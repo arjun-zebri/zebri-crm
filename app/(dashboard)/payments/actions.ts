@@ -1,5 +1,5 @@
 /**
- * Server actions for the Invoice, Contract, and Proposal builder modals.
+ * Server actions for the Invoice and Contract builder modals.
  *
  * Lifts the previously-inline `supabase.from('invoices').update(...)` /
  * `.insert(...)` / `.delete(...)` calls out of the modal components
@@ -29,6 +29,7 @@
 import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
+import { contractCoupleLimit } from '@/lib/payments/subscription';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/types/database';
 
@@ -71,15 +72,12 @@ const saveInvoiceSchema = z.object({
   paymentTerms: z.string().nullable(),
   dueDate: z.string().nullable(),
   taxRate: z.number(),
+  /** Display-only: renders a "Prices include GST" note under the total
+   *  on every couple-facing surface. Never affects an amount. Optional
+   *  so an older client bundle omitting it still validates. */
+  gstInclusive: z.boolean().optional(),
   discount: discountSchema.nullable(),
-  depositPercent: z.number().int().min(1).max(99).nullable(),
-  depositDueDate: z.string().nullable(),
-  finalDueDate: z.string().nullable(),
   stripePaymentEnabled: z.boolean(),
-  /** Provenance: the accepted proposal this invoice was generated
-   *  from. Items stay a snapshot; this never feeds rendering.
-   *  Nullish so an older client bundle omitting it still validates. */
-  proposalId: z.uuid().nullish(),
   items: z.array(lineItemSchema),
 });
 
@@ -101,12 +99,9 @@ export async function saveInvoiceAction(
     paymentTerms,
     dueDate,
     taxRate,
+    gstInclusive,
     discount,
-    depositPercent,
-    depositDueDate,
-    finalDueDate,
     stripePaymentEnabled,
-    proposalId,
     items,
   } = parsed.data;
 
@@ -132,13 +127,8 @@ export async function saveInvoiceAction(
       tax_rate: taxRate,
       discount_type: discount?.type ?? null,
       discount_value: discount?.value ?? null,
-      deposit_percent: depositPercent,
-      deposit_due_date: depositDueDate,
-      final_due_date: finalDueDate,
       stripe_payment_enabled: stripePaymentEnabled,
-      // Written only when the client sent the field, so an older
-      // bundle mid-deploy can't blank existing provenance.
-      ...(proposalId !== undefined ? { proposal_id: proposalId } : {}),
+      ...(gstInclusive !== undefined ? { gst_inclusive: gstInclusive } : {}),
     };
 
     if (effectiveId) {
@@ -229,18 +219,31 @@ export async function deleteInvoiceAction(invoiceId: string): Promise<ActionResu
    the integrity gate. ─────────────────────────────────────── */
 
 const saveContractSchema = z.object({
-  contractId: z.uuid(),
+  /** Null on first save of a new draft; uuid afterwards. */
+  contractId: z.uuid().nullable(),
+  /** The couple the contract is for. Required even on create, since a
+   *  contract with no counterparty can't be rendered or sent. */
+  coupleId: z.uuid(),
   title: z.string().max(200),
   content: z.record(z.string(), z.unknown()),
   expiresAt: z.string().nullable(),
-  /** Linked accepted proposal: drives {{total_amount}} /
-   *  {{deposit_amount}} and the signed→deposit-invoice path.
-   *  Nullish so an older client bundle omitting it still validates. */
-  proposalId: z.uuid().nullish(),
 });
 
 export type SaveContractInput = z.infer<typeof saveContractSchema>;
 
+/**
+ * Create or update a contract draft.
+ *
+ * A null `contractId` inserts a fresh draft (numbered by
+ * `generate_contract_number`) so the builder modal can open on an
+ * unsaved document and only write a row once the MC saves. That
+ * replaces the old flow, which inserted a row the moment the New
+ * button was clicked and littered the list with empty drafts.
+ *
+ * The Starter plan's distinct-couple cap is checked here rather than
+ * only in the UI: it's an entitlement, so the client can't be the one
+ * enforcing it.
+ */
 export async function saveContractAction(
   input: SaveContractInput,
 ): Promise<ActionResult<{ id: string }>> {
@@ -248,7 +251,7 @@ export async function saveContractAction(
   if (!parsed.success) {
     return { ok: false, error: 'Invalid contract data.' };
   }
-  const { contractId, title, content, expiresAt, proposalId } = parsed.data;
+  const { contractId, coupleId, title, content, expiresAt } = parsed.data;
 
   const supabase = await createClient();
   const {
@@ -257,21 +260,49 @@ export async function saveContractAction(
   if (!user) return { ok: false, error: 'Not signed in.' };
 
   try {
-    const { error } = await supabase
+    // content is a TipTap JSONContent tree — opaque to us; the
+    // generated Database type narrows the column to `Json`, so we cast
+    // at the boundary. The Zod schema already proved it's a record.
+    const contentJson = content as unknown as Json;
+
+    if (contractId) {
+      const { error } = await supabase
+        .from('contracts')
+        .update({
+          couple_id: coupleId,
+          title: title || 'Untitled contract',
+          content: contentJson,
+          expires_at: expiresAt,
+        })
+        .eq('id', contractId);
+      if (error) throw error;
+      return { ok: true, data: { id: contractId } };
+    }
+
+    const limitError = await contractLimitError(supabase, user, coupleId);
+    if (limitError) return { ok: false, error: limitError };
+
+    const { data: numData, error: numErr } = await supabase.rpc('generate_contract_number', {
+      p_user_id: user.id,
+    });
+    if (numErr) throw numErr;
+
+    const { data: inserted, error: insertErr } = await supabase
       .from('contracts')
-      .update({
+      .insert({
+        user_id: user.id,
+        couple_id: coupleId,
         title: title || 'Untitled contract',
-        // content is a TipTap JSONContent tree — opaque to us; the
-        // generated Database type narrows the column to `Json`,
-        // so we cast at the boundary. The Zod schema already
-        // proved this is a record shape.
-        content: content as unknown as Json,
+        contract_number: numData as string,
+        status: 'draft',
+        content: contentJson,
         expires_at: expiresAt,
-        ...(proposalId !== undefined ? { proposal_id: proposalId } : {}),
       })
-      .eq('id', contractId);
-    if (error) throw error;
-    return { ok: true, data: { id: contractId } };
+      .select('id')
+      .single();
+    if (insertErr || !inserted) throw insertErr ?? new Error('contract insert returned no row');
+
+    return { ok: true, data: { id: inserted.id } };
   } catch (err) {
     logger.error('[payments/actions] saveContractAction failed', {
       userId: user.id,
@@ -280,6 +311,30 @@ export async function saveContractAction(
     });
     return { ok: false, error: 'Could not save the contract.' };
   }
+}
+
+/**
+ * Starter-plan gate for creating a contract for a new couple.
+ *
+ * Returns a user-facing message when the plan caps distinct couples
+ * with contracts and this couple would exceed it, or null when the
+ * create is allowed (uncapped plan, or the couple already has one).
+ */
+async function contractLimitError(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: { app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> },
+  coupleId: string,
+): Promise<string | null> {
+  const limit = contractCoupleLimit(user);
+  if (limit === null) return null;
+
+  const { data, error } = await supabase.from('contracts').select('couple_id');
+  if (error) throw error;
+
+  const distinct = new Set((data ?? []).map((row) => row.couple_id));
+  if (distinct.has(coupleId) || distinct.size < limit) return null;
+
+  return `Your plan covers contracts for ${limit} couples. Upgrade to add more.`;
 }
 
 /* ─── revokeContractAction ─────────────────────────────────────
@@ -347,321 +402,5 @@ export async function deleteContractAction(
       error: err instanceof Error ? err.message : String(err),
     });
     return { ok: false, error: 'Could not delete the contract.' };
-  }
-}
-
-/* ─── Proposals (packages → send → accept → invoice) ───────────── */
-
-const proposalItemSchema = z.object({
-  /** Client-side key only; rows are always re-inserted on save. */
-  id: z.string(),
-  description: z.string().max(500),
-  amount: z.number().min(0),
-  isAddon: z.boolean(),
-  /** MC's pre-tick; only meaningful when isAddon. */
-  defaultIncluded: z.boolean(),
-});
-
-const proposalOptionSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).nullable(),
-  /** Provenance: the package this option snapshotted from. */
-  sourcePackageId: z.uuid().nullable(),
-  depositPercent: z.number().min(0).max(100).nullable(),
-  gstInclusive: z.boolean(),
-  weekendLoadingPercent: z.number().min(0).max(100).nullable(),
-  /** "Most popular" highlight for the public chooser. */
-  isPopular: z.boolean(),
-  items: z.array(proposalItemSchema).max(100),
-});
-
-const saveProposalSchema = z.object({
-  /** Null on first save of a new draft; uuid afterwards. */
-  proposalId: z.uuid().nullable(),
-  coupleId: z.uuid(),
-  title: z.string().max(200),
-  notes: z.string().max(5000).nullable(),
-  expiresAt: z.string().nullable(),
-  options: z.array(proposalOptionSchema).min(1).max(6),
-});
-
-export type SaveProposalInput = z.infer<typeof saveProposalSchema>;
-
-/** Base-items total of one option draft (add-ons are extras). */
-function optionBaseTotal(option: z.infer<typeof proposalOptionSchema>): number {
-  return option.items.reduce((sum, item) => sum + (item.isAddon ? 0 : item.amount), 0);
-}
-
-/**
- * Create or update a proposal with its full option/item tree.
- *
- * Options + items are wiped and re-inserted in draft order (the same
- * source-of-truth pattern as quote items and packages). Safe because
- * nothing references option/item ids until acceptance — and accepted
- * or declined proposals are REJECTED here outright: they are the
- * record of what a couple agreed to, so edits must go through
- * `duplicateProposalAction` and a fresh send.
- */
-export async function saveProposalAction(
-  input: SaveProposalInput,
-): Promise<ActionResult<{ id: string }>> {
-  const parsed = saveProposalSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: 'Invalid proposal data.' };
-  }
-  const { proposalId, coupleId, title, notes, expiresAt, options } = parsed.data;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in.' };
-
-  // List display shows the primary (first) option's base total until
-  // acceptance overwrites it with the accepted selection's total.
-  const subtotal = optionBaseTotal(options[0]!);
-
-  try {
-    let effectiveId = proposalId;
-
-    if (effectiveId) {
-      const { data: existing, error: readErr } = await supabase
-        .from('proposals')
-        .select('status')
-        .eq('id', effectiveId)
-        .single();
-      if (readErr || !existing) return { ok: false, error: 'Proposal not found.' };
-      if (existing.status === 'accepted' || existing.status === 'declined') {
-        return {
-          ok: false,
-          error: 'This proposal has been responded to and is locked. Duplicate it to send an updated version.',
-        };
-      }
-
-      const { error } = await supabase
-        .from('proposals')
-        .update({
-          couple_id: coupleId,
-          title,
-          notes,
-          expires_at: expiresAt,
-          subtotal,
-        })
-        .eq('id', effectiveId);
-      if (error) throw error;
-
-      // Wipe options (items cascade); re-insert below.
-      const { error: wipeErr } = await supabase
-        .from('proposal_options')
-        .delete()
-        .eq('proposal_id', effectiveId);
-      if (wipeErr) throw wipeErr;
-    } else {
-      const { data: numData, error: numErr } = await supabase.rpc('generate_proposal_number', {
-        p_user_id: user.id,
-      });
-      if (numErr) throw numErr;
-      const { data: inserted, error: pErr } = await supabase
-        .from('proposals')
-        .insert({
-          user_id: user.id,
-          couple_id: coupleId,
-          title,
-          proposal_number: numData as string,
-          status: 'draft',
-          notes,
-          expires_at: expiresAt,
-          subtotal,
-        })
-        .select('id')
-        .single();
-      if (pErr || !inserted) throw pErr ?? new Error('proposal insert returned no row');
-      effectiveId = inserted.id;
-    }
-
-    // Options one-by-one (each returns its id for the item batch);
-    // proposals hold ≤6 options so the round-trips stay trivial.
-    for (const [idx, option] of options.entries()) {
-      const { data: optRow, error: oErr } = await supabase
-        .from('proposal_options')
-        .insert({
-          proposal_id: effectiveId,
-          user_id: user.id,
-          position: idx + 1,
-          title: option.title,
-          description: option.description,
-          source_package_id: option.sourcePackageId,
-          deposit_percent: option.depositPercent,
-          gst_inclusive: option.gstInclusive,
-          weekend_loading_percent: option.weekendLoadingPercent,
-          is_popular: option.isPopular,
-          subtotal: optionBaseTotal(option),
-        })
-        .select('id')
-        .single();
-      if (oErr || !optRow) throw oErr ?? new Error('option insert returned no row');
-
-      if (option.items.length > 0) {
-        const { error: iErr } = await supabase.from('proposal_option_items').insert(
-          option.items.map((item, itemIdx) => ({
-            option_id: optRow.id,
-            user_id: user.id,
-            description: item.description,
-            amount: item.amount,
-            is_addon: item.isAddon,
-            default_included: item.isAddon ? item.defaultIncluded : false,
-            position: (itemIdx + 1) * 1000,
-          })),
-        );
-        if (iErr) throw iErr;
-      }
-    }
-
-    return { ok: true, data: { id: effectiveId } };
-  } catch (err) {
-    logger.error('[payments/actions] saveProposalAction failed', {
-      userId: user.id,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { ok: false, error: 'Could not save the proposal. Please try again.' };
-  }
-}
-
-/* ─── deleteProposalAction ─────────────────────────────────────── */
-
-export async function deleteProposalAction(
-  proposalId: string,
-): Promise<ActionResult<void>> {
-  const parsed = z.uuid().safeParse(proposalId);
-  if (!parsed.success) return { ok: false, error: 'Invalid proposal ID.' };
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in.' };
-
-  try {
-    const { error } = await supabase.from('proposals').delete().eq('id', parsed.data);
-    if (error) throw error;
-    return { ok: true, data: undefined };
-  } catch (err) {
-    logger.error('[payments/actions] deleteProposalAction failed', {
-      userId: user.id,
-      proposalId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { ok: false, error: 'Could not delete the proposal.' };
-  }
-}
-
-/* ─── duplicateProposalAction ──────────────────────────────────── */
-
-/**
- * Clone a proposal as a fresh draft (new number, new share token,
- * cleared acceptance state). The sanctioned way to revise an
- * already-responded proposal — the original stays as the record.
- */
-export async function duplicateProposalAction(
-  proposalId: string,
-): Promise<ActionResult<{ id: string }>> {
-  const parsed = z.uuid().safeParse(proposalId);
-  if (!parsed.success) return { ok: false, error: 'Invalid proposal ID.' };
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in.' };
-
-  try {
-    const { data: source, error: sErr } = await supabase
-      .from('proposals')
-      .select('couple_id, title, notes, expires_at, subtotal')
-      .eq('id', parsed.data)
-      .single();
-    if (sErr || !source) return { ok: false, error: 'Proposal not found.' };
-
-    const { data: options, error: oErr } = await supabase
-      .from('proposal_options')
-      .select('id, position, title, description, source_package_id, deposit_percent, gst_inclusive, weekend_loading_percent, is_popular, subtotal')
-      .eq('proposal_id', parsed.data)
-      .order('position', { ascending: true });
-    if (oErr) throw oErr;
-
-    const { data: items, error: iErr } = await supabase
-      .from('proposal_option_items')
-      .select('option_id, description, amount, is_addon, default_included, position')
-      .eq('user_id', user.id)
-      .in('option_id', (options ?? []).map((o) => o.id))
-      .order('position', { ascending: true });
-    if (iErr) throw iErr;
-
-    const { data: numData, error: numErr } = await supabase.rpc('generate_proposal_number', {
-      p_user_id: user.id,
-    });
-    if (numErr) throw numErr;
-
-    const { data: created, error: cErr } = await supabase
-      .from('proposals')
-      .insert({
-        user_id: user.id,
-        couple_id: source.couple_id,
-        title: `${source.title} (copy)`,
-        proposal_number: numData as string,
-        status: 'draft',
-        notes: source.notes,
-        expires_at: source.expires_at,
-        subtotal: source.subtotal,
-      })
-      .select('id')
-      .single();
-    if (cErr || !created) throw cErr ?? new Error('proposal insert returned no row');
-
-    for (const option of options ?? []) {
-      const { data: optRow, error: noErr } = await supabase
-        .from('proposal_options')
-        .insert({
-          proposal_id: created.id,
-          user_id: user.id,
-          position: option.position,
-          title: option.title,
-          description: option.description,
-          source_package_id: option.source_package_id,
-          deposit_percent: option.deposit_percent,
-          gst_inclusive: option.gst_inclusive,
-          weekend_loading_percent: option.weekend_loading_percent,
-          is_popular: option.is_popular,
-          subtotal: option.subtotal,
-        })
-        .select('id')
-        .single();
-      if (noErr || !optRow) throw noErr ?? new Error('option insert returned no row');
-
-      const optionItems = (items ?? []).filter((item) => item.option_id === option.id);
-      if (optionItems.length > 0) {
-        const { error: niErr } = await supabase.from('proposal_option_items').insert(
-          optionItems.map((item) => ({
-            option_id: optRow.id,
-            user_id: user.id,
-            description: item.description,
-            amount: item.amount,
-            is_addon: item.is_addon,
-            default_included: item.default_included,
-            position: item.position,
-          })),
-        );
-        if (niErr) throw niErr;
-      }
-    }
-
-    return { ok: true, data: { id: created.id } };
-  } catch (err) {
-    logger.error('[payments/actions] duplicateProposalAction failed', {
-      userId: user.id,
-      proposalId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { ok: false, error: 'Could not duplicate the proposal.' };
   }
 }

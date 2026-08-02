@@ -35,4 +35,15 @@ describe('TotalsPanel', () => {
     render(<TotalsPanel subtotal={1000} tax={50} taxLabel="VAT 5%" total={1050} />);
     expect(screen.getByText('VAT 5%')).toBeInTheDocument();
   });
+
+  it('omits the note line by default', () => {
+    render(<TotalsPanel subtotal={1000} total={1000} />);
+    expect(screen.queryByText('Prices include GST')).toBeNull();
+  });
+
+  it('renders the note under the total without changing it', () => {
+    render(<TotalsPanel subtotal={1000} total={1000} note="Prices include GST" />);
+    expect(screen.getByText('Prices include GST')).toBeInTheDocument();
+    expect(screen.getAllByText('$1,000.00').length).toBeGreaterThanOrEqual(2);
+  });
 });

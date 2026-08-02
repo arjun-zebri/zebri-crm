@@ -34,7 +34,7 @@ export const PLANS: Plan[] = [
     name: 'Starter',
     price: null,
     period: '',
-    tagline: 'For MCs getting started. CRM, proposals, invoices.',
+    tagline: 'For MCs getting started. CRM, invoices, contracts.',
     features: [
       { label: 'Up to 5 couples', included: true },
       { label: 'CRM & pipeline', included: true },
@@ -103,9 +103,9 @@ export function planById(id: string | null | undefined): Plan {
  */
 export const PLAN_SUMMARY: Record<PlanId, string> = {
   starter:
-    'Up to 5 couples · CRM, proposals & invoices · Task management',
+    'Up to 5 couples · CRM, invoices & contracts · Task management',
   pro:
-    'Unlimited couples · Couple portal · Songs, files & timeline · Quotes & invoices · Full CRM',
+    'Unlimited couples · Couple portal · Songs, files & timeline · Invoices & contracts · Full CRM',
   max:
     'Everything in Pro · Pulse · Event Mode · Up to 5 team members · Priority support',
 };

@@ -48,6 +48,7 @@ function makeCtx(overrides: Partial<RunContext> = {}): RunContext {
       spousePhone: null,
       timezone: 'Australia/Sydney',
     },
+    invoice: null,
     mc: {
       userId: 'u',
       businessName: 'Acme MC Co',

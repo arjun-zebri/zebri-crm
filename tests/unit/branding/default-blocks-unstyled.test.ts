@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { defaultBlocksFor } from '@/app/(dashboard)/branding/blocks/defaults'
 
-const SURFACES = ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as const
+const SURFACES = ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as const
 
 /** Keys on a block that carry baked styling. */
 const STYLE_KEYS = ['titleStyle', 'subtitleStyle', 'textStyle', 'totalStyle', 'labelStyle', 'style']

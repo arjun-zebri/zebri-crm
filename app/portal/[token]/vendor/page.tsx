@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import Image from 'next/image'
 
-import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import type { Block, VendorTimelineBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
+import { DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
 import { FONT_STACKS, googleFontsHref, type BodyFont } from '@/lib/branding/fonts'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
@@ -62,6 +63,13 @@ export default async function VendorPage({
   const vtbIdx = allBlocks.findIndex((b) => b.type === 'vendorTimelineBody')
   const preBlocks = vtbIdx >= 0 ? allBlocks.slice(0, vtbIdx) : allBlocks
   const postBlocks = vtbIdx >= 0 ? allBlocks.slice(vtbIdx + 1) : []
+  // Run-sheet-scoped typography overrides from the marker block, applied to the
+  // live timeline. Absent block / no overrides ⇒ historical defaults (identical
+  // render for every run sheet sent before this feature existed).
+  const vtbBlock = vtbIdx >= 0 ? (allBlocks[vtbIdx] as VendorTimelineBodyBlock) : undefined
+  const vtbStyles = vtbBlock
+    ? { title: vtbBlock.titleStyle, subtitle: vtbBlock.subtitleStyle, body: vtbBlock.bodyStyle, note: vtbBlock.noteStyle }
+    : undefined
 
   // Empty PublicDocData - used to render blocks without document-specific context.
   const VENDOR_DOC: PublicDocData = { title: '', refNumber: '', expiresAt: null, items: [], subtotal: 0, taxRate: 0 }
@@ -121,7 +129,7 @@ export default async function VendorPage({
         <link rel="stylesheet" href={googleFontsHref([branding.font_heading, branding.font_body])} />
       )}
 
-      <div className="max-w-2xl mx-auto px-4 pb-16 @container/doc">
+      <div className="mx-auto w-full px-4 pb-16 @container/doc" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
 
         {/* Pre-blocks: render above the timeline. */}
         {hasBlocks && branding && preBlocks.length > 0 && (
@@ -139,6 +147,7 @@ export default async function VendorPage({
           events={vendorData.events}
           items={vendorData.timeline_items}
           branding={branding}
+          {...(vtbStyles ? { styles: vtbStyles } : {})}
         />
 
         {/* Post-blocks: render below the timeline. */}

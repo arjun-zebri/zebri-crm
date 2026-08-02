@@ -13,10 +13,11 @@ import { roleDefaults } from '../type-defaults'
 import { fmt, fmtDate, pad, type PublicDocData } from './shared'
 
 /**
- * Renders the invoice payment schedule (deposit + final balance) on public
- * surfaces. The subheading and line labels come from the block (editable in the
- * branding editor); the amounts and due dates come from `doc.paymentSchedule`.
- * Renders nothing when the document has no schedule.
+ * Renders the invoice payment schedule on public surfaces. The subheading comes
+ * from the block (editable in the branding editor); stage labels, amounts and
+ * due dates come from `doc.paymentSchedule`. Renders nothing when the document
+ * has no schedule. Labels are named by the MC in the invoice builder, not
+ * configured on the block.
  *
  * The editor's placeholder version lives in the branding editor (render.tsx) and
  * mirrors this structure/styling — keep the two in step when changing either.
@@ -42,10 +43,12 @@ export function RenderPaymentSchedule({
   const lineCss = resolveTextStyle(block.lineStyle, bodyDefaults)
   const valueCss = resolveTextStyle(block.valueStyle, bodyDefaults)
 
-  const stages = [
-    { label: block.depositLabel ?? 'Deposit', amount: schedule.depositAmount, due: schedule.depositDueDate },
-    { label: block.finalLabel ?? 'Final balance', amount: schedule.finalAmount, due: schedule.finalDueDate },
-  ]
+  const stages = schedule.stages.map((s) => ({
+    label: s.label,
+    amount: s.amountCents / 100,
+    due: s.dueDate,
+    paid: s.paidAt,
+  }))
 
   return (
     <div className={`${p.blockY}`}>

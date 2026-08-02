@@ -1,8 +1,7 @@
 /**
  * Shared types + pure helpers for the public-contract surface.
  *
- * Mirrors `app/proposal/[token]/_components` and
- * `app/invoice/[token]/_components/public-invoice.ts`. The shape
+ * Mirrors `app/invoice/[token]/_components/public-invoice.ts`. The shape
  * is the JSONB payload from `get_public_contract(token)`.
  *
  * @module app/contract/[token]/_components/public-contract

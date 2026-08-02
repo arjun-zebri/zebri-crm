@@ -114,6 +114,21 @@ describe('buildPdfHtml with branding', () => {
     // Logo should be embedded.
     expect(html).toContain('https://example.com/logo.png')
   })
+
+  describe('prices include GST note', () => {
+    it('is absent unless the flag is set', () => {
+      expect(buildPdfHtml(invoiceDoc)).not.toContain('Prices include GST')
+    })
+
+    it('renders under the total when the flag is set', () => {
+      const html = buildPdfHtml({ ...invoiceDoc, gstInclusive: true })
+      expect(html).toContain('Prices include GST')
+      // Display only: the printed total is unchanged by the flag.
+      expect(html).toContain('$1,100.00')
+      expect(html.indexOf('Prices include GST')).toBeGreaterThan(html.indexOf('>Total<'))
+    })
+  })
+
 })
 
 describe('publicBrandingToPdfOpts adapter', () => {

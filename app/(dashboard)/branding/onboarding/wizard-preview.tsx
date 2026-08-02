@@ -55,8 +55,8 @@ const PANE_CONTENT_WIDTH = 340
 
 /** Sample wedding line items so the preview reads as a real document. */
 const SAMPLE_DOC: PublicDocData = {
-  title: 'Wedding proposal',
-  refNumber: 'PROP-0412',
+  title: 'Wedding invoice',
+  refNumber: 'INV-0412',
   expiresAt: null,
   items: [
     { id: 'p1', description: 'MC and hosting, reception', amount: 1200 },
@@ -79,7 +79,7 @@ const BODY_BLOCKS: Block[] = [
   { id: 'pv-tx', type: 'text', text: 'We would love to be part of your day. Everything you need to lock in your date is below.' },
   { id: 'pv-li', type: 'lineItems', colSpread: true },
   { id: 'pv-to', type: 'totals', taxRate: 10, showSubtotal: true },
-  { id: 'pv-ac', type: 'action', primary: 'Accept proposal', secondary: 'Ask a question' },
+  { id: 'pv-ac', type: 'action', primary: 'Pay now', secondary: null },
 ]
 const FOOTER_BLOCKS: Block[] = [
   { id: 'pv-ft', type: 'footer', closingNote: 'Thank you for thinking of us.' },
@@ -103,9 +103,9 @@ const GROUP_OPACITY: Record<1 | 2 | 3 | 4, { identity: string; body: string }> =
 
 /**
  * WizardPreview: a real document, not a mock. Renders the shared
- * PublicBlockRenderer (the exact code live proposals use) with a sample
- * wedding proposal, branded by the wizard's current choices, scaled to fill
- * the pane. Below it, the six document types show their on/off state so the
+ * PublicBlockRenderer (the exact code live invoices use) with a sample
+ * wedding invoice, branded by the wizard's current choices, scaled to fill
+ * the pane. Below it, the document types show their on/off state so the
  * step-3 toggles have visible consequences.
  * @internal
  */

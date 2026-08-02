@@ -1,7 +1,5 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
-
 import { isPastDue } from '@/lib/utils'
 
 import { useDashboardInvoices } from './use-dashboard'
@@ -30,8 +28,17 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Invoices</h2>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" strokeWidth={1.5} />
+        <div className="space-y-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="animate-pulse flex items-center gap-3 py-2">
+              <div className="flex-1 min-w-0">
+                <div className="h-3.5 bg-gray-100 rounded-md w-36 mb-1.5" />
+                <div className="h-3 bg-gray-100 rounded-md w-16" />
+              </div>
+              <div className="h-3.5 bg-gray-100 rounded-md w-14 shrink-0" />
+              <div className="h-3 bg-gray-100 rounded-md w-10 shrink-0" />
+            </div>
+          ))}
         </div>
       </div>
     )

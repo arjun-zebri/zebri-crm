@@ -9,7 +9,6 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { resolveProposalLabels } from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-branding';
 import { invoiceHtml } from '@/lib/email/html';
 
@@ -69,7 +68,6 @@ describe('Email branding', () => {
       density: 'cozy',
       corner_radius: 16,
       doc_padding: 0,
-      proposal_labels: resolveProposalLabels({}),
       theme_preset: 'custom',
       email_show_logo: true,
       email_logo_align: 'left',
@@ -138,7 +136,6 @@ describe('Email branding', () => {
       density: 'cozy',
       corner_radius: 16,
       doc_padding: 0,
-      proposal_labels: resolveProposalLabels({}),
       theme_preset: 'custom',
       email_show_logo: true,
       email_logo_align: 'center',
@@ -198,7 +195,6 @@ describe('Email branding', () => {
       density: 'cozy',
       corner_radius: 16,
       doc_padding: 0,
-      proposal_labels: resolveProposalLabels({}),
       theme_preset: 'custom',
       email_show_logo: true,
       email_logo_align: 'left',

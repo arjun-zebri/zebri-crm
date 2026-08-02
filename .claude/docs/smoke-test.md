@@ -331,7 +331,6 @@ Click any couple → profile opens. Test each tab:
 
 - [ ] Quote templates list → create / apply.
 - [ ] Contract templates → same.
-- [ ] Timeline templates → same.
 
 ### 9.6 · Statuses
 
@@ -746,7 +745,7 @@ For each major page:
   → returns empty.
 - [ ] Same for `quotes`, `invoices`, `contracts`, `contacts`,
   `tasks`, `portal_people`, `portal_songs`, `user_branding`,
-  `timeline_items`, `timeline_templates`, `contract_templates`,
+  `timeline_items`, `contract_templates`,
   `admin_audit_log`.
 
 ### 16.2 · §7.4 invariants

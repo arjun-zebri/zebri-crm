@@ -108,25 +108,56 @@ changes; the parent modals own the actual form state + mutations.
 | `builder-modal-shell.tsx` | Modal frame + hero title input + state pill + ⋯ overflow menu + contextual primary CTA |
 | `builder-meta-row.tsx` | Couple picker + payment terms (invoice) + expiry / due date |
 | `line-items-table.tsx` | description + amount table; dnd-kit reorder; empty-state CTA |
-| `totals-panel.tsx` | Subtotal / (optional) Discount / (optional) GST / Total |
+| `totals-panel.tsx` | Subtotal / (optional) Discount / (optional) GST / Total / (optional) muted `note` line under the total (invoices pass "Prices include GST") |
 | `discount-control.tsx` | Collapsed "+ Add discount" link → inline editor with % / $ switch |
-| `tax-control.tsx` | "+ Apply 10% GST" toggle |
+| `tax-control.tsx` | Tax chip + popover: rate input and a "Prices include GST" checkbox (shown only when the caller passes `onGstInclusiveChange`). Chip reads `Tax` / `GST 10%` / `GST 10% incl.` / `GST incl.`. Opening the popover no longer pre-applies 10% — the rate applies on Done, so ticking the checkbox alone cannot add GST |
 | `notes-field.tsx` | Tokenised textarea wrapper |
 | `share-and-send.tsx` | Footer: share-link affordance + Save + primary "Send to couple" CTA |
-| `payment-schedule.tsx` | Vertical-timeline schedule for invoices (deposit ┊ final) |
+| `payment-schedule.tsx` | Invoice payment section: empty state is a single "Add schedule" button; applied state shows the resolved drag-reorder timeline, an always-visible running total that warns on a mismatch, and one "Change" door into the modal |
+| `payment-stage-row.tsx` | One applied invoice stage on the timeline; unpaid rows edit inline, paid rows lock and lose their remove control |
+| `schedule-modal.tsx` | The single schedule modal (2026-07-31 v2): a Schedule combobox, an explainer line, global **Amount** (% / $) and **Timing** (after issue / before due) segmented toggles, a "final stage collects the remaining balance" checkbox, the draft timeline, running total, and Save-to-library / Cancel / Apply. Narrow (`md`), `text-sm`; Apply-to-invoice-only, no stacking |
+| `schedule-stage-row.tsx` | One draft timeline row pared to stage / share / due: label, a share value with its global unit (or "rest" for the remainder), and an offset value + unit select. No per-row type dropdowns (those are global). Paid rows lock; stacks on mobile |
+| `schedule-combobox.tsx` | The "Schedule" field: a name input with a dropdown of saved schedules (inline set-default star + delete). Type to name a new one, or pick a saved one to load it. Replaces the separate Start-from + Name pair |
 | `template-picker.tsx` | Quote templates — empty-state card + inline popover variants |
 | `builder-preview-pane.tsx` | Right pane: PDF / Email / Payment page tabs + "Update branding" link (Phase 2C.2 redesign) |
 | `preview-pdf.tsx` | PDF preview — renders `buildPdfHtml()` output in a sandboxed iframe |
-| `preview-email.tsx` | Email preview — `From/To/Subject` envelope + `quoteHtml()`/`invoiceHtml()` body in a sandboxed iframe |
+| `preview-email.tsx` | Email preview — `From/To/Subject` envelope + `invoiceHtml()` body in a sandboxed iframe |
 | `preview-payment-page.tsx` | Payment-page preview — uses `PublicBlockRenderer` with `useCurrentBranding(surface)` for pixel-faithful render |
+| `use-apply-sources.ts` | Packages / invoice templates as "start from" sources for the builders |
 | `preview-shared.ts` | The `PreviewDoc` shape the parent modals pass into every preview tab |
 
 All parts are ≤200 LOC, TSDoc'd, and unit-tested under
 `tests/unit/components/builders/parts/*.test.tsx`.
 
+### Builder first-paint skeleton
+
+`builder-modal-shell.tsx` already renders skeletons for the form body and
+the preview pane behind its `loading` prop. The invoice builder gates that
+prop on **every** input the first paint needs, not just the invoice row:
+the invoice, `useApplySources()` (packages / templates), the couple
+list, and `useCurrentBranding('invoice')`. Gating on
+the invoice alone meant a new invoice showed no skeleton at all and then
+reflowed three times as each of the others landed.
+
+Two supporting changes make that gate cheap:
+
+- `useCurrentBranding()` is backed by React Query (`['current-branding',
+  surface]`) with `staleTime: 0`, so the several consumers inside one modal
+  (Link tab, PDF tab, pane header, and the modal's own gate) share a single
+  fetch while still refetching per mount. It also returns `brandLabel`, so
+  `builder-preview-pane.tsx` no longer runs its own `auth.getUser()`.
+- `getCurrentUser()` (`@/lib/supabase/current-user`) deduplicates
+  `supabase.auth.getUser()`. That call always hits the network and
+  supabase-js serialises concurrent calls, so opening the builder used to
+  issue ten of them back to back. See the module TSDoc for why the TTL is
+  deliberately 2 seconds.
+
+Measured on the dev server against the remote DB, first paint went from
+~3.9s to ~1.9-2.9s; the remainder is genuine query latency.
+
 ## Public Blocks components — `components/public-blocks/*` (Phase 11)
 
-Shared branded surface renderers. Each public surface (quote, invoice, contract, proposal, vendor timeline, questionnaire) consumes a block tree and renders it with the MC's branding (colours, fonts, corner radius, spacing).
+Shared branded surface renderers. Each public surface (invoice, contract, client portal, vendor timeline, questionnaire) consumes a block tree and renders it with the MC's branding (colours, fonts, corner radius, spacing).
 
 **Slots + Chrome Pattern:** The public component is the sole markup source. The editor injects `InlineText` slots (for editable fields: business name, heading, button text) as React node props. The editor's toolbar is a chrome overlay sitting above the public renderer without modifying DOM structure. **Two binding amendments:**
 1. Slots always render, even if empty (undefined slots render as nothing, not errors).
@@ -137,11 +168,10 @@ Shared branded surface renderers. Each public surface (quote, invoice, contract,
 | `public-block-renderer.tsx` | All surfaces | Orchestrator: renders a block tree by type (HeaderBanner, BusinessName, Text, Image, Spacer, Divider, Footer, Action, and surface-specific fixed cores). |
 | `header-banner.tsx` | All surfaces | Header image + overlay gradient. |
 | `business-name.tsx` | All surfaces | Logo + business name + tagline. |
-| `action-block.tsx` | Quote, Invoice, Proposal | Accept/Download/etc button. |
+| `action-block.tsx` | Invoice, Contract | Pay / Download / Sign button. |
 | `text-block.tsx` | All surfaces | Rich text with font/colour overrides. |
 | `image-block.tsx` | All surfaces (chrome) | Image with fit, focal point, rounding, padding. |
 | `spacer-block.tsx` | All surfaces (chrome) | Vertical spacing. |
-| `quote-body.tsx` | Quote surface (fixed) | Renders proposal options + acceptance flow. |
 | `invoice-items.tsx` | Invoice surface (fixed) | Line items + totals + payment schedule. |
 | `contract-body.tsx` | Contract surface (fixed) | Contract text content. |
 
@@ -486,3 +516,48 @@ type PreviewScriptProps = {
   prefersReducedMotion?: boolean;
 };
 ```
+
+## Time-tracking components  -  `components/time-tracking/*`
+
+Used by the couple timer (see `page-specs.md` "Time tracking").
+
+- **`TimerProvider`**  -  mounted once in the dashboard layout. Owns the
+  start/stop mutations, the running-timer query, the stop-note dialog, and
+  the pill, so any surface can start a timer without prop drilling. Reads
+  the `zebri_is_shadowing` cookie itself via `useSyncExternalStore` (it is
+  set `httpOnly: false` for exactly this), which keeps the dashboard
+  layout a synchronous server component. Exposes `useTimerSurface()`:
+  `{ shadowing, running, clockOffsetMs, isRunningFor, start, stop,
+  claimSurface }`. `claimSurface()` increments a counter and returns its
+  release function; the pill hides while the count is above zero, which is
+  how the couple-profile overlay takes over the control.
+- **`TimerPill`**  -  the fixed top-right running pill
+  (`data-testid="timer-pill"`). Owns the only one-second interval;
+  elapsed is always recomputed from `started_at` plus the clock offset, so
+  it cannot drift.
+- **`StopNoteDialog`**  -  the timesheet prompt shown after a stop. The
+  inner form is keyed by entry id so a second stop cannot inherit the
+  previous note or category.
+- **`TimeCategoryPicker`** + **`TimeCategoryRow`**  -  type-to-create
+  category picker, trigger fixed at `w-56` so it does not stretch to the
+  dialog width, with the popover matching the trigger width. Each row is a
+  single hover/selected surface spanning the rename and delete icons (a
+  background on the name button alone read as a half-painted row); the
+  selected row is marked by that tint plus a medium weight, with no check
+  icon. Filters as you type, offers `Create "<typed>"` only when
+  the name is genuinely new, and each row has inline rename and delete.
+  Categories are **plain chips with no colour**: couple statuses are this
+  product's coloured vocabulary and a second colour system would compete
+  with them. Every write is **optimistic** (`useTimeCategories`): create,
+  rename, and delete all land in the list before the round-trip and roll
+  back on failure. A created category shows on the trigger immediately via
+  a local pending name, while `value` keeps holding only real ids, so
+  saving during that window can never send a placeholder to the server.
+- **`useTimerTick(active, clockOffsetMs)`**  -  the shared one-second tick.
+  It lives in a hook rather than the provider because a ticking provider
+  would re-render the whole dashboard once a second.
+
+Pure duration maths (`formatElapsed`, `formatDuration`, `entryDurationMs`,
+`sumByCategory`, the 8h cap helpers) lives in `lib/time-tracking/format.ts`
+and is unit-tested directly.
+

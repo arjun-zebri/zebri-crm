@@ -108,6 +108,20 @@ describe('Portal RPCs — token guard', () => {
       expect(payload.couple_id).toBe(arranged.coupleId);
     });
 
+    it('exposes invoices but no proposals key in payments (proposals removed)', async () => {
+      const arranged = await arrangeCoupleWithEnabledToken();
+      cleanupQueue.push(arranged.user.cleanup);
+
+      const client = anonClient();
+      const { data, error } = await client.rpc('get_portal_data', {
+        token: arranged.token,
+      });
+      expect(error).toBeNull();
+      const payload = data as unknown as { payments: Record<string, unknown> };
+      expect(payload.payments).not.toHaveProperty('proposals');
+      expect(payload.payments).toHaveProperty('invoices');
+    });
+
     it('returns NULL when the token is valid but disabled', async () => {
       const arranged = await arrangeCoupleWithEnabledToken();
       cleanupQueue.push(arranged.user.cleanup);

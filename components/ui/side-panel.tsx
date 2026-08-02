@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X } from 'lucide-react'
 
 interface SidePanelProps {
   isOpen: boolean
@@ -10,8 +10,6 @@ interface SidePanelProps {
   children: React.ReactNode
   footer?: React.ReactNode
   headerActions?: React.ReactNode
-  onPrev?: () => void
-  onNext?: () => void
 }
 
 export function SidePanel({
@@ -21,8 +19,6 @@ export function SidePanel({
   children,
   footer,
   headerActions,
-  onPrev,
-  onNext,
 }: SidePanelProps) {
   useEffect(() => {
     if (!isOpen) return
@@ -50,28 +46,6 @@ export function SidePanel({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-gray-200">
-          <div className="hidden sm:flex items-center gap-1">
-            {onPrev && (
-              <button
-                onClick={onPrev}
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
-                title="Previous"
-                aria-label="Previous task"
-              >
-                <ChevronLeft size={16} strokeWidth={1.5} />
-              </button>
-            )}
-            {onNext && (
-              <button
-                onClick={onNext}
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
-                title="Next"
-                aria-label="Next task"
-              >
-                <ChevronRight size={16} strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
           {title && (
             <h2 className="flex-1 text-sm font-medium text-gray-500 truncate">{title}</h2>
           )}

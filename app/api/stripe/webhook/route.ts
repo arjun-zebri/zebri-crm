@@ -45,6 +45,7 @@ import {
   defaultAuthAdmin,
   parseConnectEvent,
 } from '@/lib/payments/connect-events'
+import { deriveInvoiceStatusFromStages } from '@/lib/payments/invoice-status'
 import { stripe } from '@/lib/payments/stripe'
 import {
   type ParsedStripeEvent,
@@ -302,43 +303,156 @@ async function processInvoicePayment(
   invoiceId: string,
   adminClient: AdminClient,
 ): Promise<void> {
-  const paymentType = session.metadata?.payment_type ?? 'full'
   const now = new Date().toISOString()
   const paymentIntentId =
     typeof session.payment_intent === 'string' ? session.payment_intent : null
 
-  if (paymentType === 'deposit') {
-    const { error } = await adminClient
-      .from('invoices')
-      .update({ deposit_paid_at: now, status: 'deposit_paid' })
-      .eq('id', invoiceId)
-    if (error) logger.error('[stripe/webhook] deposit update failed', { error })
+  // Parse stage_ids from session metadata: comma-separated list of stage UUIDs,
+  // or empty string for a stageless single-payment invoice.
+  const stageIds = (session.metadata?.stage_ids ?? '')
+    .split(',')
+    .map((s: string) => s.trim())
+    .filter(Boolean)
+
+  if (stageIds.length > 0) {
+    // Stamp the stages that were just paid with paid_at and stripe_payment_intent_id.
+    // Use .is('paid_at', null) so a replayed webhook cannot overwrite an existing paid_at.
+    // Stripe retries webhooks frequently, so this guard is essential.
+    const { error: stampError } = await adminClient
+      .from('invoice_payment_stages')
+      .update({ paid_at: now, stripe_payment_intent_id: paymentIntentId })
+      .in('id', stageIds)
+      .is('paid_at', null)
+      .select('id')
+    if (stampError) {
+      logger.error('[stripe/webhook] stage stamp failed', { error: stampError, invoiceId })
+      // Return early without deriving status or updating the invoice. The stage stamping
+      // is idempotent (guarded by .is('paid_at', null)), so Stripe will retry this webhook
+      // and succeed next time. If we mark the invoice with an uncertain status now, we risk
+      // silent corruption: the next retry might see a different state but won't touch the
+      // invoice again (status already advanced). So we wait for the retry to establish facts.
+      await sendAlert({
+        type: 'invoice_payment_status_indeterminate',
+        severity: 'error',
+        invoiceId,
+        failureReason: `stage stamping failed: ${stampError.message}`,
+      })
+      return
+    }
+
+    // Verify that all requested stage IDs actually exist on this invoice. This is separate
+    // from whether they were stamped: "nothing stamped" means they were already paid (replay),
+    // which is benign and does not require an alert. "doesn't exist on this invoice" is a
+    // genuine mismatch (money moved via Stripe but records disagree about what stages were paid).
+    // Filter by invoice_id as well, so a stage id belonging to another invoice is caught
+    // rather than silently accepted: the session metadata is the only thing telling us which
+    // stages to stamp, and we must verify they belong to the named invoice.
+    const { data: existingStages, error: existingError } = await adminClient
+      .from('invoice_payment_stages')
+      .select('id, invoice_id')
+      .in('id', stageIds)
+      .eq('invoice_id', invoiceId)
+
+    if (existingError) {
+      logger.error('[stripe/webhook] stage existence check failed', { error: existingError, invoiceId })
+      // Return early without deriving status or updating the invoice. Same reasoning as above:
+      // we cannot know whether the stages exist, so we cannot safely derive status.
+      await sendAlert({
+        type: 'invoice_payment_status_indeterminate',
+        severity: 'error',
+        invoiceId,
+        failureReason: `stage existence check failed: ${existingError.message}`,
+      })
+      return
+    }
+
+    const existingIds = new Set((existingStages ?? []).map((r) => r.id))
+    const missing = stageIds.filter((id: string) => !existingIds.has(id))
+    if (missing.length > 0) {
+      await sendAlert({
+        type: 'invoice_payment_stage_mismatch',
+        severity: 'error',
+        invoiceId,
+        missingStageIds: missing,
+      })
+    }
+  }
+
+  // Read all stage rows for the invoice to determine status. The helper needs the full set
+  // (both paid and unpaid) to correctly distinguish "all paid" from "some paid".
+  const { data: allStages, error: stagesError } = await adminClient
+    .from('invoice_payment_stages')
+    .select('id, paid_at')
+    .eq('invoice_id', invoiceId)
+
+  if (stagesError) {
+    logger.error('[stripe/webhook] invoice stages query failed', { error: stagesError, invoiceId })
+    // Return early without deriving status or updating the invoice. Money has moved and the
+    // stages may or may not be paid, but we cannot know. Stripe will retry this webhook; the
+    // stage stamping above is idempotent and the next attempt will succeed in reading stages.
+    // Proceeding with an empty-array assumption would silently corrupt the invoice's status.
+    await sendAlert({
+      type: 'invoice_payment_status_indeterminate',
+      severity: 'error',
+      invoiceId,
+      failureReason: `stages query failed: ${stagesError.message}`,
+    })
     return
   }
 
-  // 'final' or default 'full' — both mark the invoice fully paid +
-  // mirror the total back onto the linked event.
-  const updateFields =
-    paymentType === 'final'
-      ? {
-          final_paid_at: now,
-          paid_at: now,
-          status: 'paid' as const,
-          stripe_payment_intent_id: paymentIntentId,
-        }
-      : { status: 'paid' as const, paid_at: now, stripe_payment_intent_id: paymentIntentId }
+  const newStatus = deriveInvoiceStatusFromStages(allStages ?? [])
+  const updateFields: Record<string, unknown> = {}
 
-  await adminClient.from('invoices').update(updateFields).eq('id', invoiceId)
+  if (newStatus === 'paid') {
+    updateFields.status = 'paid'
+    updateFields.paid_at = now
+    updateFields.stripe_payment_intent_id = paymentIntentId
+  } else if (newStatus === 'deposit_paid') {
+    updateFields.status = 'deposit_paid'
+  }
 
-  const { data: invoice } = await adminClient
-    .from('invoices')
-    .select('couple_id, subtotal, tax_rate')
-    .eq('id', invoiceId)
-    .single()
+  // Only update if the status changed (avoid unnecessary writes).
+  if (Object.keys(updateFields).length > 0) {
+    const { error: invoiceError } = await adminClient.from('invoices').update(updateFields).eq('id', invoiceId)
+    if (invoiceError) {
+      logger.error('[stripe/webhook] invoice status update failed', { error: invoiceError, invoiceId })
+      // Return early without mirroring the event price. The invoice status is now unknown
+      // (we know the stages were stamped but we cannot confirm the status was written),
+      // so we must not make dependent writes. Stripe will retry; the next attempt will
+      // succeed in updating the invoice and will run the mirror.
+      await sendAlert({
+        type: 'invoice_payment_status_indeterminate',
+        severity: 'error',
+        invoiceId,
+        failureReason: `invoice status update failed: ${invoiceError.message}`,
+      })
+      return
+    }
+  }
 
-  if (invoice) {
-    const total = invoice.subtotal + invoice.subtotal * ((invoice.tax_rate || 0) / 100)
-    await adminClient.from('events').update({ price: total }).eq('couple_id', invoice.couple_id)
+  // If the invoice is now fully paid, mirror the total back onto the linked event.
+  if (newStatus === 'paid') {
+    const { data: invoice, error: invoiceReadError } = await adminClient
+      .from('invoices')
+      .select('couple_id, subtotal, tax_rate')
+      .eq('id', invoiceId)
+      .single()
+
+    if (invoiceReadError) {
+      logger.error('[stripe/webhook] invoice read failed for event-price mirror', {
+        error: invoiceReadError,
+        invoiceId,
+      })
+    } else if (invoice) {
+      const total = invoice.subtotal + invoice.subtotal * ((invoice.tax_rate || 0) / 100)
+      const { error: eventError } = await adminClient
+        .from('events')
+        .update({ price: total })
+        .eq('couple_id', invoice.couple_id)
+      if (eventError) {
+        logger.error('[stripe/webhook] event price mirror failed', { error: eventError, invoiceId })
+      }
+    }
   }
 }
 

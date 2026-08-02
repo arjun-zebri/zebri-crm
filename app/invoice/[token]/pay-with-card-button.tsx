@@ -23,11 +23,12 @@ interface PayWithCardButtonProps {
   branding: PublicBranding
   /** Action block overrides for button color and radius. Required. */
   actionStyle: { color: string; radius: number }
-  paymentType?: 'full' | 'deposit' | 'final'
+  paymentType?: 'stage' | 'remaining'
+  stageId?: string
   label?: string
 }
 
-export function PayWithCardButton({ invoiceId, shareToken, branding, actionStyle, paymentType = 'full', label = 'Pay with card' }: PayWithCardButtonProps) {
+export function PayWithCardButton({ invoiceId, shareToken, branding, actionStyle, paymentType = 'remaining', stageId, label = 'Pay with card' }: PayWithCardButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,10 +36,14 @@ export function PayWithCardButton({ invoiceId, shareToken, branding, actionStyle
     setLoading(true)
     setError(null)
     try {
+      const body: Record<string, unknown> = { invoiceId, shareToken, paymentType }
+      if (stageId) {
+        body.stageId = stageId
+      }
       const res = await fetch('/api/stripe/invoice-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoiceId, shareToken, paymentType }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok || !data.url) {

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { shouldShowOnboarding } from '@/lib/branding/onboarding-gate'
-import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
 import type { TextCase } from '@/lib/branding/text-case'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
@@ -50,7 +49,6 @@ interface UserMetadata {
   density?: Density
   corner_radius?: number
   doc_padding?: number
-  proposal_labels?: Record<string, string>
   theme_preset?: ThemeIdOrCustom
   brand_kit_name?: string
   active_kit_id?: string | null
@@ -71,8 +69,7 @@ interface UserMetadata {
   section_spacing?: number
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
-  // `quote` is the legacy pre-proposals key; read-only fallback.
-  branding_blocks?: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] }
+  branding_blocks?: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] }
   brand_kits?: BrandKit[]
   portal_sections?: {
     timeline?: boolean
@@ -86,7 +83,7 @@ interface UserMetadata {
 }
 
 interface UserBrandingRow {
-  branding_blocks: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] } | null
+  branding_blocks: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] } | null
   brand_kits: BrandKit[] | null
   portal_sections: {
     timeline?: boolean
@@ -135,6 +132,18 @@ export default function BrandingPage() {
     // the branding lint cleanup for mount-only reads).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLikelyNeedsOnboarding(localStorage.getItem(ONBOARDED_CACHE_KEY) !== 'true')
+  }, [])
+
+  // TEMPORARY: dev-only re-trigger. The sidebar "Replay onboarding" button
+  // (development builds only) navigates here with ?onboarding=1 to force the
+  // wizard open without touching user_branding.onboarded_at. Remove together
+  // with the sidebar button once onboarding QA has a permanent home.
+  const [forceOnboarding, setForceOnboarding] = useState(false)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('onboarding') === '1') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForceOnboarding(true)
+    }
   }, [])
 
   useEffect(() => {
@@ -252,7 +261,7 @@ export default function BrandingPage() {
     // Seed branding_blocks from the default tree for each ENABLED surface only.
     // Disabled surfaces get empty arrays.
     const branding_blocks: Record<string, Block[]> = {}
-    for (const surface of ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as SurfaceTab[]) {
+    for (const surface of ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as SurfaceTab[]) {
       branding_blocks[surface] = result.enabledSurfaces.includes(surface)
         ? defaultBlocksFor(surface)
         : []
@@ -297,6 +306,10 @@ export default function BrandingPage() {
         onboarded_at: new Date().toISOString(),
       })
       localStorage.setItem(ONBOARDED_CACHE_KEY, 'true')
+      // Clear the dev-only force flag so Skip/Finish actually dismisses the
+      // modal. Without this, a wizard opened via ?onboarding=1 keeps
+      // `showOnboarding` pinned true and the modal never closes.
+      setForceOnboarding(false)
       // Remount the editor so it picks up the wizard's choices immediately.
       setDataVersion((v) => v + 1)
     } catch (err) {
@@ -324,9 +337,6 @@ export default function BrandingPage() {
   // Distinguish "never saved" (undefined → use defaults) from "saved empty"
   // (deliberately deleted by the user → preserve the empty array).
   const blocksSrc = branding?.branding_blocks ?? metadata?.branding_blocks ?? {}
-  // Legacy fallback: pre-rollout saves keyed the surface `quote`.
-  const proposalSrc = blocksSrc.proposal ?? blocksSrc.quote
-  const migratedProposal = proposalSrc !== undefined ? repairBlocks('proposal', migrateBlocks(proposalSrc, 'proposal')) : null
   const migratedInvoice  = blocksSrc.invoice  !== undefined ? repairBlocks('invoice', migrateBlocks(blocksSrc.invoice, 'invoice'))  : null
   const migratedContract = blocksSrc.contract !== undefined ? repairBlocks('contract', migrateBlocks(blocksSrc.contract, 'contract')) : null
   const migratedPortal   = blocksSrc.portal   !== undefined ? repairBlocks('portal', migrateBlocks(blocksSrc.portal, 'portal'))   : null
@@ -335,9 +345,8 @@ export default function BrandingPage() {
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
-  // Default to all six surfaces enabled
+  // Default to all five surfaces enabled
   const defaultEnabledSurfaces: Record<string, boolean> = {
-    proposal: true,
     invoice: true,
     contract: true,
     portal: true,
@@ -347,6 +356,7 @@ export default function BrandingPage() {
   const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
   const onboardedAt = branding?.onboarded_at ?? null
   const showOnboarding =
+    forceOnboarding ||
     shouldShowOnboarding({
       loading,
       cacheSaysNeedsOnboarding: likelyNeedsOnboarding,
@@ -388,7 +398,6 @@ export default function BrandingPage() {
               // Only fall back to defaults when the user has never saved this
               // surface. An empty array means they intentionally deleted everything
               // and should see the empty state, not the defaults.
-              proposal: migratedProposal !== null ? migratedProposal : defaultBlocksFor('proposal'),
               invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
               contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
               portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
@@ -416,7 +425,6 @@ export default function BrandingPage() {
               files: portalSrc.files ?? true,
               vows: portalSrc.vows ?? true,
             },
-            proposalLabels: resolveProposalLabels(metadata?.proposal_labels),
             headingSize: typeof metadata?.heading_size === 'number' ? metadata.heading_size : 32,
             bodySize: typeof metadata?.body_size === 'number' ? metadata.body_size : 15,
             headingCase: metadata?.heading_case ?? 'none',

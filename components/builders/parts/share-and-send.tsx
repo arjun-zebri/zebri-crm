@@ -179,9 +179,9 @@ export function ShareAndSend({
             ) : null}
           </>
         ) : canMarkSent && onMarkSent && shareUrl ? (
-          // Draft whose link isn't live yet (proposals ship with the
-          // token disabled until a send): the out-of-band path still
-          // needs to be reachable — marking as sent enables the link.
+          // Draft whose link isn't live yet (the token is disabled
+          // until a send): the out-of-band path still needs to be
+          // reachable — marking as sent enables the link.
           <button
             type="button"
             onClick={onMarkSent}

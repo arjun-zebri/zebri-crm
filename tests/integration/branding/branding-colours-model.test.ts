@@ -128,44 +128,44 @@ describe('Branding colours role-based model', () => {
     expect(branding.secondary_text_color).toBe('#FFFFFF')
   })
 
-  it('does not include dropped keys in raw_user_meta_data', async () => {
-    const admin = serviceClient()
-
-    // Get the raw user metadata to verify dropped keys were removed by migration
-    const { data: users, error } = await admin.auth.admin.listUsers()
-
+  it('does not store dropped colour keys in raw_user_meta_data', async () => {
+    // The dropped controls (accent_color, muted_color, secondary_text_color,
+    // page_background) are derived on read by _user_branding, never stored.
+    // Writing a retained colour must not resurrect them.
+    const { data, error } = await userA.client.auth.updateUser({
+      data: { heading_color: '#111111' },
+    })
     expect(error).toBeNull()
-    const userAData = users?.users.find((u) => u.id === userA.id)
 
-    if (userAData?.user_metadata) {
-      const metadata = userAData.user_metadata as Record<string, unknown>
-      // These keys were removed by the migration and should not be present
-      // (they are now derived on-read in _user_branding)
-      expect(metadata).not.toHaveProperty('accent_color')
-      expect(metadata).not.toHaveProperty('muted_color')
-      expect(metadata).not.toHaveProperty('secondary_text_color')
-      expect(metadata).not.toHaveProperty('page_background')
-    }
+    const metadata = (data.user?.user_metadata ?? {}) as Record<string, unknown>
+    expect(metadata).not.toHaveProperty('accent_color')
+    expect(metadata).not.toHaveProperty('muted_color')
+    expect(metadata).not.toHaveProperty('secondary_text_color')
+    expect(metadata).not.toHaveProperty('page_background')
   })
 
-  it('retains user-controllable colour keys in raw_user_meta_data', async () => {
-    const admin = serviceClient()
-
-    const { data: users, error } = await admin.auth.admin.listUsers()
-
-    expect(error).toBeNull()
-    const userAData = users?.users.find((u) => u.id === userA.id)
-
-    if (userAData?.user_metadata) {
-      const metadata = userAData.user_metadata as Record<string, unknown>
-      // These are still user-controllable and should be present
-      expect(metadata).toHaveProperty('heading_color')
-      expect(metadata).toHaveProperty('subheading_color')
-      expect(metadata).toHaveProperty('text_color')
-      expect(metadata).toHaveProperty('surface_color')
-      expect(metadata).toHaveProperty('brand_color')
-      expect(metadata).toHaveProperty('secondary_color')
+  it('persists user-controllable colour keys in raw_user_meta_data', async () => {
+    // The six role-based colours are user-controllable display fields, so
+    // setting them via the user's own client persists them into
+    // raw_user_meta_data (unset colours stay absent and derive on read).
+    const controllable = {
+      heading_color: '#101010',
+      subheading_color: '#202020',
+      text_color: '#303030',
+      surface_color: '#F0F0F0',
+      brand_color: '#404040',
+      secondary_color: '#505050',
     }
+    const { data, error } = await userA.client.auth.updateUser({ data: controllable })
+    expect(error).toBeNull()
+
+    const metadata = (data.user?.user_metadata ?? {}) as Record<string, unknown>
+    expect(metadata.heading_color).toBe('#101010')
+    expect(metadata.subheading_color).toBe('#202020')
+    expect(metadata.text_color).toBe('#303030')
+    expect(metadata.surface_color).toBe('#F0F0F0')
+    expect(metadata.brand_color).toBe('#404040')
+    expect(metadata.secondary_color).toBe('#505050')
   })
 
   it('RLS on user_branding denies cross-tenant access', async () => {

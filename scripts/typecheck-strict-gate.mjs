@@ -41,9 +41,8 @@ import { execSync } from 'node:child_process';
 // replaced both legacy managers; widened optional prop types on the
 // templates/payments surfaces for exactOptionalPropertyTypes; all new
 // template code is strict-clean). Locking in.
-// Proposals rollout / quotes removal: 305 → 302 (deleted quote builder,
-// public quote page and quote automations carried strict errors; all
-// proposal code is strict-clean). Locking in.
+// Quotes removal: 305 → 302 (deleted quote builder, public quote page and
+// quote automations carried strict errors). Locking in.
 // Branding editor redesign: net strict-clean new code + deletions (starter
 // designs, dead theme paths) reduced strict errors 302 -> 295.
 // Branding overhaul phase-a completion: fixed exactOptionalPropertyTypes
@@ -56,12 +55,17 @@ import { execSync } from 'node:child_process';
 // resolved two more inference sites on the branding page (287 -> 285).
 // Welcome onboarding wizard: extracted usePreviewScript, useReducedMotion, and
 // preview shape utilities into pure modules (286 -> 286). Locking in at 286.
-// Proposals single/multi-package + branding batch drifted the count up to 297
-// (new proposal surfaces passed `undefined` into optional props, plus grandfathered
+// Single/multi-package + branding batch drifted the count up to 297
+// (new surfaces passed `undefined` into optional props, plus grandfathered
 // noUncheckedIndexedAccess in contrast/extract-colors). Fixed by widening the
-// proposal/action-slot optional prop types to `| undefined` and guarding the pure
-// colour helpers (297 -> 281). Locking in at 281.
-const STRICT_BUDGET = 281;
+// action-slot optional prop types to `| undefined` and guarding the pure
+// colour helpers (297 -> 281).
+// Invoice-modal GST-inclusive + skeleton batch: moving useCurrentBranding onto
+// React Query dropped three `useState` inference sites (281 -> 278). Locking in
+// at 278.
+// Feature removal (2026-07-31): deleting the retired offer-document surface,
+// builders, and email cleared five strict-error sites (278 -> 273). Locking in.
+const STRICT_BUDGET = 273;
 
 function runTscStrict() {
   try {

@@ -36,6 +36,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame';
 import { findActionStyle } from '@/lib/branding/public-renderer';
 import {
   bodyFontFamily,
@@ -95,30 +96,23 @@ export default function PublicInvoicePage() {
   /* ─── Derived values (cheap, recomputed on every render) ─── */
   const taxAmount = invoice ? invoice.subtotal * ((invoice.tax_rate || 0) / 100) : 0;
   const total = invoice ? invoice.subtotal + taxAmount : 0;
-  const hasSchedule = invoice?.deposit_percent != null;
-  const depositAmount = hasSchedule
-    ? total * ((invoice!.deposit_percent ?? 0) / 100)
-    : 0;
-  const finalAmount = hasSchedule ? total - depositAmount : 0;
+  const stages = invoice?.stages ?? [];
+  const hasSchedule = stages.length > 0;
+  // Sort stages by position before finding the payable one. The API route
+  // orders by position server-side; the page must derive the earliest unpaid
+  // stage the same way or pay buttons land on stages the route will reject.
+  const orderedStages = [...stages].sort((a, b) => a.position - b.position);
+  const nextPayableStageId = orderedStages.find((s) => !s.paid_at)?.id ?? null;
+  // Components render from this, so stages appear in payment order regardless of
+  // how the RPC happened to return them.
+  const invoiceWithOrderedStages = invoice ? { ...invoice, stages: orderedStages } : null;
   const stripeReady =
     invoice?.stripe_payment_enabled && invoice?.stripe_connect_enabled;
-  const showFullButton =
-    !!stripeReady && !hasSchedule && pageState !== 'paid' && pageState !== 'cancelled';
-  const showDepositButton =
-    !!stripeReady &&
-    hasSchedule &&
-    !invoice?.deposit_paid_at &&
-    pageState !== 'paid' &&
-    pageState !== 'cancelled';
-  const showFinalButton =
-    !!stripeReady &&
-    hasSchedule &&
-    !!invoice?.deposit_paid_at &&
-    !invoice?.final_paid_at &&
-    pageState !== 'cancelled';
+  const showPayButtons =
+    !!stripeReady && pageState !== 'paid' && pageState !== 'cancelled';
 
   /* ─── Branding-derived values ─── */
-  const pageBg = invoice?.surface_color || '#fafafa';
+  const pageBg = DOC_CANVAS_BG;
   const textColor = invoice?.text_color || '#111827';
   const mutedColor = invoice?.muted_color || '#6B7280';
   const radius = invoice?.corner_radius ?? 16;
@@ -165,7 +159,7 @@ export default function PublicInvoicePage() {
       className={`min-h-screen ${pad.page} px-4`}
       style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
     >
-      <div className="max-w-lg lg:max-w-2xl mx-auto @container/doc">
+      <div className="mx-auto w-full @container/doc" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
         {showHeaderBannerImage ? (
           <div
             className="mb-5 overflow-hidden"
@@ -200,38 +194,32 @@ export default function PublicInvoicePage() {
           />
         ) : null}
 
-        {invoice &&
+        {invoiceWithOrderedStages &&
         pageState !== 'not_found' &&
         pageState !== 'cancelled' &&
         pageState !== 'loading' ? (
-          invoice.branding_blocks && invoice.branding_blocks.length > 0 ? (
+          invoiceWithOrderedStages.branding_blocks && invoiceWithOrderedStages.branding_blocks.length > 0 ? (
             <InvoiceBrandedCard
-              invoice={invoice}
+              invoice={invoiceWithOrderedStages}
               preBlocks={preBlocks}
               postBlocks={postBlocks}
               hasSchedule={hasSchedule}
-              depositAmount={depositAmount}
-              finalAmount={finalAmount}
-              showFullButton={showFullButton}
-              showDepositButton={showDepositButton}
-              showFinalButton={showFinalButton}
-              branding={invoice}
+              nextPayableStageId={nextPayableStageId}
+              showPayButtons={showPayButtons}
+              branding={invoiceWithOrderedStages}
               radius={radius}
               actionStyle={actionStyle}
             />
           ) : (
             <InvoiceFallbackCard
-              invoice={invoice}
+              invoice={invoiceWithOrderedStages}
               pageState={pageState}
               hasSchedule={hasSchedule}
               taxAmount={taxAmount}
               total={total}
-              depositAmount={depositAmount}
-              finalAmount={finalAmount}
-              showFullButton={showFullButton}
-              showDepositButton={showDepositButton}
-              showFinalButton={showFinalButton}
-              branding={invoice}
+              nextPayableStageId={nextPayableStageId}
+              showPayButtons={showPayButtons}
+              branding={invoiceWithOrderedStages}
               radius={radius}
               actionStyle={actionStyle}
             />

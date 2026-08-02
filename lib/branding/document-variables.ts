@@ -53,8 +53,8 @@ const INVOICE_DOC: DocumentVariable[] = [
   { id: 'subtotal', label: 'Subtotal', group: 'Amounts', format: 'currency', source: 'Calculated from the invoice line items.' },
   { id: 'tax', label: 'Tax', group: 'Amounts', format: 'currency', source: 'The GST calculated on the invoice.' },
   { id: 'total', label: 'Total', group: 'Amounts', format: 'currency', source: 'The invoice total (line items plus tax).' },
-  { id: 'deposit_amount', label: 'Deposit amount', group: 'Amounts', format: 'currency', source: 'The deposit amount from the payment schedule.' },
-  { id: 'deposit_due_date', label: 'Deposit due date', group: 'Amounts', format: 'date', source: 'The deposit due date from the payment schedule.' },
+  { id: 'deposit_amount', label: 'Deposit amount', group: 'Amounts', format: 'currency', source: 'The first payment on the invoice\'s schedule.' },
+  { id: 'deposit_due_date', label: 'Deposit due date', group: 'Amounts', format: 'date', source: 'The first payment\'s due date.' },
   { id: 'final_amount', label: 'Final amount', group: 'Amounts', format: 'currency', source: 'The final balance from the payment schedule.' },
   { id: 'final_due_date', label: 'Final due date', group: 'Amounts', format: 'date', source: 'The final balance due date from the payment schedule.' },
 ]
@@ -65,12 +65,6 @@ const CONTRACT_DOC: DocumentVariable[] = [
   { id: 'signer_name', label: 'Signer name', group: 'Document', format: 'text', source: "The signer's name on the contract." },
 ]
 
-const PROPOSAL_DOC: DocumentVariable[] = [
-  { id: 'proposal_number', label: 'Proposal number', group: 'Document', format: 'text', source: 'The proposal number, assigned when the proposal is sent.' },
-  { id: 'expiry_date', label: 'Expiry date', group: 'Document', format: 'date', source: "The document's expiry date." },
-  { id: 'total', label: 'Total', group: 'Amounts', format: 'currency', source: 'The total of the selected package.' },
-]
-
 /**
  * Variables offered on each surface. Line-item tables and totals stay
  * structured blocks; these are the text-shaped values that become inline chips.
@@ -78,7 +72,6 @@ const PROPOSAL_DOC: DocumentVariable[] = [
 export const VARIABLES_BY_SURFACE: Record<SurfaceTab, DocumentVariable[]> = {
   invoice: [...COUPLE, ...INVOICE_DOC, ...BUSINESS],
   contract: [...COUPLE, ...CONTRACT_DOC, ...BUSINESS],
-  proposal: [...COUPLE, ...PROPOSAL_DOC, ...BUSINESS],
   portal: [...COUPLE, ...BUSINESS],
   vendorTimeline: [...COUPLE, ...BUSINESS],
   questionnaire: [...COUPLE, ...BUSINESS],

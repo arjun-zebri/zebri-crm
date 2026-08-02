@@ -128,8 +128,8 @@ After that, CI's `supabase db push` runs cleanly.
 
 After the branding block hardening migrations deploy to production, run the
 idempotent repair sweep to upgrade existing `user_branding` rows from legacy
-block shapes (pre-Task-6: `headerBanner`, `proposalBody` markers) to the current
-format (package block trees, image blocks).
+block shapes (pre-Task-6: `headerBanner` markers) to the current
+format (image blocks).
 
 ```bash
 # Against production (with service-role credentials)

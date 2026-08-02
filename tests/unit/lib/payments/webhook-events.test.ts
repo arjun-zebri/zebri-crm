@@ -16,6 +16,7 @@ import {
   readPeriodEndIso,
   recordReplayAttempt,
 } from '@/lib/payments/webhook-events';
+import { deriveInvoiceStatusFromStages } from '@/lib/payments/invoice-status';
 
 afterEach(() => {
   _resetReplayCounterForTest();
@@ -203,5 +204,39 @@ describe('recordReplayAttempt', () => {
     recordReplayAttempt('evt_d');
     const r4 = recordReplayAttempt('evt_d');
     expect(r4.alertNow).toBe(false);
+  });
+});
+
+describe('deriveInvoiceStatusFromStages', () => {
+  it('returns paid for a stageless invoice (no stage rows)', () => {
+    const status = deriveInvoiceStatusFromStages([]);
+    expect(status).toBe('paid');
+  });
+
+  it('returns paid when every stage is settled', () => {
+    const stages = [
+      { id: 'st1', paid_at: '2026-07-02T00:00:00Z' },
+      { id: 'st2', paid_at: '2026-07-02T00:00:00Z' },
+    ];
+    const status = deriveInvoiceStatusFromStages(stages);
+    expect(status).toBe('paid');
+  });
+
+  it('returns deposit_paid when some stages remain unpaid', () => {
+    const stages = [
+      { id: 'st1', paid_at: '2026-07-02T00:00:00Z' },
+      { id: 'st2', paid_at: null },
+    ];
+    const status = deriveInvoiceStatusFromStages(stages);
+    expect(status).toBe('deposit_paid');
+  });
+
+  it('returns undefined when no stages are paid', () => {
+    const stages = [
+      { id: 'st1', paid_at: null },
+      { id: 'st2', paid_at: null },
+    ];
+    const status = deriveInvoiceStatusFromStages(stages);
+    expect(status).toBeUndefined();
   });
 });

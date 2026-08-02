@@ -5,8 +5,8 @@
  * `invoice_templates` / `invoice_template_items`. This store owns every
  * read and write so the shared manager component stays free of table
  * plumbing. (It used to also serve a `quote` kind; quote templates were
- * retired with the proposals rollout, but the kind parameter stays so
- * a future sibling table pair can slot back in.)
+ * retired, but the kind parameter stays so a future sibling table pair
+ * can slot back in.)
  *
  * The Supabase client is injected (not created here) so integration
  * tests can exercise the exact production code paths with a signed-in

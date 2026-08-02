@@ -178,28 +178,46 @@
    Uses !important because Tailwind v4 preflight (@layer base) resets
    h1-h6 font-size to inherit and ul/ol list-style to none, and we need
    to win against those without depending on layer ordering. */
+/* Contract-body SUBHEADING typography (clause headings). Each property is
+   driven by a `--cc-subheading-*` CSS variable whose FALLBACK equals the
+   historical hard-coded value, so a contract with no override renders exactly
+   as before. The variables are only ever *set* by an explicit MC override, on
+   the `.contract-content` wrapper (see contract-body-section.tsx). Per-level
+   sizes keep their own fallback; a size override collapses all three to one
+   value. Size/weight/colour keep the pre-existing `!important` (inline size/
+   weight/colour on headings was already overridden, so no regression). The
+   newly-added font-family + case are NON-`!important` (the sanitizer allows an
+   inline font-family on headings, which an `!important` rule would clobber);
+   they fall back to `inherit` (their prior no-rule state).
+   Contract-scoped — invoices/quotes never mount `.contract-content`. */
 .contract-content h1,
 .contract-content .ProseMirror h1 {
-  font-size: 1.5rem !important;
-  font-weight: 600 !important;
+  font-family: var(--cc-subheading-font, inherit);
+  font-size: var(--cc-subheading-size,1.5rem) !important;
+  font-weight: var(--cc-subheading-weight, 600) !important;
   line-height: 1.3 !important;
-  color: #111827 !important;
+  color: var(--cc-subheading-color, #111827) !important;
+  text-transform: var(--cc-subheading-case, inherit);
   margin: 1.5rem 0 0.75rem !important;
 }
 .contract-content h2,
 .contract-content .ProseMirror h2 {
-  font-size: 1.125rem !important;
-  font-weight: 600 !important;
+  font-family: var(--cc-subheading-font, inherit);
+  font-size: var(--cc-subheading-size,1.125rem) !important;
+  font-weight: var(--cc-subheading-weight, 600) !important;
   line-height: 1.4 !important;
-  color: #111827 !important;
+  color: var(--cc-subheading-color, #111827) !important;
+  text-transform: var(--cc-subheading-case, inherit);
   margin: 1.5rem 0 0.5rem !important;
 }
 .contract-content h3,
 .contract-content .ProseMirror h3 {
-  font-size: 1rem !important;
-  font-weight: 600 !important;
+  font-family: var(--cc-subheading-font, inherit);
+  font-size: var(--cc-subheading-size,1rem) !important;
+  font-weight: var(--cc-subheading-weight, 600) !important;
   line-height: 1.4 !important;
-  color: #111827 !important;
+  color: var(--cc-subheading-color, #111827) !important;
+  text-transform: var(--cc-subheading-case, inherit);
   margin: 1.1rem 0 0.375rem !important;
 }
 .contract-content h1:first-child,
@@ -208,11 +226,22 @@
 .contract-content .ProseMirror > h2:first-child {
   margin-top: 0 !important;
 }
+/* Contract-body PARAGRAPH typography. Colour + line-height + case are driven by
+   `--cc-body-*` variables whose fallbacks equal the historical values, so an
+   un-overridden paragraph is byte-identical. Case falls back to `inherit` (its
+   prior no-rule state). Paragraph font-family + size flow through the
+   `.contract-content` wrapper's inline style, not vars. These stay
+   NON-`!important` (as `color`/`line-height` were before this feature): the
+   sanitizer allows inline `color` on injected `<p>` tags, so an `!important`
+   rule would clobber a paragraph that already carries one. Without it, an
+   overridden paragraph still restyles (no `<p>` sets these inline in practice),
+   and any paragraph that does carry inline colour keeps it — no regression. */
 .contract-content p,
 .contract-content .ProseMirror p {
   margin: 0.5rem 0;
-  color: #374151;
-  line-height: 1.7;
+  color: var(--cc-body-color, #374151);
+  line-height: var(--cc-body-line-height, 1.7);
+  text-transform: var(--cc-body-case, inherit);
 }
 .contract-content ul,
 .contract-content .ProseMirror ul {

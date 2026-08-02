@@ -109,15 +109,10 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  const depositPercent = Number(
-    (user.user_metadata?.default_deposit_percent as number | undefined) ?? 25,
-  );
-
   const vars = buildContractVariables({
     couple: { name: couple.name, email: couple.email },
     firstEvent: firstEvent ?? null,
     userMeta: user.user_metadata ?? {},
-    depositPercent,
   });
 
   // `contract.content` is generated as Json; the renderer expects

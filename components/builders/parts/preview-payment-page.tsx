@@ -2,9 +2,9 @@
  * Payment-page preview — the most "real" of the three tabs.
  *
  * Renders the user's actual branded payment page using the same
- * `PublicBlockRenderer` the `/proposal/[token]` and `/invoice/[token]`
- * routes use, so the MC sees a pixel-faithful preview of what the
- * couple will see when they click the share link.
+ * `PublicBlockRenderer` the `/invoice/[token]` route uses, so the MC
+ * sees a pixel-faithful preview of what the couple will see when they
+ * click the share link.
  *
  * - Pulls live branding (colors + fonts + density + block tree) from
  *   `useCurrentBranding(surface)`.
@@ -20,6 +20,7 @@
 
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 
+import { DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame';
 import {
   type PublicDocData,
   PublicBlockRenderer,
@@ -77,6 +78,7 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
     })),
     subtotal: doc.items.reduce((sum, item) => sum + Number(item.amount || 0), 0),
     taxRate: doc.taxRate ?? 0,
+    gstInclusive: doc.gstInclusive ?? false,
     discountType: doc.discount?.type ?? null,
     discountValue: doc.discount?.value ?? null,
     paymentSchedule: doc.paymentSchedule ?? null,
@@ -119,7 +121,7 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
         ref={blockStackRef}
         className="mx-auto @container/doc"
         style={{
-          maxWidth: 640,
+          maxWidth: DOC_MAX_WIDTH_PX,
           fontFamily: headingFontFamily(branding),
         }}
       >

@@ -8,22 +8,24 @@ import { repairRow } from '@/scripts/repair-branding-blocks'
  *
  * Uses a mock Supabase client to test the repairRow function in isolation
  * without requiring a running database. Tests that:
- * 1. Legacy proposalBody + headerBanner trees are migrated and marked changed
+ * 1. Legacy trees (headerBanner + an unknown marker) are migrated/pruned and
+ *    the row is marked changed
  * 2. Second call on repaired data is idempotent (changed: false)
  */
 
 describe('branding repair sweep', () => {
-  it('migrates legacy proposalBody + headerBanner and is idempotent', async () => {
-    // Legacy branding_blocks with proposalBody marker (pre-Task-6 format)
+  it('migrates legacy headerBanner and prunes unknown markers, and is idempotent', async () => {
+    // Legacy branding_blocks: headerBanner migrates to image, and the unknown
+    // legacy `invoiceBody` marker is dropped (which changes the block count).
     const legacyBlocks: BlocksByDoc = {
-      proposal: [
+      invoice: [
         { id: 'hb', type: 'headerBanner' },
-        { id: 'pb', type: 'proposalBody', locked: true },
+        { id: 'ib', type: 'invoiceBody', locked: true } as unknown as BlocksByDoc['invoice'][number],
       ],
-      invoice: [],
       contract: [],
       portal: [
         { id: 'hb2', type: 'headerBanner' },
+        { id: 'cp', type: 'couplePortal', locked: true },
       ],
       vendorTimeline: [],
       questionnaire: [],
@@ -70,22 +72,18 @@ describe('branding repair sweep', () => {
     expect(upsertCalled).toBe(true)
 
     // Verify stored blocks were repaired
-    const proposal = storedBlocks.proposal
-    const proposalTypes = proposal.map((b) => b.type)
+    const invoiceTypes = storedBlocks.invoice.map((b) => b.type)
 
-    // proposalBody should be migrated to packageHeader + packageTotals + other package blocks
-    expect(proposalTypes).toContain('packageHeader')
-    expect(proposalTypes).toContain('packageTotals')
+    // headerBanner should be migrated to image; unknown invoiceBody dropped.
+    expect(invoiceTypes).toContain('image')
+    expect(invoiceTypes).not.toContain('headerBanner')
+    expect(invoiceTypes).not.toContain('invoiceBody')
 
-    // headerBanner should be migrated to image
-    expect(proposalTypes).toContain('image')
-    // proposalBody marker should no longer exist (replaced by package blocks)
-    expect(proposalTypes).not.toContain('proposalBody')
-
-    // Portal should also have headerBanner migrated to image
+    // Portal should also have headerBanner migrated to image, couplePortal kept.
     const portalTypes = storedBlocks.portal.map((b) => b.type)
     expect(portalTypes).toContain('image')
     expect(portalTypes).not.toContain('headerBanner')
+    expect(portalTypes).toContain('couplePortal')
 
     // Second call on already-repaired data: should return changed: false
     upsertCalled = false

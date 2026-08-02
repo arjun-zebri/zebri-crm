@@ -30,6 +30,8 @@ export interface TotalsPanelProps {
   /** Override the tax label. Defaults to "GST 10%". */
   taxLabel?: string | undefined;
   total: number;
+  /** Muted line under the total, e.g. "Prices include GST". Omit for none. */
+  note?: string | undefined;
 }
 
 export function TotalsPanel({
@@ -38,6 +40,7 @@ export function TotalsPanel({
   tax,
   taxLabel = 'GST 10%',
   total,
+  note,
 }: TotalsPanelProps) {
   const [rowsRef] = useAutoAnimate<HTMLDivElement>();
   return (
@@ -64,6 +67,11 @@ export function TotalsPanel({
             {formatCurrency(total)}
           </span>
         </div>
+        {note ? (
+          <p key="note" className="text-caption text-text-muted">
+            {note}
+          </p>
+        ) : null}
       </div>
     </div>
   );

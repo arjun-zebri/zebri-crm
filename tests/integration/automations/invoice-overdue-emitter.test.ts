@@ -49,8 +49,8 @@ async function seedCouple(user: TestUser): Promise<string> {
 async function seedInvoice(
   user: TestUser,
   coupleId: string,
-  dueDate: string,
-  status: 'sent' | 'draft' | 'paid' | 'cancelled' = 'sent',
+  dueDate: string | null,
+  status: 'sent' | 'draft' | 'paid' | 'cancelled' | 'deposit_paid' = 'sent',
 ): Promise<string> {
   const admin = serviceClient()
   const { data, error } = await admin
@@ -67,6 +67,33 @@ async function seedInvoice(
     .select('id')
     .single()
   if (error || !data) throw new Error(`seed invoice: ${error?.message}`)
+  return (data as { id: string }).id
+}
+
+async function seedStage(
+  user: TestUser,
+  invoiceId: string,
+  position: number,
+  dueDate: string | null,
+  paidAt: string | null = null,
+): Promise<string> {
+  const admin = serviceClient()
+  const { data, error } = await admin
+    .from('invoice_payment_stages' as never)
+    .insert({
+      user_id: user.id,
+      invoice_id: invoiceId,
+      position,
+      label: `Stage ${position}`,
+      amount_type: 'remainder',
+      amount_value: null,
+      amount_cents: 1000,
+      due_date: dueDate,
+      paid_at: paidAt,
+    } as never)
+    .select('id')
+    .single()
+  if (error || !data) throw new Error(`seed stage: ${error?.message}`)
   return (data as { id: string }).id
 }
 
@@ -260,5 +287,93 @@ describe('invoice_overdue time-emitter', () => {
     } finally {
       await otherUser.cleanup()
     }
+  })
+
+  it('still emits for later stages after the first is paid', async () => {
+    // The live bug: status flips to deposit_paid on first payment and the old
+    // emitter's .eq('status','sent') filter stopped matching the invoice at all.
+    const coupleId = await seedCouple(user)
+    const invoiceId = await seedInvoice(user, coupleId, null, 'deposit_paid')
+    await seedStage(user, invoiceId, 1, isoDateOffset(-30), '2026-07-01T00:00:00Z')
+    await seedStage(user, invoiceId, 2, isoDateOffset(-1), null)
+    await seedInvoiceOverdueAutomation(user, { daysOverdueMin: 1 })
+
+    const result = await runTimeEmitters(serviceClient())
+    expect(result.emitted.invoice_overdue).toBe(1)
+
+    const events = await invoiceOverdueEventsFor(invoiceId)
+    expect(events).toHaveLength(1)
+    expect(events[0]!.payload.stage_position).toBe(2)
+    expect(events[0]!.payload.stage_count).toBe(2)
+  })
+
+  it('emits one event per stage when two fall overdue the same day', async () => {
+    const coupleId = await seedCouple(user)
+    const invoiceId = await seedInvoice(user, coupleId, null, 'sent')
+    await seedStage(user, invoiceId, 1, isoDateOffset(-1), null)
+    await seedStage(user, invoiceId, 2, isoDateOffset(-1), null)
+    await seedInvoiceOverdueAutomation(user, { daysOverdueMin: 1 })
+
+    const result = await runTimeEmitters(serviceClient())
+    expect(result.emitted.invoice_overdue).toBe(2)
+  })
+
+  it('does not emit for a paid stage', async () => {
+    const coupleId = await seedCouple(user)
+    const invoiceId = await seedInvoice(user, coupleId, null, 'sent')
+    await seedStage(user, invoiceId, 1, isoDateOffset(-1), '2026-07-01T00:00:00Z')
+    await seedInvoiceOverdueAutomation(user, { daysOverdueMin: 1 })
+
+    const result = await runTimeEmitters(serviceClient())
+    expect(result.emitted.invoice_overdue).toBe(0)
+  })
+
+  it('still emits off the invoice due_date when there are no stages', async () => {
+    const coupleId = await seedCouple(user)
+    const invoiceId = await seedInvoice(user, coupleId, isoDateOffset(-1), 'sent')
+    await seedInvoiceOverdueAutomation(user, { daysOverdueMin: 1 })
+
+    const result = await runTimeEmitters(serviceClient())
+    expect(result.emitted.invoice_overdue).toBe(1)
+
+    const events = await invoiceOverdueEventsFor(invoiceId)
+    expect(events).toHaveLength(1)
+    expect(events[0]!.payload.stage_id).toBeNull()
+  })
+
+  it('does not re-emit the same stage twice in one day', async () => {
+    const coupleId = await seedCouple(user)
+    const invoiceId = await seedInvoice(user, coupleId, null, 'sent')
+    await seedStage(user, invoiceId, 1, isoDateOffset(-1), null)
+    await seedInvoiceOverdueAutomation(user, { daysOverdueMin: 1 })
+
+    const r1 = await runTimeEmitters(serviceClient())
+    expect(r1.emitted.invoice_overdue).toBe(1)
+
+    const r2 = await runTimeEmitters(serviceClient())
+    expect(r2.emitted.invoice_overdue).toBe(0)
+  })
+
+  it('correctly identifies the final stage with non-contiguous positions', async () => {
+    // Regression: when positions are {1, 3} and count is 2,
+    // the old `position === count` logic fails to identify position 3 as final.
+    // With the fix, stage_is_final is stamped on the payload based on max position.
+    const coupleId = await seedCouple(user)
+    const invoiceId = await seedInvoice(user, coupleId, null, 'sent')
+    await seedStage(user, invoiceId, 1, isoDateOffset(-1), null)
+    await seedStage(user, invoiceId, 3, isoDateOffset(-1), null)
+    await seedInvoiceOverdueAutomation(user, { daysOverdueMin: 1 })
+
+    const result = await runTimeEmitters(serviceClient())
+    expect(result.emitted.invoice_overdue).toBe(2)
+
+    const events = await invoiceOverdueEventsFor(invoiceId)
+    expect(events).toHaveLength(2)
+
+    const stage1Event = events.find((e) => e.payload.stage_position === 1)
+    const stage3Event = events.find((e) => e.payload.stage_position === 3)
+
+    expect(stage1Event?.payload.stage_is_final).toBe(false)
+    expect(stage3Event?.payload.stage_is_final).toBe(true)
   })
 })

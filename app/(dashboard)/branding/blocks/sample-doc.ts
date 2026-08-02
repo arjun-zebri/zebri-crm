@@ -91,12 +91,10 @@ function sampleQuestionnaireDoc(): PublicDocData {
 
 /**
  * Map of surface tabs to their sample document data.
- * Proposal surface doesn't include lineItems/totals/paymentDetails blocks, so no sample needed.
  */
 export const SAMPLE_DOC_BY_SURFACE: Record<SurfaceTab, PublicDocData> = {
   invoice: sampleInvoiceDoc(),
   contract: sampleContractDoc(),
-  proposal: sampleInvoiceDoc(), // Fallback (not used by proposal blocks)
   portal: samplePortalDoc(),
   vendorTimeline: sampleVendorTimelineDoc(),
   questionnaire: sampleQuestionnaireDoc(),

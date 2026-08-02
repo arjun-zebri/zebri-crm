@@ -21,6 +21,7 @@ import type {
 export type CoupleProfileSection =
   | 'overview'
   | 'tasks'
+  | 'time'
   | 'contacts'
   | 'timeline'
   | 'songs'
@@ -41,6 +42,7 @@ export type CoupleProfileSection =
 export const SECTION_KEYS: readonly CoupleProfileSection[] = [
   'overview',
   'tasks',
+  'time',
   'contacts',
   'timeline',
   'songs',

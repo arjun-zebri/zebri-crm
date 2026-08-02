@@ -34,7 +34,7 @@ export interface StarterLineItemSet {
 
 /* ─── Packages: reusable service bundles ───────────────────────── */
 
-/** Starter service packages an MC can drop into proposals and invoices. */
+/** Starter service packages an MC can drop into invoices. */
 export const STARTER_PACKAGES: readonly StarterLineItemSet[] = [
   {
     name: 'Ceremony MC',

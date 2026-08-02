@@ -60,19 +60,27 @@ export interface PublicDocData {
   items: PublicDocItem[]
   subtotal: number
   taxRate: number
+  /**
+   * Invoice-only display flag. When true the totals block renders a
+   * "Prices include GST" note under the total, so a couple looking at a
+   * GST-inclusive price knows the tax is already covered. Purely
+   * informational: it never participates in subtotal, tax, or total.
+   */
+  gstInclusive?: boolean
   discountType?: 'percentage' | 'fixed' | null
   discountValue?: number | null
   /**
-   * Invoice deposit / final-balance schedule. When present, the `paymentSchedule`
-   * block renders the two stages with these amounts and due dates. Null/undefined
-   * means no schedule, so the block renders nothing.
+   * Invoice payment stages. When present, the `paymentSchedule` block renders
+   * one row per stage. Null or undefined means no schedule, so the block
+   * renders nothing. Previously a fixed deposit + final pair.
    */
   paymentSchedule?: {
-    depositPercent: number
-    depositAmount: number
-    depositDueDate: string | null
-    finalAmount: number
-    finalDueDate: string | null
+    stages: Array<{
+      label: string
+      amountCents: number
+      dueDate: string | null
+      paidAt: string | null
+    }>
   } | null
 }
 

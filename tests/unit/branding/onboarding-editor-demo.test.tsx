@@ -27,7 +27,7 @@ describe('StepEditorDemo', () => {
     expect(accept).toHaveStyle({ background: DEMO_GOLD, color: '#ffffff' })
 
     // The canvas renders the real public document.
-    expect(screen.getByText('Accept proposal')).toBeInTheDocument()
+    expect(screen.getByText('Pay now')).toBeInTheDocument()
     expect(screen.getByText('Forever & Always')).toBeInTheDocument()
   })
 

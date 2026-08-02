@@ -1,6 +1,6 @@
 # Zebri Custom Branding
 
-MCs customize the look and layout of all customer-facing surfaces via a Canva-grade block-based editor. Branding flows from the editor into quotes, invoices, contracts, proposals, vendor timelines, questionnaires, emails, and PDFs.
+MCs customize the look and layout of all customer-facing surfaces via a Canva-grade block-based editor. Branding flows from the editor into invoices, contracts, the client portal, vendor timelines (run sheets), questionnaires, emails, and PDFs.
 
 **Branded surfaces (Phase 11, 2026-07-17):**
 
@@ -9,8 +9,7 @@ MCs customize the look and layout of all customer-facing surfaces via a Canva-gr
 | Quote | `/quote/[token]` | shipped |
 | Invoice | `/invoice/[token]` | shipped |
 | Contract | `/contract/[token]` | shipped |
-| Proposal | `/proposal/[token]` | shipped |
-| Vendor Timeline | `/vendor-timeline/[token]` | shipped |
+| Vendor Timeline (Run sheet) | `/vendor-timeline/[token]` | shipped |
 | Questionnaire | `/questionnaire/[token]` | shipped |
 | Email (sent docs) | Resend transactional | shipped |
 | PDF (generated docs) | Supabase Function | shipped |
@@ -19,7 +18,7 @@ MCs customize the look and layout of all customer-facing surfaces via a Canva-gr
 
 # Block-Tree Model
 
-Branding is a per-surface block tree stored in `user_branding.branding_blocks` (jsonb, keyed by surface). Surfaces are `quote`, `invoice`, `contract`, `proposal`, `vendorTimeline`, `questionnaire`. Empty tree (`[]`) means the surface is disabled (public render returns null).
+Branding is a per-surface block tree stored in `user_branding.branding_blocks` (jsonb, keyed by surface). Surfaces are `invoice`, `contract`, `couplePortal`, `vendorTimeline`, `questionnaire`. Empty tree (`[]`) means the surface is disabled (public render returns null).
 
 ## Rich text + variables (Canva-style free text)
 
@@ -30,7 +29,7 @@ Free-text block fields are **TipTap rich text** (per-range bold / italic / under
 - **Server render (public surfaces):** `renderRichText(json, values)` in `lib/branding/render-rich-text.ts` = `generateHTML` (controlled extensions) → `sanitizeRichHtml` (the security boundary: validates every style value, strips anything unexpected — `lib/branding/rich-text-sanitize.ts`) → `resolveVariablesInHtml` (chips → escaped real values — `lib/branding/resolve-variables.ts`). Because storage is JSON rendered through a fixed extension set, no arbitrary attribute can reach a public money page.
 - **Variables:** catalogue per surface in `lib/branding/document-variables.ts`; the id→value map is built from branding + doc by `lib/branding/public-blocks/variable-values.ts`, computed in `PublicBlockRenderer` and passed to the rich-text renderers. A missing value renders empty, never a raw `{{ }}`. `event_date` / `venue` depend on those fields being added to the public RPCs.
 
-**Block types:** HeaderBanner, BusinessName, Tagline, Title, Text, LineItems, Totals, PaymentDetails, Action, Image, Spacer, Divider, Footer, ProposalBody, ContractBody, CouplePortal, VendorTimeline, Questionnaire.
+**Block types:** HeaderBanner, BusinessName, Tagline, Title, Text, LineItems, Totals, PaymentDetails, Action, Image, Spacer, Divider, Footer, ContractBody, CouplePortal, VendorTimeline, Questionnaire.
 
 **Scalar fields** (global across all surfaces, stored in `user_metadata`):
 - **Role-based colours** (user-set via onboarding + editor): `heading_color`, `subheading_color`, `text_color`, `surface_color`, `brand_color` (primary button), `secondary_color` (secondary button), `link_color` (editor-only).
@@ -39,7 +38,7 @@ Free-text block fields are **TipTap rich text** (per-range bold / italic / under
 - **Typography**: font_heading, font_body, font_weight, font_body_weight, heading_size, body_size, heading_case, body_case, subheading_size, subheading_weight, subheading_case, heading_letter_spacing, body_line_height.
   - **Case values**: `heading_case` / `body_case` / `subheading_case` accept `none` (as typed), `uppercase`, `lowercase`, `capitalize` (each word), and `sentence` (first letter only). Sentence case has no CSS `text-transform` and CSS `::first-letter` does not apply to the inline `<span>`s most labels render as, so it is a **string transform**: `applyCase(text, case)` in `lib/branding/text-case.ts`, surfaced to block renderers as `caseText(text, style, defaults)` in `text-style.ts`. `cssTextTransform` handles the CSS-native cases (sentence → `none`). The rail's "Case" pills map `Aa`→sentence, `Ab`→capitalize, `AA`→uppercase, `aa`→lowercase; there is no as-typed pill on the global rail (the per-block toolbar keeps one).
   - **Subheading role** = the `sectionLabel` type role: invoice "Ref"/"Due" (contracts use "Expires"), "Account name"/"BSB"/"Account number", lineItems headers, and other small labels. It is its own global control (Typography → Subheading: size, weight, case) plus colour under Brand colours → Subheading. `roleDefaults(b, 'sectionLabel')` reads `subheading_size` / `subheading_weight` / `subheading_case` / `subheading_color`. Each `subheading_*` scalar defaults (in `buildPublicBranding` and the `_user_branding` SQL helper) to the value the role used to derive — size ≈ 0.73× body, weight = body weight, case = heading case — so documents saved before this control existed render unchanged until the MC touches it. Migration: `20260721000000_subheading_typography.sql`.
-- **Layout & UI**: button_variant, button_size, button_radius, corner_radius, section_spacing, doc_padding, density, proposal_labels, theme_preset.
+- **Layout & UI**: button_variant, button_size, button_radius, corner_radius, section_spacing, doc_padding, density, theme_preset.
 
 ------------------------------------------------------------------------
 
@@ -96,7 +95,7 @@ Three distinct paths with clear repair semantics:
 
 2. **Load path** — Form initialized via `getBrandingDataAction` reading from both tables. Empty block trees load as `[]` (deliberately empty, surface disabled). Required blocks are enforced by the UI when applying templates or resetting.
 
-3. **Public render path** — `get_public_quote`, `get_public_invoice`, `get_public_contract`, `get_public_proposal`, `get_vendor_timeline`, `get_public_questionnaire` RPCs merge `_user_branding(user_id)` + `_user_branding.branding_blocks[surface]`. If a surface's block tree is `[]` or null, the public renderer skips that tree and renders only fixed cores (e.g., invoice items, contract body). **Deliberately empty surface = disabled = null in public output.**
+3. **Public render path** — `get_public_invoice`, `get_public_contract`, `get_vendor_timeline`, `get_public_questionnaire`, `get_portal_data` RPCs merge `_user_branding(user_id)` + `_user_branding.branding_blocks[surface]`. If a surface's block tree is `[]` or null, the public renderer skips that tree and renders only fixed cores (e.g., invoice items, contract body). **Deliberately empty surface = disabled = null in public output.**
 
 Reset semantics: clicking "Reset [Surface]" saves an explicit empty array `[]` to the block tree, not a null. This flags the surface as explicitly disabled by the MC, distinct from "never customized." The first-run wizard initially populates `enabled_surfaces` with defaults; subsequent resets track explicit user choices.
 

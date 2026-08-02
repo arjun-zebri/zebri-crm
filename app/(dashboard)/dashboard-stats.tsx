@@ -1,6 +1,5 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { DashboardPeriod } from "./use-dashboard";
 
 interface DashboardStatsProps {
@@ -142,11 +141,8 @@ export function DashboardStats({
             {!isLoading && <StatBadge percent={card.percent} unit={card.percentUnit} />}
           </div>
           {isLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2
-                className="w-4 h-4 text-gray-400 animate-spin"
-                strokeWidth={1.5}
-              />
+            <div className="animate-pulse pt-1">
+              <div className="h-7 w-24 bg-gray-100 rounded-md" />
             </div>
           ) : (
             <>

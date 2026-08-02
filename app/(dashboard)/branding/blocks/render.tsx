@@ -1,21 +1,10 @@
 'use client'
 
-import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
+import { ImageIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { PackageDetails } from '@/components/proposal/package-details'
-import { PackageHeader } from '@/components/proposal/package-header'
-import { PackageInclusions } from '@/components/proposal/package-inclusions'
-import { PackageLineItems } from '@/components/proposal/package-line-items'
-import { PackageTotals } from '@/components/proposal/package-totals'
-import {
-  ProposalBlockProvider,
-  type ProposalBlockContextValue,
-} from '@/components/proposal/proposal-block-context'
-import { PROPOSAL_SAMPLE_MULTI } from '@/components/proposal/proposal-sample-data'
-import { getTextColor, pillForeground } from '@/lib/branding/contrast'
-import { FONT_STACKS } from '@/lib/branding/fonts'
-import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
+import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
+import { getTextColor } from '@/lib/branding/contrast'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
 import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
@@ -26,21 +15,21 @@ import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/branding/public-blocks/title'
 import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
 import { VarChip } from '@/lib/branding/public-blocks/var-chip'
-import { htmlToPlainText } from '@/lib/branding/sanitize'
+import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
 import { roleDefaults } from '@/lib/branding/type-defaults'
-import { defaultSelection } from '@/lib/payments/proposal-view'
-import type { ProposalViewBranding } from '@/lib/payments/proposal-view'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 
 import { publicBrandingFromEditorState } from '../editor-branding'
 
+import { CouplePortalSample } from './couple-portal-sample'
 import { InlineAsset } from './inline-asset'
 import { InlineText } from './inline-text'
 import { RichText } from './rich-text/rich-text'
 import { SAMPLE_DOC_BY_SURFACE } from './sample-doc'
-import { resolveTextStyle } from './text-style'
+import { SAMPLE_RUN_SHEET_EVENT, SAMPLE_RUN_SHEET_ITEMS } from './sample-run-sheet'
+import { resolveTextStyle, caseText, type TextStyleDefaults } from './text-style'
 import type {
   Block,
   HeaderBannerBlock,
@@ -51,13 +40,13 @@ import type {
   PaymentDetailsBlock,
   ActionBlock,
   ImageBlock,
-  PackageHeaderBlock,
-  PackageDetailsBlock,
-  PackageLineItemsBlock,
-  PackageInclusionsBlock,
-  PackageTotalsBlock,
-  QuestionnaireBodyBlock,
+  QuestionnaireOneAtATimeBlock,
+  QuestionnaireAllOnePageBlock,
   PaymentScheduleBlock,
+  ContractBodyBlock,
+  ContractSignBlock,
+  CouplePortalBlock,
+  VendorTimelineBodyBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -756,9 +745,7 @@ export function RenderAction({
         placeholder={
           surface === 'invoice'
             ? 'Add a note above the button, e.g. how to pay…'
-            : surface === 'proposal'
-              ? 'Add a note above the button, e.g. what happens next…'
-              : 'Add a note above the button…'
+            : 'Add a note above the button…'
         }
         as="span"
       />
@@ -809,7 +796,7 @@ export function RenderAction({
           onClick={(e) => {
             e.stopPropagation()
             updateBlock<ActionBlock>(block.id, {
-              secondary: surface === 'proposal' ? 'Decline' : 'Secondary',
+              secondary: 'Secondary',
             })
           }}
           className={`absolute left-1/2 -translate-x-1/2 mt-2 px-4 border border-dashed border-text-muted rounded-md text-xs text-text-muted hover:text-text hover:border-text cursor-pointer transition ${
@@ -872,123 +859,40 @@ export function RenderPaymentDetails({ block, state, surface, updateBlock }: Ren
 
 // ── Couple portal ─────────────────────────────────────────────────────────────
 
-type PortalSectionKey = keyof NonNullable<BrandPreviewState['portalSections']>
-
-const PORTAL_SECTIONS: Array<{ label: string; icon: typeof LayoutDashboard; count: number; active?: boolean; key?: PortalSectionKey }> = [
-  { label: 'Overview', icon: LayoutDashboard, count: 1, active: true },
-  { label: 'Timeline', icon: Clock, count: 12, key: 'timeline' },
-  { label: 'Contacts', icon: Users2, count: 8, key: 'contacts' },
-  { label: 'Payments', icon: Receipt, count: 2, key: 'payments' },
-  { label: 'Contracts', icon: FileSignature, count: 1, key: 'contracts' },
-  { label: 'Songs', icon: Music, count: 18, key: 'songs' },
-  { label: 'Files', icon: FileText, count: 3, key: 'files' },
-]
-
-export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
-  const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
+/**
+ * Placeholder shown in the branding editor where the couple-facing portal (hero
+ * + section nav) renders on the public page. The portal structure is not
+ * authored here (couples fill it in themselves), so this shows a representative
+ * sample via {@link CouplePortalSample} — the same sample the branding preview
+ * injects — with a small caption. Selectable via BlockFrame (still locked, so it
+ * can't be duplicated). The block's title / subtitle / heading / body typography
+ * overrides flow into the sample so the mock reflects them. Same model as
+ * `RenderVendorTimelineBody` + `RenderContractBody`.
+ */
+export function RenderCouplePortal({ state, block }: { state: BrandPreviewState; block: CouplePortalBlock }) {
+  const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
-  const text = state.textColor || '#111827'
-  const surface = state.surfaceColor || '#FFFFFF'
-  const visibleSections = PORTAL_SECTIONS.filter(
-    (s) => !s.key || state.portalSections?.[s.key] !== false,
-  )
+  const baseBranding = publicBrandingFromEditorState(state)
+  // Portal-specific background: the block's colour overrides the brand Surface
+  // colour for the whole portal (page + cards), mirroring the sent portal.
+  const branding = block.bgColor
+    ? { ...baseBranding, surface_color: block.bgColor }
+    : baseBranding
   return (
-    <div className="border-t border-gray-100">
-      <div className="px-8 py-6">
-        {/* Locked-slot affordance — dashed border + muted "Locked"
-            pill so MCs see at a glance that this is a fixed portal
-            preview, not editable chrome. Same wrapper as
-            RenderContractBody. */}
-        <div
-          className="rounded-xl border-2 border-dashed p-5"
-          style={{
-            borderColor: muted + '60',
-            backgroundColor: surface,
-          }}
+    <div className="border-t border-gray-100" style={{ backgroundColor: branding.surface_color }}>
+      {/* BlockFrame supplies the docX inset; only vertical rhythm here. */}
+      <div className={pad.blockY}>
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-3"
+          style={{ color: muted }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <p
-              className="text-xs font-medium uppercase tracking-wider"
-              style={{ color: muted }}
-            >
-              Couple portal
-            </p>
-            <span
-              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: muted + '20',
-                color: muted,
-              }}
-            >
-              Locked
-            </span>
-          </div>
-
-          {/* Portal preview — dimmed + pointer-events-none so it
-              reads as inert, matching the contract-body slot. */}
-          <div className="opacity-60 select-none pointer-events-none">
-            <div className="px-2 pt-2 pb-6 border-b border-gray-100">
-              <p
-                className="text-3xl mb-1"
-                style={{ color: text, ...fontHeading }}
-              >
-                Couple name
-              </p>
-              <p className="mt-3 text-sm" style={{ color: muted }}>
-                Fill in your details below. Everything saves automatically. You can come back anytime.
-              </p>
-            </div>
-            <div className="flex flex-col @md/doc:flex-row gap-8 px-2 py-6 min-h-[420px]">
-              <nav className="hidden @md/doc:flex w-52 shrink-0 border-r border-gray-100 pr-4 space-y-0.5">
-                {visibleSections.map((s) => {
-                  const Icon = s.icon
-                  return (
-                    <div key={s.label} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${s.active ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500'}`}>
-                      <Icon size={15} strokeWidth={1.5} className="shrink-0" />
-                      <span className="flex-1 text-sm">{s.label}</span>
-                      <span className="text-[11px] text-gray-400">{s.count}</span>
-                    </div>
-                  )
-                })}
-              </nav>
-              <div className="w-full @md/doc:flex-1 @md/doc:min-w-0 space-y-6">
-                <div>
-                  <h2 className="text-2xl font-semibold text-gray-900" style={fontHeading}>Overview</h2>
-                  <p className="text-sm text-gray-500 mt-1">Your details and upcoming events</p>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-xl p-6">
-                  <p className="text-xs font-medium text-gray-500 mb-4">Your details</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Name</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>Alex &amp; Jordan</p></div>
-                    <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Email</p><p className="text-sm text-gray-700">hello@example.com</p></div>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">Your events</p>
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-base font-medium text-gray-900">Saturday, 14 September 2026</p>
-                        <p className="text-sm text-gray-500 mt-0.5">The Glasshouse, Sydney</p>
-                      </div>
-                      <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${state.brandColor || state.brandColor}26`, color: pillForeground(state.brandColor, state.brandColor, state.surfaceColor || '#FFFFFF') }}>127 days away</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white border border-gray-200 rounded-xl p-5"><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Next payment</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>$1,250</p><p className="text-xs text-gray-500 mt-1">Due 1 August 2026</p></div>
-                  <div className="bg-white border border-gray-200 rounded-xl p-5"><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Contract</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>Signed</p><p className="text-xs text-gray-500 mt-1">12 April 2026</p></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
-            <p className="text-xs" style={{ color: muted }}>
-              This is what the couple sees when they open their portal link. The portal&apos;s structure (navigation, sections, fields) isn&apos;t editable here — couples fill it in themselves. You can drag other blocks above or below this slot to add custom welcome text or notes.
-            </p>
-          </div>
-        </div>
+          Couple portal · sample
+        </p>
+        <CouplePortalSample
+          branding={branding}
+          {...(state.portalSections ? { portalSections: state.portalSections } : {})}
+          styles={{ title: block.titleStyle, subtitle: block.subtitleStyle, heading: block.headingStyle, body: block.bodyStyle }}
+        />
       </div>
     </div>
   )
@@ -1004,12 +908,12 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
  * visually unambiguous this block isn't editable on the branding surface.
  */
 /**
- * Editor render for the invoice payment schedule. The subheading and the two line
- * labels (deposit, final balance) are editable text stored on the block and
- * click-to-style targets; the amounts and due dates are per-invoice data filled
- * when the invoice is sent, so they render as mint `{{ … }}` chips (the line-items
- * idiom). Public rendering of the schedule is deferred (the public renderer omits
- * this block), so this is editor-only chrome.
+ * Editor render for the invoice payment schedule. The subheading is editable
+ * text stored on the block and a click-to-style target; the stage labels,
+ * amounts and due dates are filled from the live invoice data when the invoice
+ * is sent, so they render as sample text and mint `{{ … }}` chips (the
+ * line-items idiom). Public rendering of the schedule is deferred (the public
+ * renderer omits this block), so this is editor-only chrome.
  */
 export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps<PaymentScheduleBlock>) {
   const branding = publicBrandingFromEditorState(state)
@@ -1022,18 +926,20 @@ export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps
   // one style target so they can be resized together.
   const valueCss = resolveTextStyle(block.valueStyle, bodyDefaults)
 
+  // Sample stage data to show realistic preview. Labels come from the invoice
+  // builder, not from the block, so they render as static text here.
   const stages = [
     {
-      value: block.depositLabel ?? 'Deposit',
-      placeholder: 'Deposit',
-      onChange: (v: string) => updateBlock<PaymentScheduleBlock>(block.id, { depositLabel: v }),
-      dueHint: "The deposit's due date, from the invoice.",
+      label: 'Deposit',
+      dueHint: 'The deposit due date, from the invoice.',
     },
     {
-      value: block.finalLabel ?? 'Final balance',
-      placeholder: 'Final balance',
-      onChange: (v: string) => updateBlock<PaymentScheduleBlock>(block.id, { finalLabel: v }),
-      dueHint: "The final balance's due date, from the invoice.",
+      label: 'Progress payment',
+      dueHint: 'The progress payment due date, from the invoice.',
+    },
+    {
+      label: 'Final balance',
+      dueHint: 'The final balance due date, from the invoice.',
     },
   ]
 
@@ -1056,14 +962,14 @@ export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps
           {/* Label + due date sit on one line (due date beside, not under). */}
           <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
             <span data-subtarget="line" style={lineCss}>
-              <InlineText value={stage.value} onChange={stage.onChange} placeholder={stage.placeholder} as="span" />
+              {stage.label}
             </span>
             <span data-subtarget="value" style={valueCss}>
               <VarChip label="Due date" hint={stage.dueHint} />
             </span>
           </div>
           <span className="shrink-0" data-subtarget="value" style={valueCss}>
-            <VarChip label="Amount" hint="Filled from the invoice's deposit percent and total." />
+            <VarChip label="Amount" hint="Filled from the invoice's payment stages." />
           </span>
         </div>
       ))}
@@ -1078,279 +984,153 @@ export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps
  * builder modal's TipTap editor and is set per couple. Same model
  * as `RenderCouplePortal` + `RenderPaymentSchedule`.
  *
- * Renders with a dashed border + muted "Locked" badge so it's
- * visually unambiguous this slot isn't editable here, plus a
- * short message explaining where the body actually lives.
+ * Renders a realistic mock of the body (sample clauses + MC signature
+ * line, in the MC's branding fonts/colours) so the preview shows how a
+ * contract actually reads, rather than a bare note. A small "sample"
+ * caption and the closing note make clear it is authored per couple and
+ * not editable here; the "Required" badge + top-right readiness panel
+ * carry the locked/required signal, so no heavy framing is needed.
  */
-export function RenderContractBody({ state }: { state: BrandPreviewState }) {
+export function RenderContractBody({ state, block }: { state: BrandPreviewState; block: ContractBodyBlock }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
-  const surface = state.surfaceColor || '#FFFFFF'
-  const heading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
+  // Resolve the two contract-body targets from the block's overrides, falling
+  // back to the global section-heading / body role defaults — the same defaults
+  // the live prose uses, so an unstyled block mirrors a real contract. The
+  // `data-subtarget` tags let a click in the preview target the right control.
+  const pub = publicBrandingFromEditorState(state)
+  const headingCss = resolveTextStyle(block.subheadingStyle, roleDefaults(pub, 'sectionHeading'))
+  const bodyCss = resolveTextStyle(block.bodyStyle, roleDefaults(pub, 'body'))
   return (
     <div className="border-t border-gray-100">
+      {/* Horizontal (docX) inset comes from BlockFrame, which now wraps this
+          block — only the vertical rhythm is applied here. */}
       <div className={pad.blockY}>
-        {/* Locked-slot affordance — dashed border + muted "Locked"
-            badge make it clear at a glance that this block isn't
-            editable on the branding surface. */}
-        <div
-          className="rounded-xl border-2 border-dashed p-5"
-          style={{
-            borderColor: muted + '60',
-            backgroundColor: surface,
-          }}
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-3"
+          style={{ color: muted }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <p
-              className="text-xs font-medium uppercase tracking-wider"
-              style={{ color: muted }}
-            >
-              Contract body
-            </p>
-            <span
-              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: muted + '20',
-                color: muted,
-              }}
-            >
-              Locked
-            </span>
-          </div>
+          Contract body · sample
+        </p>
 
-          <div className="space-y-3 max-w-prose opacity-60 select-none pointer-events-none">
-            <p className="text-base font-semibold" style={{ color: text, ...heading }}>
-              1. Definitions and interpretation
-            </p>
-            <p className="text-sm leading-6" style={{ color: text }}>
-              <span className="font-semibold">Event</span> means the wedding reception described in clause 2.{' '}
-              <span className="font-semibold">Services</span> means the wedding MC services described in clause 3.{' '}
-              <span className="font-semibold">Fee</span> means the total amount payable under clause 4.
-            </p>
-            <p className="text-base font-semibold mt-4" style={{ color: text, ...heading }}>
-              2. Event details
-            </p>
-            <p className="text-sm leading-6" style={{ color: text }}>
-              Event date: 14 September 2026<br />
-              Venue: The Glasshouse, Sydney
-            </p>
-          </div>
-
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
-            <p className="text-xs" style={{ color: muted }}>
-              The contract body itself can&apos;t be edited here — you write it per couple inside the contract modal under{' '}
-              <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>. You can drag other blocks (text intros, dividers, signature notes) above or below this slot to wrap the body with extra chrome.
-            </p>
-          </div>
+        <div className="space-y-4 max-w-prose">
+          {SAMPLE_CONTRACT_CLAUSES.map((clause) => (
+            <div key={clause.heading} className="space-y-1.5">
+              <p data-subtarget="subheading" style={headingCss}>
+                {clause.heading}
+              </p>
+              <p data-subtarget="body" style={bodyCss}>
+                {clause.body}
+              </p>
+            </div>
+          ))}
         </div>
+
+        <p className="text-xs leading-6 mt-5 w-full" style={{ color: muted }}>
+          Written per couple in the contract modal under{' '}
+          <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>, where you can also drop in a reusable contract template you&apos;ve saved. The signature and sign / decline form live in the separate Sign block. Drag other blocks above or below to wrap it.
+        </p>
       </div>
     </div>
   )
 }
 
-// ── Proposal body (fixed core) ────────────────────────────────────────────────
-
-/** Map the editor's preview state onto the proposal view's branding. */
-function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
-  return {
-    pageBg: state.surfaceColor || '#FFFFFF',
-    textColor: state.textColor || '#111827',
-    mutedColor: state.textColor || '#6B7280',
-    brand: state.brandColor || '#111827',
-    accent: state.brandColor || state.brandColor || '#111827',
-    secondaryColor: state.secondaryColor || '#FFFFFF',
-    secondaryTextColor: getTextColor(state.secondaryColor || '#FFFFFF'),
-    headingColor: state.textColor || '#111827',
-    subheadingColor: state.textColor || '#6B7280',
-    radius: state.cornerRadius ?? 16,
-    borderColor: state.borderColor || '#E5E7EB',
-    cornerRadius: state.cornerRadius ?? 8,
-    headingFontFamily: FONT_STACKS[state.fontHeading],
-    bodyFontFamily: FONT_STACKS[state.fontBody],
-    headingWeight: state.fontWeight,
-    docPadding: 0, // the block-renderer already applies doc padding
-    logoUrl: null, // logo lives in its own block on this surface
-    headerImageUrl: null, // header banner is its own block
-    businessName: state.businessName ? htmlToPlainText(state.businessName) : null,
-    tagline: state.tagline ? htmlToPlainText(state.tagline) : null,
-    abn: state.abn || null,
-    labels: resolveProposalLabels(state.proposalLabels),
-  }
-}
-
-
-
-// ── Package blocks (proposal decomposed) ───────────────────────────────
-//
-// The editor previews render the exact same public package components the
-// public proposal page uses, wrapped in a sample block context. This is the
-// same reuse pattern the line-items / totals previews follow, so the editor
-// and the sent document can never drift in styling or padding.
-
 /**
- * Build a sample proposal block context for the editor preview: the "Full Day"
- * sample option with its default add-on selection, non-interactive (no choose /
- * toggle handlers), styled from the editor's live branding state.
- */
-function sampleProposalContext(state: BrandPreviewState): ProposalBlockContextValue {
-  const chosen = PROPOSAL_SAMPLE_MULTI[1]!
-  return {
-    options: PROPOSAL_SAMPLE_MULTI,
-    chosenId: chosen.id,
-    selection: defaultSelection(chosen),
-    onChoose: undefined,
-    onToggle: undefined,
-    branding: publicBrandingFromEditorState(state),
-    view: proposalBranding(state),
-    expiresAt: null,
-    state: 'active',
-  }
-}
-
-/** Editor preview for the packageHeader block. */
-export function RenderPackageHeader({ block, state }: RenderProps<PackageHeaderBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageHeader block={block} variablePreview />
-    </ProposalBlockProvider>
-  )
-}
-
-/** Editor preview for the packageDetails block. */
-export function RenderPackageDetails({ block, state }: RenderProps<PackageDetailsBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageDetails block={block} variablePreview />
-    </ProposalBlockProvider>
-  )
-}
-
-/** Editor preview for the packageLineItems block. */
-export function RenderPackageLineItems({ block, state, updateBlock }: RenderProps<PackageLineItemsBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageLineItems
-        block={block}
-        variablePreview
-        headingSlot={
-          <InlineText
-            value={block.heading || 'Included services'}
-            onChange={(v) => updateBlock<PackageLineItemsBlock>(block.id, { heading: v })}
-            placeholder="Included services"
-            as="span"
-          />
-        }
-      />
-    </ProposalBlockProvider>
-  )
-}
-
-/** Editor preview for the packageInclusions block. */
-export function RenderPackageInclusions({ block, state }: RenderProps<PackageInclusionsBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageInclusions block={block} variablePreview />
-    </ProposalBlockProvider>
-  )
-}
-
-/** Editor preview for the packageTotals block. */
-export function RenderPackageTotals({ block, state }: RenderProps<PackageTotalsBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageTotals block={block} variablePreview />
-    </ProposalBlockProvider>
-  )
-}
-
-/**
- * Placeholder block shown in the branding editor where the vendor run sheet
- * (live timeline data) will render on the public page. The MC can never edit
- * the run sheet here: it flows from event data in real time. Same model
- * as `RenderContractBody` and `RenderPaymentSchedule`.
+ * Placeholder block shown in the branding editor where the contract's sign /
+ * decline form + MC countersignature will render on the public page. The form's
+ * behaviour (name input, agreement checkbox, sign / decline calls) is fixed and
+ * never editable here — only its labels, button colour and typography are
+ * MC-configurable. Same model as `RenderContractBody` + `RenderPaymentSchedule`.
  *
- * Renders with a dashed border + muted "Live data - run sheet" badge so it is
- * visually unambiguous this block is not editable on the branding surface.
- * The sample shows event title and three static timeline rows styled to match
- * vendor-timeline.tsx row rendering.
+ * Renders a realistic, calm mock of the live form (disabled name field, agreement
+ * line, Sign + Decline buttons, then the "Signed by MC" cursive signature) so the
+ * preview reads like the real sent contract. The `data-subtarget` tags let a click
+ * in the preview target the heading vs. label style controls.
  */
-export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }) {
+export function RenderContractSign({ state, block }: { state: BrandPreviewState; block: ContractSignBlock }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
-  const surface = state.surfaceColor || '#FFFFFF'
+  const pub = publicBrandingFromEditorState(state)
+  const headingCss = resolveTextStyle(block.headingStyle, roleDefaults(pub, 'sectionHeading'))
+  const labelCss = resolveTextStyle(block.labelStyle, roleDefaults(pub, 'body'))
+  const buttonColor = block.buttonColor ?? state.brandColor
+  const radius = Math.min(state.cornerRadius ?? 12, 12)
+
   return (
     <div className="border-t border-gray-100">
+      {/* Horizontal (docX) inset comes from BlockFrame; only vertical rhythm here. */}
       <div className={pad.blockY}>
-        {/* Locked-slot affordance: dashed border + muted "Live data - run sheet"
-            badge make it clear at a glance that this block is not
-            editable on the branding surface. */}
-        <div
-          className="rounded-xl border-2 border-dashed p-5"
-          style={{
-            borderColor: muted + '60',
-            backgroundColor: surface,
-          }}
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-3"
+          style={{ color: muted }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <p
-              className="text-xs font-medium uppercase tracking-wider"
-              style={{ color: muted }}
-            >
-              Run sheet
-            </p>
-            <span
-              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: muted + '20',
-                color: muted,
-              }}
-            >
-              Live data - run sheet
-            </span>
-          </div>
+          Sign contract · sample
+        </p>
 
-          <div className="space-y-3 opacity-60 select-none pointer-events-none">
-            <p className="text-sm font-semibold mb-4" style={{ color: text }}>
-              Alex & Jordan - Reception
+        <div className="space-y-4 max-w-prose">
+          <p data-subtarget="heading" style={headingCss}>
+            {block.heading ?? 'Sign to accept'}
+          </p>
+
+          {/* Disabled mock of the couple-facing name field. */}
+          <div>
+            <p data-subtarget="label" className="mb-1.5" style={labelCss}>
+              Your full legal name
             </p>
-            <div className="space-y-2">
-              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
-                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
-                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>5:00 PM</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium" style={{ color: text }}>Guest arrival</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
-                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
-                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>6:30 PM</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium" style={{ color: text }}>Entrance</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
-                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
-                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>9:45 PM</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium" style={{ color: text }}>Farewell circle</p>
-                </div>
-              </div>
+            <div
+              className="w-full border px-3 py-2.5 bg-gray-50/60"
+              style={{ borderRadius: radius, borderColor: pub.border_color }}
+            >
+              <span className="text-sm" style={{ color: muted }}>
+                Sarah &amp; James
+              </span>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
-            <p className="text-xs" style={{ color: muted }}>
-              The run sheet is driven by your event timeline and updates in real time. You cannot edit it here. You can drag other blocks above or below this slot to add headings or notes.
-            </p>
+          {/* Agreement line (checkbox is decorative in the mock). */}
+          <div className="flex items-start gap-3">
+            <span
+              className="mt-0.5 w-4 h-4 rounded border shrink-0"
+              style={{ borderColor: pub.border_color }}
+              aria-hidden
+            />
+            <span data-subtarget="label" style={labelCss}>
+              I agree to the terms above and intend my typed name to serve as my
+              legal signature.
+            </span>
           </div>
+
+          {/* Sign + decline buttons. Tagged `button` so clicking either focuses
+              the toolbar to the button controls (labels + fill colour). */}
+          <div data-subtarget="button" className="flex flex-wrap items-center gap-2 pt-1">
+            <span
+              className="px-5 py-2.5 inline-flex items-center gap-2 text-sm font-semibold"
+              style={{ backgroundColor: buttonColor, color: getTextColor(buttonColor), borderRadius: radius }}
+            >
+              {block.primaryLabel ?? 'Sign contract'}
+            </span>
+            <span
+              className="border px-4 py-2.5 text-sm font-medium"
+              style={{ color: muted, borderColor: pub.border_color, borderRadius: radius }}
+            >
+              {block.secondaryLabel ?? 'Decline'}
+            </span>
+          </div>
+        </div>
+
+        {/* MC countersignature — mirrors what renders on the sent contract. */}
+        <div className="mt-6 pt-5 border-t" style={{ borderColor: muted + '30' }}>
+          <p className="text-xs mb-1" style={{ color: muted }}>
+            Signed by MC
+          </p>
+          <p
+            className="text-2xl leading-none"
+            style={{ color: text, fontFamily: 'Caveat, "Brush Script MT", cursive' }}
+          >
+            Your name
+          </p>
         </div>
       </div>
     </div>
@@ -1358,125 +1138,138 @@ export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }
 }
 
 /**
- * Editor wrapper for questionnaireBody block. Shows a preview of the
- * questionnaire in either form or one-at-a-time mode (persisted on the block).
- * The mode toggle writes to the block, not preview state.
- *
- * Renders with a dashed border + muted "Fixed steps" badge so it is
- * visually unambiguous this block is not editable on the branding surface.
- * The sample renders in form or oneAtATime mode based on the block's mode field.
+ * Placeholder shown in the branding editor where the run sheet (live event
+ * timeline) renders on the public page. The run sheet is not authored here: it
+ * flows from the couple's event timeline in real time, so this shows a
+ * representative sample through the real `VendorTimeline` component (so the
+ * preview is faithful), with a small caption. Selectable via BlockFrame (still
+ * locked, so it can't be duplicated). The block's title / subtitle / body / note
+ * typography overrides flow into `VendorTimeline` so the mock reflects them.
  */
-export function RenderQuestionnaireBody({
+export function RenderVendorTimelineBody({ state, block }: { state: BrandPreviewState; block: VendorTimelineBodyBlock }) {
+  const pad = PAD(state)
+  const muted = state.textColor || '#6B7280'
+  const branding = publicBrandingFromEditorState(state)
+  return (
+    <div className="border-t border-gray-100">
+      {/* BlockFrame supplies the docX inset; only vertical rhythm here. */}
+      <div className={pad.blockY}>
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-3"
+          style={{ color: muted }}
+        >
+          Run sheet · sample
+        </p>
+        <VendorTimeline
+          events={[SAMPLE_RUN_SHEET_EVENT]}
+          items={SAMPLE_RUN_SHEET_ITEMS}
+          branding={branding}
+          styles={{ title: block.titleStyle, subtitle: block.subtitleStyle, body: block.bodyStyle, note: block.noteStyle }}
+        />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Editor preview for the two questionnaire form-style marker blocks
+ * ({@link QuestionnaireOneAtATimeBlock} / {@link QuestionnaireAllOnePageBlock}).
+ * The presentation is fixed by the block type — one-at-a-time vs all-on-one-page
+ * — so there is no toggle; the MC swaps styles by adding the other block.
+ *
+ * Renders the sample questions inside a dashed outline so it reads as fixed,
+ * non-editable content. The block's own frame styling (background, padding,
+ * border, radius) is applied by BlockFrame around this preview, matching how
+ * the questions area is framed on the public fill page.
+ */
+export function RenderQuestionnairePreview({
   block,
   state,
-  updateBlock,
-}: RenderProps<QuestionnaireBodyBlock> & {
-  updateBlock: <X extends Block>(id: string, patch: Partial<X>) => void
+}: {
+  block: QuestionnaireOneAtATimeBlock | QuestionnaireAllOnePageBlock
+  state: BrandPreviewState
 }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
-  const text = state.textColor || '#111827'
-  const surface = state.surfaceColor || '#FFFFFF'
   const radius = state.cornerRadius || 16
   const brand = state.brandColor || '#A7F3D0'
-  const mode = block.mode ?? 'form'
+  const mode = block.type === 'questionnaireOneAtATime' ? 'oneAtATime' : 'form'
+  const branding = publicBrandingFromEditorState(state)
+  const buttonColor = block.buttonColor ?? brand
+
+  // Question + answer typography resolve exactly as on the public fill page:
+  // block override layered over the section-heading / body theme roles. Clicking
+  // either in the preview targets it for the toolbar (data-subtarget).
+  const questionDefaults: TextStyleDefaults = { ...roleDefaults(branding, 'sectionHeading'), align: 'left' }
+  const answerDefaults: TextStyleDefaults = { ...roleDefaults(branding, 'body'), align: 'left' }
+  const qCss = resolveTextStyle(block.questionStyle, questionDefaults)
+  const aCss = resolveTextStyle(block.answerStyle, answerDefaults)
+  const inputStyle = { borderColor: muted + '40', borderRadius: radius, backgroundColor: '#fafafa', ...aCss }
+
+  const sampleButton = (label: string) => (
+    <button
+      type="button"
+      className="mt-2 font-medium"
+      style={{ background: buttonColor, color: getTextColor(buttonColor), borderRadius: radius, padding: '0.625rem 1.5rem' }}
+    >
+      {label}
+    </button>
+  )
 
   return (
-    <div className="border-t border-gray-100">
-      <div className={pad.blockY}>
-        <div
-          className="rounded-xl border-2 border-dashed p-5"
-          style={{
-            borderColor: muted + '60',
-            backgroundColor: surface,
-          }}
-        >
+    <div className={pad.blockY}>
+      {/* No inner box/border: the block frame (BlockFrame) is the styleable
+          surface, so its background/padding/border/radius wrap this content
+          directly, exactly like every other block. */}
+      <div className="opacity-90">
           <div className="flex items-center justify-between mb-4">
             <p
-              className="text-xs font-medium uppercase tracking-wider"
+              className="text-[10px] font-medium uppercase tracking-wider"
               style={{ color: muted }}
             >
-              Questionnaire
+              Sample · your live questions appear here
             </p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
-                Preview
-              </span>
-              <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
-                {(['form', 'oneAtATime'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      updateBlock<QuestionnaireBodyBlock>(block.id, { mode: m })
-                    }}
-                    className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition cursor-pointer ${
-                      mode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    {m === 'form' ? 'Form' : 'One at a time'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+              {mode === 'oneAtATime' ? 'One at a time' : 'All on one page'}
+            </span>
           </div>
 
           {/* Form mode: two stacked labelled inputs. */}
           {mode === 'form' && (
-            <div className="space-y-4 max-w-prose opacity-60 select-none pointer-events-none">
-              <div>
-                <label className="text-sm font-medium mb-2 block" style={{ color: text }}>
-                  What is the date of your wedding?
-                </label>
-                <input
-                  type="text"
-                  placeholder="DD/MM/YYYY"
-                  disabled
-                  className="w-full px-4 py-3 border text-sm"
-                  style={{
-                    borderColor: muted + '40',
-                    borderRadius: radius,
-                    backgroundColor: '#fafafa',
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block" style={{ color: text }}>
-                  How many guests are you expecting?
-                </label>
-                <input
-                  type="text"
-                  placeholder="Type your answer…"
-                  disabled
-                  className="w-full px-4 py-3 border text-sm"
-                  style={{
-                    borderColor: muted + '40',
-                    borderRadius: radius,
-                    backgroundColor: '#fafafa',
-                  }}
-                />
-              </div>
+            <div className="space-y-4 max-w-prose">
+              {['What is the date of your wedding?', 'How many guests are you expecting?'].map((q, i) => (
+                <div key={q}>
+                  <label data-subtarget="question" className="mb-2 block cursor-pointer" style={qCss}>
+                    {caseText(q, block.questionStyle, questionDefaults)}
+                  </label>
+                  <input
+                    data-subtarget="answer"
+                    type="text"
+                    placeholder={i === 0 ? 'DD/MM/YYYY' : 'Type your answer…'}
+                    readOnly
+                    className="w-full px-4 py-3 border cursor-pointer"
+                    style={inputStyle}
+                  />
+                </div>
+              ))}
+              {sampleButton('Submit')}
             </div>
           )}
 
           {/* One at a time mode: one large question + progress bar. */}
           {mode === 'oneAtATime' && (
-            <div className="space-y-6 max-w-prose opacity-60 select-none pointer-events-none">
+            <div className="space-y-6 max-w-prose">
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold" style={{ color: text }}>
-                  What is the date of your wedding?
+                <h2 data-subtarget="question" className="cursor-pointer" style={qCss}>
+                  {caseText('What is the date of your wedding?', block.questionStyle, questionDefaults)}
                 </h2>
                 <input
+                  data-subtarget="answer"
                   type="text"
                   placeholder="DD/MM/YYYY"
-                  disabled
-                  className="w-full px-4 py-3 border text-lg"
-                  style={{
-                    borderColor: brand + '40',
-                    borderRadius: radius,
-                    backgroundColor: '#fafafa',
-                  }}
+                  readOnly
+                  className="w-full px-4 py-3 border cursor-pointer"
+                  style={inputStyle}
                 />
               </div>
 
@@ -1495,15 +1288,9 @@ export function RenderQuestionnaireBody({
                   Question 1 of 3
                 </p>
               </div>
+              {sampleButton('Next')}
             </div>
           )}
-
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
-            <p className="text-xs" style={{ color: muted }}>
-              The questionnaire structure is fixed and cannot be edited here. You can drag other blocks above or below this slot to add custom intros or additional sections.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )
