@@ -79,14 +79,13 @@ function CategorySection({
               </div>
               {person.audio_url && (
                 <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <audio src={person.audio_url} id={`mc-audio-${person.id}`} className="hidden" />
-                  <button
-                    onClick={() => (document.getElementById(`mc-audio-${person.id}`) as HTMLAudioElement)?.play()}
-                    className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100 transition cursor-pointer"
-                  >
-                    <Play size={12} strokeWidth={2} />
-                    Listen
-                  </button>
+                  <AudioPlayButton
+                    src={person.audio_url}
+                    label="Listen"
+                    className="flex items-center gap-1 text-xs border rounded-lg px-2.5 py-1.5 transition cursor-pointer"
+                    idleClassName="text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
+                    playingClassName="text-emerald-700 border-emerald-300 bg-emerald-100 hover:bg-emerald-200"
+                  />
                 </div>
               )}
               <Pencil size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />

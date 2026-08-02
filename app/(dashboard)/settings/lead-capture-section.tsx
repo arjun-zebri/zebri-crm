@@ -11,6 +11,7 @@
 import { Check, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import {
@@ -59,17 +60,27 @@ function CopyField({ label, value }: { label: string; value: string }) {
   };
   return (
     <div>
-      <div className="flex items-end gap-2">
-        <Input label={label} readOnly value={value} className="font-mono text-xs" />
-        <button
-          type="button"
+      {/* The label is rendered here rather than passed to `Input` so the
+          monospace treatment applies to the snippet only, not the label. */}
+      <p className="mb-1 text-caption font-medium text-text">{label}</p>
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label={label}
+          readOnly
+          value={value}
+          size="sm"
+          className="min-w-0 flex-1 font-mono"
+        />
+        <Button
+          variant="outline"
+          size="sm"
           onClick={copy}
           aria-label={`Copy ${label}`}
-          className="mb-0.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 px-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+          className="shrink-0 cursor-pointer"
         >
-          {copied ? <Check size={16} strokeWidth={1.5} /> : <Copy size={16} strokeWidth={1.5} />}
+          {copied ? <Check size={14} strokeWidth={1.5} /> : <Copy size={14} strokeWidth={1.5} />}
           <span>{copied ? 'Copied' : 'Copy'}</span>
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -125,7 +136,7 @@ export function LeadCaptureSection() {
         </p>
       </div>
 
-      <div className="flex items-center justify-between max-w-xl">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-gray-700">Form enabled</p>
           <p className="text-xs text-gray-400">Turn off to stop accepting new enquiries.</p>
@@ -139,20 +150,22 @@ export function LeadCaptureSection() {
         />
       </div>
 
-      <div className="max-w-xl">
-        <Select
-          label="New leads land in"
-          value={targetSlug}
-          onValueChange={(v) => {
-            setTargetSlug(v);
-            persist({ enabled, targetSlug: v });
-          }}
-          options={options}
-          contentClassName="z-[90]"
-        />
-      </div>
+      {/* Narrower than the snippet fields: status names are short, so a
+          full-width trigger leaves a long empty run before the chevron. */}
+      <Select
+        label="New leads land in"
+        value={targetSlug}
+        size="sm"
+        onValueChange={(v) => {
+          setTargetSlug(v);
+          persist({ enabled, targetSlug: v });
+        }}
+        options={options}
+        contentClassName="z-[90]"
+        className="max-w-xs"
+      />
 
-      <div className="space-y-6 max-w-xl">
+      <div className="space-y-4">
         <CopyField label="Hosted link" value={buildHostedUrl(origin, token)} />
         <CopyField label="Embed (iframe)" value={buildIframeSnippet(origin, token)} />
         <CopyField label="Embed (script)" value={buildScriptSnippet(origin, token)} />

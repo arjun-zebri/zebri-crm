@@ -38,26 +38,63 @@ function formatDueDate(iso: string | null | undefined): string | null {
   });
 }
 
+/**
+ * Placeholder shown in place of the share URL while the document has no
+ * share token yet (an unsaved draft). Kept plain-language so nothing in
+ * the preview looks like a URL the MC could copy.
+ */
+const PENDING_LINK_TEXT = 'link created when you send';
+
+/**
+ * Adapt an email template for preview inside a sandboxed iframe.
+ *
+ * Two adjustments, both preview-only — the emails couples actually
+ * receive are untouched:
+ *
+ * - `<base target="_blank">` so the CTA opens the invoice in a new tab
+ *   instead of navigating the preview iframe itself (which the sandbox
+ *   then blocks, so the MC just saw a "refused to connect" panel).
+ * - When there is no share link yet, every `href` is stripped so the
+ *   button and copy-link line are inert rather than pointing at a URL
+ *   that does not resolve.
+ *
+ * @param html      Rendered email HTML from the shared templates.
+ * @param shareUrl  The document's public link, or null when unsaved.
+ * @returns         HTML ready to hand to the iframe's `srcDoc`.
+ */
+export function decorateEmailPreview(html: string, shareUrl: string | null): string {
+  const withBase = html.includes('<head>')
+    ? html.replace('<head>', '<head><base target="_blank">')
+    : `<base target="_blank">${html}`;
+  if (shareUrl) return withBase;
+  return withBase.replace(/\s*href="[^"]*"/g, '');
+}
+
 export function PreviewEmail({ doc, coupleEmail }: PreviewEmailProps) {
   const html = useMemo(() => {
-    if (doc.kind === 'contract') {
-      return contractHtml({
-        coupleName: doc.coupleName ?? 'there',
-        contractNumber: doc.documentNumber,
-        contractTitle: doc.title || `Contract ${doc.documentNumber}`,
-        expiresAt: formatDueDate(doc.expiresAt),
-        shareUrl: doc.shareUrl,
-        mcBusinessName: doc.businessName ?? 'Your MC',
-      });
-    }
-    return invoiceHtml({
-      coupleName: doc.coupleName ?? 'there',
-      invoiceNumber: doc.documentNumber,
-      invoiceTitle: doc.title || `Invoice ${doc.documentNumber}`,
-      dueDate: formatDueDate(doc.dueDate),
-      shareUrl: doc.shareUrl,
-      mcBusinessName: doc.businessName ?? 'Your MC',
-    });
+    // An unsaved document has no share token, so the templates get a
+    // human-readable stand-in and `decorateEmailPreview` removes the
+    // hrefs that would otherwise wrap it.
+    const shareUrl = doc.shareUrl ?? PENDING_LINK_TEXT;
+    const rendered =
+      doc.kind === 'contract'
+        ? contractHtml({
+            coupleName: doc.coupleName ?? 'there',
+            contractNumber: doc.documentNumber,
+            contractTitle: doc.title || `Contract ${doc.documentNumber}`,
+            expiresAt: formatDueDate(doc.expiresAt),
+            shareUrl,
+            mcBusinessName: doc.businessName ?? 'Your MC',
+          })
+        : invoiceHtml({
+            coupleName: doc.coupleName ?? 'there',
+            invoiceNumber: doc.documentNumber,
+            invoiceTitle: doc.title || `Invoice ${doc.documentNumber}`,
+            dueDate: formatDueDate(doc.dueDate),
+            shareUrl,
+            mcBusinessName: doc.businessName ?? 'Your MC',
+          });
+    return decorateEmailPreview(rendered, doc.shareUrl);
   }, [doc]);
 
   const subject = buildSubject(doc);
@@ -79,10 +116,12 @@ export function PreviewEmail({ doc, coupleEmail }: PreviewEmailProps) {
           <span className="font-medium text-text">Subject</span> · {subject}
         </div>
       </div>
+      {/* allow-popups (+ escape-sandbox) is what lets the CTA open the
+          real invoice in a new tab; scripts stay disabled. */}
       <iframe
         srcDoc={html}
         title="Email preview"
-        sandbox=""
+        sandbox="allow-popups allow-popups-to-escape-sandbox"
         className="flex-1 rounded-card border border-border bg-surface"
       />
     </div>

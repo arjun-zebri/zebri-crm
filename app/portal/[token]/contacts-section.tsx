@@ -243,16 +243,12 @@ function AudioRecorder({
         </p>
         {audioUrl && !recording && !uploading && (
           <div className="flex items-center gap-1.5">
-            <audio src={audioUrl} className="hidden" id={`audio-modal-${personId}`} />
-            <button
-              type="button"
-              onClick={() => (document.getElementById(`audio-modal-${personId}`) as HTMLAudioElement)?.play()}
+            <AudioPlayButton
+              src={audioUrl}
+              label="Play"
               className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1 transition cursor-pointer hover:opacity-80"
               style={PLAY_BUTTON_STYLE}
-            >
-              <Play size={12} strokeWidth={2} />
-              Play
-            </button>
+            />
           </div>
         )}
       </div>
@@ -611,15 +607,12 @@ function PersonRow({
       </div>
       {person.audio_url && (
         <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-          <audio src={person.audio_url} className="hidden" id={`audio-row-${person.id}`} />
-          <button
-            onClick={() => (document.getElementById(`audio-row-${person.id}`) as HTMLAudioElement)?.play()}
+          <AudioPlayButton
+            src={person.audio_url}
+            label="Play"
             className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1.5 transition cursor-pointer hover:opacity-80"
             style={PLAY_BUTTON_STYLE}
-          >
-            <Play size={12} strokeWidth={2} />
-            Play
-          </button>
+          />
         </div>
       )}
       <Pencil size={13} strokeWidth={1.5} className="shrink-0" style={{ color: finePrintDefaults.color }} />

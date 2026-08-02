@@ -39,7 +39,11 @@ import {
   type SaveInvoiceInput,
 } from '@/app/(dashboard)/payments/actions';
 import { AddOnPickerDialog } from '@/components/builders/parts/add-on-picker-dialog';
-import { BuilderMetaRow, type PaymentTerms } from '@/components/builders/parts/builder-meta-row';
+import {
+  BuilderMetaRow,
+  type CoupleOption,
+  type PaymentTerms,
+} from '@/components/builders/parts/builder-meta-row';
 import {
   type BuilderModalPrimaryAction,
   BuilderModalShell,
@@ -53,7 +57,8 @@ import {
 } from '@/components/builders/parts/line-items-table';
 import { NotesField } from '@/components/builders/parts/notes-field';
 import { PaymentSchedule } from '@/components/builders/parts/payment-schedule';
-import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
+import { previewPdfBrandingOpts } from '@/components/builders/parts/preview-pdf';
+import { toPdfDocumentData, type PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { TaxControl } from '@/components/builders/parts/tax-control';
 import { TemplatePicker } from '@/components/builders/parts/template-picker';
@@ -69,7 +74,9 @@ import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
 import { stripeConnectEnabled } from '@/lib/auth/entitlements';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
+import { resolveCoupleEmail } from '@/lib/couples/email';
 import { weekendLoadingLine } from '@/lib/payments/package-math';
+import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentUser } from '@/lib/supabase/current-user';
 import { isPastDue } from '@/lib/utils';
@@ -215,20 +222,22 @@ export function InvoiceBuilderModal({
   // Branding is fetched here purely so the skeleton gate below can wait
   // on it. The preview pane calls the same hook and hits the shared
   // cache, so this costs no extra request.
-  const { loading: brandingLoading } = useCurrentBranding('invoice');
+  const { branding, loading: brandingLoading } = useCurrentBranding('invoice');
 
   const { data: couples, isPending: couplesLoading } = useQuery({
     queryKey: ['all-couples-for-invoice'],
     queryFn: async () => {
       const user = await getCurrentUser();
       if (!user) return [];
+      // primary_email + email both come back so the email preview can
+      // show the real recipient (resolveCoupleEmail prefers primary).
       const { data, error } = await supabase
         .from('couples')
-        .select('id, name')
+        .select('id, name, primary_email, email')
         .eq('user_id', user.id)
         .order('name', { ascending: true });
       if (error) throw error;
-      return (data ?? []) as { id: string; name: string }[];
+      return (data ?? []) as CoupleOption[];
     },
   });
 
@@ -257,6 +266,10 @@ export function InvoiceBuilderModal({
     typeof window !== 'undefined' && invoice?.share_token
       ? `${window.location.origin}/invoice/${invoice.share_token}`
       : null;
+
+  // The address `send-invoice` will actually mail, resolved the same way
+  // the route does so the preview can't disagree with the send.
+  const coupleEmail = resolveCoupleEmail(couples?.find((c) => c.id === coupleId));
 
   /* ─── hydrate from DB / initial defaults ────────────────────── */
   useEffect(() => {
@@ -714,7 +727,8 @@ export function InvoiceBuilderModal({
 
   // Live preview doc — fed to the right pane on every render so the
   // PDF / Email / Payment-page previews track form edits without a
-  // save round-trip.
+  // save round-trip. Also what Download PDF prints, so an unsaved edit
+  // is included in the file without forcing a save first.
   const previewDoc: PreviewDoc = {
     kind: 'invoice',
     documentNumber: invoice?.invoice_number ?? 'DRAFT',
@@ -746,8 +760,19 @@ export function InvoiceBuilderModal({
             })),
           }
         : null,
-    shareUrl: shareUrl ?? `https://example.com/invoice/${invoice?.share_token ?? 'preview'}`,
+    shareUrl,
     stripePaymentEnabled,
+  };
+
+  /* ─── PDF download ──────────────────────────────────────────── */
+  // Prints exactly what the PDF tab shows: same projection, same
+  // branding, so there is no second code path to drift.
+  const downloadPdf = () => {
+    generateAndPrintPdf(
+      toPdfDocumentData(previewDoc),
+      previewPdfBrandingOpts(branding),
+      branding ?? undefined,
+    );
   };
 
   return (
@@ -768,7 +793,14 @@ export function InvoiceBuilderModal({
         }}
         titlePlaceholder={coupleName ? `Invoice for ${coupleName}` : 'Wedding invoice title'}
         titleReadOnly={!canEdit}
-        previewPane={<BuilderPreviewPane doc={previewDoc} surface="invoice" />}
+        previewPane={
+          <BuilderPreviewPane
+            doc={previewDoc}
+            surface="invoice"
+            coupleEmail={coupleEmail}
+            onDownloadPdf={downloadPdf}
+          />
+        }
         footer={
           <ShareAndSend
             dirty={dirty}

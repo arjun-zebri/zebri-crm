@@ -115,6 +115,54 @@ describe('buildPdfHtml with branding', () => {
     expect(html).toContain('https://example.com/logo.png')
   })
 
+  describe('line item columns', () => {
+    it('omits Qty / Unit price when items carry no quantity or unit price', () => {
+      const html = buildPdfHtml(invoiceDoc)
+      expect(html).not.toContain('>Qty<')
+      expect(html).not.toContain('>Unit price<')
+      expect(html).toContain('$1,000.00')
+    })
+
+    it('omits Qty / Unit price when every item is a plain qty-1 line', () => {
+      // The builder writes quantity=1, unit_price=amount for forward
+      // compatibility; those columns would just repeat the amount.
+      const html = buildPdfHtml({
+        ...invoiceDoc,
+        items: [{ description: 'MC Services', quantity: 1, unit_price: 1000, amount: 1000 }],
+      })
+      expect(html).not.toContain('>Qty<')
+      expect(html).not.toContain('>Unit price<')
+    })
+
+    it('renders Qty / Unit price when an item has a real quantity', () => {
+      const html = buildPdfHtml({
+        ...invoiceDoc,
+        items: [{ description: 'Extra hours', quantity: 2, unit_price: 500, amount: 1000 }],
+      })
+      expect(html).toContain('>Qty<')
+      expect(html).toContain('>Unit price<')
+      expect(html).toContain('>2<')
+      expect(html).toContain('$500.00')
+    })
+
+    it('pads qty-1 rows so columns line up when another item has a quantity', () => {
+      const html = buildPdfHtml({
+        ...invoiceDoc,
+        items: [
+          { description: 'MC Services', amount: 1000 },
+          { description: 'Extra hours', quantity: 2, unit_price: 500, amount: 1000 },
+        ],
+      })
+      // Header is 4 columns, so every row must also be 4 cells.
+      const rows = html.match(/<tr>[\s\S]*?<\/tr>/g) ?? []
+      const itemRows = rows.filter((r) => r.includes('MC Services') || r.includes('Extra hours'))
+      expect(itemRows).toHaveLength(2)
+      for (const row of itemRows) {
+        expect((row.match(/<td/g) ?? []).length).toBe(4)
+      }
+    })
+  })
+
   describe('prices include GST note', () => {
     it('is absent unless the flag is set', () => {
       expect(buildPdfHtml(invoiceDoc)).not.toContain('Prices include GST')

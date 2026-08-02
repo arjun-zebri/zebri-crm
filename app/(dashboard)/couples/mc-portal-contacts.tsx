@@ -423,14 +423,13 @@ export function McPortalContacts({
                       </div>
                       {person.audio_url && (
                         <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <audio src={person.audio_url} id={`mc-audio-${person.id}`} className="hidden" />
-                          <button
-                            onClick={() => (document.getElementById(`mc-audio-${person.id}`) as HTMLAudioElement)?.play()}
-                            className="flex items-center justify-center w-7 h-7 text-gray-600 hover:text-gray-800 transition cursor-pointer rounded-lg hover:bg-gray-100"
+                          <AudioPlayButton
+                            src={person.audio_url}
                             title="Play pronunciation"
-                          >
-                            <Play size={12} strokeWidth={1.5} />
-                          </button>
+                            className="flex items-center justify-center w-7 h-7 transition cursor-pointer rounded-lg"
+                            idleClassName="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                            playingClassName="text-emerald-600 bg-emerald-50"
+                          />
                         </div>
                       )}
                       <Pencil size={12} strokeWidth={1.5} className="text-gray-300 shrink-0 opacity-0 group-hover:opacity-100 transition" />
