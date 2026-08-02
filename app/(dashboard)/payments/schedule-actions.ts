@@ -20,7 +20,12 @@ const templateStageSchema = z.object({
   label: z.string().min(1).max(80),
   amountType: z.enum(['percent', 'fixed', 'remainder']),
   amountValue: z.number().nonnegative().nullable(),
-  offsetValue: z.number().int().min(0).max(120),
+  // Sanity bound, not a business rule: ~2 years expressed in the smallest unit
+  // (days). The offset is unit-scoped (day / week / month), so a single cap has
+  // to clear the largest legitimate day count — a wedding booked two years out
+  // can legitimately place a stage 500+ days from its anchor. The modal input is
+  // the real UX guard; this only rejects clearly-absurd values.
+  offsetValue: z.number().int().min(0).max(730),
   offsetUnit: z.enum(['day', 'week', 'month']),
   offsetAnchor: z.enum(['issue', 'due']),
 })
