@@ -18,7 +18,7 @@ export const GENERAL_BLOCKS: BlockType[] = [
 /** Document-specific blocks per surface (spec §2.2). */
 export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
   invoice: ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action'],
-  contract: ['title', 'contractBody', 'action'],
+  contract: ['title', 'contractBody'],
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
   questionnaire: ['questionnaireBody'],
@@ -32,15 +32,31 @@ export interface PaletteGroup {
 /** Two labelled palette groups for a surface (General first).
  *
  * Render-split markers (contractBody, couplePortal, …) are excluded: they are
- * locked singletons that are always present, so they cannot be added or
- * removed and have no place in the "add block" palette. */
-export function paletteGroupsForSurface(surface: SurfaceTab): PaletteGroup[] {
+ * locked singletons that are always present, so they normally cannot be added
+ * or removed and have no place in the "add block" palette.
+ *
+ * The one exception is the contract body: it is clearable via "Clear all
+ * blocks", so when it is absent from the tree it must be re-addable. Pass the
+ * block types currently present (`presentTypes`) and a missing `contractBody`
+ * is surfaced in the Document-specific group; when present it is hidden again.
+ *
+ * @param surface - The document surface.
+ * @param presentTypes - Block types currently in the tree (defaults to none).
+ */
+export function paletteGroupsForSurface(
+  surface: SurfaceTab,
+  presentTypes: readonly BlockType[] = [],
+): PaletteGroup[] {
+  const present = new Set(presentTypes)
+  const docSpecific = (DOC_SPECIFIC_BY_SURFACE[surface] ?? []).filter((t) => {
+    if (!isMarker(t)) return true
+    // A cleared contract body is the only marker allowed back into the palette,
+    // and only while it is missing (so we never offer a duplicate singleton).
+    return t === 'contractBody' && !present.has('contractBody')
+  })
   return [
     { label: 'General', types: GENERAL_BLOCKS },
-    {
-      label: 'Document-specific',
-      types: (DOC_SPECIFIC_BY_SURFACE[surface] ?? []).filter((t) => !isMarker(t)),
-    },
+    { label: 'Document-specific', types: docSpecific },
   ]
 }
 

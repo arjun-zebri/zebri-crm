@@ -34,6 +34,7 @@ import type {
   ImageBlock,
   SpacerBlock,
   PaymentScheduleBlock,
+  ContractBodyBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -199,7 +200,7 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
     case 'paymentSchedule':
       return <PaymentScheduleControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'contractBody':
-      return null
+      return <ContractBodyControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'vendorTimelineBody':
       return null
     case 'questionnaireBody':
@@ -1786,6 +1787,68 @@ function PaymentScheduleControls({
         onChange={onStyleChange}
         {...(expanded !== undefined ? { expanded } : {})}
         bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />}
+      />
+    </div>
+  )
+}
+
+// ── Contract body ─────────────────────────────────────────────────────────────
+
+/**
+ * Typography controls for the contract-body block. Two targets, chosen by what
+ * the MC clicked in the preview mock: a clause heading (`data-subtarget=
+ * "subheading"`) edits {@link ContractBodyBlock.subheadingStyle}; anything else
+ * defaults to the paragraph body ({@link ContractBodyBlock.bodyStyle}). Mirrors
+ * the multi-target pattern in {@link PaymentScheduleControls} — selection is by
+ * preview click, and {@link ActiveTargetLabel} just names the active target.
+ *
+ * These overrides are contract-scoped (they live on the block), so nothing here
+ * reaches invoices or quotes. Defaults come from the global body / section-
+ * heading roles, so an untouched target shows the same values the live prose
+ * already uses.
+ */
+function ContractBodyControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: ContractBodyBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  const target: 'body' | 'subheading' = activeSubTarget === 'subheading' ? 'subheading' : 'body'
+  const style = target === 'subheading' ? block.subheadingStyle : block.bodyStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(
+      publicBrandingFromEditorState(state),
+      target === 'subheading' ? 'sectionHeading' : 'body',
+    ),
+    align: 'left',
+  }
+  // Merge onto the existing override so each single-field patch from the
+  // controls preserves the MC's prior changes for this target (matching every
+  // sibling *Controls). Only the fields the MC actually touched persist.
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<ContractBodyBlock>(
+      block.id,
+      target === 'subheading' ? { subheadingStyle: merged } : { bodyStyle: merged },
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'subheading' ? 'Subheading' : 'Paragraph'} />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        fontKind={target === 'subheading' ? 'heading' : 'body'}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
   )

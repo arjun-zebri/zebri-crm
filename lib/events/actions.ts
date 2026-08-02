@@ -551,10 +551,9 @@ export async function deleteTimelineItemAction(
 }
 
 /**
- * Bulk-insert timeline items (used when applying a template to an
- * event). The DB-side `position` defaults are inconvenient here -
- * callers supply explicit positions so the visual order matches
- * what the template intended.
+ * Bulk-insert timeline items in one call. The DB-side `position`
+ * defaults are inconvenient here - callers supply explicit positions
+ * so the visual order matches the order they intended.
  */
 const bulkInsertTimelineSchema = z.array(createTimelineItemSchema).min(1);
 

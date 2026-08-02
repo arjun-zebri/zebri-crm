@@ -149,6 +149,25 @@ Dense page section titles (e.g. settings): text-sm font-medium text-gray-900
 
 # Layout
 
+## Outward-facing document frame
+
+`lib/branding/document-frame.ts` is the single source of truth for how a sent
+document is framed, so the branding builder, the previews, and the public
+pages stay in lockstep:
+
+- `DOC_MAX_WIDTH_PX = 720` — the shared content width. Used by the branding
+  builder canvas, the branding preview page, the builder-modal preview, and
+  the public invoice / contract / run sheet / questionnaire pages. Apply it as
+  `style={{ maxWidth: DOC_MAX_WIDTH_PX }}` with `mx-auto w-full`, not a
+  `max-w-*` class, so there is one numeric source.
+- `DOC_CANVAS_BG = '#F4F4F1'` — the light-grey page canvas the white document
+  card sits on. The public invoice and contract pages set their page
+  background to this (the card keeps its own `surface_color`) so the card
+  reads as a document, matching the builder backdrop. Run sheet and
+  questionnaire share the width but not the canvas: they have no white card,
+  so grey would leave their content floating (revisit if they gain a card).
+- The couple portal is intentionally wider (`max-w-5xl`) and is out of scope.
+
 Sidebar width: 240px (desktop expanded), 68px (desktop collapsed)
 
 Structure: Sidebar \| Main Content

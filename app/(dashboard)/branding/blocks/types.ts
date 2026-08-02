@@ -325,9 +325,28 @@ export interface PaymentScheduleBlock extends BaseBlock {
  * in the branding editor; the contract content itself is never
  * editable on the branding surface. Same model as `couplePortal`
  * and `paymentSchedule`.
+ *
+ * Typography overrides are **contract-scoped**: they live on this block, so
+ * they never touch invoices or quotes. Each is fully optional and only carries
+ * the individual properties the MC explicitly changed. The live prose reads
+ * them through CSS variables whose fallbacks equal the historical hard-coded
+ * values (see `.contract-content` in `app/globals.css` +
+ * `contract-body-section.tsx`), so a block with neither override renders
+ * byte-identically to every contract sent before this feature existed.
  */
 export interface ContractBodyBlock extends BaseBlock {
   type: 'contractBody'
+  /**
+   * Paragraph typography override (the `<p>` prose). Absent ⇒ paragraphs keep
+   * the historical body defaults. Only the set fields are applied.
+   */
+  bodyStyle?: TextStyle
+  /**
+   * Subheading typography override (the `<h1>`/`<h2>`/`<h3>` clause headings).
+   * Absent ⇒ subheadings keep the historical heading defaults. A size override
+   * collapses all three heading levels to that single size.
+   */
+  subheadingStyle?: TextStyle
 }
 
 /**
@@ -400,12 +419,12 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
 }
 
 /**
- * Surface-specific overrides for {@link BLOCK_LABELS}. The action block is a
- * payment CTA on invoices ("Pay with card") but a sign CTA on contracts
- * ("Sign contract"), so its label depends on the document.
+ * Surface-specific overrides for {@link BLOCK_LABELS}. The shared `title` block
+ * is the "Invoice header" on invoices but the "Contract header" on contracts,
+ * so its label depends on the document.
  */
 const BLOCK_LABEL_OVERRIDES: Record<string, Partial<Record<BlockType, string>>> = {
-  contract: { title: 'Contract header', action: 'Sign contract' },
+  contract: { title: 'Contract header' },
 }
 
 /**

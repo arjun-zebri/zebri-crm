@@ -26,6 +26,7 @@
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import { findActionStyle } from '@/lib/branding/public-renderer';
 import {
@@ -152,7 +153,7 @@ export default function PublicContractPage() {
   };
 
   /* ─── Branding-derived values ─── */
-  const pageBg = contract?.surface_color || '#fafafa';
+  const pageBg = DOC_CANVAS_BG;
   const textColor = contract?.text_color || '#111827';
   const mutedColor = contract?.muted_color || '#6B7280';
   const brand = contract?.brand_color || '#A7F3D0';
@@ -238,7 +239,7 @@ export default function PublicContractPage() {
       className="min-h-screen"
       style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
     >
-      <div className={`max-w-3xl mx-auto ${pad.page} px-4 @container/doc`}>
+      <div className={`mx-auto w-full ${pad.page} px-4 @container/doc`} style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
         {showHeaderBanner ? (
           <div className="mb-5 overflow-hidden" style={{ borderRadius: radius }}>
             {/* User-uploaded brand asset — no next/image. */}

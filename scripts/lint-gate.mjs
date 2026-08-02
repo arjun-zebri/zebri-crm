@@ -64,7 +64,11 @@ import { execSync } from 'node:child_process';
 // error → 64 → 63.
 // Feature removal (2026-07-31): deleting the retired offer-document surface
 // and its builders cleared one lint error → 62.
-const ERROR_BUDGET = 62;
+// Contract-block coherence + preview mock body (2026-08-02): removing the
+// payment-shaped action wiring from the contract surface, routing the contract
+// body through BlockFrame, and consolidating the contract-body mock into a
+// shared module cleared 8 lint errors → 54. Locking in.
+const ERROR_BUDGET = 54;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -183,7 +187,10 @@ const ERROR_BUDGET = 62;
 // Feature removal (2026-07-31): deleting the retired offer-document surface,
 // builders, automations, and email cleared dead imports/vars net of the ones
 // the removal exposed (261 -> 259). Locking in.
-const WARNING_BUDGET = 259;
+// Shared document frame (2026-08-02): moved the builder backdrop colour off the
+// arbitrary-value Tailwind class `bg-[#F4F4F1]` into an inline style sourced
+// from DOC_CANVAS_BG, clearing one no-off-token-color warning (259 -> 258).
+const WARNING_BUDGET = 258;
 
 function runEslintJson() {
   try {

@@ -12,15 +12,12 @@ import {
 } from '@dnd-kit/core'
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Check, Clock, LayoutTemplate } from 'lucide-react'
+import { ChevronDown, Check, Clock } from 'lucide-react'
 import { useState, useCallback } from 'react'
 
 import { EventDayCalendar } from '@/components/events/event-day-calendar'
 import { EventTimelineModal } from '@/components/events/event-timeline-modal'
-import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/toast'
 import {
-  bulkInsertTimelineItemsAction,
   deleteTimelineItemAction,
   updateTimelineItemAction,
 } from '@/lib/events/actions'
@@ -38,20 +35,6 @@ function unwrap<T>(
 }
 
 
-
-interface TimelineTemplate {
-  id: string
-  name: string
-  item_count: number
-}
-
-interface TimelineTemplateItem {
-  title: string
-  start_time: string | null
-  duration_min: number | null
-  description: string | null
-  position: number
-}
 
 interface Event {
   id: string
@@ -129,7 +112,6 @@ interface CoupleTimelineProps {
 export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
-  const { toast } = useToast()
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -137,10 +119,6 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
   // Item edit modal (shared for unscheduled + review cards)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<TimelineItem | null>(null)
-
-  // Template picker
-  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
-  const [applyingTemplateId, setApplyingTemplateId] = useState<string | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -227,83 +205,6 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
     }
   }, [items, updateItem, queryClient, activeEventId])
 
-  const { data: templates = [] } = useQuery({
-    queryKey: ['timeline-templates-picker'],
-    queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) return []
-      const { data: tmplData, error: tmplErr } = await supabase
-        .from('timeline_templates')
-        .select('id, name')
-        .eq('user_id', user.user.id)
-        .order('position', { ascending: true })
-      if (tmplErr) throw tmplErr
-
-      const { data: itemData, error: itemErr } = await supabase
-        .from('timeline_template_items')
-        .select('template_id')
-        .eq('user_id', user.user.id)
-      if (itemErr) throw itemErr
-
-      const counts: Record<string, number> = {}
-      ;(itemData || []).forEach((r: any) => {
-        counts[r.template_id] = (counts[r.template_id] ?? 0) + 1
-      })
-
-      return (tmplData || []).map((t: any) => ({
-        id: t.id,
-        name: t.name,
-        item_count: counts[t.id] ?? 0,
-      })) as TimelineTemplate[]
-    },
-  })
-
-  const applyTemplate = useMutation({
-    mutationFn: async (templateId: string) => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user || !activeEventId) throw new Error('Not authenticated')
-      setApplyingTemplateId(templateId)
-
-      // The template_items read stays on the RLS-scoped client —
-      // there's no write here, just a fetch for the bulk insert
-      // below.
-      const { data: templateItems, error } = await supabase
-        .from('timeline_template_items')
-        .select('title, start_time, duration_min, description, position')
-        .eq('template_id', templateId)
-        .eq('user_id', user.user.id)
-        .order('position', { ascending: true })
-      if (error) throw error
-
-      const basePosition = (items.length) * 1000
-      if (templateItems && templateItems.length > 0) {
-        unwrap(
-          await bulkInsertTimelineItemsAction(
-            templateItems.map((item: TimelineTemplateItem, i: number) => ({
-              event_id: activeEventId,
-              title: item.title,
-              start_time: item.start_time ?? null,
-              duration_min: item.duration_min,
-              description: item.description,
-              position: basePosition + (i + 1) * 1000,
-              pending_review: false,
-            })),
-          ),
-        )
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event-timeline', activeEventId] })
-      setTemplatePickerOpen(false)
-      setApplyingTemplateId(null)
-      toast('Template applied.')
-    },
-    onError: (err: any) => {
-      setApplyingTemplateId(null)
-      toast(err.message || 'Failed to apply template', 'error')
-    },
-  })
-
   const isLoading = eventsLoading || (!!activeEventId && (itemsLoading || contactsLoading))
   const activeEvent = events.find((e) => e.id === activeEventId) ?? events[0]
   const exportFilename = [
@@ -314,46 +215,10 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
   const unscheduledItems = items.filter((i) => !i.start_time && !i.pending_review)
   const reviewItems = items.filter((i) => i.pending_review)
 
-  // Render the "Apply template" action only when there's an active event and templates exist
-  const applyTemplateAction = activeEventId && templates.length > 0 ? (
-    <Popover.Root open={templatePickerOpen} onOpenChange={setTemplatePickerOpen}>
-      <Popover.Trigger asChild>
-        <Button size="sm" className="cursor-pointer gap-1.5">
-          <LayoutTemplate size={14} strokeWidth={1.5} />
-          Apply template
-        </Button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-56"
-          sideOffset={4}
-          align="start"
-        >
-          <p className="px-3 py-1.5 text-xs text-gray-400 font-medium uppercase tracking-wider">Templates</p>
-          {templates.map((tmpl) => (
-            <button
-              key={tmpl.id}
-              type="button"
-              disabled={applyTemplate.isPending}
-              onClick={() => applyTemplate.mutate(tmpl.id)}
-              className="w-full text-left px-3 py-2 text-sm transition flex items-center justify-between text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              <span className="truncate">{tmpl.name}</span>
-              <span className="text-xs text-gray-400 shrink-0 ml-2">
-                {applyingTemplateId === tmpl.id ? '…' : `${tmpl.item_count}`}
-              </span>
-            </button>
-          ))}
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
-  ) : null
-
   return (
     <CoupleTabShell
       title="Timeline"
       stats={events.length > 0 ? [{ label: tabStat(events.length, 'event') }] : undefined}
-      actions={applyTemplateAction}
     >
       {isLoading ? (
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 animate-pulse">

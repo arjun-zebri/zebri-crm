@@ -222,20 +222,23 @@ export function BlockRenderer({
               <div aria-hidden className="absolute inset-x-0 -top-4 h-8" />
             </div>
             {blocks.map((block) => {
+              // Non-contract render-split markers stay fixed (non-selectable):
+              // their surface is nothing but that one body, so there's nothing
+              // to arrange around them. The contract body is the exception — it
+              // flows through the normal BlockFrame path below so the MC can
+              // select it and reach the shared style toolbar (it's still locked,
+              // so delete/duplicate stay disabled).
               if (
                 block.type === 'couplePortal' ||
-                block.type === 'contractBody' ||
                 block.type === 'vendorTimelineBody' ||
                 block.type === 'questionnaireBody'
               ) {
                 const fixedLabel =
                   block.type === 'couplePortal'
                     ? 'Couple portal (fixed)'
-                    : block.type === 'contractBody'
-                      ? 'Contract body (fixed)'
-                      : block.type === 'vendorTimelineBody'
-                        ? 'Run sheet (fixed)'
-                        : 'Questionnaire (fixed)';
+                    : block.type === 'vendorTimelineBody'
+                      ? 'Run sheet (fixed)'
+                      : 'Questionnaire (fixed)';
                 return (
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
                     {renderBlock(block, state, updateBlock, {}, surface)}
@@ -486,7 +489,7 @@ function renderBlock(
     case 'paymentSchedule':
       return <RenderPaymentSchedule block={block} state={state} updateBlock={updateBlock} />
     case 'contractBody':
-      return <RenderContractBody state={state} />
+      return <RenderContractBody state={state} block={block} />
     case 'vendorTimelineBody':
       return <RenderVendorTimelineBody state={state} />
     case 'questionnaireBody':

@@ -1,6 +1,7 @@
 import type { JSONContent } from '@tiptap/core'
 
 import { htmlToPlainText } from '@/lib/branding/sanitize'
+import type { SurfaceTab } from '@/types/branding-preview'
 
 import type { Block, BlockType } from './types'
 
@@ -34,7 +35,7 @@ export function actionDefaults(): { primary: string; secondary: string | null } 
   return { primary: 'Pay now', secondary: null }
 }
 
-export function blockTemplate(type: BlockType): Block {
+export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
   switch (type) {
     case 'headerBanner':
       return { id: newId('hb'), type: 'headerBanner' }
@@ -43,6 +44,21 @@ export function blockTemplate(type: BlockType): Block {
     case 'tagline':
       return { id: newId('tg'), type: 'tagline' }
     case 'title':
+      // A contract is signed, not quoted or billed: it carries no
+      // customer-facing "Expires" date and no reference number the way an
+      // invoice/quote does, so both default off on the contract surface.
+      // The header then reads as the contract title + couple name.
+      if (surface === 'contract') {
+        return {
+          id: newId('tt'),
+          type: 'title',
+          title: 'Contract',
+          showCoupleName: true,
+          showRef: false,
+          showExpires: false,
+          showAbn: false,
+        }
+      }
       return {
         id: newId('tt'),
         type: 'title',
@@ -140,15 +156,26 @@ export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'v
       blockTemplate('questionnaireBody'),
     ]
   }
-  // contract — minimal chrome scaffold. The contract body is
+  // contract — minimal chrome scaffold: business identity, a
+  // contract header, then the body marker. The contract body is
   // written by the MC per-couple in the builder modal's TipTap
-  // editor and renders at the `contractBody` marker. MCs can add
-  // any other chrome blocks they want (title, custom intro text,
-  // divider, footer, etc) above or below the marker; this default
-  // stays intentionally lean so MCs aren't fighting pre-canned
-  // structure they didn't ask for.
+  // editor and renders at the `contractBody` marker; the sign/decline
+  // form is injected on the public page, so there is no CTA block
+  // here. MCs can add any other chrome blocks they want (custom intro
+  // text, divider, footer, etc) above or below the marker; this
+  // default stays lean so MCs aren't fighting pre-canned structure
+  // they didn't ask for.
   return [
     { id: newId('bn'), type: 'businessName' },
+    {
+      id: newId('tt'),
+      type: 'title',
+      title: 'Contract',
+      showCoupleName: true,
+      showRef: false,
+      showExpires: false,
+      showAbn: false,
+    },
     { id: newId('cb'), type: 'contractBody', locked: true },
   ]
 }
@@ -206,16 +233,24 @@ export function migrateBlocks(blocks: unknown, surface?: 'invoice' | 'contract' 
   // with a single `contractBody` marker; keep chrome (header,
   // business name, title, footer). Idempotent — runs harmlessly
   // when the data is already in the new shape.
+  //
+  // Heuristic: any text block whose content matches the old template's
+  // distinctive headings (PARTIES / EVENT DETAILS / numbered clauses /
+  // SIGNATURES) was canned content from the previous default. Custom
+  // text blocks the MC wrote themselves do NOT trip this — we only
+  // match start-of-string against the old default's headings.
   if (surface === 'contract') {
+    const oldDefaultPattern = /^(PARTIES|EVENT DETAILS|\d+\.\s+[A-Z][A-Z &,]+|SIGNATURES)\b/
     const hasMarker = migrated.some((b) => b.type === 'contractBody')
-    if (!hasMarker) {
-      // Heuristic: any text block whose content matches the old
-      // template's distinctive headings (PARTIES / EVENT DETAILS /
-      // numbered clauses / SIGNATURES) was canned content from the
-      // previous default. Strip them. Custom text blocks the MC
-      // added themselves should NOT trip this — we only match
-      // start-of-string against the old default's headings.
-      const oldDefaultPattern = /^(PARTIES|EVENT DETAILS|\d+\.\s+[A-Z][A-Z &,]+|SIGNATURES)\b/
+    const hadLegacyTemplate = migrated.some(
+      (b) => b.type === 'text' && oldDefaultPattern.test(richPlainText((b as { text?: unknown }).text).trimStart()),
+    )
+    // Only heal a genuine legacy contract (the pre-Phase-3.1 inline
+    // template). A modern contract with no marker is one the MC cleared
+    // via "Clear all blocks" — leave it marker-less so the removal
+    // sticks. The body is re-addable from the block palette, and the
+    // readiness panel flags its absence until it returns.
+    if (!hasMarker && hadLegacyTemplate) {
       const chrome = migrated.filter(
         (b) => b.type !== 'text' || !oldDefaultPattern.test(richPlainText((b as { text?: unknown }).text).trimStart()),
       )

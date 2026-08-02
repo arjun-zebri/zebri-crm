@@ -12,12 +12,16 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { type CSSProperties, useEffect } from 'react'
 
-import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { googleFontsHref } from '@/lib/branding/fonts'
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import type { Block, ContractBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
+import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
+import { FONT_STACKS, googleFontsHref } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead, type PublicBranding } from '@/lib/branding/public-surface'
+import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 
 /**
@@ -117,8 +121,12 @@ function PreviewContent({ surface }: { surface: 'invoice' | 'contract' | 'portal
     return <LoadingState />
   }
 
+  // Match the outward-facing document frame: the light-grey canvas sits behind
+  // the white card so the preview reads like the sent document (and like the
+  // builder). The portal is a wider dashboard-style surface, so it keeps its own
+  // surface colour rather than the document canvas.
   const pageStyle = {
-    background: branding.surface_color,
+    background: surface === 'portal' ? branding.surface_color : DOC_CANVAS_BG,
     color: branding.text_color,
     minHeight: '100vh',
   }
@@ -162,8 +170,8 @@ function InvoicePreview({
 
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           {/* Render the action (CTA) block: on the live payment page a functional
               button is injected separately (so it's hidden there to avoid a
               duplicate), but this static preview has no such button, so we let the
@@ -193,17 +201,82 @@ function ContractPreview({
 }) {
   const doc = sampleContractDoc()
 
+  // The contract body is a render-split marker: the generic block renderer emits
+  // nothing for it (on the live page the real signed body is injected there).
+  // Split the tree at the marker and inject a mock body so the preview shows how
+  // a contract reads, mirroring app/contract/[token] ContractBrandedCard.
+  const markerIdx = blocks.findIndex((b) => b.type === 'contractBody')
+  const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks
+  const postBlocks = markerIdx >= 0 ? blocks.slice(markerIdx + 1) : []
+  const contractBodyBlock = blocks.find(
+    (b): b is ContractBodyBlock => b.type === 'contractBody',
+  )
+
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
-          {/* Show the CTA block (see InvoicePreview note). */}
-          <PublicBlockRenderer
-            blocks={blocks}
-            branding={branding}
-            doc={doc}
-          />
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+          <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={doc} hideAction />
+          {markerIdx >= 0 ? (
+            <PreviewContractBody
+              branding={branding}
+              {...(contractBodyBlock ? { block: contractBodyBlock } : {})}
+            />
+          ) : null}
+          {postBlocks.length > 0 ? (
+            <PublicBlockRenderer blocks={postBlocks} branding={branding} doc={doc} hideAction />
+          ) : null}
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Mock contract body for the preview — sample clauses + MC signature, rendered
+ * with the branding's body / subheading / label type roles so the preview
+ * reflects the MC's typography. Never sent; the couple's real body replaces it.
+ */
+function PreviewContractBody({
+  branding,
+  block,
+}: {
+  branding: PublicBranding
+  block?: ContractBodyBlock
+}) {
+  // Layer the contract-scoped overrides (if any) on top of the global body /
+  // section-heading roles. `resolveTextStyle` returns ready CSS, and with no
+  // override it resolves exactly to the role defaults, so an unstyled preview
+  // is unchanged.
+  const headingCss = resolveTextStyle(block?.subheadingStyle, roleDefaults(branding, 'sectionHeading'))
+  const bodyCss = resolveTextStyle(block?.bodyStyle, roleDefaults(branding, 'body'))
+  const label = roleDefaults(branding, 'sectionLabel')
+  return (
+    <div className="space-y-8 border-t pt-8 mt-8" style={{ borderTopColor: branding.border_color }}>
+      <div className="space-y-6">
+        {SAMPLE_CONTRACT_CLAUSES.map((clause) => (
+          <div key={clause.heading} className="space-y-1.5">
+            <p style={headingCss}>{clause.heading}</p>
+            <p style={bodyCss}>{clause.body}</p>
+          </div>
+        ))}
+      </div>
+      <div className="border-t pt-6" style={{ borderTopColor: branding.border_color }}>
+        <p
+          className="mb-1"
+          style={{
+            fontFamily: FONT_STACKS[label.fontFamily as never],
+            fontSize: label.fontSize,
+            fontWeight: label.fontWeight,
+            color: label.color,
+            textTransform: label.textTransform,
+          } as CSSProperties}
+        >
+          Signed by MC
+        </p>
+        <p style={{ fontSize: 28, lineHeight: 1, color: bodyCss.color, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+          Your name
+        </p>
       </div>
     </div>
   )
@@ -232,8 +305,8 @@ function PortalPreview({
 
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           <PublicBlockRenderer
             blocks={blocks}
             branding={branding}
@@ -269,8 +342,8 @@ function VendorTimelinePreview({
 
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           <PublicBlockRenderer
             blocks={blocks}
             branding={branding}
@@ -306,8 +379,8 @@ function QuestionnairePreview({
 
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           <PublicBlockRenderer
             blocks={blocks}
             branding={branding}

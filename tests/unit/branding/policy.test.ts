@@ -14,10 +14,11 @@ describe('policy', () => {
     expect(isMarker('paymentSchedule')).toBe(false)
   })
 
-  it('contract requires title/contractBody/action', () => {
+  it('contract requires title/contractBody (no action — sign form is injected)', () => {
     expect(requiredTypesForSurface('contract').sort()).toEqual(
-      ['action', 'contractBody', 'title'].sort(),
+      ['contractBody', 'title'].sort(),
     )
+    expect(isRequired('action', 'contract')).toBe(false)
     expect(isRequired('footer', 'contract')).toBe(false)
   })
 

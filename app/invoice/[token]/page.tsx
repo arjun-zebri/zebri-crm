@@ -36,6 +36,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame';
 import { findActionStyle } from '@/lib/branding/public-renderer';
 import {
   bodyFontFamily,
@@ -111,7 +112,7 @@ export default function PublicInvoicePage() {
     !!stripeReady && pageState !== 'paid' && pageState !== 'cancelled';
 
   /* ─── Branding-derived values ─── */
-  const pageBg = invoice?.surface_color || '#fafafa';
+  const pageBg = DOC_CANVAS_BG;
   const textColor = invoice?.text_color || '#111827';
   const mutedColor = invoice?.muted_color || '#6B7280';
   const radius = invoice?.corner_radius ?? 16;
@@ -158,7 +159,7 @@ export default function PublicInvoicePage() {
       className={`min-h-screen ${pad.page} px-4`}
       style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
     >
-      <div className="max-w-lg lg:max-w-2xl mx-auto @container/doc">
+      <div className="mx-auto w-full @container/doc" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
         {showHeaderBannerImage ? (
           <div
             className="mb-5 overflow-hidden"

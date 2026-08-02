@@ -46,7 +46,10 @@ describe('blocksForSurface', () => {
     const blocks = blocksForSurface('contract')
     expect(blocks).toContain('text')
     expect(blocks).toContain('title')
-    expect(blocks).toContain('action')
+    expect(blocks).toContain('contractBody')
+    // The sign/decline form is injected on the public contract page, so no
+    // manageable action/CTA block belongs on the contract surface.
+    expect(blocks).not.toContain('action')
   })
 
   it('portal includes general blocks and couplePortal', () => {

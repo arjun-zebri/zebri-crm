@@ -24,11 +24,13 @@ const DATA_BOUND: ReadonlySet<BlockType> = new Set([
   'paymentSchedule', 'lineItems', 'totals',
 ] as const)
 
-/** Required non-conditional blocks per surface (the CTA `action` is required
- *  where the document must have a call to action). */
+/** Required non-conditional blocks per surface. Contracts do not list an
+ *  `action` block: the sign/decline form is always injected on the public
+ *  contract page (see contract-branded-card `bodyTrailing`), so a manageable
+ *  CTA block would render nothing and only muddy the palette. */
 export const REQUIRED_BY_SURFACE: Readonly<Record<SurfaceTab, readonly BlockType[]>> = {
   invoice: ['title', 'lineItems', 'totals'],
-  contract: ['title', 'contractBody', 'action'],
+  contract: ['title', 'contractBody'],
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
   questionnaire: ['questionnaireBody'],

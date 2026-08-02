@@ -78,13 +78,50 @@ Invoice payment rule: **at least one** of Bank details / Pay CTA must be
 present; both are allowed. (This relaxes the earlier "one but not both"
 rule.)
 
-**Contract** (all required):
+**Contract**:
 
 | Block           | Required? |
 |-----------------|-----------|
 | Contract header | Required  |
 | Contract body   | Required  |
-| Sign CTA        | Required  |
+
+There is **no Sign CTA block** on the contract surface. The
+sign/decline form is always injected on the public contract page
+(`contract-branded-card` `bodyTrailing`), so a manageable CTA block
+would render nothing. The `action` block is not addable on contracts
+and is not in the contract required set. The contract header (`title`)
+defaults with **Expires off and Ref off** (a contract is signed, not
+quoted or billed, so it carries neither an expiry date nor a
+customer-facing reference number); the header reads as the contract
+title + couple name.
+
+Unlike the other render-split markers (portal / run sheet /
+questionnaire body, which survive a "Clear all blocks"), the contract
+body **is** cleared by "Clear all blocks" so a contract can be reset to
+a truly blank canvas. When it is absent it becomes re-addable from the
+block palette, the readiness panel flags its absence, and
+`migrateBlocks` will **not** silently re-insert it (it only heals
+genuine pre-Phase-3.1 legacy contracts). On the public page a body-less
+contract falls back to rendering the injected body after all blocks.
+
+**Contract-body typography (contract-scoped).** Selecting the contract-body
+block exposes typography controls for two targets, chosen by clicking the
+corresponding part in the preview: **Paragraph** (the prose `<p>`, stored as
+`contractBody.bodyStyle`) and **Subheading** (the clause headings
+`h1`/`h2`/`h3`, stored as `contractBody.subheadingStyle`). Both are optional
+`TextStyle` overrides that live on the block, so they **never** affect invoices
+or quotes. Targets default to the global `body` / `sectionHeading` roles.
+
+The live prose is a locked HTML snapshot injected via `.contract-content`
+(`app/globals.css`). Each styled property there is driven by a `--cc-*` CSS
+variable whose **fallback equals the historical hard-coded value**
+(`--cc-body-color`, `--cc-body-line-height`, `--cc-body-case`;
+`--cc-subheading-font/size/weight/color/case`). A variable is **set only when
+the MC explicitly overrides that property** (see `contract-body-section.tsx`) —
+never from a role default. Result: a contract with no overrides (every contract
+sent before this feature) renders byte-identically. A subheading size override
+collapses all three heading levels to one size; paragraph font-family + size
+flow through the `.contract-content` wrapper inline style rather than a var.
 
 **Client Portal** (required): Portal body.
 
@@ -107,8 +144,8 @@ Fresh templates ship valid out of the box (all required blocks present).
 - **Invoice:** My details → Invoice header → Invoice line items → Invoice
   totals → Payment schedule → Text (you have a choice to choose between sentence) → Bank details → Pay CTA → Footer
   (default includes **both** Bank details and Pay CTA)
-- **Contract:** My details → Contract header → Contract body → Sign CTA →
-  Footer
+- **Contract:** My details → Contract header → Contract body
+  (sign/decline form is injected on the public page; no CTA block)
 - **Client Portal:** My details → Portal body → Footer
 - **Run sheet:** My details → Run sheet body → Footer
 - **Questionnaire:** My details → Questionnaire body (mode: Regular form)

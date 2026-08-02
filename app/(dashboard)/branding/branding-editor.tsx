@@ -685,7 +685,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
-    const newBlock = blockTemplate(type)
+    const newBlock = blockTemplate(type, docSurface)
     const list = state.blocks[docSurface] ?? []
     if (insertAfterId) {
       const idx = list.findIndex((b) => b.id === insertAfterId)
@@ -995,6 +995,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             onOpenChange={setPaletteOpen}
             onAdd={addBlock}
             surface={surface}
+            presentTypes={(state.blocks[docSurface] ?? []).map((b) => b.type)}
             trigger={
               <button
                 type="button"
@@ -1119,12 +1120,18 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             onClearBlocks={
               visibleBlocks.length > 0
                 ? () => {
-                    // Keep only the render-split marker (portal / contract /
-                    // run sheet / questionnaire body). Everything else clears,
-                    // including paymentSchedule, which is now an optional block
-                    // rather than a fixed marker.
+                    // Keep only the render-split markers (portal / run sheet /
+                    // questionnaire body) whose surface is nothing without
+                    // them. The contract body is the exception: it is fully
+                    // clearable so "Clear all blocks" gives a true blank
+                    // canvas, and it is re-addable from the block palette when
+                    // absent (the readiness panel flags it meanwhile).
+                    // Everything else clears, including paymentSchedule, which
+                    // is now an optional block rather than a fixed marker.
                     setBlocksForCurrent(
-                      (state.blocks[docSurface] ?? []).filter((b) => isMarker(b.type)),
+                      (state.blocks[docSurface] ?? []).filter(
+                        (b) => isMarker(b.type) && b.type !== 'contractBody',
+                      ),
                     )
                     setSelectedBlockIds([])
                   }

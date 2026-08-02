@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
+import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
 import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
@@ -39,6 +40,7 @@ import type {
   ImageBlock,
   QuestionnaireBodyBlock,
   PaymentScheduleBlock,
+  ContractBodyBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -1059,72 +1061,66 @@ export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps
  * builder modal's TipTap editor and is set per couple. Same model
  * as `RenderCouplePortal` + `RenderPaymentSchedule`.
  *
- * Renders with a dashed border + muted "Locked" badge so it's
- * visually unambiguous this slot isn't editable here, plus a
- * short message explaining where the body actually lives.
+ * Renders a realistic mock of the body (sample clauses + MC signature
+ * line, in the MC's branding fonts/colours) so the preview shows how a
+ * contract actually reads, rather than a bare note. A small "sample"
+ * caption and the closing note make clear it is authored per couple and
+ * not editable here; the "Required" badge + top-right readiness panel
+ * carry the locked/required signal, so no heavy framing is needed.
  */
-export function RenderContractBody({ state }: { state: BrandPreviewState }) {
+export function RenderContractBody({ state, block }: { state: BrandPreviewState; block: ContractBodyBlock }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
-  const surface = state.surfaceColor || '#FFFFFF'
-  const heading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
+  // Resolve the two contract-body targets from the block's overrides, falling
+  // back to the global section-heading / body role defaults — the same defaults
+  // the live prose uses, so an unstyled block mirrors a real contract. The
+  // `data-subtarget` tags let a click in the preview target the right control.
+  const pub = publicBrandingFromEditorState(state)
+  const headingCss = resolveTextStyle(block.subheadingStyle, roleDefaults(pub, 'sectionHeading'))
+  const bodyCss = resolveTextStyle(block.bodyStyle, roleDefaults(pub, 'body'))
   return (
     <div className="border-t border-gray-100">
+      {/* Horizontal (docX) inset comes from BlockFrame, which now wraps this
+          block — only the vertical rhythm is applied here. */}
       <div className={pad.blockY}>
-        {/* Locked-slot affordance — dashed border + muted "Locked"
-            badge make it clear at a glance that this block isn't
-            editable on the branding surface. */}
-        <div
-          className="rounded-xl border-2 border-dashed p-5"
-          style={{
-            borderColor: muted + '60',
-            backgroundColor: surface,
-          }}
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-3"
+          style={{ color: muted }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <p
-              className="text-xs font-medium uppercase tracking-wider"
-              style={{ color: muted }}
-            >
-              Contract body
-            </p>
-            <span
-              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: muted + '20',
-                color: muted,
-              }}
-            >
-              Locked
-            </span>
-          </div>
+          Contract body · sample
+        </p>
 
-          <div className="space-y-3 max-w-prose opacity-60 select-none pointer-events-none">
-            <p className="text-base font-semibold" style={{ color: text, ...heading }}>
-              1. Definitions and interpretation
-            </p>
-            <p className="text-sm leading-6" style={{ color: text }}>
-              <span className="font-semibold">Event</span> means the wedding reception described in clause 2.{' '}
-              <span className="font-semibold">Services</span> means the wedding MC services described in clause 3.{' '}
-              <span className="font-semibold">Fee</span> means the total amount payable under clause 4.
-            </p>
-            <p className="text-base font-semibold mt-4" style={{ color: text, ...heading }}>
-              2. Event details
-            </p>
-            <p className="text-sm leading-6" style={{ color: text }}>
-              Event date: 14 September 2026<br />
-              Venue: The Glasshouse, Sydney
-            </p>
-          </div>
-
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
-            <p className="text-xs" style={{ color: muted }}>
-              The contract body itself can&apos;t be edited here — you write it per couple inside the contract modal under{' '}
-              <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>. You can drag other blocks (text intros, dividers, signature notes) above or below this slot to wrap the body with extra chrome.
-            </p>
-          </div>
+        <div className="space-y-4 max-w-prose">
+          {SAMPLE_CONTRACT_CLAUSES.map((clause) => (
+            <div key={clause.heading} className="space-y-1.5">
+              <p data-subtarget="subheading" style={headingCss}>
+                {clause.heading}
+              </p>
+              <p data-subtarget="body" style={bodyCss}>
+                {clause.body}
+              </p>
+            </div>
+          ))}
         </div>
+
+        {/* MC countersignature — mirrors what renders on the sent contract. */}
+        <div className="mt-6 pt-5 border-t" style={{ borderColor: muted + '30' }}>
+          <p className="text-xs mb-1" style={{ color: muted }}>
+            Signed by MC
+          </p>
+          <p
+            className="text-2xl leading-none"
+            style={{ color: text, fontFamily: 'Caveat, "Brush Script MT", cursive' }}
+          >
+            Your name
+          </p>
+        </div>
+
+        <p className="text-xs leading-6 mt-5 w-full" style={{ color: muted }}>
+          Written per couple in the contract modal under{' '}
+          <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>, where you can also drop in a reusable contract template you&apos;ve saved. Drag other blocks above or below to wrap it.
+        </p>
       </div>
     </div>
   )

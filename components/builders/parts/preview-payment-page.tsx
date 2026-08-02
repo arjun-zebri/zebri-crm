@@ -20,6 +20,7 @@
 
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 
+import { DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame';
 import {
   type PublicDocData,
   PublicBlockRenderer,
@@ -120,7 +121,7 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
         ref={blockStackRef}
         className="mx-auto @container/doc"
         style={{
-          maxWidth: 640,
+          maxWidth: DOC_MAX_WIDTH_PX,
           fontFamily: headingFontFamily(branding),
         }}
       >

@@ -461,8 +461,6 @@ DELETE (sampled clean across the migrations).
 | `event_vendors` (legacy) | ✅ | (join) | ☐ | Contacts |
 | `task_groups` | ✅ | `user_id` | ✅ `tests/integration/rls/task-groups.test.ts` (Phase 6, 5 tests) | Tasks |
 | `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) + `tests/integration/timeline/public-timeline-rpc.test.ts` (Phase 10 — public RPC guards) | Timeline |
-| `timeline_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-templates.test.ts` (Phase 12, 11 tests — both tables) | Timeline |
-| `timeline_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-templates.test.ts` (Phase 12, 11 tests — both tables) | Timeline |
 | `portal_files` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-files.test.ts` (Phase 4D, 4 tests) | Client Portal |
 | `portal_people` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-people.test.ts` (Phase 4D, 5 tests) | Client Portal |
 | `portal_songs` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-songs.test.ts` (Phase 4D, 7 tests — also covers `portal_song_categories`) | Client Portal |

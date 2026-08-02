@@ -19,6 +19,7 @@ import { useParams } from 'next/navigation'
 import { useState } from 'react'
 
 import { themeFromBranding } from '@/components/questionnaires/theme'
+import { DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead } from '@/lib/branding/public-surface'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
@@ -83,7 +84,7 @@ export default function PublicQuestionnairePage() {
 
   return (
     <div className="min-h-screen" style={{ background: theme.pageBg, color: theme.textColor, fontFamily: theme.bodyStack }}>
-      <div className="mx-auto flex min-h-screen max-w-xl flex-col px-5 py-10">
+      <div className="mx-auto flex min-h-screen w-full flex-col px-5 py-10" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
         {/* Brand header: only render if no businessName block in the tree. */}
         {questionnaire && pageState !== 'loading' && pageState !== 'not_found' && !chrome.hasBusinessName && (
           <div className="mb-10 flex items-center gap-3">

@@ -1246,12 +1246,12 @@ The block palette has two labeled groups:
 
 **Questionnaire mode**: the Questionnaire body block now persists `mode: 'form' | 'oneAtATime'` (replacing the preview-only toggle); public rendering reads this to show regular-form vs one-at-a-time.
 
-**Payment schedule**: now optional on Invoice. The shared `action` block survives (Invoice Pay CTA, Contract Sign CTA); `headerBanner` remains only in migration code.
+**Payment schedule**: now optional on Invoice. The shared `action` block is the Invoice Pay CTA; it is **not** used on Contracts (the sign/decline form is injected on the public contract page, so no CTA block belongs there — see the Contract surface below). `headerBanner` remains only in migration code.
 
 ## Five Surfaces
 
 - **Invoice** — Invoice header, Invoice line items, Invoice totals, Payment schedule (optional), Bank details (required—at least one of Bank details/Pay CTA), Pay CTA (required—at least one)
-- **Contract** — Contract header, Contract body, Sign CTA
+- **Contract** — Contract header (Expires + Ref both off by default; reads as contract title + couple name), Contract body. No Sign CTA block: the sign/decline form is injected on the public page.
 - **Client Portal** — Portal body
 - **Vendor Timeline** — Run sheet body
 - **Questionnaire** — Questionnaire body with mode toggle (form | oneAtATime)
@@ -1438,12 +1438,14 @@ tested directly). Saves rewrite items wipe-and-reinsert style so a
 drag-reorder inside the edit modal persists, and set `updated_at`
 explicitly (no touch trigger on these tables). Search matches name,
 subtitle, applied notes, and item descriptions.
-- **Timelines** — `TimelineTemplateManager` (reusable run-sheet item
-  sets; `timeline_templates` + `timeline_template_items`).
 - **Contracts** — `ContractTemplateManager` (`contract_templates`).
 
+(A **Timelines** tab once lived here for reusable run-sheet item sets;
+it was removed on 2026-08-02 — every wedding is bespoke, so templated
+run-sheets added no value. The core per-event timeline is unaffected.)
+
 Tab order follows the money flow (packages → quotes → invoices build on
-each other). Quotes / Timelines / Contracts moved here out of
+each other). Quotes / Contracts moved here out of
 **Settings → Templates** (that tab is removed; `/settings?tab=templates`
 redirects to `/templates`).
 
@@ -1637,7 +1639,6 @@ app/(dashboard)/templates/
   packages-manager.tsx          -  Packages tab (packages + package_items)
   invoice-templates-manager.tsx -  Invoices tab (+ "Add from package/quote" picker)
   quote-template-manager.tsx    -  Quotes tab (moved from settings/)
-  timeline-template-manager.tsx -  Timelines tab (moved from settings/)
   contract-template-manager.tsx -  Contracts tab (moved from settings/)
 lib/email/
   templates.ts              -  render + detectMissingVariables (shared)
