@@ -111,11 +111,11 @@ field is optional; each falls back to its historical default
 (`'Sign to accept'` / `'Sign contract'` / `'Decline'` / the brand
 colour / fine-print typography).
 
-**Both clearable markers.** Unlike the other render-split markers
-(portal / run sheet / questionnaire body, which survive a "Clear all
-blocks"), the contract **body** and **sign** markers are the two
-`CLEARABLE_MARKERS`: "Clear all blocks" removes them so a contract can
-be reset to a truly blank canvas. When absent, each becomes re-addable
+**Both clearable markers.** Unlike the fixed render-split markers
+(portal / questionnaire body, which survive a "Clear all blocks"), the
+contract **body** and **sign** markers are `CLEARABLE_MARKERS` (along
+with the run sheet body): "Clear all blocks" removes them so a contract
+can be reset to a truly blank canvas. When absent, each becomes re-addable
 from the block palette, the readiness panel flags its absence, and
 `migrateBlocks` will **not** silently re-insert either (it only heals
 genuine pre-Phase-3.1 legacy contracts for the body; it never fabricates
@@ -153,7 +153,14 @@ flow through the `.contract-content` wrapper inline style rather than a var.
 **Client Portal** (required): Portal body.
 
 **Run sheet** (required): Run sheet body. Editor copy must make clear
-this document is **sent to vendors only**, not to the couple.
+this document is **sent to vendors only**, not to the couple. Like the
+contract body, the run sheet body is a `CLEARABLE_MARKER`: selectable in
+the editor (it renders a representative sample through the real
+`VendorTimeline` component), clearable via "Clear all blocks",
+deletable, and re-addable from the palette (where it stays listed). The
+public run sheet and the branding preview both inject the live/sample
+timeline at the marker. The body itself is not authored here (it is the
+couple's live event timeline); only chrome blocks around it are editable.
 
 **Questionnaire** (required, pick exactly one mode): Questionnaire body
 with a **mode toggle**:

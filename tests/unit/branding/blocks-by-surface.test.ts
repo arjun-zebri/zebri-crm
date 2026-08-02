@@ -34,7 +34,11 @@ describe('blocks-by-surface', () => {
     expect(contract).toContain('contractSign')
   })
 
-  it('other surface markers never enter the palette', () => {
+  it('run sheet palette always lists the clearable run sheet body', () => {
+    expect(paletteGroupsForSurface('vendorTimeline')[1]!.types).toContain('vendorTimelineBody')
+  })
+
+  it('fixed-singleton markers never enter the palette', () => {
     expect(paletteGroupsForSurface('portal')[1]!.types).not.toContain('couplePortal')
     expect(paletteGroupsForSurface('questionnaire')[1]!.types).not.toContain('questionnaireBody')
   })

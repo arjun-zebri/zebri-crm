@@ -223,23 +223,20 @@ export function BlockRenderer({
               <div aria-hidden className="absolute inset-x-0 -top-4 h-8" />
             </div>
             {blocks.map((block) => {
-              // Non-contract render-split markers stay fixed (non-selectable):
+              // The portal + questionnaire markers stay fixed (non-selectable):
               // their surface is nothing but that one body, so there's nothing
-              // to arrange around them. The contract body is the exception — it
-              // flows through the normal BlockFrame path below so the MC can
-              // select it and reach the shared style toolbar (it's still locked,
-              // so delete/duplicate stay disabled).
+              // to arrange around them. The contract body/sign and the run sheet
+              // body are the exceptions: they flow through the normal BlockFrame
+              // path below so the MC can select them and reach the shared style
+              // toolbar (still locked, so duplicate stays disabled).
               if (
                 block.type === 'couplePortal' ||
-                block.type === 'vendorTimelineBody' ||
                 block.type === 'questionnaireBody'
               ) {
                 const fixedLabel =
                   block.type === 'couplePortal'
                     ? 'Couple portal (fixed)'
-                    : block.type === 'vendorTimelineBody'
-                      ? 'Run sheet (fixed)'
-                      : 'Questionnaire (fixed)';
+                    : 'Questionnaire (fixed)';
                 return (
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
                     {renderBlock(block, state, updateBlock, {}, surface)}

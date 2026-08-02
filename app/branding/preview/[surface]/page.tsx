@@ -14,8 +14,10 @@
 import { useParams } from 'next/navigation'
 import { useEffect } from 'react'
 
+import { SAMPLE_RUN_SHEET_EVENT, SAMPLE_RUN_SHEET_ITEMS } from '@/app/(dashboard)/branding/blocks/sample-run-sheet'
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
 import type { Block, ContractBodyBlock, ContractSignBlock } from '@/app/(dashboard)/branding/blocks/types'
+import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
 import { getTextColor } from '@/lib/branding/contrast'
 import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
 import { googleFontsHref } from '@/lib/branding/fonts'
@@ -401,16 +403,26 @@ function VendorTimelinePreview({
     taxRate: 0,
   }
 
+  // The run sheet body is a render-split marker (null in the generic renderer).
+  // Split at it and inject a sample timeline so the preview shows a body, like
+  // the public run sheet page does with live data.
+  const markerIdx = blocks.findIndex((b) => b.type === 'vendorTimelineBody')
+  const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks
+  const postBlocks = markerIdx >= 0 ? blocks.slice(markerIdx + 1) : []
+
   return (
     <div style={pageStyle}>
       <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
         <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
-          <PublicBlockRenderer
-            blocks={blocks}
-            branding={branding}
-            doc={sampleDoc}
-            hideAction
-          />
+          <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
+          {markerIdx >= 0 ? (
+            <div className="pt-6">
+              <VendorTimeline events={[SAMPLE_RUN_SHEET_EVENT]} items={SAMPLE_RUN_SHEET_ITEMS} branding={branding} />
+            </div>
+          ) : null}
+          {postBlocks.length > 0 ? (
+            <PublicBlockRenderer blocks={postBlocks} branding={branding} doc={sampleDoc} hideAction />
+          ) : null}
         </div>
       </div>
     </div>

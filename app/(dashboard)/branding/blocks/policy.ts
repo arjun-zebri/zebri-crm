@@ -20,13 +20,14 @@ export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
 ] as const)
 
 /**
- * Markers the user may clear (via "Clear all blocks") and re-add from the block
- * palette. Every other marker is a fixed singleton whose surface is nothing
- * without it, so it can never be removed. The contract surface owns both
- * clearable markers: the body and the sign form.
+ * Markers the user may clear (via "Clear all blocks"), delete directly, and
+ * re-add from the block palette (where they stay listed permanently). Every
+ * other marker is a fixed singleton whose surface is nothing without it, so it
+ * can never be removed. Clearable markers: the contract body + sign form, and
+ * the run sheet body.
  */
 export const CLEARABLE_MARKERS: ReadonlySet<BlockType> = new Set([
-  'contractBody', 'contractSign',
+  'contractBody', 'contractSign', 'vendorTimelineBody',
 ] as const)
 
 /** Blocks whose content comes from live document data, not template text. */

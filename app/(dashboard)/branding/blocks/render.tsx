@@ -3,6 +3,7 @@
 import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
 import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
@@ -27,6 +28,7 @@ import { InlineAsset } from './inline-asset'
 import { InlineText } from './inline-text'
 import { RichText } from './rich-text/rich-text'
 import { SAMPLE_DOC_BY_SURFACE } from './sample-doc'
+import { SAMPLE_RUN_SHEET_EVENT, SAMPLE_RUN_SHEET_ITEMS } from './sample-run-sheet'
 import { resolveTextStyle } from './text-style'
 import type {
   Block,
@@ -1216,93 +1218,37 @@ export function RenderContractSign({ state, block }: { state: BrandPreviewState;
 }
 
 /**
- * Placeholder block shown in the branding editor where the vendor run sheet
- * (live timeline data) will render on the public page. The MC can never edit
- * the run sheet here: it flows from event data in real time. Same model
- * as `RenderContractBody` and `RenderPaymentSchedule`.
- *
- * Renders with a dashed border + muted "Live data - run sheet" badge so it is
- * visually unambiguous this block is not editable on the branding surface.
- * The sample shows event title and three static timeline rows styled to match
- * vendor-timeline.tsx row rendering.
+ * Placeholder shown in the branding editor where the run sheet (live event
+ * timeline) renders on the public page. The run sheet is not authored here: it
+ * flows from the couple's event timeline in real time, so this shows a
+ * representative sample through the real `VendorTimeline` component (so the
+ * preview is faithful), with a small caption + note. Selectable via BlockFrame
+ * (still locked, so it can't be duplicated).
  */
 export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
-  const text = state.textColor || '#111827'
-  const surface = state.surfaceColor || '#FFFFFF'
+  const branding = publicBrandingFromEditorState(state)
   return (
     <div className="border-t border-gray-100">
+      {/* BlockFrame supplies the docX inset; only vertical rhythm here. */}
       <div className={pad.blockY}>
-        {/* Locked-slot affordance: dashed border + muted "Live data - run sheet"
-            badge make it clear at a glance that this block is not
-            editable on the branding surface. */}
-        <div
-          className="rounded-xl border-2 border-dashed p-5"
-          style={{
-            borderColor: muted + '60',
-            backgroundColor: surface,
-          }}
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-3"
+          style={{ color: muted }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <p
-              className="text-xs font-medium uppercase tracking-wider"
-              style={{ color: muted }}
-            >
-              Run sheet
-            </p>
-            <span
-              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: muted + '20',
-                color: muted,
-              }}
-            >
-              Live data - run sheet
-            </span>
-          </div>
-
-          <div className="space-y-3 opacity-60 select-none pointer-events-none">
-            <p className="text-sm font-semibold mb-4" style={{ color: text }}>
-              Alex & Jordan - Reception
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
-                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
-                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>5:00 PM</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium" style={{ color: text }}>Guest arrival</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
-                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
-                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>6:30 PM</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium" style={{ color: text }}>Entrance</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
-                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
-                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>9:45 PM</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium" style={{ color: text }}>Farewell circle</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
-            <p className="text-xs" style={{ color: muted }}>
-              The run sheet is driven by your event timeline and updates in real time. You cannot edit it here. You can drag other blocks above or below this slot to add headings or notes.
-            </p>
-          </div>
-        </div>
+          Run sheet · sample
+        </p>
+        <VendorTimeline
+          events={[SAMPLE_RUN_SHEET_EVENT]}
+          items={SAMPLE_RUN_SHEET_ITEMS}
+          branding={branding}
+        />
+        <p className="text-xs leading-6 mt-5 w-full" style={{ color: muted }}>
+          Live event data from the couple&apos;s timeline. It renders here on the
+          sent run sheet and updates in real time. Drag other blocks above or
+          below to wrap it.
+        </p>
       </div>
     </div>
   )

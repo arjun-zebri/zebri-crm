@@ -17,12 +17,15 @@ describe('policy', () => {
     expect(MARKER_TYPES.has('contractSign')).toBe(true)
   })
 
-  it('clearable markers are exactly the contract body + sign form', () => {
-    expect([...CLEARABLE_MARKERS].sort()).toEqual(['contractBody', 'contractSign'].sort())
+  it('clearable markers are the contract body + sign form + run sheet body', () => {
+    expect([...CLEARABLE_MARKERS].sort()).toEqual(
+      ['contractBody', 'contractSign', 'vendorTimelineBody'].sort(),
+    )
     // Every clearable marker is also a marker.
     for (const t of CLEARABLE_MARKERS) expect(MARKER_TYPES.has(t)).toBe(true)
-    // Fixed-singleton markers are not clearable.
+    // Fixed-singleton markers (portal / questionnaire) are not clearable.
     expect(CLEARABLE_MARKERS.has('couplePortal')).toBe(false)
+    expect(CLEARABLE_MARKERS.has('questionnaireBody')).toBe(false)
   })
 
   it('contract requires title/contractBody/contractSign (no generic action block)', () => {
@@ -47,13 +50,15 @@ describe('policy', () => {
     expect(isDeletable(locked, 'portal')).toBe(false)
   })
 
-  it('clearable markers are deletable even though locked (contract body + sign)', () => {
+  it('clearable markers are deletable even though locked (body + sign + run sheet)', () => {
     // They stay `locked` (no duplication) but the MC can delete them directly
     // and re-add from the palette, matching "Clear all blocks".
     const body: Block = { id: 'b', type: 'contractBody', locked: true }
     const sign: Block = { id: 's', type: 'contractSign', locked: true }
+    const runSheet: Block = { id: 'r', type: 'vendorTimelineBody', locked: true }
     expect(isDeletable(body, 'contract')).toBe(true)
     expect(isDeletable(sign, 'contract')).toBe(true)
+    expect(isDeletable(runSheet, 'vendorTimeline')).toBe(true)
     // A non-clearable locked marker still resists deletion.
     expect(isDeletable({ id: 'q', type: 'questionnaireBody', locked: true }, 'questionnaire')).toBe(false)
   })
