@@ -302,8 +302,46 @@ export interface SpacerBlock extends BaseBlock {
   heightPx?: number
 }
 
+/**
+ * Marker block — the position where the couple-facing portal (hero + section
+ * nav) renders on the public portal page. The MC can drag chrome blocks above
+ * and below it in the branding editor; the portal's structure is never editable
+ * here (couples fill it in themselves). Same model as `contractBody`,
+ * `vendorTimelineBody`, and `paymentSchedule`.
+ *
+ * Typography overrides are **portal-scoped**: they live on this block, so they
+ * never touch invoices, quotes, or contracts. Each is fully optional and only
+ * carries the individual properties the MC explicitly changed. The public hero
+ * (`app/portal/[token]/page.tsx`) and `PortalShell` resolve each element as
+ * `resolveTextStyle(override, defaultsBuiltFromTheValuesTheyCurrentlyHard-code)`,
+ * so a portal with none of these set renders byte-identically to every portal
+ * sent before this feature existed.
+ */
 export interface CouplePortalBlock extends BaseBlock {
   type: 'couplePortal'
+  /**
+   * Title typography override (the hero `<h1>` couple name). Absent ⇒ the title
+   * keeps the historical docTitle defaults (text colour). Only set fields apply.
+   */
+  titleStyle?: TextStyle
+  /**
+   * Subtitle typography override (the hero intro line). Absent ⇒ the subtitle
+   * keeps the historical body defaults (muted/text colour). Only set fields apply.
+   */
+  subtitleStyle?: TextStyle
+  /**
+   * Heading typography override, applied to each portal section heading (the
+   * `PortalShell` `<h2>`). Absent ⇒ the section heading keeps its historical
+   * section-heading-role defaults. Only set fields apply.
+   */
+  headingStyle?: TextStyle
+  /**
+   * Body typography override, applied to each portal section subtitle (the
+   * `PortalShell` `<p>`). Absent ⇒ the section subtitle keeps its historical
+   * body-role defaults. Split from {@link headingStyle} so a section's heading
+   * and its subtitle are styled independently.
+   */
+  bodyStyle?: TextStyle
 }
 
 export interface PaymentScheduleBlock extends BaseBlock {

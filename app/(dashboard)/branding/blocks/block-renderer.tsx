@@ -223,20 +223,15 @@ export function BlockRenderer({
               <div aria-hidden className="absolute inset-x-0 -top-4 h-8" />
             </div>
             {blocks.map((block) => {
-              // The portal + questionnaire markers stay fixed (non-selectable):
-              // their surface is nothing but that one body, so there's nothing
-              // to arrange around them. The contract body/sign and the run sheet
-              // body are the exceptions: they flow through the normal BlockFrame
-              // path below so the MC can select them and reach the shared style
-              // toolbar (still locked, so duplicate stays disabled).
-              if (
-                block.type === 'couplePortal' ||
-                block.type === 'questionnaireBody'
-              ) {
-                const fixedLabel =
-                  block.type === 'couplePortal'
-                    ? 'Couple portal (fixed)'
-                    : 'Questionnaire (fixed)';
+              // The questionnaire marker stays fixed (non-selectable): its
+              // surface is nothing but that one body, so there's nothing to
+              // arrange around it. The contract body/sign, the run sheet body,
+              // and the couple portal body are the exceptions: they flow through
+              // the normal BlockFrame path below so the MC can select them and
+              // reach the shared style toolbar (still locked, so duplicate stays
+              // disabled).
+              if (block.type === 'questionnaireBody') {
+                const fixedLabel = 'Questionnaire (fixed)';
                 return (
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
                     {renderBlock(block, state, updateBlock, {}, surface)}
@@ -483,7 +478,7 @@ function renderBlock(
       )
     }
     case 'couplePortal':
-      return <RenderCouplePortal state={state} />
+      return <RenderCouplePortal state={state} block={block} />
     case 'paymentSchedule':
       return <RenderPaymentSchedule block={block} state={state} updateBlock={updateBlock} />
     case 'contractBody':

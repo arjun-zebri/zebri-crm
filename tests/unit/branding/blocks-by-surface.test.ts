@@ -38,8 +38,13 @@ describe('blocks-by-surface', () => {
     expect(paletteGroupsForSurface('vendorTimeline')[1]!.types).toContain('vendorTimelineBody')
   })
 
+  it('portal palette always lists the clearable couple portal body', () => {
+    expect(paletteGroupsForSurface('portal')[1]!.types).toContain('couplePortal')
+  })
+
   it('fixed-singleton markers never enter the palette', () => {
-    expect(paletteGroupsForSurface('portal')[1]!.types).not.toContain('couplePortal')
+    // The questionnaire body is the last fixed singleton (its surface is nothing
+    // without it), so it never appears in the "add block" palette.
     expect(paletteGroupsForSurface('questionnaire')[1]!.types).not.toContain('questionnaireBody')
   })
 })

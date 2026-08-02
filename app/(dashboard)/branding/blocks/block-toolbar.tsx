@@ -37,6 +37,7 @@ import type {
   PaymentScheduleBlock,
   ContractBodyBlock,
   ContractSignBlock,
+  CouplePortalBlock,
   VendorTimelineBodyBlock,
 } from './types'
 
@@ -199,7 +200,7 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
     case 'spacer':
       return <SpacerControls block={block} updateBlock={updateBlock} />
     case 'couplePortal':
-      return null
+      return <CouplePortalControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'paymentSchedule':
       return <PaymentScheduleControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'contractBody':
@@ -2036,6 +2037,82 @@ function VendorTimelineBodyControls({
         style={style}
         defaults={defaults}
         fontKind={target === 'title' ? 'heading' : 'body'}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
+      />
+    </div>
+  )
+}
+
+// ── Couple portal ─────────────────────────────────────────────────────────────
+
+/**
+ * Typography controls for the couple-portal body block. Four click-to-target
+ * parts, chosen by what the MC clicked in the preview: the hero couple name
+ * (`data-subtarget="title"`) edits {@link CouplePortalBlock.titleStyle} over the
+ * docTitle role; the hero intro line (`data-subtarget="subtitle"`) edits
+ * {@link CouplePortalBlock.subtitleStyle} over the body role; a section heading
+ * (`data-subtarget="heading"`) edits {@link CouplePortalBlock.headingStyle} over
+ * the sectionHeading role; anything else defaults to the section subtitle
+ * ({@link CouplePortalBlock.bodyStyle}) over the body role. Mirrors the
+ * multi-target pattern in {@link VendorTimelineBodyControls} — selection is by
+ * preview click, and {@link ActiveTargetLabel} just names the target.
+ *
+ * These overrides are portal-scoped (they live on the block), so nothing here
+ * reaches invoices, quotes, or contracts. Defaults come from the global type
+ * roles, so an untouched target shows the same values the live portal uses.
+ * Patches merge onto the existing override so each single-field change preserves
+ * the MC's prior edits, matching every sibling *Controls.
+ */
+function CouplePortalControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: CouplePortalBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  const target: 'title' | 'subtitle' | 'heading' | 'body' =
+    activeSubTarget === 'title' ? 'title'
+      : activeSubTarget === 'subtitle' ? 'subtitle'
+        : activeSubTarget === 'heading' ? 'heading'
+          : 'body'
+  const role =
+    target === 'title' ? 'docTitle'
+      : target === 'heading' ? 'sectionHeading'
+        : 'body'
+  const style =
+    target === 'title' ? block.titleStyle
+      : target === 'subtitle' ? block.subtitleStyle
+        : target === 'heading' ? block.headingStyle
+          : block.bodyStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(publicBrandingFromEditorState(state), role),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<CouplePortalBlock>(
+      block.id,
+      target === 'title' ? { titleStyle: merged }
+        : target === 'subtitle' ? { subtitleStyle: merged }
+          : target === 'heading' ? { headingStyle: merged }
+            : { bodyStyle: merged },
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'title' ? 'Title' : target === 'subtitle' ? 'Subtitle' : target === 'heading' ? 'Heading' : 'Body'} />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        fontKind={target === 'title' || target === 'heading' ? 'heading' : 'body'}
         onChange={onStyleChange}
         {...(expanded !== undefined ? { expanded } : {})}
       />

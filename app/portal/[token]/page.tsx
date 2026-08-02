@@ -3,7 +3,8 @@ import { headers } from 'next/headers'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 
-import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import type { Block, CouplePortalBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { recordInvalidTokenAttempt } from '@/lib/api/public-token-limiter'
 import { ipOfHeaders } from '@/lib/api/rate-limit'
 import { DENSITY_PADDING } from '@/lib/branding/density'
@@ -245,6 +246,29 @@ export default async function PortalPage({
   const preBlocks = cpIdx >= 0 ? allBlocks.slice(0, cpIdx) : allBlocks
   const postBlocks = cpIdx >= 0 ? allBlocks.slice(cpIdx + 1) : []
 
+  // Portal-scoped typography overrides live on the couplePortal marker block.
+  // The hero title / intro apply title/subtitle here; the section heading /
+  // subtitle flow to PortalShell. Legacy safety: with no block or no override,
+  // each `resolveTextStyle` reproduces the historical inline style exactly — its
+  // defaults keep the element's current colour and force `letterSpacing: 0` +
+  // `textTransform: 'none'` (the neutral values the old inline styles rendered).
+  const cpBlock = cpIdx >= 0 ? (allBlocks[cpIdx] as CouplePortalBlock) : undefined
+  const heroTitleStyle = resolveTextStyle(cpBlock?.titleStyle, {
+    ...roleDefaults(branding, 'docTitle'),
+    color: textColor,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+  const heroIntroStyle = resolveTextStyle(cpBlock?.subtitleStyle, {
+    ...roleDefaults(branding, 'body'),
+    color: mutedColor,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+  const portalStyles = cpBlock
+    ? { heading: cpBlock.headingStyle, body: cpBlock.bodyStyle }
+    : undefined
+
   return (
     <div
       className="min-h-screen"
@@ -349,21 +373,10 @@ export default async function PortalPage({
           className={`${docX} pt-8 pb-8 border-b`}
           style={{ borderColor: branding.border_color, borderBottomWidth: 1 }}
         >
-          <h1
-            className="mb-1"
-            style={{ fontSize: `${roleDefaults(branding, 'docTitle').fontSize}px`, color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
-          >
+          <h1 className="mb-1" style={heroTitleStyle}>
             {portal.couple_name}
           </h1>
-          <p
-            className="mt-3"
-            style={{
-              color: mutedColor,
-              fontSize: `${roleDefaults(branding, 'body').fontSize}px`,
-              fontFamily: FONT_STACKS[roleDefaults(branding, 'body').fontFamily as never],
-              lineHeight: roleDefaults(branding, 'body').lineHeight,
-            }}
-          >
+          <p className="mt-3" style={heroIntroStyle}>
             Fill in your details below. Everything saves automatically. You can come back anytime.
           </p>
         </div>
@@ -375,6 +388,7 @@ export default async function PortalPage({
             token={token}
             initialData={portal}
             branding={branding}
+            {...(portalStyles ? { styles: portalStyles } : {})}
           />
         </div>
 

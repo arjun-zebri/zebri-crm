@@ -23,11 +23,11 @@ export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
  * Markers the user may clear (via "Clear all blocks"), delete directly, and
  * re-add from the block palette (where they stay listed permanently). Every
  * other marker is a fixed singleton whose surface is nothing without it, so it
- * can never be removed. Clearable markers: the contract body + sign form, and
- * the run sheet body.
+ * can never be removed. Clearable markers: the contract body + sign form, the
+ * run sheet body, and the couple portal body.
  */
 export const CLEARABLE_MARKERS: ReadonlySet<BlockType> = new Set([
-  'contractBody', 'contractSign', 'vendorTimelineBody',
+  'contractBody', 'contractSign', 'vendorTimelineBody', 'couplePortal',
 ] as const)
 
 /** Blocks whose content comes from live document data, not template text. */
@@ -84,9 +84,10 @@ export function isRequired(type: BlockType, surface: SurfaceTab): boolean {
 /**
  * True when the user may delete this block. Non-locked blocks are always
  * deletable. Locked blocks resist EXCEPT the clearable markers (contract body +
- * sign form): those stay `locked` so they can't be duplicated, but the MC can
- * delete them directly (and re-add from the palette), matching "Clear all
- * blocks". Deleting one raises the not-ready flag until it is re-added.
+ * sign form, run sheet body, couple portal body): those stay `locked` so they
+ * can't be duplicated, but the MC can delete them directly (and re-add from the
+ * palette), matching "Clear all blocks". Deleting one raises the not-ready flag
+ * until it is re-added.
  */
 export function isDeletable(block: Block, _surface: SurfaceTab): boolean {
   return !block.locked || CLEARABLE_MARKERS.has(block.type)

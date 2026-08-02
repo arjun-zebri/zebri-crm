@@ -31,14 +31,15 @@ export interface PaletteGroup {
 
 /** Two labelled palette groups for a surface (General first).
  *
- * Fixed render-split markers (couplePortal, run sheet / questionnaire body) are
- * excluded: they are locked singletons that are always present, so they cannot
- * be added or removed and have no place in the "add block" palette.
+ * Fixed render-split markers (the questionnaire body) are excluded: they are
+ * locked singletons that are always present, so they cannot be added or removed
+ * and have no place in the "add block" palette.
  *
- * The clearable markers (the contract body + sign form) DO appear, and stay
- * listed even once inserted, so the MC always sees the full set of contract
- * blocks. They are singletons, so the editor's addBlock selects the existing one
- * instead of inserting a duplicate when it is already present.
+ * The clearable markers (the contract body + sign form, the run sheet body, and
+ * the couple portal body) DO appear, and stay listed even once inserted, so the
+ * MC always sees the full set of document blocks. They are singletons, so the
+ * editor's addBlock selects the existing one instead of inserting a duplicate
+ * when it is already present.
  *
  * @param surface - The document surface.
  */

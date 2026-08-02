@@ -111,11 +111,11 @@ field is optional; each falls back to its historical default
 (`'Sign to accept'` / `'Sign contract'` / `'Decline'` / the brand
 colour / fine-print typography).
 
-**Both clearable markers.** Unlike the fixed render-split markers
-(portal / questionnaire body, which survive a "Clear all blocks"), the
-contract **body** and **sign** markers are `CLEARABLE_MARKERS` (along
-with the run sheet body): "Clear all blocks" removes them so a contract
-can be reset to a truly blank canvas. When absent, each becomes re-addable
+**Both clearable markers.** Unlike the fixed render-split marker (the
+questionnaire body, which survives a "Clear all blocks"), the contract
+**body** and **sign** markers are `CLEARABLE_MARKERS` (along with the run
+sheet body and the couple portal body): "Clear all blocks" removes them so a
+contract can be reset to a truly blank canvas. When absent, each becomes re-addable
 from the block palette, the readiness panel flags its absence, and
 `migrateBlocks` will **not** silently re-insert either (it only heals
 genuine pre-Phase-3.1 legacy contracts for the body; it never fabricates
@@ -150,7 +150,36 @@ sent before this feature) renders byte-identically. A subheading size override
 collapses all three heading levels to one size; paragraph font-family + size
 flow through the `.contract-content` wrapper inline style rather than a var.
 
-**Client Portal** (required): Portal body.
+**Client Portal** (required): Portal body. Like the contract body and run
+sheet body, the couple portal body is a `CLEARABLE_MARKER`: selectable in the
+editor (it renders a representative sample via the shared `CouplePortalSample`
+component — hero + section nav + Overview cards), clearable via "Clear all
+blocks", deletable, and re-addable from the palette (where it stays listed). The
+public portal page (`app/portal/[token]/page.tsx`) and the branding preview both
+inject the live/sample body at the marker. The portal's structure (navigation,
+sections, fields) is not authored here — couples fill it in themselves; only
+chrome blocks around it are editable. The portal is intentionally the wider
+dashboard-style surface with its own background (no grey document canvas).
+
+**Typography (title / subtitle / heading / body).** The marker block carries
+four optional overrides — `titleStyle`, `subtitleStyle`, `headingStyle`,
+`bodyStyle` — edited via click-to-target in the preview (`data-subtarget` =
+`title` / `subtitle` / `heading` / `body`), same UX as the run sheet body
+controls. **Title** styles the hero `<h1>` couple name (over the `docTitle`
+role), **Subtitle** the hero intro line (over `body`), **Heading** each portal
+section heading in `PortalShell` (over `sectionHeading`), and **Body** each
+section subtitle (over `body`). Heading and Body are separate levels so a
+section's heading and its subtitle are styled independently. Like the run sheet,
+this is **inline-driven, not globals.css-driven**: the hero and `PortalShell`
+each resolve `resolveTextStyle(override, defaultsBuiltFromTheValuesTheyCurrently
+Hard-code)`. The defaults preserve the element's current colour (hero title +
+intro use `text_color`; section heading uses `heading_color`; section subtitle
+uses `text_color`) and force `letterSpacing: 0` + `textTransform: 'none'` (the
+neutral values the old inline styles already rendered), so a portal with **no
+overrides renders byte-identically** to every portal sent before this feature.
+The overrides are portal-scoped (they live on the block) and never touch
+invoices, quotes, or contracts. `migrateBlocks` / `repairBlocks` pass them
+through untouched and never fabricate them on a bare marker.
 
 **Run sheet** (required): Run sheet body. Editor copy must make clear
 this document is **sent to vendors only**, not to the couple. Like the
