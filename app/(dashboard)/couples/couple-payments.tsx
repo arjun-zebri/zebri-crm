@@ -24,14 +24,26 @@ interface Invoice {
   status: string
   subtotal: number
   due_date: string | null
+  invoice_payment_stages: { amount_cents: number; paid_at: string | null }[]
 }
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600',
   sent: 'bg-blue-50 text-blue-600',
+  deposit_paid: 'bg-amber-50 text-amber-600',
   paid: 'bg-emerald-50 text-emerald-600',
   overdue: 'bg-red-50 text-red-600',
   cancelled: 'bg-gray-100 text-gray-400',
+}
+
+/** Human-readable label for a stored invoice status (no raw `deposit_paid`). */
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  sent: 'Sent',
+  deposit_paid: 'Part paid',
+  paid: 'Paid',
+  overdue: 'Overdue',
+  cancelled: 'Cancelled',
 }
 
 function formatCurrency(amount: number) {
@@ -58,7 +70,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
 
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_number, title, status, subtotal, due_date')
+        .select('id, invoice_number, title, status, subtotal, due_date, invoice_payment_stages(amount_cents, paid_at)')
         .eq('couple_id', coupleId)
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false })
@@ -156,6 +168,15 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                     })
                   : '-'
 
+                // Collected so far, from the paid schedule stages.
+                const paidAmount =
+                  invoice.invoice_payment_stages
+                    .filter((s) => s.paid_at !== null)
+                    .reduce((sum, s) => sum + s.amount_cents, 0) / 100
+                // Show the running total only while a schedule is part-paid — a
+                // fully-paid or single-payment invoice reads clearly from the pill.
+                const showProgress = paidAmount > 0 && invoice.status !== 'paid'
+
                 return (
                   <button
                     key={invoice.id}
@@ -165,14 +186,22 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                     <Receipt size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900 truncate">{invoice.title}</p>
-                      <p className="text-xs text-gray-400">{invoice.invoice_number}</p>
+                      <p className="text-xs text-gray-400">
+                        {invoice.invoice_number}
+                        {showProgress && (
+                          <span className="text-emerald-600">
+                            {' · '}
+                            {formatCurrency(paidAmount)} paid
+                          </span>
+                        )}
+                      </p>
                     </div>
                     <span
-                      className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${
+                      className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full ${
                         STATUS_STYLES[invoice.status] || STATUS_STYLES.draft
                       }`}
                     >
-                      {invoice.status}
+                      {STATUS_LABELS[invoice.status] ?? invoice.status}
                     </span>
                     <span
                       className={`hidden sm:inline shrink-0 text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}
