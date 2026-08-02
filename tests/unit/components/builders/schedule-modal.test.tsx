@@ -64,7 +64,7 @@ describe('ScheduleModal', () => {
 
   it('saves the current timeline to the library', async () => {
     const props = setup()
-    await userEvent.click(screen.getByRole('button', { name: /save to library/i }))
+    await userEvent.click(screen.getByRole('button', { name: /save schedule/i }))
     expect(props.onSaveToLibrary).toHaveBeenCalledWith({ name: 'Default', stages: expect.any(Array) })
   })
 

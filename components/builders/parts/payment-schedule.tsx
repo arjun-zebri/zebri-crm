@@ -2,17 +2,15 @@
  * The invoice builder's payment-schedule section.
  *
  * Empty: a single "Add schedule" button that opens the modal (pre-loaded with
- * the MC's default so the common case is open-and-Apply). Applied: the resolved
- * timeline with mark-paid, drag-to-reorder, and an always-visible running
- * total, plus one "Change" door back into the modal. The modal is the only
- * place schedules are built or managed.
+ * the MC's default so the common case is open-and-Apply). Applied: a read-only
+ * resolved timeline with an always-visible running total, plus one "Change"
+ * door back into the modal. All editing of shape happens in the modal; the only
+ * action on the surface is recording a manual payment.
  *
  * @module components/builders/parts/payment-schedule
  */
 'use client'
 
-import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core'
-import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -45,11 +43,12 @@ export interface PaymentScheduleProps {
   schedulesError: string | null
   /** Resolver validation message, shown inline and blocking save. */
   validationError: string | null
+  /** The invoice is live (sent / part-paid), so payments can be recorded. */
+  canRecordPayments: boolean
   markPendingStageId: string | null
-  onStagesChange: (stages: InvoiceStage[]) => void
+  onMarkPaid: (stageId: string) => void
   /** Resolve the template against this invoice and set its stages. */
   onApplyTemplate: (stages: TemplateStage[]) => void
-  onMarkPaid: (stageId: string) => void
   onCreateSchedule: (input: { name: string; stages: TemplateStage[] }) => Promise<void>
   onDeleteSchedule: (id: string) => Promise<void>
   onSetDefaultSchedule: (id: string) => Promise<void>
@@ -68,10 +67,10 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
     schedulesLoading,
     schedulesError,
     validationError,
+    canRecordPayments,
     markPendingStageId,
-    onStagesChange,
-    onApplyTemplate,
     onMarkPaid,
+    onApplyTemplate,
     onCreateSchedule,
     onDeleteSchedule,
     onSetDefaultSchedule,
@@ -111,10 +110,6 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
     })
   }
 
-  const patchStage = (id: string, patch: Partial<InvoiceStage>) => {
-    onStagesChange(stages.map((s) => (s.id === id ? { ...s, ...patch } : s)))
-  }
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -142,38 +137,24 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
           )}
         </div>
       ) : (
-        <DndContext
-          collisionDetection={closestCenter}
-          onDragEnd={(event: DragEndEvent) => {
-            const { active, over } = event
-            if (!over || active.id === over.id) return
-            const ids = stages.map((s) => s.id)
-            onStagesChange(
-              arrayMove(stages, ids.indexOf(String(active.id)), ids.indexOf(String(over.id))),
-            )
-          }}
-        >
-          <SortableContext items={stages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-            <div className="relative space-y-6 pl-7">
-              <div
-                aria-hidden
-                className="absolute left-2.5 top-3 bottom-3 w-px border-l border-dashed border-border"
-              />
-              {stages.map((stage) => (
-                <PaymentStageRow
-                  key={stage.id}
-                  stage={stage}
-                  canEdit={canEdit}
-                  isNextUnpaid={stage.id === nextUnpaidId}
-                  markPending={markPendingStageId === stage.id}
-                  onChange={(patch) => patchStage(stage.id, patch)}
-                  onRemove={() => onStagesChange(stages.filter((s) => s.id !== stage.id))}
-                  onMarkPaid={() => onMarkPaid(stage.id)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <div className="relative space-y-4 pl-7">
+          {/* Dashed connector centred on the 12px dots (dot left edge sits at
+              the container's left, so its centre is 6px in). */}
+          <div
+            aria-hidden
+            className="absolute left-[5.5px] top-2 bottom-2 w-px border-l border-dashed border-border"
+          />
+          {stages.map((stage) => (
+            <PaymentStageRow
+              key={stage.id}
+              stage={stage}
+              canRecord={canRecordPayments}
+              isNextUnpaid={stage.id === nextUnpaidId}
+              markPending={markPendingStageId === stage.id}
+              onMarkPaid={() => onMarkPaid(stage.id)}
+            />
+          ))}
+        </div>
       )}
 
       {stages.length > 0 && (

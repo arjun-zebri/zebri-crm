@@ -237,6 +237,9 @@ export function InvoiceBuilderModal({
   const isOverdue = rawStatus === 'sent' && isPastDue(dueDate);
   const status = isOverdue ? 'overdue' : rawStatus;
   const canEdit = !['paid', 'cancelled'].includes(rawStatus);
+  // Payments are recorded only once the invoice is live: sent (incl. overdue)
+  // or part-paid. While drafting there is nothing to record.
+  const canRecordPayments = rawStatus === 'sent' || rawStatus === 'deposit_paid';
   const templateOptions = applySources?.options ?? [];
   const shareEnabled = invoice?.share_token_enabled ?? false;
 
@@ -900,16 +903,13 @@ export function InvoiceBuilderModal({
             schedulesLoading={invoiceStages.schedulesLoading}
             schedulesError={invoiceStages.schedulesError}
             validationError={invoiceStages.validationError}
+            canRecordPayments={canRecordPayments}
             markPendingStageId={invoiceStages.markPendingStageId}
-            onStagesChange={(stages) => {
-              invoiceStages.setStages(stages);
-              setDirty(true);
-            }}
+            onMarkPaid={invoiceStages.markPaid}
             onApplyTemplate={(template) => {
               invoiceStages.applyTemplate(template);
               setDirty(true);
             }}
-            onMarkPaid={invoiceStages.markPaid}
             onCreateSchedule={invoiceStages.createSchedule}
             onDeleteSchedule={invoiceStages.deleteSchedule}
             onSetDefaultSchedule={invoiceStages.setDefaultSchedule}

@@ -14,63 +14,45 @@ const paid: InvoiceStage = { ...unpaid, id: 's0', paidAt: '2026-07-02T00:00:00Z'
 
 function setup(stage: InvoiceStage, overrides = {}) {
   const props = {
-    stage, canEdit: true, isNextUnpaid: true, markPending: false,
-    onChange: vi.fn(), onRemove: vi.fn(), onMarkPaid: vi.fn(), ...overrides,
+    stage, canRecord: true, isNextUnpaid: true, markPending: false,
+    onMarkPaid: vi.fn(), ...overrides,
   }
   render(<PaymentStageRow {...props} />)
   return props
 }
 
 describe('PaymentStageRow', () => {
-  it('shows the resolved amount', () => {
+  it('shows the label and resolved amount', () => {
     setup(unpaid)
-    expect(screen.getByText(/\$1,500\.00/)).toBeInTheDocument()
+    expect(screen.getByText('Deposit')).toBeInTheDocument()
+    expect(screen.getByText(/30% · \$1,500\.00/)).toBeInTheDocument()
   })
 
-  it('commits a label edit on blur', async () => {
+  it('has no editing inputs — shape is edited in the modal', () => {
+    setup(unpaid)
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+  })
+
+  it('records a payment on the next unpaid stage when the invoice is live', async () => {
     const props = setup(unpaid)
-    const field = screen.getByLabelText(/stage label/i)
-    await userEvent.clear(field)
-    await userEvent.type(field, 'Booking fee')
-    await userEvent.tab()
-    expect(props.onChange).toHaveBeenCalledWith({ label: 'Booking fee' })
+    await userEvent.click(screen.getByRole('button', { name: /record payment/i }))
+    expect(props.onMarkPaid).toHaveBeenCalled()
   })
 
-  it('commits an amount change on blur', async () => {
-    const props = setup(unpaid)
-    const field = screen.getByLabelText(/stage amount/i)
-    await userEvent.clear(field)
-    await userEvent.type(field, '40')
-    await userEvent.tab()
-    expect(props.onChange).toHaveBeenCalledWith({ amountValue: 40 })
+  it('hides Record payment while drafting (canRecord false)', () => {
+    setup(unpaid, { canRecord: false })
+    expect(screen.queryByRole('button', { name: /record payment/i })).not.toBeInTheDocument()
   })
 
-  it('hides the amount field for a remainder stage', () => {
-    setup({ ...unpaid, amountType: 'remainder', amountValue: null })
-    expect(screen.queryByLabelText(/stage amount/i)).not.toBeInTheDocument()
-    expect(screen.getByText('Remaining balance', { selector: 'span.text-caption' })).toBeInTheDocument()
-  })
-
-  it('locks a paid stage: no editing, no remove', () => {
-    setup(paid)
-    expect(screen.queryByLabelText(/stage label/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument()
-    // StatePill renders Paid as a styled span, not a button
-    expect(screen.getByText('Paid', { selector: 'span' })).toBeInTheDocument()
-  })
-
-  it('only offers Mark paid on the next unpaid stage', () => {
+  it('hides Record payment on a later unpaid stage', () => {
     setup(unpaid, { isNextUnpaid: false })
-    expect(screen.queryByRole('button', { name: /mark paid/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /record payment/i })).not.toBeInTheDocument()
   })
 
-  it('exposes a reorder handle on an editable stage', () => {
-    setup(unpaid)
-    expect(screen.getByLabelText(/reorder deposit/i)).toBeInTheDocument()
-  })
-
-  it('has no reorder handle on a paid stage', () => {
+  it('a paid stage shows its paid date and no action', () => {
     setup(paid)
-    expect(screen.queryByLabelText(/reorder/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Paid 2 Jul/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /record payment/i })).not.toBeInTheDocument()
   })
 })

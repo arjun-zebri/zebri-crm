@@ -12,7 +12,7 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { ChevronDown, Plus, Star, Trash2 } from 'lucide-react'
+import { ChevronDown, Star, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { Input } from '@/components/ui/input'
@@ -26,7 +26,6 @@ export interface ScheduleComboboxProps {
   schedules: PaymentSchedule[]
   loading: boolean
   error: string | null
-  onNew: () => void
   onPick: (schedule: PaymentSchedule) => void
   onSetDefault: (id: string) => void
   onDelete: (schedule: PaymentSchedule) => void
@@ -39,7 +38,6 @@ export function ScheduleCombobox({
   schedules,
   loading,
   error,
-  onNew,
   onPick,
   onSetDefault,
   onDelete,
@@ -77,21 +75,12 @@ export function ScheduleCombobox({
           sideOffset={6}
           className="z-[95] w-[var(--radix-popover-trigger-width)] rounded-xl border border-border bg-card p-1 shadow-lg animate-fade-in"
         >
-          <button
-            type="button"
-            onClick={() => {
-              onNew()
-              setOpen(false)
-            }}
-            className="flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-2 text-left text-caption text-text transition hover:bg-surface-muted"
-          >
-            <Plus size={13} strokeWidth={1.5} /> New schedule
-          </button>
-          {(loading || error || schedules.length > 0) && <div className="my-1 border-t border-border" />}
           {loading ? (
             <p className="px-2 py-2 text-caption text-text-subtle">Loading schedules...</p>
           ) : error ? (
             <p className="px-2 py-2 text-caption text-danger">{error}</p>
+          ) : schedules.length === 0 ? (
+            <p className="px-2 py-2 text-caption text-text-subtle">No saved schedules yet.</p>
           ) : (
             <div className="max-h-56 overflow-y-auto">
               {schedules.map((s) => (

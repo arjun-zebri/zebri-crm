@@ -202,17 +202,6 @@ function ScheduleModalBody({
     setName(schedule.name)
   }
 
-  // "New schedule": a blank name plus a fresh deposit + balance starter to edit.
-  const startNew = () => {
-    const paid = draft.filter((s) => s.paidAt)
-    setName('')
-    setDraft([
-      ...paid,
-      { key: nextKey(), label: 'Deposit', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue', paidAt: null },
-      { key: nextKey(), label: 'Final balance', amountType: 'remainder', amountValue: null, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue', paidAt: null },
-    ])
-  }
-
   const template = draftToTemplate(draft)
   const resolved = resolveStages(template, totalCents, issueDate, dueDate)
   const applyReason = resolved.ok ? null : reason(resolved.errors[0]?.code ?? '')
@@ -247,7 +236,6 @@ function ScheduleModalBody({
           schedules={schedules}
           loading={schedulesLoading}
           error={schedulesError}
-          onNew={startNew}
           onPick={loadSchedule}
           onSetDefault={onSetDefaultSchedule}
           onDelete={onDeleteSchedule}
@@ -305,20 +293,25 @@ function ScheduleModalBody({
             <span aria-hidden />
           </div>
         )}
-        <div className="relative">
-          <div
-            aria-hidden
-            className="absolute left-[0.19rem] top-2 bottom-2 hidden w-px border-l border-dashed border-border sm:block"
-          />
-          <div className="flex flex-col gap-2.5">
-            {draft.map((s) => (
-              <ScheduleStageRow
-                key={s.key}
-                stage={s}
-                onChange={(p) => patch(s.key, p)}
-                onRemove={() => removeStage(s.key)}
-              />
-            ))}
+        {/* Fixed-height scroll area so the modal keeps a stable size as
+            payments are added or removed. Sized to fit ~6 rows on a wide
+            screen; more than that scrolls here rather than growing the modal. */}
+        <div className="h-[15.5rem] overflow-y-auto sm:pr-1">
+          <div className="relative">
+            <div
+              aria-hidden
+              className="absolute left-[0.19rem] top-2 bottom-2 hidden w-px border-l border-dashed border-border sm:block"
+            />
+            <div className="flex flex-col gap-2.5">
+              {draft.map((s) => (
+                <ScheduleStageRow
+                  key={s.key}
+                  stage={s}
+                  onChange={(p) => patch(s.key, p)}
+                  onRemove={() => removeStage(s.key)}
+                />
+              ))}
+            </div>
           </div>
         </div>
         <button
@@ -348,7 +341,7 @@ function ScheduleModalBody({
           onClick={save}
         >
           <Bookmark size={14} strokeWidth={1.5} />
-          Save to library
+          Save schedule
         </Button>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>

@@ -21,6 +21,11 @@ import type { OffsetAnchor, OffsetUnit, StageAmountType } from '@/types/payment-
 export const STAGE_ROW_GRID =
   'sm:grid sm:grid-cols-[0.5rem_minmax(0,1fr)_4.75rem_8.5rem_0.9rem] sm:items-center sm:gap-2'
 
+// Hide the native number-input spinners in every engine: `appearance: textfield`
+// covers Firefox, the `-webkit-*-spin-button` rules cover Chrome/Safari.
+const NO_SPINNER =
+  '[&_input]:[appearance:textfield] [&_input::-webkit-inner-spin-button]:appearance-none [&_input::-webkit-outer-spin-button]:appearance-none'
+
 /** The editable shape of one timeline row. `paidAt` locks the row. */
 export interface StageDraft {
   key: string
@@ -69,29 +74,33 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
         disabled={locked}
       />
 
-      {/* Share: a value with its global unit, or "rest" for the remainder. */}
-      {isRemainder ? (
-        <span className="flex h-8 items-center justify-center rounded-control border border-dashed border-border text-caption text-text-muted">
-          rest
-        </span>
-      ) : (
-        <div className="flex items-center gap-1">
-          <span className="sm:hidden text-caption text-text-muted">Amount</span>
-          <Input
-            size="sm"
-            type="number"
-            min={0}
-            value={stage.amountValue ?? ''}
-            onChange={(e) =>
-              onChange({ amountValue: e.target.value === '' ? null : Number(e.target.value) })
-            }
-            aria-label="Amount"
-            className="w-14 [&_input]:[appearance:textfield]"
-            disabled={locked}
-          />
-          <span className="text-caption text-text-muted">{unit}</span>
-        </div>
-      )}
+      {/* Amount: a value with its global unit, or "rest" for the remainder.
+          The "rest" box matches the amount input width so it lines up with the
+          numeric shares above it. */}
+      <div className="flex items-center gap-1">
+        <span className="sm:hidden text-caption text-text-muted">Amount</span>
+        {isRemainder ? (
+          <span className="flex h-8 w-14 items-center justify-center rounded-control border border-dashed border-border text-caption text-text-muted">
+            Rest
+          </span>
+        ) : (
+          <>
+            <Input
+              size="sm"
+              type="number"
+              min={0}
+              value={stage.amountValue ?? ''}
+              onChange={(e) =>
+                onChange({ amountValue: e.target.value === '' ? null : Number(e.target.value) })
+              }
+              aria-label="Amount"
+              className={`w-14 ${NO_SPINNER}`}
+              disabled={locked}
+            />
+            <span className="text-caption text-text-muted">{unit}</span>
+          </>
+        )}
+      </div>
 
       {/* Due offset: value + unit. */}
       <div className="flex items-center gap-1.5">
@@ -103,7 +112,7 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
           value={String(stage.offsetValue)}
           onChange={(e) => onChange({ offsetValue: Number(e.target.value) || 0 })}
           aria-label="Offset amount"
-          className="w-12 [&_input]:[appearance:textfield]"
+          className={`w-12 ${NO_SPINNER}`}
           disabled={locked}
         />
         <Select
