@@ -33,7 +33,7 @@ Spec: `docs/superpowers/specs/2026-07-31-lead-capture-embed-design.md`.
 ## File structure
 
 **Create:**
-- `supabase/migrations/20260730000000_add_lead_capture_forms.sql` — table, `couples.referral_source`, both RPCs, RLS, grants, trigger.
+- `supabase/migrations/20260803000000_add_lead_capture_forms.sql` — table, `couples.referral_source`, both RPCs, RLS, grants, trigger.
 - `lib/lead-capture/schema.ts` — `leadSubmitSchema` (Zod) + `LeadSubmitInput` type + `isLikelyBot`.
 - `lib/lead-capture/snippets.ts` — hosted-URL / iframe / script snippet builders.
 - `app/api/lead/submit/route.ts` — public POST ingest endpoint.
@@ -63,7 +63,7 @@ Spec: `docs/superpowers/specs/2026-07-31-lead-capture-embed-design.md`.
 ## Task 1: DB ingest layer (migration + RPCs + RLS tests)
 
 **Files:**
-- Create: `supabase/migrations/20260730000000_add_lead_capture_forms.sql`
+- Create: `supabase/migrations/20260803000000_add_lead_capture_forms.sql`
 - Create: `tests/integration/lead-capture/rpc.test.ts`
 - Modify: `types/database.ts` (regenerated)
 
@@ -302,7 +302,7 @@ Expected: FAIL — relation `lead_capture_forms` / function `submit_lead` does n
 
 - [ ] **Step 3: Write the migration**
 
-Create `supabase/migrations/20260730000000_add_lead_capture_forms.sql`:
+Create `supabase/migrations/20260803000000_add_lead_capture_forms.sql`:
 
 ```sql
 -- ZEB-2 — embeddable lead-capture forms.
@@ -477,7 +477,7 @@ Expected: 0 errors (the regenerated types now include `lead_capture_forms`, `cou
 - [ ] **Step 7: Commit**
 
 ```bash
-git add supabase/migrations/20260730000000_add_lead_capture_forms.sql tests/integration/lead-capture/rpc.test.ts types/database.ts
+git add supabase/migrations/20260803000000_add_lead_capture_forms.sql tests/integration/lead-capture/rpc.test.ts types/database.ts
 git commit -m "ZEB-2: lead_capture_forms table + ingest RPCs with RLS tests"
 ```
 
