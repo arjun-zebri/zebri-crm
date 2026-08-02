@@ -10,7 +10,7 @@
  */
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
@@ -36,9 +36,15 @@ interface TypeformFlowProps {
   saveState?: SaveState
   /** Required: the MC's resolved branding for typography roles and styling. */
   branding: PublicBranding
+  /** Optional question-heading typography override from the form-style block. */
+  questionCss?: CSSProperties
+  /** Optional answer typography override from the form-style block. */
+  answerCss?: CSSProperties
+  /** Optional Next/Send button background from the form-style block. */
+  buttonColor?: string
 }
 
-export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle', branding }: TypeformFlowProps) {
+export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle', branding, questionCss, answerCss, buttonColor }: TypeformFlowProps) {
   const { brand, textColor, mutedColor } = theme
   const steps = useMemo(() => buildSteps(questions), [questions])
   const [index, setIndex] = useState(0)
@@ -120,7 +126,7 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
       ) : (
         <div className="min-h-[300px] flex-1 overflow-y-auto">
           {step.section && <p className="mb-2" style={{ color: sectionLabelStyles.color, fontSize: `${sectionLabelStyles.fontSize}px`, fontFamily: sectionLabelStyles.fontFamily, fontWeight: sectionLabelStyles.fontWeight, textTransform: sectionLabelStyles.textTransform, letterSpacing: `${sectionLabelStyles.letterSpacing}em`, lineHeight: sectionLabelStyles.lineHeight }}>{step.section}</p>}
-          <h2 style={{ color: questionHeadingStyles.color, fontSize: `${questionHeadingStyles.fontSize}px`, fontFamily: questionHeadingStyles.fontFamily, fontWeight: questionHeadingStyles.fontWeight, lineHeight: questionHeadingStyles.lineHeight, marginBottom: '0.5rem' }}>
+          <h2 style={{ color: questionHeadingStyles.color, fontSize: `${questionHeadingStyles.fontSize}px`, fontFamily: questionHeadingStyles.fontFamily, fontWeight: questionHeadingStyles.fontWeight, lineHeight: questionHeadingStyles.lineHeight, ...questionCss, marginBottom: '0.5rem' }}>
             {step.question.label}
             {step.question.required && <span style={{ color: brand }}> *</span>}
           </h2>
@@ -137,6 +143,7 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
             onAutoAdvance={() => goNext(true)}
             autoFocus={mode === 'live'}
             theme={theme}
+            {...(answerCss ? { answerCss } : {})}
           />
         </div>
       )}
@@ -162,7 +169,7 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
             onClick={() => goNext()}
             disabled={submitting}
             className="cursor-pointer transition hover:opacity-90 disabled:opacity-60"
-            style={{ background: brand, color: readableTextOn(brand), borderRadius: branding.corner_radius, padding: '0.625rem 1.5rem', fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
+            style={{ background: buttonColor ?? brand, color: readableTextOn(buttonColor ?? brand), borderRadius: branding.corner_radius, padding: '0.625rem 1.5rem', fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
           >
             {submitting ? 'Sending…' : atConfirm ? 'Send answers' : 'Next'}
           </button>

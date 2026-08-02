@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCalendarEvents } from "./use-dashboard";
 
 interface DashboardCalendarProps {
@@ -100,11 +100,25 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2
-            className="w-5 h-5 text-gray-400 animate-spin"
-            strokeWidth={1.5}
-          />
+        <div className="animate-pulse flex flex-col flex-1 min-h-0">
+          {/* Day grid placeholder - hidden on mobile */}
+          <div className="hidden sm:grid grid-cols-7 gap-y-1">
+            {Array.from({ length: 35 }).map((_, i) => (
+              <div key={i} className="h-7 flex items-center">
+                <div className="h-6 w-6 bg-gray-100 rounded-full" />
+              </div>
+            ))}
+          </div>
+          {/* Event rows placeholder */}
+          <div className="mt-4 space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2">
+                <div className="w-2 h-2 rounded-full bg-gray-100 shrink-0" />
+                <div className="h-3 bg-gray-100 rounded-md w-10 shrink-0" />
+                <div className="h-3 bg-gray-100 rounded-md flex-1" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <>

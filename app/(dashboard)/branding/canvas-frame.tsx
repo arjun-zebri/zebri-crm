@@ -3,6 +3,8 @@
 import { Minus, Plus, Maximize2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
+import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
+
 import { Slider } from './components/slider'
 
 interface CanvasFrameProps {
@@ -28,7 +30,7 @@ function clampZoom(v: number): number {
 export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: CanvasFrameProps) {
   // Portal uses a wider surface (it's a real-app dashboard preview); documents
   // stay narrower and identical across quote / invoice / contract.
-  const desktopWidth = wide ? 920 : 720
+  const desktopWidth = wide ? 920 : DOC_MAX_WIDTH_PX
 
   // The scroll viewport. Pan writes directly to its scrollLeft/scrollTop, and
   // cursor-anchored zoom reads its scroll + rect to keep the point under the
@@ -166,7 +168,7 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: 
   const panCursor = panning ? 'grabbing' : spaceHeld ? 'grab' : undefined
 
   return (
-    <div className="relative flex-1 min-h-0 overflow-hidden bg-[#F4F4F1]">
+    <div className="relative flex-1 min-h-0 overflow-hidden" style={{ backgroundColor: DOC_CANVAS_BG }}>
       {/* Subtle dotted backdrop, ala Canva / Figma */}
       <div
         aria-hidden

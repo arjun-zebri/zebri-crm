@@ -7,7 +7,7 @@
  */
 import type { SurfaceTab } from '@/types/branding-preview'
 
-import { isMarker } from './policy'
+import { CLEARABLE_MARKERS, isMarker } from './policy'
 import type { BlockType } from './types'
 
 /** General blocks, most-used first (spec §2.1). Available on every surface. */
@@ -17,12 +17,11 @@ export const GENERAL_BLOCKS: BlockType[] = [
 
 /** Document-specific blocks per surface (spec §2.2). */
 export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
-  proposal: ['packageHeader', 'packageDetails', 'packageLineItems', 'packageInclusions', 'packageTotals', 'action'],
   invoice: ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action'],
-  contract: ['title', 'contractBody', 'action'],
+  contract: ['title', 'contractBody', 'contractSign'],
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
-  questionnaire: ['questionnaireBody'],
+  questionnaire: ['questionnaireOneAtATime', 'questionnaireAllOnePage'],
 }
 
 export interface PaletteGroup {
@@ -32,16 +31,28 @@ export interface PaletteGroup {
 
 /** Two labelled palette groups for a surface (General first).
  *
- * Render-split markers (contractBody, couplePortal, …) are excluded: they are
- * locked singletons that are always present, so they cannot be added or
- * removed and have no place in the "add block" palette. */
+ * Fixed render-split markers (the questionnaire body) are excluded: they are
+ * locked singletons that are always present, so they cannot be added or removed
+ * and have no place in the "add block" palette.
+ *
+ * The clearable markers (the contract body + sign form, the run sheet body, and
+ * the couple portal body) DO appear, and stay listed even once inserted, so the
+ * MC always sees the full set of document blocks. They are singletons, so the
+ * editor's addBlock selects the existing one instead of inserting a duplicate
+ * when it is already present.
+ *
+ * @param surface - The document surface.
+ */
 export function paletteGroupsForSurface(surface: SurfaceTab): PaletteGroup[] {
+  const docSpecific = (DOC_SPECIFIC_BY_SURFACE[surface] ?? []).filter((t) => {
+    if (!isMarker(t)) return true
+    // Clearable markers stay in the palette permanently; other markers never
+    // appear (their surface is nothing without them, so they can't be removed).
+    return CLEARABLE_MARKERS.has(t)
+  })
   return [
     { label: 'General', types: GENERAL_BLOCKS },
-    {
-      label: 'Document-specific',
-      types: (DOC_SPECIFIC_BY_SURFACE[surface] ?? []).filter((t) => !isMarker(t)),
-    },
+    { label: 'Document-specific', types: docSpecific },
   ]
 }
 

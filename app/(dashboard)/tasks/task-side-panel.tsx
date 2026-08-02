@@ -66,8 +66,11 @@ interface TaskSidePanelProps {
   onDeleteTypeOption?: (id: string) => void
   onPatch: (id: string, patch: TaskFieldUpdate) => void
   onDelete?: (id: string) => void
-  onPrev?: () => void
-  onNext?: () => void
+  /**
+   * Focus + select the title on open. Set when the panel was opened by a
+   * "New task" action so the placeholder title is ready to be typed over.
+   */
+  autoFocusTitle?: boolean
 }
 
 export function TaskSidePanel({
@@ -90,8 +93,7 @@ export function TaskSidePanel({
   onDeleteTypeOption,
   onPatch,
   onDelete,
-  onPrev,
-  onNext,
+  autoFocusTitle,
 }: TaskSidePanelProps) {
   if (!task) return null
   return (
@@ -116,8 +118,7 @@ export function TaskSidePanel({
       onDeleteTypeOption={onDeleteTypeOption}
       onPatch={onPatch}
       onDelete={onDelete}
-      onPrev={onPrev}
-      onNext={onNext}
+      autoFocusTitle={autoFocusTitle}
     />
   )
 }
@@ -151,8 +152,7 @@ interface InnerProps {
   onDeleteTypeOption?: (id: string) => void
   onPatch: (id: string, patch: TaskFieldUpdate) => void
   onDelete?: (id: string) => void
-  onPrev?: () => void
-  onNext?: () => void
+  autoFocusTitle?: boolean
 }
 
 function TaskSidePanelInner({
@@ -175,8 +175,7 @@ function TaskSidePanelInner({
   onDeleteTypeOption,
   onPatch,
   onDelete,
-  onPrev,
-  onNext,
+  autoFocusTitle,
 }: InnerProps) {
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
@@ -194,6 +193,18 @@ function TaskSidePanelInner({
     el.style.height = `${el.scrollHeight}px`
   }, [title])
 
+  // Freshly created tasks land here with a placeholder title, so select it
+  // and let the user type straight over it. Mount-only: the inner component
+  // is keyed by task id, so switching tasks remounts and re-runs this.
+  useEffect(() => {
+    if (!autoFocusTitle) return
+    const el = titleRef.current
+    if (!el) return
+    el.focus()
+    el.select()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const patch = (p: TaskFieldUpdate) => onPatch(task.id, p)
 
   const selectedCouple = couples?.find((c) => c.id === coupleId)
@@ -204,8 +215,6 @@ function TaskSidePanelInner({
       <SidePanel
         isOpen={isOpen}
         onClose={onClose}
-        onPrev={onPrev}
-        onNext={onNext}
         footer={
           onDelete ? (
             <div className="flex items-center justify-end">

@@ -59,7 +59,16 @@ import { execSync } from 'node:child_process';
 // and fixed import-order across public block renderers → 75 → 72.
 // Branding overhaul phase-a completion: strict type compliance fixes +
 // render consolidation clearances → 72 → 66 → 64 (page.tsx any-casts fixed).
-const ERROR_BUDGET = 64;
+// Payment schedules phase: replaced two-stage deposit model with N-stage
+// payment timeline; rewrite of payment-schedule.tsx removed set-state-in-effect
+// error → 64 → 63.
+// Feature removal (2026-07-31): deleting the retired offer-document surface
+// and its builders cleared one lint error → 62.
+// Contract-block coherence + preview mock body (2026-08-02): removing the
+// payment-shaped action wiring from the contract surface, routing the contract
+// body through BlockFrame, and consolidating the contract-body mock into a
+// shared module cleared 8 lint errors → 54. Locking in.
+const ERROR_BUDGET = 54;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -134,7 +143,7 @@ const ERROR_BUDGET = 64;
 // legacy managers and their stray hook-deps suppressions → 395 → 394.
 // Phase G quotes removal: cleaned up imports/exports from files that
 // previously exported quote types or references → 394 → 392.
-// Proposal branding audit follow-ups: starter-designs work removed a
+// Branding audit follow-ups: starter-designs work removed a
 // stale unused import in brand-panel → 342 → 341.
 // P3.1 business-section extraction: fixed @next/next/no-img-element and
 // @typescript-eslint/no-unused-expressions violations by using Image from
@@ -165,14 +174,35 @@ const ERROR_BUDGET = 64;
 // STATUS_COLORS constants, dropping one more warning (271 -> 270).
 // Welcome onboarding wizard: pure utility modules + component extraction cleared
 // unused-import warnings across preview files (270 -> 267).
-// Proposals single/multi-package + branding batch drifted warnings up to 307
-// (mostly import-order across the new proposal/branding surfaces). Auto-fixed
+// Single/multi-package + branding batch drifted warnings up to 307
+// (mostly import-order across the new branding surfaces). Auto-fixed
 // import-order in the changed files, removed dead imports/vars, and applied the
 // established disable-comment convention for the deliberate app->lib Block type
 // import (no-restricted-imports) and public-branding logo <img> (no-img-element).
 // Also made the eslint `.next` ignore recursive so a local git worktree's build
 // output stops polluting the count (307 -> 265). Locking in at 265.
-const WARNING_BUDGET = 265;
+// Contract create-in-modal: deleted new-contract-popover.tsx (raw
+// inputs + off-token colours) and the now-dead unused imports in the
+// payments header and couple-contracts (265 -> 261). Locking in.
+// Feature removal (2026-07-31): deleting the retired offer-document surface,
+// builders, automations, and email cleared dead imports/vars net of the ones
+// the removal exposed (261 -> 259). Locking in.
+// Shared document frame (2026-08-02): moved the builder backdrop colour off the
+// arbitrary-value Tailwind class `bg-[#F4F4F1]` into an inline style sourced
+// from DOC_CANVAS_BG, clearing one no-off-token-color warning (259 -> 258).
+// Contract sign block + body-signature cleanup (2026-08-02): removed unused
+// imports when the MC signature moved out of the body mock, and fixed an
+// import-order warning (258 -> 257). Locking in.
+// Run sheet body typography (2026-08-02): VendorTimeline gained a colour-
+// preserving import from the branding blocks module; running eslint --fix on the
+// new imports netted out one import-order warning (257 -> 256). Locking in.
+// Questionnaire form-style blocks (2026-08-02): replaced the single
+// questionnaireBody marker + its mode toggle with two stylable form blocks
+// (One at a time / All on one page), plus question/answer/button typography
+// threaded through the fill renderers and both preview surfaces. Deleting the
+// toggle + "fixed" preview note and tightening imports netted out three
+// warnings (256 -> 253). Locking in.
+const WARNING_BUDGET = 253;
 
 function runEslintJson() {
   try {

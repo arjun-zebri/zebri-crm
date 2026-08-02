@@ -30,7 +30,7 @@ interface ExperiencePreviewProps {
 }
 
 export function QuestionnaireExperiencePreview({ title, questions, displayMode, frame = 'desktop', heightClass = 'h-[560px]' }: ExperiencePreviewProps) {
-  const { branding, loading } = useCurrentBranding('proposal')
+  const { branding, loading } = useCurrentBranding('questionnaire')
   const theme = themeFromBranding(branding)
   const [responses, setResponses] = useState<Responses>({})
 

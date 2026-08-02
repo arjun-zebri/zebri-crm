@@ -145,7 +145,6 @@ function readPath(path: string, ctx: RunContext): string {
     case 'questionnaire':
       return readQuestionnaire(ctx, key)
     case 'invoice':
-    case 'proposal':
     case 'contract':
     case 'task':
       // These read from the triggering event's payload or the
@@ -293,8 +292,8 @@ function readEventField(ctx: RunContext, namespace: string, key: string): string
     const v = payload[c]
     if (v != null) return String(v)
   }
-  // Look in prior action results too - actions like "Send quote"
-  // write the resulting proposal_id / proposal_link into actionResults.
+  // Look in prior action results too - actions like "Send invoice"
+  // write the resulting invoice_id / invoice_link into actionResults.
   for (const actionId of Object.keys(ctx.actionResults)) {
     const r = ctx.actionResults[actionId] as Record<string, unknown> | null
     if (!r) continue
@@ -380,7 +379,6 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
     group: 'Links',
     variables: [
       { token: '{{portal.link}}', label: 'Couple portal link', example: 'https://zebri.app/portal/…' },
-      { token: '{{proposal.link}}', label: 'Proposal share link', example: 'https://zebri.app/proposal/…' },
       { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/invoice/…' },
       { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/contract/…' },
       { token: '{{questionnaire.link}}', label: 'Questionnaire link', example: 'https://zebri.app/questionnaire/…' },
@@ -389,8 +387,6 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
   {
     group: 'Document Numbers & Totals',
     variables: [
-      { token: '{{proposal.number}}', label: 'Proposal number', example: 'PR-001' },
-      { token: '{{proposal.total}}', label: 'Proposal total', example: '$2,500' },
       { token: '{{invoice.number}}', label: 'Invoice number', example: 'INV-001' },
       { token: '{{contract.number}}', label: 'Contract number', example: 'CTR-001' },
     ],

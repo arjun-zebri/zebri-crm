@@ -74,6 +74,10 @@ function describe(event: AlertEvent): string {
       return `surface=${event.surface} · ip=${event.ip} · attempts=${event.attempts}`;
     case 'payment_success_param_tampered':
       return `invoiceToken=${event.invoiceToken} · session=${event.sessionId} — ${event.reason}`;
+    case 'invoice_payment_stage_mismatch':
+      return `invoice=${event.invoiceId} · missing stages=${event.missingStageIds.join(', ')}`;
+    case 'invoice_payment_status_indeterminate':
+      return `invoice=${event.invoiceId} · status unknown, retry pending — ${event.failureReason}`;
     case 'email_rate_limit_hit':
       return `action=${event.action} · user=${event.userId} · ip=${event.ip}`;
     case 'resend_send_failed':

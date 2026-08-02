@@ -1,5 +1,5 @@
 /**
- * Pure readiness engine for document blocks: Layer A (required/at-least-one/questionnaire-mode)
+ * Pure readiness engine for document blocks: Layer A (required/at-least-one/exactly-one)
  * and Layer B (account prerequisites like stripe, bank details, contract template).
  *
  * This module contains NO React and NO IO. It evaluates a branding kit's surface
@@ -15,10 +15,10 @@
 // readiness evaluator. Layering exception noted in `.claude/docs/component-library.md`.
 // eslint-disable-next-line no-restricted-imports
 import {
-  requiredTypesForSurface, atLeastOneForSurface,
+  requiredTypesForSurface, atLeastOneForSurface, exactlyOneForSurface,
 } from '@/app/(dashboard)/branding/blocks/policy'
 // eslint-disable-next-line no-restricted-imports
-import type { Block, QuestionnaireBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
+import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 // eslint-disable-next-line no-restricted-imports
 import { blockLabel } from '@/app/(dashboard)/branding/blocks/types'
 import type { SurfaceTab } from '@/types/branding-preview'
@@ -35,8 +35,8 @@ export interface AccountReadiness {
 
 /** A single readiness issue blocking editing or sending. */
 export interface ReadinessIssue {
-  /** Category of issue: missing required block, at-least-one constraint, questionnaire mode, or account prerequisite. */
-  kind: 'missing-required' | 'need-at-least-one' | 'questionnaire-mode' | 'account'
+  /** Category of issue: missing required block, at-least-one constraint, exactly-one constraint, or account prerequisite. */
+  kind: 'missing-required' | 'need-at-least-one' | 'need-exactly-one' | 'account'
   /** Plain-language message (no block type codes, only human labels from blockLabel). */
   message: string
 }
@@ -56,14 +56,14 @@ export interface SurfaceReadiness {
  * Layer A (sets `ready: false` when failed):
  * - All required block types for the surface must be present.
  * - Invoice: at least one of paymentDetails or action.
- * - Questionnaire: questionnaireBody must have a mode set.
+ * - Questionnaire: exactly one form-style block (One at a time / All on one page).
  *
  * Layer B (produces `kind:'account'` issues but does NOT set `ready: false`):
  * - If paymentDetails block is present, account.bankDetailsFilled must be true.
  * - If action block is present on invoice, account.stripeConnected must be true.
  * - On contract surface, account.contractTemplateExists must be true.
  *
- * @param surface - The surface tab ('proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire').
+ * @param surface - The surface tab ('invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire').
  * @param blocks - The block tree for this surface.
  * @param account - The MC's account readiness state.
  * @returns { ready, issues } — Layer A readiness + all issues (Layer A + Layer B).
@@ -103,14 +103,22 @@ export function evaluateSurface(
     }
   }
 
-  // Layer A: Questionnaire mode
-  if (surface === 'questionnaire') {
-    const questionnaireBlock = blocks.find((b) => b.type === 'questionnaireBody') as QuestionnaireBodyBlock | undefined
-    if (questionnaireBlock && !questionnaireBlock.mode) {
+  // Layer A: Exactly-one constraint (questionnaire form style). None means the
+  // couple has nothing to fill; both means the form style is ambiguous.
+  const exactlyOne = exactlyOneForSurface(surface)
+  if (exactlyOne !== null) {
+    const present = exactlyOne.filter((type) => blockTypes.has(type))
+    if (present.length === 0) {
       layerAReady = false
       issues.push({
-        kind: 'questionnaire-mode',
-        message: 'A questionnaire mode',
+        kind: 'need-exactly-one',
+        message: `Add a form style: ${exactlyOne.map((t) => blockLabel(t, surface)).join(' or ')}`,
+      })
+    } else if (present.length > 1) {
+      layerAReady = false
+      issues.push({
+        kind: 'need-exactly-one',
+        message: `Pick one form style: remove ${present.map((t) => blockLabel(t, surface)).join(' or ')} so only one remains`,
       })
     }
   }

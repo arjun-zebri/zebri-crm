@@ -1,8 +1,8 @@
 /**
  * "Public Page" settings section. Groups the outward-facing branding an
  * MC's couples see: the Zebri subdomain that fronts the portal, invoices,
- * proposals, and contracts, plus (in the {@link PublicPageEmail} subsection)
- * the address that emails are sent from.
+ * and contracts, plus (in the {@link PublicPageEmail} subsection) the
+ * address that emails are sent from.
  *
  * State is persisted to `user_public_settings`: the subdomain auto-saves
  * on blur via {@link saveSubdomainAction}, and the email subsection drives
@@ -18,7 +18,6 @@ import {
   FileSignature,
   Globe,
   Receipt,
-  ScrollText,
   Users2,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -54,7 +53,6 @@ interface SurfaceDef {
 
 const SURFACES: SurfaceDef[] = [
   { id: 'portal', label: 'Couple portal', icon: Users2, build: (h) => `${h}/portal/emma-and-james` },
-  { id: 'proposals', label: 'Proposals', icon: ScrollText, build: (h) => `${h}/proposal/PR-1042` },
   { id: 'invoices', label: 'Invoices', icon: Receipt, build: (h) => `${h}/invoice/INV-1042` },
   { id: 'contracts', label: 'Contracts', icon: FileSignature, build: (h) => `${h}/contract/CON-1042` },
 ];

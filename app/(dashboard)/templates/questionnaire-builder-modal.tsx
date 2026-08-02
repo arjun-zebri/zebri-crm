@@ -107,9 +107,9 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
         </div>
       }
     >
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="flex flex-col gap-6 lg:min-h-full lg:flex-row lg:items-stretch">
         {/* Editor */}
-        <div className="space-y-4">
+        <div className="space-y-4 lg:flex-1 lg:min-w-0">
           <div className="space-y-3">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-text">Name</label>
@@ -126,13 +126,13 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-text">Couples answer</label>
-              <div className="inline-flex overflow-hidden rounded-xl border border-border bg-surface">
+              <div className="inline-flex overflow-hidden rounded-control border border-border bg-surface">
                 {DISPLAY_MODES.map((m, i) => (
                   <button
                     key={m.value}
                     type="button"
                     onClick={() => setDisplayMode(m.value)}
-                    className={`cursor-pointer px-3 py-1.5 text-sm font-medium transition-colors ${i > 0 ? 'border-l border-border' : ''} ${
+                    className={`cursor-pointer px-2.5 py-1 text-xs font-medium transition-colors ${i > 0 ? 'border-l border-border' : ''} ${
                       displayMode === m.value ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'
                     }`}
                   >
@@ -167,11 +167,15 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
           </div>
         </div>
 
-        {/* Preview — the real branded couple experience, sticky alongside the
-            editor on large screens. */}
-        <div className="hidden rounded-2xl bg-surface-muted p-4 lg:sticky lg:top-0 lg:block lg:self-start">
+        {/* Preview — the real branded couple experience. On large screens it
+            fills the column so the panel reaches the bottom of the modal
+            (flex-1 + min-h-0 lets the inner preview scroll rather than the
+            panel growing past the modal). */}
+        <div className="hidden rounded-2xl bg-surface-muted p-4 lg:flex lg:flex-1 lg:min-w-0 lg:flex-col">
           <p className="mb-3 px-2 text-xs uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
-          <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} heightClass="h-[600px]" />
+          <div className="min-h-0 lg:flex-1">
+            <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} heightClass="h-full min-h-[600px]" />
+          </div>
         </div>
       </div>
     </Modal>

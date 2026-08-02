@@ -17,6 +17,7 @@ import type {
   AutomationEventRow,
   AutomationRunRow,
   CoupleSnapshot,
+  InvoiceSnapshot,
   McSnapshot,
   RunContext,
 } from '@/types/automations'
@@ -30,9 +31,10 @@ export async function buildRunContext(
   run: AutomationRunRow,
   event: AutomationEventRow,
 ): Promise<RunContext> {
-  const [couple, mc] = await Promise.all([
+  const [couple, mc, invoice] = await Promise.all([
     run.couple_id ? loadCoupleSnapshot(supabase, run.couple_id) : Promise.resolve(null),
     loadMcSnapshot(supabase, run.user_id),
+    run.couple_id ? loadInvoiceSnapshot(supabase, run.couple_id, event) : Promise.resolve(null),
   ])
   const actionResults = (run.last_payload as Record<string, unknown> | null)?.['action_results']
   return {
@@ -42,6 +44,7 @@ export async function buildRunContext(
     coupleId: run.couple_id,
     triggerEvent: event,
     couple,
+    invoice,
     mc,
     actionResults: (actionResults as Record<string, never>) ?? {},
   }
@@ -136,6 +139,70 @@ async function loadSpouseDetails(
     name: row?.full_name ?? null,
     email: row?.email ?? null,
     phone: row?.phone ?? null,
+  }
+}
+
+/**
+ * Load an invoice snapshot for a couple.
+ *
+ * Invoice resolution follows this rule:
+ * 1. If triggerEvent.payload.invoice_id is present, use that invoice. The
+ *    invoice-related triggers carry it, and it is the specific invoice the
+ *    run is about. Being specific matters for a reminder chain on one invoice
+ *    while another sits unpaid.
+ * 2. Otherwise, use the couple's most recent non-cancelled invoice. An MC
+ *    who puts "has paid deposit" on a time-before-event automation means
+ *    "has this couple paid their deposit yet", and returning null because
+ *    the trigger was not invoice-shaped would just be the current bug with
+ *    a smaller blast radius.
+ * 3. If neither resolves, return null and the condition is false.
+ *
+ * The snapshot carries the paid_at timestamp of the invoice's first
+ * (lowest position) payment stage, or null if unpaid.
+ */
+export async function loadInvoiceSnapshot(
+  supabase: SupabaseClient<Database>,
+  coupleId: string,
+  event: AutomationEventRow,
+): Promise<InvoiceSnapshot | null> {
+  const invoiceIdFromPayload = (event.payload as Record<string, unknown> | null)?.['invoice_id']
+  const invoiceId = typeof invoiceIdFromPayload === 'string' ? invoiceIdFromPayload : null
+
+  let invoice: { id: string } | null = null
+
+  if (invoiceId) {
+    const { data } = await supabase
+      .from('invoices')
+      .select('id')
+      .eq('id', invoiceId)
+      .eq('couple_id', coupleId)
+      .single()
+    invoice = data
+  } else {
+    const { data } = await supabase
+      .from('invoices')
+      .select('id')
+      .eq('couple_id', coupleId)
+      .neq('status', 'cancelled')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    invoice = data
+  }
+
+  if (!invoice) return null
+
+  const { data: stages } = await supabase
+    .from('invoice_payment_stages')
+    .select('position, paid_at')
+    .eq('invoice_id', invoice.id)
+    .order('position', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  return {
+    id: invoice.id,
+    firstStagePaidAt: (stages?.['paid_at'] as string | null) ?? null,
   }
 }
 

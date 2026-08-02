@@ -9,8 +9,8 @@ import { serviceClient } from '@/tests/integration/helpers/supabase'
  * Integration test for the branding blocks repair sweep.
  *
  * Runs against a real local Supabase instance (Docker required).
- * Tests that the sweep correctly migrates legacy block trees (proposalBody,
- * headerBanner) in actual persisted user_branding rows, and verifies idempotency.
+ * Tests that the sweep correctly migrates legacy block trees (headerBanner
+ * to image) in actual persisted user_branding rows, and verifies idempotency.
  *
  * This test is deferred until Docker is available. It runs in CI/CD against
  * the real local Supabase stack to verify production-ready behavior.
@@ -35,17 +35,13 @@ describe('branding repair sweep (integration)', () => {
 
     userId = authUser.user.id
 
-    // Insert a legacy user_branding row with proposalBody marker + headerBanner
+    // Insert a legacy user_branding row with headerBanner blocks to migrate
     const { error: insertError } = await supabase
       .from('user_branding')
       .insert([
         {
           user_id: userId,
           branding_blocks: {
-            proposal: [
-              { id: 'hb1', type: 'headerBanner' },
-              { id: 'pb1', type: 'proposalBody', locked: true },
-            ],
             invoice: [
               { id: 'hb2', type: 'headerBanner' },
               { id: 'ib', type: 'invoiceBody', locked: true },
@@ -66,7 +62,7 @@ describe('branding repair sweep (integration)', () => {
     }
   })
 
-  it('migrates legacy proposalBody + headerBanner and is idempotent', async () => {
+  it('migrates legacy headerBanner blocks and is idempotent', async () => {
     const supabase = serviceClient()
 
     // First call: should repair and return changed: true
@@ -82,18 +78,23 @@ describe('branding repair sweep (integration)', () => {
 
     expect(data).toBeDefined()
 
-    const proposal = (data!.branding_blocks as { proposal: { type: string }[] }).proposal
-    const proposalTypes = proposal.map((b) => b.type)
+    const blocks = data!.branding_blocks as {
+      invoice: { type: string }[]
+      portal: { type: string }[]
+    }
 
-    // proposalBody should be migrated to package blocks (packageHeader, packageTotals, etc.)
-    expect(proposalTypes).toContain('packageHeader')
-    expect(proposalTypes).toContain('packageTotals')
+    // headerBanner should be migrated to image on the invoice surface; the
+    // unknown legacy invoiceBody marker is dropped.
+    const invoiceTypes = blocks.invoice.map((b) => b.type)
+    expect(invoiceTypes).toContain('image')
+    expect(invoiceTypes).not.toContain('headerBanner')
+    expect(invoiceTypes).not.toContain('invoiceBody')
 
-    // headerBanner should be migrated to image
-    expect(proposalTypes).toContain('image')
-
-    // proposalBody marker should not exist (replaced by package blocks)
-    expect(proposalTypes).not.toContain('proposalBody')
+    // Portal headerBanner should also migrate to image, couplePortal preserved.
+    const portalTypes = blocks.portal.map((b) => b.type)
+    expect(portalTypes).toContain('image')
+    expect(portalTypes).not.toContain('headerBanner')
+    expect(portalTypes).toContain('couplePortal')
 
     // Second call on already-repaired data: should return changed: false
     const second = await repairRow(supabase, userId)

@@ -264,17 +264,12 @@ export function ExtendedTriggerFields({
       return <CoupleStageChangedExtra config={config} setConfig={setConfig} />
     case 'booking_cancelled':
       return <BookingCancelledExtra config={config} setConfig={setConfig} />
-    case 'proposal_sent':
-    case 'proposal_accepted':
-    case 'proposal_declined':
     case 'invoice_created':
     case 'invoice_sent':
     case 'payment_received':
       return <PaymentDocFiltersExtra config={config} setConfig={setConfig} forPayment={triggerType === 'payment_received'} />
-    case 'proposal_due':
     case 'invoice_due':
       return <DueExtra config={config} setConfig={setConfig} isInvoice={triggerType === 'invoice_due'} />
-    case 'proposal_overdue':
     case 'invoice_overdue':
       return <OverdueExtra config={config} setConfig={setConfig} isInvoice={triggerType === 'invoice_overdue'} />
     case 'payment_failed':
@@ -423,9 +418,33 @@ const BookingCancelledExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = (
 
 const PaymentDocFiltersExtra: (p: { config: Cfg; setConfig: SetCfg; forPayment: boolean }) => null = () => null
 
-const DueExtra: (p: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) => null = () => null
+function DueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) {
+  if (!isInvoice) return null
+  return (
+    <>
+      <Check
+        label="Only the final payment"
+        checked={(config['isFinalBalance'] as boolean) ?? false}
+        onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })}
+      />
+      <Hint>Skip the earlier stages and only chase the last one.</Hint>
+    </>
+  )
+}
 
-const OverdueExtra: (p: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) => null = () => null
+function OverdueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) {
+  if (!isInvoice) return null
+  return (
+    <>
+      <Check
+        label="Only the final payment"
+        checked={(config['isFinalBalance'] as boolean) ?? false}
+        onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })}
+      />
+      <Hint>Skip the earlier stages and only chase the last one.</Hint>
+    </>
+  )
+}
 
 function PaymentFailedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
@@ -1306,13 +1325,6 @@ export function CalendarEventExtraFields({ config, updateConfig }: FormProps) {
       <NumField label="Reminder hours before start (optional)" value={(config['reminderHoursBefore'] as number | undefined) ?? 0} onChange={(v) => updateConfig({ reminderHoursBefore: v || undefined })} />
       <SelectField label="Notification channel" value={(config['notificationChannel'] as string) ?? 'email'} onChange={(v) => updateConfig({ notificationChannel: v })} options={[{ value: 'email', label: 'Email' }, { value: 'slack', label: 'Slack' }, { value: 'in_app', label: 'In-app' }]} />
     </>
-  )
-}
-
-/** Extra fields for `send_quote`. */
-export function SendProposalExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <TextAreaField label="Custom message above the proposal link (optional)" value={(config['customMessage'] as string) ?? ''} onChange={(v) => updateConfig({ customMessage: v || undefined })} />
   )
 }
 

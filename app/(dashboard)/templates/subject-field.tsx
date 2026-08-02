@@ -148,7 +148,7 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
           onSelect={detectTrigger}
           onKeyDown={onKeyDown}
           onBlur={() => setTrigger(null)}
-          placeholder="e.g. Your proposal from {{mc.business_name}}"
+          placeholder="e.g. Your invoice from {{mc.business_name}}"
         />
         {trigger && (
           // onMouseDown preventDefault keeps the input focused so a

@@ -32,10 +32,10 @@ Concretely, the Phase-2 surface is:
   in place; needs idempotency keys, dead-letter handling, fixture
   replay test coverage, and tighter Zod-validated event handlers.
 
-Quote-specific feature work (templating, customisation, send-as-
-proposal UX) stays scoped to **Phase 9 (Quotes)**. Phase 2's
-treatment of quotes is structural only — the modal is rebuilt to
-the §5 DoD bar; deeper UX iteration happens in Phase 9.
+Quote-specific feature work (templating, customisation) stays scoped
+to **Phase 9 (Quotes)**. Phase 2's treatment of quotes is structural
+only; the modal is rebuilt to the §5 DoD bar, and deeper UX iteration
+happens in Phase 9.
 
 ## 2. PR plan — 4 small PRs, not one big one
 

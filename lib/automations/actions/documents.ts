@@ -1,7 +1,7 @@
 /**
  * Document-sharing actions.
  *
- * send_proposal / send_contract / send_invoice  flip share_token_enabled
+ * send_contract / send_invoice  flip share_token_enabled
  *                                            to true and send the
  *                                            corresponding email
  *                                            via the existing
@@ -18,7 +18,7 @@
 
 import { z } from 'zod'
 
-import { sendContractEmail, sendInvoiceEmail, sendProposalEmail } from '@/lib/email'
+import { sendContractEmail, sendInvoiceEmail } from '@/lib/email'
 import { dispatchEmail } from '@/lib/email/dispatch'
 import { resolveSender, type ResolvedSender } from '@/lib/email/sender-identity'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -49,61 +49,6 @@ async function emailRunSheetLink(
     html: `<p>Here's the run sheet for ${coupleName}.</p><p><a href="${url}">Open the run sheet</a></p><p>${url}</p>`,
   })
   return res.ok
-}
-
-// ────────────────────────────────────────────────────────────────
-// send_proposal
-// ────────────────────────────────────────────────────────────────
-
-const sendProposalSchema = z.object({
-  /** If omitted, pick the most recent draft/sent proposal for this couple. */
-  proposalId: z.string().uuid().optional(),
-  /** Days until the proposal expires. */
-  expiryDays: z.number().int().min(1).max(365).optional(),
-  /** Optional personal message above the proposal link. */
-  customMessage: z.string().optional(),
-  /** CC list (assistant / partner). */
-  cc: z.array(z.string().email()).optional(),
-}).passthrough()
-
-const sendProposal: ActionSpec<z.infer<typeof sendProposalSchema>> = {
-  type: 'send_proposal',
-  configSchema: sendProposalSchema,
-  async handler(ctx, config) {
-    if (!ctx.couple?.email) return { kind: 'ok', output: { skipped: 'no primary email' } }
-    const supabase = createAdminClient()
-    const proposal = await pickProposal(supabase, ctx, config.proposalId)
-    if (!proposal) return { kind: 'ok', output: { skipped: 'no proposal found' } }
-
-    // Count options to drive email copy (mentions "choose between X options").
-    const { count } = await supabase
-      .from('proposal_options')
-      .select('id', { count: 'exact', head: true })
-      .eq('proposal_id', proposal.id)
-    const optionCount = count ?? 0
-
-    // Flip draft → sent and enable sharing.
-    const updates: Record<string, unknown> = { share_token_enabled: true }
-    if (proposal.status === 'draft') {
-      updates.status = 'sent'
-      updates.email_sent_at = new Date().toISOString()
-    }
-    await supabase.from('proposals').update(updates as never).eq('id', proposal.id)
-
-    const url = `${APP_URL}/proposal/${proposal.share_token}`
-    await sendProposalEmail({
-      coupleEmail: ctx.couple.email,
-      coupleName: ctx.couple.name,
-      proposalNumber: proposal.proposal_number,
-      proposalTitle: proposal.title,
-      shareUrl: url,
-      mcBusinessName: ctx.mc.businessName,
-      optionCount,
-      sender: await resolveSender(supabase, ctx.userId, ctx.mc.businessName),
-    })
-    return { kind: 'ok', output: { proposal_id: proposal.id, proposal_link: url } }
-  },
-  ui: { category: 'payments', label: 'Send proposal', description: 'Email the couple a proposal', icon: 'FileText' },
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -292,38 +237,6 @@ const generateRunSheetPdf: ActionSpec<z.infer<typeof generateRunSheetSchema>> = 
 // helpers - pick the row most-likely meant by the user
 // ────────────────────────────────────────────────────────────────
 
-async function pickProposal(
-  supabase: ReturnType<typeof createAdminClient>,
-  ctx: RunContext,
-  explicitId?: string,
-) {
-  if (explicitId) {
-    const { data } = await supabase
-      .from('proposals')
-      .select('id, proposal_number, title, share_token, status')
-      .eq('id', explicitId)
-      .eq('user_id', ctx.userId)
-      .single()
-    return data ?? null
-  }
-  const triggerPayload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
-  const idFromTrigger = typeof triggerPayload['proposal_id'] === 'string' ? (triggerPayload['proposal_id'] as string) : null
-  if (idFromTrigger) return pickProposal(supabase, ctx, idFromTrigger)
-  if (!ctx.couple) return null
-  // Pick the most recent draft or sent proposal.
-  const { data } = await supabase
-    .from('proposals')
-    .select('id, proposal_number, title, share_token, status')
-    .eq('couple_id', ctx.couple.id)
-    .eq('user_id', ctx.userId)
-    .in('status', ['draft', 'sent'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  return data ?? null
-}
-
-
 async function pickContract(
   supabase: ReturnType<typeof createAdminClient>,
   ctx: RunContext,
@@ -383,7 +296,6 @@ async function pickInvoice(
 }
 
 export const documentActions: Partial<Record<ActionType, ActionSpec<any>>> = {
-  send_proposal: sendProposal,
   send_contract: sendContract,
   send_invoice: sendInvoice,
   trigger_payment_reminder: triggerPaymentReminder,

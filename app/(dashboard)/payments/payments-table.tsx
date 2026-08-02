@@ -2,9 +2,9 @@
  * Shared presentation primitive for the /payments page lists.
  *
  * Desktop renders a fixed-column table; mobile renders the same rows
- * as a vertically-stacked card list. Each tab (Quotes / Invoices /
- * Contracts) passes a `renderRow` callback that maps its domain type
- * to the cells the table needs.
+ * as a vertically-stacked card list. Each tab (Invoices / Contracts)
+ * passes a `renderRow` callback that maps its domain type to the
+ * cells the table needs.
  *
  * Loading state shows skeleton rows in the same shape so swap-in
  * doesn't reflow. Empty state shows a per-tab icon + message.
@@ -16,7 +16,7 @@
 import { Calendar, DollarSign, Hash, ListChecks, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { Invoice, Contract, Proposal } from './use-payments-data';
+import type { Invoice, Contract } from './use-payments-data';
 
 const COL_WIDTHS = {
   number: '11%',
@@ -45,7 +45,7 @@ export interface PaymentsRow {
 }
 
 /** Domain types that can populate this table. */
-export type PaymentsTableItem = Proposal | Invoice | Contract;
+export type PaymentsTableItem = Invoice | Contract;
 
 export interface PaymentsTableProps<T extends PaymentsTableItem> {
   loading: boolean;

@@ -1,6 +1,5 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { useLeadSources, DashboardPeriod } from "./use-dashboard";
 import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple';
 
@@ -27,11 +26,15 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2
-            className="w-5 h-5 text-gray-400 animate-spin"
-            strokeWidth={1.5}
-          />
+        <div className="space-y-4 flex-1 min-h-0">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="animate-pulse flex items-center gap-3">
+              <div className="h-3.5 bg-gray-100 rounded-md w-28 shrink-0" />
+              <div className="flex-1 h-2 bg-gray-100 rounded-full" />
+              <div className="h-3.5 bg-gray-100 rounded-md w-6 shrink-0" />
+              <div className="h-3 bg-gray-100 rounded-md w-8 shrink-0" />
+            </div>
+          ))}
         </div>
       ) : !data || data.total === 0 ? (
         <div className="text-center py-12">

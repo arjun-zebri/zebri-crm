@@ -15,15 +15,10 @@ import type { SurfaceTab } from '@/types/branding-preview'
  * stays document-scoped. It also hosts the "Clear all blocks" action so
  * the canvas has a single, calm header row.
  *
- * On the proposal surface it adds a note explaining that the layout designs a
- * single package, and that proposals offering several packages render each one
- * stacked below the other (each with its own Accept) at send time.
- *
  * @module app/(dashboard)/branding/canvas-scope-bar
  */
 
 const SURFACE_LABEL: Record<SurfaceTab, string> = {
-  proposal: 'Proposal',
   invoice: 'Invoice',
   contract: 'Contract',
   portal: 'Portal',
@@ -66,12 +61,6 @@ export function CanvasScopeBar({ surface, onClearBlocks, onResetLayout }: Canvas
           )}
         </div>
       </div>
-      {surface === 'proposal' && (
-        <p className="mt-1.5 text-[11px] text-gray-400">
-          Design one package here. If a proposal offers several packages, each one stacks below the
-          other on the sent proposal, each with its own Accept.
-        </p>
-      )}
     </div>
   )
 }

@@ -29,19 +29,23 @@ export interface PreviewDoc {
   businessName: string | null;
   items: PreviewLineItem[];
   taxRate: number;
+  /** Invoice-only display flag: renders a "Prices include GST" note
+   *  under the total. Never affects a computed amount. */
+  gstInclusive?: boolean;
   discount: PreviewDiscount | null;
   notes: string | null;
   /** Contract-only: when the document expires. */
   expiresAt?: string | null;
   /** Invoice-only: when the invoice is due. */
   dueDate?: string | null;
-  /** Invoice-only: deposit / final-balance schedule when the MC enabled one. */
+  /** Invoice-only: payment stages when the MC enabled them. */
   paymentSchedule?: {
-    depositPercent: number;
-    depositAmount: number;
-    depositDueDate: string | null;
-    finalAmount: number;
-    finalDueDate: string | null;
+    stages: Array<{
+      label: string;
+      amountCents: number;
+      dueDate: string | null;
+      paidAt: string | null;
+    }>;
   } | null;
   /** Invoice-only bank-transfer details (from user_metadata). */
   bankAccountName?: string | null;

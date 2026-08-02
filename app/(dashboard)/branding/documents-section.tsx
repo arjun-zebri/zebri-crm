@@ -13,7 +13,6 @@ interface Surface {
 }
 
 const SURFACES: Surface[] = [
-  { id: 'proposal', label: 'Proposals', description: 'Priced packages couples accept online', icon: FileText },
   { id: 'invoice', label: 'Invoices', description: 'Card and bank-transfer payments', icon: Receipt },
   { id: 'contract', label: 'Contracts', description: 'E-sign agreements', icon: FileSignature },
   { id: 'portal', label: 'Client portal', description: 'The couple\'s home for everything', icon: Users2 },

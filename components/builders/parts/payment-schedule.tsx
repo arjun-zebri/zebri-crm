@@ -1,254 +1,193 @@
 /**
- * Vertical-timeline payment schedule for the Invoice builder.
+ * The invoice builder's payment-schedule section.
  *
- * Replaces the previous two-card layout (`invoice-payment-schedule.tsx`).
- *
- * ```
- * ● Deposit  30% · $2,805  Paid 12 Jun  ✓
- * ┊
- * ○ Final    70% · $6,545  Due 14 Aug   [Mark paid]
- * ```
- *
- * - Filled dot when the stage is paid; hollow dot when it's still due.
- * - State pill inline (Paid / Due).
- * - Vertical `┊` connector between the two stages — drawn with a
- *   single `border-l` div.
- * - Each stage has its own "Mark paid" button when actionable.
- * - The deposit % is editable until the deposit is marked paid; the
- *   final % is always `100 - deposit`.
+ * Empty: a single "Add schedule" button that opens the modal (pre-loaded with
+ * the MC's default so the common case is open-and-Apply). Applied: a read-only
+ * resolved timeline with an always-visible running total, plus one "Change"
+ * door back into the modal. All editing of shape happens in the modal; the only
+ * action on the surface is recording a manual payment.
  *
  * @module components/builders/parts/payment-schedule
  */
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react'
 
-import { DatePicker } from '@/components/ui/date-picker';
-import { StatePill } from '@/components/ui/state-pill';
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
+import type {
+  InvoiceStage,
+  PaymentSchedule as PaymentScheduleType,
+  TemplateStage,
+} from '@/types/payment-schedule'
 
-// Shared field styling so the % input + DatePicker + Mark paid
-// button all line up at the same height + corner radius. Matches
-// the DatePicker primitive (`rounded-xl px-3 py-2 text-sm`) so we
-// don't have to override the primitive in this one spot.
-const FIELD_CLS =
-  'h-9 inline-flex items-center rounded-xl border border-border bg-surface px-3 text-sm text-text transition-colors';
+import { PaymentStageRow } from './payment-stage-row'
+import { ScheduleModal } from './schedule-modal'
+import type { StageDraft } from './schedule-stage-row'
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(amount);
+function formatCurrency(cents: number): string {
+  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100)
 }
 
-function formatDateShort(iso: string | null): string | null {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-}
-
+/** Props for {@link PaymentSchedule}. */
 export interface PaymentScheduleProps {
-  canEdit: boolean;
-  depositPercent: number;
-  depositDueDate: string;
-  finalDueDate: string;
-  depositPaidAt: string | null;
-  finalPaidAt: string | null;
-  depositAmount: number;
-  finalAmount: number;
-  onDepositPercentChange: (v: number) => void;
-  onDepositDueDateChange: (v: string) => void;
-  onFinalDueDateChange: (v: string) => void;
-  onMarkDepositPaid: () => void;
-  onMarkFinalPaid: () => void;
-  /** Removes the schedule entirely (back to single due-date invoice). */
-  onRemove?: () => void;
-  markDepositPending: boolean;
-  markFinalPending: boolean;
+  canEdit: boolean
+  stages: InvoiceStage[]
+  totalCents: number
+  issueDate: string
+  /** The invoice's due date, for "before due date" timing in the modal. */
+  dueDate: string | null
+  defaultSchedule: PaymentScheduleType | null
+  schedules: PaymentScheduleType[]
+  schedulesLoading: boolean
+  schedulesError: string | null
+  /** Resolver validation message, shown inline and blocking save. */
+  validationError: string | null
+  /** The invoice is live (sent / part-paid), so payments can be recorded. */
+  canRecordPayments: boolean
+  markPendingStageId: string | null
+  onMarkPaid: (stageId: string) => void
+  /** Resolve the template against this invoice and set its stages. */
+  onApplyTemplate: (stages: TemplateStage[]) => void
+  onCreateSchedule: (input: { name: string; stages: TemplateStage[] }) => Promise<void>
+  onDeleteSchedule: (id: string) => Promise<void>
+  onSetDefaultSchedule: (id: string) => Promise<void>
 }
 
-export function PaymentSchedule({
-  canEdit,
-  depositPercent,
-  depositDueDate,
-  finalDueDate,
-  depositPaidAt,
-  finalPaidAt,
-  depositAmount,
-  finalAmount,
-  onDepositPercentChange,
-  onDepositDueDateChange,
-  onFinalDueDateChange,
-  onMarkDepositPaid,
-  onMarkFinalPaid,
-  onRemove,
-  markDepositPending,
-  markFinalPending,
-}: PaymentScheduleProps) {
-  // Local %-input state so the parent isn't spammed on every keystroke
-  // (commits onBlur).
-  const [percentStr, setPercentStr] = useState(String(depositPercent));
-  const [isFocused, setIsFocused] = useState(false);
-  useEffect(() => {
-    if (!isFocused) setPercentStr(String(depositPercent));
-  }, [depositPercent, isFocused]);
+/** The invoice payment-schedule section. See {@link PaymentScheduleProps}. */
+export function PaymentSchedule(props: PaymentScheduleProps) {
+  const {
+    canEdit,
+    stages,
+    totalCents,
+    issueDate,
+    dueDate,
+    defaultSchedule,
+    schedules,
+    schedulesLoading,
+    schedulesError,
+    validationError,
+    canRecordPayments,
+    markPendingStageId,
+    onMarkPaid,
+    onApplyTemplate,
+    onCreateSchedule,
+    onDeleteSchedule,
+    onSetDefaultSchedule,
+  } = props
 
-  const depositPaid = Boolean(depositPaidAt);
-  const finalPaid = Boolean(finalPaidAt);
+  const { toast } = useToast()
+  const [modalOpen, setModalOpen] = useState(false)
 
-  // Removal is only sensible while nothing has been paid — once a
-  // payment is recorded the schedule must stay on the invoice.
-  const canRemove = canEdit && !depositPaid && !finalPaid && Boolean(onRemove);
+  const nextUnpaidId = stages.find((s) => !s.paidAt)?.id ?? null
+  const stageSumCents = stages.reduce((acc, s) => acc + s.amountCents, 0)
+  const totalMatches = stageSumCents === totalCents
+
+  const initialStages: StageDraft[] = stages.map((s) => ({
+    key: s.id,
+    label: s.label,
+    amountType: s.amountType,
+    amountValue: s.amountValue,
+    offsetValue: s.offsetValue,
+    offsetUnit: s.offsetUnit,
+    offsetAnchor: s.offsetAnchor,
+    paidAt: s.paidAt,
+  }))
+
+  // Save to library always creates; a name collision appends " copy" so it
+  // never overwrites a schedule the MC reuses.
+  const handleSaveToLibrary = async (input: { name: string; stages: TemplateStage[] }) => {
+    const exists = schedules.some((s) => s.name === input.name)
+    await onCreateSchedule({ name: exists ? `${input.name} copy` : input.name, stages: input.stages })
+  }
+
+  // Delete with an undo toast that re-creates the schedule from the copy.
+  const handleDeleteSchedule = async (schedule: PaymentScheduleType) => {
+    await onDeleteSchedule(schedule.id)
+    toast(`Deleted "${schedule.name}".`, 'success', {
+      label: 'Undo',
+      onClick: () => void onCreateSchedule({ name: schedule.name, stages: schedule.stages }),
+    })
+  }
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h4 className="text-caption font-medium uppercase tracking-wide text-text-muted">
           Payment schedule
         </h4>
-        {canRemove ? (
+        {canEdit && stages.length > 0 && (
           <button
             type="button"
-            onClick={onRemove}
-            className="text-caption text-text-muted hover:text-danger transition-colors cursor-pointer"
+            onClick={() => setModalOpen(true)}
+            className="cursor-pointer text-sm text-text-muted transition-colors hover:text-text"
           >
-            Remove schedule
+            Change
           </button>
-        ) : null}
+        )}
       </div>
 
-      <div className="relative pl-7">
-        {/* Vertical connector between the two dots */}
-        <div
-          aria-hidden
-          className="absolute left-2.5 top-3 bottom-3 w-px border-l border-dashed border-border"
-        />
-
-        {/* Deposit row */}
-        <Stage
-          dot={depositPaid ? 'filled' : 'hollow'}
-          tone={depositPaid ? 'success' : 'warning'}
-          label="Deposit"
-          percent={depositPercent}
-          amount={depositAmount}
-          dueLabel={
-            depositPaid
-              ? `Paid ${formatDateShort(depositPaidAt)}`
-              : `Due ${formatDateShort(depositDueDate) ?? '—'}`
-          }
-          state={{ label: depositPaid ? 'Paid' : 'Due', tone: depositPaid ? 'success' : 'warning' }}
-        >
-          {/* Editor row — only visible when actionable. */}
-          {!depositPaid && canEdit ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <div className={`${FIELD_CLS} gap-1`}>
-                <input
-                  type="number"
-                  min={1}
-                  max={99}
-                  value={percentStr}
-                  onChange={(e) => setPercentStr(e.target.value)}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => {
-                    setIsFocused(false);
-                    const v = Math.min(99, Math.max(1, Number(percentStr) || 1));
-                    setPercentStr(String(v));
-                    onDepositPercentChange(v);
-                  }}
-                  aria-label="Deposit percentage"
-                  className="w-10 bg-transparent text-sm text-text tabular-nums focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="text-sm text-text-muted">%</span>
-              </div>
-              <DatePicker
-                value={depositDueDate}
-                onChange={onDepositDueDateChange}
-                iconPosition="left"
-              />
-              <button
-                type="button"
-                onClick={onMarkDepositPaid}
-                disabled={markDepositPending}
-                className="h-9 inline-flex items-center rounded-xl px-3 text-sm font-medium bg-success text-text-inverse hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                {markDepositPending ? 'Saving…' : 'Mark paid'}
-              </button>
-            </div>
-          ) : null}
-        </Stage>
-
-        {/* Final row */}
-        <div className="mt-6">
-          <Stage
-            dot={finalPaid ? 'filled' : 'hollow'}
-            tone={finalPaid ? 'success' : 'warning'}
-            label="Final"
-            percent={100 - depositPercent}
-            amount={finalAmount}
-            dueLabel={
-              finalPaid
-                ? `Paid ${formatDateShort(finalPaidAt)}`
-                : `Due ${formatDateShort(finalDueDate) ?? '—'}`
-            }
-            state={{ label: finalPaid ? 'Paid' : 'Due', tone: finalPaid ? 'success' : 'warning' }}
-          >
-            {!finalPaid && canEdit && depositPaid ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <DatePicker
-                  value={finalDueDate}
-                  onChange={onFinalDueDateChange}
-                  iconPosition="left"
-                />
-                <button
-                  type="button"
-                  onClick={onMarkFinalPaid}
-                  disabled={markFinalPending}
-                  className="h-9 inline-flex items-center rounded-xl px-3 text-sm font-medium bg-success text-text-inverse hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {markFinalPending ? 'Saving…' : 'Mark paid'}
-                </button>
-              </div>
-            ) : null}
-          </Stage>
+      {stages.length === 0 ? (
+        <div className="space-y-3">
+          <p className="text-sm text-text-muted">The couple pays this invoice in one payment.</p>
+          {canEdit && (
+            <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
+              Add schedule
+            </Button>
+          )}
         </div>
-      </div>
+      ) : (
+        <div className="relative space-y-4 pl-7">
+          {/* Dashed connector centred on the 12px dots (dot left edge sits at
+              the container's left, so its centre is 6px in). */}
+          <div
+            aria-hidden
+            className="absolute left-[5.5px] top-2 bottom-2 w-px border-l border-dashed border-border"
+          />
+          {stages.map((stage) => (
+            <PaymentStageRow
+              key={stage.id}
+              stage={stage}
+              canRecord={canRecordPayments}
+              isNextUnpaid={stage.id === nextUnpaidId}
+              markPending={markPendingStageId === stage.id}
+              onMarkPaid={() => onMarkPaid(stage.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {stages.length > 0 && (
+        <div className="flex items-center justify-end">
+          <span className={`text-sm tabular-nums ${totalMatches ? 'text-text-muted' : 'text-warning'}`}>
+            Stages total {formatCurrency(stageSumCents)} of {formatCurrency(totalCents)}
+          </span>
+        </div>
+      )}
+
+      {validationError && <p className="text-sm text-danger">{validationError}</p>}
+
+      {canEdit && (
+        <ScheduleModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          totalCents={totalCents}
+          issueDate={issueDate}
+          dueDate={dueDate}
+          initialStages={initialStages}
+          defaultSchedule={defaultSchedule}
+          schedules={schedules}
+          schedulesLoading={schedulesLoading}
+          schedulesError={schedulesError}
+          onApply={(template) => {
+            onApplyTemplate(template)
+            setModalOpen(false)
+          }}
+          onSaveToLibrary={handleSaveToLibrary}
+          onDeleteSchedule={handleDeleteSchedule}
+          onSetDefaultSchedule={onSetDefaultSchedule}
+        />
+      )}
     </div>
-  );
-}
-
-/* ─── Stage row ─────────────────────────────────────────────────── */
-
-interface StageProps {
-  dot: 'filled' | 'hollow';
-  tone: 'success' | 'warning';
-  label: string;
-  percent: number;
-  amount: number;
-  dueLabel: string | null;
-  state: { label: string; tone: 'success' | 'warning' };
-  children?: React.ReactNode;
-}
-
-function Stage({ dot, tone, label, percent, amount, dueLabel, state, children }: StageProps) {
-  return (
-    <div className="relative">
-      {/* Dot on the timeline */}
-      <span
-        aria-hidden
-        className={`absolute -left-7 top-1 inline-flex h-3 w-3 items-center justify-center rounded-full ${
-          dot === 'filled'
-            ? tone === 'success'
-              ? 'bg-success'
-              : 'bg-warning'
-            : `border-2 ${tone === 'success' ? 'border-success' : 'border-warning'} bg-surface`
-        }`}
-      />
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-body font-medium text-text">{label}</span>
-        <span className="text-caption text-text-muted tabular-nums">
-          {percent}% · {formatCurrency(amount)}
-        </span>
-        {dueLabel ? <span className="text-caption text-text-muted">{dueLabel}</span> : null}
-        <span className="ml-auto">
-          <StatePill label={state.label} tone={state.tone} dot={dot} />
-        </span>
-      </div>
-      {children}
-    </div>
-  );
+  )
 }

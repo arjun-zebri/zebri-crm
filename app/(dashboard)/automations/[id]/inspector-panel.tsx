@@ -75,7 +75,6 @@ import {
   SendEmailExtraFields,
   SendInvoiceExtraFields,
   SendPortalLinkExtraFields,
-  SendProposalExtraFields,
   SendTimelineExtraFields,
   StopExtraFields,
   SubFlowExtraFields,
@@ -259,9 +258,6 @@ function TriggerConfigForm({
   })
 
   const amountQuoteInvoice =
-    triggerType === 'proposal_sent' ||
-    triggerType === 'proposal_accepted' ||
-    triggerType === 'proposal_declined' ||
     triggerType === 'invoice_created' ||
     triggerType === 'invoice_sent' ||
     triggerType === 'payment_received'
@@ -346,13 +342,6 @@ function TriggerConfigForm({
         />
       )}
 
-      {triggerType === 'proposal_due' && (
-        <NumberInput
-          label="Days before expiry (0 = on the day)"
-          value={Number(config['days'] ?? 0)}
-          onChange={(v) => setConfig({ ...config, days: v })}
-        />
-      )}
 
       {triggerType === 'invoice_due' && (
         <NumberInput
@@ -1143,16 +1132,6 @@ function ActionFields({ actionType, config, setConfig }: FieldProps & { actionTy
     case 'create_calendar_event':
     case 'create_reminder':
       return <CalendarEntryForm config={config} updateConfig={updateInner} />
-    case 'send_proposal':
-      return (
-        <>
-          <Hint>
-            This action sends the most recent proposal for the triggering couple. The picker
-            auto-selects based on the trigger payload, or the latest draft if there isn't one.
-          </Hint>
-          <SendProposalExtraFields config={config} updateConfig={updateInner} />
-        </>
-      )
     case 'send_contract':
       return (
         <>

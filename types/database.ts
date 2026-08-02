@@ -600,7 +600,6 @@ export type Database = {
           locked_content_html: string | null
           mc_signature_name: string | null
           notes: string | null
-          proposal_id: string | null
           reminder_count: number
           share_token: string
           share_token_enabled: boolean
@@ -629,7 +628,6 @@ export type Database = {
           locked_content_html?: string | null
           mc_signature_name?: string | null
           notes?: string | null
-          proposal_id?: string | null
           reminder_count?: number
           share_token?: string
           share_token_enabled?: boolean
@@ -658,7 +656,6 @@ export type Database = {
           locked_content_html?: string | null
           mc_signature_name?: string | null
           notes?: string | null
-          proposal_id?: string | null
           reminder_count?: number
           share_token?: string
           share_token_enabled?: boolean
@@ -678,13 +675,6 @@ export type Database = {
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contracts_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -924,6 +914,57 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      couple_time_entries: {
+        Row: {
+          auto_stopped: boolean
+          category_id: string | null
+          couple_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          note: string | null
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_stopped?: boolean
+          category_id?: string | null
+          couple_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          started_at: string
+          user_id: string
+        }
+        Update: {
+          auto_stopped?: boolean
+          category_id?: string | null
+          couple_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_time_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "time_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_time_entries_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       couples: {
         Row: {
@@ -1287,6 +1328,65 @@ export type Database = {
           },
         ]
       }
+      invoice_payment_stages: {
+        Row: {
+          amount_cents: number
+          amount_type: string
+          amount_value: number | null
+          due_date: string | null
+          due_offset_anchor: string | null
+          due_offset_unit: string | null
+          due_offset_value: number | null
+          id: string
+          invoice_id: string
+          label: string
+          paid_at: string | null
+          position: number
+          stripe_payment_intent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          amount_type: string
+          amount_value?: number | null
+          due_date?: string | null
+          due_offset_unit?: string | null
+          due_offset_anchor?: string | null
+          due_offset_value?: number | null
+          id?: string
+          invoice_id: string
+          label: string
+          paid_at?: string | null
+          position: number
+          stripe_payment_intent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          amount_type?: string
+          amount_value?: number | null
+          due_date?: string | null
+          due_offset_unit?: string | null
+          due_offset_anchor?: string | null
+          due_offset_value?: number | null
+          id?: string
+          invoice_id?: string
+          label?: string
+          paid_at?: string | null
+          position?: number
+          stripe_payment_intent_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payment_stages_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_template_items: {
         Row: {
           amount: number
@@ -1365,22 +1465,17 @@ export type Database = {
         Row: {
           couple_id: string
           created_at: string
-          deposit_due_date: string | null
-          deposit_paid_at: string | null
-          deposit_percent: number | null
           discount_type: string | null
           discount_value: number | null
           due_date: string | null
           email_sent_at: string | null
           event_id: string | null
-          final_due_date: string | null
-          final_paid_at: string | null
+          gst_inclusive: boolean
           id: string
           invoice_number: string
           notes: string | null
           paid_at: string | null
           payment_terms: string | null
-          proposal_id: string | null
           share_token: string
           share_token_enabled: boolean
           status: string
@@ -1394,22 +1489,17 @@ export type Database = {
         Insert: {
           couple_id: string
           created_at?: string
-          deposit_due_date?: string | null
-          deposit_paid_at?: string | null
-          deposit_percent?: number | null
           discount_type?: string | null
           discount_value?: number | null
           due_date?: string | null
           email_sent_at?: string | null
           event_id?: string | null
-          final_due_date?: string | null
-          final_paid_at?: string | null
+          gst_inclusive?: boolean
           id?: string
           invoice_number: string
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
-          proposal_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -1423,22 +1513,17 @@ export type Database = {
         Update: {
           couple_id?: string
           created_at?: string
-          deposit_due_date?: string | null
-          deposit_paid_at?: string | null
-          deposit_percent?: number | null
           discount_type?: string | null
           discount_value?: number | null
           due_date?: string | null
           email_sent_at?: string | null
           event_id?: string | null
-          final_due_date?: string | null
-          final_paid_at?: string | null
+          gst_inclusive?: boolean
           id?: string
           invoice_number?: string
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
-          proposal_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -1462,13 +1547,6 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -1552,7 +1630,6 @@ export type Database = {
           archived_at: string | null
           category_id: string | null
           created_at: string
-          deposit_percent: number | null
           description: string | null
           gst_inclusive: boolean
           id: string
@@ -1569,7 +1646,6 @@ export type Database = {
           archived_at?: string | null
           category_id?: string | null
           created_at?: string
-          deposit_percent?: number | null
           description?: string | null
           gst_inclusive?: boolean
           id?: string
@@ -1586,7 +1662,6 @@ export type Database = {
           archived_at?: string | null
           category_id?: string | null
           created_at?: string
-          deposit_percent?: number | null
           description?: string | null
           gst_inclusive?: boolean
           id?: string
@@ -1608,6 +1683,80 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_schedule_stages: {
+        Row: {
+          amount_type: string
+          amount_value: number | null
+          due_offset_days: number
+          due_offset_unit: string
+          due_offset_anchor: string
+          due_offset_value: number
+          id: string
+          label: string
+          position: number
+          schedule_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_type: string
+          amount_value?: number | null
+          due_offset_days?: number
+          due_offset_unit?: string
+          due_offset_anchor?: string
+          due_offset_value?: number
+          id?: string
+          label: string
+          position: number
+          schedule_id: string
+          user_id: string
+        }
+        Update: {
+          amount_type?: string
+          amount_value?: number | null
+          due_offset_days?: number
+          due_offset_unit?: string
+          due_offset_anchor?: string
+          due_offset_value?: number
+          id?: string
+          label?: string
+          position?: number
+          schedule_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_schedule_stages_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       portal_files: {
         Row: {
@@ -1781,188 +1930,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "portal_songs_couple_id_fkey"
-            columns: ["couple_id"]
-            isOneToOne: false
-            referencedRelation: "couples"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposal_option_items: {
-        Row: {
-          amount: number
-          created_at: string
-          default_included: boolean
-          description: string
-          id: string
-          is_addon: boolean
-          option_id: string
-          position: number
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          default_included?: boolean
-          description: string
-          id?: string
-          is_addon?: boolean
-          option_id: string
-          position: number
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          default_included?: boolean
-          description?: string
-          id?: string
-          is_addon?: boolean
-          option_id?: string
-          position?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposal_option_items_option_id_fkey"
-            columns: ["option_id"]
-            isOneToOne: false
-            referencedRelation: "proposal_options"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposal_options: {
-        Row: {
-          created_at: string
-          deposit_percent: number | null
-          description: string | null
-          gst_inclusive: boolean
-          id: string
-          is_popular: boolean
-          position: number
-          proposal_id: string
-          source_package_id: string | null
-          subtotal: number
-          title: string
-          user_id: string
-          weekend_loading_percent: number | null
-        }
-        Insert: {
-          created_at?: string
-          deposit_percent?: number | null
-          description?: string | null
-          gst_inclusive?: boolean
-          id?: string
-          is_popular?: boolean
-          position: number
-          proposal_id: string
-          source_package_id?: string | null
-          subtotal?: number
-          title: string
-          user_id: string
-          weekend_loading_percent?: number | null
-        }
-        Update: {
-          created_at?: string
-          deposit_percent?: number | null
-          description?: string | null
-          gst_inclusive?: boolean
-          id?: string
-          is_popular?: boolean
-          position?: number
-          proposal_id?: string
-          source_package_id?: string | null
-          subtotal?: number
-          title?: string
-          user_id?: string
-          weekend_loading_percent?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposal_options_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposal_options_source_package_id_fkey"
-            columns: ["source_package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposals: {
-        Row: {
-          accepted_addon_selection: Json | null
-          accepted_at: string | null
-          accepted_option_id: string | null
-          couple_id: string
-          created_at: string
-          email_sent_at: string | null
-          expires_at: string | null
-          id: string
-          notes: string | null
-          proposal_number: string
-          share_token: string
-          share_token_enabled: boolean
-          status: string
-          subtotal: number
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accepted_addon_selection?: Json | null
-          accepted_at?: string | null
-          accepted_option_id?: string | null
-          couple_id: string
-          created_at?: string
-          email_sent_at?: string | null
-          expires_at?: string | null
-          id?: string
-          notes?: string | null
-          proposal_number: string
-          share_token?: string
-          share_token_enabled?: boolean
-          status?: string
-          subtotal?: number
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accepted_addon_selection?: Json | null
-          accepted_at?: string | null
-          accepted_option_id?: string | null
-          couple_id?: string
-          created_at?: string
-          email_sent_at?: string | null
-          expires_at?: string | null
-          id?: string
-          notes?: string | null
-          proposal_number?: string
-          share_token?: string
-          share_token_enabled?: boolean
-          status?: string
-          subtotal?: number
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposals_accepted_option_id_fkey"
-            columns: ["accepted_option_id"]
-            isOneToOne: false
-            referencedRelation: "proposal_options"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_couple_id_fkey"
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
@@ -2233,6 +2200,33 @@ export type Database = {
           },
         ]
       }
+      time_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       timeline_items: {
         Row: {
           contact_id: string | null
@@ -2406,6 +2400,7 @@ export type Database = {
           oauth_status: string
           oauth_token_expires_at: string | null
           subdomain: string | null
+          time_categories_seeded: boolean
           updated_at: string
           user_id: string
         }
@@ -2423,6 +2418,7 @@ export type Database = {
           oauth_status?: string
           oauth_token_expires_at?: string | null
           subdomain?: string | null
+          time_categories_seeded?: boolean
           updated_at?: string
           user_id: string
         }
@@ -2440,6 +2436,7 @@ export type Database = {
           oauth_status?: string
           oauth_token_expires_at?: string | null
           subdomain?: string | null
+          time_categories_seeded?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -2536,14 +2533,7 @@ export type Database = {
         Args: { p_surface: string; p_user_id: string }
         Returns: Json
       }
-      accept_proposal: {
-        Args: {
-          addon_selection?: Json
-          chosen_option_id: string
-          token: string
-        }
-        Returns: Json
-      }
+      backfill_invoice_payment_stages: { Args: never; Returns: number }
       contracts_due_for_reminder: {
         Args: never
         Returns: {
@@ -2573,7 +2563,6 @@ export type Database = {
             }
             Returns: Json
           }
-      decline_proposal: { Args: { token: string }; Returns: Json }
       delete_portal_file: {
         Args: { p_id: string; p_token: string }
         Returns: undefined
@@ -2622,12 +2611,10 @@ export type Database = {
       expire_contracts: { Args: never; Returns: string[] }
       generate_contract_number: { Args: { p_user_id: string }; Returns: string }
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
-      generate_proposal_number: { Args: { p_user_id: string }; Returns: string }
       get_portal_data: { Args: { token: string }; Returns: Json }
       get_portal_questionnaires: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
       get_public_invoice: { Args: { token: string }; Returns: Json }
-      get_public_proposal: { Args: { token: string }; Returns: Json }
       get_public_questionnaire: { Args: { token: string }; Returns: Json }
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }
@@ -2752,6 +2739,10 @@ export type Database = {
         Returns: Json
       }
       seed_default_contract_template: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      seed_default_payment_schedule: {
         Args: { p_user_id: string }
         Returns: undefined
       }

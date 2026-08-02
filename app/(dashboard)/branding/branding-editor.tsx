@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useToast } from '@/components/ui/toast'
 import { getAccountReadiness } from '@/lib/branding/account-readiness'
 import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
-import type { ProposalLabels } from '@/lib/branding/proposal-labels'
 import { evaluateSurface, type AccountReadiness } from '@/lib/branding/readiness'
 import type { TextCase } from '@/lib/branding/text-case'
 import {
@@ -25,7 +24,7 @@ import type { Json } from '@/types/database'
 import { AddBlockPalette } from './blocks/add-block-palette'
 import { BlockRenderer } from './blocks/block-renderer'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
-import { isDeletable, isMarker } from './blocks/policy'
+import { CLEARABLE_MARKERS, isDeletable, isMarker } from './blocks/policy'
 import type { Block, ImageBlock } from './blocks/types'
 import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
@@ -70,7 +69,7 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
+    blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
     businessName: string
     phone: string
     website: string
@@ -84,7 +83,6 @@ interface BrandingEditorProps {
     brandKits: BrandKit[]
     activeKitId: string | null
     portalSections: PortalSectionSettings
-    proposalLabels: ProposalLabels
     headingSize: number
     bodySize: number
     headingCase: TextCase
@@ -137,11 +135,10 @@ export interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
-  proposalLabels: ProposalLabels
   headingSize: number
   bodySize: number
   headingCase: TextCase
@@ -201,7 +198,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       brandKits: initialData.brandKits,
       activeKitId: initialData.activeKitId,
       portalSections: initialData.portalSections,
-      proposalLabels: initialData.proposalLabels,
       headingSize: initialData.headingSize,
       bodySize: initialData.bodySize,
       headingCase: initialData.headingCase,
@@ -226,7 +222,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   const { state, set: setState, undo, redo, canUndo, canRedo } = useHistory<EditorState>(initial)
 
-  const [surface, setSurface] = useState<SurfaceTab>('proposal')
+  const [surface, setSurface] = useState<SurfaceTab>('invoice')
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [zoom, setZoom] = useState(1)
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
@@ -312,7 +308,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         doc_padding: value.docPadding,
         theme_preset: value.themePreset,
         active_kit_id: value.activeKitId,
-        proposal_labels: value.proposalLabels,
         heading_size: value.headingSize,
         body_size: value.bodySize,
         heading_case: value.headingCase,
@@ -356,7 +351,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   // Switch to the first enabled surface if the active surface becomes disabled.
   useEffect(() => {
     if (!state.enabledSurfaces.includes(surface)) {
-      setSurface(state.enabledSurfaces[0] || 'proposal')
+      setSurface(state.enabledSurfaces[0] || 'invoice')
     }
   }, [state.enabledSurfaces, surface])
 
@@ -625,17 +620,16 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     updateBlock<ImageBlock>(blockId, { url: undefined })
   }
 
-  const docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' = surface
+  const docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' = surface
 
-  /** Kit block trees saved before the proposals rollout keyed the
-   *  first surface `quote`; normalise to the editor's `proposal` key
-   *  so applying an old kit keeps the MC's design. */
+  /** Normalise a kit's per-surface block trees, filling any missing
+   *  surface with its default layout so applying a kit keeps the MC's
+   *  design. */
   const normalizeKitBlocks = (
     blocks: BrandKit['blocks'],
   ): EditorState['blocks'] | null => {
     if (!blocks) return null
     return {
-      proposal: blocks.proposal ?? blocks.quote ?? defaultBlocksFor('proposal'),
       invoice: blocks.invoice ?? defaultBlocksFor('invoice'),
       contract: blocks.contract ?? defaultBlocksFor('contract'),
       portal: blocks.portal ?? defaultBlocksFor('portal'),
@@ -691,8 +685,19 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
-    const newBlock = blockTemplate(type, docSurface)
     const list = state.blocks[docSurface] ?? []
+    // Singleton markers (contract body / sign) stay in the palette permanently
+    // so the MC can see them, but only one may exist. If one is already there,
+    // select it instead of inserting a duplicate.
+    if (isMarker(type)) {
+      const existing = list.find((b) => b.type === type)
+      if (existing) {
+        setInsertAfterId(null)
+        setSelectedBlockIds([existing.id])
+        return
+      }
+    }
+    const newBlock = blockTemplate(type, docSurface)
     if (insertAfterId) {
       const idx = list.findIndex((b) => b.id === insertAfterId)
       const next = [...list]
@@ -787,7 +792,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       name = `${baseName} ${n++}`
     }
     const defaultBlocks = {
-      proposal: defaultBlocksFor('proposal'),
       invoice: defaultBlocksFor('invoice'),
       contract: defaultBlocksFor('contract'),
       portal: defaultBlocksFor('portal'),
@@ -962,7 +966,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     bankBsb: state.bankBsb,
     bankAccountNumber: state.bankAccountNumber,
     portalSections: state.portalSections,
-    proposalLabels: state.proposalLabels,
   }), [state])
 
   // Null-safe: state persisted or hot-reloaded from before the six-surface
@@ -1127,12 +1130,19 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             onClearBlocks={
               visibleBlocks.length > 0
                 ? () => {
-                    // Keep only the render-split marker (portal / contract /
-                    // run sheet / questionnaire body). Everything else clears,
-                    // including paymentSchedule, which is now an optional block
-                    // rather than a fixed marker.
+                    // Keep only the render-split markers whose surface is
+                    // nothing without them (the questionnaire body). The
+                    // clearable markers (contract body + sign form, run sheet
+                    // body, couple portal body) are the exception: they are
+                    // fully clearable so "Clear all blocks" gives a true blank
+                    // canvas, and they are re-addable from the block palette when
+                    // absent (the readiness panel flags them meanwhile).
+                    // Everything else clears, including paymentSchedule, which is
+                    // now an optional block rather than a fixed marker.
                     setBlocksForCurrent(
-                      (state.blocks[docSurface] ?? []).filter((b) => isMarker(b.type)),
+                      (state.blocks[docSurface] ?? []).filter(
+                        (b) => isMarker(b.type) && !CLEARABLE_MARKERS.has(b.type),
+                      ),
                     )
                     setSelectedBlockIds([])
                   }
@@ -1170,9 +1180,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             removeHeader={removeHeader}
             uploadImage={uploadImage}
             removeImage={removeImage}
-            onEditProposalLabel={(key, val) =>
-              setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
-            }
           />
         </CanvasFrame>
       </div>
@@ -1279,8 +1286,8 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] },
-  docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire',
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] },
+  docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire',
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return

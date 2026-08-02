@@ -2,11 +2,11 @@
  * Time-based event emitters.
  *
  * Most automation triggers fire from a DB row change — a `couples`
- * INSERT, a `proposals` UPDATE — and the corresponding DB trigger calls
+ * INSERT, an `invoices` UPDATE — and the corresponding DB trigger calls
  * {@link emit_automation_event} synchronously inside the transaction.
  *
  * A handful of triggers, though, don't have a source row that changes
- * when they "fire": `proposal_due`, `invoice_overdue`, `task_overdue`,
+ * when they "fire": `invoice_due`, `invoice_overdue`, `task_overdue`,
  * `time_before_event`, etc. They need to be computed each tick by
  * comparing the source row's timestamp to "now".
  *
@@ -24,7 +24,7 @@
  * "fires for", using the existing `automation_events` table — an event
  * already emitted today for (source_id, event_type, …) means no
  * re-emit. Each emitter encodes its own bucket key inside the event
- * payload (e.g. `proposal_due` stores `days_until_due` so two
+ * payload (e.g. `invoice_due` stores `days_until_due` so two
  * automations with different lead-times don't collide).
  *
  * # Targeting
@@ -34,7 +34,7 @@
  * config value) that actually match an active automation — there's
  * no point publishing an event nothing will match. The trigger's
  * {@link TriggerSpec.match} function narrows by config value
- * (e.g. `config.days === payload.days_until_due` for `proposal_due`).
+ * (e.g. `config.days === payload.days_until_due` for `invoice_due`).
  *
  * @module lib/automations/time-emitters
  */
@@ -48,8 +48,6 @@ import type { Database } from '@/types/database'
 import { anniversaryOfEventEmitter } from './anniversary-of-event'
 import { invoiceDueEmitter } from './invoice-due'
 import { invoiceOverdueEmitter } from './invoice-overdue'
-import { proposalDueEmitter } from './proposal-due'
-import { proposalOverdueEmitter } from './proposal-overdue'
 import { taskOverdueEmitter } from './task-overdue'
 import { timeAfterEventEmitter } from './time-after-event'
 import { timeBeforeEventEmitter } from './time-before-event'
@@ -76,8 +74,6 @@ export interface TimeEmitter {
  * {@link TimeEmitter} and append it here" — no other wiring.
  */
 const registry: readonly TimeEmitter[] = [
-  proposalDueEmitter,
-  proposalOverdueEmitter,
   invoiceDueEmitter,
   invoiceOverdueEmitter,
   taskOverdueEmitter,

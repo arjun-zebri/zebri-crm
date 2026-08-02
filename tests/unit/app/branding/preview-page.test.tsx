@@ -18,19 +18,6 @@ vi.mock('@/lib/branding/public-surface', () => ({
   useBrandingHead: vi.fn(),
 }))
 
-vi.mock('@/components/proposal/proposal-document-body', () => ({
-  ProposalDocumentBody: ({ title, coupleName }: any) => (
-    <div data-testid="proposal-body">
-      {title && <h1>{title}</h1>}
-      {coupleName && <p>{coupleName}</p>}
-    </div>
-  ),
-}))
-
-vi.mock('@/components/proposal/proposal-page-view', () => ({
-  StaticAcceptCta: () => <div data-testid="accept-cta">Accept</div>,
-}))
-
 vi.mock('@/lib/branding/public-renderer', () => ({
   PublicBlockRenderer: ({ doc }: any) => (
     <div data-testid="block-renderer">
@@ -109,17 +96,6 @@ function createMockBranding(overrides?: Partial<PublicBranding>): PublicBranding
     button_radius: 8,
     section_spacing: 32,
     page_background: '#f5f5f5',
-    proposal_labels: {
-      eyebrow: { text: 'Proposal' },
-      note: { text: 'Note' },
-      choose: { text: 'Choose a package' },
-      chooseHint: { text: 'Select one' },
-      selected: { text: 'Your package' },
-      addOns: { text: 'Add-ons' },
-      addOnsHint: { text: 'Tap to include' },
-      accept: { text: 'Accept' },
-      decline: { text: 'Decline' },
-    },
     ...overrides,
   } as PublicBranding
 }
@@ -144,6 +120,7 @@ describe('BrandingPreviewPage', () => {
     mockUseCurrentBranding.mockReturnValue({
       branding: null,
       blocks: [],
+      brandLabel: null,
       loading: true,
     })
 
@@ -156,33 +133,6 @@ describe('BrandingPreviewPage', () => {
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument()
   })
 
-  it('renders proposal preview with sample data', async () => {
-    const mockBlocks: any[] = [{ id: 'pb-1', type: 'proposalBody', locked: true }]
-    const mockBranding = createMockBranding()
-
-    mockUseCurrentBranding.mockReturnValue({
-      branding: mockBranding,
-      blocks: mockBlocks,
-      loading: false,
-    })
-
-    Object.defineProperty(window, 'location', {
-      value: { pathname: '/branding/preview/proposal' },
-      writable: true,
-    })
-
-    render(
-      <div data-testid="proposal-body">
-        <h1>Wedding Photography & Videography</h1>
-        <p>Emma & James</p>
-      </div>
-    )
-
-    expect(screen.getByTestId('proposal-body')).toBeInTheDocument()
-    expect(screen.getByText('Wedding Photography & Videography')).toBeInTheDocument()
-    expect(screen.getByText('Emma & James')).toBeInTheDocument()
-  })
-
   it('renders invoice preview with sample data', async () => {
     const mockBlocks: any[] = [{ id: 'li-1', type: 'lineItems' }, { id: 'to-1', type: 'totals' }]
     const mockBranding = createMockBranding()
@@ -190,6 +140,7 @@ describe('BrandingPreviewPage', () => {
     mockUseCurrentBranding.mockReturnValue({
       branding: mockBranding,
       blocks: mockBlocks,
+      brandLabel: null,
       loading: false,
     })
 
@@ -217,6 +168,7 @@ describe('BrandingPreviewPage', () => {
     mockUseCurrentBranding.mockReturnValue({
       branding: mockBranding,
       blocks: mockBlocks,
+      brandLabel: null,
       loading: false,
     })
 
@@ -242,6 +194,7 @@ describe('BrandingPreviewPage', () => {
     mockUseCurrentBranding.mockReturnValue({
       branding: mockBranding,
       blocks: mockBlocks,
+      brandLabel: null,
       loading: false,
     })
 

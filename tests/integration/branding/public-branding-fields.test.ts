@@ -3,7 +3,7 @@
  *
  * Verifies that the new global typography and layout fields (from Task 0.3)
  * are correctly assembled by `_user_branding` and flow through the public
- * RPCs (`get_public_proposal`, `get_portal_data`).
+ * RPCs (`get_public_invoice`, `get_portal_data`).
  *
  * Runs against local Supabase with the real schema and RLS.
  */
@@ -26,14 +26,14 @@ const pro = {
 interface TestSetup {
   user: TestUser;
   coupleId: string;
-  proposalId: string;
-  proposalToken: string;
+  invoiceId: string;
+  invoiceToken: string;
   portalToken: string;
 }
 
 /**
  * Provision a test user with custom branding values, a couple,
- * a proposal with share_token enabled, and a portal token.
+ * an invoice with share_token enabled, and a portal token.
  */
 async function arrangeTest(): Promise<TestSetup> {
   // Create user with new branding fields set in metadata
@@ -50,7 +50,10 @@ async function arrangeTest(): Promise<TestSetup> {
       button_size: 'lg',
       button_radius: 12,
       section_spacing: 48,
-      page_background: '#F5F5F5',
+      // page_background is derived from surface_color by _user_branding (the
+      // standalone page_background control was dropped), so drive it via
+      // surface_color to assert the value flows through.
+      surface_color: '#F5F5F5',
     },
     pro,
   );
@@ -73,34 +76,34 @@ async function arrangeTest(): Promise<TestSetup> {
     .update({ portal_token_enabled: true })
     .eq('id', couple.data.id);
 
-  // Create proposal
-  const proposal = await user.client
-    .from('proposals')
+  // Create invoice
+  const invoice = await user.client
+    .from('invoices')
     .insert({
       user_id: user.id,
       couple_id: couple.data.id,
-      title: 'Test Proposal',
-      proposal_number: 'PR-001',
+      title: 'Test Invoice',
+      invoice_number: 'INV-001',
       status: 'sent',
       subtotal: 5000,
     })
     .select('id, share_token')
     .single();
-  if (proposal.error || !proposal.data) {
-    throw new Error(`proposal insert failed: ${proposal.error?.message}`);
+  if (invoice.error || !invoice.data) {
+    throw new Error(`invoice insert failed: ${invoice.error?.message}`);
   }
 
   // Enable share token
   await admin
-    .from('proposals')
+    .from('invoices')
     .update({ share_token_enabled: true })
-    .eq('id', proposal.data.id);
+    .eq('id', invoice.data.id);
 
   return {
     user,
     coupleId: couple.data.id,
-    proposalId: proposal.data.id,
-    proposalToken: proposal.data.share_token as string,
+    invoiceId: invoice.data.id,
+    invoiceToken: invoice.data.share_token as string,
     portalToken: couple.data.portal_token as string,
   };
 }
@@ -111,13 +114,13 @@ afterAll(async () => {
 });
 
 describe('Public branding fields — _user_branding extension', () => {
-  describe('get_public_proposal', () => {
+  describe('get_public_invoice', () => {
     it('returns the new typography and layout fields in the payload', async () => {
       const setup = await arrangeTest();
       cleanupQueue.push(setup.user.cleanup);
 
-      const { data, error } = await anonClient().rpc('get_public_proposal', {
-        token: setup.proposalToken,
+      const { data, error } = await anonClient().rpc('get_public_invoice', {
+        token: setup.invoiceToken,
       });
 
       expect(error).toBeNull();
@@ -150,13 +153,13 @@ describe('Public branding fields — _user_branding extension', () => {
         .select('id')
         .single();
 
-      const proposal = await user.client
-        .from('proposals')
+      const invoice = await user.client
+        .from('invoices')
         .insert({
           user_id: user.id,
           couple_id: couple.data!.id,
-          title: 'Default Proposal',
-          proposal_number: 'PR-002',
+          title: 'Default Invoice',
+          invoice_number: 'INV-002',
           status: 'sent',
           subtotal: 5000,
         })
@@ -164,14 +167,14 @@ describe('Public branding fields — _user_branding extension', () => {
         .single();
 
       await admin
-        .from('proposals')
+        .from('invoices')
         .update({ share_token_enabled: true })
-        .eq('id', proposal.data!.id);
+        .eq('id', invoice.data!.id);
 
       cleanupQueue.push(user.cleanup);
 
-      const { data, error } = await anonClient().rpc('get_public_proposal', {
-        token: proposal.data!.share_token as string,
+      const { data, error } = await anonClient().rpc('get_public_invoice', {
+        token: invoice.data!.share_token as string,
       });
 
       expect(error).toBeNull();

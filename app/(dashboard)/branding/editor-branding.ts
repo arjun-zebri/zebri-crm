@@ -41,11 +41,10 @@ export function publicBrandingFromEditorState(state: BrandPreviewState): PublicB
     font_body: state.fontBody,
     font_weight: state.fontWeight,
     font_body_weight: state.fontBodyWeight,
-    font_scale: 1, // Dormant: retired from proposals, kept for DB schema compatibility
+    font_scale: 1, // Dormant: kept for DB schema compatibility
     density: state.density,
     corner_radius: state.cornerRadius,
     doc_padding: state.docPadding,
-    proposal_labels: state.proposalLabels ?? { quote: 'Quote', invoice: 'Invoice' } as any,
     theme_preset: 'minimal',
     email_show_logo: true,
     email_logo_align: 'left',

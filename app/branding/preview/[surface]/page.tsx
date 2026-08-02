@@ -2,7 +2,7 @@
  * Customer preview page for the branding editor.
  *
  * Authed via the dashboard session (not token-gated). Renders the current user's
- * saved branding for the chosen surface (proposal/invoice/contract/portal) with
+ * saved branding for the chosen surface (invoice/contract/portal) with
  * sample data using the same shared renderers the public pages use, so the preview
  * matches exactly what the couple receives. Reads the surface from route params via
  * useParams for SSR safety (window.location during render breaks hydration).
@@ -12,75 +12,32 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
-import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { ProposalDocumentBody } from '@/components/proposal/proposal-document-body'
-import { StaticAcceptCta } from '@/components/proposal/proposal-page-view'
+import { CouplePortalSample } from '@/app/(dashboard)/branding/blocks/couple-portal-sample'
+import { SAMPLE_RUN_SHEET_EVENT, SAMPLE_RUN_SHEET_ITEMS } from '@/app/(dashboard)/branding/blocks/sample-run-sheet'
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import type { Block, ContractBodyBlock, ContractSignBlock, CouplePortalBlock, VendorTimelineBodyBlock, QuestionnaireOneAtATimeBlock, QuestionnaireAllOnePageBlock } from '@/app/(dashboard)/branding/blocks/types'
+import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
+import { ClassicForm } from '@/components/questionnaires/classic-form'
+import { themeFromBranding } from '@/components/questionnaires/theme'
+import { TypeformFlow } from '@/components/questionnaires/typeform-flow'
+import { blockOuterStyle, hasOuterStyle } from '@/lib/branding/block-outer-style'
+import { getTextColor } from '@/lib/branding/contrast'
+import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
 import { googleFontsHref } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead, type PublicBranding } from '@/lib/branding/public-surface'
+import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
+import type { Answer, Question, Responses } from '@/lib/questionnaires/question-schema'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
-import type { PublicProposalOption } from '@/lib/payments/proposal-view'
 
 /**
  * Validates a surface string and returns true if it is a valid BuilderSurface.
  */
-function isValidSurface(s: unknown): s is 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' {
-  return s === 'proposal' || s === 'invoice' || s === 'contract' || s === 'portal' || s === 'vendorTimeline' || s === 'questionnaire'
-}
-
-/**
- * Sample proposal data for preview.
- */
-function sampleProposal(): {
-  options: PublicProposalOption[]
-  title: string
-  coupleName: string
-  proposalNumber: string
-  expiresAt: string
-  notes: string
-} {
-  return {
-    title: 'Wedding MC & Hosting',
-    coupleName: 'Emma & James',
-    proposalNumber: 'PROP-2024-001',
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? '',
-    notes: 'Includes a pre-wedding planning meeting, a detailed run sheet, and full hosting of your ceremony and reception. Vendor coordination on the day so everything runs to time.',
-    options: [
-      {
-        id: 'opt-1',
-        title: 'Standard Package',
-        description: 'Ceremony hosting plus reception MC',
-        subtotal: 1800,
-        deposit_percent: 50,
-        gst_inclusive: true,
-        is_popular: true,
-        position: 0,
-        items: [
-          { id: 'i1', description: 'Pre-wedding planning meeting', amount: 0, position: 0, is_addon: false, default_included: false },
-          { id: 'i2', description: 'Ceremony & reception hosting', amount: 1200, position: 1, is_addon: false, default_included: false },
-          { id: 'i3', description: 'Run sheet & vendor coordination', amount: 600, position: 2, is_addon: false, default_included: false },
-        ],
-      },
-      {
-        id: 'opt-2',
-        title: 'Premium Package',
-        description: 'Full-day hosting with rehearsal attendance',
-        subtotal: 2500,
-        deposit_percent: 50,
-        gst_inclusive: true,
-        is_popular: false,
-        position: 1,
-        items: [
-          { id: 'i4', description: 'Pre-wedding planning meeting', amount: 0, position: 0, is_addon: false, default_included: false },
-          { id: 'i5', description: 'Full-day ceremony & reception hosting', amount: 1500, position: 1, is_addon: false, default_included: false },
-          { id: 'i6', description: 'Ceremony rehearsal attendance', amount: 500, position: 2, is_addon: false, default_included: false },
-          { id: 'i7', description: 'Run sheet & vendor coordination', amount: 500, position: 3, is_addon: false, default_included: false },
-        ],
-      },
-    ],
-  }
+function isValidSurface(s: unknown): s is 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' {
+  return s === 'invoice' || s === 'contract' || s === 'portal' || s === 'vendorTimeline' || s === 'questionnaire'
 }
 
 /**
@@ -103,13 +60,13 @@ function sampleInvoiceDoc(): PublicDocData {
     ],
     subtotal: 2750,
     taxRate: 10,
-    // Sample deposit/final schedule so the paymentSchedule block previews with data.
+    // Sample three-stage payment schedule so the paymentSchedule block previews realistically.
     paymentSchedule: {
-      depositPercent: 50,
-      depositAmount: 1512.5,
-      depositDueDate: depositDue,
-      finalAmount: 1512.5,
-      finalDueDate: finalDue,
+      stages: [
+        { label: 'Deposit', amountCents: 125_000, dueDate: depositDue, paidAt: null },
+        { label: 'Progress payment', amountCents: 250_000, dueDate: finalDue, paidAt: null },
+        { label: 'Final balance', amountCents: 125_000, dueDate: new Date(Date.now() + 42 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? '', paidAt: null },
+      ],
     },
   }
 }
@@ -149,11 +106,11 @@ export default function BrandingPreviewPage() {
 /**
  * Content renderer for a valid surface.
  */
-function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' }) {
+function PreviewContent({ surface }: { surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' }) {
   const { branding, blocks: savedBlocks, loading } = useCurrentBranding(surface)
   useBrandingHead(branding)
 
-  // Inject branding fonts (same pattern as proposal-preview-pane)
+  // Inject branding fonts (same pattern as the builder preview pane)
   useEffect(() => {
     if (!branding) return
     const id = 'zebri-branding-preview-fonts'
@@ -173,14 +130,14 @@ function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contra
     return <LoadingState />
   }
 
+  // Match the outward-facing document frame: the light-grey canvas sits behind
+  // the white card so the preview reads like the sent document (and like the
+  // builder). The portal is a wider dashboard-style surface, so it keeps its own
+  // surface colour rather than the document canvas.
   const pageStyle = {
-    background: branding.surface_color,
+    background: surface === 'portal' ? branding.surface_color : DOC_CANVAS_BG,
     color: branding.text_color,
     minHeight: '100vh',
-  }
-
-  if (surface === 'proposal') {
-    return <ProposalPreview branding={branding} blocks={savedBlocks} pageStyle={pageStyle} />
   }
 
   if (surface === 'invoice') {
@@ -207,53 +164,6 @@ function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contra
 }
 
 /**
- * Proposal surface preview with sample couple data.
- */
-function ProposalPreview({
-  branding,
-  blocks,
-  pageStyle,
-}: {
-  branding: PublicBranding
-  blocks: Block[]
-  pageStyle: Record<string, string | number>
-}) {
-  const sample = sampleProposal()
-  const chosen = sample.options[0]!
-
-  // Compute selection (pre-select first item of each add-on)
-  const selection: Record<string, boolean> = {}
-  for (const item of chosen.items) {
-    if (item.is_addon) selection[item.id] = item.default_included
-  }
-
-  return (
-    <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden @container/doc" style={{ background: branding.surface_color }}>
-          <ProposalDocumentBody
-            blocks={blocks}
-            branding={branding}
-            title={sample.title}
-            coupleName={sample.coupleName}
-            proposalNumber={sample.proposalNumber}
-            notes={sample.notes}
-            expiresAt={sample.expiresAt}
-            options={sample.options}
-            state="active"
-            chosenId={chosen.id}
-            selection={selection}
-            renderAccept={({ view, style, publicBranding }) => (
-              <StaticAcceptCta expiresAt={sample.expiresAt} branding={view} publicBranding={publicBranding} style={style} />
-            )}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/**
  * Invoice surface preview with sample data.
  */
 function InvoicePreview({
@@ -269,8 +179,8 @@ function InvoicePreview({
 
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           {/* Render the action (CTA) block: on the live payment page a functional
               button is injected separately (so it's hidden there to avoid a
               duplicate), but this static preview has no such button, so we let the
@@ -300,17 +210,142 @@ function ContractPreview({
 }) {
   const doc = sampleContractDoc()
 
+  // The contract body + sign form are render-split markers: the generic block
+  // renderer emits nothing for them (on the live page the real signed body + the
+  // sign / decline form are injected there). Walk the tree, flushing chrome runs
+  // and injecting a mock body / sign section at each marker, mirroring
+  // app/contract/[token] ContractBrandedCard.
+  const contractBodyBlock = blocks.find(
+    (b): b is ContractBodyBlock => b.type === 'contractBody',
+  )
+  const contractSignBlock = blocks.find(
+    (b): b is ContractSignBlock => b.type === 'contractSign',
+  )
+
+  const nodes: React.ReactNode[] = []
+  let buffer: Block[] = []
+  let bufKey = 0
+  const flush = () => {
+    if (buffer.length > 0) {
+      nodes.push(
+        <PublicBlockRenderer key={`chrome-${bufKey++}`} blocks={buffer} branding={branding} doc={doc} hideAction />,
+      )
+      buffer = []
+    }
+  }
+  for (const b of blocks) {
+    if (b.type === 'contractBody') {
+      flush()
+      nodes.push(
+        <PreviewContractBody key="body" branding={branding} {...(contractBodyBlock ? { block: contractBodyBlock } : {})} />,
+      )
+    } else if (b.type === 'contractSign') {
+      flush()
+      nodes.push(
+        <PreviewContractSign key="sign" branding={branding} {...(contractSignBlock ? { block: contractSignBlock } : {})} />,
+      )
+    } else {
+      buffer.push(b)
+    }
+  }
+  flush()
+
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
-          {/* Show the CTA block (see InvoicePreview note). */}
-          <PublicBlockRenderer
-            blocks={blocks}
-            branding={branding}
-            doc={doc}
-          />
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+          {nodes}
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Mock contract body for the preview — sample clauses + MC signature, rendered
+ * with the branding's body / subheading / label type roles so the preview
+ * reflects the MC's typography. Never sent; the couple's real body replaces it.
+ */
+function PreviewContractBody({
+  branding,
+  block,
+}: {
+  branding: PublicBranding
+  block?: ContractBodyBlock
+}) {
+  // Layer the contract-scoped overrides (if any) on top of the global body /
+  // section-heading roles. `resolveTextStyle` returns ready CSS, and with no
+  // override it resolves exactly to the role defaults, so an unstyled preview
+  // is unchanged.
+  const headingCss = resolveTextStyle(block?.subheadingStyle, roleDefaults(branding, 'sectionHeading'))
+  const bodyCss = resolveTextStyle(block?.bodyStyle, roleDefaults(branding, 'body'))
+  return (
+    <div className="space-y-6 border-t pt-8 mt-8" style={{ borderTopColor: branding.border_color }}>
+      {SAMPLE_CONTRACT_CLAUSES.map((clause) => (
+        <div key={clause.heading} className="space-y-1.5">
+          <p style={headingCss}>{clause.heading}</p>
+          <p style={bodyCss}>{clause.body}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Mock contract sign section for the preview — the prompt heading, a disabled
+ * name field + agreement line, the Sign / Decline buttons, then the MC
+ * countersignature, styled with the block's heading / label overrides layered
+ * over the section-heading / body roles. Never sent; the live form replaces it.
+ */
+function PreviewContractSign({
+  branding,
+  block,
+}: {
+  branding: PublicBranding
+  block?: ContractSignBlock
+}) {
+  const headingCss = resolveTextStyle(block?.headingStyle, roleDefaults(branding, 'sectionHeading'))
+  const labelCss = resolveTextStyle(block?.labelStyle, roleDefaults(branding, 'body'))
+  const buttonColor = block?.buttonColor ?? branding.brand_color
+  const radius = Math.min(branding.corner_radius ?? 12, 12)
+  const muted = roleDefaults(branding, 'finePrint').color
+  return (
+    <div className="space-y-4 border-t pt-8 mt-8" style={{ borderTopColor: branding.border_color }}>
+      <p style={headingCss}>{block?.heading ?? 'Sign to accept'}</p>
+      <div>
+        <p className="mb-1.5" style={labelCss}>Your full legal name</p>
+        <div
+          className="w-full border px-3 py-2.5"
+          style={{ borderRadius: radius, borderColor: branding.border_color }}
+        >
+          <span style={{ color: muted }}>Sarah &amp; James</span>
+        </div>
+      </div>
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 w-4 h-4 rounded border shrink-0" style={{ borderColor: branding.border_color }} aria-hidden />
+        <span style={labelCss}>
+          I agree to the terms above and intend my typed name to serve as my legal signature.
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <span
+          className="px-5 py-2.5 inline-flex items-center text-sm font-semibold"
+          style={{ backgroundColor: buttonColor, color: getTextColor(buttonColor), borderRadius: radius }}
+        >
+          {block?.primaryLabel ?? 'Sign contract'}
+        </span>
+        <span
+          className="border px-4 py-2.5 text-sm font-medium"
+          style={{ color: muted, borderColor: branding.border_color, borderRadius: radius }}
+        >
+          {block?.secondaryLabel ?? 'Decline'}
+        </span>
+      </div>
+      <div className="border-t pt-6" style={{ borderTopColor: branding.border_color }}>
+        <p className="mb-1" style={{ color: muted, fontSize: 12 }}>Signed by MC</p>
+        <p style={{ fontSize: 28, lineHeight: 1, color: roleDefaults(branding, 'body').color, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+          Your name
+        </p>
       </div>
     </div>
   )
@@ -337,16 +372,41 @@ function PortalPreview({
     taxRate: 0,
   }
 
+  // The couple portal body is a render-split marker (null in the generic
+  // renderer). Split at it and inject the shared sample so the preview shows a
+  // body, like the public portal page does with the live hero + section nav.
+  const markerIdx = blocks.findIndex((b) => b.type === 'couplePortal')
+  const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks
+  const postBlocks = markerIdx >= 0 ? blocks.slice(markerIdx + 1) : []
+  // Carry the portal body block's typography overrides into the injected sample,
+  // so the preview matches the sent portal. Absent block / no overrides resolve
+  // to the historical defaults (identical render).
+  const cpBlock = markerIdx >= 0 ? (blocks[markerIdx] as CouplePortalBlock) : undefined
+  const cpStyles = cpBlock
+    ? { title: cpBlock.titleStyle, subtitle: cpBlock.subtitleStyle, heading: cpBlock.headingStyle, body: cpBlock.bodyStyle }
+    : undefined
+  // Portal-specific background: the block's colour overrides the brand Surface
+  // colour for the whole portal (page + cards), mirroring the sent portal.
+  const portalBranding: PublicBranding = cpBlock?.bgColor
+    ? { ...branding, surface_color: cpBlock.bgColor }
+    : branding
+
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
-          <PublicBlockRenderer
-            blocks={blocks}
-            branding={branding}
-            doc={sampleDoc}
-            hideAction
-          />
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+          <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
+          {markerIdx >= 0 ? (
+            /* The portal background colour wraps ONLY the portal (hero +
+               dashboard + cards), not the surrounding card/chrome — mirroring
+               the sent portal. Unset → transparent, unchanged. */
+            <div className="pt-6" style={cpBlock?.bgColor ? { background: portalBranding.surface_color } : undefined}>
+              <CouplePortalSample branding={portalBranding} {...(cpStyles ? { styles: cpStyles } : {})} />
+            </div>
+          ) : null}
+          {postBlocks.length > 0 ? (
+            <PublicBlockRenderer blocks={postBlocks} branding={branding} doc={sampleDoc} hideAction />
+          ) : null}
         </div>
       </div>
     </div>
@@ -374,24 +434,105 @@ function VendorTimelinePreview({
     taxRate: 0,
   }
 
+  // The run sheet body is a render-split marker (null in the generic renderer).
+  // Split at it and inject a sample timeline so the preview shows a body, like
+  // the public run sheet page does with live data.
+  const markerIdx = blocks.findIndex((b) => b.type === 'vendorTimelineBody')
+  const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks
+  const postBlocks = markerIdx >= 0 ? blocks.slice(markerIdx + 1) : []
+  // Carry the run sheet body block's typography overrides into the injected
+  // timeline, so the preview matches the sent run sheet. Absent block / no
+  // overrides resolve to the historical defaults (identical render).
+  const vtbBlock = markerIdx >= 0 ? (blocks[markerIdx] as VendorTimelineBodyBlock) : undefined
+  const vtbStyles = vtbBlock
+    ? { title: vtbBlock.titleStyle, subtitle: vtbBlock.subtitleStyle, body: vtbBlock.bodyStyle, note: vtbBlock.noteStyle }
+    : undefined
+
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
-          <PublicBlockRenderer
-            blocks={blocks}
-            branding={branding}
-            doc={sampleDoc}
-            hideAction
-          />
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+          <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
+          {markerIdx >= 0 ? (
+            <div className="pt-6">
+              <VendorTimeline events={[SAMPLE_RUN_SHEET_EVENT]} items={SAMPLE_RUN_SHEET_ITEMS} branding={branding} {...(vtbStyles ? { styles: vtbStyles } : {})} />
+            </div>
+          ) : null}
+          {postBlocks.length > 0 ? (
+            <PublicBlockRenderer blocks={postBlocks} branding={branding} doc={sampleDoc} hideAction />
+          ) : null}
         </div>
       </div>
     </div>
   )
 }
 
+/** Sample questions for the questionnaire preview (never sent; the couple's
+ *  real questions replace them on the live fill page). */
+const SAMPLE_QUESTIONS: Question[] = [
+  { id: 'q1', type: 'date', label: 'What is the date of your wedding?', required: true },
+  { id: 'q2', type: 'number', label: 'How many guests are you expecting?', required: false },
+  { id: 'q3', type: 'single_choice', label: 'Which package are you interested in?', options: ['Essential', 'Premium', 'Deluxe'], required: false },
+]
+
 /**
- * Questionnaire surface preview with sample data.
+ * Interactive sample of the couple-facing questionnaire, framed and styled by
+ * the form-style block exactly as the live fill page does: the block's outer
+ * style wraps the questions, and its question / answer typography + button
+ * colour flow into the shared renderer. Answers live in local state; nothing is
+ * sent (mode="preview").
+ */
+function QuestionnaireSample({
+  branding,
+  block,
+}: {
+  branding: PublicBranding
+  block?: QuestionnaireOneAtATimeBlock | QuestionnaireAllOnePageBlock
+}) {
+  const [responses, setResponses] = useState<Responses>({})
+  const theme = themeFromBranding(branding)
+  const Renderer = block?.type === 'questionnaireOneAtATime' ? TypeformFlow : ClassicForm
+
+  const questionCss = block?.questionStyle
+    ? resolveTextStyle(block.questionStyle, roleDefaults(branding, 'sectionHeading'))
+    : undefined
+  const answerCss = block?.answerStyle
+    ? resolveTextStyle(block.answerStyle, roleDefaults(branding, 'body'))
+    : undefined
+  const buttonColor = block?.buttonColor
+  const frameStyle = block && hasOuterStyle(block)
+    ? blockOuterStyle(block, { cornerRadius: branding.corner_radius })
+    : null
+
+  const inner = (
+    <Renderer
+      questions={SAMPLE_QUESTIONS}
+      responses={responses}
+      onAnswer={(id: string, v: Answer) => setResponses((r) => ({ ...r, [id]: v }))}
+      theme={theme}
+      mode="preview"
+      branding={branding}
+      {...(questionCss ? { questionCss } : {})}
+      {...(answerCss ? { answerCss } : {})}
+      {...(buttonColor ? { buttonColor } : {})}
+    />
+  )
+
+  if (!frameStyle) return inner
+  const clip = frameStyle.borderRadius !== undefined || frameStyle.borderWidth
+  return (
+    <div style={frameStyle} className={clip ? 'overflow-hidden' : ''}>
+      {inner}
+    </div>
+  )
+}
+
+/**
+ * Questionnaire surface preview with sample data. The form style is a
+ * render-split marker (null in the generic renderer): split at it and inject a
+ * live sample form, mirroring the contract / portal / run-sheet previews. A
+ * missing marker (an invalid, warned-about state) falls back to the classic
+ * form so the preview still shows something, matching the live fill page.
  */
 function QuestionnairePreview({
   branding,
@@ -411,16 +552,26 @@ function QuestionnairePreview({
     taxRate: 0,
   }
 
+  const markerIdx = blocks.findIndex(
+    (b) => b.type === 'questionnaireOneAtATime' || b.type === 'questionnaireAllOnePage',
+  )
+  const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks
+  const postBlocks = markerIdx >= 0 ? blocks.slice(markerIdx + 1) : []
+  const formBlock = markerIdx >= 0
+    ? (blocks[markerIdx] as QuestionnaireOneAtATimeBlock | QuestionnaireAllOnePageBlock)
+    : undefined
+
   return (
     <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
-          <PublicBlockRenderer
-            blocks={blocks}
-            branding={branding}
-            doc={sampleDoc}
-            hideAction
-          />
+      <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+          <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
+          <div className="pt-6">
+            <QuestionnaireSample branding={branding} {...(formBlock ? { block: formBlock } : {})} />
+          </div>
+          {postBlocks.length > 0 ? (
+            <PublicBlockRenderer blocks={postBlocks} branding={branding} doc={sampleDoc} hideAction />
+          ) : null}
         </div>
       </div>
     </div>
@@ -435,7 +586,7 @@ function UnknownSurfaceState({ surface }: { surface: string }) {
     <div className="flex items-center justify-center min-h-screen bg-surface p-4">
       <div className="text-center">
         <p className="text-text-muted text-sm">Unknown surface: {surface}</p>
-        <p className="text-text-subtle text-xs mt-2">Valid surfaces: proposal, invoice, contract, portal, vendorTimeline, questionnaire</p>
+        <p className="text-text-subtle text-xs mt-2">Valid surfaces: invoice, contract, portal, vendorTimeline, questionnaire</p>
       </div>
     </div>
   )

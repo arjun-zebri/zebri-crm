@@ -396,15 +396,14 @@ async function loadEngagementSets(): Promise<EngagementCounts> {
 
   // Active-in-last-30d set. A "use" event is any new row in any of
   // these tables. We deliberately keep this list small (couples /
-  // events / invoices / contracts / proposals) — these are the surfaces
-  // that signal real product use.
+  // events / invoices / contracts) — these are the surfaces that
+  // signal real product use.
   const [active30dResults, everEngagedResults] = await Promise.all([
     Promise.all([
       admin.from("couples").select("user_id").gte("created_at", cutoff),
       admin.from("events").select("user_id").gte("created_at", cutoff),
       admin.from("invoices").select("user_id").gte("created_at", cutoff),
       admin.from("contracts").select("user_id").gte("created_at", cutoff),
-      admin.from("proposals").select("user_id").gte("created_at", cutoff),
     ]),
     // Ever-engaged set: any couple ever created. If a user has
     // ZERO couples in their history they've never used the core

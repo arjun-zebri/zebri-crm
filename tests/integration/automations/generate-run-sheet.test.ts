@@ -53,6 +53,7 @@ function makeCtx(user: TestUser, coupleId: string): RunContext {
       venue: null, status: 'booked', primaryName: 'Couple', spouseName: null,
       spouseEmail: null, spousePhone: null, timezone: 'Australia/Sydney',
     },
+    invoice: null,
     mc: {
       userId: user.id, businessName: 'Test MC', contactName: 'MC', email: 'mc@zebri.test',
       phone: null, brandColor: null, logoUrl: null, quietHoursStart: null, quietHoursEnd: null,

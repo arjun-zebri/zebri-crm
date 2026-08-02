@@ -1,6 +1,7 @@
 import type { JSONContent } from '@tiptap/core'
 
 import { htmlToPlainText } from '@/lib/branding/sanitize'
+import type { SurfaceTab } from '@/types/branding-preview'
 
 import type { Block, BlockType } from './types'
 
@@ -27,18 +28,14 @@ let counter = 0
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`
 
 /**
- * Default primary/secondary labels for an action block, by surface. Proposals
- * accept or decline; invoices and every other surface pay, with no decline.
- *
- * @param surface - The document surface the action block belongs to.
+ * Default primary/secondary labels for an action block. Every surface pays,
+ * with no decline.
  */
-export function actionDefaults(surface?: string): { primary: string; secondary: string | null } {
-  return surface === 'proposal'
-    ? { primary: 'Accept', secondary: 'Decline' }
-    : { primary: 'Pay now', secondary: null }
+export function actionDefaults(): { primary: string; secondary: string | null } {
+  return { primary: 'Pay now', secondary: null }
 }
 
-export function blockTemplate(type: BlockType, surface?: string): Block {
+export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
   switch (type) {
     case 'headerBanner':
       return { id: newId('hb'), type: 'headerBanner' }
@@ -47,6 +44,21 @@ export function blockTemplate(type: BlockType, surface?: string): Block {
     case 'tagline':
       return { id: newId('tg'), type: 'tagline' }
     case 'title':
+      // A contract is signed, not quoted or billed: it carries no
+      // customer-facing "Expires" date and no reference number the way an
+      // invoice/quote does, so both default off on the contract surface.
+      // The header then reads as the contract title + couple name.
+      if (surface === 'contract') {
+        return {
+          id: newId('tt'),
+          type: 'title',
+          title: 'Contract',
+          showCoupleName: true,
+          showRef: false,
+          showExpires: false,
+          showAbn: false,
+        }
+      }
       return {
         id: newId('tt'),
         type: 'title',
@@ -65,7 +77,7 @@ export function blockTemplate(type: BlockType, surface?: string): Block {
       // only and an untouched text block renders nothing on the public document.
       return { id: newId('tx'), type: 'text', text: textDoc('') }
     case 'action':
-      return { id: newId('ac'), type: 'action', ...actionDefaults(surface) }
+      return { id: newId('ac'), type: 'action', ...actionDefaults() }
     case 'divider':
       return { id: newId('dv'), type: 'divider' }
     case 'footer':
@@ -78,22 +90,17 @@ export function blockTemplate(type: BlockType, surface?: string): Block {
       return { id: newId('ps'), type: 'paymentSchedule' }
     case 'contractBody':
       return { id: newId('cb'), type: 'contractBody', locked: true }
-    case 'proposalBody':
-      return { id: newId('pb'), type: 'proposalBody', locked: true }
-    case 'packageHeader':
-      return { id: newId('ph'), type: 'packageHeader' }
-    case 'packageDetails':
-      return { id: newId('pd2'), type: 'packageDetails' }
-    case 'packageLineItems':
-      return { id: newId('pli'), type: 'packageLineItems', showHeader: true }
-    case 'packageInclusions':
-      return { id: newId('pi'), type: 'packageInclusions' }
-    case 'packageTotals':
-      return { id: newId('pt'), type: 'packageTotals' }
+    case 'contractSign':
+      return { id: newId('cs'), type: 'contractSign', locked: true }
     case 'vendorTimelineBody':
       return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
-    case 'questionnaireBody':
-      return { id: newId('qb'), type: 'questionnaireBody', locked: true, mode: 'form' }
+    case 'questionnaireOneAtATime':
+      // Locked so it can't be duplicated; still deletable + re-addable as a
+      // clearable marker (the MC swaps form styles by deleting one, adding the
+      // other). See policy.CLEARABLE_MARKERS.
+      return { id: newId('q1'), type: 'questionnaireOneAtATime', locked: true }
+    case 'questionnaireAllOnePage':
+      return { id: newId('qa'), type: 'questionnaireAllOnePage', locked: true }
     case 'image':
       return { id: newId('im'), type: 'image', fit: 'cover', heightPx: 160 }
     case 'spacer':
@@ -103,23 +110,11 @@ export function blockTemplate(type: BlockType, surface?: string): Block {
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
+export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (surface === 'portal') {
     return [
       { id: newId('bn'), type: 'businessName' },
       { id: newId('cp'), type: 'couplePortal', locked: true },
-    ]
-  }
-  if (surface === 'proposal') {
-    return [
-      { id: newId('bn'), type: 'businessName' },
-      { id: newId('ph'), type: 'packageHeader' },
-      { id: newId('pd2'), type: 'packageDetails' },
-      { id: newId('pli'), type: 'packageLineItems', showHeader: true },
-      { id: newId('pi'), type: 'packageInclusions' },
-      { id: newId('pt'), type: 'packageTotals' },
-      { id: newId('ac'), type: 'action', ...actionDefaults('proposal') },
-      { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for thinking of us.') },
     ]
   }
   if (surface === 'invoice') {
@@ -163,21 +158,35 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
     ]
   }
   if (surface === 'questionnaire') {
+    // Seed the "All on one page" form so a new questionnaire starts in a valid
+    // (exactly-one) state. This maps to the old default presentation (mode:
+    // 'form'). The MC can swap to "One at a time" from the block palette.
     return [
       { id: newId('bn'), type: 'businessName' },
-      blockTemplate('questionnaireBody'),
+      blockTemplate('questionnaireAllOnePage'),
     ]
   }
-  // contract — minimal chrome scaffold. The contract body is
-  // written by the MC per-couple in the builder modal's TipTap
-  // editor and renders at the `contractBody` marker. MCs can add
-  // any other chrome blocks they want (title, custom intro text,
-  // divider, footer, etc) above or below the marker; this default
-  // stays intentionally lean so MCs aren't fighting pre-canned
-  // structure they didn't ask for.
+  // contract — minimal chrome scaffold: business identity, a contract
+  // header, the body marker, then the sign marker. The contract body is
+  // written by the MC per-couple in the builder modal's TipTap editor and
+  // renders at the `contractBody` marker; the sign/decline form + MC
+  // countersignature render at the `contractSign` marker below it. MCs can
+  // add any other chrome blocks they want (custom intro text, divider,
+  // footer, etc) above, below, or between the markers; this default stays
+  // lean so MCs aren't fighting pre-canned structure they didn't ask for.
   return [
     { id: newId('bn'), type: 'businessName' },
+    {
+      id: newId('tt'),
+      type: 'title',
+      title: 'Contract',
+      showCoupleName: true,
+      showRef: false,
+      showExpires: false,
+      showAbn: false,
+    },
     { id: newId('cb'), type: 'contractBody', locked: true },
+    { id: newId('cs'), type: 'contractSign', locked: true },
   ]
 }
 
@@ -185,7 +194,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {
@@ -200,6 +209,14 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
         const { style: _style, ...rest } = b as Record<string, unknown>
         void _style
         return stripDashes({ ...(rest as object), type: 'text' } as unknown as Block)
+      }
+      if (b.type === 'questionnaireBody') {
+        // The single questionnaireBody marker (with a `mode` toggle) is replaced
+        // by two form-style marker blocks. Map by the old mode, preserving the
+        // block id + all frame styling; drop the now-meaningless `mode` field.
+        const { mode, ...rest } = b as Record<string, unknown>
+        const type = mode === 'oneAtATime' ? 'questionnaireOneAtATime' : 'questionnaireAllOnePage'
+        return stripDashes({ ...(rest as object), type } as unknown as Block)
       }
       if (b.type === 'lineItems' && 'showAddPlaceholder' in b) {
         const { showAddPlaceholder: _drop, ...rest } = b as Record<string, unknown>
@@ -226,20 +243,6 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
     )
   }
 
-  // Proposals are accepted or declined, never paid. An action block still
-  // carrying the old surface-blind "Pay now" default (or the "Secondary"
-  // placeholder) leaked from the invoice-shaped template; give it the proposal
-  // accept/decline wording. Idempotent — only the exact legacy strings match.
-  if (surface === 'proposal') {
-    migrated = migrated.map((b) => {
-      if (b.type !== 'action') return b
-      let next = b
-      if (next.primary === 'Pay now') next = { ...next, ...actionDefaults('proposal') }
-      if (next.secondary === 'Secondary') next = { ...next, secondary: 'Decline' }
-      return next
-    })
-  }
-
   // Contract surface migration (Phase 3.1):
   // Old default for the contract surface inserted ~13 text blocks
   // carrying the full contract template (PARTIES / SERVICES /
@@ -248,16 +251,24 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
   // with a single `contractBody` marker; keep chrome (header,
   // business name, title, footer). Idempotent — runs harmlessly
   // when the data is already in the new shape.
+  //
+  // Heuristic: any text block whose content matches the old template's
+  // distinctive headings (PARTIES / EVENT DETAILS / numbered clauses /
+  // SIGNATURES) was canned content from the previous default. Custom
+  // text blocks the MC wrote themselves do NOT trip this — we only
+  // match start-of-string against the old default's headings.
   if (surface === 'contract') {
+    const oldDefaultPattern = /^(PARTIES|EVENT DETAILS|\d+\.\s+[A-Z][A-Z &,]+|SIGNATURES)\b/
     const hasMarker = migrated.some((b) => b.type === 'contractBody')
-    if (!hasMarker) {
-      // Heuristic: any text block whose content matches the old
-      // template's distinctive headings (PARTIES / EVENT DETAILS /
-      // numbered clauses / SIGNATURES) was canned content from the
-      // previous default. Strip them. Custom text blocks the MC
-      // added themselves should NOT trip this — we only match
-      // start-of-string against the old default's headings.
-      const oldDefaultPattern = /^(PARTIES|EVENT DETAILS|\d+\.\s+[A-Z][A-Z &,]+|SIGNATURES)\b/
+    const hadLegacyTemplate = migrated.some(
+      (b) => b.type === 'text' && oldDefaultPattern.test(richPlainText((b as { text?: unknown }).text).trimStart()),
+    )
+    // Only heal a genuine legacy contract (the pre-Phase-3.1 inline
+    // template). A modern contract with no marker is one the MC cleared
+    // via "Clear all blocks" — leave it marker-less so the removal
+    // sticks. The body is re-addable from the block palette, and the
+    // readiness panel flags its absence until it returns.
+    if (!hasMarker && hadLegacyTemplate) {
       const chrome = migrated.filter(
         (b) => b.type !== 'text' || !oldDefaultPattern.test(richPlainText((b as { text?: unknown }).text).trimStart()),
       )
@@ -297,33 +308,6 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
         marker,
         ...cleaned.slice(insertAt),
       ]
-    }
-  }
-
-  // Proposal surface migration: expand any surviving `proposalBody` marker
-  // into the four real package blocks (header, details, inclusions, totals).
-  if (surface === 'proposal') {
-    migrated = expandProposalBody(migrated)
-
-    // Insert packageLineItems block after packageDetails if the tree has package
-    // blocks but no packageLineItems yet. Idempotent — runs harmlessly when the
-    // data is already in the new shape.
-    const hasPackageBlocks = migrated.some((b) => b.type === 'packageDetails')
-    const hasLineItems = migrated.some((b) => b.type === 'packageLineItems')
-    if (hasPackageBlocks && !hasLineItems) {
-      const detailsIdx = migrated.findIndex((b) => b.type === 'packageDetails')
-      if (detailsIdx >= 0) {
-        const lineItemsBlock: Block = {
-          id: `pli_${Math.random().toString(36).slice(2, 9)}`,
-          type: 'packageLineItems',
-          showHeader: true,
-        }
-        migrated = [
-          ...migrated.slice(0, detailsIdx + 1),
-          lineItemsBlock,
-          ...migrated.slice(detailsIdx + 1),
-        ]
-      }
     }
   }
 
@@ -383,25 +367,4 @@ function stripDashes(block: Block): Block {
     default:
       return block
   }
-}
-
-/**
- * Spec §6: expand a legacy `proposalBody` marker into the four real package
- * blocks (header, details, optional inclusions, totals) in place. The Accept
- * CTA is the existing `action` block that already sits after the marker; we do
- * not synthesise one here (readiness flags its absence). Idempotent: a tree
- * with no `proposalBody` is returned unchanged.
- */
-export function expandProposalBody(blocks: Block[]): Block[] {
-  const idx = blocks.findIndex((b) => b.type === 'proposalBody')
-  if (idx < 0) return blocks
-  const pkg: Block[] = [
-    blockTemplate('packageHeader'),
-    blockTemplate('packageDetails'),
-    blockTemplate('packageInclusions'),
-    blockTemplate('packageTotals'),
-  ]
-  // Drop the marker and any duplicate proposalBody markers further down.
-  const rest = blocks.filter((b) => b.type !== 'proposalBody')
-  return [...rest.slice(0, idx), ...pkg, ...rest.slice(idx)]
 }

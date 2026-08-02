@@ -32,14 +32,17 @@ import {
   Paperclip,
   Receipt,
   Sparkles,
+  Timer,
   Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useTimerSurface } from '@/components/time-tracking/timer-provider';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getOpenModalDepth } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { Couple } from '@/types/couple';
+
 
 import { rotateCouplePortalTokenAction } from './actions';
 import { CoupleProfileBody } from './couple-profile-body';
@@ -65,6 +68,13 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'tasks',
     label: 'Tasks',
     icon: <CheckSquare size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'time',
+    label: 'Time',
+    // `Clock` already belongs to the Timeline tab; two identical icons in
+    // one nav is a usability bug, so the stopwatch gets `Timer`.
+    icon: <Timer size={18} strokeWidth={1.5} />,
   },
   {
     key: 'contacts',
@@ -175,6 +185,15 @@ export function CoupleProfile({
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const portal = usePortalData(couple?.id ?? '');
+
+  // While this overlay is open it owns the timer control: the floating
+  // pill is fixed to the viewport's top-right, which is where this
+  // overlay puts its close button.
+  const { claimSurface } = useTimerSurface();
+  useEffect(() => {
+    if (!couple) return;
+    return claimSurface();
+  }, [couple, claimSurface]);
 
   const rotateToken = useMutation({
     mutationFn: async () => {

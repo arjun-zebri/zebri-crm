@@ -4,7 +4,7 @@
 
 **Goal:** Turn `/branding` into a Canva-grade design tool — full per-block/per-heading styling, 30+ fonts, per-surface block sets, functional templates, and a live customer preview — while keeping all brand styling global per MC.
 
-**Architecture:** Extend the existing global branding model (`user_metadata` scalars + `user_branding.branding_blocks` per surface) and the shared public renderers (`ProposalDocumentBody`, `PublicBlockRenderer`, `public-blocks/*`) rather than replacing them. New style fields resolve inside those renderers so editor preview = composer preview = public page. One additive Supabase migration extends `_user_branding` + the public RPCs.
+**Architecture:** Extend the existing global branding model (`user_metadata` scalars + `user_branding.branding_blocks` per surface) and the shared public renderers (`PublicBlockRenderer`, `public-blocks/*`) rather than replacing them. New style fields resolve inside those renderers so editor preview = composer preview = public page. One additive Supabase migration extends `_user_branding` + the public RPCs.
 
 **Tech Stack:** Next.js 16 (App Router) · React 19 · Tailwind 4 tokens · Supabase (Postgres + RLS) · Vitest 3 (unit + integration) · Playwright · dnd-kit · Radix.
 
@@ -42,15 +42,13 @@ Full design: `.claude/docs/branding-editor-redesign.md`.
 - `lib/branding/fonts.ts` — expand to 30+ fonts.
 - `app/(dashboard)/branding/blocks/text-style.ts` + `blocks/types.ts` — `textTransform`; new block interfaces; `BaseBlock` padding fields.
 - `lib/branding/public-branding.ts` + `lib/branding/public-surface.ts` — new `PublicBranding` fields.
-- `components/proposal/proposal-page-view.tsx` — styled core labels + type defaults.
-- `lib/branding/proposal-labels.ts` — `{ text, style }` label shape + back-compat.
 - `app/(dashboard)/branding/brand-panel.tsx` — restructure; remove density/themes; colour descriptions; global styles.
 - `app/(dashboard)/branding/branding-editor.tsx` — state fields; remove theme/starter apply; template apply; preview link.
 - `app/(dashboard)/branding/blocks/block-toolbar.tsx` + `render.tsx` — per-block controls + new blocks.
 - `lib/branding/public-blocks/*` + `public-renderer.tsx` — consume new style fields.
 - `lib/branding/density.ts` — freeze to a single baseline (keep reading stored value; drop the control).
-- Public pages (`app/{proposal,invoice,contract,portal}/[token]`) — no change needed if they keep reading stored density.
-- Docs: `proposals.md`, `page-specs.md`, `database-schema.md`, `frontend-design.md`.
+- Public pages (`app/{invoice,contract,portal}/[token]`) — no change needed if they keep reading stored density.
+- Docs: `page-specs.md`, `database-schema.md`, `frontend-design.md`.
 
 **Delete**
 - `app/(dashboard)/branding/starter-designs.ts` + `tests/.../starter-designs.test.ts`; the Themes + Starter-designs accordions.
@@ -120,9 +118,9 @@ describe('buildPublicBranding — redesign fields', () => {
 - Create: `supabase/migrations/20260715000000_branding_editor_redesign.sql`
 - Test: `tests/integration/branding/public-branding-fields.test.ts`
 
-- [ ] **Step 1: Write failing integration test** — seed a user, set the new metadata keys, call `get_public_proposal`/`get_portal_data`, assert the payload includes `heading_size`, `link_color`, `page_background`, and styled `proposal_labels`. (Skeleton mirrors `tests/integration/payments/public-proposal-rpcs.test.ts`.)
+- [ ] **Step 1: Write failing integration test** — seed a user, set the new metadata keys, call `get_public_invoice`/`get_portal_data`, assert the payload includes `heading_size`, `link_color`, and `page_background`. (Skeleton mirrors the existing public-RPC integration tests.)
 - [ ] **Step 2: Reset local DB + run** → FAIL (fields absent). Run `supabase db reset` then the grant-repair SQL, then `npm run test:integration -- public-branding-fields`.
-- [ ] **Step 3: Implement migration** — `create or replace function _user_branding(uuid)` adding the new keys to the returned jsonb (each `coalesce`d to its default, mirroring `20260713000000`), and the styled `proposal_labels` passthrough. No changes to the per-RPC merge (they already spread `_user_branding`). Additive only.
+- [ ] **Step 3: Implement migration** — `create or replace function _user_branding(uuid)` adding the new keys to the returned jsonb (each `coalesce`d to its default, mirroring `20260713000000`). No changes to the per-RPC merge (they already spread `_user_branding`). Additive only.
 - [ ] **Step 4: Reset + rerun** → PASS. `npm run typecheck` 0.
 - [ ] **Step 5: Commit** — `"branding: migration extends _user_branding with redesign fields"`.
 
@@ -194,53 +192,13 @@ describe('font catalogue', () => {
 
 ---
 
-## Phase P2 — Stylable fixed-core headings (`proposal_labels` → `{text,style}`)
+## Phase P2 — (removed)
 
-### Task 2.1: Label model with back-compat
-
-**Files:**
-- Modify: `lib/branding/proposal-labels.ts`
-- Test: `tests/unit/lib/branding/proposal-labels.test.ts`
-
-**Interfaces:**
-- Produces: `interface StyledLabel { text: string; style?: TextStyle }`; `ProposalLabels = Record<LabelKey, StyledLabel>`; `resolveProposalLabels(raw: unknown): ProposalLabels` accepts BOTH the legacy `Record<LabelKey,string>` and the new shape; `PROPOSAL_LABEL_DEFAULTS` uses `{text}` form.
-
-- [ ] **Step 1: Write failing test:**
-
-```ts
-import { describe, expect, it } from 'vitest'
-import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
-
-describe('resolveProposalLabels back-compat', () => {
-  it('reads the legacy string form', () => {
-    const r = resolveProposalLabels({ accept: 'Book us' })
-    expect(r.accept.text).toBe('Book us')
-    expect(r.accept.style).toBeUndefined()
-  })
-  it('reads the new styled form', () => {
-    const r = resolveProposalLabels({ accept: { text: 'Book us', style: { textTransform: 'uppercase' } } })
-    expect(r.accept.text).toBe('Book us')
-    expect(r.accept.style?.textTransform).toBe('uppercase')
-  })
-  it('falls back to defaults for blanks', () => {
-    expect(resolveProposalLabels({}).accept.text).toBeTruthy()
-  })
-})
-```
-
-- [ ] **Step 2: Verify fail.**
-- [ ] **Step 3: Implement** — normalise string|object entries to `StyledLabel`; keep `ProposalLabelEdit` able to patch text and style.
-- [ ] **Step 4: PASS + typecheck 0.**
-- [ ] **Step 5: Commit** — `"branding: styled proposal labels with legacy back-compat"`.
-
-### Task 2.2: Thread label style through the shared view
-
-**Files:**
-- Modify: `components/proposal/editable-label.tsx` (accept a resolved `style`), `components/proposal/proposal-page-view.tsx`, `option-chooser.tsx`, `option-selection.tsx`, `app/(dashboard)/branding/blocks/render.tsx` (`RenderProposalBody` edit handlers).
-
-- [ ] **Step 1** `EditableLabel` applies `labels[key].style` (merged over the global heading default) to its element; the canvas edit path lets the toolbar patch `style` for the focused label.
-- [ ] **Step 2** `npm run build` compiles; `npm run typecheck` 0; unit tests for `proposal-page-view` (if any) green.
-- [ ] **Step 3: Commit** — `"branding: fixed-core headings are fully stylable"`.
+This phase covered stylable fixed-core proposal headings
+(`proposal_labels` → `{ text, style }`). It no longer applies: the
+Proposal document and `proposal_labels` were removed along with the
+Proposal surface. The phase numbering is kept so later phase references
+stay stable.
 
 ---
 
@@ -288,7 +246,7 @@ describe('resolveProposalLabels back-compat', () => {
 **Interfaces:**
 - Produces: `BLOCKS_BY_SURFACE: Record<SurfaceTab, BlockType[]>`; `blocksForSurface(surface): BlockType[]`.
 
-- [ ] **Step 1: Write failing test** — invoice includes `lineItems`+`totals`+`paymentDetails`; proposal excludes them; portal excludes `action`; each includes its fixed core.
+- [ ] **Step 1: Write failing test** — invoice includes `lineItems`+`totals`+`paymentDetails`; portal excludes `action`; each includes its fixed core.
 - [ ] **Step 2: Verify fail.**
 - [ ] **Step 3: Implement** the map (spec §3 matrix) + palette filter (the palette already groups by intent; intersect groups with `blocksForSurface`).
 - [ ] **Step 4: PASS + build + typecheck 0.**
@@ -367,7 +325,7 @@ Each 5.x follows the P5 TDD rhythm (test any new pure helper → implement → b
 
 - [ ] **Step 1: Write failing test** — every template's `blocks` are valid for its surface (`blocksForSurface` includes each block type; the surface's fixed core is present).
 - [ ] **Step 2: Verify fail.**
-- [ ] **Step 3: Implement** templates (Wedding proposal, Deposit invoice, Standard e-sign contract, Couple portal) as concrete block trees + `applyTemplate` + the picker section. Remove starter-designs + Themes remnants.
+- [ ] **Step 3: Implement** templates (Deposit invoice, Standard e-sign contract, Couple portal) as concrete block trees + `applyTemplate` + the picker section. Remove starter-designs + Themes remnants.
 - [ ] **Step 4: PASS + build + typecheck 0; ratchet lint budget if reduced.**
 - [ ] **Step 5: Commit** — `"branding: functional document templates replace themes/starters"`.
 
@@ -382,9 +340,9 @@ Each 5.x follows the P5 TDD rhythm (test any new pure helper → implement → b
 - Modify: `branding-editor.tsx` (`onPreview` opens `window.open('/branding/preview/'+surface,'_blank')`), `editor-topbar.tsx` (enable the button).
 - Test: `tests/e2e/branding-editor.spec.ts` (preview tab renders the surface).
 
-- [ ] **Step 1: Write failing e2e** (desktop) — click Preview → new tab at `/branding/preview/proposal` shows the branded sample document (assert a sample heading is visible).
+- [ ] **Step 1: Write failing e2e** (desktop) — click Preview → new tab at `/branding/preview/invoice` shows the branded sample document (assert a sample heading is visible).
 - [ ] **Step 2: Verify fail** (`npx playwright test branding-editor` → the route 404s).
-- [ ] **Step 3: Implement** — the route is authed (dashboard session), reads `useCurrentBranding(surface)` + sample data, renders via the shared renderer for that surface (`ProposalDocumentBody` for proposal; `PublicBlockRenderer` split for invoice/contract/portal), read-only (no handlers). Replace the topbar toast.
+- [ ] **Step 3: Implement** — the route is authed (dashboard session), reads `useCurrentBranding(surface)` + sample data, renders via the shared renderer for that surface (`PublicBlockRenderer` for invoice/contract/portal), read-only (no handlers). Replace the topbar toast.
 - [ ] **Step 4: e2e PASS on desktop + Pixel 5 + iPhone 12.**
 - [ ] **Step 5: Commit** — `"branding: live customer preview opens in a new tab"`.
 
@@ -394,7 +352,7 @@ Each 5.x follows the P5 TDD rhythm (test any new pure helper → implement → b
 
 ### Task 8.1: Docs
 
-**Files:** `proposals.md`, `page-specs.md`, `database-schema.md`, `frontend-design.md`, and `branding-editor-redesign.md` (mark shipped).
+**Files:** `page-specs.md`, `database-schema.md`, `frontend-design.md`, and `branding-editor-redesign.md` (mark shipped).
 
 - [ ] **Step 1** Update each to reflect the shipped behaviour (per-surface blocks, typography system, templates, preview, removed density/themes, new fields).
 - [ ] **Step 2: Commit** — `"docs: branding-editor redesign"`.
@@ -408,6 +366,6 @@ Each 5.x follows the P5 TDD rhythm (test any new pure helper → implement → b
 
 ## Self-review notes
 
-- **Spec coverage:** sidebar §1 → P3; typography §2 → P0.2/P1/P2; per-surface blocks + new blocks §3 → P4; per-block controls §3 → P5; templates §4 → P6; preview §5 → P7; data model + migration §6 → P0; rendering §7 → shared helper in 5.1 + public-block updates; testing §8 → per-task tests + 8.2; rollout §9 → P8; risks §10 → back-compat (2.1), density non-shift (3.3), font on-demand load (unchanged).
+- **Spec coverage:** sidebar §1 → P3; typography §2 → P0.2/P1; per-surface blocks + new blocks §3 → P4; per-block controls §3 → P5; templates §4 → P6; preview §5 → P7; data model + migration §6 → P0; rendering §7 → shared helper in 5.1 + public-block updates; testing §8 → per-task tests + 8.2; rollout §9 → P8; risks §10 → density non-shift (3.3), font on-demand load (unchanged). (P2, the proposal-label styling phase, was removed with the Proposal surface.)
 - **Density note:** renderers keep reading any stored `density` (default cozy) so live docs do not shift; only the control is removed. This refines spec §6's wording (do not hardcode-collapse existing users to cozy).
-- **Type consistency:** `blockOuterStyle` (5.1), `blocksForSurface`/`BLOCKS_BY_SURFACE` (4.1), `resolveTypeDefaults`/`TypeDefaults` (0.2), `StyledLabel`/`resolveProposalLabels` (2.1), `applyTemplate`/`DocTemplate` (6.1) are the cross-task interfaces; names used consistently throughout.
+- **Type consistency:** `blockOuterStyle` (5.1), `blocksForSurface`/`BLOCKS_BY_SURFACE` (4.1), `resolveTypeDefaults`/`TypeDefaults` (0.2), `applyTemplate`/`DocTemplate` (6.1) are the cross-task interfaces; names used consistently throughout.

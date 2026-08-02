@@ -11,11 +11,18 @@ import { describe, expect, it } from 'vitest'
 import {
   computeWaitWakeAt,
   evaluateBranch,
+  evaluatePredicate,
   evaluateWaitAction,
 } from '@/lib/automations/conditions'
 import type { RunContext } from '@/types/automations'
 
-function makeCtx(weddingOffsetDays = 60): RunContext {
+interface MakeContextOptions {
+  weddingOffsetDays?: number
+  firstStagePaidAt?: string | null
+}
+
+function makeCtx(opts: MakeContextOptions = {}): RunContext {
+  const weddingOffsetDays = opts.weddingOffsetDays ?? 60
   const date = new Date(Date.now() + weddingOffsetDays * 86_400_000)
   return {
     userId: 'u',
@@ -48,6 +55,13 @@ function makeCtx(weddingOffsetDays = 60): RunContext {
       spousePhone: null,
       timezone: 'Australia/Sydney',
     },
+    invoice:
+      opts.firstStagePaidAt !== undefined
+        ? {
+            id: 'inv-123',
+            firstStagePaidAt: opts.firstStagePaidAt,
+          }
+        : null,
     mc: {
       userId: 'u',
       businessName: 'Biz',
@@ -66,13 +80,13 @@ function makeCtx(weddingOffsetDays = 60): RunContext {
 
 describe('evaluateBranch', () => {
   it('takes the yes branch when wedding is less than 30 days away (with 14d ctx)', () => {
-    const ctx = makeCtx(14)
+    const ctx = makeCtx({ weddingOffsetDays: 14 })
     const out = evaluateBranch({ kind: 'event_in', op: '<', days: 30 }, ctx)
     expect(out).toBe('yes')
   })
 
   it('takes the no branch when wedding is more than 30 days away (with 60d ctx)', () => {
-    const ctx = makeCtx(60)
+    const ctx = makeCtx({ weddingOffsetDays: 60 })
     const out = evaluateBranch({ kind: 'event_in', op: '<', days: 30 }, ctx)
     expect(out).toBe('no')
   })
@@ -84,7 +98,7 @@ describe('evaluateBranch', () => {
   })
 
   it('and combinator', () => {
-    const ctx = makeCtx(14)
+    const ctx = makeCtx({ weddingOffsetDays: 14 })
     const out = evaluateBranch(
       {
         kind: 'and',
@@ -108,7 +122,7 @@ describe('computeWaitWakeAt', () => {
   })
 
   it('relative_to_wedding before resolves earlier than the wedding date', () => {
-    const ctx = makeCtx(60)
+    const ctx = makeCtx({ weddingOffsetDays: 60 })
     const now = new Date()
     const wake = computeWaitWakeAt(
       { mode: 'relative_to_event', relative: { amount: 7, unit: 'days', direction: 'before', anchor: 'event_date' } },
@@ -133,5 +147,25 @@ describe('evaluateWaitAction', () => {
     const future = new Date(Date.now() + 86_400_000)
     const r = evaluateWaitAction({ mode: 'until_date', untilDate: future.toISOString() }, ctx, new Date())
     expect(r.kind).toBe('sleep')
+  })
+})
+
+describe('has_paid_deposit', () => {
+  it('is true when the first stage is paid', () => {
+    const ctx = makeCtx({ firstStagePaidAt: '2026-07-02T00:00:00Z' })
+    const result = evaluatePredicate({ kind: 'has_paid_deposit' }, ctx)
+    expect(result).toBe(true)
+  })
+
+  it('is false when the first stage is unpaid', () => {
+    const ctx = makeCtx({ firstStagePaidAt: null })
+    const result = evaluatePredicate({ kind: 'has_paid_deposit' }, ctx)
+    expect(result).toBe(false)
+  })
+
+  it('is false when there is no invoice', () => {
+    const ctx = makeCtx({})
+    const result = evaluatePredicate({ kind: 'has_paid_deposit' }, ctx)
+    expect(result).toBe(false)
   })
 })

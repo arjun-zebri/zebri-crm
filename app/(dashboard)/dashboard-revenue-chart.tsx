@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Loader2, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useRevenueChart, useLeadsChart, DashboardPeriod } from './use-dashboard'
 
@@ -85,8 +85,9 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" strokeWidth={1.5} />
+        <div className="animate-pulse flex flex-col flex-1 min-h-0">
+          <div className="h-8 w-32 bg-gray-100 rounded-md mb-4" />
+          <div className="flex-1 min-h-0 bg-gray-100 rounded-lg" />
         </div>
       ) : !data || data.chartData.length === 0 ? (
         <div className="text-center py-16">

@@ -42,10 +42,15 @@ export function useCouplesView(couples: Couple[]): UseCouplesViewResult {
   const baseFiltered = useMemo(() => {
     const term = search.toLowerCase();
     return couples.filter((couple) => {
+      // `Couple` types these as `string`, but both columns are nullable
+      // and a couple added with only a name arrives with `email: null`.
+      // Reading `.toLowerCase()` off it threw, and because this runs in
+      // a `useMemo` during render it took the whole Couples page down to
+      // the error boundary the moment anyone typed in the search box.
       const matchesSearch =
         term === '' ||
-        couple.name.toLowerCase().includes(term) ||
-        couple.email.toLowerCase().includes(term);
+        (couple.name ?? '').toLowerCase().includes(term) ||
+        (couple.email ?? '').toLowerCase().includes(term);
       const matchesStatus =
         statusFilter === 'all' || couple.status === statusFilter;
       return matchesSearch && matchesStatus;

@@ -6,8 +6,9 @@ Commits: All 8 phases (P0–P8) implemented in internal commits on the branch; r
 
 ## Context
 
-The `/branding` editor is a block-tree designer for the four
-customer-facing surfaces (proposal, invoice, contract, portal). It works
+The `/branding` editor is a block-tree designer for the
+customer-facing surfaces (invoice, contract, portal, run sheet,
+questionnaire). It works
 but is not yet a real design tool: the left rail is cluttered, headings
 are re-wordable but not restylable, there are only ~12/7 fonts, spacing
 is a coarse global "density", the same block set shows on every surface,
@@ -18,9 +19,9 @@ customer preview.
 
 Delivered as **one change** (reviewed as a whole), built in internal
 commits. All brand styling stays **global per MC** (one brand kit flows
-into proposal/invoice/contract/portal); block layout + wording stay
-**per surface**. This preserves the model clarified in
-`.claude/docs/proposals.md` ("Preview parity + surface-scope clarity").
+into every surface); block layout + wording stay
+**per surface**. This preserves the global-brand, per-surface-layout
+model.
 
 ## Goals
 
@@ -38,7 +39,7 @@ into proposal/invoice/contract/portal); block layout + wording stay
 
 ## Non-goals
 
-- Per-proposal / per-document branding overrides (branding stays global).
+- Per-document branding overrides (branding stays global).
 - Changing the accepted split-at-marker public rendering model.
 - Rich-text inside blocks beyond the existing inline editing + TextStyle.
 
@@ -87,40 +88,30 @@ working), but the primary control is now explicit px.
 element resolves its effective style as: global type default → block
 TextStyle override → inline.
 
-**Fixed-core headings become stylable.** Today the proposal-core section
-labels (eyebrow, note, chooser, selected, add-ons, accept, decline) are
-plain strings in `proposal_labels` and render with hard-coded classes.
-They upgrade to `{ text: string; style?: TextStyle }` so each label can be
-restyled (font/size/weight/colour/align/case) directly on the canvas,
-not just reworded. `resolveProposalLabels` + `EditableLabel` +
-`ProposalPageView` thread the style through; `_user_branding` returns the
-new shape. A back-compat reader accepts the old string form.
-
 ## 3. Per-block, per-surface model
 
 **Per-surface block availability.** A `BLOCKS_BY_SURFACE` map gates which
 block types the Add-block palette offers and which `defaultBlocksFor`
 seeds. Fixed cores in **bold**:
 
-| Block | Proposal | Invoice | Contract | Portal |
-|---|:--:|:--:|:--:|:--:|
-| Header banner | ✓ | ✓ | ✓ | ✓ |
-| Business name | ✓ | ✓ | ✓ | ✓ |
-| Tagline | ✓ | ✓ | ✓ | ✓ |
-| Text | ✓ | ✓ | ✓ | ✓ |
-| Image (new) | ✓ | ✓ | ✓ | ✓ |
-| Spacer (new) | ✓ | ✓ | ✓ | ✓ |
-| Divider | ✓ | ✓ | ✓ | ✓ |
-| Footer | ✓ | ✓ | ✓ | ✓ |
-| Title & meta | – | ✓ | ✓ | – |
-| Line items | – | ✓ | – | – |
-| Totals | – | ✓ | – | – |
-| Payment details | – | ✓ | – | – |
-| Action | ✓ | ✓ | ✓ | – |
-| **Proposal core** | ✓ | – | – | – |
-| **Payment schedule** | – | ✓ | – | – |
-| **Contract body** | – | – | ✓ | – |
-| **Couple portal** | – | – | – | ✓ |
+| Block | Invoice | Contract | Portal |
+|---|:--:|:--:|:--:|
+| Header banner | ✓ | ✓ | ✓ |
+| Business name | ✓ | ✓ | ✓ |
+| Tagline | ✓ | ✓ | ✓ |
+| Text | ✓ | ✓ | ✓ |
+| Image (new) | ✓ | ✓ | ✓ |
+| Spacer (new) | ✓ | ✓ | ✓ |
+| Divider | ✓ | ✓ | ✓ |
+| Footer | ✓ | ✓ | ✓ |
+| Title & meta | ✓ | ✓ | – |
+| Line items | ✓ | – | – |
+| Totals | ✓ | – | – |
+| Payment details | ✓ | – | – |
+| Action | ✓ | ✓ | – |
+| **Payment schedule** | ✓ | – | – |
+| **Contract body** | – | ✓ | – |
+| **Couple portal** | – | – | ✓ |
 
 **New blocks.** `image` (uploaded image with fit/focal/rounding/width)
 and `spacer` (adjustable vertical gap) for Canva-parity.
@@ -148,8 +139,8 @@ Replace Themes + Starter designs (both removed, incl.
 
 A **functional template** is a ready-made, fully laid-out starting
 document for one surface: the right blocks in order with sensible starter
-wording for that job (e.g. *Wedding proposal*, *Deposit invoice*,
-*Standard e-sign contract*, *Couple portal*). Stored as data in
+wording for that job (e.g. *Deposit invoice*, *Standard e-sign contract*,
+*Couple portal*). Stored as data in
 `app/(dashboard)/branding/templates/` (block trees built from
 `defaultBlocksFor` + explicit content). Applying one replaces the current
 surface's block tree in a single undoable step and shows a toast. It does
@@ -161,7 +152,7 @@ colours/fonts.
 
 The topbar Preview action opens a **new browser tab** at a preview route
 (e.g. `/branding/preview/[surface]`) that renders the surface exactly as
-the customer sees it — the shared `ProposalDocumentBody` / public block
+the customer sees it — the shared public block
 renderers, fed by the MC's saved branding (`useCurrentBranding`) + realistic
 sample data. Read-only, no accept/pay handlers. Reuses the same renderers
 the public pages use so the preview can't drift.
@@ -173,29 +164,26 @@ size, case, letter-spacing, line-height (per role); `link_color`;
 button-style defaults (`button_variant`, `button_size`, `button_radius`);
 `section_spacing`; `page_background` (colour + optional texture id).
 
-**Changed:** `proposal_labels` entries become `{ text, style }`
-(back-compat reader for old strings). **Removed:** `density` usage —
+**Removed:** `density` usage —
 `DENSITY_PAD` collapses to a single fixed "cozy" baseline so live
 documents don't shift; the field is ignored on read.
 
 **Migration** (CI `supabase db push`): extend `_user_branding(uuid)` +
-`get_public_{proposal,invoice,contract}` + `get_portal_data` to return
-the new fields and the styled `proposal_labels`. Additive and
+`get_public_{invoice,contract}` + `get_portal_data` to return
+the new fields. Additive and
 back-compatible; no destructive SQL. `buildPublicBranding` +
 `PublicBranding` + `viewBranding` extended in lockstep.
 
 ## 7. Rendering impact
 
 Public surfaces and the composer preview already share renderers
-(`ProposalDocumentBody`, `PublicBlockRenderer`, `ProposalPageView`,
-`lib/branding/public-blocks/*`). All new styles resolve inside those, so
+(`PublicBlockRenderer`, `lib/branding/public-blocks/*`). All new styles resolve inside those, so
 editor preview = composer preview = public page. New blocks (image,
 spacer) get `public-blocks/*` renderers + editor `render.tsx` renderers.
 
 ## 8. Testing
 
-- Unit: font-list integrity, `resolveProposalLabels` back-compat (old
-  string ↔ new `{text,style}`), `BLOCKS_BY_SURFACE` gating, density→
+- Unit: font-list integrity, `BLOCKS_BY_SURFACE` gating, density→
   baseline migration, TextStyle `textTransform` resolution, template
   block trees valid per surface.
 - Integration: public RPCs return the new branding fields; RLS unchanged.
@@ -209,15 +197,13 @@ spacer) get `public-blocks/*` renderers + editor `render.tsx` renderers.
 
 Built in internal commits on `feature/proposals-phase-a`, reviewed as one
 change, shipped through `staging` per the current batch policy. Docs
-updated in the same change: this spec, `proposals.md`, `page-specs.md`,
+updated in the same change: this spec, `page-specs.md`,
 `database-schema.md`, `frontend-design.md`/`component-library.md`.
 
 ## 10. Risks
 
 - **Scope**: large surface area; mitigated by shared renderers + a fixed
   per-block control contract audited block-by-block.
-- **proposal_labels schema change**: mitigated by a back-compat reader +
-  unit tests pinning both shapes.
 - **Density removal shifting live docs**: mitigated by migrating to the
   current default baseline (cozy), the most common value.
 - **30 fonts payload**: fonts load per-surface on demand

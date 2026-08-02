@@ -29,7 +29,7 @@ metadata_on_insert` trigger).
 
 Scalars returned by `_user_branding(uuid)` and merged into public RPCs. Migration `20260715000000_branding_editor_redesign.sql` extended the function with typography + layout fields. Migration `20260718100000_branding_colours.sql` replaced the old colour model with a role-based system: six user-set colours (heading, subheading, body, background, primary button, secondary button, plus link for the editor) with derived aliases for backward compatibility.
 
-**user_branding table** (Branding overhaul, Phase 11 onwards). One row per user, RLS-owned, stores the block tree + surface configuration for the branding editor. Columns: `user_id` (PK, FK auth.users cascade), `branding_blocks` (jsonb, keyed by surface: `quote`, `invoice`, `contract`, `proposal`, `vendorTimeline`, `questionnaire`), `enabled_surfaces` (text[], default `{quote,invoice,contract}`), `onboarded_at` (timestamptz, null until first save), `created_at`, `updated_at`.
+**user_branding table** (Branding overhaul, Phase 11 onwards). One row per user, RLS-owned, stores the block tree + surface configuration for the branding editor. Columns: `user_id` (PK, FK auth.users cascade), `branding_blocks` (jsonb, keyed by surface: `quote`, `invoice`, `contract`, `vendorTimeline`, `questionnaire`), `enabled_surfaces` (text[], default `{quote,invoice,contract}`), `onboarded_at` (timestamptz, null until first save), `created_at`, `updated_at`.
 
 Surface-level reset: setting a surface's block tree to an empty array disables public render (the get_public_* RPCs treat it as null). `enabled_surfaces` tracks which surfaces the MC has customized; the editor's first-run wizard gates by this.
 
@@ -70,7 +70,6 @@ Surface-level reset: setting a surface's block tree to an empty array disables p
 | `section_spacing` | int | 32 | Space between blocks in px |
 | `doc_padding` | int | 0 | Extra horizontal inset on documents |
 | `density` | text | `cozy` | Vertical spacing preset (cozy/compact) — read-only (frozen to baseline) |
-| `proposal_labels` | jsonb | `{}` | Stylable proposal section labels (string or {text, style}) |
 | `theme_preset` | text | `minimal` | Theme key (for legacy compatibility) |
 
 These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`, and new social fields `twitter_url`, `pinterest_url` (read from `auth.users.raw_user_meta_data` at render time by `_user_branding()` RPC; users edit them in Settings). Added migration `20260723000000_branding_social_urls.sql` extended the function to expose these three URLs for footer social-link rendering.
@@ -297,9 +296,7 @@ tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.re
 
 task_groups -> have many tasks (one-to-many, set null on delete)
 
-proposals -> belong to a couple (FK couple_id); have many proposal_options (cascade delete), each with many proposal_option_items (cascade delete)
-
-invoices -> belong to a couple (FK couple_id); optionally linked to an event (FK event_id, set null on delete) and a proposal (FK proposal_id, set null on delete); have many invoice_items (cascade delete)
+invoices -> belong to a couple (FK couple_id); optionally linked to an event (FK event_id, set null on delete); have many invoice_items (cascade delete)
 
 invoice_items -> belong to an invoice (FK invoice_id, cascade delete)
 
@@ -317,8 +314,6 @@ id (uuid) user_id (uuid, not null) couple_id (uuid, not null, FK to couples.id, 
 
 event_id (uuid, nullable, FK to events.id, on delete set null)  -  links invoice to a specific wedding; used to update events.price when marked paid
 
-proposal_id (uuid, nullable, FK to proposals.id, on delete set null)  -  preserved link if invoice was generated from an accepted proposal (added `20260710000000_add_proposals_feature.sql`; the old `quote_id` column was dropped with the quotes feature in `20260711000000_drop_quotes_feature.sql`)
-
 invoice_number (text, not null)  -  auto-generated on insert as "INV-001" format (sequential count per user)
 
 title (text, not null)  -  e.g. "Wedding MC Services  -  Smith Wedding"
@@ -329,11 +324,13 @@ Status values: draft sent paid overdue cancelled
 
 subtotal (numeric(10,2), not null, default 0)  -  sum of invoice_items.amount; updated on item save
 
-due_date (date, nullable)  -  defaults to 7 days from creation when generated from a proposal
+due_date (date, nullable)  -  optional payment due date, set manually by the MC (invoices are built by hand)
 
 payment_terms (text, nullable)  -  one of: `net_7`, `net_14`, `net_30`, `due_on_receipt`, `custom`. When set to a net term, due_date is auto-calculated. `due_on_receipt` clears due_date. `custom` keeps due_date freely editable.
 
 tax_rate (numeric(5,2), not null, default 0)  -  GST percentage (e.g. 10 for 10%). 0 means no GST. Currently only 0 and 10 are used.
+
+gst_inclusive (boolean, not null, default false)  -  display-only flag (added `20260730150000_add_gst_inclusive_to_invoices.sql`). When true, every couple-facing surface renders a "Prices include GST" note under the total: the builder's totals panel, the shared `totals` branding block (public page + Link preview), the PDF, and the fallback card. It NEVER participates in any amount, so subtotal / tax_rate / total and every money path (Stripe charge amounts, payment-stage totals) are unaffected, and `false` renders exactly as before the column existed. Independent of `tax_rate`: setting a rate AND ticking the flag is allowed, and produces a document that adds GST on top while also disclosing inclusive pricing. Carried over automatically when an invoice is built from a GST-inclusive package. Returned by `get_public_invoice`.
 
 notes (text, nullable)  -  payment instructions, bank details, reference number request. Auto-populated from MC's saved bank details when creating a new invoice.
 
@@ -590,7 +587,7 @@ id (uuid, primary key)
 user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
 name (text, not null)
 description (text, nullable)
-subject (text, not null, default '')  -  mustache string, e.g. `Proposal for {{couple.name}}`
+subject (text, not null, default '')  -  mustache string, e.g. `Invoice for {{couple.name}}`
 content (jsonb, not null, default '{}')  -  TipTap JSON body; mention nodes carry a namespaced variable key in `attrs.id` (e.g. `couple.primary_name`, `event.date | friendly`)
 lifecycle_stage (text, nullable, check in: enquiry | quote | booking | planning | wedding_week | follow_up)  -  **LEGACY**: grouping moved to `category_id`; kept for starter provenance, never dropped
 category_id (uuid, nullable, FK email_template_categories.id, **on delete set null**)  -  the user category this template is grouped under
@@ -656,13 +653,13 @@ template path pauses a run on an unresolved variable; see `alerts.md`).
 
 Reusable, per-MC service bundles surfaced on the **Packages** tab of
 `/templates`. A package is a named set of priced line items the MC can
-drop into proposals and invoices.
+drop into invoices.
 
 `packages` columns:
 id (uuid, primary key)
 user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
 name (text, not null)
-description (text, nullable)  -  "what's included" prose shown on the preview and prepended to the applied proposal/invoice notes
+description (text, nullable)  -  "what's included" prose shown on the preview and prepended to the applied invoice notes
 notes (text, nullable)  -  short subtitle shown on the list row
 category_id (uuid, nullable, FK package_categories.id, **on delete set null**)  -  the user category this package is grouped under
 position (integer, not null, default 0)  -  list order (creation order; the Packages list is not drag-reorderable)
@@ -671,7 +668,7 @@ deposit_percent (numeric(5,2), nullable)  -  booking-fee rule (e.g. 30 for "30% 
 gst_inclusive (boolean, not null, default true)  -  whether prices already include GST. Applying an inclusive package turns the builder's GST line off; an exclusive one keeps GST 10% on top
 archived_at (timestamptz, nullable)  -  soft retirement; archived packages keep history but leave the default list and the builders' apply pickers
 weekend_loading_percent (numeric(5,2), nullable)  -  peak-rate loading (e.g. 15 for "Saturday +15%"); applying appends a transparent loading line item the MC deletes off-peak
-is_popular (boolean, not null, default false)  -  marketing flag; snapshots into a proposal option on apply and badges it "Most popular" in the public chooser, but only when the proposal offers >1 option. Added `20260712000000_proposal_popular_flag.sql`
+is_popular (boolean, not null, default false)  -  marketing "most popular" flag on the package. Added `20260712000000_proposal_popular_flag.sql`
 created_at / updated_at (timestamptz)
 
 `package_items` columns:
@@ -679,7 +676,7 @@ id (uuid, primary key)
 package_id (uuid, FK packages.id, on delete cascade)
 user_id (uuid, not null)  -  RLS key (denormalised)
 description (text, not null)
-amount (numeric(10,2), not null)  -  PER-UNIT price (line total = quantity × amount; flattened to "N × description" on apply since proposal/invoice builder items carry no qty)
+amount (numeric(10,2), not null)  -  PER-UNIT price (line total = quantity × amount; flattened to "N × description" on apply since invoice builder items carry no qty)
 quantity (numeric(8,2), not null, default 1.00)
 optional (boolean, not null, default false)  -  an add-on offered alongside the base package; the builders let the MC tick which add-ons to include on apply
 position (integer, not null)
@@ -701,17 +698,10 @@ Indexes: `packages(user_id)`, `packages(category_id)`,
 RLS: base owner policy `user_id = auth.uid()` on all three tables
 (`for all using (...)`, which Postgres reuses as the INSERT WITH CHECK).
 
-Related: `proposal_options.source_package_id` (nullable uuid, FK
-packages.id, on delete **set null**, indexed) records which package a
-proposal option was started from, as provenance for per-package
-conversion stats only; items are still snapshotted, so the FK never
-feeds rendering.
-
 Migrations: `20260618000300_create_packages.sql`; `is_starter` added in
 `20260619000100_add_is_starter_to_templates.sql`; commercial fields
 (deposit/GST/archive/weekend loading) and item `quantity`/`optional`
-added in `20260702000000_packages_v2.sql` (which also added
-`quotes.source_package_id`, since superseded by the proposals model);
+added in `20260702000000_packages_v2.sql`;
 `package_categories` + `packages.category_id` added in
 `20260709130000_package_categories.sql`.
 Starter packages are an opt-in catalog
@@ -719,80 +709,6 @@ Starter packages are an opt-in catalog
 `addStarterPackagesAction` server action; nothing is auto-seeded.
 Pure package money math (line totals, base vs add-on totals, weekend
 loading line) lives in `lib/payments/package-math.ts`.
-
-## proposals / proposal_options / proposal_option_items
-
-The send→accept surface that replaced quotes (full spec:
-`.claude/docs/proposals.md`; the legacy quote tables/RPCs were dropped
-in `20260711000000_drop_quotes_feature.sql`). A proposal offers a
-couple 1–N package options;
-each option snapshots a package's items AND commercial terms at apply
-time.
-
-`proposals` columns:
-id (uuid, primary key)
-user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
-couple_id (uuid, FK couples.id, on delete cascade)
-title (text, not null)
-proposal_number (text, not null)  -  sequential per user via `generate_proposal_number` ("PR-001")
-status (text, not null, default 'draft', check: draft | sent | accepted | declined)  -  "expired" is display-only, derived from expires_at
-notes (text, nullable)
-expires_at (date, nullable)
-share_token (uuid, not null, default gen_random_uuid())
-share_token_enabled (boolean, not null, default true)  -  link is live from creation so the MC can copy/share it out-of-band without emailing (default flipped false→true + all rows back-filled by `20260728000000_proposals_share_token_enabled_by_default`, mirroring quotes/invoices/contracts). The send action still sets it true idempotently.
-accepted_option_id (uuid, nullable, FK proposal_options.id, on delete set null)
-accepted_addon_selection (jsonb, nullable)  -  `{option_item_id: bool}` for the chosen option's add-ons
-accepted_at (timestamptz, nullable)
-email_sent_at (timestamptz, nullable)
-subtotal (numeric(10,2), not null, default 0)  -  denormalised list display: primary option total pre-acceptance, accepted selection total after
-created_at / updated_at (timestamptz; trigger `proposals_set_updated_at`)
-
-`proposal_options` columns:
-id (uuid, primary key)
-proposal_id (uuid, FK proposals.id, on delete cascade)
-user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
-position (integer, not null)
-title (text, not null)  -  pre-filled from the package name, editable
-description (text, nullable)
-source_package_id (uuid, nullable, FK packages.id, on delete set null)  -  provenance only
-deposit_percent (numeric(5,2), nullable) / gst_inclusive (boolean, not null, default true) / weekend_loading_percent (numeric(5,2), nullable)  -  snapshot of the package's commercial terms; feeds invoice generation
-is_popular (boolean, not null, default false)  -  snapshot of the package's "most popular" flag (editable per proposal); badged in the public chooser only when the proposal has >1 option. Returned by get_public_proposal. Added `20260712000000_proposal_popular_flag.sql`
-subtotal (numeric(10,2), not null, default 0)  -  base (non-add-on) items total
-
-`proposal_option_items` columns:
-id (uuid, primary key)
-option_id (uuid, FK proposal_options.id, on delete cascade)
-user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
-description (text, not null)  -  quantities pre-flattened ("2 × Extra hour")
-amount (numeric(10,2), not null)  -  line total
-is_addon (boolean, not null, default false)
-default_included (boolean, not null, default false)  -  MC's pre-tick (only meaningful when is_addon)
-position (integer, not null)
-
-Cross-references: `invoices.proposal_id` and `contracts.proposal_id`
-(both uuid nullable, FK proposals.id on delete set null, indexed) —
-provenance for documents generated from an accepted proposal.
-
-Public RPCs (SECURITY DEFINER, anon): `get_public_proposal(token)`
-(payload + `_user_branding` merge; no user_id/share_token leakage), `_user_branding` also returns `doc_padding` + `proposal_labels` (editable proposal wording) as of `20260713000000_proposal_branding_tokens.sql`,
-`accept_proposal(token, chosen_option_id, addon_selection)` (validates
-the choice against this proposal's own options/add-ons, records the
-selection, recomputes subtotal, advances couple to 'confirmed', creates
-the follow-up task; the accepted_at flip fires
-`tg_proposals_emit_lifecycle` → proposal_accepted event),
-`decline_proposal(token)`. Automation events proposal_sent /
-proposal_accepted / proposal_declined emit from the lifecycle trigger.
-
-Indexes: `proposals(user_id)`, `proposals(couple_id)`,
-`proposals(share_token)`, `proposal_options(proposal_id)`,
-`proposal_options(source_package_id)`,
-`proposal_option_items(option_id)`, `invoices(proposal_id)`,
-`contracts(proposal_id)`.
-
-RLS: base owner policy `user_id = auth.uid()` (USING + WITH CHECK) on
-all three tables; anon access via the RPCs only.
-
-Migration: `20260710000000_add_proposals_feature.sql`.
 
 ## invoice_templates / invoice_template_items (Templates page — Invoices tab)
 
@@ -914,6 +830,12 @@ oauth_connected_at, created_at, updated_at,
 **couple_profile_tabs_config** (jsonb, not null, default
 `{"hidden_tabs":[],"tab_order":[]}`).
 
+**time_categories_seeded** (boolean, not null, default false) marks that
+the six starter time categories have been created for this user. Keying
+off an empty `time_categories` table instead would resurrect them for a
+user who deliberately deleted all six. Migration:
+`20260730120000_create_couple_time_tracking.sql`.
+
 `couple_profile_tabs_config` is the MC's per-user, global-across-couples layout
 for the couple profile tab nav: `hidden_tabs` (tab keys hidden everywhere,
 never includes `overview`) and `tab_order` (ordered tab keys; empty means the
@@ -937,3 +859,89 @@ callback route + the Public Page server actions
 (`app/(dashboard)/settings/public/actions.ts`).
 
 Migration: `20260621000000_create_user_public_settings.sql`.
+
+------------------------------------------------------------------------
+
+## couple_time_entries / time_categories (Couple profile Time tab)
+
+Per-couple work sessions so an MC can see how much time a couple has
+absorbed and charge accordingly. No rates or amounts live here: the
+feature reports hours only.
+
+### couple_time_entries
+
+Columns: id (uuid pk), user_id (uuid, not null, fk auth.users, cascade),
+couple_id (uuid, not null, fk couples, cascade), started_at (timestamptz,
+not null), **ended_at (timestamptz, nullable; null means the timer is
+RUNNING)**, category_id (uuid, nullable, fk time_categories, `on delete
+set null`), note (text, nullable, max 2000 chars), auto_stopped (boolean,
+not null, default false), created_at (timestamptz).
+
+Duration is never stored. It is always `ended_at - started_at`, so
+"editing a duration" moves `ended_at`. A manual back-fill is simply a row
+created with both timestamps.
+
+Constraint `couple_time_entries_ends_after_start`: `ended_at is null or
+ended_at > started_at`.
+
+Indexes:
+- `couple_time_entries_user_couple_started_idx (user_id, couple_id,
+  started_at desc)`: the Time tab read.
+- `couple_time_entries_category_idx (category_id)`: the FK index.
+- **`couple_time_entries_one_running_per_user`: unique on `(user_id)
+  where ended_at is null`.** This makes "one running timer per user" a
+  database invariant: two tabs racing on Start makes the second insert
+  fail loudly instead of silently producing two live timers.
+
+RLS: one `for all` policy. `using (auth.uid() = user_id)`, and
+`with check (auth.uid() = user_id and exists (select 1 from couples c
+where c.id = couple_id and c.user_id = auth.uid()))`. The EXISTS clause
+matters because foreign keys ignore RLS: without it a user could log time
+against another MC's couple id. Proven by
+`tests/integration/couples/time-actions.test.ts`.
+
+`auto_stopped` is set by the 8-hour cap. `getRunningTimerAction` clamps a
+session older than 8h to `started_at + 8h` on read and flags it, so a
+timer left on overnight logs 8h and is visibly marked for correction. No
+cron is involved.
+
+### time_categories
+
+Columns: id (uuid pk), user_id (uuid, not null, fk auth.users, cascade),
+name (text, not null, max 40 chars), position (integer, not null, default 0),
+**color (text, nullable)**, created_at (timestamptz).
+
+Unique index `time_categories_user_lower_name_key (user_id, lower(name))`
+so "Travel" and "travel" cannot both exist and the type-to-create picker
+can resolve a typed name to an existing row.
+
+`color` is a user-chosen uppercase `#RRGGBB`, constrained by
+`time_categories_color_hex` (`color is null or color ~ '^#[0-9A-F]{6}$'`).
+Note this is a **raw hex, not a named palette key** like
+`couple_statuses.color` or `task_groups.color`: categories follow the
+branding model, where the MC picks any colour through the shared
+`ColorPopover`. The original "plain text only" rule was about not adding
+a second *fixed* palette beside the couple statuses; a colour the MC
+chooses is their own vocabulary, and the Time tab's breakdown bar needs
+segments a reader can tell apart.
+
+New categories are assigned the first unused slot of
+`DEFAULT_CATEGORY_COLORS` (`lib/time-tracking/colors.ts`) server-side, so
+a chart is readable before anyone opens a picker. That order is the
+validated categorical order from the dataviz palette and must not be
+re-sorted — adjacent pairs are what clear the colour-blind separation
+floor. Nullable rather than defaulted, because a row written before the
+column existed genuinely has no colour and renders in the neutral fill.
+
+Migration: `20260730140000_time_category_colors.sql`, which also
+back-fills existing rows by position.
+
+Deleting a category keeps its sessions and leaves them uncategorised
+(`on delete set null`). Deleting a label must never destroy tracked time.
+
+Seeded once per user with Meeting / Call / Admin / Travel / Rehearsal /
+Ceremony, gated on `user_public_settings.time_categories_seeded` so a user
+who deletes all six does not get them resurrected.
+
+Written by `app/(dashboard)/couples/time-actions.ts`. Migration:
+`20260730120000_create_couple_time_tracking.sql`.
