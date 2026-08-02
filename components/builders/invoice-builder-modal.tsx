@@ -365,6 +365,7 @@ export function InvoiceBuilderModal({
     invoiceId: invoice?.id ?? null,
     totalCents: Math.round(total * 100),
     issueDate,
+    dueDate: dueDate ?? null,
     initialStages: mapStageRows(invoice?.invoice_payment_stages ?? []),
   })
 
@@ -477,7 +478,10 @@ export function InvoiceBuilderModal({
       const result = await saveInvoiceAction(input);
       if (!result.ok) throw new Error(result.error);
       const newId = result.data.id;
-      await invoiceStages.persist();
+      // Pass the freshly-created id: on a brand-new invoice the hook's own
+      // invoiceId is still null this render, so persist() would otherwise no-op
+      // and the schedule would not be written.
+      await invoiceStages.persist(newId);
       return newId;
     },
     onSuccess: (newId) => {

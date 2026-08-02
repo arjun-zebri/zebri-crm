@@ -48,9 +48,10 @@ export function useInvoiceStages(input: {
   invoiceId: string | null
   totalCents: number
   issueDate: string
+  dueDate: string | null
   initialStages: InvoiceStage[]
 }) {
-  const { invoiceId, totalCents, issueDate, initialStages } = input
+  const { invoiceId, totalCents, issueDate, dueDate, initialStages } = input
   const queryClient = useQueryClient()
 
   // `draft` holds only what the MC edits: labels, amount types, values, dates.
@@ -63,8 +64,8 @@ export function useInvoiceStages(input: {
   const template = useMemo<TemplateStage[]>(() => toTemplateStages(draft), [draft])
 
   const resolved = useMemo(
-    () => resolveStages(template, totalCents, issueDate),
-    [template, totalCents, issueDate],
+    () => resolveStages(template, totalCents, issueDate, dueDate),
+    [template, totalCents, issueDate, dueDate],
   )
 
   const validationError = resolved.ok ? null : messageFor(resolved.errors[0]?.code ?? '')
@@ -97,7 +98,7 @@ export function useInvoiceStages(input: {
    */
   const applyTemplate = useCallback(
     (stagesTemplate: TemplateStage[]) => {
-      const next = resolveStages(stagesTemplate, totalCents, issueDate)
+      const next = resolveStages(stagesTemplate, totalCents, issueDate, dueDate)
       if (!next.ok) return
       setDraft(
         next.stages.map((s) => ({
@@ -107,7 +108,7 @@ export function useInvoiceStages(input: {
         })),
       )
     },
-    [totalCents, issueDate],
+    [totalCents, issueDate, dueDate],
   )
 
   const changeStages = useCallback((next: InvoiceStage[]) => {
@@ -140,12 +141,21 @@ export function useInvoiceStages(input: {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['payment-schedules'] }),
   })
 
-  /** Persist the current stages. Called by the modal's Save handler. */
-  const persist = useCallback(async () => {
-    if (!invoiceId) return
-    if (!resolved.ok) throw new Error(validationError ?? 'Schedule is not valid')
-    await replaceInvoiceStages({ invoiceId, stages: resolved.stages })
-  }, [invoiceId, resolved, validationError])
+  /**
+   * Persist the current stages. Called by the invoice's Save handler, which
+   * passes the freshly-created invoice id for a brand-new invoice: the hook's
+   * own `invoiceId` is still null on that first save, so without the override
+   * a new invoice's schedule would silently never be written.
+   */
+  const persist = useCallback(
+    async (overrideId?: string) => {
+      const id = overrideId ?? invoiceId
+      if (!id) return
+      if (!resolved.ok) throw new Error(validationError ?? 'Schedule is not valid')
+      await replaceInvoiceStages({ invoiceId: id, stages: resolved.stages })
+    },
+    [invoiceId, resolved, validationError],
+  )
 
   return {
     stages,
