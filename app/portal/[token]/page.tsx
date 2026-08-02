@@ -269,6 +269,16 @@ export default async function PortalPage({
     ? { heading: cpBlock.headingStyle, body: cpBlock.bodyStyle }
     : undefined
 
+  // Portal-specific background: the couplePortal block's colour (if set)
+  // overrides the brand Surface colour for the WHOLE portal render, so it
+  // reaches the page background AND every card (all of which read
+  // `surface_color`) — a portal-only background, distinct from the other
+  // documents. Unset → the brand Surface colour, unchanged.
+  const portalBg = cpBlock?.bgColor ?? pageBg
+  const portalBranding: PublicBranding = cpBlock?.bgColor
+    ? { ...branding, surface_color: cpBlock.bgColor }
+    : branding
+
   return (
     <div
       className="min-h-screen"
@@ -368,28 +378,34 @@ export default async function PortalPage({
           </>
         )}
 
-        {/* Hero */}
-        <div
-          className={`${docX} pt-8 pb-8 border-b`}
-          style={{ borderColor: branding.border_color, borderBottomWidth: 1 }}
-        >
-          <h1 className="mb-1" style={heroTitleStyle}>
-            {portal.couple_name}
-          </h1>
-          <p className="mt-3" style={heroIntroStyle}>
-            Fill in your details below. Everything saves automatically. You can come back anytime.
-          </p>
-        </div>
+        {/* The portal's background colour (from the couplePortal block) wraps
+            ONLY the portal itself — the hero + dashboard + its cards — not the
+            page or the MC's chrome blocks above/below. Unset → transparent, so
+            it shows the page background exactly as before. */}
+        <div style={cpBlock?.bgColor ? { background: portalBg } : undefined}>
+          {/* Hero */}
+          <div
+            className={`${docX} pt-8 pb-8 border-b`}
+            style={{ borderColor: branding.border_color, borderBottomWidth: 1 }}
+          >
+            <h1 className="mb-1" style={heroTitleStyle}>
+              {portal.couple_name}
+            </h1>
+            <p className="mt-3" style={heroIntroStyle}>
+              Fill in your details below. Everything saves automatically. You can come back anytime.
+            </p>
+          </div>
 
-        {/* Portal sections - same horizontal padding as the blocks/hero so the
-            Overview nav lines up with the logo, couple name and intro. */}
-        <div className={docX}>
-          <PortalShell
-            token={token}
-            initialData={portal}
-            branding={branding}
-            {...(portalStyles ? { styles: portalStyles } : {})}
-          />
+          {/* Portal sections - same horizontal padding as the blocks/hero so the
+              Overview nav lines up with the logo, couple name and intro. */}
+          <div className={docX}>
+            <PortalShell
+              token={token}
+              initialData={portal}
+              branding={portalBranding}
+              {...(portalStyles ? { styles: portalStyles } : {})}
+            />
+          </div>
         </div>
 
         {/* Blocks the MC placed below the couple portal in the editor. */}

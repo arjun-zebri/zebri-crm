@@ -63,7 +63,7 @@ describe('repairAllSurfaces', () => {
       contract: [{ id: 'c', type: 'contractBody', locked: true }],
       portal: [{ id: 'pt', type: 'couplePortal', locked: true }],
       vendorTimeline: [{ id: 'vt', type: 'vendorTimelineBody', locked: true }],
-      questionnaire: [{ id: 'q', type: 'questionnaireBody', locked: true }],
+      questionnaire: [{ id: 'q', type: 'questionnaireAllOnePage', locked: true }],
     }
     const result = repairAllSurfaces(input)
     expect(Object.keys(result).sort()).toEqual([

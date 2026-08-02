@@ -123,7 +123,8 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'contractBody': return null
     case 'contractSign': return null
     case 'vendorTimelineBody': return null
-    case 'questionnaireBody': return null
+    case 'questionnaireOneAtATime': return null
+    case 'questionnaireAllOnePage': return null
     case 'image': return <RenderImage block={block} branding={branding} />
   }
 }

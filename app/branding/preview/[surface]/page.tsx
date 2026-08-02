@@ -12,19 +12,24 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 import { CouplePortalSample } from '@/app/(dashboard)/branding/blocks/couple-portal-sample'
 import { SAMPLE_RUN_SHEET_EVENT, SAMPLE_RUN_SHEET_ITEMS } from '@/app/(dashboard)/branding/blocks/sample-run-sheet'
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
-import type { Block, ContractBodyBlock, ContractSignBlock, CouplePortalBlock, VendorTimelineBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
+import type { Block, ContractBodyBlock, ContractSignBlock, CouplePortalBlock, VendorTimelineBodyBlock, QuestionnaireOneAtATimeBlock, QuestionnaireAllOnePageBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
+import { ClassicForm } from '@/components/questionnaires/classic-form'
+import { themeFromBranding } from '@/components/questionnaires/theme'
+import { TypeformFlow } from '@/components/questionnaires/typeform-flow'
+import { blockOuterStyle, hasOuterStyle } from '@/lib/branding/block-outer-style'
 import { getTextColor } from '@/lib/branding/contrast'
 import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
 import { googleFontsHref } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead, type PublicBranding } from '@/lib/branding/public-surface'
 import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
+import type { Answer, Question, Responses } from '@/lib/questionnaires/question-schema'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 
@@ -380,6 +385,11 @@ function PortalPreview({
   const cpStyles = cpBlock
     ? { title: cpBlock.titleStyle, subtitle: cpBlock.subtitleStyle, heading: cpBlock.headingStyle, body: cpBlock.bodyStyle }
     : undefined
+  // Portal-specific background: the block's colour overrides the brand Surface
+  // colour for the whole portal (page + cards), mirroring the sent portal.
+  const portalBranding: PublicBranding = cpBlock?.bgColor
+    ? { ...branding, surface_color: cpBlock.bgColor }
+    : branding
 
   return (
     <div style={pageStyle}>
@@ -387,8 +397,11 @@ function PortalPreview({
         <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
           {markerIdx >= 0 ? (
-            <div className="pt-6">
-              <CouplePortalSample branding={branding} {...(cpStyles ? { styles: cpStyles } : {})} />
+            /* The portal background colour wraps ONLY the portal (hero +
+               dashboard + cards), not the surrounding card/chrome — mirroring
+               the sent portal. Unset → transparent, unchanged. */
+            <div className="pt-6" style={cpBlock?.bgColor ? { background: portalBranding.surface_color } : undefined}>
+              <CouplePortalSample branding={portalBranding} {...(cpStyles ? { styles: cpStyles } : {})} />
             </div>
           ) : null}
           {postBlocks.length > 0 ? (
@@ -454,8 +467,72 @@ function VendorTimelinePreview({
   )
 }
 
+/** Sample questions for the questionnaire preview (never sent; the couple's
+ *  real questions replace them on the live fill page). */
+const SAMPLE_QUESTIONS: Question[] = [
+  { id: 'q1', type: 'date', label: 'What is the date of your wedding?', required: true },
+  { id: 'q2', type: 'number', label: 'How many guests are you expecting?', required: false },
+  { id: 'q3', type: 'single_choice', label: 'Which package are you interested in?', options: ['Essential', 'Premium', 'Deluxe'], required: false },
+]
+
 /**
- * Questionnaire surface preview with sample data.
+ * Interactive sample of the couple-facing questionnaire, framed and styled by
+ * the form-style block exactly as the live fill page does: the block's outer
+ * style wraps the questions, and its question / answer typography + button
+ * colour flow into the shared renderer. Answers live in local state; nothing is
+ * sent (mode="preview").
+ */
+function QuestionnaireSample({
+  branding,
+  block,
+}: {
+  branding: PublicBranding
+  block?: QuestionnaireOneAtATimeBlock | QuestionnaireAllOnePageBlock
+}) {
+  const [responses, setResponses] = useState<Responses>({})
+  const theme = themeFromBranding(branding)
+  const Renderer = block?.type === 'questionnaireOneAtATime' ? TypeformFlow : ClassicForm
+
+  const questionCss = block?.questionStyle
+    ? resolveTextStyle(block.questionStyle, roleDefaults(branding, 'sectionHeading'))
+    : undefined
+  const answerCss = block?.answerStyle
+    ? resolveTextStyle(block.answerStyle, roleDefaults(branding, 'body'))
+    : undefined
+  const buttonColor = block?.buttonColor
+  const frameStyle = block && hasOuterStyle(block)
+    ? blockOuterStyle(block, { cornerRadius: branding.corner_radius })
+    : null
+
+  const inner = (
+    <Renderer
+      questions={SAMPLE_QUESTIONS}
+      responses={responses}
+      onAnswer={(id: string, v: Answer) => setResponses((r) => ({ ...r, [id]: v }))}
+      theme={theme}
+      mode="preview"
+      branding={branding}
+      {...(questionCss ? { questionCss } : {})}
+      {...(answerCss ? { answerCss } : {})}
+      {...(buttonColor ? { buttonColor } : {})}
+    />
+  )
+
+  if (!frameStyle) return inner
+  const clip = frameStyle.borderRadius !== undefined || frameStyle.borderWidth
+  return (
+    <div style={frameStyle} className={clip ? 'overflow-hidden' : ''}>
+      {inner}
+    </div>
+  )
+}
+
+/**
+ * Questionnaire surface preview with sample data. The form style is a
+ * render-split marker (null in the generic renderer): split at it and inject a
+ * live sample form, mirroring the contract / portal / run-sheet previews. A
+ * missing marker (an invalid, warned-about state) falls back to the classic
+ * form so the preview still shows something, matching the live fill page.
  */
 function QuestionnairePreview({
   branding,
@@ -475,16 +552,26 @@ function QuestionnairePreview({
     taxRate: 0,
   }
 
+  const markerIdx = blocks.findIndex(
+    (b) => b.type === 'questionnaireOneAtATime' || b.type === 'questionnaireAllOnePage',
+  )
+  const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks
+  const postBlocks = markerIdx >= 0 ? blocks.slice(markerIdx + 1) : []
+  const formBlock = markerIdx >= 0
+    ? (blocks[markerIdx] as QuestionnaireOneAtATimeBlock | QuestionnaireAllOnePageBlock)
+    : undefined
+
   return (
     <div style={pageStyle}>
       <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
         <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
-          <PublicBlockRenderer
-            blocks={blocks}
-            branding={branding}
-            doc={sampleDoc}
-            hideAction
-          />
+          <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
+          <div className="pt-6">
+            <QuestionnaireSample branding={branding} {...(formBlock ? { block: formBlock } : {})} />
+          </div>
+          {postBlocks.length > 0 ? (
+            <PublicBlockRenderer blocks={postBlocks} branding={branding} doc={sampleDoc} hideAction />
+          ) : null}
         </div>
       </div>
     </div>

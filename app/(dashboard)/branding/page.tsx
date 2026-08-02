@@ -306,6 +306,10 @@ export default function BrandingPage() {
         onboarded_at: new Date().toISOString(),
       })
       localStorage.setItem(ONBOARDED_CACHE_KEY, 'true')
+      // Clear the dev-only force flag so Skip/Finish actually dismisses the
+      // modal. Without this, a wizard opened via ?onboarding=1 keeps
+      // `showOnboarding` pinned true and the modal never closes.
+      setForceOnboarding(false)
       // Remount the editor so it picks up the wizard's choices immediately.
       setDataVersion((v) => v + 1)
     } catch (err) {

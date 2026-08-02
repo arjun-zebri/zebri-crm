@@ -94,8 +94,13 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
       return { id: newId('cs'), type: 'contractSign', locked: true }
     case 'vendorTimelineBody':
       return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
-    case 'questionnaireBody':
-      return { id: newId('qb'), type: 'questionnaireBody', locked: true, mode: 'form' }
+    case 'questionnaireOneAtATime':
+      // Locked so it can't be duplicated; still deletable + re-addable as a
+      // clearable marker (the MC swaps form styles by deleting one, adding the
+      // other). See policy.CLEARABLE_MARKERS.
+      return { id: newId('q1'), type: 'questionnaireOneAtATime', locked: true }
+    case 'questionnaireAllOnePage':
+      return { id: newId('qa'), type: 'questionnaireAllOnePage', locked: true }
     case 'image':
       return { id: newId('im'), type: 'image', fit: 'cover', heightPx: 160 }
     case 'spacer':
@@ -153,9 +158,12 @@ export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'v
     ]
   }
   if (surface === 'questionnaire') {
+    // Seed the "All on one page" form so a new questionnaire starts in a valid
+    // (exactly-one) state. This maps to the old default presentation (mode:
+    // 'form'). The MC can swap to "One at a time" from the block palette.
     return [
       { id: newId('bn'), type: 'businessName' },
-      blockTemplate('questionnaireBody'),
+      blockTemplate('questionnaireAllOnePage'),
     ]
   }
   // contract — minimal chrome scaffold: business identity, a contract
@@ -201,6 +209,14 @@ export function migrateBlocks(blocks: unknown, surface?: 'invoice' | 'contract' 
         const { style: _style, ...rest } = b as Record<string, unknown>
         void _style
         return stripDashes({ ...(rest as object), type: 'text' } as unknown as Block)
+      }
+      if (b.type === 'questionnaireBody') {
+        // The single questionnaireBody marker (with a `mode` toggle) is replaced
+        // by two form-style marker blocks. Map by the old mode, preserving the
+        // block id + all frame styling; drop the now-meaningless `mode` field.
+        const { mode, ...rest } = b as Record<string, unknown>
+        const type = mode === 'oneAtATime' ? 'questionnaireOneAtATime' : 'questionnaireAllOnePage'
+        return stripDashes({ ...(rest as object), type } as unknown as Block)
       }
       if (b.type === 'lineItems' && 'showAddPlaceholder' in b) {
         const { showAddPlaceholder: _drop, ...rest } = b as Record<string, unknown>

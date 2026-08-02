@@ -11,7 +11,7 @@ import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 import { BlockToolbar } from './block-toolbar'
-import { isDeletable, isMarker } from './policy'
+import { isDeletable, isMarker, stylesWrapMarker } from './policy'
 import type { Block } from './types'
 
 interface BlockFrameProps {
@@ -160,8 +160,10 @@ export function BlockFrame({
   // so a per-block background / border / radius does nothing there and would
   // only tint the editor preview (the misleading white-cards-on-colour case).
   // Strip those overrides for markers — their surface comes from the brand
-  // Surface colour. Typography overrides still apply.
-  const isMarkerBlock = isMarker(block.type)
+  // Surface colour. Typography overrides still apply. Exception: the
+  // style-wrapping markers (questionnaire form blocks) keep their frame, which
+  // wraps the questions area exactly like a normal block.
+  const isMarkerBlock = isMarker(block.type) && !stylesWrapMarker(block.type)
   const borderWidth = isMarkerBlock ? 0 : (block.borderWidth ?? 0)
   const borderColor = block.borderColor || '#E5E7EB'
   const blockRadius = isMarkerBlock ? undefined : block.blockRadius

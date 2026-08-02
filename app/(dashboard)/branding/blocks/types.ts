@@ -43,7 +43,8 @@ export type BlockType =
   | 'contractBody'
   | 'contractSign'
   | 'vendorTimelineBody'
-  | 'questionnaireBody'
+  | 'questionnaireOneAtATime'
+  | 'questionnaireAllOnePage'
   | 'image'
   | 'spacer'
 
@@ -463,18 +464,48 @@ export interface VendorTimelineBodyBlock extends BaseBlock {
 }
 
 /**
- * Marker block represents the position where the questionnaire steps
- * (fixed content) will appear. The MC can drag chrome blocks above and
- * below it in the branding editor; the questionnaire itself is never
- * editable on the branding surface. Same model as `couplePortal`,
- * `paymentSchedule`, and `contractBody`.
+ * Shared shape for the two questionnaire form-style marker blocks. The questions
+ * themselves are fixed (couples answer them; the MC never edits them here). The
+ * MC controls the block frame (background, padding, border, radius — via
+ * {@link BaseBlock}) plus the questions' typography, which is applied on both the
+ * editor preview and the live fill page.
+ *
+ * Every typography field is optional and only carries the properties the MC
+ * changed; each falls back to the global questionnaire theme role, so an unstyled
+ * block renders exactly like a questionnaire sent before this feature existed.
  */
-export interface QuestionnaireBodyBlock extends BaseBlock {
-  type: 'questionnaireBody'
-  /** Presentation mode for the couple-facing questionnaire. 'form' shows all
-   *  questions on one page; 'oneAtATime' is Typeform-style one-per-step.
-   *  Defaults to 'form' when absent. */
-  mode?: 'form' | 'oneAtATime'
+interface QuestionnaireFormBlockBase extends BaseBlock {
+  /** Question heading typography (the per-question prompt). Falls back to the
+   *  section-heading role. */
+  questionStyle?: TextStyle
+  /** Answer typography (input text, choice/option labels). Falls back to the
+   *  body role. */
+  answerStyle?: TextStyle
+  /** Background colour of the Submit / Next / Start button. Absent ⇒ the brand
+   *  colour. */
+  buttonColor?: string
+}
+
+/**
+ * Marker block — the position where the couple-facing questionnaire renders as
+ * a Typeform-style one-question-at-a-time flow.
+ *
+ * The form style is chosen by which of the two questionnaire blocks is present:
+ * this one, or {@link QuestionnaireAllOnePageBlock}. Exactly one should exist —
+ * the readiness engine warns on none or both (see lib/branding/readiness.ts).
+ */
+export interface QuestionnaireOneAtATimeBlock extends QuestionnaireFormBlockBase {
+  type: 'questionnaireOneAtATime'
+}
+
+/**
+ * Marker block — the position where the couple-facing questionnaire renders as
+ * a classic form (all questions on one page). Sibling of
+ * {@link QuestionnaireOneAtATimeBlock}; see it for the shared model and the
+ * exactly-one selection rule.
+ */
+export interface QuestionnaireAllOnePageBlock extends QuestionnaireFormBlockBase {
+  type: 'questionnaireAllOnePage'
 }
 
 export type Block =
@@ -494,7 +525,8 @@ export type Block =
   | ContractBodyBlock
   | ContractSignBlock
   | VendorTimelineBodyBlock
-  | QuestionnaireBodyBlock
+  | QuestionnaireOneAtATimeBlock
+  | QuestionnaireAllOnePageBlock
   | ImageBlock
   | SpacerBlock
 
@@ -517,7 +549,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   contractBody: 'Contract body',
   contractSign: 'Sign contract',
   vendorTimelineBody: 'Run sheet',
-  questionnaireBody: 'Questionnaire',
+  questionnaireOneAtATime: 'One at a time',
+  questionnaireAllOnePage: 'All on one page',
   image: 'Image',
   spacer: 'Spacer',
 }
@@ -559,7 +592,8 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   contractBody: 'The contract body (fixed, edited per couple)',
   contractSign: 'Signature + sign / decline form (fixed)',
   vendorTimelineBody: 'The vendor run sheet (live timeline data)',
-  questionnaireBody: 'The questionnaire steps (fixed)',
+  questionnaireOneAtATime: 'Questions one at a time (Typeform-style)',
+  questionnaireAllOnePage: 'All questions on one page',
   image: 'An uploaded image',
   spacer: 'Adjustable vertical gap',
 }

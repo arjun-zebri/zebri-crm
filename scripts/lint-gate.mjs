@@ -196,7 +196,13 @@ const ERROR_BUDGET = 54;
 // Run sheet body typography (2026-08-02): VendorTimeline gained a colour-
 // preserving import from the branding blocks module; running eslint --fix on the
 // new imports netted out one import-order warning (257 -> 256). Locking in.
-const WARNING_BUDGET = 256;
+// Questionnaire form-style blocks (2026-08-02): replaced the single
+// questionnaireBody marker + its mode toggle with two stylable form blocks
+// (One at a time / All on one page), plus question/answer/button typography
+// threaded through the fill renderers and both preview surfaces. Deleting the
+// toggle + "fixed" preview note and tightening imports netted out three
+// warnings (256 -> 253). Locking in.
+const WARNING_BUDGET = 253;
 
 function runEslintJson() {
   try {

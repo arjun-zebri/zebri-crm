@@ -42,9 +42,11 @@ describe('blocks-by-surface', () => {
     expect(paletteGroupsForSurface('portal')[1]!.types).toContain('couplePortal')
   })
 
-  it('fixed-singleton markers never enter the palette', () => {
-    // The questionnaire body is the last fixed singleton (its surface is nothing
-    // without it), so it never appears in the "add block" palette.
-    expect(paletteGroupsForSurface('questionnaire')[1]!.types).not.toContain('questionnaireBody')
+  it('questionnaire palette lists both clearable form-style blocks', () => {
+    // The form style is chosen by adding one of these two clearable markers, so
+    // both stay listed permanently; addBlock guards against duplicates.
+    const questionnaire = paletteGroupsForSurface('questionnaire')[1]!.types
+    expect(questionnaire).toContain('questionnaireOneAtATime')
+    expect(questionnaire).toContain('questionnaireAllOnePage')
   })
 })

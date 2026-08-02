@@ -42,7 +42,7 @@ import {
   RenderLineItems,
   RenderPaymentDetails,
   RenderPaymentSchedule,
-  RenderQuestionnaireBody,
+  RenderQuestionnairePreview,
   RenderTitle,
   RenderTotals,
   RenderVendorTimelineBody,
@@ -223,33 +223,11 @@ export function BlockRenderer({
               <div aria-hidden className="absolute inset-x-0 -top-4 h-8" />
             </div>
             {blocks.map((block) => {
-              // The questionnaire marker stays fixed (non-selectable): its
-              // surface is nothing but that one body, so there's nothing to
-              // arrange around it. The contract body/sign, the run sheet body,
-              // and the couple portal body are the exceptions: they flow through
-              // the normal BlockFrame path below so the MC can select them and
-              // reach the shared style toolbar (still locked, so duplicate stays
-              // disabled).
-              if (block.type === 'questionnaireBody') {
-                const fixedLabel = 'Questionnaire (fixed)';
-                return (
-                  <div key={block.id} aria-label={fixedLabel} className="group relative">
-                    {renderBlock(block, state, updateBlock, {}, surface)}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        requestAddAfter(block.id)
-                      }}
-                      aria-label="Add block below"
-                      title="Add block below"
-                      className="absolute left-1/2 -translate-x-1/2 -bottom-3 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 transition cursor-pointer"
-                    >
-                      <Plus size={12} strokeWidth={2} />
-                    </button>
-                  </div>
-                )
-              }
+              // Every block (including the questionnaire form-style markers)
+              // flows through the normal BlockFrame path so the MC can select
+              // it and reach the shared style toolbar. The form blocks are
+              // locked, so duplicate stays disabled, but they remain deletable +
+              // re-addable as clearable markers (swapping the form style).
               const selected = primarySelectedId === block.id
               const multi = !selected && selectedBlockIds.includes(block.id)
               return (
@@ -487,8 +465,9 @@ function renderBlock(
       return <RenderContractSign state={state} block={block} />
     case 'vendorTimelineBody':
       return <RenderVendorTimelineBody state={state} block={block} />
-    case 'questionnaireBody':
-      return <RenderQuestionnaireBody block={block} state={state} updateBlock={updateBlock} />
+    case 'questionnaireOneAtATime':
+    case 'questionnaireAllOnePage':
+      return <RenderQuestionnairePreview block={block} state={state} />
     case 'image':
       return (
         <RenderImage

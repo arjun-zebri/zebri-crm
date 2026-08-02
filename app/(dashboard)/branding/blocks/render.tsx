@@ -29,7 +29,7 @@ import { InlineText } from './inline-text'
 import { RichText } from './rich-text/rich-text'
 import { SAMPLE_DOC_BY_SURFACE } from './sample-doc'
 import { SAMPLE_RUN_SHEET_EVENT, SAMPLE_RUN_SHEET_ITEMS } from './sample-run-sheet'
-import { resolveTextStyle } from './text-style'
+import { resolveTextStyle, caseText, type TextStyleDefaults } from './text-style'
 import type {
   Block,
   HeaderBannerBlock,
@@ -40,7 +40,8 @@ import type {
   PaymentDetailsBlock,
   ActionBlock,
   ImageBlock,
-  QuestionnaireBodyBlock,
+  QuestionnaireOneAtATimeBlock,
+  QuestionnaireAllOnePageBlock,
   PaymentScheduleBlock,
   ContractBodyBlock,
   ContractSignBlock,
@@ -871,9 +872,14 @@ export function RenderPaymentDetails({ block, state, surface, updateBlock }: Ren
 export function RenderCouplePortal({ state, block }: { state: BrandPreviewState; block: CouplePortalBlock }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
-  const branding = publicBrandingFromEditorState(state)
+  const baseBranding = publicBrandingFromEditorState(state)
+  // Portal-specific background: the block's colour overrides the brand Surface
+  // colour for the whole portal (page + cards), mirroring the sent portal.
+  const branding = block.bgColor
+    ? { ...baseBranding, surface_color: block.bgColor }
+    : baseBranding
   return (
-    <div className="border-t border-gray-100">
+    <div className="border-t border-gray-100" style={{ backgroundColor: branding.surface_color }}>
       {/* BlockFrame supplies the docX inset; only vertical rhythm here. */}
       <div className={pad.blockY}>
         <p
@@ -1166,125 +1172,104 @@ export function RenderVendorTimelineBody({ state, block }: { state: BrandPreview
 }
 
 /**
- * Editor wrapper for questionnaireBody block. Shows a preview of the
- * questionnaire in either form or one-at-a-time mode (persisted on the block).
- * The mode toggle writes to the block, not preview state.
+ * Editor preview for the two questionnaire form-style marker blocks
+ * ({@link QuestionnaireOneAtATimeBlock} / {@link QuestionnaireAllOnePageBlock}).
+ * The presentation is fixed by the block type — one-at-a-time vs all-on-one-page
+ * — so there is no toggle; the MC swaps styles by adding the other block.
  *
- * Renders with a dashed border + muted "Fixed steps" badge so it is
- * visually unambiguous this block is not editable on the branding surface.
- * The sample renders in form or oneAtATime mode based on the block's mode field.
+ * Renders the sample questions inside a dashed outline so it reads as fixed,
+ * non-editable content. The block's own frame styling (background, padding,
+ * border, radius) is applied by BlockFrame around this preview, matching how
+ * the questions area is framed on the public fill page.
  */
-export function RenderQuestionnaireBody({
+export function RenderQuestionnairePreview({
   block,
   state,
-  updateBlock,
-}: RenderProps<QuestionnaireBodyBlock> & {
-  updateBlock: <X extends Block>(id: string, patch: Partial<X>) => void
+}: {
+  block: QuestionnaireOneAtATimeBlock | QuestionnaireAllOnePageBlock
+  state: BrandPreviewState
 }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
-  const text = state.textColor || '#111827'
-  const surface = state.surfaceColor || '#FFFFFF'
   const radius = state.cornerRadius || 16
   const brand = state.brandColor || '#A7F3D0'
-  const mode = block.mode ?? 'form'
+  const mode = block.type === 'questionnaireOneAtATime' ? 'oneAtATime' : 'form'
+  const branding = publicBrandingFromEditorState(state)
+  const buttonColor = block.buttonColor ?? brand
+
+  // Question + answer typography resolve exactly as on the public fill page:
+  // block override layered over the section-heading / body theme roles. Clicking
+  // either in the preview targets it for the toolbar (data-subtarget).
+  const questionDefaults: TextStyleDefaults = { ...roleDefaults(branding, 'sectionHeading'), align: 'left' }
+  const answerDefaults: TextStyleDefaults = { ...roleDefaults(branding, 'body'), align: 'left' }
+  const qCss = resolveTextStyle(block.questionStyle, questionDefaults)
+  const aCss = resolveTextStyle(block.answerStyle, answerDefaults)
+  const inputStyle = { borderColor: muted + '40', borderRadius: radius, backgroundColor: '#fafafa', ...aCss }
+
+  const sampleButton = (label: string) => (
+    <button
+      type="button"
+      className="mt-2 font-medium"
+      style={{ background: buttonColor, color: getTextColor(buttonColor), borderRadius: radius, padding: '0.625rem 1.5rem' }}
+    >
+      {label}
+    </button>
+  )
 
   return (
-    <div className="border-t border-gray-100">
-      <div className={pad.blockY}>
-        <div
-          className="rounded-xl border-2 border-dashed p-5"
-          style={{
-            borderColor: muted + '60',
-            backgroundColor: surface,
-          }}
-        >
+    <div className={pad.blockY}>
+      {/* No inner box/border: the block frame (BlockFrame) is the styleable
+          surface, so its background/padding/border/radius wrap this content
+          directly, exactly like every other block. */}
+      <div className="opacity-90">
           <div className="flex items-center justify-between mb-4">
             <p
-              className="text-xs font-medium uppercase tracking-wider"
+              className="text-[10px] font-medium uppercase tracking-wider"
               style={{ color: muted }}
             >
-              Questionnaire
+              Sample · your live questions appear here
             </p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
-                Preview
-              </span>
-              <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
-                {(['form', 'oneAtATime'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      updateBlock<QuestionnaireBodyBlock>(block.id, { mode: m })
-                    }}
-                    className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition cursor-pointer ${
-                      mode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    {m === 'form' ? 'Form' : 'One at a time'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+              {mode === 'oneAtATime' ? 'One at a time' : 'All on one page'}
+            </span>
           </div>
 
           {/* Form mode: two stacked labelled inputs. */}
           {mode === 'form' && (
-            <div className="space-y-4 max-w-prose opacity-60 select-none pointer-events-none">
-              <div>
-                <label className="text-sm font-medium mb-2 block" style={{ color: text }}>
-                  What is the date of your wedding?
-                </label>
-                <input
-                  type="text"
-                  placeholder="DD/MM/YYYY"
-                  disabled
-                  className="w-full px-4 py-3 border text-sm"
-                  style={{
-                    borderColor: muted + '40',
-                    borderRadius: radius,
-                    backgroundColor: '#fafafa',
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block" style={{ color: text }}>
-                  How many guests are you expecting?
-                </label>
-                <input
-                  type="text"
-                  placeholder="Type your answer…"
-                  disabled
-                  className="w-full px-4 py-3 border text-sm"
-                  style={{
-                    borderColor: muted + '40',
-                    borderRadius: radius,
-                    backgroundColor: '#fafafa',
-                  }}
-                />
-              </div>
+            <div className="space-y-4 max-w-prose">
+              {['What is the date of your wedding?', 'How many guests are you expecting?'].map((q, i) => (
+                <div key={q}>
+                  <label data-subtarget="question" className="mb-2 block cursor-pointer" style={qCss}>
+                    {caseText(q, block.questionStyle, questionDefaults)}
+                  </label>
+                  <input
+                    data-subtarget="answer"
+                    type="text"
+                    placeholder={i === 0 ? 'DD/MM/YYYY' : 'Type your answer…'}
+                    readOnly
+                    className="w-full px-4 py-3 border cursor-pointer"
+                    style={inputStyle}
+                  />
+                </div>
+              ))}
+              {sampleButton('Submit')}
             </div>
           )}
 
           {/* One at a time mode: one large question + progress bar. */}
           {mode === 'oneAtATime' && (
-            <div className="space-y-6 max-w-prose opacity-60 select-none pointer-events-none">
+            <div className="space-y-6 max-w-prose">
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold" style={{ color: text }}>
-                  What is the date of your wedding?
+                <h2 data-subtarget="question" className="cursor-pointer" style={qCss}>
+                  {caseText('What is the date of your wedding?', block.questionStyle, questionDefaults)}
                 </h2>
                 <input
+                  data-subtarget="answer"
                   type="text"
                   placeholder="DD/MM/YYYY"
-                  disabled
-                  className="w-full px-4 py-3 border text-lg"
-                  style={{
-                    borderColor: brand + '40',
-                    borderRadius: radius,
-                    backgroundColor: '#fafafa',
-                  }}
+                  readOnly
+                  className="w-full px-4 py-3 border cursor-pointer"
+                  style={inputStyle}
                 />
               </div>
 
@@ -1303,15 +1288,9 @@ export function RenderQuestionnaireBody({
                   Question 1 of 3
                 </p>
               </div>
+              {sampleButton('Next')}
             </div>
           )}
-
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
-            <p className="text-xs" style={{ color: muted }}>
-              The questionnaire structure is fixed and cannot be edited here. You can drag other blocks above or below this slot to add custom intros or additional sections.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )

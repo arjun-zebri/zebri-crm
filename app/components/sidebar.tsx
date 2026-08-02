@@ -178,8 +178,11 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                 paint-hint cache and force-opens the wizard via ?onboarding=1.
                 Never ships to production: the NODE_ENV check strips it from
                 the build. Remove with the branding page's forceOnboarding
-                branch once onboarding QA has a permanent home. */}
-            {process.env.NODE_ENV === "development" && (
+                branch once onboarding QA has a permanent home.
+
+                HIDDEN: flip the `false &&` guard back to
+                `process.env.NODE_ENV === "development" &&` to restore this. */}
+            {false && process.env.NODE_ENV === "development" && (
               <button
                 type="button"
                 onClick={() => {

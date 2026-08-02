@@ -1,7 +1,7 @@
 /**
- * Questionnaire branding chrome logic: splitting blocks around the
- * questionnaireBody marker and deciding whether to show a welcome screen
- * in typeform mode.
+ * Questionnaire branding chrome logic: splitting blocks around the form-style
+ * marker (One at a time / All on one page) and deciding whether to show a
+ * welcome screen in one-at-a-time mode.
  *
  * @module lib/questionnaires/branding-chrome
  */
@@ -29,7 +29,7 @@ export interface QuestionnaireChrome {
 }
 
 /**
- * Splits a questionnaire's branding blocks around the `questionnaireBody` marker
+ * Splits a questionnaire's branding blocks around the form-style marker
  * and decides whether to show a welcome screen in one-at-a-time mode.
  *
  * Back-compat: if blocks is empty or contains only the marker, this returns
@@ -48,8 +48,12 @@ export interface QuestionnaireChrome {
  * @returns Chrome split and welcome-screen decision.
  */
 export function questionnaireChrome(blocks: Block[], mode: 'oneAtATime' | 'form'): QuestionnaireChrome {
-  // Find the marker.
-  const markerIdx = blocks.findIndex((b) => b.type === 'questionnaireBody')
+  // Find the marker. The form style is one of two marker blocks; if both are
+  // present (an invalid, warned-about state), split at the first one — the same
+  // first-in-tree tiebreak the page uses to pick the active renderer.
+  const markerIdx = blocks.findIndex(
+    (b) => b.type === 'questionnaireOneAtATime' || b.type === 'questionnaireAllOnePage',
+  )
 
   // Split blocks around the marker.
   const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks

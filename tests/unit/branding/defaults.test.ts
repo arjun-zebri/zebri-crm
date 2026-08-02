@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { defaultBlocksFor, blockTemplate } from '@/app/(dashboard)/branding/blocks/defaults'
+import { defaultBlocksFor, blockTemplate, migrateBlocks } from '@/app/(dashboard)/branding/blocks/defaults'
 
 const types = (bs: { type: string }[]) => bs.map((b) => b.type)
 
@@ -13,9 +13,13 @@ describe('defaultBlocksFor', () => {
     expect(t[t.length - 1]).toBe('footer')
   })
 
-  it('questionnaire seeds form mode', () => {
-    const qb = defaultBlocksFor('questionnaire').find((b) => b.type === 'questionnaireBody')
-    expect(qb).toMatchObject({ type: 'questionnaireBody', mode: 'form' })
+  it('questionnaire seeds the all-on-one-page form (a valid exactly-one state)', () => {
+    const blocks = defaultBlocksFor('questionnaire')
+    const t = types(blocks)
+    expect(t).toContain('questionnaireAllOnePage')
+    expect(t).not.toContain('questionnaireOneAtATime')
+    const form = blocks.find((b) => b.type === 'questionnaireAllOnePage')
+    expect(form).toMatchObject({ type: 'questionnaireAllOnePage', locked: true })
   })
 
   it('blockTemplate builds each document-specific block', () => {
@@ -41,6 +45,28 @@ describe('defaultBlocksFor', () => {
     expect(body).toMatchObject({ type: 'contractBody', locked: true })
     const sign = blocks.find((b) => b.type === 'contractSign')
     expect(sign).toMatchObject({ type: 'contractSign', locked: true })
+  })
+
+  it('migrates a legacy questionnaireBody block by its mode, preserving id + styling', () => {
+    const oneAtATime = migrateBlocks(
+      [{ id: 'qb-1', type: 'questionnaireBody', mode: 'oneAtATime', locked: true, bgColor: '#EEE', padTop: 12 }],
+      'questionnaire',
+    )
+    expect(oneAtATime[0]).toMatchObject({
+      id: 'qb-1',
+      type: 'questionnaireOneAtATime',
+      locked: true,
+      bgColor: '#EEE',
+      padTop: 12,
+    })
+    // The now-meaningless mode field is dropped.
+    expect('mode' in oneAtATime[0]!).toBe(false)
+
+    // 'form' and an absent mode both map to the all-on-one-page form.
+    const form = migrateBlocks([{ id: 'qb-2', type: 'questionnaireBody', mode: 'form' }], 'questionnaire')
+    expect(form[0]).toMatchObject({ id: 'qb-2', type: 'questionnaireAllOnePage' })
+    const noMode = migrateBlocks([{ id: 'qb-3', type: 'questionnaireBody' }], 'questionnaire')
+    expect(noMode[0]).toMatchObject({ id: 'qb-3', type: 'questionnaireAllOnePage' })
   })
 
   it('title template is surface-aware: contract turns Expires + Ref off, invoice keeps them on', () => {

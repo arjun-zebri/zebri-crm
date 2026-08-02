@@ -21,7 +21,7 @@ export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
   contract: ['title', 'contractBody', 'contractSign'],
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
-  questionnaire: ['questionnaireBody'],
+  questionnaire: ['questionnaireOneAtATime', 'questionnaireAllOnePage'],
 }
 
 export interface PaletteGroup {

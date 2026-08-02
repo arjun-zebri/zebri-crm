@@ -14,7 +14,7 @@ import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 import { Slider } from '../components/slider'
 import { publicBrandingFromEditorState } from '../editor-branding'
 
-import { isDataBound, isDeletable, isMarker, isRequired } from './policy'
+import { isDataBound, isDeletable, isMarker, isRequired, stylesWrapMarker } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
 import { blockLabel } from './types'
@@ -39,6 +39,8 @@ import type {
   ContractSignBlock,
   CouplePortalBlock,
   VendorTimelineBodyBlock,
+  QuestionnaireOneAtATimeBlock,
+  QuestionnaireAllOnePageBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -63,7 +65,9 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
   // editor preview and mislead. Their background comes from the brand Surface
   // colour. Show only their typography controls + actions, not the structural
   // chrome. (The couple portal background, e.g., is the brand Surface colour.)
-  const isMarkerBlock = isMarker(block.type)
+  // Exception: the style-wrapping markers (questionnaire form blocks) frame the
+  // questions area, so they get the full structural controls like any block.
+  const isMarkerBlock = isMarker(block.type) && !stylesWrapMarker(block.type)
 
   return (
     <div
@@ -99,7 +103,11 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
         {/* Text-content blocks render Background inside their controls, right
             next to the text colour (via bgSlot); the divider renders it beside
             its line colour. The rest show it here. */}
-        {block.type !== 'action' && !isMarkerBlock &&
+        {/* The couple portal is the exception among markers: its `bgColor` is a
+            real portal-specific background that the sent portal consumes (page +
+            cards), so it keeps the Background control. Other markers take their
+            surface from the brand Surface colour, so it stays hidden for them. */}
+        {block.type !== 'action' && (!isMarkerBlock || block.type === 'couplePortal') &&
           !['title', 'text', 'businessName', 'tagline', 'footer', 'divider'].includes(block.type) && (
             <BackgroundControl block={block} updateBlock={updateBlock} />
           )}
@@ -216,9 +224,77 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
       return <ContractSignControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'vendorTimelineBody':
       return <VendorTimelineBodyControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
-    case 'questionnaireBody':
-      return null
+    case 'questionnaireOneAtATime':
+    case 'questionnaireAllOnePage':
+      return <QuestionnaireControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
   }
+}
+
+// ── Questionnaire ─────────────────────────────────────────────────────────────
+
+/**
+ * Style controls for the questionnaire form blocks. The questions are fixed, so
+ * there is no content editing; instead the MC styles the question heading and
+ * the answer text (targeted by clicking either in the preview) and picks the
+ * Submit / Next button colour. Mirrors the marker-block typography pattern
+ * (see {@link CouplePortalControls}).
+ */
+function QuestionnaireControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: QuestionnaireOneAtATimeBlock | QuestionnaireAllOnePageBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  // Target from the preview click, defaulting to the question heading.
+  const target: 'question' | 'answer' = activeSubTarget === 'answer' ? 'answer' : 'question'
+  const style = target === 'question' ? block.questionStyle : block.answerStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(publicBrandingFromEditorState(state), target === 'question' ? 'sectionHeading' : 'body'),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock(block.id, (target === 'question' ? { questionStyle: merged } : { answerStyle: merged }) as Partial<Block>)
+  }
+  const buttonColor = block.buttonColor ?? state.brandColor
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'question' ? 'Question' : 'Answer'} />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        fontKind={target === 'question' ? 'heading' : 'body'}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
+      />
+      <Divider />
+      <Tooltip label="Button colour">
+        <ColorPopover
+          value={buttonColor}
+          onChange={(v) => updateBlock(block.id, { buttonColor: v } as Partial<Block>)}
+          swatches={COLOR_PALETTE}
+          trigger={
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200 text-xs text-gray-700"
+            >
+              <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: buttonColor }} />
+              Button
+            </button>
+          }
+        />
+      </Tooltip>
+    </div>
+  )
 }
 
 // ── Title ─────────────────────────────────────────────────────────────────────

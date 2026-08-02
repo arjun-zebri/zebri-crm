@@ -46,15 +46,40 @@ describe('readiness', () => {
     expect(result.issues[0]!.message).toContain('Stripe')
   })
 
-  it('questionnaire with questionnaireBody lacking mode raises questionnaire-mode issue', () => {
+  it('questionnaire with no form-style block raises need-exactly-one issue', () => {
     const blocks: Block[] = [
-      { id: '1', type: 'questionnaireBody' },
+      { id: '1', type: 'businessName' },
     ]
     const account = { stripeConnected: false, bankDetailsFilled: false, contractTemplateExists: false }
     const result = evaluateSurface('questionnaire', blocks, account)
     expect(result.ready).toBe(false)
     expect(result.issues).toHaveLength(1)
-    expect(result.issues[0]!.kind).toBe('questionnaire-mode')
+    expect(result.issues[0]!.kind).toBe('need-exactly-one')
+    expect(result.issues[0]!.message).toContain('Add a form style')
+  })
+
+  it('questionnaire with both form-style blocks raises need-exactly-one issue', () => {
+    const blocks: Block[] = [
+      { id: '1', type: 'questionnaireOneAtATime', locked: true },
+      { id: '2', type: 'questionnaireAllOnePage', locked: true },
+    ]
+    const account = { stripeConnected: false, bankDetailsFilled: false, contractTemplateExists: false }
+    const result = evaluateSurface('questionnaire', blocks, account)
+    expect(result.ready).toBe(false)
+    expect(result.issues).toHaveLength(1)
+    expect(result.issues[0]!.kind).toBe('need-exactly-one')
+    expect(result.issues[0]!.message).toContain('Pick one form style')
+  })
+
+  it('questionnaire with exactly one form-style block is ready', () => {
+    const blocks: Block[] = [
+      { id: '1', type: 'businessName' },
+      { id: '2', type: 'questionnaireAllOnePage', locked: true },
+    ]
+    const account = { stripeConnected: false, bankDetailsFilled: false, contractTemplateExists: false }
+    const result = evaluateSurface('questionnaire', blocks, account)
+    expect(result.ready).toBe(true)
+    expect(result.issues).toHaveLength(0)
   })
 
   it('fully-seeded invoice with good account is ready with no issues', () => {

@@ -9,6 +9,9 @@
  */
 'use client'
 
+import type { CSSProperties } from 'react'
+
+import { DatePicker } from '@/components/ui/date-picker'
 import type { Answer, Question } from '@/lib/questionnaires/question-schema'
 
 import { readableTextOn, type QuestionnaireTheme } from './theme'
@@ -22,6 +25,9 @@ interface FieldProps {
   /** Focus the control on mount — used by the one-at-a-time flow only. */
   autoFocus?: boolean
   theme: QuestionnaireTheme
+  /** Optional answer typography override (colour/font/size) from the
+   *  questionnaire form-style block; layered over the theme text defaults. */
+  answerCss?: CSSProperties
 }
 
 const INPUT_CLASS = 'w-full border px-4 py-3 outline-none transition focus:border-current'
@@ -34,10 +40,12 @@ const PLACEHOLDERS: Partial<Record<Question['type'], string>> = {
   phone: '0400 000 000',
 }
 
-export function QuestionField({ question, value, onChange, onAutoAdvance, autoFocus = false, theme }: FieldProps) {
+export function QuestionField({ question, value, onChange, onAutoAdvance, autoFocus = false, theme, answerCss }: FieldProps) {
   const { brand, textColor, borderColor, radius, pageBg, bodyFontSize } = theme
   // Use theme properties for styling: pageBg for backgrounds (from surface_color), borderColor for outlines.
-  const borderStyle = { borderColor, borderRadius: radius, color: textColor, backgroundColor: pageBg }
+  // answerCss (the MC's block-level answer typography) layers on top, overriding
+  // colour/font/size while leaving the border + background chrome intact.
+  const borderStyle = { borderColor, borderRadius: radius, color: textColor, backgroundColor: pageBg, ...answerCss }
 
   switch (question.type) {
     case 'long_text':
@@ -91,7 +99,7 @@ export function QuestionField({ question, value, onChange, onAutoAdvance, autoFo
                   onAutoAdvance?.()
                 }}
                 className="flex w-full cursor-pointer items-center justify-between border px-4 py-3 text-left transition hover:border-current"
-                style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor, fontSize: `${bodyFontSize}px` }}
+                style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor, fontSize: `${bodyFontSize}px`, ...answerCss }}
               >
                 {opt}
               </button>
@@ -114,7 +122,7 @@ export function QuestionField({ question, value, onChange, onAutoAdvance, autoFo
                 type="button"
                 onClick={() => toggle(opt)}
                 className="flex w-full cursor-pointer items-center gap-3 border px-4 py-3 text-left transition hover:border-current"
-                style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor, fontSize: `${bodyFontSize}px` }}
+                style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor, fontSize: `${bodyFontSize}px`, ...answerCss }}
               >
                 <span className="grid h-5 w-5 shrink-0 place-items-center rounded border" style={{ borderColor: isSel ? brand : borderColor, background: isSel ? brand : pageBg }}>
                   {isSel && <span style={{ fontSize: `${theme.finePrintFontSize}px`, color: readableTextOn(brand) }}>✓</span>}
@@ -127,10 +135,23 @@ export function QuestionField({ question, value, onChange, onAutoAdvance, autoFo
       )
     }
 
+    case 'date':
+      // The app's custom calendar picker instead of the native date control, so
+      // the couple gets the same date UX as the rest of Zebri. It stores the
+      // same YYYY-MM-DD string the native input did, so saved answers are
+      // unchanged. (The picker carries its own chrome, so the block's answer
+      // typography does not apply to it.)
+      return (
+        <DatePicker
+          value={typeof value === 'string' ? value : ''}
+          onChange={onChange}
+          placeholder="Select date"
+        />
+      )
+
     default: {
       const inputType =
-        question.type === 'date' ? 'date'
-        : question.type === 'time' ? 'time'
+        question.type === 'time' ? 'time'
         : question.type === 'number' ? 'number'
         : question.type === 'email' ? 'email'
         : question.type === 'phone' ? 'tel'

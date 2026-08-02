@@ -77,10 +77,16 @@ export default function PublicQuestionnairePage() {
   const allBlocks = questionnaire?.branding_blocks && questionnaire.branding_blocks.length > 0
     ? repairBlocks('questionnaire', questionnaire.branding_blocks)
     : []
-  // Extract the questionnaire mode from the questionnaireBody block.
-  const questionnaireBodyBlock = allBlocks.find((b) => b.type === 'questionnaireBody')
-  const displayMode = (questionnaireBodyBlock?.type === 'questionnaireBody' ? questionnaireBodyBlock.mode : undefined) ?? 'form'
-  const chrome = questionnaireChrome(allBlocks, displayMode as 'form' | 'oneAtATime')
+  // The form style is chosen by which of the two form-style blocks is present.
+  // Safe fallback for the invalid states the editor warns about: if both are
+  // present, the first in the tree wins; if none is present, fall back to the
+  // classic all-on-one-page form so the couple always has something to fill.
+  const formBlock = allBlocks.find(
+    (b) => b.type === 'questionnaireOneAtATime' || b.type === 'questionnaireAllOnePage',
+  )
+  const displayMode: 'form' | 'oneAtATime' =
+    formBlock?.type === 'questionnaireOneAtATime' ? 'oneAtATime' : 'form'
+  const chrome = questionnaireChrome(allBlocks, displayMode)
 
   return (
     <div className="min-h-screen" style={{ background: theme.pageBg, color: theme.textColor, fontFamily: theme.bodyStack }}>
@@ -133,6 +139,7 @@ export default function PublicQuestionnairePage() {
               postBlocks={chrome.postBlocks}
               showWelcome={chrome.showWelcome}
               displayMode={displayMode}
+              {...(formBlock ? { formBlock } : {})}
             />
           )}
 
