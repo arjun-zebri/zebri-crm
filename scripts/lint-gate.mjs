@@ -190,7 +190,10 @@ const ERROR_BUDGET = 54;
 // Shared document frame (2026-08-02): moved the builder backdrop colour off the
 // arbitrary-value Tailwind class `bg-[#F4F4F1]` into an inline style sourced
 // from DOC_CANVAS_BG, clearing one no-off-token-color warning (259 -> 258).
-const WARNING_BUDGET = 258;
+// Contract sign block + body-signature cleanup (2026-08-02): removed unused
+// imports when the MC signature moved out of the body mock, and fixed an
+// import-order warning (258 -> 257). Locking in.
+const WARNING_BUDGET = 257;
 
 function runEslintJson() {
   try {

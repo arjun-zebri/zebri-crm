@@ -12,12 +12,13 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { type CSSProperties, useEffect } from 'react'
+import { useEffect } from 'react'
 
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
-import type { Block, ContractBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
+import type { Block, ContractBodyBlock, ContractSignBlock } from '@/app/(dashboard)/branding/blocks/types'
+import { getTextColor } from '@/lib/branding/contrast'
 import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
-import { FONT_STACKS, googleFontsHref } from '@/lib/branding/fonts'
+import { googleFontsHref } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead, type PublicBranding } from '@/lib/branding/public-surface'
 import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
@@ -201,31 +202,51 @@ function ContractPreview({
 }) {
   const doc = sampleContractDoc()
 
-  // The contract body is a render-split marker: the generic block renderer emits
-  // nothing for it (on the live page the real signed body is injected there).
-  // Split the tree at the marker and inject a mock body so the preview shows how
-  // a contract reads, mirroring app/contract/[token] ContractBrandedCard.
-  const markerIdx = blocks.findIndex((b) => b.type === 'contractBody')
-  const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks
-  const postBlocks = markerIdx >= 0 ? blocks.slice(markerIdx + 1) : []
+  // The contract body + sign form are render-split markers: the generic block
+  // renderer emits nothing for them (on the live page the real signed body + the
+  // sign / decline form are injected there). Walk the tree, flushing chrome runs
+  // and injecting a mock body / sign section at each marker, mirroring
+  // app/contract/[token] ContractBrandedCard.
   const contractBodyBlock = blocks.find(
     (b): b is ContractBodyBlock => b.type === 'contractBody',
   )
+  const contractSignBlock = blocks.find(
+    (b): b is ContractSignBlock => b.type === 'contractSign',
+  )
+
+  const nodes: React.ReactNode[] = []
+  let buffer: Block[] = []
+  let bufKey = 0
+  const flush = () => {
+    if (buffer.length > 0) {
+      nodes.push(
+        <PublicBlockRenderer key={`chrome-${bufKey++}`} blocks={buffer} branding={branding} doc={doc} hideAction />,
+      )
+      buffer = []
+    }
+  }
+  for (const b of blocks) {
+    if (b.type === 'contractBody') {
+      flush()
+      nodes.push(
+        <PreviewContractBody key="body" branding={branding} {...(contractBodyBlock ? { block: contractBodyBlock } : {})} />,
+      )
+    } else if (b.type === 'contractSign') {
+      flush()
+      nodes.push(
+        <PreviewContractSign key="sign" branding={branding} {...(contractSignBlock ? { block: contractSignBlock } : {})} />,
+      )
+    } else {
+      buffer.push(b)
+    }
+  }
+  flush()
 
   return (
     <div style={pageStyle}>
       <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
         <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
-          <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={doc} hideAction />
-          {markerIdx >= 0 ? (
-            <PreviewContractBody
-              branding={branding}
-              {...(contractBodyBlock ? { block: contractBodyBlock } : {})}
-            />
-          ) : null}
-          {postBlocks.length > 0 ? (
-            <PublicBlockRenderer blocks={postBlocks} branding={branding} doc={doc} hideAction />
-          ) : null}
+          {nodes}
         </div>
       </div>
     </div>
@@ -250,31 +271,71 @@ function PreviewContractBody({
   // is unchanged.
   const headingCss = resolveTextStyle(block?.subheadingStyle, roleDefaults(branding, 'sectionHeading'))
   const bodyCss = resolveTextStyle(block?.bodyStyle, roleDefaults(branding, 'body'))
-  const label = roleDefaults(branding, 'sectionLabel')
   return (
-    <div className="space-y-8 border-t pt-8 mt-8" style={{ borderTopColor: branding.border_color }}>
-      <div className="space-y-6">
-        {SAMPLE_CONTRACT_CLAUSES.map((clause) => (
-          <div key={clause.heading} className="space-y-1.5">
-            <p style={headingCss}>{clause.heading}</p>
-            <p style={bodyCss}>{clause.body}</p>
-          </div>
-        ))}
+    <div className="space-y-6 border-t pt-8 mt-8" style={{ borderTopColor: branding.border_color }}>
+      {SAMPLE_CONTRACT_CLAUSES.map((clause) => (
+        <div key={clause.heading} className="space-y-1.5">
+          <p style={headingCss}>{clause.heading}</p>
+          <p style={bodyCss}>{clause.body}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Mock contract sign section for the preview — the prompt heading, a disabled
+ * name field + agreement line, the Sign / Decline buttons, then the MC
+ * countersignature, styled with the block's heading / label overrides layered
+ * over the section-heading / body roles. Never sent; the live form replaces it.
+ */
+function PreviewContractSign({
+  branding,
+  block,
+}: {
+  branding: PublicBranding
+  block?: ContractSignBlock
+}) {
+  const headingCss = resolveTextStyle(block?.headingStyle, roleDefaults(branding, 'sectionHeading'))
+  const labelCss = resolveTextStyle(block?.labelStyle, roleDefaults(branding, 'body'))
+  const buttonColor = block?.buttonColor ?? branding.brand_color
+  const radius = Math.min(branding.corner_radius ?? 12, 12)
+  const muted = roleDefaults(branding, 'finePrint').color
+  return (
+    <div className="space-y-4 border-t pt-8 mt-8" style={{ borderTopColor: branding.border_color }}>
+      <p style={headingCss}>{block?.heading ?? 'Sign to accept'}</p>
+      <div>
+        <p className="mb-1.5" style={labelCss}>Your full legal name</p>
+        <div
+          className="w-full border px-3 py-2.5"
+          style={{ borderRadius: radius, borderColor: branding.border_color }}
+        >
+          <span style={{ color: muted }}>Sarah &amp; James</span>
+        </div>
+      </div>
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 w-4 h-4 rounded border shrink-0" style={{ borderColor: branding.border_color }} aria-hidden />
+        <span style={labelCss}>
+          I agree to the terms above and intend my typed name to serve as my legal signature.
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <span
+          className="px-5 py-2.5 inline-flex items-center text-sm font-semibold"
+          style={{ backgroundColor: buttonColor, color: getTextColor(buttonColor), borderRadius: radius }}
+        >
+          {block?.primaryLabel ?? 'Sign contract'}
+        </span>
+        <span
+          className="border px-4 py-2.5 text-sm font-medium"
+          style={{ color: muted, borderColor: branding.border_color, borderRadius: radius }}
+        >
+          {block?.secondaryLabel ?? 'Decline'}
+        </span>
       </div>
       <div className="border-t pt-6" style={{ borderTopColor: branding.border_color }}>
-        <p
-          className="mb-1"
-          style={{
-            fontFamily: FONT_STACKS[label.fontFamily as never],
-            fontSize: label.fontSize,
-            fontWeight: label.fontWeight,
-            color: label.color,
-            textTransform: label.textTransform,
-          } as CSSProperties}
-        >
-          Signed by MC
-        </p>
-        <p style={{ fontSize: 28, lineHeight: 1, color: bodyCss.color, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+        <p className="mb-1" style={{ color: muted, fontSize: 12 }}>Signed by MC</p>
+        <p style={{ fontSize: 28, lineHeight: 1, color: roleDefaults(branding, 'body').color, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
           Your name
         </p>
       </div>

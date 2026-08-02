@@ -1216,7 +1216,7 @@ Toggles to enable/disable individual surfaces. Only enabled surfaces render to t
 
 ## Canvas (right side)
 
-Renders the selected surface with live sample data. Fixed-core blocks (contractBody, couplePortal, questionnaire, vendorTimeline) are marked "Fixed layout"; chrome blocks (header banner, business name, text, image, spacer, divider, footer, action) are freely positioned above/below.
+Renders the selected surface with live sample data. Fixed-core blocks (contractBody, contractSign, couplePortal, questionnaire, vendorTimeline) are marked "Fixed layout"; chrome blocks (header banner, business name, text, image, spacer, divider, footer, action) are freely positioned above/below. (contractBody + contractSign are still selectable — they flow through BlockFrame so the MC can reach their style toolbars — but remain locked against delete/duplicate.)
 
 Per-block toolbar (Canva-style): padding (per side), background colour, border (width/colour/radius), width, horizontal alignment, space above/below. Text-bearing blocks add font/size/weight/colour/alignment/case/letter-spacing/line-height. Block-specific controls (header overlay, action variant/size/radius, divider thickness, etc.) per type.
 
@@ -1246,12 +1246,14 @@ The block palette has two labeled groups:
 
 **Questionnaire mode**: the Questionnaire body block now persists `mode: 'form' | 'oneAtATime'` (replacing the preview-only toggle); public rendering reads this to show regular-form vs one-at-a-time.
 
-**Payment schedule**: now optional on Invoice. The shared `action` block is the Invoice Pay CTA; it is **not** used on Contracts (the sign/decline form is injected on the public contract page, so no CTA block belongs there — see the Contract surface below). `headerBanner` remains only in migration code.
+**Payment schedule**: now optional on Invoice. The shared `action` block is the Invoice Pay CTA; it is **not** used on Contracts — the sign/decline form is its own `contractSign` marker block (see the Contract surface below), so no generic CTA block belongs there. `headerBanner` remains only in migration code.
+
+**Contract sign block**: the sign/decline form + MC countersignature are the `contractSign` marker block. Its behaviour is fixed (name input, agreement checkbox, sign/decline calls, decline dialog, signing state machine — all untouched); the MC edits only its heading, Sign/Decline labels, button colour and heading/label typography. `contractBody` + `contractSign` are the two `CLEARABLE_MARKERS`. **Legacy safety**: contracts sent before this block have no `contractSign` marker, so the public card injects the sign slot right after the body (today's placement) — they render identically and stay signable.
 
 ## Five Surfaces
 
 - **Invoice** — Invoice header, Invoice line items, Invoice totals, Payment schedule (optional), Bank details (required—at least one of Bank details/Pay CTA), Pay CTA (required—at least one)
-- **Contract** — Contract header (Expires + Ref both off by default; reads as contract title + couple name), Contract body. No Sign CTA block: the sign/decline form is injected on the public page.
+- **Contract** — Contract header (Expires + Ref both off by default; reads as contract title + couple name), Contract body, Sign contract (the sign/decline form + MC countersignature). No generic Sign CTA block. Legacy contracts predating the sign block have no `contractSign` marker and get the form injected after the body instead.
 - **Client Portal** — Portal body
 - **Vendor Timeline** — Run sheet body
 - **Questionnaire** — Questionnaire body with mode toggle (form | oneAtATime)

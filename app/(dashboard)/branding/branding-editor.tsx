@@ -24,7 +24,7 @@ import type { Json } from '@/types/database'
 import { AddBlockPalette } from './blocks/add-block-palette'
 import { BlockRenderer } from './blocks/block-renderer'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
-import { isDeletable, isMarker } from './blocks/policy'
+import { CLEARABLE_MARKERS, isDeletable, isMarker } from './blocks/policy'
 import type { Block, ImageBlock } from './blocks/types'
 import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
@@ -685,8 +685,19 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
-    const newBlock = blockTemplate(type, docSurface)
     const list = state.blocks[docSurface] ?? []
+    // Singleton markers (contract body / sign) stay in the palette permanently
+    // so the MC can see them, but only one may exist. If one is already there,
+    // select it instead of inserting a duplicate.
+    if (isMarker(type)) {
+      const existing = list.find((b) => b.type === type)
+      if (existing) {
+        setInsertAfterId(null)
+        setSelectedBlockIds([existing.id])
+        return
+      }
+    }
+    const newBlock = blockTemplate(type, docSurface)
     if (insertAfterId) {
       const idx = list.findIndex((b) => b.id === insertAfterId)
       const next = [...list]
@@ -995,7 +1006,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             onOpenChange={setPaletteOpen}
             onAdd={addBlock}
             surface={surface}
-            presentTypes={(state.blocks[docSurface] ?? []).map((b) => b.type)}
             trigger={
               <button
                 type="button"
@@ -1122,15 +1132,16 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
                 ? () => {
                     // Keep only the render-split markers (portal / run sheet /
                     // questionnaire body) whose surface is nothing without
-                    // them. The contract body is the exception: it is fully
-                    // clearable so "Clear all blocks" gives a true blank
-                    // canvas, and it is re-addable from the block palette when
-                    // absent (the readiness panel flags it meanwhile).
-                    // Everything else clears, including paymentSchedule, which
-                    // is now an optional block rather than a fixed marker.
+                    // them. The clearable markers (contract body + sign form)
+                    // are the exception: they are fully clearable so "Clear all
+                    // blocks" gives a true blank canvas, and they are re-addable
+                    // from the block palette when absent (the readiness panel
+                    // flags them meanwhile). Everything else clears, including
+                    // paymentSchedule, which is now an optional block rather
+                    // than a fixed marker.
                     setBlocksForCurrent(
                       (state.blocks[docSurface] ?? []).filter(
-                        (b) => isMarker(b.type) && b.type !== 'contractBody',
+                        (b) => isMarker(b.type) && !CLEARABLE_MARKERS.has(b.type),
                       ),
                     )
                     setSelectedBlockIds([])

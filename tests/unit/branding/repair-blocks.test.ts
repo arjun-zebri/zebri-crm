@@ -38,4 +38,47 @@ describe('repairBlocks (redesign)', () => {
     const input: Block[] = [{ id: 'c1', type: 'contractBody', locked: true }, { id: 'c2', type: 'contractBody', locked: true }]
     expect(repairBlocks('contract', input).filter((b) => b.type === 'contractBody')).toHaveLength(1)
   })
+
+  it('round-trips a contractSign marker with its overrides through repair', () => {
+    const input: Block[] = [
+      { id: 'bn', type: 'businessName' },
+      { id: 'cb', type: 'contractBody', locked: true },
+      {
+        id: 'cs',
+        type: 'contractSign',
+        locked: true,
+        heading: 'Sign here',
+        primaryLabel: 'Accept',
+        buttonColor: '#111827',
+      } as Block,
+    ]
+    const out = repairBlocks('contract', input)
+    expect(types(out)).toEqual(['businessName', 'contractBody', 'contractSign'])
+    expect(out.find((b) => b.type === 'contractSign')).toEqual({
+      id: 'cs',
+      type: 'contractSign',
+      locked: true,
+      heading: 'Sign here',
+      primaryLabel: 'Accept',
+      buttonColor: '#111827',
+    })
+  })
+
+  it('dedups a surviving contractSign marker (keep first)', () => {
+    const input: Block[] = [
+      { id: 's1', type: 'contractSign', locked: true },
+      { id: 's2', type: 'contractSign', locked: true },
+    ]
+    const out = repairBlocks('contract', input).filter((b) => b.type === 'contractSign')
+    expect(out).toHaveLength(1)
+    expect(out[0]!.id).toBe('s1')
+  })
+
+  it('does NOT reinsert a deleted contractSign marker (readiness flags it)', () => {
+    const input: Block[] = [
+      { id: 'bn', type: 'businessName' },
+      { id: 'cb', type: 'contractBody', locked: true },
+    ]
+    expect(types(repairBlocks('contract', input))).toEqual(['businessName', 'contractBody'])
+  })
 })

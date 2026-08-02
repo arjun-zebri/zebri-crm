@@ -3,9 +3,8 @@
 import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { pillForeground } from '@/lib/branding/contrast'
+import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
 import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
@@ -16,6 +15,7 @@ import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/branding/public-blocks/title'
 import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
 import { VarChip } from '@/lib/branding/public-blocks/var-chip'
+import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
@@ -41,6 +41,7 @@ import type {
   QuestionnaireBodyBlock,
   PaymentScheduleBlock,
   ContractBodyBlock,
+  ContractSignBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -1104,6 +1105,99 @@ export function RenderContractBody({ state, block }: { state: BrandPreviewState;
           ))}
         </div>
 
+        <p className="text-xs leading-6 mt-5 w-full" style={{ color: muted }}>
+          Written per couple in the contract modal under{' '}
+          <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>, where you can also drop in a reusable contract template you&apos;ve saved. The signature and sign / decline form live in the separate Sign block. Drag other blocks above or below to wrap it.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Placeholder block shown in the branding editor where the contract's sign /
+ * decline form + MC countersignature will render on the public page. The form's
+ * behaviour (name input, agreement checkbox, sign / decline calls) is fixed and
+ * never editable here — only its labels, button colour and typography are
+ * MC-configurable. Same model as `RenderContractBody` + `RenderPaymentSchedule`.
+ *
+ * Renders a realistic, calm mock of the live form (disabled name field, agreement
+ * line, Sign + Decline buttons, then the "Signed by MC" cursive signature) so the
+ * preview reads like the real sent contract. The `data-subtarget` tags let a click
+ * in the preview target the heading vs. label style controls.
+ */
+export function RenderContractSign({ state, block }: { state: BrandPreviewState; block: ContractSignBlock }) {
+  const pad = PAD(state)
+  const muted = state.textColor || '#6B7280'
+  const text = state.textColor || '#111827'
+  const pub = publicBrandingFromEditorState(state)
+  const headingCss = resolveTextStyle(block.headingStyle, roleDefaults(pub, 'sectionHeading'))
+  const labelCss = resolveTextStyle(block.labelStyle, roleDefaults(pub, 'body'))
+  const buttonColor = block.buttonColor ?? state.brandColor
+  const radius = Math.min(state.cornerRadius ?? 12, 12)
+
+  return (
+    <div className="border-t border-gray-100">
+      {/* Horizontal (docX) inset comes from BlockFrame; only vertical rhythm here. */}
+      <div className={pad.blockY}>
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider mb-3"
+          style={{ color: muted }}
+        >
+          Sign contract · sample
+        </p>
+
+        <div className="space-y-4 max-w-prose">
+          <p data-subtarget="heading" style={headingCss}>
+            {block.heading ?? 'Sign to accept'}
+          </p>
+
+          {/* Disabled mock of the couple-facing name field. */}
+          <div>
+            <p data-subtarget="label" className="mb-1.5" style={labelCss}>
+              Your full legal name
+            </p>
+            <div
+              className="w-full border px-3 py-2.5 bg-gray-50/60"
+              style={{ borderRadius: radius, borderColor: pub.border_color }}
+            >
+              <span className="text-sm" style={{ color: muted }}>
+                Sarah &amp; James
+              </span>
+            </div>
+          </div>
+
+          {/* Agreement line (checkbox is decorative in the mock). */}
+          <div className="flex items-start gap-3">
+            <span
+              className="mt-0.5 w-4 h-4 rounded border shrink-0"
+              style={{ borderColor: pub.border_color }}
+              aria-hidden
+            />
+            <span data-subtarget="label" style={labelCss}>
+              I agree to the terms above and intend my typed name to serve as my
+              legal signature.
+            </span>
+          </div>
+
+          {/* Sign + decline buttons. Tagged `button` so clicking either focuses
+              the toolbar to the button controls (labels + fill colour). */}
+          <div data-subtarget="button" className="flex flex-wrap items-center gap-2 pt-1">
+            <span
+              className="px-5 py-2.5 inline-flex items-center gap-2 text-sm font-semibold"
+              style={{ backgroundColor: buttonColor, color: getTextColor(buttonColor), borderRadius: radius }}
+            >
+              {block.primaryLabel ?? 'Sign contract'}
+            </span>
+            <span
+              className="border px-4 py-2.5 text-sm font-medium"
+              style={{ color: muted, borderColor: pub.border_color, borderRadius: radius }}
+            >
+              {block.secondaryLabel ?? 'Decline'}
+            </span>
+          </div>
+        </div>
+
         {/* MC countersignature — mirrors what renders on the sent contract. */}
         <div className="mt-6 pt-5 border-t" style={{ borderColor: muted + '30' }}>
           <p className="text-xs mb-1" style={{ color: muted }}>
@@ -1116,11 +1210,6 @@ export function RenderContractBody({ state, block }: { state: BrandPreviewState;
             Your name
           </p>
         </div>
-
-        <p className="text-xs leading-6 mt-5 w-full" style={{ color: muted }}>
-          Written per couple in the contract modal under{' '}
-          <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>, where you can also drop in a reusable contract template you&apos;ve saved. Drag other blocks above or below to wrap it.
-        </p>
       </div>
     </div>
   )

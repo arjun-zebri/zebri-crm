@@ -16,7 +16,17 @@ import type { Block, BlockType } from './types'
 /** Render-split markers: the generic public renderer emits null for these and
  *  each surface injects the live content at the marker position. */
 export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
-  'couplePortal', 'contractBody', 'vendorTimelineBody', 'questionnaireBody',
+  'couplePortal', 'contractBody', 'contractSign', 'vendorTimelineBody', 'questionnaireBody',
+] as const)
+
+/**
+ * Markers the user may clear (via "Clear all blocks") and re-add from the block
+ * palette. Every other marker is a fixed singleton whose surface is nothing
+ * without it, so it can never be removed. The contract surface owns both
+ * clearable markers: the body and the sign form.
+ */
+export const CLEARABLE_MARKERS: ReadonlySet<BlockType> = new Set([
+  'contractBody', 'contractSign',
 ] as const)
 
 /** Blocks whose content comes from live document data, not template text. */
@@ -25,12 +35,14 @@ const DATA_BOUND: ReadonlySet<BlockType> = new Set([
 ] as const)
 
 /** Required non-conditional blocks per surface. Contracts do not list an
- *  `action` block: the sign/decline form is always injected on the public
- *  contract page (see contract-branded-card `bodyTrailing`), so a manageable
- *  CTA block would render nothing and only muddy the palette. */
+ *  `action` block: the sign/decline form is its own `contractSign` marker block,
+ *  so a generic CTA block would render nothing and only muddy the palette. The
+ *  `contractSign` marker is where the form + MC countersignature render; on
+ *  legacy contracts that predate it, the public card injects the form after the
+ *  body instead (see contract-branded-card's absent-marker fallback). */
 export const REQUIRED_BY_SURFACE: Readonly<Record<SurfaceTab, readonly BlockType[]>> = {
   invoice: ['title', 'lineItems', 'totals'],
-  contract: ['title', 'contractBody'],
+  contract: ['title', 'contractBody', 'contractSign'],
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
   questionnaire: ['questionnaireBody'],
@@ -68,7 +80,13 @@ export function isRequired(type: BlockType, surface: SurfaceTab): boolean {
   return requiredTypesForSurface(surface).includes(type)
 }
 
-/** True when the user may delete this block. Only hard-locked markers resist. */
+/**
+ * True when the user may delete this block. Non-locked blocks are always
+ * deletable. Locked blocks resist EXCEPT the clearable markers (contract body +
+ * sign form): those stay `locked` so they can't be duplicated, but the MC can
+ * delete them directly (and re-add from the palette), matching "Clear all
+ * blocks". Deleting one raises the not-ready flag until it is re-added.
+ */
 export function isDeletable(block: Block, _surface: SurfaceTab): boolean {
-  return !block.locked
+  return !block.locked || CLEARABLE_MARKERS.has(block.type)
 }

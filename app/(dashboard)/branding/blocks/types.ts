@@ -41,6 +41,7 @@ export type BlockType =
   | 'couplePortal'
   | 'paymentSchedule'
   | 'contractBody'
+  | 'contractSign'
   | 'vendorTimelineBody'
   | 'questionnaireBody'
   | 'image'
@@ -350,6 +351,38 @@ export interface ContractBodyBlock extends BaseBlock {
 }
 
 /**
+ * Marker block — the position where the contract's sign / decline form and the
+ * MC countersignature render on the public contract page. Like `contractBody`,
+ * the generic renderer emits nothing for it and the public contract card injects
+ * the real signing UI at the marker position.
+ *
+ * The form's behaviour (name input, agreement checkbox, sign / decline calls) is
+ * fixed and never editable here — only its labels, button colour and typography
+ * are MC-configurable. Every field is optional; each defaults to the historical
+ * hard-coded value so an unstyled block renders exactly like the legacy form.
+ *
+ * Legacy safety: contracts sent before this block existed carry no `contractSign`
+ * marker. The public card falls back to injecting the sign UI right after the
+ * body (its historical placement), so those contracts stay byte-identical and
+ * always signable. `migrateBlocks` therefore never force-adds this marker.
+ */
+export interface ContractSignBlock extends BaseBlock {
+  type: 'contractSign'
+  /** Prompt heading above the form (e.g. "Sign to accept"). */
+  heading?: string
+  /** Label for the primary sign button. Absent ⇒ "Sign contract". */
+  primaryLabel?: string
+  /** Label for the secondary decline button. Absent ⇒ "Decline". */
+  secondaryLabel?: string
+  /** Sign-button background colour. Absent ⇒ the brand colour. */
+  buttonColor?: string
+  /** Typography override for the prompt heading (over the section-heading role). */
+  headingStyle?: TextStyle
+  /** Typography override for the field / agreement labels (over the body role). */
+  labelStyle?: TextStyle
+}
+
+/**
  * Marker block represents the position where the vendor run sheet
  * (live timeline data) will appear. The MC can drag chrome blocks above
  * and below it in the branding editor; the run sheet content itself is
@@ -390,6 +423,7 @@ export type Block =
   | CouplePortalBlock
   | PaymentScheduleBlock
   | ContractBodyBlock
+  | ContractSignBlock
   | VendorTimelineBodyBlock
   | QuestionnaireBodyBlock
   | ImageBlock
@@ -412,6 +446,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   couplePortal: 'Couple portal',
   paymentSchedule: 'Payment schedule',
   contractBody: 'Contract body',
+  contractSign: 'Sign contract',
   vendorTimelineBody: 'Run sheet',
   questionnaireBody: 'Questionnaire',
   image: 'Image',
@@ -452,7 +487,8 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   footer: 'Business contact and closing line',
   couplePortal: 'The couple-facing portal (fixed)',
   paymentSchedule: 'Payment stages (live invoice data)',
-  contractBody: 'The contract body (fixed — edited per couple)',
+  contractBody: 'The contract body (fixed, edited per couple)',
+  contractSign: 'Signature + sign / decline form (fixed)',
   vendorTimelineBody: 'The vendor run sheet (live timeline data)',
   questionnaireBody: 'The questionnaire steps (fixed)',
   image: 'An uploaded image',

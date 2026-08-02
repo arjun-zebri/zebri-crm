@@ -259,6 +259,57 @@ describe('migrateBlocks — contract surface', () => {
     });
   });
 
+  it('round-trips a contractSign marker unchanged, overrides preserved', () => {
+    // The sign marker carries label / colour / typography overrides. migrate
+    // must pass them through untouched — losing them would silently restyle a
+    // contract the MC customised.
+    const withSign: Block[] = [
+      { id: 'bn_1', type: 'businessName' },
+      { id: 'cb_1', type: 'contractBody', locked: true },
+      {
+        id: 'cs_1',
+        type: 'contractSign',
+        locked: true,
+        heading: 'Ready to sign?',
+        primaryLabel: 'Accept & sign',
+        secondaryLabel: 'Not yet',
+        buttonColor: '#1d4ed8',
+        headingStyle: { fontSize: 22, fontWeight: 700 },
+        labelStyle: { color: '#334155' },
+      } as Block,
+    ];
+    const result = migrateBlocks(withSign, 'contract');
+    expect(result.find((b) => b.type === 'contractSign')).toEqual({
+      id: 'cs_1',
+      type: 'contractSign',
+      locked: true,
+      heading: 'Ready to sign?',
+      primaryLabel: 'Accept & sign',
+      secondaryLabel: 'Not yet',
+      buttonColor: '#1d4ed8',
+      headingStyle: { fontSize: 22, fontWeight: 700 },
+      labelStyle: { color: '#334155' },
+    });
+  });
+
+  it('NEVER force-adds a contractSign marker (legacy contracts rely on the card fallback)', () => {
+    // Legacy contracts sent before this feature carry a body marker but no sign
+    // marker. migrate must not fabricate one — the public card injects the sign
+    // form after the body instead, keeping those contracts byte-identical.
+    const legacy: Block[] = [
+      { id: 'bn_1', type: 'businessName' },
+      { id: 'tt_1', type: 'title', title: 'Contract', showCoupleName: true, showRef: false, showExpires: false, showAbn: false },
+      { id: 'cb_1', type: 'contractBody', locked: true },
+    ];
+    const result = migrateBlocks(legacy, 'contract');
+    expect(result.some((b) => b.type === 'contractSign')).toBe(false);
+    expect(result.map((b) => b.type)).toEqual(['businessName', 'title', 'contractBody']);
+    // Even the old inline-template migration path (which inserts a body marker)
+    // must not add a sign marker.
+    const fromOldDefault = migrateBlocks(oldContractDefault, 'contract');
+    expect(fromOldDefault.some((b) => b.type === 'contractSign')).toBe(false);
+  });
+
   it('does not touch non-contract surfaces', () => {
     // Quote / invoice surfaces should NOT have the contract-body
     // injection applied even if they contain text blocks matching

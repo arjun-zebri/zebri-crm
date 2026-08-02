@@ -19,22 +19,28 @@ describe('defaultBlocksFor', () => {
   })
 
   it('blockTemplate builds each document-specific block', () => {
-    for (const t of ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails'] as const) {
+    for (const t of ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'contractSign'] as const) {
       expect(blockTemplate(t)).toMatchObject({ type: t })
     }
+    // The sign marker is a locked singleton.
+    expect(blockTemplate('contractSign')).toMatchObject({ type: 'contractSign', locked: true })
   })
 
-  it('contract default seeds a header (expires off) and the body marker, no CTA', () => {
+  it('contract default seeds a header (expires off), the body marker, then the sign marker, no CTA', () => {
     const blocks = defaultBlocksFor('contract')
     const t = types(blocks)
-    expect(t).toEqual(['businessName', 'title', 'contractBody'])
+    expect(t).toEqual(['businessName', 'title', 'contractBody', 'contractSign'])
     expect(t).not.toContain('action')
+    // The sign marker is last, right after the body marker.
+    expect(t[t.length - 1]).toBe('contractSign')
     const header = blocks.find((b) => b.type === 'title')
     // A contract is signed, not quoted or billed: no "Expires" date and no
     // customer-facing reference number on its header.
     expect(header).toMatchObject({ type: 'title', showExpires: false, showRef: false })
     const body = blocks.find((b) => b.type === 'contractBody')
     expect(body).toMatchObject({ type: 'contractBody', locked: true })
+    const sign = blocks.find((b) => b.type === 'contractSign')
+    expect(sign).toMatchObject({ type: 'contractSign', locked: true })
   })
 
   it('title template is surface-aware: contract turns Expires + Ref off, invoice keeps them on', () => {

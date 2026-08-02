@@ -84,25 +84,52 @@ rule.)
 |-----------------|-----------|
 | Contract header | Required  |
 | Contract body   | Required  |
+| Sign contract   | Required  |
 
-There is **no Sign CTA block** on the contract surface. The
-sign/decline form is always injected on the public contract page
-(`contract-branded-card` `bodyTrailing`), so a manageable CTA block
-would render nothing. The `action` block is not addable on contracts
-and is not in the contract required set. The contract header (`title`)
-defaults with **Expires off and Ref off** (a contract is signed, not
-quoted or billed, so it carries neither an expiry date nor a
-customer-facing reference number); the header reads as the contract
-title + couple name.
+There is **no generic Sign CTA (`action`) block** on the contract
+surface. The sign/decline form is its own **`contractSign` marker
+block**: it renders where the marker sits (below the body by default),
+carries the couple's typed-name form + agreement checkbox + Sign /
+Decline buttons, and the **MC countersignature** ("Signed by MC" +
+cursive name) which moved out of the contract body into this block. The
+`action` block is not addable on contracts and is not in the contract
+required set. The contract header (`title`) defaults with **Expires off
+and Ref off** (a contract is signed, not quoted or billed, so it carries
+neither an expiry date nor a customer-facing reference number); the
+header reads as the contract title + couple name.
 
-Unlike the other render-split markers (portal / run sheet /
-questionnaire body, which survive a "Clear all blocks"), the contract
-body **is** cleared by "Clear all blocks" so a contract can be reset to
-a truly blank canvas. When it is absent it becomes re-addable from the
-block palette, the readiness panel flags its absence, and
-`migrateBlocks` will **not** silently re-insert it (it only heals
-genuine pre-Phase-3.1 legacy contracts). On the public page a body-less
-contract falls back to rendering the injected body after all blocks.
+**Editable vs fixed on the sign block.** The form's *behaviour* (name
+input, agreement checkbox, sign/decline API calls, the decline dialog,
+the signing state machine) is fixed and never surfaced in the editor.
+What the MC *can* edit lives on the block: the prompt **heading**
+(`heading`), the **Sign** / **Decline** button labels (`primaryLabel` /
+`secondaryLabel`), the sign-button **colour** (`buttonColor`), and two
+typography targets — **Heading** (`headingStyle`, over the
+`sectionHeading` role) and **Label** (`labelStyle`, over the `body`
+role), chosen by clicking the corresponding part in the preview. Every
+field is optional; each falls back to its historical default
+(`'Sign to accept'` / `'Sign contract'` / `'Decline'` / the brand
+colour / fine-print typography).
+
+**Both clearable markers.** Unlike the other render-split markers
+(portal / run sheet / questionnaire body, which survive a "Clear all
+blocks"), the contract **body** and **sign** markers are the two
+`CLEARABLE_MARKERS`: "Clear all blocks" removes them so a contract can
+be reset to a truly blank canvas. When absent, each becomes re-addable
+from the block palette, the readiness panel flags its absence, and
+`migrateBlocks` will **not** silently re-insert either (it only heals
+genuine pre-Phase-3.1 legacy contracts for the body; it never fabricates
+a sign marker).
+
+**Legacy safety (critical).** Every contract sent before this feature
+carries a `contractBody` marker but **no** `contractSign` marker. The
+public `contract-branded-card` handles the two-marker split in saved
+order, but when the sign marker is **absent** it injects the sign slot
+(form + banner + MC signature) **right after the body section** — today's
+exact placement — so those contracts render identically and stay
+signable. A contract is always signable even with no sign block. The
+fallback card (no block tree at all) likewise renders hero → body →
+sign slot.
 
 **Contract-body typography (contract-scoped).** Selecting the contract-body
 block exposes typography controls for two targets, chosen by clicking the
@@ -144,8 +171,10 @@ Fresh templates ship valid out of the box (all required blocks present).
 - **Invoice:** My details → Invoice header → Invoice line items → Invoice
   totals → Payment schedule → Text (you have a choice to choose between sentence) → Bank details → Pay CTA → Footer
   (default includes **both** Bank details and Pay CTA)
-- **Contract:** My details → Contract header → Contract body
-  (sign/decline form is injected on the public page; no CTA block)
+- **Contract:** My details → Contract header → Contract body → Sign
+  contract (the sign/decline form + MC countersignature; no generic CTA
+  block). Legacy contracts predating the sign block have no `contractSign`
+  marker and get the form injected after the body instead.
 - **Client Portal:** My details → Portal body → Footer
 - **Run sheet:** My details → Run sheet body → Footer
 - **Questionnaire:** My details → Questionnaire body (mode: Regular form)

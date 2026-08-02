@@ -90,6 +90,8 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
       return { id: newId('ps'), type: 'paymentSchedule' }
     case 'contractBody':
       return { id: newId('cb'), type: 'contractBody', locked: true }
+    case 'contractSign':
+      return { id: newId('cs'), type: 'contractSign', locked: true }
     case 'vendorTimelineBody':
       return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
     case 'questionnaireBody':
@@ -156,15 +158,14 @@ export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'v
       blockTemplate('questionnaireBody'),
     ]
   }
-  // contract — minimal chrome scaffold: business identity, a
-  // contract header, then the body marker. The contract body is
-  // written by the MC per-couple in the builder modal's TipTap
-  // editor and renders at the `contractBody` marker; the sign/decline
-  // form is injected on the public page, so there is no CTA block
-  // here. MCs can add any other chrome blocks they want (custom intro
-  // text, divider, footer, etc) above or below the marker; this
-  // default stays lean so MCs aren't fighting pre-canned structure
-  // they didn't ask for.
+  // contract — minimal chrome scaffold: business identity, a contract
+  // header, the body marker, then the sign marker. The contract body is
+  // written by the MC per-couple in the builder modal's TipTap editor and
+  // renders at the `contractBody` marker; the sign/decline form + MC
+  // countersignature render at the `contractSign` marker below it. MCs can
+  // add any other chrome blocks they want (custom intro text, divider,
+  // footer, etc) above, below, or between the markers; this default stays
+  // lean so MCs aren't fighting pre-canned structure they didn't ask for.
   return [
     { id: newId('bn'), type: 'businessName' },
     {
@@ -177,6 +178,7 @@ export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'v
       showAbn: false,
     },
     { id: newId('cb'), type: 'contractBody', locked: true },
+    { id: newId('cs'), type: 'contractSign', locked: true },
   ]
 }
 

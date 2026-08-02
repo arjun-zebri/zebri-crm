@@ -7,7 +7,7 @@
  */
 import type { SurfaceTab } from '@/types/branding-preview'
 
-import { isMarker } from './policy'
+import { CLEARABLE_MARKERS, isMarker } from './policy'
 import type { BlockType } from './types'
 
 /** General blocks, most-used first (spec §2.1). Available on every surface. */
@@ -18,7 +18,7 @@ export const GENERAL_BLOCKS: BlockType[] = [
 /** Document-specific blocks per surface (spec §2.2). */
 export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
   invoice: ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action'],
-  contract: ['title', 'contractBody'],
+  contract: ['title', 'contractBody', 'contractSign'],
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
   questionnaire: ['questionnaireBody'],
@@ -31,28 +31,23 @@ export interface PaletteGroup {
 
 /** Two labelled palette groups for a surface (General first).
  *
- * Render-split markers (contractBody, couplePortal, …) are excluded: they are
- * locked singletons that are always present, so they normally cannot be added
- * or removed and have no place in the "add block" palette.
+ * Fixed render-split markers (couplePortal, run sheet / questionnaire body) are
+ * excluded: they are locked singletons that are always present, so they cannot
+ * be added or removed and have no place in the "add block" palette.
  *
- * The one exception is the contract body: it is clearable via "Clear all
- * blocks", so when it is absent from the tree it must be re-addable. Pass the
- * block types currently present (`presentTypes`) and a missing `contractBody`
- * is surfaced in the Document-specific group; when present it is hidden again.
+ * The clearable markers (the contract body + sign form) DO appear, and stay
+ * listed even once inserted, so the MC always sees the full set of contract
+ * blocks. They are singletons, so the editor's addBlock selects the existing one
+ * instead of inserting a duplicate when it is already present.
  *
  * @param surface - The document surface.
- * @param presentTypes - Block types currently in the tree (defaults to none).
  */
-export function paletteGroupsForSurface(
-  surface: SurfaceTab,
-  presentTypes: readonly BlockType[] = [],
-): PaletteGroup[] {
-  const present = new Set(presentTypes)
+export function paletteGroupsForSurface(surface: SurfaceTab): PaletteGroup[] {
   const docSpecific = (DOC_SPECIFIC_BY_SURFACE[surface] ?? []).filter((t) => {
     if (!isMarker(t)) return true
-    // A cleared contract body is the only marker allowed back into the palette,
-    // and only while it is missing (so we never offer a duplicate singleton).
-    return t === 'contractBody' && !present.has('contractBody')
+    // Clearable markers stay in the palette permanently; other markers never
+    // appear (their surface is nothing without them, so they can't be removed).
+    return CLEARABLE_MARKERS.has(t)
   })
   return [
     { label: 'General', types: GENERAL_BLOCKS },

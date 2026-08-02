@@ -35,6 +35,7 @@ import {
   RenderAction,
   RenderBusinessName,
   RenderContractBody,
+  RenderContractSign,
   RenderCouplePortal,
   RenderHeaderBanner,
   RenderImage,
@@ -490,6 +491,8 @@ function renderBlock(
       return <RenderPaymentSchedule block={block} state={state} updateBlock={updateBlock} />
     case 'contractBody':
       return <RenderContractBody state={state} block={block} />
+    case 'contractSign':
+      return <RenderContractSign state={state} block={block} />
     case 'vendorTimelineBody':
       return <RenderVendorTimelineBody state={state} />
     case 'questionnaireBody':

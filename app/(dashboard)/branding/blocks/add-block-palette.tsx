@@ -37,17 +37,14 @@ interface AddBlockPaletteProps {
   trigger: React.ReactNode
   /** The surface for which blocks are being added. Controls which blocks are available. */
   surface: SurfaceTab
-  /** Block types currently in the tree. Lets a cleared contract body reappear
-   *  in the palette while it is absent. */
-  presentTypes?: readonly BlockType[]
 }
 
-export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface, presentTypes }: AddBlockPaletteProps) {
+export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }: AddBlockPaletteProps) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const groups = paletteGroupsForSurface(surface, presentTypes)
+  const groups = paletteGroupsForSurface(surface)
 
   // Build flat list of filtered blocks and track which group each belongs to
   const flatBlocks: { type: BlockType; group: string }[] = []

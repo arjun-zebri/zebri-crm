@@ -1,11 +1,15 @@
 /**
- * Shared "contract body + MC signature" section, rendered identically
- * in both the branded and fallback card variants.
+ * Shared contract-body prose section, rendered identically in both the branded
+ * and fallback card variants.
  *
  * The contract body is a server-rendered HTML string (the locked
  * snapshot taken at send-time, with all `{{variable}}` substitution
  * applied). We use the `.contract-content` class so the editor,
  * preview pane, and public surface all render identical typography.
+ *
+ * The MC countersignature no longer lives here — it moved into
+ * `contract-sign-section.tsx` when the sign form was split into its own
+ * `contractSign` marker block. This section renders prose only.
  *
  * @module app/contract/[token]/_components/contract-body-section
  */
@@ -13,11 +17,10 @@ import type { CSSProperties } from 'react';
 
 import type { ContractBodyBlock } from '@/app/(dashboard)/branding/blocks/types';
 import { FONT_STACKS } from '@/lib/branding/fonts';
-import { htmlToPlainText } from '@/lib/branding/sanitize';
 import { cssTextTransform } from '@/lib/branding/text-case';
 import { roleDefaults } from '@/lib/branding/type-defaults';
 
-import { formatDate, type PublicContract } from './public-contract';
+import { type PublicContract } from './public-contract';
 
 export interface ContractBodySectionProps {
   contract: PublicContract;
@@ -31,8 +34,6 @@ export function ContractBodySection({
   mutedColor,
 }: ContractBodySectionProps) {
   const bodyDefaults = roleDefaults(contract, 'body');
-  const labelDefaults = roleDefaults(contract, 'sectionLabel');
-  const finePrintDefaults = roleDefaults(contract, 'finePrint');
 
   // Contract-scoped typography overrides live on the `contractBody` block. Read
   // them (absent on legacy contracts) and drive the live prose through CSS
@@ -90,46 +91,6 @@ export function ContractBodySection({
           No content.
         </p>
       )}
-
-      {/* MC countersignature. Stays visible across all states; the
-          MC effectively signs the moment the contract is sent. */}
-      <div className="border-t pt-6" style={{ borderTopColor: contract.border_color }}>
-        <p
-          className="mb-1"
-          style={{
-            color: mutedColor,
-            fontSize: `${labelDefaults.fontSize}px`,
-            fontFamily: FONT_STACKS[labelDefaults.fontFamily as never],
-            fontWeight: labelDefaults.fontWeight,
-          }}
-        >
-          Signed by MC
-        </p>
-        <p
-          style={{
-            color: textColor,
-            fontSize: `${roleDefaults(contract, 'sectionHeading').fontSize}px`,
-            fontFamily: 'Caveat, "Brush Script MT", cursive',
-            lineHeight: roleDefaults(contract, 'sectionHeading').lineHeight,
-          }}
-        >
-          {contract.mc_signature_name ||
-            htmlToPlainText(contract.business_name) ||
-            'Your MC'}
-        </p>
-        <p
-          className="mt-1"
-          style={{
-            color: mutedColor,
-            fontSize: `${finePrintDefaults.fontSize}px`,
-            fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-            lineHeight: finePrintDefaults.lineHeight,
-          }}
-        >
-          {htmlToPlainText(contract.business_name) || ''} ·{' '}
-          {formatDate(contract.email_sent_at)}
-        </p>
-      </div>
     </div>
   );
 }

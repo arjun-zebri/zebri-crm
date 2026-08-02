@@ -17,6 +17,7 @@ import { publicBrandingFromEditorState } from '../editor-branding'
 import { isDataBound, isDeletable, isRequired } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
+import { blockLabel } from './types'
 import type {
   Block,
   TextStyle,
@@ -35,6 +36,7 @@ import type {
   SpacerBlock,
   PaymentScheduleBlock,
   ContractBodyBlock,
+  ContractSignBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -62,7 +64,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
     >
       {/* Row 0: block-type label + lock/live-data chips */}
       <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-        <span className="text-xs font-medium text-gray-600 capitalize">{block.type}</span>
+        <span className="text-xs font-medium text-gray-600">{blockLabel(block.type, surface)}</span>
         <div className="flex items-center gap-1 ml-auto">
           {isBlockRequired && (
             <Tooltip label="Required to send. You can remove it, but the document will show as not ready until you add it back.">
@@ -201,6 +203,8 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
       return <PaymentScheduleControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'contractBody':
       return <ContractBodyControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
+    case 'contractSign':
+      return <ContractSignControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'vendorTimelineBody':
       return null
     case 'questionnaireBody':
@@ -1854,7 +1858,143 @@ function ContractBodyControls({
   )
 }
 
+/**
+ * Toolbar for the contract sign block. Editable content is the prompt heading +
+ * the two button labels (text inputs) and the sign-button colour; typography is
+ * two click-targets — the prompt heading (over the section-heading role) and the
+ * field / agreement labels (over the body role). The form's behaviour is fixed
+ * and never surfaced here. Patches merge onto the existing override so each
+ * single-field change preserves the MC's prior edits, matching every sibling
+ * *Controls.
+ */
+function ContractSignControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: ContractSignBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  // Three click-to-target parts (like every other multi-target block): the
+  // prompt heading, the couple-facing label text, and the sign/decline button.
+  // Clicking a part in the preview focuses the toolbar to just that part's
+  // controls, so the button gets its own dedicated labels + fill styling rather
+  // than everything showing at once.
+  const target: 'heading' | 'label' | 'button' =
+    activeSubTarget === 'heading' ? 'heading' : activeSubTarget === 'button' ? 'button' : 'label'
+  const buttonColor = block.buttonColor ?? state.brandColor
+
+  if (target === 'button') {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <ActiveTargetLabel label="Sign button" />
+        <Divider />
+        <TextField
+          label="Sign"
+          value={block.primaryLabel ?? ''}
+          placeholder="Sign contract"
+          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { primaryLabel: v })}
+        />
+        <TextField
+          label="Decline"
+          value={block.secondaryLabel ?? ''}
+          placeholder="Decline"
+          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { secondaryLabel: v })}
+        />
+        <ColorPopover
+          value={buttonColor}
+          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { buttonColor: v })}
+          swatches={COLOR_PALETTE}
+          trigger={
+            <button
+              type="button"
+              title="Button fill"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200 text-xs text-gray-600"
+            >
+              <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: buttonColor }} />
+              Fill
+            </button>
+          }
+        />
+      </div>
+    )
+  }
+
+  // heading / label typography target
+  const style = target === 'heading' ? block.headingStyle : block.labelStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(
+      publicBrandingFromEditorState(state),
+      target === 'heading' ? 'sectionHeading' : 'body',
+    ),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<ContractSignBlock>(
+      block.id,
+      target === 'heading' ? { headingStyle: merged } : { labelStyle: merged },
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'heading' ? 'Heading' : 'Label'} />
+      {target === 'heading' ? (
+        <TextField
+          label="Text"
+          value={block.heading ?? ''}
+          placeholder="Sign to accept"
+          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { heading: v })}
+        />
+      ) : null}
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        fontKind={target === 'heading' ? 'heading' : 'body'}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
+      />
+    </div>
+  )
+}
+
 // ── Primitives ────────────────────────────────────────────────────────────────
+
+/**
+ * Compact labelled text input for a toolbar. Controlled directly by the block
+ * field; the placeholder shows the default label when the MC has cleared it.
+ */
+function TextField({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string
+  value: string
+  placeholder: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 border border-gray-200 rounded-md px-2 h-8">
+      <span className="text-gray-500 shrink-0">{label}</span>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-24 bg-transparent outline-none text-gray-900 placeholder:text-gray-400"
+      />
+    </label>
+  )
+}
 
 /**
  * Compact toolbar button that opens a single-slider popover. Used for the footer
