@@ -51,6 +51,7 @@ export function CoupleModal({
   const [venue, setVenue] = useState<VenueDetails>(EMPTY_VENUE);
   const [notes, setNotes] = useState("");
   const [leadSource, setLeadSource] = useState<string>("");
+  const [referralSource, setReferralSource] = useState<string>("");
   const [statusOpen, setStatusOpen] = useState(false);
   const [leadSourceOpen, setLeadSourceOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -75,6 +76,7 @@ export function CoupleModal({
         venue: couple.next_event_venue ?? couple.venue ?? "",
       });
       setLeadSource(couple.lead_source || "");
+      setReferralSource(couple.referral_source ?? "");
       setNotes(couple.notes);
     } else {
       resetForm();
@@ -97,6 +99,7 @@ export function CoupleModal({
     setEventDate("");
     setVenue(EMPTY_VENUE);
     setLeadSource("");
+    setReferralSource("");
     setNotes("");
   };
 
@@ -126,6 +129,7 @@ export function CoupleModal({
       venue: couple?.venue ?? "",
       status: status as any,
       lead_source: leadSource || null,
+      referral_source: trim(referralSource),
       kanban_position: couple?.kanban_position ?? 0,
       notes,
     }, { date: eventDate || null, ...venue });
@@ -405,6 +409,19 @@ export function CoupleModal({
             </Popover.Root>
           </div>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">
+            How did you hear about me?
+          </label>
+          <input
+            type="text"
+            value={referralSource}
+            onChange={(e) => setReferralSource(e.target.value)}
+            className={inputClass}
+            placeholder="e.g. Instagram, a friend, a venue..."
+          />
         </div>
 
         <div>

@@ -285,36 +285,51 @@ export function buildPdfHtml(
   const taxRate = doc.taxRate ?? 0
   const tax = taxableAmount * (taxRate / 100)
 
+  // One layout decision drives both the header and every row, so the two can
+  // never disagree on column count. The Phase 2C.2 builder only captures
+  // description + amount (and persists quantity=1, unit_price=amount for
+  // forward compatibility), so Qty / Unit price would either be blank or just
+  // repeat the amount. Only legacy multi-quantity items earn those columns —
+  // same rule the public line-items block uses.
+  const showQtyColumns =
+    doc.type === 'invoice' &&
+    doc.items.some(
+      (item) => item.quantity != null && item.quantity !== 1 && item.unit_price != null,
+    )
+
+  const cellStyle = (extra = '') =>
+    `padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor}${extra}`
+
   const itemRows = doc.items
     .map((item) => {
-      if (doc.type === 'invoice' && item.quantity != null && item.unit_price != null) {
+      const amount = item.amount ?? (item.unit_price ?? 0) * (item.quantity ?? 1)
+      if (showQtyColumns) {
+        // A qty-1 line mixed in with multi-quantity ones still fills all four
+        // cells, otherwise its amount would slide under the Qty heading.
+        const quantity = item.quantity ?? 1
+        const unitPrice = item.unit_price ?? amount
         return `
           <tr>
-            <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor}">${item.description || '-'}</td>
-            <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor};text-align:right;width:60px">${item.quantity}</td>
-            <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor};text-align:right;width:100px">${formatCurrency(item.unit_price)}</td>
-            <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor};text-align:right;width:100px">${formatCurrency(item.amount ?? item.unit_price * item.quantity)}</td>
+            <td style="${cellStyle()}">${item.description || '-'}</td>
+            <td style="${cellStyle(';text-align:right;width:60px')}">${quantity}</td>
+            <td style="${cellStyle(';text-align:right;width:100px')}">${formatCurrency(unitPrice)}</td>
+            <td style="${cellStyle(';text-align:right;width:100px')}">${formatCurrency(amount)}</td>
           </tr>`
       }
       return `
         <tr>
-          <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor}">${item.description || '-'}</td>
-          <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor};text-align:right;width:120px">${formatCurrency(item.amount ?? 0)}</td>
+          <td style="${cellStyle()}">${item.description || '-'}</td>
+          <td style="${cellStyle(';text-align:right;width:120px')}">${formatCurrency(amount)}</td>
         </tr>`
     })
     .join('')
 
-  const headerRow =
-    doc.type === 'invoice'
-      ? `<tr style="border-bottom:2px solid ${brandColor}">
-          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:left;font-family:${headingFont}">Description</th>
-          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:right;width:60px;font-family:${headingFont}">Qty</th>
-          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:right;width:100px;font-family:${headingFont}">Unit price</th>
-          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:right;width:100px;font-family:${headingFont}">Amount</th>
-        </tr>`
-      : `<tr style="border-bottom:2px solid ${brandColor}">
-          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:left;font-family:${headingFont}">Description</th>
-          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:right;width:120px;font-family:${headingFont}">Amount</th>
+  const th = (label: string, width?: string) =>
+    `<th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:${width ? 'right' : 'left'}${width ? `;width:${width}` : ''};font-family:${headingFont}">${label}</th>`
+
+  const headerRow = `<tr style="border-bottom:2px solid ${brandColor}">
+          ${th('Description')}
+          ${showQtyColumns ? `${th('Qty', '60px')}\n          ${th('Unit price', '100px')}\n          ${th('Amount', '100px')}` : th('Amount', '120px')}
         </tr>`
 
   const discountRow =

@@ -17,18 +17,15 @@
 import { useMemo } from 'react';
 
 import { googleFontsHref } from '@/lib/branding/fonts';
+import type { PublicBranding } from '@/lib/branding/public-branding';
 import { bodyFontFamily, headingFontFamily } from '@/lib/branding/public-surface';
 import {
   type BuilderSurface,
   useCurrentBranding,
 } from '@/lib/branding/use-current-branding';
-import {
-  buildPdfHtml,
-  type PdfBrandingOpts,
-  type PdfDocumentData,
-} from '@/lib/pdf/generate-pdf';
+import { buildPdfHtml, type PdfBrandingOpts } from '@/lib/pdf/generate-pdf';
 
-import type { PreviewDoc } from './preview-shared';
+import { toPdfDocumentData, type PreviewDoc } from './preview-shared';
 
 export interface PreviewPdfProps {
   doc: PreviewDoc;
@@ -37,24 +34,39 @@ export interface PreviewPdfProps {
   surface?: BuilderSurface | undefined;
 }
 
+/**
+ * Project a `PublicBranding` row into the option bag `buildPdfHtml` /
+ * `generateAndPrintPdf` expect.
+ *
+ * Shared with the builder modals' Download PDF action so the file the
+ * MC downloads is styled identically to the preview they were looking
+ * at when they clicked.
+ *
+ * @param branding Branding assembled by `useCurrentBranding`, or null.
+ * @returns        PDF branding options, or undefined when unbranded.
+ */
+export function previewPdfBrandingOpts(
+  branding: PublicBranding | null | undefined,
+): PdfBrandingOpts | undefined {
+  if (!branding) return undefined;
+  return {
+    brandColor: branding.brand_color,
+    textColor: branding.text_color,
+    mutedColor: branding.muted_color,
+    headingFontFamily: headingFontFamily(branding),
+    bodyFontFamily: bodyFontFamily(branding),
+    fontsHref: googleFontsHref([branding.font_heading, branding.font_body]),
+    ...(branding.logo_url ? { logoUrl: branding.logo_url } : {}),
+  };
+}
+
 export function PreviewPdf({ doc, surface = 'invoice' }: PreviewPdfProps) {
   const { branding } = useCurrentBranding(surface);
 
-  const brandingOpts = useMemo<PdfBrandingOpts | undefined>(() => {
-    if (!branding) return undefined;
-    return {
-      brandColor: branding.brand_color,
-      textColor: branding.text_color,
-      mutedColor: branding.muted_color,
-      headingFontFamily: headingFontFamily(branding),
-      bodyFontFamily: bodyFontFamily(branding),
-      fontsHref: googleFontsHref([branding.font_heading, branding.font_body]),
-      ...(branding.logo_url ? { logoUrl: branding.logo_url } : {}),
-    };
-  }, [branding]);
+  const brandingOpts = useMemo(() => previewPdfBrandingOpts(branding), [branding]);
 
   const html = useMemo(
-    () => buildPdfHtml(toPdfDoc(doc), brandingOpts, branding ?? undefined),
+    () => buildPdfHtml(toPdfDocumentData(doc), brandingOpts, branding ?? undefined),
     [doc, brandingOpts, branding],
   );
 
@@ -66,58 +78,4 @@ export function PreviewPdf({ doc, surface = 'invoice' }: PreviewPdfProps) {
       className="h-full w-full rounded-card border border-border bg-white"
     />
   );
-}
-
-function toPdfDoc(doc: PreviewDoc): PdfDocumentData {
-  const subtotal = doc.items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const discountAmount =
-    doc.discount && doc.discount.value > 0
-      ? doc.discount.type === 'percentage'
-        ? (subtotal * doc.discount.value) / 100
-        : doc.discount.value
-      : 0;
-  const taxableAmount = subtotal - discountAmount;
-  const tax = taxableAmount * ((doc.taxRate ?? 0) / 100);
-  const total = taxableAmount + tax;
-
-  return {
-    type: doc.kind,
-    documentNumber: doc.documentNumber,
-    title: doc.title,
-    status: doc.status,
-    coupleName: doc.coupleName ?? '',
-    ...(doc.businessName ? { businessName: doc.businessName } : {}),
-    items: doc.items.map((item) => ({
-      description: item.description,
-      amount: item.amount,
-    })),
-    subtotal,
-    discountType: doc.discount?.type ?? null,
-    discountValue: doc.discount?.value ?? null,
-    taxRate: doc.taxRate,
-    ...(doc.gstInclusive ? { gstInclusive: true } : {}),
-    total,
-    notes: doc.notes,
-    ...(doc.kind === 'invoice' ? { dueDate: doc.dueDate ?? null } : {}),
-    ...(doc.kind === 'invoice' && doc.bankAccountName
-      ? { bankAccountName: doc.bankAccountName }
-      : {}),
-    ...(doc.kind === 'invoice' && doc.bankBsb ? { bankBsb: doc.bankBsb } : {}),
-    ...(doc.kind === 'invoice' && doc.bankAccountNumber
-      ? { bankAccountNumber: doc.bankAccountNumber }
-      : {}),
-    // Contract-only: thread the body HTML (locked snapshot wins
-    // when present, otherwise the live editor render), plus signer
-    // info so the PDF includes the audit trail.
-    ...(doc.kind === 'contract'
-      ? {
-          contractHtml: doc.lockedHtml || doc.contractHtml || '',
-          signerName: doc.signerName ?? null,
-          signedAt: doc.signedAt ?? null,
-          signerIp: doc.signerIp ?? null,
-          signerUserAgent: doc.signerUserAgent ?? null,
-          mcSignatureName: doc.mcSignatureName ?? null,
-        }
-      : {}),
-  };
 }

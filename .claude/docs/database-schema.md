@@ -122,7 +122,11 @@ Status values: stored as custom couple status slug (e.g. 'new', 'contacted', 'co
 
 lead_source (text, nullable)
 
-Lead source values: referral website social_media word_of_mouth wedding_expo venue_partner
+Lead source values: referral website social_media word_of_mouth wedding_expo venue_partner. Set automatically to 'website' for couples created by the lead-capture form (ZEB-2).
+
+referral_source (text, nullable)
+
+"How did you hear about me" answer. Free text captured by the lead-capture form (ZEB-2) and editable on the couple modal; distinct from lead_source.
 
 created_at (timestamp)
 
@@ -143,6 +147,31 @@ Supported colors: amber, blue, purple, emerald, gray, green, red, orange, pink, 
 position (integer) created_at (timestamp)
 
 Each user has their own set of custom statuses. The slug is stored in couples.status. Defaults include: new, contacted, confirmed, paid, complete.
+
+------------------------------------------------------------------------
+
+# lead_capture_forms (ZEB-2)
+
+One embeddable lead-capture form per MC. The capture_token is the public
+capability for the /lead/[token] surface (mirrors couples.portal_token).
+RLS: single owner-isolation policy (auth.uid() = user_id). Public access
+is only via the security-definer RPCs get_lead_form / submit_lead, both
+granted to anon; the anon client never touches the table directly.
+
+Columns:
+
+id (uuid) user_id (uuid, not null, unique) capture_token (uuid, not null, unique, default gen_random_uuid())
+
+enabled (boolean, not null, default true)
+
+target_status_slug (text, nullable) — couple_statuses.slug the lead lands in; null falls back to the MC's first status by position
+
+created_at (timestamp) updated_at (timestamp)
+
+Ingest (submit_lead): validates the token, resolves the landing status,
+and inserts a couple owned by the token issuer with lead_source='website'
+and referral_source from the "how did you hear" field. A Starter
+couple-cap block returns {error:'plan_limit'} rather than raising.
 
 ------------------------------------------------------------------------
 

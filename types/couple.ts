@@ -45,6 +45,8 @@ export interface Couple {
   notes: string
   status: string
   lead_source: string | null
+  /** "How did you hear about me" - captured by the lead-capture form or edited inline. */
+  referral_source?: string | null
   kanban_position: number
   created_at: string
   portal_token?: string

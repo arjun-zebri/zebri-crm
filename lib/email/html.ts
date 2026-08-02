@@ -417,3 +417,45 @@ export function contractReminderHtml(
 </body>
 </html>`;
 }
+
+/** Opts for {@link leadNotificationHtml}: the MC and the submitted lead. */
+export interface LeadNotificationOpts {
+  mcBusinessName: string;
+  lead: {
+    name: string;
+    partnerName?: string | undefined;
+    email: string;
+    phone?: string | undefined;
+    weddingDate?: string | undefined;
+    venue?: string | undefined;
+    referralSource?: string | undefined;
+    message?: string | undefined;
+  };
+}
+
+/**
+ * Internal notification to the MC that a website lead arrived. Plain neutral
+ * shell (no couple-facing branding) - this is an ops email to the MC.
+ */
+export function leadNotificationHtml(opts: LeadNotificationOpts): string {
+  const l = opts.lead;
+  const row = (label: string, value?: string) =>
+    value && value.trim()
+      ? `<tr><td style="padding:4px 12px 4px 0;color:#6B7280;font-size:13px;vertical-align:top;">${escapeHtmlText(
+          label,
+        )}</td><td style="padding:4px 0;color:#111827;font-size:13px;">${escapeHtmlText(value)}</td></tr>`
+      : "";
+  const body = `
+    <p style="font-size:15px;color:#111827;margin:0 0 12px;">New website enquiry</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+      ${row("Name", l.name)}
+      ${row("Partner", l.partnerName)}
+      ${row("Email", l.email)}
+      ${row("Phone", l.phone)}
+      ${row("Wedding date", l.weddingDate)}
+      ${row("Venue", l.venue)}
+      ${row("Heard via", l.referralSource)}
+      ${row("Message", l.message)}
+    </table>`;
+  return wrapTemplateHtml(body, opts.mcBusinessName);
+}

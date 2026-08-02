@@ -18,7 +18,7 @@
  */
 'use client';
 
-import { ExternalLink, FileText, Globe, Mail, Palette } from 'lucide-react';
+import { Download, ExternalLink, FileText, Globe, Mail, Palette } from 'lucide-react';
 import { useState } from 'react';
 
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
@@ -39,6 +39,9 @@ export interface BuilderPreviewPaneProps {
   /** Couple's email for the "To:" line of the email preview.
    *  Optional — when missing the preview shows a placeholder. */
   coupleEmail?: string | null | undefined;
+  /** Hands the MC the PDF of whatever is currently on screen. When
+   *  omitted the Download control is not rendered. */
+  onDownloadPdf?: (() => void) | undefined;
 }
 
 const TABS: { id: PreviewTab; label: string; icon: typeof FileText }[] = [
@@ -49,7 +52,12 @@ const TABS: { id: PreviewTab; label: string; icon: typeof FileText }[] = [
   { id: 'payment_page', label: 'Link', icon: Globe },
 ];
 
-export function BuilderPreviewPane({ doc, surface, coupleEmail }: BuilderPreviewPaneProps) {
+export function BuilderPreviewPane({
+  doc,
+  surface,
+  coupleEmail,
+  onDownloadPdf,
+}: BuilderPreviewPaneProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('payment_page');
   // Shares the cached branding fetch with the PDF + Link tabs below
   // rather than issuing its own `auth.getUser()`, so the header label
@@ -66,7 +74,24 @@ export function BuilderPreviewPane({ doc, surface, coupleEmail }: BuilderPreview
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <h2 className="text-section font-semibold text-text">Preview</h2>
 
-        <div className="ml-auto flex items-center gap-1 rounded-card border border-border bg-surface p-1">
+        {/* Download sits before the tab group so it reads as an action
+            on the document, not a fourth preview mode. */}
+        {onDownloadPdf ? (
+          <button
+            type="button"
+            onClick={onDownloadPdf}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-caption font-medium text-text-muted transition-colors hover:text-text cursor-pointer"
+          >
+            <Download size={12} strokeWidth={1.5} />
+            Download
+          </button>
+        ) : null}
+
+        <div
+          className={`flex items-center gap-1 rounded-card border border-border bg-surface p-1 ${
+            onDownloadPdf ? '' : 'ml-auto'
+          }`}
+        >
           {TABS.map((tab) => (
             <button
               key={tab.id}
