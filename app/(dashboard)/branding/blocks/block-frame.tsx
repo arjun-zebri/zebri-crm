@@ -11,7 +11,7 @@ import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 import { BlockToolbar } from './block-toolbar'
-import { isDeletable } from './policy'
+import { isDeletable, isMarker } from './policy'
 import type { Block } from './types'
 
 interface BlockFrameProps {
@@ -156,10 +156,17 @@ export function BlockFrame({
     window.addEventListener('mouseup', onUp)
   }
 
-  const borderWidth = block.borderWidth ?? 0
+  // Render-split markers inject live/couple-owned content on the sent document,
+  // so a per-block background / border / radius does nothing there and would
+  // only tint the editor preview (the misleading white-cards-on-colour case).
+  // Strip those overrides for markers — their surface comes from the brand
+  // Surface colour. Typography overrides still apply.
+  const isMarkerBlock = isMarker(block.type)
+  const borderWidth = isMarkerBlock ? 0 : (block.borderWidth ?? 0)
   const borderColor = block.borderColor || '#E5E7EB'
-  const blockRadius = block.blockRadius
-  const outerStyle = blockOuterStyle(block, { cornerRadius: state.cornerRadius })
+  const blockRadius = isMarkerBlock ? undefined : block.blockRadius
+  const rawOuterStyle = blockOuterStyle(block, { cornerRadius: state.cornerRadius })
+  const outerStyle = isMarkerBlock ? { ...rawOuterStyle, background: undefined } : rawOuterStyle
 
   const blockNode = (
     <div

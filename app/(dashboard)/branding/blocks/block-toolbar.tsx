@@ -14,7 +14,7 @@ import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 import { Slider } from '../components/slider'
 import { publicBrandingFromEditorState } from '../editor-branding'
 
-import { isDataBound, isDeletable, isRequired } from './policy'
+import { isDataBound, isDeletable, isMarker, isRequired } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
 import { blockLabel } from './types'
@@ -57,6 +57,13 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
   const canDelete = isDeletable(block, surface)
   const hasLiveData = isDataBound(block.type)
   const isBlockRequired = isRequired(block.type, surface)
+  // Render-split markers (contract body/sign, run sheet, couple portal) inject
+  // live/couple-owned content on the sent document, so per-block background,
+  // padding, border, radius and v-align do nothing there — they'd only tint the
+  // editor preview and mislead. Their background comes from the brand Surface
+  // colour. Show only their typography controls + actions, not the structural
+  // chrome. (The couple portal background, e.g., is the brand Surface colour.)
+  const isMarkerBlock = isMarker(block.type)
 
   return (
     <div
@@ -92,7 +99,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
         {/* Text-content blocks render Background inside their controls, right
             next to the text colour (via bgSlot); the divider renders it beside
             its line colour. The rest show it here. */}
-        {block.type !== 'action' &&
+        {block.type !== 'action' && !isMarkerBlock &&
           !['title', 'text', 'businessName', 'tagline', 'footer', 'divider'].includes(block.type) && (
             <BackgroundControl block={block} updateBlock={updateBlock} />
           )}
@@ -100,13 +107,13 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
 
       {/* Row 2: structural controls + actions */}
       <div className="flex items-center gap-1 px-1 pb-1 pt-0.5 border-t border-gray-100 mt-1">
-        {block.type !== 'headerBanner' && block.type !== 'action' && (
+        {block.type !== 'headerBanner' && block.type !== 'action' && !isMarkerBlock && (
           <>
             <VAlignControl block={block} updateBlock={updateBlock} />
             <Divider />
           </>
         )}
-        {block.type !== 'action' && (
+        {block.type !== 'action' && !isMarkerBlock && (
           <>
             <SpacingControl block={block} updateBlock={updateBlock} />
             <RadiusControl block={block} updateBlock={updateBlock} />
