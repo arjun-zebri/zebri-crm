@@ -1,6 +1,8 @@
 'use client'
 
-import { Play, Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil } from 'lucide-react'
+
+import { AudioPlayButton } from '@/components/ui/audio-play-button'
 
 interface PortalPerson {
   id: string

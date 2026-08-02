@@ -1,9 +1,10 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Mic, Square, Play, Loader2, Trash2, ChevronDown } from 'lucide-react'
+import { Mic, Square, Loader2, Trash2, ChevronDown } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
+import { AudioPlayButton } from '@/components/ui/audio-play-button'
 import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 

@@ -2,9 +2,10 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Play, Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 
+import { AudioPlayButton } from '@/components/ui/audio-play-button'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'

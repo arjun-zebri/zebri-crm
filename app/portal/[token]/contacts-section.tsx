@@ -1,9 +1,10 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Plus, Mail, Phone, Mic, Play, Trash2, Loader2, Pencil, ChevronDown } from 'lucide-react'
+import { Plus, Mail, Phone, Mic, Trash2, Loader2, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from 'react'
 
+import { AudioPlayButton } from '@/components/ui/audio-play-button'
 import { Modal } from '@/components/ui/modal'
 import { getRgb, getTextColor } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
@@ -94,13 +95,11 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
  */
 function AudioRecorder({
   audioUrl,
-  personId,
   token,
   onRecorded,
   branding,
 }: {
   audioUrl: string | null
-  personId: string
   token: string
   onRecorded: (url: string) => void
   /** Global branding for type scale, colours, and fonts. */
@@ -450,7 +449,6 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
             <label className="block mb-1.5" style={getLabelStyles(branding)}>Name pronunciation</label>
             <AudioRecorder
               audioUrl={audioUrl}
-              personId={person?.id ?? 'new'}
               token={token}
               onRecorded={setAudioUrl}
               branding={branding}
