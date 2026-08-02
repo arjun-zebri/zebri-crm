@@ -22,6 +22,11 @@ import { DatePicker } from '@/components/ui/date-picker';
 export interface CoupleOption {
   id: string;
   name: string;
+  /** Contact addresses, carried so the builder can show the couple the
+   *  document will actually be emailed to. Optional: pickers that only
+   *  need id + name can leave them off. */
+  primary_email?: string | null;
+  email?: string | null;
 }
 
 export type PaymentTerms =

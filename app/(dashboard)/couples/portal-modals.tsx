@@ -1,9 +1,10 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Mic, Square, Play, Loader2, Trash2, ChevronDown } from 'lucide-react'
+import { Mic, Square, Loader2, Trash2, ChevronDown } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
+import { AudioPlayButton } from '@/components/ui/audio-play-button'
 import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 
@@ -126,15 +127,13 @@ export function AudioRecorder({
   if (audioUrl) {
     return (
       <div className="flex items-center gap-2">
-        <audio src={audioUrl} className="hidden" id={`mc-audio-recorder-${personId}`} />
-        <button
-          type="button"
-          onClick={() => (document.getElementById(`mc-audio-recorder-${personId}`) as HTMLAudioElement)?.play()}
-          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100 transition cursor-pointer"
-        >
-          <Play size={12} strokeWidth={2} />
-          Play
-        </button>
+        <AudioPlayButton
+          src={audioUrl}
+          label="Play"
+          className="flex items-center gap-1 text-xs border rounded-lg px-2.5 py-1.5 transition cursor-pointer"
+          idleClassName="text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
+          playingClassName="text-emerald-700 border-emerald-300 bg-emerald-100 hover:bg-emerald-200"
+        />
         <button type="button" onClick={startRecording} className="p-1 text-gray-400 hover:text-gray-600 transition cursor-pointer" title="Re-record">
           <Mic size={13} strokeWidth={1.5} />
         </button>

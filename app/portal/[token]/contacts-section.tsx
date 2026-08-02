@@ -1,9 +1,10 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Plus, Mail, Phone, Mic, Play, Trash2, Loader2, Pencil, ChevronDown } from 'lucide-react'
+import { Plus, Mail, Phone, Mic, Trash2, Loader2, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from 'react'
 
+import { AudioPlayButton } from '@/components/ui/audio-play-button'
 import { Modal } from '@/components/ui/modal'
 import { getRgb, getTextColor } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
@@ -94,13 +95,11 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
  */
 function AudioRecorder({
   audioUrl,
-  personId,
   token,
   onRecorded,
   branding,
 }: {
   audioUrl: string | null
-  personId: string
   token: string
   onRecorded: (url: string) => void
   /** Global branding for type scale, colours, and fonts. */
@@ -243,16 +242,12 @@ function AudioRecorder({
         </p>
         {audioUrl && !recording && !uploading && (
           <div className="flex items-center gap-1.5">
-            <audio src={audioUrl} className="hidden" id={`audio-modal-${personId}`} />
-            <button
-              type="button"
-              onClick={() => (document.getElementById(`audio-modal-${personId}`) as HTMLAudioElement)?.play()}
+            <AudioPlayButton
+              src={audioUrl}
+              label="Play"
               className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1 transition cursor-pointer hover:opacity-80"
               style={PLAY_BUTTON_STYLE}
-            >
-              <Play size={12} strokeWidth={2} />
-              Play
-            </button>
+            />
           </div>
         )}
       </div>
@@ -454,7 +449,6 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
             <label className="block mb-1.5" style={getLabelStyles(branding)}>Name pronunciation</label>
             <AudioRecorder
               audioUrl={audioUrl}
-              personId={person?.id ?? 'new'}
               token={token}
               onRecorded={setAudioUrl}
               branding={branding}
@@ -611,15 +605,12 @@ function PersonRow({
       </div>
       {person.audio_url && (
         <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-          <audio src={person.audio_url} className="hidden" id={`audio-row-${person.id}`} />
-          <button
-            onClick={() => (document.getElementById(`audio-row-${person.id}`) as HTMLAudioElement)?.play()}
+          <AudioPlayButton
+            src={person.audio_url}
+            label="Play"
             className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1.5 transition cursor-pointer hover:opacity-80"
             style={PLAY_BUTTON_STYLE}
-          >
-            <Play size={12} strokeWidth={2} />
-            Play
-          </button>
+          />
         </div>
       )}
       <Pencil size={13} strokeWidth={1.5} className="shrink-0" style={{ color: finePrintDefaults.color }} />

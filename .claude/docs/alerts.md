@@ -72,6 +72,7 @@ default emoji and routing.
 | `auth_anomaly` | warn | Failed-login spike, token reuse, … | middleware (Phase 0.8) |
 | `auth_rate_limit_hit` | warn | Per-action rate limit hit (login/signup/reset/update/change password) | `app/(auth)/actions.ts` + `app/(dashboard)/settings/account/actions.ts` (Phase 1) |
 | `rls_denied_spike` | warn | Cluster of RLS denials in a window | logs aggregator (Phase 0.8) |
+| `lead_blocked_plan_limit` | warn | A website lead-capture submission was blocked by the MC's Starter couple cap; the MC is emailed to upgrade so the lead is not lost | `app/api/lead/submit/route.ts` (ZEB-2) |
 | `app_error` | error | Catch-all / uncaught errors | global error boundaries |
 
 Wiring each row to its source happens during that surface's hardening

@@ -61,6 +61,7 @@ import {
   buildContractVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
+import { resolveCoupleEmail } from '@/lib/couples/email';
 import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 
@@ -204,6 +205,23 @@ export function ContractBuilderModal({
         .order('name', { ascending: true });
       if (error) throw error;
       return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+
+  // The address the send route will mail. Fetched separately from the
+  // picker list because that list is only loaded while the contract is
+  // still a draft, and the preview needs the recipient at every stage.
+  const { data: coupleEmail } = useQuery({
+    queryKey: ['couple-email', coupleId],
+    enabled: isOpen && !!coupleId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('couples')
+        .select('primary_email, email')
+        .eq('id', coupleId!)
+        .single();
+      if (error) throw error;
+      return resolveCoupleEmail(data);
     },
   });
 
@@ -500,7 +518,7 @@ export function ContractBuilderModal({
     discount: null,
     notes: null,
     expiresAt: expiresAt,
-    shareUrl: shareUrl ?? '',
+    shareUrl,
     contractHtml: previewHtml,
     lockedHtml: contract?.locked_content_html ?? null,
     signerName: contract?.signer_name ?? null,
@@ -534,7 +552,7 @@ export function ContractBuilderModal({
         titlePlaceholder={coupleName ? `Contract for ${coupleName}` : 'Wedding MC contract'}
         titleReadOnly={!canEdit}
         previewPane={
-          <BuilderPreviewPane doc={previewDoc} surface="contract" />
+          <BuilderPreviewPane doc={previewDoc} surface="contract" coupleEmail={coupleEmail} />
         }
         footer={
           <ShareAndSend

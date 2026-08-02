@@ -313,14 +313,17 @@ function ScheduleModalBody({
               ))}
             </div>
           </div>
+          {/* Inside the scroll area, after the rows: keeps "Add payment"
+              directly under the last stage instead of pinned to the
+              bottom of the fixed box, without resizing the modal. */}
+          <button
+            type="button"
+            onClick={addStage}
+            className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-caption text-text-muted transition-colors hover:text-text"
+          >
+            <Plus size={14} strokeWidth={1.5} /> Add payment
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={addStage}
-          className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-caption text-text-muted transition-colors hover:text-text"
-        >
-          <Plus size={14} strokeWidth={1.5} /> Add payment
-        </button>
       </div>
 
       {draft.length > 0 && (

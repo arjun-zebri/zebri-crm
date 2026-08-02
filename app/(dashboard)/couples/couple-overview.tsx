@@ -257,6 +257,17 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
           )}
         </div>
 
+        {/* How did you hear about me - captured by the lead-capture form.
+            Read-only here; edited via the couple modal. */}
+        {couple.referral_source ? (
+          <div className="flex items-center justify-between py-3 -mx-2 px-2">
+            <span className="text-sm text-gray-700 w-28 shrink-0">Heard via</span>
+            <span className="flex-1 text-right text-sm text-gray-500 min-w-0 break-words">
+              {couple.referral_source}
+            </span>
+          </div>
+        ) : null}
+
         {/* Notes */}
         <div className="group flex-1 flex flex-col py-3 rounded-xl -mx-2 px-2 min-h-0">
           <div className="flex items-start justify-between">

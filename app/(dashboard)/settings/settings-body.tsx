@@ -25,6 +25,7 @@ import {
 import { AccountSection } from './account-section';
 import { BillingSection } from './billing-section';
 import { EmailSignatureSection } from './email-signature-section';
+import { LeadCaptureSection } from './lead-capture-section';
 import { PaymentSettingsSection } from './payment-settings-section';
 import { PersonalInfoSection } from './personal-info-section';
 import { PrivacySection } from './privacy-section';
@@ -155,6 +156,7 @@ export function SettingsBody({ activeTab, data }: SettingsBodyProps) {
             initial={data.publicSettings}
           />
         )}
+        {activeTab === 'lead-capture' && <LeadCaptureSection />}
         {activeTab === 'signature' && (
           <EmailSignatureSection initialContent={metadata?.email_signature ?? null} />
         )}
