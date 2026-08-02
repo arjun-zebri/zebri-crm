@@ -76,7 +76,7 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
         </span>
       ) : (
         <div className="flex items-center gap-1">
-          <span className="sm:hidden text-caption text-text-muted">Share</span>
+          <span className="sm:hidden text-caption text-text-muted">Amount</span>
           <Input
             size="sm"
             type="number"
@@ -85,7 +85,7 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
             onChange={(e) =>
               onChange({ amountValue: e.target.value === '' ? null : Number(e.target.value) })
             }
-            aria-label="Share"
+            aria-label="Amount"
             className="w-14 [&_input]:[appearance:textfield]"
             disabled={locked}
           />

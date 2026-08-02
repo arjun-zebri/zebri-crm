@@ -12,7 +12,6 @@
  */
 'use client'
 
-import { useAutoAnimate } from '@formkit/auto-animate/react'
 import { Bookmark, Plus } from 'lucide-react'
 import { useRef, useState } from 'react'
 
@@ -140,7 +139,6 @@ function ScheduleModalBody({
   const { toast } = useToast()
   const keyCounter = useRef(0)
   const nextKey = () => `k${String(keyCounter.current++)}`
-  const [listRef] = useAutoAnimate<HTMLDivElement>()
 
   const [draft, setDraft] = useState<StageDraft[]>(() =>
     initialStages.length > 0
@@ -204,6 +202,17 @@ function ScheduleModalBody({
     setName(schedule.name)
   }
 
+  // "New schedule": a blank name plus a fresh deposit + balance starter to edit.
+  const startNew = () => {
+    const paid = draft.filter((s) => s.paidAt)
+    setName('')
+    setDraft([
+      ...paid,
+      { key: nextKey(), label: 'Deposit', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue', paidAt: null },
+      { key: nextKey(), label: 'Final balance', amountType: 'remainder', amountValue: null, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue', paidAt: null },
+    ])
+  }
+
   const template = draftToTemplate(draft)
   const resolved = resolveStages(template, totalCents, issueDate, dueDate)
   const applyReason = resolved.ok ? null : reason(resolved.errors[0]?.code ?? '')
@@ -230,22 +239,19 @@ function ScheduleModalBody({
 
   return (
     <div className="space-y-4 text-sm">
-      <div className="flex items-center gap-3">
-        <label htmlFor="schedule-name" className="w-16 shrink-0 text-caption text-text-muted">
-          Schedule
-        </label>
-        <div className="flex-1">
-          <ScheduleCombobox
-            name={name}
-            onNameChange={setName}
-            schedules={schedules}
-            loading={schedulesLoading}
-            error={schedulesError}
-            onPick={loadSchedule}
-            onSetDefault={onSetDefaultSchedule}
-            onDelete={onDeleteSchedule}
-          />
-        </div>
+      <div className="space-y-1.5">
+        <span className="block text-caption font-medium text-text-muted">Schedule</span>
+        <ScheduleCombobox
+          name={name}
+          onNameChange={setName}
+          schedules={schedules}
+          loading={schedulesLoading}
+          error={schedulesError}
+          onNew={startNew}
+          onPick={loadSchedule}
+          onSetDefault={onSetDefaultSchedule}
+          onDelete={onDeleteSchedule}
+        />
       </div>
 
       <p className="text-caption leading-relaxed text-text-muted">
@@ -258,7 +264,7 @@ function ScheduleModalBody({
         <div className="flex items-center gap-2">
           <span className="text-caption text-text-muted">Amount</span>
           <Segmented
-            ariaLabel="Share unit"
+            ariaLabel="Amount unit"
             value={amountUnit === 'fixed' ? 'fixed' : 'percent'}
             onChange={(v) => setAmountUnit(v)}
             options={[
@@ -294,7 +300,7 @@ function ScheduleModalBody({
           <div className={`hidden pb-2 text-caption text-text-muted ${STAGE_ROW_GRID}`}>
             <span aria-hidden />
             <span>Stage</span>
-            <span>Share</span>
+            <span>Amount</span>
             <span>Due</span>
             <span aria-hidden />
           </div>
@@ -304,7 +310,7 @@ function ScheduleModalBody({
             aria-hidden
             className="absolute left-[0.19rem] top-2 bottom-2 hidden w-px border-l border-dashed border-border sm:block"
           />
-          <div ref={listRef} className="space-y-2.5">
+          <div className="flex flex-col gap-2.5">
             {draft.map((s) => (
               <ScheduleStageRow
                 key={s.key}

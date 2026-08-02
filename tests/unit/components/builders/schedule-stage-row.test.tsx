@@ -30,7 +30,7 @@ describe('ScheduleStageRow', () => {
 
   it('edits the share', () => {
     const props = setup()
-    fireEvent.change(screen.getByLabelText(/^share$/i), { target: { value: '40' } })
+    fireEvent.change(screen.getByLabelText(/^amount$/i), { target: { value: '40' } })
     expect(props.onChange).toHaveBeenCalledWith({ amountValue: 40 })
   })
 
@@ -53,7 +53,7 @@ describe('ScheduleStageRow', () => {
   it('shows "rest" and no share input for a remainder stage', () => {
     setup({ amountType: 'remainder', amountValue: null })
     expect(screen.getByText(/rest/i)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/^share$/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^amount$/i)).not.toBeInTheDocument()
   })
 
   it('removes the row', async () => {
