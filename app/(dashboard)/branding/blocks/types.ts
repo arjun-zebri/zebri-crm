@@ -388,9 +388,40 @@ export interface ContractSignBlock extends BaseBlock {
  * and below it in the branding editor; the run sheet content itself is
  * never editable on the branding surface. Same model as `couplePortal`,
  * `paymentSchedule`, and `contractBody`.
+ *
+ * Typography overrides are **run-sheet-scoped**: they live on this block, so
+ * they never touch invoices, quotes, or contracts. Each is fully optional and
+ * only carries the individual properties the MC explicitly changed. Unlike the
+ * contract body (which drives its prose through globals.css CSS variables), the
+ * run sheet's `VendorTimeline` styles every element with inline styles resolved
+ * from the block override layered over the same values it currently hard-codes,
+ * so a block with none of these set renders byte-identically to every run sheet
+ * sent before this feature existed.
  */
 export interface VendorTimelineBodyBlock extends BaseBlock {
   type: 'vendorTimelineBody'
+  /**
+   * Title typography override (the `<h1>Run Sheet</h1>`). Absent ⇒ the title
+   * keeps the historical docTitle defaults. Only the set fields are applied.
+   */
+  titleStyle?: TextStyle
+  /**
+   * Subtitle typography override (the date / venue line). Absent ⇒ the subtitle
+   * keeps the historical finePrint defaults. Only the set fields are applied.
+   */
+  subtitleStyle?: TextStyle
+  /**
+   * Body typography override, applied to the per-item title. Absent ⇒ the item
+   * title keeps its historical body-role defaults. Only the set fields are
+   * applied, layered over the body role.
+   */
+  bodyStyle?: TextStyle
+  /**
+   * Note typography override, applied to the per-item description line. Absent ⇒
+   * the description keeps its historical finePrint defaults. Split from
+   * {@link bodyStyle} so the item title and its note are styled independently.
+   */
+  noteStyle?: TextStyle
 }
 
 /**

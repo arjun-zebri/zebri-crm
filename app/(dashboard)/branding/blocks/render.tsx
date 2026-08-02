@@ -44,6 +44,7 @@ import type {
   PaymentScheduleBlock,
   ContractBodyBlock,
   ContractSignBlock,
+  VendorTimelineBodyBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -1222,10 +1223,11 @@ export function RenderContractSign({ state, block }: { state: BrandPreviewState;
  * timeline) renders on the public page. The run sheet is not authored here: it
  * flows from the couple's event timeline in real time, so this shows a
  * representative sample through the real `VendorTimeline` component (so the
- * preview is faithful), with a small caption + note. Selectable via BlockFrame
- * (still locked, so it can't be duplicated).
+ * preview is faithful), with a small caption. Selectable via BlockFrame (still
+ * locked, so it can't be duplicated). The block's title / subtitle / body / note
+ * typography overrides flow into `VendorTimeline` so the mock reflects them.
  */
-export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }) {
+export function RenderVendorTimelineBody({ state, block }: { state: BrandPreviewState; block: VendorTimelineBodyBlock }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
   const branding = publicBrandingFromEditorState(state)
@@ -1243,12 +1245,8 @@ export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }
           events={[SAMPLE_RUN_SHEET_EVENT]}
           items={SAMPLE_RUN_SHEET_ITEMS}
           branding={branding}
+          styles={{ title: block.titleStyle, subtitle: block.subtitleStyle, body: block.bodyStyle, note: block.noteStyle }}
         />
-        <p className="text-xs leading-6 mt-5 w-full" style={{ color: muted }}>
-          Live event data from the couple&apos;s timeline. It renders here on the
-          sent run sheet and updates in real time. Drag other blocks above or
-          below to wrap it.
-        </p>
       </div>
     </div>
   )

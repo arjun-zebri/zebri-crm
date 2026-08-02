@@ -37,6 +37,7 @@ import type {
   PaymentScheduleBlock,
   ContractBodyBlock,
   ContractSignBlock,
+  VendorTimelineBodyBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -206,7 +207,7 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
     case 'contractSign':
       return <ContractSignControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'vendorTimelineBody':
-      return null
+      return <VendorTimelineBodyControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'questionnaireBody':
       return null
   }
@@ -1958,6 +1959,83 @@ function ContractSignControls({
         style={style}
         defaults={defaults}
         fontKind={target === 'heading' ? 'heading' : 'body'}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
+      />
+    </div>
+  )
+}
+
+// ── Run sheet body ────────────────────────────────────────────────────────────
+
+/**
+ * Typography controls for the run-sheet body block. Four click-to-target parts,
+ * chosen by what the MC clicked in the preview: the `<h1>` title
+ * (`data-subtarget="title"`) edits {@link VendorTimelineBodyBlock.titleStyle}
+ * over the docTitle role; the date / venue line (`data-subtarget="subtitle"`)
+ * edits {@link VendorTimelineBodyBlock.subtitleStyle} over the finePrint role;
+ * the per-item description (`data-subtarget="note"`) edits
+ * {@link VendorTimelineBodyBlock.noteStyle} over the finePrint role; anything
+ * else defaults to the body ({@link VendorTimelineBodyBlock.bodyStyle}), which
+ * styles the per-item title over the body role. Mirrors the multi-target pattern
+ * in {@link ContractSignControls} — selection is by preview click, and
+ * {@link ActiveTargetLabel} just names the target.
+ *
+ * These overrides are run-sheet-scoped (they live on the block), so nothing here
+ * reaches invoices, quotes, or contracts. Defaults come from the global type
+ * roles, so an untouched target shows the same values the live run sheet uses.
+ * Patches merge onto the existing override so each single-field change preserves
+ * the MC's prior edits, matching every sibling *Controls.
+ */
+function VendorTimelineBodyControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: VendorTimelineBodyBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  const target: 'title' | 'subtitle' | 'note' | 'body' =
+    activeSubTarget === 'title' ? 'title'
+      : activeSubTarget === 'subtitle' ? 'subtitle'
+        : activeSubTarget === 'note' ? 'note'
+          : 'body'
+  const role =
+    target === 'title' ? 'docTitle'
+      : target === 'subtitle' || target === 'note' ? 'finePrint'
+        : 'body'
+  const style =
+    target === 'title' ? block.titleStyle
+      : target === 'subtitle' ? block.subtitleStyle
+        : target === 'note' ? block.noteStyle
+          : block.bodyStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(publicBrandingFromEditorState(state), role),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<VendorTimelineBodyBlock>(
+      block.id,
+      target === 'title' ? { titleStyle: merged }
+        : target === 'subtitle' ? { subtitleStyle: merged }
+          : target === 'note' ? { noteStyle: merged }
+            : { bodyStyle: merged },
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'title' ? 'Title' : target === 'subtitle' ? 'Subtitle' : target === 'note' ? 'Note' : 'Body'} />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        fontKind={target === 'title' ? 'heading' : 'body'}
         onChange={onStyleChange}
         {...(expanded !== undefined ? { expanded } : {})}
       />

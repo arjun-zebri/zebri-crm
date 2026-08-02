@@ -16,7 +16,7 @@ import { useEffect } from 'react'
 
 import { SAMPLE_RUN_SHEET_EVENT, SAMPLE_RUN_SHEET_ITEMS } from '@/app/(dashboard)/branding/blocks/sample-run-sheet'
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
-import type { Block, ContractBodyBlock, ContractSignBlock } from '@/app/(dashboard)/branding/blocks/types'
+import type { Block, ContractBodyBlock, ContractSignBlock, VendorTimelineBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
 import { getTextColor } from '@/lib/branding/contrast'
 import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
@@ -409,6 +409,13 @@ function VendorTimelinePreview({
   const markerIdx = blocks.findIndex((b) => b.type === 'vendorTimelineBody')
   const preBlocks = markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks
   const postBlocks = markerIdx >= 0 ? blocks.slice(markerIdx + 1) : []
+  // Carry the run sheet body block's typography overrides into the injected
+  // timeline, so the preview matches the sent run sheet. Absent block / no
+  // overrides resolve to the historical defaults (identical render).
+  const vtbBlock = markerIdx >= 0 ? (blocks[markerIdx] as VendorTimelineBodyBlock) : undefined
+  const vtbStyles = vtbBlock
+    ? { title: vtbBlock.titleStyle, subtitle: vtbBlock.subtitleStyle, body: vtbBlock.bodyStyle, note: vtbBlock.noteStyle }
+    : undefined
 
   return (
     <div style={pageStyle}>
@@ -417,7 +424,7 @@ function VendorTimelinePreview({
           <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
           {markerIdx >= 0 ? (
             <div className="pt-6">
-              <VendorTimeline events={[SAMPLE_RUN_SHEET_EVENT]} items={SAMPLE_RUN_SHEET_ITEMS} branding={branding} />
+              <VendorTimeline events={[SAMPLE_RUN_SHEET_EVENT]} items={SAMPLE_RUN_SHEET_ITEMS} branding={branding} {...(vtbStyles ? { styles: vtbStyles } : {})} />
             </div>
           ) : null}
           {postBlocks.length > 0 ? (

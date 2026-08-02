@@ -491,7 +491,7 @@ function renderBlock(
     case 'contractSign':
       return <RenderContractSign state={state} block={block} />
     case 'vendorTimelineBody':
-      return <RenderVendorTimelineBody state={state} />
+      return <RenderVendorTimelineBody state={state} block={block} />
     case 'questionnaireBody':
       return <RenderQuestionnaireBody block={block} state={state} updateBlock={updateBlock} />
     case 'image':

@@ -193,7 +193,10 @@ const ERROR_BUDGET = 54;
 // Contract sign block + body-signature cleanup (2026-08-02): removed unused
 // imports when the MC signature moved out of the body mock, and fixed an
 // import-order warning (258 -> 257). Locking in.
-const WARNING_BUDGET = 257;
+// Run sheet body typography (2026-08-02): VendorTimeline gained a colour-
+// preserving import from the branding blocks module; running eslint --fix on the
+// new imports netted out one import-order warning (257 -> 256). Locking in.
+const WARNING_BUDGET = 256;
 
 function runEslintJson() {
   try {

@@ -162,6 +162,26 @@ public run sheet and the branding preview both inject the live/sample
 timeline at the marker. The body itself is not authored here (it is the
 couple's live event timeline); only chrome blocks around it are editable.
 
+**Typography (title / subtitle / body / note).** The marker block carries four
+optional overrides — `titleStyle`, `subtitleStyle`, `bodyStyle`, `noteStyle` —
+edited via click-to-target in the preview (`data-subtarget` = `title` /
+`subtitle` / `body` / `note`), same UX as the contract body/sign controls.
+**Title** styles the `<h1>Run Sheet</h1>` (over the `docTitle` role),
+**Subtitle** the date / venue line (over `finePrint`), **Body** the per-item
+title (over `body`), and **Note** the per-item description (over `finePrint`).
+Body and Note are separate levels so the item title and its note are styled
+independently. Unlike the contract body, this is **inline-driven,
+not globals.css-driven**: `VendorTimeline` already styles every element with
+inline styles from the type roles, so each element resolves as
+`resolveTextStyle(override, defaultsBuiltFromTheValuesItCurrentlyHard-codes)`.
+The defaults preserve the element's current colour (`heading_color` /
+`text_color`) and force `letterSpacing: 0` + `textTransform: 'none'` (the neutral
+values the old inline styles already rendered), so a run sheet with **no
+overrides renders byte-identically** to every run sheet sent before this feature.
+The overrides are run-sheet-scoped (they live on the block) and never touch
+invoices, quotes, or contracts. `migrateBlocks` / `repairBlocks` pass them
+through untouched and never fabricate them on a bare marker.
+
 **Questionnaire** (required, pick exactly one mode): Questionnaire body
 with a **mode toggle**:
 
