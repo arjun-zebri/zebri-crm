@@ -115,9 +115,9 @@ changes; the parent modals own the actual form state + mutations.
 | `share-and-send.tsx` | Footer: share-link affordance + Save + primary "Send to couple" CTA |
 | `payment-schedule.tsx` | Invoice payment section: empty state is a single "Add schedule" button; applied state shows the resolved drag-reorder timeline, an always-visible running total that warns on a mismatch, and one "Change" door into the modal |
 | `payment-stage-row.tsx` | One applied invoice stage on the timeline; unpaid rows edit inline, paid rows lock and lose their remove control |
-| `schedule-modal.tsx` | The single schedule modal (2026-07-31 redesign): Start-from dropdown, name, draft timeline, running total, and Save-to-library / Cancel / Apply. Edits a template-shaped draft and resolves it against the invoice on Apply; Apply-to-invoice-only, no stacking. Uses the shared `Modal` (`nested`) |
-| `schedule-stage-row.tsx` | One draft timeline row reading as a sentence: label, amount-type select + value, "due `<n>` `<unit>` after issue" (day/week/month). Dropdowns and labeled inputs, not bare number spinners. Paid rows lock |
-| `schedule-start-dropdown.tsx` | The modal's "Start from" popover: saved schedules with an inline set-default star and delete, plus "Build from scratch". Summaries via `describeSchedule` |
+| `schedule-modal.tsx` | The single schedule modal (2026-07-31 v2): a Schedule combobox, an explainer line, global **Amount** (% / $) and **Timing** (after issue / before due) segmented toggles, a "final stage collects the remaining balance" checkbox, the draft timeline, running total, and Save-to-library / Cancel / Apply. Narrow (`md`), `text-sm`; Apply-to-invoice-only, no stacking |
+| `schedule-stage-row.tsx` | One draft timeline row pared to stage / share / due: label, a share value with its global unit (or "rest" for the remainder), and an offset value + unit select. No per-row type dropdowns (those are global). Paid rows lock; stacks on mobile |
+| `schedule-combobox.tsx` | The "Schedule" field: a name input with a dropdown of saved schedules (inline set-default star + delete). Type to name a new one, or pick a saved one to load it. Replaces the separate Start-from + Name pair |
 | `template-picker.tsx` | Quote templates — empty-state card + inline popover variants |
 | `builder-preview-pane.tsx` | Right pane: PDF / Email / Payment page tabs + "Update branding" link (Phase 2C.2 redesign) |
 | `preview-pdf.tsx` | PDF preview — renders `buildPdfHtml()` output in a sandboxed iframe |

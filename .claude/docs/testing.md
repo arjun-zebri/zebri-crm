@@ -84,18 +84,21 @@ seed). The integration project runs serially in one process (shared DB).
 ### Payment schedule modal specs (2026-07-31 redesign)
 
 Unit (`tests/unit/`), all with semantic selectors:
-- `lib/payments/resolve-stages.test.ts` — resolution + validation, plus the
-  new `<value> <unit>` offsets: day / week / month, and month-end clamping
-  (Jan 31 + 1 month = Feb 28).
+- `lib/payments/resolve-stages.test.ts` — resolution + validation, the
+  `<value> <unit>` offsets (day / week / month, month-end clamping), and the
+  `issue` / `due` timing anchor (before-due dates backward from the due date;
+  `no_due_date` when the invoice has none).
 - `lib/payments/describe-schedule.test.ts` — `describeSchedule` across
   remainder, single-stage, fixed, and percentage combinations.
-- `components/builders/schedule-stage-row.test.tsx` — label / offset edits, the
-  value field hides for a remainder, a paid row locks. The amount-type and unit
-  controls are Radix `Select`s; their option selection is **not** drivable in
-  jsdom (same as `select.test.tsx`), so state is asserted by rendering.
+- `components/builders/schedule-stage-row.test.tsx` — label / share / offset
+  edits, the % vs $ unit, "rest" for a remainder, a paid row locks. The unit
+  `Select` is a Radix control (not drivable in jsdom), so state is asserted by
+  rendering.
 - `components/builders/schedule-modal.test.tsx` — seeds from the default, the
-  running total, Add payment, Apply fires the resolved template + closes, Save
-  to library, Apply disabled with a warning for an unresolvable schedule.
+  running total, Add payment (before the remainder), Apply fires the resolved
+  template + closes, Save to library, the Amount %/$ toggle, the remainder
+  checkbox, "Before due" disabled without a due date, and Apply disabled with a
+  warning for an unresolvable schedule.
 - `components/builders/payment-schedule.test.tsx` — empty state offers one "Add
   schedule" button that opens the modal; applied state shows the running total
   and "Change" reopens it.

@@ -223,12 +223,19 @@ The authoring UI is a **single modal** (2026-07-31 redesign,
   (a name collision appends " copy"), so it never silently rewrites a
   reused schedule. Every MC is seeded a default named "Default"
   (migration `20260730000000` + an `auth.users` trigger).
-- **Flexible timing.** A stage falls due `<value> <unit>` after issue,
-  where unit is day / week / month, stored in `due_offset_value` +
-  `due_offset_unit` (migration `20260731010000`; `due_offset_days` is
-  deprecated). `month` resolves to a real calendar month, clamped to the
-  end of a short month. `invoice_payment_stages` carry the same columns so
-  the chosen unit round-trips when the modal reopens.
+- **Flexible timing.** A stage falls due `<value> <unit>` from an anchor,
+  where unit is day / week / month (`due_offset_value` + `due_offset_unit`,
+  migration `20260731010000`; `due_offset_days` deprecated) and the anchor is
+  either **`issue`** (forward from the issue date) or **`due`** (backward from
+  the invoice due date) (`due_offset_anchor`, migration `20260731020000`).
+  `month` resolves to a real calendar month, clamped to the end of a short
+  month; a `due`-anchored schedule needs the invoice to have a due date, or the
+  resolver returns `no_due_date`. `invoice_payment_stages` carry the same
+  columns so the choice round-trips when the modal reopens.
+- **UI (2026-07-31 v2).** One `md`-width modal: a Schedule combobox (name +
+  saved-schedule dropdown), global **Amount** (% / $) and **Timing** (after
+  issue / before due) toggles, and a "final stage collects the remaining
+  balance" checkbox, so each row is just stage / share / due.
 
 Design + rationale: `docs/superpowers/specs/2026-07-31-payment-schedule-modal-v2-design.md`
 (supersedes the 2026-07-30 UI). The server actions in `schedule-actions.ts`

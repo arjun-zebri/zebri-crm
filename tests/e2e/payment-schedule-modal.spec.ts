@@ -46,7 +46,7 @@ test.describe('invoice builder: payment schedule modal', () => {
 
     // Empty state: one button opens the modal, pre-loaded with the default.
     await page.getByRole('button', { name: /add schedule/i }).click()
-    await expect(page.getByLabel('Schedule name')).toBeVisible()
+    await expect(page.getByLabel('Schedule')).toBeVisible()
     await expect(page.getByText(/Stages total .* of \$4,000\.00/i)).toBeVisible()
 
     // Apply writes the timeline onto the invoice and closes the modal.
