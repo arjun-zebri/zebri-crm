@@ -1,25 +1,27 @@
 import { describe, expect, it } from 'vitest'
 
 import { resolveStages, toTemplateStages, validateForSave } from '@/lib/payments/resolve-stages'
-import type { OffsetUnit, TemplateStage } from '@/types/payment-schedule'
+import type { OffsetAnchor, OffsetUnit, TemplateStage } from '@/types/payment-schedule'
 
 const pct = (
   label: string,
   value: number,
   offsetValue = 0,
   offsetUnit: OffsetUnit = 'day',
-): TemplateStage => ({ label, amountType: 'percent', amountValue: value, offsetValue, offsetUnit })
+  offsetAnchor: OffsetAnchor = 'issue',
+): TemplateStage => ({ label, amountType: 'percent', amountValue: value, offsetValue, offsetUnit, offsetAnchor })
 const fixed = (
   label: string,
   dollars: number,
   offsetValue = 0,
   offsetUnit: OffsetUnit = 'day',
-): TemplateStage => ({ label, amountType: 'fixed', amountValue: dollars, offsetValue, offsetUnit })
+): TemplateStage => ({ label, amountType: 'fixed', amountValue: dollars, offsetValue, offsetUnit, offsetAnchor: 'issue' })
 const rest = (
   label: string,
   offsetValue = 0,
   offsetUnit: OffsetUnit = 'day',
-): TemplateStage => ({ label, amountType: 'remainder', amountValue: null, offsetValue, offsetUnit })
+  offsetAnchor: OffsetAnchor = 'issue',
+): TemplateStage => ({ label, amountType: 'remainder', amountValue: null, offsetValue, offsetUnit, offsetAnchor })
 
 const ISSUE = '2026-06-12'
 
@@ -68,6 +70,22 @@ describe('resolveStages', () => {
     if (!result.ok) return
     expect(result.stages[0]!.offsetValue).toBe(3)
     expect(result.stages[0]!.offsetUnit).toBe('week')
+  })
+
+  it('dates a before-due stage backward from the invoice due date', () => {
+    const due = '2026-12-01'
+    const result = resolveStages([pct('Balance', 100, 2, 'week', 'due')], 100_000, ISSUE, due)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.stages[0]!.dueDate).toBe('2026-11-17')
+    expect(result.stages[0]!.offsetAnchor).toBe('due')
+  })
+
+  it('rejects a before-due stage when the invoice has no due date', () => {
+    const result = resolveStages([pct('Balance', 100, 2, 'week', 'due')], 100_000, ISSUE, null)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.errors.map((e) => e.code)).toContain('no_due_date')
   })
 
   it('resolves mixed fixed plus remainder', () => {

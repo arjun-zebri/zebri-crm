@@ -108,6 +108,7 @@ interface Invoice {
     due_date: string | null;
     due_offset_value: number | null;
     due_offset_unit: string | null;
+    due_offset_anchor: string | null;
     paid_at: string | null;
   }>;
 }
@@ -338,6 +339,7 @@ export function InvoiceBuilderModal({
       due_date: string | null;
       due_offset_value: number | null;
       due_offset_unit: string | null;
+      due_offset_anchor: string | null;
       paid_at: string | null;
     }>,
   ) =>
@@ -352,6 +354,7 @@ export function InvoiceBuilderModal({
       offsetValue:
         row.due_offset_value ?? (row.due_date ? daysBetween(issueDate, row.due_date) : 0),
       offsetUnit: (row.due_offset_unit as 'day' | 'week' | 'month' | null) ?? 'day',
+      offsetAnchor: (row.due_offset_anchor as 'issue' | 'due' | null) ?? 'issue',
       paidAt: row.paid_at,
     }))
 
@@ -891,6 +894,7 @@ export function InvoiceBuilderModal({
             stages={invoiceStages.stages}
             totalCents={Math.round(total * 100)}
             issueDate={issueDate}
+            dueDate={dueDate ?? null}
             defaultSchedule={invoiceStages.defaultSchedule}
             schedules={invoiceStages.schedules}
             schedulesLoading={invoiceStages.schedulesLoading}

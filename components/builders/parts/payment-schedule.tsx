@@ -37,6 +37,8 @@ export interface PaymentScheduleProps {
   stages: InvoiceStage[]
   totalCents: number
   issueDate: string
+  /** The invoice's due date, for "before due date" timing in the modal. */
+  dueDate: string | null
   defaultSchedule: PaymentScheduleType | null
   schedules: PaymentScheduleType[]
   schedulesLoading: boolean
@@ -60,6 +62,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
     stages,
     totalCents,
     issueDate,
+    dueDate,
     defaultSchedule,
     schedules,
     schedulesLoading,
@@ -88,6 +91,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
     amountValue: s.amountValue,
     offsetValue: s.offsetValue,
     offsetUnit: s.offsetUnit,
+    offsetAnchor: s.offsetAnchor,
     paidAt: s.paidAt,
   }))
 
@@ -188,6 +192,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
           onClose={() => setModalOpen(false)}
           totalCents={totalCents}
           issueDate={issueDate}
+          dueDate={dueDate}
           initialStages={initialStages}
           defaultSchedule={defaultSchedule}
           schedules={schedules}

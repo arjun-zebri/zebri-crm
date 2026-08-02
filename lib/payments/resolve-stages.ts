@@ -6,7 +6,13 @@
  *
  * @module lib/payments/resolve-stages
  */
-import type { OffsetUnit, ResolvedStage, StageAmountType, TemplateStage } from '@/types/payment-schedule'
+import type {
+  OffsetAnchor,
+  OffsetUnit,
+  ResolvedStage,
+  StageAmountType,
+  TemplateStage,
+} from '@/types/payment-schedule'
 
 /** Why a schedule cannot be applied or saved. */
 export type StageValidationError =
@@ -15,6 +21,7 @@ export type StageValidationError =
   | { code: 'sum_mismatch'; expectedCents: number; actualCents: number }
   | { code: 'fixed_exceeds_total'; position: number }
   | { code: 'single_stage' }
+  | { code: 'no_due_date' }
 
 /** Outcome of resolving a template against a concrete invoice total. */
 export type ResolveResult =
@@ -30,6 +37,26 @@ export type ResolveResult =
  * would shift the calendar day for anyone east of Greenwich, which is every
  * Australian user.
  */
+/**
+ * Resolve one stage's concrete due date from its anchor and offset. `'issue'`
+ * counts forward from the issue date; `'due'` counts backward from the invoice
+ * due date. Returns null when a `'due'`-anchored stage has no due date to
+ * count from — the caller turns that into a `no_due_date` validation error.
+ */
+function resolveDueDate(
+  anchor: OffsetAnchor,
+  value: number,
+  unit: OffsetUnit,
+  issueDate: string,
+  dueDate: string | null,
+): string | null {
+  if (anchor === 'due') {
+    if (!dueDate) return null
+    return addOffset(dueDate, -value, unit)
+  }
+  return addOffset(issueDate, value, unit)
+}
+
 function addOffset(isoDate: string, value: number, unit: OffsetUnit): string {
   const [y, m, d] = isoDate.split('-').map(Number)
   const base = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1))
@@ -108,6 +135,7 @@ export function resolveStages(
   template: TemplateStage[],
   invoiceTotalCents: number,
   issueDate: string,
+  dueDate: string | null = null,
 ): ResolveResult {
   if (template.length === 0) return { ok: true, stages: [] }
 
@@ -115,6 +143,11 @@ export function resolveStages(
   // Amount checks cannot run on a template with structural errors (e.g., two
   // remainder stages), so we return early: the validation stage stopped here.
   if (errors.length > 0) return { ok: false, errors }
+
+  // A stage timed "before the due date" cannot be dated without one.
+  if (!dueDate && template.some((s) => s.offsetAnchor === 'due')) {
+    return { ok: false, errors: [{ code: 'no_due_date' }] }
+  }
 
   const hasRemainder = template.some((s) => s.amountType === 'remainder')
 
@@ -166,9 +199,10 @@ export function resolveStages(
       amountType: s.amountType,
       amountValue: s.amountValue,
       amountCents: cents[i] ?? 0,
-      dueDate: addOffset(issueDate, s.offsetValue, s.offsetUnit),
+      dueDate: resolveDueDate(s.offsetAnchor, s.offsetValue, s.offsetUnit, issueDate, dueDate),
       offsetValue: s.offsetValue,
       offsetUnit: s.offsetUnit,
+      offsetAnchor: s.offsetAnchor,
     })),
   }
 }
@@ -187,6 +221,7 @@ export function toTemplateStages(stages: ResolvedStage[]): TemplateStage[] {
     amountValue: s.amountValue,
     offsetValue: s.offsetValue,
     offsetUnit: s.offsetUnit,
+    offsetAnchor: s.offsetAnchor,
   }))
 }
 

@@ -1,11 +1,12 @@
 /**
  * The single payment-schedule modal.
  *
- * One surface over the invoice builder, no stacking: a Start-from dropdown
- * (with inline set-default / delete), a Name, a timeline of draft stages, a
- * running total, and Save-to-library / Cancel / Apply. The modal edits a
- * template-shaped draft and resolves it against this invoice on Apply; it never
- * touches saved templates except through the explicit Save to library.
+ * One narrow surface over the invoice builder. A Schedule combobox names the
+ * schedule and loads saved ones. Two global choices sit above the timeline: the
+ * share unit (% or $) and the timing anchor (forward from issue, or back from
+ * the due date). A checkbox makes the final stage collect the remainder, so the
+ * rows stay down to name / share / due. Apply resolves the draft against this
+ * invoice; Save to library persists it as a new template.
  *
  * @module components/builders/parts/schedule-modal
  */
@@ -16,14 +17,14 @@ import { Bookmark, Plus } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Modal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toast'
 import { resolveStages, validateForSave } from '@/lib/payments/resolve-stages'
-import type { PaymentSchedule, TemplateStage } from '@/types/payment-schedule'
+import type { OffsetAnchor, PaymentSchedule, StageAmountType, TemplateStage } from '@/types/payment-schedule'
 
+import { ScheduleCombobox } from './schedule-combobox'
 import { ScheduleStageRow, STAGE_ROW_GRID, type StageDraft } from './schedule-stage-row'
-import { ScheduleStartDropdown } from './schedule-start-dropdown'
 
 /** Props for {@link ScheduleModal}. */
 export interface ScheduleModalProps {
@@ -31,6 +32,8 @@ export interface ScheduleModalProps {
   onClose: () => void
   totalCents: number
   issueDate: string
+  /** The invoice's due date, needed for "before due date" timing. */
+  dueDate: string | null
   /** Current invoice stages as drafts (empty for a fresh invoice). */
   initialStages: StageDraft[]
   defaultSchedule: PaymentSchedule | null
@@ -60,6 +63,8 @@ function reason(code: string): string {
       return 'A fixed amount is larger than the invoice total.'
     case 'single_stage':
       return 'A schedule needs at least two stages.'
+    case 'no_due_date':
+      return 'Set a due date on the invoice to time stages before it.'
     default:
       return 'This schedule is not valid yet.'
   }
@@ -72,13 +77,46 @@ function draftToTemplate(draft: StageDraft[]): TemplateStage[] {
     amountValue: s.amountValue,
     offsetValue: s.offsetValue,
     offsetUnit: s.offsetUnit,
+    offsetAnchor: s.offsetAnchor,
   }))
+}
+
+/** A small two-or-three-way segmented toggle. */
+function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: T
+  onChange: (v: T) => void
+  options: { value: T; label: string; disabled?: boolean }[]
+  ariaLabel: string
+}) {
+  return (
+    <div role="group" aria-label={ariaLabel} className="inline-flex overflow-hidden rounded-control border border-border">
+      {options.map((o, i) => (
+        <button
+          key={o.value}
+          type="button"
+          disabled={o.disabled}
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={`cursor-pointer px-2.5 py-1 text-caption transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+            i > 0 ? 'border-l border-border' : ''
+          } ${value === o.value ? 'bg-brand-fg font-medium text-text-inverse' : 'text-text-muted hover:text-text'}`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 /** The modal shell. The body remounts on open, reseeding its draft. */
 export function ScheduleModal(props: ScheduleModalProps) {
   return (
-    <Modal isOpen={props.open} onClose={props.onClose} title="Payment schedule" size="lg" nested>
+    <Modal isOpen={props.open} onClose={props.onClose} title="Payment schedule" size="md" nested>
       <ScheduleModalBody {...props} />
     </Modal>
   )
@@ -88,6 +126,7 @@ function ScheduleModalBody({
   onClose,
   totalCents,
   issueDate,
+  dueDate,
   initialStages,
   defaultSchedule,
   schedules,
@@ -103,8 +142,6 @@ function ScheduleModalBody({
   const nextKey = () => `k${String(keyCounter.current++)}`
   const [listRef] = useAutoAnimate<HTMLDivElement>()
 
-  // Seeded on mount; the Modal unmounts this body on close, so opening reseeds
-  // from the current invoice, else the default schedule, else empty.
   const [draft, setDraft] = useState<StageDraft[]>(() =>
     initialStages.length > 0
       ? initialStages
@@ -115,21 +152,44 @@ function ScheduleModalBody({
   )
   const [saving, setSaving] = useState(false)
 
+  // Globals derived from the rows; the toggles bulk-edit the unpaid rows.
+  const amountUnit: StageAmountType =
+    draft.find((s) => s.amountType !== 'remainder')?.amountType ?? 'percent'
+  const anchor: OffsetAnchor = draft[0]?.offsetAnchor ?? 'issue'
+  const lastIsRemainder = draft.length > 0 && draft[draft.length - 1]?.amountType === 'remainder'
+
   const patch = (key: string, p: Partial<StageDraft>) =>
     setDraft((cur) => cur.map((s) => (s.key === key ? { ...s, ...p } : s)))
   const removeStage = (key: string) => setDraft((cur) => cur.filter((s) => s.key !== key))
+
+  const setAmountUnit = (unit: StageAmountType) =>
+    setDraft((cur) => cur.map((s) => (s.paidAt || s.amountType === 'remainder' ? s : { ...s, amountType: unit })))
+  const setAnchor = (next: OffsetAnchor) =>
+    setDraft((cur) => cur.map((s) => (s.paidAt ? s : { ...s, offsetAnchor: next })))
+  const setLastRemainder = (on: boolean) =>
+    setDraft((cur) => {
+      if (cur.length === 0) return cur
+      const last = cur.length - 1
+      return cur.map((s, i) =>
+        i === last && !s.paidAt
+          ? on
+            ? { ...s, amountType: 'remainder', amountValue: null }
+            : { ...s, amountType: amountUnit, amountValue: s.amountValue ?? 0 }
+          : s,
+      )
+    })
+
   const addStage = () =>
     setDraft((cur) => {
-      // A remainder must stay last, so a new stage is a percent inserted just
-      // before it; with no remainder yet, the new stage becomes the remainder.
       const remainderIdx = cur.findIndex((s) => s.amountType === 'remainder')
       const newStage: StageDraft = {
         key: nextKey(),
         label: `Payment ${String(cur.length + 1)}`,
-        amountType: remainderIdx >= 0 ? 'percent' : 'remainder',
-        amountValue: remainderIdx >= 0 ? 0 : null,
+        amountType: amountUnit,
+        amountValue: 0,
         offsetValue: 0,
         offsetUnit: 'day',
+        offsetAnchor: anchor,
         paidAt: null,
       }
       if (remainderIdx < 0) return [...cur, newStage]
@@ -138,20 +198,14 @@ function ScheduleModalBody({
       return copy
     })
 
-  // Loading a saved schedule keeps any paid stages locked at the front.
-  const loadSchedule = (schedule: PaymentSchedule | null) => {
+  const loadSchedule = (schedule: PaymentSchedule) => {
     const paid = draft.filter((s) => s.paidAt)
-    if (!schedule) {
-      setDraft(paid)
-      setName('')
-      return
-    }
     setDraft([...paid, ...schedule.stages.map((s) => ({ ...s, key: nextKey(), paidAt: null }))])
     setName(schedule.name)
   }
 
   const template = draftToTemplate(draft)
-  const resolved = resolveStages(template, totalCents, issueDate)
+  const resolved = resolveStages(template, totalCents, issueDate, dueDate)
   const applyReason = resolved.ok ? null : reason(resolved.errors[0]?.code ?? '')
   const saveErrors = validateForSave(template)
   const saveReason =
@@ -161,7 +215,6 @@ function ScheduleModalBody({
         ? reason(saveErrors[0]!.code)
         : applyReason
   const sumCents = resolved.ok ? resolved.stages.reduce((acc, s) => acc + s.amountCents, 0) : 0
-  const hasPaid = draft.some((s) => s.paidAt)
 
   const save = async () => {
     setSaving(true)
@@ -176,46 +229,80 @@ function ScheduleModalBody({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-sm">
       <div className="flex items-center gap-3">
-        <span className="w-14 shrink-0 text-caption text-text-muted">Start from</span>
-        <ScheduleStartDropdown
-          schedules={schedules}
-          loading={schedulesLoading}
-          error={schedulesError}
-          triggerLabel={name.trim() !== '' ? name : 'Build from scratch'}
-          onPick={loadSchedule}
-          onSetDefault={onSetDefaultSchedule}
-          onDelete={onDeleteSchedule}
-        />
-      </div>
-      <div className="flex items-center gap-3">
-        <label htmlFor="schedule-name" className="w-14 shrink-0 text-caption text-text-muted">
-          Name
+        <label htmlFor="schedule-name" className="w-16 shrink-0 text-caption text-text-muted">
+          Schedule
         </label>
-        <Input
-          id="schedule-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          aria-label="Schedule name"
-          placeholder="e.g. 50 / 50 split"
-          className="flex-1"
-        />
+        <div className="flex-1">
+          <ScheduleCombobox
+            name={name}
+            onNameChange={setName}
+            schedules={schedules}
+            loading={schedulesLoading}
+            error={schedulesError}
+            onPick={loadSchedule}
+            onSetDefault={onSetDefaultSchedule}
+            onDelete={onDeleteSchedule}
+          />
+        </div>
       </div>
+
+      <p className="text-caption leading-relaxed text-text-muted">
+        Split the invoice into stages the couple pays over time. Choose whether each share is a
+        percent or a dollar amount, and whether timing counts forward from the issue date or back
+        from the due date.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-caption text-text-muted">Amount</span>
+          <Segmented
+            ariaLabel="Share unit"
+            value={amountUnit === 'fixed' ? 'fixed' : 'percent'}
+            onChange={(v) => setAmountUnit(v)}
+            options={[
+              { value: 'percent', label: '%' },
+              { value: 'fixed', label: '$' },
+            ]}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-caption text-text-muted">Timing</span>
+          <Segmented
+            ariaLabel="Timing anchor"
+            value={anchor}
+            onChange={(v) => setAnchor(v)}
+            options={[
+              { value: 'issue', label: 'After issue' },
+              { value: 'due', label: 'Before due', disabled: !dueDate },
+            ]}
+          />
+        </div>
+      </div>
+
+      {draft.length > 0 && (
+        <Checkbox
+          checked={lastIsRemainder}
+          onChange={setLastRemainder}
+          label="Final stage collects the remaining balance"
+        />
+      )}
 
       <div>
         {draft.length > 0 && (
           <div className={`hidden pb-2 text-caption text-text-muted ${STAGE_ROW_GRID}`}>
             <span aria-hidden />
             <span>Stage</span>
-            <span>Amount</span>
-            <span>Due after issue</span>
+            <span>Share</span>
+            <span>Due</span>
+            <span aria-hidden />
           </div>
         )}
         <div className="relative">
           <div
             aria-hidden
-            className="absolute left-[0.3rem] top-2 bottom-2 hidden w-px border-l border-dashed border-border sm:block"
+            className="absolute left-[0.19rem] top-2 bottom-2 hidden w-px border-l border-dashed border-border sm:block"
           />
           <div ref={listRef} className="space-y-2.5">
             {draft.map((s) => (
@@ -231,21 +318,18 @@ function ScheduleModalBody({
         <button
           type="button"
           onClick={addStage}
-          className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-text"
+          className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-caption text-text-muted transition-colors hover:text-text"
         >
-          <Plus size={15} strokeWidth={1.5} /> Add payment
+          <Plus size={14} strokeWidth={1.5} /> Add payment
         </button>
       </div>
 
       {draft.length > 0 && (
-        <div className="flex items-center justify-end text-sm tabular-nums">
+        <div className="flex items-center justify-end text-caption tabular-nums">
           <span className={applyReason ? 'text-warning' : 'text-text-muted'}>
             {applyReason ?? `Stages total ${fmt(sumCents)} of ${fmt(totalCents)}`}
           </span>
         </div>
-      )}
-      {hasPaid && (
-        <p className="text-caption text-text-subtle">Applying keeps any stage that is already paid.</p>
       )}
 
       <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
@@ -257,7 +341,7 @@ function ScheduleModalBody({
           title={saveReason ?? undefined}
           onClick={save}
         >
-          <Bookmark size={15} strokeWidth={1.5} />
+          <Bookmark size={14} strokeWidth={1.5} />
           Save to library
         </Button>
         <div className="flex gap-2">

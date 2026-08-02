@@ -12,18 +12,18 @@ const defaultSchedule: PaymentScheduleType = {
   name: 'Default',
   isDefault: true,
   stages: [
-    { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day' },
-    { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
+    { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+    { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
   ],
 }
 
 const stageA: InvoiceStage = {
   id: 's1', position: 1, label: 'Deposit', amountType: 'percent', amountValue: 25,
-  amountCents: 140_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', paidAt: null,
+  amountCents: 140_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue', paidAt: null,
 }
 const stageB: InvoiceStage = {
   id: 's2', position: 2, label: 'Final', amountType: 'remainder', amountValue: null,
-  amountCents: 420_000, dueDate: '2026-09-01', offsetValue: 30, offsetUnit: 'day', paidAt: null,
+  amountCents: 420_000, dueDate: '2026-09-01', offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue', paidAt: null,
 }
 
 function setup(overrides: Partial<Parameters<typeof PaymentSchedule>[0]> = {}) {
@@ -32,6 +32,7 @@ function setup(overrides: Partial<Parameters<typeof PaymentSchedule>[0]> = {}) {
     stages: [stageA, stageB],
     totalCents: 560_000,
     issueDate: '2026-06-12',
+    dueDate: null,
     defaultSchedule,
     schedules: [defaultSchedule],
     schedulesLoading: false,
@@ -63,7 +64,7 @@ describe('PaymentSchedule', () => {
     // The modal's Apply button is unambiguous (the section h4 also reads
     // "Payment schedule", so we do not assert on the heading here).
     expect(screen.getByRole('button', { name: /^apply$/i })).toBeInTheDocument()
-    expect(screen.getByLabelText(/schedule name/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^schedule$/i)).toBeInTheDocument()
   })
 
   it('shows a matching running total when applied', () => {

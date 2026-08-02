@@ -11,6 +11,7 @@ const base: StageDraft = {
   amountValue: 25,
   offsetValue: 7,
   offsetUnit: 'day',
+  offsetAnchor: 'issue',
   paidAt: null,
 }
 
@@ -27,20 +28,32 @@ describe('ScheduleStageRow', () => {
     expect(props.onChange).toHaveBeenCalledWith({ label: 'Booking fee' })
   })
 
+  it('edits the share', () => {
+    const props = setup()
+    fireEvent.change(screen.getByLabelText(/^share$/i), { target: { value: '40' } })
+    expect(props.onChange).toHaveBeenCalledWith({ amountValue: 40 })
+  })
+
   it('edits the offset amount', () => {
     const props = setup()
     fireEvent.change(screen.getByLabelText(/offset amount/i), { target: { value: '14' } })
     expect(props.onChange).toHaveBeenCalledWith({ offsetValue: 14 })
   })
 
-  it('shows the value field for a percent stage', () => {
+  it('shows the percent unit for a percent stage', () => {
     setup()
-    expect(screen.getByLabelText(/^amount$/i)).toBeInTheDocument()
+    expect(screen.getByText('%')).toBeInTheDocument()
   })
 
-  it('hides the value field for a remainder stage', () => {
+  it('shows the dollar unit for a fixed stage', () => {
+    setup({ amountType: 'fixed' })
+    expect(screen.getByText('$')).toBeInTheDocument()
+  })
+
+  it('shows "rest" and no share input for a remainder stage', () => {
     setup({ amountType: 'remainder', amountValue: null })
-    expect(screen.queryByLabelText(/^amount$/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/rest/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^share$/i)).not.toBeInTheDocument()
   })
 
   it('removes the row', async () => {

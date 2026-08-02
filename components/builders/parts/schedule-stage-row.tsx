@@ -1,10 +1,11 @@
 /**
  * One row of the payment-schedule modal's timeline.
  *
- * A four-column grid (dot · name · amount · due) so every row lines up with its
- * neighbours and the column header, with fixed control widths so nothing wraps.
- * The amount type and time unit are dropdowns, never bare inputs. A paid stage
- * is locked: money has moved against it, so the only honest UI is read-only.
+ * Pared back to the three things a stage needs: its name, its share, and when
+ * it falls due. The share unit (% or $) and the timing anchor are global to the
+ * schedule, set above the timeline, so a row carries no type dropdowns of its
+ * own. A stage flagged as the remainder shows "rest" instead of a share input.
+ * A paid stage is locked: money has moved against it.
  *
  * @module components/builders/parts/schedule-stage-row
  */
@@ -14,14 +15,11 @@ import { X } from 'lucide-react'
 
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import type { OffsetUnit, StageAmountType } from '@/types/payment-schedule'
+import type { OffsetAnchor, OffsetUnit, StageAmountType } from '@/types/payment-schedule'
 
-/**
- * Shared column template for the header + every row on `sm+`. Below `sm` the
- * row stacks (see the row's own classes), so this grid only applies at `sm`.
- */
+/** Shared column template so the header and every row align on `sm+`. */
 export const STAGE_ROW_GRID =
-  'sm:grid sm:grid-cols-[0.6rem_minmax(0,1fr)_11.5rem_11rem] sm:items-center sm:gap-2.5'
+  'sm:grid sm:grid-cols-[0.5rem_minmax(0,1fr)_4.75rem_8.5rem_0.9rem] sm:items-center sm:gap-2'
 
 /** The editable shape of one timeline row. `paidAt` locks the row. */
 export interface StageDraft {
@@ -31,11 +29,12 @@ export interface StageDraft {
   amountValue: number | null
   offsetValue: number
   offsetUnit: OffsetUnit
+  offsetAnchor: OffsetAnchor
   paidAt: string | null
 }
 
 /** Fields a row edit can change. */
-export type StageDraftPatch = Partial<Omit<StageDraft, 'key' | 'paidAt'>>
+export type StageDraftPatch = Partial<Pick<StageDraft, 'label' | 'amountValue' | 'offsetValue' | 'offsetUnit'>>
 
 /** Props for {@link ScheduleStageRow}. */
 export interface ScheduleStageRowProps {
@@ -48,20 +47,21 @@ export interface ScheduleStageRowProps {
 export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRowProps) {
   const locked = stage.paidAt !== null
   const isRemainder = stage.amountType === 'remainder'
+  const unit = stage.amountType === 'fixed' ? '$' : '%'
 
   return (
     <div
-      className={`flex flex-col gap-2 border-b border-border pb-3 last:border-0 sm:border-0 sm:pb-0 ${STAGE_ROW_GRID}`}
+      className={`flex flex-col gap-1.5 border-b border-border pb-2.5 last:border-0 sm:border-0 sm:pb-0 ${STAGE_ROW_GRID}`}
     >
       <span
         aria-hidden
-        className={`hidden h-2 w-2 justify-self-center rounded-full sm:block ${
+        className={`hidden h-1.5 w-1.5 justify-self-center rounded-full sm:block ${
           locked ? 'bg-success' : 'border-2 border-brand-fg bg-surface'
         }`}
       />
 
       <Input
-        size="md"
+        size="sm"
         value={stage.label}
         onChange={(e) => onChange({ label: e.target.value })}
         aria-label="Stage label"
@@ -69,57 +69,41 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
         disabled={locked}
       />
 
-      {/* Amount: type select + value input (hidden for a remainder). */}
-      <div className="flex items-center gap-2">
-        <span className="w-16 shrink-0 text-caption text-text-muted sm:hidden">Amount</span>
-        <Select
-          value={stage.amountType}
-          onValueChange={(v) => {
-            const amountType = v as StageAmountType
-            onChange(
-              amountType === 'remainder'
-                ? { amountType, amountValue: null }
-                : { amountType, amountValue: stage.amountValue ?? 0 },
-            )
-          }}
-          aria-label="Amount type"
-          disabled={locked}
-          className="w-[7.25rem] shrink-0"
-          options={[
-            { value: 'percent', label: '%' },
-            { value: 'fixed', label: '$' },
-            { value: 'remainder', label: 'Remainder' },
-          ]}
-        />
-        {isRemainder ? (
-          <span className="w-14" />
-        ) : (
+      {/* Share: a value with its global unit, or "rest" for the remainder. */}
+      {isRemainder ? (
+        <span className="flex h-8 items-center justify-center rounded-control border border-dashed border-border text-caption text-text-muted">
+          rest
+        </span>
+      ) : (
+        <div className="flex items-center gap-1">
+          <span className="sm:hidden text-caption text-text-muted">Share</span>
           <Input
-            size="md"
+            size="sm"
             type="number"
             min={0}
             value={stage.amountValue ?? ''}
             onChange={(e) =>
               onChange({ amountValue: e.target.value === '' ? null : Number(e.target.value) })
             }
-            aria-label="Amount"
-            className="w-14 shrink-0 [&_input]:[appearance:textfield]"
+            aria-label="Share"
+            className="w-14 [&_input]:[appearance:textfield]"
             disabled={locked}
           />
-        )}
-      </div>
+          <span className="text-caption text-text-muted">{unit}</span>
+        </div>
+      )}
 
-      {/* Due offset: value + unit, with the remove control trailing. */}
-      <div className="flex items-center gap-2">
-        <span className="w-16 shrink-0 text-caption text-text-muted sm:hidden">Due after</span>
+      {/* Due offset: value + unit. */}
+      <div className="flex items-center gap-1.5">
+        <span className="sm:hidden text-caption text-text-muted">Due</span>
         <Input
-          size="md"
+          size="sm"
           type="number"
           min={0}
           value={String(stage.offsetValue)}
           onChange={(e) => onChange({ offsetValue: Number(e.target.value) || 0 })}
           aria-label="Offset amount"
-          className="w-12 shrink-0 [&_input]:[appearance:textfield]"
+          className="w-12 [&_input]:[appearance:textfield]"
           disabled={locked}
         />
         <Select
@@ -127,26 +111,28 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
           onValueChange={(v) => onChange({ offsetUnit: v as OffsetUnit })}
           aria-label="Offset unit"
           disabled={locked}
-          className="w-[5.5rem] shrink-0"
+          size="sm"
+          className="w-[4.75rem]"
           options={[
             { value: 'day', label: 'days' },
             { value: 'week', label: 'weeks' },
             { value: 'month', label: 'months' },
           ]}
         />
-        {locked ? (
-          <span className="w-5" aria-hidden />
-        ) : (
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label={`Remove ${stage.label}`}
-            className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center text-text-subtle transition-colors hover:text-danger"
-          >
-            <X size={15} strokeWidth={1.5} />
-          </button>
-        )}
       </div>
+
+      {locked ? (
+        <span className="hidden w-5 sm:block" aria-hidden />
+      ) : (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ${stage.label}`}
+          className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center self-start text-text-subtle transition-colors hover:text-danger sm:self-center sm:justify-self-center"
+        >
+          <X size={14} strokeWidth={1.5} />
+        </button>
+      )}
     </div>
   )
 }

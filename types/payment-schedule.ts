@@ -19,6 +19,12 @@ export type StageAmountType = 'percent' | 'fixed' | 'remainder'
 export type OffsetUnit = 'day' | 'week' | 'month'
 
 /**
+ * What a stage's offset is measured from: forward from the invoice issue date,
+ * or backward from its due date.
+ */
+export type OffsetAnchor = 'issue' | 'due'
+
+/**
  * One stage on a saved, reusable schedule.
  *
  * `amountValue` is a percentage for `'percent'`, **dollars** for `'fixed'`, and
@@ -35,6 +41,7 @@ export interface TemplateStage {
   amountValue: number | null
   offsetValue: number
   offsetUnit: OffsetUnit
+  offsetAnchor: OffsetAnchor
 }
 
 /** One stage stamped onto a specific invoice, with its amount frozen. */
@@ -50,6 +57,7 @@ export interface ResolvedStage {
   /** The offset that produced `dueDate`, kept so the modal round-trips units. */
   offsetValue: number
   offsetUnit: OffsetUnit
+  offsetAnchor: OffsetAnchor
 }
 
 /** A saved schedule with its template stages. */

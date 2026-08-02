@@ -48,9 +48,9 @@ describe('schedule actions', () => {
       const { id } = await createSchedule({
         name: '25 / 50 / 25',
         stages: [
-          { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Progress', amountType: 'percent', amountValue: 50, offsetValue: 90, offsetUnit: 'day' },
-          { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 180, offsetUnit: 'day' },
+          { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Progress', amountType: 'percent', amountValue: 50, offsetValue: 90, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 180, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
       const all = await listSchedules()
@@ -69,7 +69,7 @@ describe('schedule actions', () => {
       await expect(
         createSchedule({
           name: 'Pointless',
-          stages: [{ label: 'All of it', amountType: 'percent', amountValue: 100, offsetValue: 0, offsetUnit: 'day' }],
+          stages: [{ label: 'All of it', amountType: 'percent', amountValue: 100, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' }],
         }),
       ).rejects.toThrow(/single stage/i)
     } finally {
@@ -83,8 +83,8 @@ describe('schedule actions', () => {
       const { id } = await createSchedule({
         name: '50 / 50',
         stages: [
-          { label: 'Deposit', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 60, offsetUnit: 'day' },
+          { label: 'Deposit', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 60, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
       await setDefaultSchedule(id)
@@ -130,8 +130,8 @@ describe('schedule actions', () => {
       await replaceInvoiceStages({
         invoiceId: invoice!.id,
         stages: [
-          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day' },
-          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day' },
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
       await admin
@@ -144,8 +144,8 @@ describe('schedule actions', () => {
       await replaceInvoiceStages({
         invoiceId: invoice!.id,
         stages: [
-          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day' },
-          { position: 2, label: 'Renamed final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-10-01', offsetValue: 0, offsetUnit: 'day' },
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { position: 2, label: 'Renamed final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-10-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
 
@@ -168,8 +168,8 @@ describe('schedule actions', () => {
       const { id } = await createSchedule({
         name: 'Original name',
         stages: [
-          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
+          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
       await updateSchedule({ id, name: 'Updated name' })
@@ -188,16 +188,16 @@ describe('schedule actions', () => {
       const { id } = await createSchedule({
         name: 'Original stages',
         stages: [
-          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
+          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
       await updateSchedule({
         id,
         stages: [
-          { label: 'Third', amountType: 'percent', amountValue: 33, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Third', amountType: 'percent', amountValue: 33, offsetValue: 30, offsetUnit: 'day' },
-          { label: 'Last', amountType: 'remainder', amountValue: null, offsetValue: 60, offsetUnit: 'day' },
+          { label: 'Third', amountType: 'percent', amountValue: 33, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Third', amountType: 'percent', amountValue: 33, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Last', amountType: 'remainder', amountValue: null, offsetValue: 60, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
 
@@ -216,8 +216,8 @@ describe('schedule actions', () => {
       const { id } = await createSchedule({
         name: 'To delete',
         stages: [
-          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
+          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
       await deleteSchedule(id)
@@ -258,8 +258,8 @@ describe('schedule actions', () => {
       await replaceInvoiceStages({
         invoiceId: invoice!.id,
         stages: [
-          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day' },
-          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day' },
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
 
@@ -312,8 +312,8 @@ describe('schedule actions', () => {
       await replaceInvoiceStages({
         invoiceId: invoice!.id,
         stages: [
-          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day' },
-          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day' },
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
 
@@ -361,17 +361,17 @@ describe('schedule actions', () => {
       const { id } = await createSchedule({
         name: 'Original',
         stages: [
-          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
+          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
       await updateSchedule({
         id,
         name: 'Updated both',
         stages: [
-          { label: 'Third', amountType: 'percent', amountValue: 33, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Third', amountType: 'percent', amountValue: 33, offsetValue: 30, offsetUnit: 'day' },
-          { label: 'Last', amountType: 'remainder', amountValue: null, offsetValue: 60, offsetUnit: 'day' },
+          { label: 'Third', amountType: 'percent', amountValue: 33, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Third', amountType: 'percent', amountValue: 33, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Last', amountType: 'remainder', amountValue: null, offsetValue: 60, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
 
@@ -414,8 +414,8 @@ describe('schedule actions', () => {
       await replaceInvoiceStages({
         invoiceId: invoice!.id,
         stages: [
-          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day' },
-          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day' },
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
 
@@ -443,7 +443,7 @@ describe('schedule actions', () => {
         createSchedule({
           name: 'Bad',
           stages: [
-            { label: 'Only stage', amountType: 'remainder', amountValue: null, offsetValue: 0, offsetUnit: 'day' },
+            { label: 'Only stage', amountType: 'remainder', amountValue: null, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
           ],
         }),
       ).rejects.toThrow('single stage')
@@ -458,8 +458,8 @@ describe('schedule actions', () => {
       const { id } = await createSchedule({
         name: 'Valid',
         stages: [
-          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
+          { label: 'Half', amountType: 'percent', amountValue: 50, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'Half', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
 
@@ -467,7 +467,7 @@ describe('schedule actions', () => {
         updateSchedule({
           id,
           stages: [
-            { label: 'Only stage', amountType: 'remainder', amountValue: null, offsetValue: 0, offsetUnit: 'day' },
+            { label: 'Only stage', amountType: 'remainder', amountValue: null, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
           ],
         }),
       ).rejects.toThrow('single stage')
@@ -505,8 +505,8 @@ describe('schedule actions', () => {
       await replaceInvoiceStages({
         invoiceId: invoice!.id,
         stages: [
-          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day' },
-          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day' },
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       })
 
@@ -544,8 +544,8 @@ describe('schedule actions', () => {
         replaceInvoiceStages({
           invoiceId: invoice!.id,
           stages: [
-            { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day' },
-            { position: 2, label: 'Replaced final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-10-01', offsetValue: 0, offsetUnit: 'day' },
+            { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+            { position: 2, label: 'Replaced final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-10-01', offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
           ],
         }),
       ).rejects.toThrow('simulated read failure')

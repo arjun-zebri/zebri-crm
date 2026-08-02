@@ -12,8 +12,8 @@ const defaultSchedule: PaymentSchedule = {
   name: 'Default',
   isDefault: true,
   stages: [
-    { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day' },
-    { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
+    { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+    { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
   ],
 }
 
@@ -23,6 +23,7 @@ function setup(overrides: Partial<Parameters<typeof ScheduleModal>[0]> = {}) {
     onClose: vi.fn(),
     totalCents: 400_000,
     issueDate: '2026-06-12',
+    dueDate: '2026-12-01' as string | null,
     initialStages: [],
     defaultSchedule,
     schedules: [defaultSchedule],
@@ -39,11 +40,11 @@ function setup(overrides: Partial<Parameters<typeof ScheduleModal>[0]> = {}) {
 }
 
 describe('ScheduleModal', () => {
-  it('seeds the timeline from the default schedule', () => {
+  it('seeds the timeline and name from the default schedule', () => {
     setup()
     const labels = screen.getAllByLabelText(/stage label/i) as HTMLInputElement[]
     expect(labels.map((l) => l.value)).toEqual(['Deposit', 'Final'])
-    expect((screen.getByLabelText(/schedule name/i) as HTMLInputElement).value).toBe('Default')
+    expect((screen.getByLabelText(/^schedule$/i) as HTMLInputElement).value).toBe('Default')
   })
 
   it('shows a matching running total', () => {
@@ -55,8 +56,8 @@ describe('ScheduleModal', () => {
     const props = setup()
     await userEvent.click(screen.getByRole('button', { name: /^apply$/i }))
     expect(props.onApply).toHaveBeenCalledWith([
-      { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day' },
-      { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
+      { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+      { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day', offsetAnchor: 'issue' },
     ])
     expect(props.onClose).toHaveBeenCalled()
   })
@@ -64,16 +65,32 @@ describe('ScheduleModal', () => {
   it('saves the current timeline to the library', async () => {
     const props = setup()
     await userEvent.click(screen.getByRole('button', { name: /save to library/i }))
-    expect(props.onSaveToLibrary).toHaveBeenCalledWith({
-      name: 'Default',
-      stages: expect.any(Array),
-    })
+    expect(props.onSaveToLibrary).toHaveBeenCalledWith({ name: 'Default', stages: expect.any(Array) })
   })
 
-  it('adds a payment', async () => {
+  it('adds a payment before the remainder', async () => {
     setup()
     await userEvent.click(screen.getByRole('button', { name: /add payment/i }))
     expect(screen.getAllByLabelText(/stage label/i)).toHaveLength(3)
+  })
+
+  it('switches every share to dollars when Amount is set to $', async () => {
+    setup()
+    const dollar = screen.getByRole('button', { name: '$' })
+    await userEvent.click(dollar)
+    expect(dollar).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('disables Before due when the invoice has no due date', () => {
+    setup({ dueDate: null })
+    expect(screen.getByRole('button', { name: /before due/i })).toBeDisabled()
+  })
+
+  it('unchecking the remainder box turns the last stage into a numeric share', async () => {
+    setup()
+    expect(screen.getByText(/rest/i)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox', { name: /remaining balance/i }))
+    expect(screen.queryByText(/rest/i)).not.toBeInTheDocument()
   })
 
   it('disables Apply with a warning for an unresolvable schedule', () => {
@@ -83,8 +100,8 @@ describe('ScheduleModal', () => {
         name: 'Bad',
         isDefault: true,
         stages: [
-          { label: 'A', amountType: 'percent', amountValue: 30, offsetValue: 0, offsetUnit: 'day' },
-          { label: 'B', amountType: 'percent', amountValue: 30, offsetValue: 0, offsetUnit: 'day' },
+          { label: 'A', amountType: 'percent', amountValue: 30, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
+          { label: 'B', amountType: 'percent', amountValue: 30, offsetValue: 0, offsetUnit: 'day', offsetAnchor: 'issue' },
         ],
       },
     })

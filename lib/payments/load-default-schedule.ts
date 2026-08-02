@@ -41,7 +41,7 @@ export async function loadDefaultScheduleFirstStage(
 ): Promise<LoadScheduleResult> {
   const { data, error } = await supabase
     .from('payment_schedules')
-    .select('id, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_value, due_offset_unit)')
+    .select('id, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_value, due_offset_unit, due_offset_anchor)')
     .eq('user_id', userId)
     .eq('is_default', true)
     .maybeSingle()
@@ -68,6 +68,7 @@ export async function loadDefaultScheduleFirstStage(
       amountValue: s.amount_value,
       offsetValue: s.due_offset_value,
       offsetUnit: s.due_offset_unit as 'day' | 'week' | 'month',
+      offsetAnchor: s.due_offset_anchor as 'issue' | 'due',
     })) as TemplateStage[]
 
   const resolved = resolveStages(stages, totalCents, issueDate)
