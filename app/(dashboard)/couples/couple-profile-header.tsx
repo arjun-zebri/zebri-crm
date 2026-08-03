@@ -87,7 +87,7 @@ export function CoupleProfileHeader({
   const [copied, setCopied] = useState<CopiedKind>(null);
   // Mobile reuses the desktop control's state so the overflow row and
   // the inline button can never disagree about what is running.
-  const timer = useCoupleTimerControl(couple.id);
+  const timer = useCoupleTimerControl(couple.id, couple.name);
 
   const hasPhone = !!couple.phone;
   const hasEmail = !!couple.email;
@@ -447,7 +447,7 @@ export function CoupleProfileHeader({
 
         {/* Desktop: inline action row */}
         <div className="hidden sm:flex items-center">
-          <CoupleTimerControl coupleId={couple.id} />
+          <CoupleTimerControl coupleId={couple.id} coupleName={couple.name} />
           {timer.shadowing ? null : (
             <div className="w-px h-4 bg-gray-200 mx-2" />
           )}

@@ -18,7 +18,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ErrorState } from '@/components/ui/error-state';
-import { Loading } from '@/components/ui/loading';
 import { formatDuration, totalMs } from '@/lib/time-tracking/format';
 import type { TimeEntry } from '@/types/time-tracking';
 
@@ -26,6 +25,7 @@ import { CoupleTabEmpty, CoupleTabShell, type TabStat } from './couple-tab-shell
 import { CoupleTimeBreakdown } from './couple-time-breakdown';
 import { CoupleTimeEntryModal } from './couple-time-entry-modal';
 import { CoupleTimeRow } from './couple-time-row';
+import { CoupleTimeSkeleton } from './couple-time-skeleton';
 import { useCoupleTime } from './use-couple-time';
 
 export interface CoupleTimeProps {
@@ -67,7 +67,7 @@ export function CoupleTime({ coupleId }: CoupleTimeProps) {
       }
     >
       {isLoading ? (
-        <Loading />
+        <CoupleTimeSkeleton />
       ) : isError ? (
         <ErrorState
           title="Could not load tracked time."

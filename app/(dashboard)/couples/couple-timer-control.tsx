@@ -27,7 +27,7 @@ import { entryDurationMs, formatElapsed } from '@/lib/time-tracking/format';
  * Shared timer state for one couple's header, used by both the desktop
  * control and the mobile overflow row so they can never disagree.
  */
-export function useCoupleTimerControl(coupleId: string) {
+export function useCoupleTimerControl(coupleId: string, coupleName?: string) {
   const { shadowing, running, clockOffsetMs, isRunningFor, start, stop } =
     useTimerSurface();
   const runningHere = isRunningFor(coupleId);
@@ -43,18 +43,23 @@ export function useCoupleTimerControl(coupleId: string) {
     /** Name of the couple being timed, when it is not this one. */
     otherCoupleName: running && !runningHere ? running.couple_name : null,
     label: runningHere ? 'Stop timing' : 'Start timing',
-    toggle: () => (runningHere ? stop() : start(coupleId)),
+    toggle: () => (runningHere ? stop() : start(coupleId, coupleName)),
   };
 }
 
 export interface CoupleTimerControlProps {
   coupleId: string;
+  /** Labels the optimistic pill until the server read names the couple. */
+  coupleName?: string;
 }
 
 /** Desktop inline control. Renders nothing during a shadow session. */
-export function CoupleTimerControl({ coupleId }: CoupleTimerControlProps) {
+export function CoupleTimerControl({
+  coupleId,
+  coupleName,
+}: CoupleTimerControlProps) {
   const { shadowing, runningHere, elapsed, otherCoupleName, label, toggle } =
-    useCoupleTimerControl(coupleId);
+    useCoupleTimerControl(coupleId, coupleName);
 
   if (shadowing) return null;
 

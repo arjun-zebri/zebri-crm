@@ -15,7 +15,7 @@ interface SurfaceStub {
   running: RunningTimer | null;
   clockOffsetMs: number;
   isRunningFor: (coupleId: string) => boolean;
-  start: (coupleId: string) => void;
+  start: (coupleId: string, coupleName?: string) => void;
   stop: () => void;
   claimSurface: () => () => void;
 }
@@ -111,7 +111,7 @@ describe('CoupleProfileHeader timer control', () => {
     await userEvent.click(
       screen.getAllByRole('button', { name: /start timing/i })[0]!,
     );
-    expect(start).toHaveBeenCalledWith('couple-1');
+    expect(start).toHaveBeenCalledWith('couple-1', 'Sarah & Tom');
   });
 
   it('shows elapsed time and a stop control for this couple', () => {
@@ -152,7 +152,7 @@ describe('CoupleProfileHeader timer control', () => {
     await userEvent.click(
       screen.getAllByRole('button', { name: /start timing/i })[0]!,
     );
-    expect(start).toHaveBeenCalledWith('couple-1');
+    expect(start).toHaveBeenCalledWith('couple-1', 'Sarah & Tom');
     expect(stop).not.toHaveBeenCalled();
   });
 

@@ -22,6 +22,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 
 import { ensureLeadForm, saveLeadCaptureSettings } from './lead-capture/actions';
+import { LeadCaptureSkeleton } from './lead-capture-skeleton';
 
 /** Sentinel for "let leads land in the first pipeline status". */
 const DEFAULT_STATUS = '__default__';
@@ -118,15 +119,13 @@ export function LeadCaptureSection() {
     });
   };
 
-  if (loading || !token) {
-    return <p className="text-sm text-gray-500">Loading...</p>;
-  }
-
   const options = [
     { value: DEFAULT_STATUS, label: 'Top of pipeline (default)' },
     ...statuses.map((s) => ({ value: s.slug, label: s.name })),
   ];
 
+  // The heading is static copy, so it stays mounted through the fetch and
+  // only the data-bound body below it swaps for the skeleton.
   return (
     <div className="space-y-10">
       <div>
@@ -136,40 +135,46 @@ export function LeadCaptureSection() {
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-gray-700">Form enabled</p>
-          <p className="text-xs text-gray-400">Turn off to stop accepting new enquiries.</p>
-        </div>
-        <Toggle
-          enabled={enabled}
-          onChange={(v) => {
-            setEnabled(v);
-            persist({ enabled: v, targetSlug });
-          }}
-        />
-      </div>
+      {loading || !token ? (
+        <LeadCaptureSkeleton />
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Form enabled</p>
+              <p className="text-xs text-gray-400">Turn off to stop accepting new enquiries.</p>
+            </div>
+            <Toggle
+              enabled={enabled}
+              onChange={(v) => {
+                setEnabled(v);
+                persist({ enabled: v, targetSlug });
+              }}
+            />
+          </div>
 
-      {/* Narrower than the snippet fields: status names are short, so a
-          full-width trigger leaves a long empty run before the chevron. */}
-      <Select
-        label="New leads land in"
-        value={targetSlug}
-        size="sm"
-        onValueChange={(v) => {
-          setTargetSlug(v);
-          persist({ enabled, targetSlug: v });
-        }}
-        options={options}
-        contentClassName="z-[90]"
-        className="max-w-xs"
-      />
+          {/* Narrower than the snippet fields: status names are short, so a
+              full-width trigger leaves a long empty run before the chevron. */}
+          <Select
+            label="New leads land in"
+            value={targetSlug}
+            size="sm"
+            onValueChange={(v) => {
+              setTargetSlug(v);
+              persist({ enabled, targetSlug: v });
+            }}
+            options={options}
+            contentClassName="z-[90]"
+            className="max-w-xs"
+          />
 
-      <div className="space-y-4">
-        <CopyField label="Hosted link" value={buildHostedUrl(origin, token)} />
-        <CopyField label="Embed (iframe)" value={buildIframeSnippet(origin, token)} />
-        <CopyField label="Embed (script)" value={buildScriptSnippet(origin, token)} />
-      </div>
+          <div className="space-y-4">
+            <CopyField label="Hosted link" value={buildHostedUrl(origin, token)} />
+            <CopyField label="Embed (iframe)" value={buildIframeSnippet(origin, token)} />
+            <CopyField label="Embed (script)" value={buildScriptSnippet(origin, token)} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
