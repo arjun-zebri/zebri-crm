@@ -762,6 +762,7 @@ InvoiceBuilderModal is rendered on this page (and reused on the couple profile).
 - Right side of the header: status-aware contextual primary CTA + `⋯` overflow menu for destructive / revert actions.
 - Body: hero title input (large unbordered text — Notion-style) followed by the composed parts.
 - Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple). While the doc is still a draft, a subtle "Mark as sent" text button sits next to Copy link / Open — it flips the status draft→sent **without** firing an email (for MCs who shared the link out-of-band via SMS/WhatsApp). It leaves `email_sent_at` null, so the primary stays "Send to couple".
+  - **When the link affordances appear.** They need a saved row (the share token is generated on insert). Opened from the couple profile the row already exists, so Copy link / Open / Mark as sent are there from the first paint. Opened from `/payments`, "New invoice" starts an unsaved draft with no row and no token, so the footer shows only Save + Send to couple; the builder adopts the id its first save returns, and the link affordances appear in place without reopening the modal. The contract builder behaves the same way.
 - New `previewPane` prop carries the right-side preview content. When provided, the shell switches to a 2-column grid (`grid-cols-1 lg:grid-cols-2`) and the modal upgrades to `fullscreen` size.
 
 ### Preview pane (`builder-preview-pane.tsx`)
