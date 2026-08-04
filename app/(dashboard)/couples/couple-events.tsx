@@ -120,8 +120,23 @@ async function recalculateDriveTimes(coupleId: string, date: string, queryClient
   queryClient.invalidateQueries({ queryKey: ['couple-events', coupleId] })
 }
 
+/**
+ * Formats a drive duration for the compact event meta line.
+ *
+ * Rounds to whole minutes first, then splits into hours + minutes so long
+ * drives read as `~1h 34m` rather than `~94 min`. The minutes part is dropped
+ * when it rounds to zero (`~2h`), and the hours part is omitted under an hour
+ * (`~45m`).
+ *
+ * @param seconds - Drive duration in seconds, as returned by `/api/drive-time`.
+ * @returns An approximate, human-readable duration (e.g. `~1h 34m`).
+ */
 function formatDriveTime(seconds: number): string {
-  return `~${Math.round(seconds / 60)} min`
+  const totalMinutes = Math.round(seconds / 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours === 0) return `~${minutes}m`
+  return minutes === 0 ? `~${hours}h` : `~${hours}h ${minutes}m`
 }
 
 function formatDriveDistance(meters: number): string {
