@@ -154,8 +154,19 @@ export function InvoiceBuilderModal({
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const isNewInvoice = invoiceId === 'new' || invoiceId === null;
-  const effectiveId = isNewInvoice ? null : invoiceId;
+  // Opened as a blank draft: `/payments` passes `'new'` and never a real
+  // id, so the modal has to remember what its own first save created.
+  const openedAsNew = invoiceId === 'new' || invoiceId === null;
+
+  // Adopt the id of an invoice first saved from the "new" state so the
+  // detail query — and with it the share link, Open, Mark as sent, and
+  // Delete actions — light up without reopening the modal. Without it a
+  // draft started from /payments stayed id-less: no share controls, and
+  // every further Save inserted another invoice. The couple profile does
+  // not hit this because it inserts the row before opening the modal.
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const effectiveId = openedAsNew ? savedId : invoiceId;
+  const isNewInvoice = !effectiveId;
 
   /* ─── form state ────────────────────────────────────────────── */
   const [title, setTitle] = useState('');
@@ -257,8 +268,11 @@ export function InvoiceBuilderModal({
   // the form render and then visibly reflow three more times as the
   // packages picker, the couple selector, and the branded preview each
   // arrived on their own beat.
+  // Gated on `openedAsNew`, not `isNewInvoice`: once the first save
+  // adopts an id the detail query starts fetching, and gating on the row
+  // would throw the fully-populated form back behind the skeleton.
   const firstPaintReady =
-    (isNewInvoice || !!invoice) &&
+    (openedAsNew || !!invoice) &&
     !applySourcesLoading &&
     !couplesLoading &&
     !brandingLoading;
@@ -270,6 +284,18 @@ export function InvoiceBuilderModal({
   // The address `send-invoice` will actually mail, resolved the same way
   // the route does so the preview can't disagree with the send.
   const coupleEmail = resolveCoupleEmail(couples?.find((c) => c.id === coupleId));
+
+  /**
+   * Drop the adopted id on the way out so the next "New invoice" starts a
+   * fresh draft instead of reopening the one that was just saved. Callers
+   * that unmount the modal get this for free; this covers the ones that
+   * keep it mounted. Every close path (Escape, backdrop, the X) runs
+   * through `onClose`, so wrapping it here catches all of them.
+   */
+  function handleClose() {
+    setSavedId(null);
+    onClose();
+  }
 
   /* ─── hydrate from DB / initial defaults ────────────────────── */
   useEffect(() => {
@@ -498,6 +524,9 @@ export function InvoiceBuilderModal({
       return newId;
     },
     onSuccess: (newId) => {
+      // First save of a fresh draft: adopt the new id so the detail query
+      // hydrates and the share / send / delete actions become available.
+      if (!effectiveId) setSavedId(newId);
       queryClient.invalidateQueries({ queryKey: ['invoice', newId] });
       queryClient.invalidateQueries({ queryKey: ['invoice-items', newId] });
       queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
@@ -679,7 +708,7 @@ export function InvoiceBuilderModal({
       toast('Invoice deleted');
       setConfirmDelete(false);
       onDelete?.();
-      onClose();
+      handleClose();
     },
     onError: (err) => {
       toast(err instanceof Error ? err.message : 'Could not delete the invoice', 'error');
@@ -779,7 +808,7 @@ export function InvoiceBuilderModal({
     <>
       <BuilderModalShell
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={handleClose}
         documentNumber={documentNumber}
         statePill={STATE_PILL[pillKey]}
         primaryAction={primaryAction}
