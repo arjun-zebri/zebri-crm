@@ -68,7 +68,7 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
           type="button"
           onClick={onShowRuns}
           title="See recent runs and any errors"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md text-text hover:bg-surface-muted cursor-pointer transition"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-control text-text hover:bg-surface-muted cursor-pointer transition"
         >
           <History size={12} strokeWidth={1.5} />
           Runs
@@ -77,7 +77,7 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
           type="button"
           disabled
           title="Run a test against a real couple (coming soon)"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md text-text-muted disabled:opacity-50 cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-control text-text-muted disabled:opacity-50 cursor-not-allowed"
         >
           <Play size={12} strokeWidth={1.5} />
           Test Flow
@@ -85,7 +85,7 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
         <button
           type="button"
           onClick={onToggleActive}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md cursor-pointer transition ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-control cursor-pointer transition ${
             isActive
               ? 'border border-border text-text hover:bg-surface-muted'
               : 'bg-gray-900 text-white hover:bg-gray-700'

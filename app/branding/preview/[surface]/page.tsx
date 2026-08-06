@@ -180,7 +180,7 @@ function InvoicePreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+        <div className="rounded-control border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           {/* Render the action (CTA) block: on the live payment page a functional
               button is injected separately (so it's hidden there to avoid a
               duplicate), but this static preview has no such button, so we let the
@@ -253,7 +253,7 @@ function ContractPreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+        <div className="rounded-control border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           {nodes}
         </div>
       </div>
@@ -322,7 +322,7 @@ function PreviewContractSign({
         </div>
       </div>
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 w-4 h-4 rounded border shrink-0" style={{ borderColor: branding.border_color }} aria-hidden />
+        <span className="mt-0.5 w-4 h-4 rounded-control border shrink-0" style={{ borderColor: branding.border_color }} aria-hidden />
         <span style={labelCss}>
           I agree to the terms above and intend my typed name to serve as my legal signature.
         </span>
@@ -394,7 +394,7 @@ function PortalPreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+        <div className="rounded-control border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
           {markerIdx >= 0 ? (
             /* The portal background colour wraps ONLY the portal (hero +
@@ -451,7 +451,7 @@ function VendorTimelinePreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+        <div className="rounded-control border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
           {markerIdx >= 0 ? (
             <div className="pt-6">
@@ -564,7 +564,7 @@ function QuestionnairePreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto w-full p-4" style={{ maxWidth: DOC_MAX_WIDTH_PX }}>
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
+        <div className="rounded-control border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color, borderColor: branding.border_color }}>
           <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={sampleDoc} hideAction />
           <div className="pt-6">
             <QuestionnaireSample branding={branding} {...(formBlock ? { block: formBlock } : {})} />
@@ -600,8 +600,8 @@ function LoadingState() {
     <div className="flex items-center justify-center min-h-screen bg-surface p-4">
       <div className="text-center">
         <div className="animate-pulse">
-          <div className="h-8 bg-surface-muted rounded w-48 mx-auto mb-2" />
-          <div className="h-4 bg-surface-muted rounded w-32 mx-auto" />
+          <div className="h-8 bg-surface-muted rounded-control w-48 mx-auto mb-2" />
+          <div className="h-4 bg-surface-muted rounded-control w-32 mx-auto" />
         </div>
       </div>
     </div>

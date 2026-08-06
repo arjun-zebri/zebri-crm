@@ -51,20 +51,20 @@ export function SignatureImageView({ node, updateAttributes, deleteNode, selecte
         src={String(node.attrs.src ?? '')}
         alt={String(node.attrs.alt ?? '')}
         style={{ width }}
-        className={`max-w-full rounded ${selected ? 'ring-2 ring-blue-500' : ''}`}
+        className={`max-w-full rounded-control ${selected ? 'ring-2 ring-blue-500' : ''}`}
       />
       <button
         type="button"
         title="Delete image"
         onClick={() => deleteNode()}
-        className={`${controlsVisible} transition-opacity absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full bg-gray-900 text-white shadow cursor-pointer hover:bg-gray-700`}
+        className={`${controlsVisible} transition-opacity absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-pill bg-gray-900 text-white shadow cursor-pointer hover:bg-gray-700`}
       >
         <X size={14} strokeWidth={2} />
       </button>
       <span
         title="Drag to resize"
         onPointerDown={startResize}
-        className={`${controlsVisible} transition-opacity absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-sm bg-blue-500 border-2 border-white cursor-nwse-resize`}
+        className={`${controlsVisible} transition-opacity absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-control bg-blue-500 border-2 border-white cursor-nwse-resize`}
       />
     </NodeViewWrapper>
   )

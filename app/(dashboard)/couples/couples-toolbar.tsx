@@ -60,14 +60,14 @@ export function CouplesToolbar({
           placeholder="Search couples..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-control text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
         />
       </div>
 
       <div className="relative" ref={filtersRef}>
         <button
           onClick={() => setFiltersOpen(!filtersOpen)}
-          className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl transition ${
+          className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-control transition ${
             statusFilter !== 'all'
               ? 'border border-gray-900 bg-gray-900 text-white'
               : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -76,7 +76,7 @@ export function CouplesToolbar({
           <SlidersHorizontal size={14} strokeWidth={1.5} /> Filters
         </button>
         {filtersOpen && (
-          <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-48">
+          <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-control shadow-lg z-20 min-w-48">
             <button
               onClick={() => {
                 onStatusFilterChange('all')

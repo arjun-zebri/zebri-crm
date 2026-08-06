@@ -91,7 +91,7 @@ export function StarterCatalogModal({
           </div>
           <ul>
             {addable.map((item) => (
-              <li key={item.name} className="flex items-center gap-3 rounded-xl px-1 py-2.5">
+              <li key={item.name} className="flex items-center gap-3 rounded-control px-1 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-text">{item.name}</p>
                   <p className="truncate text-xs text-text-subtle">{item.subtitle}</p>

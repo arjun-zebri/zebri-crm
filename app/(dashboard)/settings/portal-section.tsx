@@ -47,12 +47,12 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
       role="switch"
       aria-checked={enabled}
       onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-pill transition-colors cursor-pointer ${
         enabled ? 'bg-black' : 'bg-gray-200'
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+        className={`inline-block h-4 w-4 transform rounded-pill bg-white shadow transition-transform ${
           enabled ? 'translate-x-[18px]' : 'translate-x-0.5'
         }`}
       />
@@ -99,7 +99,7 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
         <h2 className="text-xl font-semibold text-gray-900 mb-1">Couple Portal</h2>
         <p className="text-sm text-gray-500 mb-6">Choose which sections are visible in the couple portal. Changes apply to all couples.</p>
 
-        <div className="space-y-0 border border-gray-200 rounded-xl overflow-hidden">
+        <div className="space-y-0 border border-gray-200 rounded-control overflow-hidden">
           {SECTION_DEFS.map((section, i) => {
             const Icon = section.icon
             return (
@@ -128,7 +128,7 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
           type="button"
           onClick={handleSave}
           disabled={saving || !isDirty}
-          className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
+          className="bg-black text-white text-sm font-medium rounded-control px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
         >
           {saving ? 'Saving...' : 'Save'}
         </button>

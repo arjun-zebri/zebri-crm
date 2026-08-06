@@ -94,7 +94,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
             {selected?.color ? (
               <span
                 aria-hidden
-                className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                className="size-2.5 shrink-0 rounded-pill ring-1 ring-black/10"
                 style={{ background: selected.color }}
               />
             ) : null}
@@ -119,7 +119,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="z-[95] w-[var(--radix-popover-trigger-width)] rounded-xl border border-border bg-card py-1 shadow-lg"
+          className="z-[95] w-[var(--radix-popover-trigger-width)] rounded-control border border-border bg-card py-1 shadow-lg"
         >
           <div className="px-2 pb-1 pt-1">
             <Input
@@ -164,7 +164,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               <button
                 type="button"
                 onClick={handleCreate}
-                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-caption text-text-muted transition hover:bg-surface-emphasis hover:text-text"
+                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-left text-caption text-text-muted transition hover:bg-surface-emphasis hover:text-text"
               >
                 <Plus size={13} strokeWidth={1.5} />
                 <span className="truncate">Create &quot;{trimmed}&quot;</span>
@@ -177,7 +177,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               <button
                 type="button"
                 onClick={() => select(null)}
-                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-caption text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
+                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-left text-caption text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
               >
                 <X size={13} strokeWidth={1.5} />
                 Clear

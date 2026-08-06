@@ -117,7 +117,7 @@ export function TaxControl({
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-[90] w-64 rounded-card border border-border bg-surface shadow-lg p-3 animate-fade-in"
+          className="z-[90] w-64 rounded-control border border-border bg-surface shadow-lg p-3 animate-fade-in"
         >
           <p className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
             Tax

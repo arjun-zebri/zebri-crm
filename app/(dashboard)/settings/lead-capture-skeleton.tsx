@@ -12,7 +12,7 @@
 /** A single pulsing placeholder bar. */
 function Bar({ className }: { className: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-surface-muted ${className}`} />
+    <div className={`animate-pulse rounded-control bg-surface-muted ${className}`} />
   );
 }
 
@@ -22,8 +22,8 @@ function CopyFieldSkeleton({ labelWidth }: { labelWidth: string }) {
     <div>
       <Bar className={`mb-1 h-3 ${labelWidth}`} />
       <div className="flex items-center gap-2">
-        <Bar className="h-8 min-w-0 flex-1 rounded-xl" />
-        <Bar className="h-8 w-20 shrink-0 rounded-xl" />
+        <Bar className="h-8 min-w-0 flex-1 rounded-control" />
+        <Bar className="h-8 w-20 shrink-0 rounded-control" />
       </div>
     </div>
   );
@@ -38,12 +38,12 @@ export function LeadCaptureSkeleton() {
           <Bar className="h-3.5 w-28" />
           <Bar className="h-3 w-56" />
         </div>
-        <Bar className="h-5 w-9 shrink-0 rounded-full" />
+        <Bar className="h-5 w-9 shrink-0 rounded-pill" />
       </div>
 
       <div className="max-w-xs space-y-1.5">
         <Bar className="h-3 w-32" />
-        <Bar className="h-8 w-full rounded-xl" />
+        <Bar className="h-8 w-full rounded-control" />
       </div>
 
       <div className="space-y-4">

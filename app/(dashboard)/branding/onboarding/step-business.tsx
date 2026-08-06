@@ -137,7 +137,7 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
         onDragOver={handleDragOver}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className={`relative w-full h-32 rounded-xl bg-surface border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand/50 transition ${
+        className={`relative w-full h-32 rounded-control bg-surface border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand/50 transition ${
           dragging
             ? 'border-brand bg-brand/5'
             : filled
@@ -158,7 +158,7 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
         )}
         {filled && hovering && (
           <span className="absolute inset-0 bg-text/5 flex items-center justify-center pointer-events-none">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-surface/95 text-text text-xs font-medium shadow-sm">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-control bg-surface/95 text-text text-xs font-medium shadow-sm">
               <Upload size={12} strokeWidth={1.5} />
               Replace
             </span>
@@ -171,7 +171,7 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
               e.stopPropagation()
               removeLogo()
             }}
-            className={`absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-md bg-surface/95 backdrop-blur-sm border border-border text-text-muted hover:text-text hover:border-border-strong shadow-sm cursor-pointer transition ${
+            className={`absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-control bg-surface/95 backdrop-blur-sm border border-border text-text-muted hover:text-text hover:border-border-strong shadow-sm cursor-pointer transition ${
               hovering ? 'opacity-100' : 'opacity-0'
             }`}
           >

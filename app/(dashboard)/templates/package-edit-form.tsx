@@ -194,7 +194,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
 
         <div>
           <SectionLabel label="Line items" hint="What's included in the base price" />
-          <div className="rounded-xl border border-border px-4 pt-2 pb-1.5">
+          <div className="rounded-control border border-border px-4 pt-2 pb-1.5">
             <LineItemsEditor
               items={baseItems}
               onChange={setBaseItems}
@@ -210,7 +210,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
 
         <div>
           <SectionLabel label="Optional add-ons" hint="Extras you pick per quote" />
-          <div className="rounded-xl border border-border px-4 pt-2 pb-1.5">
+          <div className="rounded-control border border-border px-4 pt-2 pb-1.5">
             <LineItemsEditor
               items={addOns}
               onChange={setAddOns}

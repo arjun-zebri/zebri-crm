@@ -128,7 +128,7 @@ function StopNoteForm({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Venue walkthrough, script draft, travel"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-caption text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
+            className="w-full resize-none rounded-control border border-border bg-surface px-3 py-2 text-caption text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
           />
         </div>
       </div>

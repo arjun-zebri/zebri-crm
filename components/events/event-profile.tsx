@@ -58,7 +58,7 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(event)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer ml-auto"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-control hover:bg-gray-50 transition cursor-pointer ml-auto"
             >
               <Pencil size={14} strokeWidth={1.5} />
               Edit

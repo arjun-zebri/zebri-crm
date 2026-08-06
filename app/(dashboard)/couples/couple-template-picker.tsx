@@ -45,8 +45,8 @@ function PickerSkeleton() {
     <div aria-hidden="true">
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="flex items-center justify-between gap-3 px-3 py-2">
-          <div className="h-3.5 flex-1 animate-pulse rounded bg-surface-muted" />
-          <div className="h-3 w-12 shrink-0 animate-pulse rounded bg-surface-muted" />
+          <div className="h-3.5 flex-1 animate-pulse rounded-control bg-surface-muted" />
+          <div className="h-3 w-12 shrink-0 animate-pulse rounded-control bg-surface-muted" />
         </div>
       ))}
     </div>
@@ -81,7 +81,7 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-[80] w-72 rounded-xl border border-border bg-surface py-1.5 shadow-lg"
+          className="z-[80] w-72 rounded-control border border-border bg-surface py-1.5 shadow-lg"
         >
           <p className="px-3 py-1.5 text-xs text-text-subtle">{cfg.hint}</p>
           {isLoading ? (

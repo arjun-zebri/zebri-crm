@@ -83,13 +83,13 @@ export function PackagePreview({
             </h3>
             {category && (
               <span
-                className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${categoryColorClasses(category.color).chip}`}
+                className={`shrink-0 rounded-control px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${categoryColorClasses(category.color).chip}`}
               >
                 {category.name}
               </span>
             )}
             {archived && (
-              <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-text-muted">
+              <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-xs text-text-muted">
                 Archived
               </span>
             )}
@@ -104,7 +104,7 @@ export function PackagePreview({
         <p className="mt-4 whitespace-pre-line text-sm text-text-muted">{description}</p>
       ) : null}
 
-      <div className="mt-5 overflow-hidden rounded-lg border border-border">
+      <div className="mt-5 overflow-hidden rounded-control border border-border">
         <div className="flex items-center justify-between bg-surface-muted px-4 py-2.5">
           <BandLabel>Line items</BandLabel>
           <span className="text-xs text-text-muted">
@@ -145,7 +145,7 @@ export function PackagePreview({
       </div>
 
       {addOns.length > 0 && (
-        <div className="mt-4 overflow-hidden rounded-lg border border-border">
+        <div className="mt-4 overflow-hidden rounded-control border border-border">
           <div className="flex items-center justify-between bg-surface-muted px-4 py-2.5">
             <BandLabel>Optional add-ons</BandLabel>
           </div>

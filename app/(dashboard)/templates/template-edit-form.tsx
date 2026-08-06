@@ -196,7 +196,7 @@ export function TemplateEditForm({
             </p>
             {sources && sources.length > 0 ? <SourcePicker sources={sources} onPick={addFromSource} /> : null}
           </div>
-          <div className="rounded-xl border border-border px-4 pt-2 pb-1.5">
+          <div className="rounded-control border border-border px-4 pt-2 pb-1.5">
             <LineItemsEditor
               items={items}
               onChange={setItems}
@@ -232,7 +232,7 @@ function SourceGroup({
           key={`${s.kind}-${s.id}`}
           type="button"
           onClick={() => onPick(s)}
-          className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-muted cursor-pointer"
+          className="flex w-full items-center justify-between gap-3 rounded-control px-2 py-1.5 text-left hover:bg-surface-muted cursor-pointer"
         >
           <span className="truncate text-sm text-text">{s.name}</span>
           <span className="shrink-0 text-xs text-text-subtle">
@@ -270,7 +270,7 @@ function SourcePicker({ sources, onPick }: { sources: TemplateSource[]; onPick: 
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-[90] w-64 rounded-xl border border-border bg-card p-1.5 shadow-lg"
+          className="z-[90] w-64 rounded-control border border-border bg-card p-1.5 shadow-lg"
         >
           <div className="max-h-64 overflow-y-auto">
             <SourceGroup label="Packages" items={packages} onPick={pick} />

@@ -126,7 +126,7 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
           {files.map((f) => (
             <li
               key={f.id}
-              className="flex items-center gap-2.5 rounded-xl border border-border px-3 py-2"
+              className="flex items-center gap-2.5 rounded-control border border-border px-3 py-2"
             >
               {/* Name is a button: click to open the file in a new tab. */}
               <button
@@ -142,7 +142,7 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
               <button
                 type="button"
                 aria-label={`Remove ${f.file_name}`}
-                className="shrink-0 cursor-pointer rounded p-1 text-text-subtle transition hover:text-text"
+                className="shrink-0 cursor-pointer rounded-control p-1 text-text-subtle transition hover:text-text"
                 onClick={() => void onRemove(f)}
               >
                 <X size={14} strokeWidth={1.5} />

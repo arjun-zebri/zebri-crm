@@ -53,14 +53,14 @@ export function CoupleTimeRow({ entry, onEdit, onDelete }: CoupleTimeRowProps) {
             </span>
           ) : null}
           {entry.category_name ? (
-            <span className="flex items-center gap-1.5 rounded-lg bg-surface-emphasis px-2 py-0.5 text-text-muted">
+            <span className="flex items-center gap-1.5 rounded-control bg-surface-emphasis px-2 py-0.5 text-text-muted">
               {/* The dot ties the row to its segment in the breakdown
                   bar. The name stays, so the colour is a second cue
                   rather than the only one. */}
               {entry.category_color ? (
                 <span
                   aria-hidden
-                  className="size-2 shrink-0 rounded-full"
+                  className="size-2 shrink-0 rounded-pill"
                   style={{ background: entry.category_color }}
                 />
               ) : null}

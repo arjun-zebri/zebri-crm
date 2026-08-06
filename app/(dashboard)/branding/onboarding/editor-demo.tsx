@@ -185,7 +185,7 @@ export function EditorDemo({ reducedMotion }: EditorDemoProps) {
   return (
     <div
       ref={frameRef}
-      className="relative rounded-xl border border-border bg-white overflow-hidden flex flex-col h-full shadow-sm"
+      className="relative rounded-control border border-border bg-white overflow-hidden flex flex-col h-full shadow-sm"
     >
       <DemoTabs docsOpen={docsOpen} runSheetOn={runSheetOn} />
 
@@ -233,7 +233,7 @@ export function EditorDemo({ reducedMotion }: EditorDemoProps) {
 
       {/* Tour progress: fills linearly, one beat per step, across the run.
           Flush with the bottom edge, corner to corner — the frame's own
-          rounded-xl + overflow-hidden clip it to the container's corners. */}
+          rounded-control + overflow-hidden clip it to the container's corners. */}
       <div className="absolute bottom-0 inset-x-0 h-1 bg-gray-100 z-40" aria-hidden>
         <div
           className="h-full bg-brand-fg transition-[width] duration-[1400ms] ease-linear motion-reduce:transition-none"
@@ -247,7 +247,7 @@ export function EditorDemo({ reducedMotion }: EditorDemoProps) {
         aria-hidden
         className="pointer-events-none absolute left-0 top-0 z-30 opacity-0 transition-all duration-[450ms] ease-out"
       >
-        <span ref={ringRef} className="absolute -left-1.5 -top-1.5 h-6 w-6 rounded-full bg-brand-fg/25 opacity-0" />
+        <span ref={ringRef} className="absolute -left-1.5 -top-1.5 h-6 w-6 rounded-pill bg-brand-fg/25 opacity-0" />
         <MousePointer2
           size={18}
           strokeWidth={1.5}

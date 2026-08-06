@@ -44,9 +44,9 @@ export default function Error({
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-white">
-      <div className="max-w-md w-full bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+      <div className="max-w-md w-full bg-white border border-gray-200 rounded-control shadow-sm p-6">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-red-50 mb-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-control bg-red-50 mb-4">
             <span className="text-2xl">⚠️</span>
           </div>
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
@@ -57,7 +57,7 @@ export default function Error({
           </p>
           <button
             onClick={() => reset()}
-            className="w-full bg-black text-white rounded-xl px-4 py-2 text-sm font-medium hover:bg-neutral-800 transition"
+            className="w-full bg-black text-white rounded-control px-4 py-2 text-sm font-medium hover:bg-neutral-800 transition"
           >
             Try again
           </button>

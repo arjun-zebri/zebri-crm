@@ -539,7 +539,7 @@ export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps
         {isLoading ? (
           <div className="space-y-2">
             {[1, 2].map((i) => (
-              <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+              <div key={i} className="h-10 bg-gray-100 rounded-control animate-pulse" />
             ))}
           </div>
         ) : !events || events.length === 0 ? (
@@ -570,7 +570,7 @@ export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps
                         className="group relative pl-6 py-1.5 cursor-pointer"
                       >
                         <span
-                          className="absolute left-0 top-2.5 w-[9px] h-[9px] rounded-full ring-2 ring-white bg-emerald-200"
+                          className="absolute left-0 top-2.5 w-[9px] h-[9px] rounded-pill ring-2 ring-white bg-emerald-200"
                           aria-hidden
                         />
                         <div className="flex items-center justify-between">

@@ -29,7 +29,7 @@ const CONTRACT_STATUS_STYLES: Record<string, string> = {
 };
 
 function pill(status: string, opts?: { wrap?: boolean }): ReactNode {
-  const className = `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize${opts?.wrap === false ? ' whitespace-nowrap' : ''} ${CONTRACT_STATUS_STYLES[status] || CONTRACT_STATUS_STYLES.draft}`;
+  const className = `inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-medium capitalize${opts?.wrap === false ? ' whitespace-nowrap' : ''} ${CONTRACT_STATUS_STYLES[status] || CONTRACT_STATUS_STYLES.draft}`;
   return <span className={className}>{status}</span>;
 }
 

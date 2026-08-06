@@ -204,10 +204,10 @@ function EditorSkeleton() {
       </div>
       {/* Items header */}
       <div className="space-y-2">
-        <div className="h-9 w-full rounded-card bg-surface-muted" />
-        <div className="h-12 w-full rounded-card bg-surface-muted/60" />
-        <div className="h-12 w-full rounded-card bg-surface-muted/60" />
-        <div className="h-12 w-full rounded-card bg-surface-muted/60" />
+        <div className="h-9 w-full rounded-control bg-surface-muted" />
+        <div className="h-12 w-full rounded-control bg-surface-muted/60" />
+        <div className="h-12 w-full rounded-control bg-surface-muted/60" />
+        <div className="h-12 w-full rounded-control bg-surface-muted/60" />
       </div>
       {/* Discount + tax + totals */}
       <div className="flex justify-between gap-4">
@@ -216,15 +216,15 @@ function EditorSkeleton() {
           <div className="h-7 w-28 rounded-pill bg-surface-muted" />
         </div>
         <div className="w-48 space-y-2">
-          <div className="h-3 w-full rounded bg-surface-muted" />
-          <div className="h-3 w-full rounded bg-surface-muted" />
-          <div className="h-4 w-full rounded bg-surface-muted" />
+          <div className="h-3 w-full rounded-control bg-surface-muted" />
+          <div className="h-3 w-full rounded-control bg-surface-muted" />
+          <div className="h-4 w-full rounded-control bg-surface-muted" />
         </div>
       </div>
       {/* Notes */}
       <div className="space-y-2">
-        <div className="h-3 w-16 rounded bg-surface-muted" />
-        <div className="h-24 w-full rounded-card bg-surface-muted/60" />
+        <div className="h-3 w-16 rounded-control bg-surface-muted" />
+        <div className="h-24 w-full rounded-control bg-surface-muted/60" />
       </div>
     </div>
   );
@@ -232,25 +232,25 @@ function EditorSkeleton() {
 
 function PreviewSkeleton() {
   return (
-    <div className="flex h-full flex-col gap-3 rounded-card bg-surface-muted/60 p-4 sm:p-5 animate-pulse">
+    <div className="flex h-full flex-col gap-3 rounded-control bg-surface-muted/60 p-4 sm:p-5 animate-pulse">
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <div className="h-6 w-24 rounded bg-surface-muted" />
-        <div className="h-7 w-60 rounded-card bg-surface" />
+        <div className="h-6 w-24 rounded-control bg-surface-muted" />
+        <div className="h-7 w-60 rounded-control bg-surface" />
       </div>
-      <div className="h-3 w-40 rounded bg-surface-muted" />
+      <div className="h-3 w-40 rounded-control bg-surface-muted" />
       {/* Document body placeholder */}
-      <div className="flex-1 rounded-card border border-border bg-surface p-6 space-y-4">
-        <div className="h-5 w-32 rounded bg-surface-muted" />
+      <div className="flex-1 rounded-control border border-border bg-surface p-6 space-y-4">
+        <div className="h-5 w-32 rounded-control bg-surface-muted" />
         <div className="space-y-2">
-          <div className="h-3 w-full rounded bg-surface-muted/60" />
-          <div className="h-3 w-3/4 rounded bg-surface-muted/60" />
+          <div className="h-3 w-full rounded-control bg-surface-muted/60" />
+          <div className="h-3 w-3/4 rounded-control bg-surface-muted/60" />
         </div>
         <div className="h-px w-full bg-border" />
         <div className="space-y-2">
-          <div className="h-3 w-full rounded bg-surface-muted/60" />
-          <div className="h-3 w-full rounded bg-surface-muted/60" />
-          <div className="h-3 w-2/3 rounded bg-surface-muted/60" />
+          <div className="h-3 w-full rounded-control bg-surface-muted/60" />
+          <div className="h-3 w-full rounded-control bg-surface-muted/60" />
+          <div className="h-3 w-2/3 rounded-control bg-surface-muted/60" />
         </div>
       </div>
     </div>
@@ -276,7 +276,7 @@ function OverflowMenu({ items }: { items: OverflowMenuItem[] }) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-[90] min-w-[12rem] rounded-card border border-border bg-surface shadow-lg p-1 animate-fade-in"
+          className="z-[90] min-w-[12rem] rounded-control border border-border bg-surface shadow-lg p-1 animate-fade-in"
         >
           {items.map((item) => (
             <button

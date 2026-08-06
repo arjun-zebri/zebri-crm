@@ -162,7 +162,7 @@ export function CommandPalette({
         role="dialog"
         aria-label={title}
         style={{ left: position.left, top: position.top, width: POPOVER_WIDTH }}
-        className="fixed z-50 bg-white rounded-xl border border-gray-200 shadow-xl flex flex-col overflow-hidden"
+        className="fixed z-50 bg-white rounded-control border border-gray-200 shadow-xl flex flex-col overflow-hidden"
         onKeyDown={handleKey}
       >
       <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">

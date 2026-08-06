@@ -199,14 +199,14 @@ export function CoupleProfileHeader({
           <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
             <Popover.Trigger asChild>
               <button
-                className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer transition hover:opacity-80 ${statusClasses.pill}`}
+                className={`shrink-0 px-2 py-0.5 rounded-pill text-xs font-medium cursor-pointer transition hover:opacity-80 ${statusClasses.pill}`}
               >
                 {statusName}
               </button>
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content
-                className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-44"
+                className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-44"
                 sideOffset={4}
                 align="start"
               >
@@ -237,7 +237,7 @@ export function CoupleProfileHeader({
                       }`}
                     >
                       <span
-                        className={`inline-block w-2 h-2 rounded-full ${cls.dot}`}
+                        className={`inline-block w-2 h-2 rounded-pill ${cls.dot}`}
                       />
                       {s.name}
                     </button>
@@ -254,14 +254,14 @@ export function CoupleProfileHeader({
             <Popover.Trigger asChild>
               <button
                 title="Actions"
-                className="shrink-0 p-1.5 ring-1 ring-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                className="shrink-0 p-1.5 ring-1 ring-gray-200 rounded-control text-gray-700 hover:bg-gray-100 transition cursor-pointer"
               >
                 <MoreHorizontal size={16} strokeWidth={1.5} />
               </button>
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content
-                className="bg-white border border-gray-200 rounded-xl shadow-lg z-[70] w-52 py-1.5"
+                className="bg-white border border-gray-200 rounded-control shadow-lg z-[70] w-52 py-1.5"
                 sideOffset={6}
                 align="end"
               >
@@ -455,7 +455,7 @@ export function CoupleProfileHeader({
             <button
               onClick={onSettingsToggle}
               aria-label={settingsMode ? 'Done editing tabs' : 'Edit tabs'}
-              className={`p-1.5 rounded-lg transition cursor-pointer ${
+              className={`p-1.5 rounded-control transition cursor-pointer ${
                 settingsMode
                   ? 'bg-gray-100 text-gray-900'
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
@@ -478,7 +478,7 @@ export function CoupleProfileHeader({
             <button
               onClick={onDeleteRequest}
               aria-label="Delete couple"
-              className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+              className="p-1.5 rounded-control text-red-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
             >
               <Trash2 size={16} strokeWidth={1.5} />
             </button>
@@ -488,7 +488,7 @@ export function CoupleProfileHeader({
             <Tooltip label="Portal links">
               <Popover.Trigger asChild>
                 <button
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                  className="p-1.5 rounded-control text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                 >
                   <Link size={16} strokeWidth={1.5} />
                 </button>
@@ -499,7 +499,7 @@ export function CoupleProfileHeader({
                 side="bottom"
                 align="end"
                 sideOffset={6}
-                className="z-[80] w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+                className="z-[80] w-60 bg-white rounded-control shadow-lg border border-gray-100 py-1 text-sm"
               >
                 {linkTargets.map((t) => (
                   <button
@@ -541,7 +541,7 @@ export function CoupleProfileHeader({
             <Tooltip label="Download documents">
               <Popover.Trigger asChild>
                 <button
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                  className="p-1.5 rounded-control text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                 >
                   <FileDown size={16} strokeWidth={1.5} />
                 </button>
@@ -552,7 +552,7 @@ export function CoupleProfileHeader({
                 side="bottom"
                 align="end"
                 sideOffset={6}
-                className="z-[80] w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+                className="z-[80] w-60 bg-white rounded-control shadow-lg border border-gray-100 py-1 text-sm"
               >
                 <button
                   onClick={() => {
@@ -592,7 +592,7 @@ export function CoupleProfileHeader({
             <Tooltip label={hasPhone ? 'Call' : 'No phone number'}>
               <a
                 href={hasPhone ? `tel:${couple.phone}` : undefined}
-                className={`p-1.5 rounded-lg transition ${
+                className={`p-1.5 rounded-control transition ${
                   hasPhone
                     ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
                     : 'text-gray-200 cursor-not-allowed pointer-events-none'
@@ -604,7 +604,7 @@ export function CoupleProfileHeader({
             <Tooltip label={hasEmail ? 'Email' : 'No email address'}>
               <a
                 href={hasEmail ? `mailto:${couple.email}` : undefined}
-                className={`p-1.5 rounded-lg transition ${
+                className={`p-1.5 rounded-control transition ${
                   hasEmail
                     ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
                     : 'text-gray-200 cursor-not-allowed pointer-events-none'
@@ -622,7 +622,7 @@ export function CoupleProfileHeader({
                 }
                 target={hasPhone ? '_blank' : undefined}
                 rel={hasPhone ? 'noopener noreferrer' : undefined}
-                className={`p-1.5 rounded-lg transition ${
+                className={`p-1.5 rounded-control transition ${
                   hasPhone
                     ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
                     : 'text-gray-200 cursor-not-allowed pointer-events-none'
@@ -636,7 +636,7 @@ export function CoupleProfileHeader({
           <Tooltip label="Close">
             <button
               onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-control transition cursor-pointer"
             >
               <X size={18} strokeWidth={1.5} />
             </button>
@@ -646,7 +646,7 @@ export function CoupleProfileHeader({
         {/* Mobile close button */}
         <button
           onClick={onClose}
-          className="sm:hidden shrink-0 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+          className="sm:hidden shrink-0 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-control transition cursor-pointer"
         >
           <X size={18} strokeWidth={1.5} />
         </button>

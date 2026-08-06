@@ -106,7 +106,7 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="flex cursor-pointer items-center gap-1.5 rounded-md border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100"
+              className="flex cursor-pointer items-center gap-1.5 rounded-control border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100"
             >
               <AtSign size={13} strokeWidth={1.5} />
               Insert variable
@@ -116,7 +116,7 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
             <Popover.Content
               align="end"
               sideOffset={6}
-              className="z-[90] w-56 rounded-xl border border-border bg-card p-1 shadow-lg"
+              className="z-[90] w-56 rounded-control border border-border bg-card p-1 shadow-lg"
             >
               <div className="max-h-72 overflow-y-auto">
                 {EMAIL_TEMPLATE_VARIABLES.map((v) => (
@@ -124,7 +124,7 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
                     key={v.id}
                     type="button"
                     onClick={() => insertAtEnd(v.id)}
-                    className="w-full cursor-pointer rounded-md px-2 py-1 text-left hover:bg-surface-muted"
+                    className="w-full cursor-pointer rounded-control px-2 py-1 text-left hover:bg-surface-muted"
                   >
                     <p className="truncate text-caption text-text">{v.label}</p>
                   </button>

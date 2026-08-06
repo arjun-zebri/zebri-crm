@@ -145,14 +145,14 @@ export function ContactModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+            className="text-sm px-4 py-2 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading || !name.trim()}
-            className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+            className="text-sm px-4 py-2 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Saving..." : "Save"}
           </button>
@@ -224,7 +224,7 @@ export function ContactModal({
                   // z-[90] sits above the nested ContactModal content
                   // (z-[80]); the previous z-[70] sat *under* it, which
                   // is why the popover items were unclickable.
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -267,7 +267,7 @@ export function ContactModal({
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >

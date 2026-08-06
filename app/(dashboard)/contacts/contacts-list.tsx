@@ -121,8 +121,8 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                   className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
                 >
                   <div className="flex-1 pr-3">
-                    <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
-                    <div className="h-3 bg-gray-100 rounded-md w-24" />
+                    <div className="h-4 bg-gray-100 rounded-control w-36 mb-1.5" />
+                    <div className="h-3 bg-gray-100 rounded-control w-24" />
                   </div>
                 </div>
               ))
@@ -193,7 +193,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                   <tr key={i} className="animate-pulse">
                     {[0, 1, 2, 3].map((j) => (
                       <td key={j} className="px-0 py-2 border-b border-gray-100">
-                        <div className="h-4 bg-gray-100 rounded-md w-32" />
+                        <div className="h-4 bg-gray-100 rounded-control w-32" />
                       </td>
                     ))}
                   </tr>

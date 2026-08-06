@@ -110,7 +110,7 @@ function TemplateRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 rounded-xl pr-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
+      className={`group flex items-center gap-2 rounded-control pr-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
     >
       {!disabled && (
         <button
@@ -359,7 +359,7 @@ export function LineItemTemplateManager({
     return (
       <div className="space-y-3 animate-pulse">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-surface-muted rounded-xl" />
+          <div key={i} className="h-12 bg-surface-muted rounded-control" />
         ))}
       </div>
     )

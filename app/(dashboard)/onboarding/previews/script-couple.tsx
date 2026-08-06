@@ -53,12 +53,12 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
         title="Add Couple"
         footer={
           <>
-            <span className="text-xs px-3 py-1 rounded-md border border-transparent bg-surface-muted text-text">
+            <span className="text-xs px-3 py-1 rounded-control border border-transparent bg-surface-muted text-text">
               Cancel
             </span>
             <span
               data-cursor="save"
-              className="rounded-md px-3 py-1 text-xs border border-brand-fg bg-brand-fg text-text-inverse"
+              className="rounded-control px-3 py-1 text-xs border border-brand-fg bg-brand-fg text-text-inverse"
             >
               Save
             </span>
@@ -111,7 +111,7 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
             </div>
             <span
               data-cursor="new-couple"
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs border border-brand-fg bg-brand-fg text-text-inverse"
+              className="inline-flex items-center gap-1 rounded-control px-2 py-1 text-xs border border-brand-fg bg-brand-fg text-text-inverse"
             >
               <Plus size={12} strokeWidth={1.5} />
               <span className="hidden sm:inline">New couple</span>
@@ -120,7 +120,7 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
         )}
 
         {show(2) && !show(4) && (
-          <div className="absolute right-4 top-11 z-10 w-40 rounded-xl border border-border bg-card shadow-lg py-1 animate-fade-in">
+          <div className="absolute right-4 top-11 z-10 w-40 rounded-control border border-border bg-card shadow-lg py-1 animate-fade-in">
             <p data-cursor="add-manually" className="px-3 py-1.5 text-xs text-text hover:bg-surface-muted">
               Add manually
             </p>
@@ -133,7 +133,7 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
         {show(8) && (
           <div className="flex-1 flex gap-2 overflow-hidden">
             <BoardColumn tone="amber" label="New">
-              <div className="rounded-xl border border-border bg-card p-3 space-y-2 animate-fade-in">
+              <div className="rounded-control border border-border bg-card p-3 space-y-2 animate-fade-in">
                 <p className="text-xs font-semibold text-text">Ellie &amp; Tom</p>
                 <div className="flex items-center gap-1 text-[10px] text-text-subtle">
                   <Mail size={11} strokeWidth={1.5} />
@@ -213,9 +213,9 @@ function BoardColumn({
   return (
     <div className={`min-w-[128px] shrink-0 ${empty ? 'opacity-30' : ''}`}>
       <div className="flex items-center gap-2 mb-2">
-        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${TONE[tone]}`}>{label}</span>
+        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-control ${TONE[tone]}`}>{label}</span>
       </div>
-      {empty ? <div className="h-24 rounded-xl border border-dashed border-border" /> : children}
+      {empty ? <div className="h-24 rounded-control border border-dashed border-border" /> : children}
     </div>
   )
 }

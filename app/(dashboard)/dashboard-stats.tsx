@@ -37,7 +37,7 @@ function StatBadge({ percent, unit = "%" }: { percent: number; unit?: string }) 
   const isPositive = percent > 0;
   return (
     <span
-      className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-md ${
+      className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-control ${
         isPositive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
       }`}
     >
@@ -132,7 +132,7 @@ export function DashboardStats({
       {cards.map((card) => (
         <div
           key={card.label}
-          className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6"
+          className="bg-white rounded-control border border-gray-200 p-4 sm:p-6"
         >
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -142,7 +142,7 @@ export function DashboardStats({
           </div>
           {isLoading ? (
             <div className="animate-pulse pt-1">
-              <div className="h-7 w-24 bg-gray-100 rounded-md" />
+              <div className="h-7 w-24 bg-gray-100 rounded-control" />
             </div>
           ) : (
             <>

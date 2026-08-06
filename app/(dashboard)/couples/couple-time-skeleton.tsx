@@ -12,7 +12,7 @@
 /** A single pulsing placeholder bar. */
 function Bar({ className }: { className: string }) {
   return (
-    <div className={`animate-pulse rounded-md bg-surface-muted ${className}`} />
+    <div className={`animate-pulse rounded-control bg-surface-muted ${className}`} />
   );
 }
 
@@ -22,7 +22,7 @@ function RowSkeleton({ width }: { width: string }) {
     <div className="flex items-start gap-3 border-b border-border py-2.5 last:border-b-0">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <Bar className="h-3 w-12" />
-        <Bar className={`h-4 ${width} rounded-lg`} />
+        <Bar className={`h-4 ${width} rounded-control`} />
       </div>
       <Bar className="h-3 w-10 shrink-0" />
     </div>

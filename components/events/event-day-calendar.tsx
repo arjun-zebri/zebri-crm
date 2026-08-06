@@ -199,7 +199,7 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize, hasOverlay }: 
         transform: `translateY(${transform?.y ?? 0}px)`,
         zIndex: isDragging ? 50 : 1,
       }}
-      className={`rounded-xl border select-none transition-shadow ${
+      className={`rounded-control border select-none transition-shadow ${
         isDragging
           ? hasOverlay ? "opacity-0" : "shadow-2xl border-gray-400 ring-2 ring-gray-200 opacity-90"
           : item.pending_review
@@ -213,7 +213,7 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize, hasOverlay }: 
       {...attributes}
       {...listeners}
     >
-      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl ${item.pending_review ? "bg-amber-400" : "bg-gray-900"}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-control ${item.pending_review ? "bg-amber-400" : "bg-gray-900"}`} />
 
       <div
         className="pl-3.5 pr-2 py-1.5 overflow-hidden"
@@ -242,7 +242,7 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize, hasOverlay }: 
         onPointerDown={handleResizeStart}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-6 h-0.5 bg-gray-300 rounded group-hover:bg-gray-500 transition-colors" />
+        <div className="w-6 h-0.5 bg-gray-300 rounded-control group-hover:bg-gray-500 transition-colors" />
       </div>
     </div>
   );
@@ -628,7 +628,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
     return (
       <div className="space-y-2">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+          <div key={i} className="h-16 bg-gray-100 rounded-control animate-pulse" />
         ))}
       </div>
     );
@@ -646,7 +646,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
             {items.length > 0 && (
               <button
                 onClick={exportCsv}
-                className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
+                className="text-xs text-gray-500 border border-gray-200 rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
               >
                 <Download size={12} strokeWidth={1.5} />
                 Export
@@ -658,7 +658,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                 setClickTime("");
                 setShowModal(true);
               }}
-              className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+              className="text-xs text-gray-700 border border-gray-200 rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add item
             </button>
@@ -693,7 +693,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
           )}
           <div
             ref={scrollContainerRef}
-            className="flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded-xl bg-white min-w-0"
+            className="flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded-control bg-white min-w-0"
           >
             <MaybeDndContext
               skip={skipDndContext}
@@ -795,7 +795,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                         setClickTime("");
                         setShowModal(true);
                       }}
-                      className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer"
+                      className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-control hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer"
                     >
                       <p className="text-xs font-medium text-gray-700 truncate">
                         {item.title}

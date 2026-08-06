@@ -34,7 +34,7 @@ export function ConnectIssuesList({
             <li
               key={row.user_id}
               onClick={() => onOpenUser(row.user_id)}
-              className="px-2 py-1.5 rounded-md hover:bg-surface-emphasis cursor-pointer"
+              className="px-2 py-1.5 rounded-control hover:bg-surface-emphasis cursor-pointer"
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-mono text-text truncate">

@@ -90,7 +90,7 @@ export function PublicPageSection({ seedName, initial }: PublicPageSectionProps)
       <div>
         <div className="flex items-center gap-2 mb-1">
           <h2 className="text-xl font-semibold text-gray-900">Public page</h2>
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+          <span className="inline-flex items-center rounded-pill bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
             Coming soon
           </span>
         </div>
@@ -113,10 +113,10 @@ export function PublicPageSection({ seedName, initial }: PublicPageSectionProps)
             onBlur={handleSubdomainBlur}
             spellCheck={false}
             autoCapitalize="none"
-            className="min-w-0 flex-1 border border-gray-200 rounded-l-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+            className="min-w-0 flex-1 border border-gray-200 rounded-l-control px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
             placeholder="your-business"
           />
-          <span className="flex items-center px-3 text-sm text-gray-400 bg-gray-50 border border-l-0 border-gray-200 rounded-r-xl whitespace-nowrap select-none">
+          <span className="flex items-center px-3 text-sm text-gray-400 bg-gray-50 border border-l-0 border-gray-200 rounded-r-control whitespace-nowrap select-none">
             .{ROOT_DOMAIN}
           </span>
         </div>

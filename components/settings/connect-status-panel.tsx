@@ -56,7 +56,7 @@ export function ConnectStatusPanel({
     state.requirementsPastDue.length > 0;
 
   return (
-    <div className="rounded-card border border-border bg-surface p-4 space-y-3">
+    <div className="rounded-control border border-border bg-surface p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-body text-text">
           {state.chargesEnabled ? (
@@ -163,7 +163,7 @@ function CapabilityRow({
   return (
     <div className="flex items-center gap-1.5">
       <span
-        className={`inline-block h-2 w-2 rounded-full ${
+        className={`inline-block h-2 w-2 rounded-pill ${
           enabled ? 'bg-success' : 'bg-text-subtle'
         }`}
       />

@@ -59,7 +59,7 @@ export function CoupleQuestionnaireRow({ questionnaire: q, onOpen, onCopyLink, o
   ]
 
   return (
-    <div className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 transition hover:bg-surface-muted">
+    <div className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 transition hover:bg-surface-muted">
       <button onClick={onOpen} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left">
         <ClipboardList size={15} strokeWidth={1.5} className="shrink-0 text-text-muted" />
         <span className="min-w-0 flex-1">

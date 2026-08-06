@@ -219,7 +219,7 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
                 setPrefs(next);
                 void save(next);
               }}
-              className="h-4 w-4 rounded border-border accent-brand-fg"
+              className="h-4 w-4 rounded-control border-border accent-brand-fg"
             />
             <span className="text-sm text-text">{label}</span>
           </label>

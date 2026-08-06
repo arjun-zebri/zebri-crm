@@ -157,7 +157,7 @@ export function CoupleModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-md transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
+              className="text-xs px-3 py-1.5 rounded-control transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
             >
               Delete
             </button>
@@ -166,14 +166,14 @@ export function CoupleModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-md bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-xs px-3 py-1.5 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || !name.trim() || !primaryName.trim()}
-              className="text-xs px-3 py-1.5 rounded-md bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+              className="text-xs px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save"}
             </button>
@@ -321,7 +321,7 @@ export function CoupleModal({
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -369,7 +369,7 @@ export function CoupleModal({
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >

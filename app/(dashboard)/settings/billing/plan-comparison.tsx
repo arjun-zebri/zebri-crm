@@ -99,7 +99,7 @@ export function PlanComparisonDialog({
           and the table. Body is now content-sized (flushBottom on
           Modal drops flex-1) so the inner wrapper's height equals
           the table height equals the body height, the abs tint at
-          inset-y-0 reaches the modal's rounded bottom edge. */}
+          inset-y-0 reaches the modal's rounded-control bottom edge. */}
       <div className="overflow-x-auto">
         <div className="relative min-w-[36rem]">
           {currentPlan ? (

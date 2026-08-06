@@ -146,7 +146,7 @@ export function ContactPopover({
         <Popover.Trigger asChild>{children}</Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
-            className="w-72 bg-white border border-gray-200 rounded-xl shadow-lg z-[80] overflow-hidden"
+            className="w-72 bg-white border border-gray-200 rounded-control shadow-lg z-[80] overflow-hidden"
             sideOffset={6}
             align="start"
           >

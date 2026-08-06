@@ -124,7 +124,7 @@ export function QuestionField({ question, value, onChange, onAutoAdvance, autoFo
                 className="flex w-full cursor-pointer items-center gap-3 border px-4 py-3 text-left transition hover:border-current"
                 style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor, fontSize: `${bodyFontSize}px`, ...answerCss }}
               >
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded border" style={{ borderColor: isSel ? brand : borderColor, background: isSel ? brand : pageBg }}>
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-control border" style={{ borderColor: isSel ? brand : borderColor, background: isSel ? brand : pageBg }}>
                   {isSel && <span style={{ fontSize: `${theme.finePrintFontSize}px`, color: readableTextOn(brand) }}>✓</span>}
                 </span>
                 {opt}

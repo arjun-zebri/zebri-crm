@@ -101,7 +101,7 @@ export function TemplatePreview({ subject, content, ctx, mode = 'preview', overr
     return (
       // Fills its parent so only the iframe scrolls — a fixed iframe
       // height taller than the pane stacked two scrollbars.
-      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card">
+      <div className="flex h-full flex-col overflow-hidden rounded-control border border-border bg-card">
         <div className="shrink-0">{subjectRow}</div>
         {/* allow-same-origin (still no allow-scripts, so the content is
             inert) lets the effect above write the body without reloading
@@ -125,7 +125,7 @@ export function TemplatePreview({ subject, content, ctx, mode = 'preview', overr
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-control border border-border bg-card">
       {subjectRow}
       <div
         // `[&_p:empty]:min-h-[1.4em]` preserves the blank lines the MC

@@ -103,7 +103,7 @@ export function PortalEventModal({ onClose, onSave, event, saving, branding }: P
             type="button"
             onClick={() => onSave({ date, venue })}
             disabled={saving || !date}
-            className="rounded-xl px-3 py-1.5 transition cursor-pointer disabled:opacity-50 hover:opacity-90"
+            className="rounded-control px-3 py-1.5 transition cursor-pointer disabled:opacity-50 hover:opacity-90"
             style={{
               fontSize: `${bodyDefaults.fontSize}px`,
               color: 'white',

@@ -87,11 +87,11 @@ export function LineItemsTable({
           type="button"
           onClick={onAdd}
           disabled={!canEdit}
-          className={`w-full rounded-card border border-dashed border-border bg-surface-muted/40 ${
+          className={`w-full rounded-control border border-dashed border-border bg-surface-muted/40 ${
             compact ? 'py-8' : 'py-12'
           } text-center transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50`}
         >
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-surface text-text-muted">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-pill bg-surface text-text-muted">
             <Plus size={18} strokeWidth={1.5} />
           </div>
           <p className={`mt-3 ${compact ? 'text-caption' : 'text-body'} text-text-muted`}>
@@ -143,7 +143,7 @@ export function LineItemsTable({
   return (
     <div className="space-y-3">
       {headerAccessory}
-      <div className="rounded-card border border-border overflow-hidden">
+      <div className="rounded-control border border-border overflow-hidden">
         {/* Column header */}
         <div className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 bg-surface-muted text-caption font-medium uppercase tracking-wide text-text-muted">
           <span className="hidden sm:block" />

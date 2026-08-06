@@ -145,7 +145,7 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
 
       {/* Past-due notice */}
       {state === 'past_due' ? (
-        <div className="mt-6 inline-flex items-center gap-2 rounded-card border border-danger/40 bg-danger/5 px-3 py-2 text-body text-danger">
+        <div className="mt-6 inline-flex items-center gap-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2 text-body text-danger">
           <AlertCircle size={14} strokeWidth={1.5} />
           Update your payment method to restore access.
         </div>
@@ -313,7 +313,7 @@ function StarterUsage({ onUpgrade, redirecting }: { onUpgrade: () => void; redir
       </h4>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-4">
-          <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-border">
+          <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-pill bg-border">
             <div
               className={`h-full transition-all ${atCap ? 'bg-warning' : 'bg-text'}`}
               style={{ width: `${pct}%` }}

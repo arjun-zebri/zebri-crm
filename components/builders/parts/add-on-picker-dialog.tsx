@@ -63,7 +63,7 @@ function AddOnPickerContent({
         <div
           role="dialog"
           aria-label={`Add-ons for ${packageName}`}
-          className="pointer-events-auto w-full max-w-sm rounded-2xl border border-border bg-card shadow-xl"
+          className="pointer-events-auto w-full max-w-sm rounded-control border border-border bg-card shadow-xl"
         >
           <div className="px-5 py-5">
             <h3 className="text-base font-semibold text-text">Include add-ons?</h3>

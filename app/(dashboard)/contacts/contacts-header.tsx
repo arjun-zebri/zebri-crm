@@ -106,7 +106,7 @@ export function ContactsHeader({
         actions={
           <button
             onClick={onAddClick}
-            className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
+            className="sm:hidden flex items-center justify-center w-8 h-8 rounded-pill bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
             aria-label="New contact"
           >
             <Plus size={16} strokeWidth={2} />
@@ -129,7 +129,7 @@ export function ContactsHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search contacts..."
-            className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+            className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
           />
           {search && (
             <button
@@ -148,7 +148,7 @@ export function ContactsHeader({
         <div className="relative" ref={filtersRef}>
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className={`flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
               hasActiveFilter ? 'text-gray-900 bg-gray-50' : 'text-gray-500'
             }`}
           >
@@ -167,7 +167,7 @@ export function ContactsHeader({
             )}
           </button>
           {filtersOpen && (
-            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-36 py-1">
+            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-control shadow-lg z-20 min-w-36 py-1">
               <button
                 onClick={() => {
                   onFilterChange(null)
@@ -225,13 +225,13 @@ export function ContactsHeader({
         <div className="relative" ref={sortRef}>
           <button
             onClick={() => setSortOpen(!sortOpen)}
-            className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <ArrowUpDown size={11} strokeWidth={1.5} />
             <span>{activeSortLabel || 'Sort'}</span>
           </button>
           {sortOpen && (
-            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-40 py-1">
+            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-control shadow-lg z-20 min-w-40 py-1">
               {SORT_OPTIONS.map((option) => (
                 <button
                   key={`${option.field}-${option.direction}`}
@@ -256,7 +256,7 @@ export function ContactsHeader({
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onAddClick}
-            className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
           >
             <Plus size={11} strokeWidth={2} />
             New contact

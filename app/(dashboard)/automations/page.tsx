@@ -80,7 +80,7 @@ export default function AutomationsPage() {
               <button
                 onClick={handleCreate}
                 disabled={pending}
-                className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+                className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
               >
                 <Plus size={11} strokeWidth={2} />
                 New automation
@@ -88,7 +88,7 @@ export default function AutomationsPage() {
               <button
                 onClick={handleCreate}
                 disabled={pending}
-                className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+                className="sm:hidden flex items-center justify-center w-8 h-8 rounded-pill bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
                 aria-label="New automation"
               >
                 <Plus size={14} strokeWidth={2} />

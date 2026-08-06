@@ -83,7 +83,7 @@ export function TimePicker({
         className={`flex items-center justify-between w-36 text-sm transition cursor-pointer focus:outline-none ${
           variant === 'underline'
             ? 'border-0 border-b border-gray-200 bg-transparent px-0 py-2 hover:border-gray-400 focus:border-gray-400'
-            : 'border border-gray-200 rounded-xl px-3 py-2 hover:bg-gray-50'
+            : 'border border-gray-200 rounded-control px-3 py-2 hover:bg-gray-50'
         }`}
       >
         <span className={value ? 'text-gray-900' : 'text-gray-400'}>
@@ -95,7 +95,7 @@ export function TimePicker({
       {open && (
         <div
           ref={listRef}
-          className="absolute z-50 mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-lg overflow-y-auto py-1"
+          className="absolute z-50 mt-1 w-36 bg-white border border-gray-200 rounded-control shadow-lg overflow-y-auto py-1"
           style={{ maxHeight: '220px' }}
         >
           <button
@@ -249,7 +249,7 @@ export function EventTimelineModal({
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className={`text-xs px-3 py-1.5 rounded-md transition cursor-pointer disabled:opacity-50 ${
+                className={`text-xs px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 ${
                   deleteConfirm
                     ? 'bg-red-600 text-white hover:bg-red-700'
                     : 'bg-red-50 text-red-600 hover:bg-red-100'
@@ -263,14 +263,14 @@ export function EventTimelineModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-md bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-xs px-3 py-1.5 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={loading || !title.trim()}
-              className="text-xs px-3 py-1.5 rounded-md bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+              className="text-xs px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'Saving...' : 'Save'}
             </button>
@@ -282,7 +282,7 @@ export function EventTimelineModal({
         {showStatus && item && (
           <div>
             <label className={labelClass}>Status</label>
-            <div className="flex border border-gray-200 rounded-xl overflow-hidden">
+            <div className="flex border border-gray-200 rounded-control overflow-hidden">
               {(['timeline', 'unscheduled', 'review'] as const).map((s) => (
                 <button
                   key={s}

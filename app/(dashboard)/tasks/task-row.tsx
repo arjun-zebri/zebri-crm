@@ -205,7 +205,7 @@ const TaskRowContent = memo(function TaskRowContent({
                 onToggleSelect?.(e)
               }}
               disabled={pending}
-              className={`shrink-0 w-4 h-4 rounded border transition cursor-pointer ${
+              className={`shrink-0 w-4 h-4 rounded-control border transition cursor-pointer ${
                 selected
                   ? 'bg-emerald-500 border-emerald-500 opacity-100'
                   : `border-gray-300 hover:border-gray-500 ${
@@ -230,7 +230,7 @@ const TaskRowContent = memo(function TaskRowContent({
                   e.stopPropagation()
                   onCoupleClick?.(task.couple!.id)
                 }}
-                className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5 hover:bg-gray-200 hover:text-gray-700 transition cursor-pointer whitespace-nowrap shrink-0"
+                className="text-xs bg-gray-100 text-gray-500 rounded-pill px-2 py-0.5 hover:bg-gray-200 hover:text-gray-700 transition cursor-pointer whitespace-nowrap shrink-0"
               >
                 {task.couple.name}
               </button>
@@ -242,7 +242,7 @@ const TaskRowContent = memo(function TaskRowContent({
                   e.stopPropagation()
                   onOpen()
                 }}
-                className="shrink-0 text-xs text-gray-500 hover:text-gray-900 px-1.5 py-0.5 rounded border border-gray-200 hover:border-gray-300 bg-white shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition flex items-center gap-1 cursor-pointer"
+                className="shrink-0 text-xs text-gray-500 hover:text-gray-900 px-1.5 py-0.5 rounded-control border border-gray-200 hover:border-gray-300 bg-white shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition flex items-center gap-1 cursor-pointer"
                 title="Open"
                 aria-label="Open task"
               >

@@ -47,7 +47,7 @@ interface EmailsTabProps {
 function CategoryChip({ category }: { category: EmailTemplateCategory }) {
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${categoryColorClasses(category.color).chip}`}
+      className={`rounded-control px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${categoryColorClasses(category.color).chip}`}
     >
       {category.name}
     </span>
@@ -212,7 +212,7 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
                     <>
                       {category ? <CategoryChip category={category} /> : null}
                       {selected.archived_at ? (
-                        <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-text-muted">
+                        <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-xs text-text-muted">
                           Archived
                         </span>
                       ) : null}

@@ -95,7 +95,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
       {/* Calendar-style event card */}
       <div
         onClick={() => onEdit(item)}
-        className={`flex-1 relative overflow-hidden rounded-xl border bg-white hover:shadow-sm transition-all cursor-pointer ${
+        className={`flex-1 relative overflow-hidden rounded-control border bg-white hover:shadow-sm transition-all cursor-pointer ${
           isPending ? 'border-amber-200 hover:border-amber-300' : 'border-gray-200 hover:border-gray-300'
         }`}
       >
@@ -118,7 +118,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
             </span>
             <div className="flex items-center gap-2">
               {isPending && (
-                <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 rounded-full px-2 py-0.5">
+                <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 rounded-pill px-2 py-0.5">
                   Pending
                 </span>
               )}
@@ -150,7 +150,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
       {isPending && onApprove && (
         <button
           onClick={(e) => { e.stopPropagation(); onApprove(item.id) }}
-          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-xl px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
+          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-control px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
           title="Approve"
         >
           <Check size={12} strokeWidth={2} />
@@ -365,7 +365,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+          <div key={i} className="h-12 bg-gray-100 rounded-control animate-pulse" />
         ))}
       </div>
     )
@@ -379,7 +379,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
           <p className="text-sm font-medium text-gray-900">Timeline</p>
           <button
             onClick={handleOpenAdd}
-            className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+            className="text-xs text-gray-700 border border-gray-200 rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add item
           </button>
@@ -391,7 +391,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
             <p className="text-sm text-gray-500 mb-3">No items yet.</p>
             <button
               onClick={handleOpenAdd}
-              className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+              className="text-sm text-gray-700 border border-gray-200 rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add first item
             </button>

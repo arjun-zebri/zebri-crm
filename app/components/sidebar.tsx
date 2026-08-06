@@ -125,7 +125,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                 key={item.href}
                 href={item.href}
                 onClick={onMobileClose}
-                className={`flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-base transition whitespace-nowrap ${
+                className={`flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-control text-base transition whitespace-nowrap ${
                   isActive
                     ? "bg-gray-100 text-gray-900"
                     : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
@@ -160,7 +160,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                   key={item.href}
                   href={item.href}
                   onClick={onMobileClose}
-                  className={`flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-base transition whitespace-nowrap ${
+                  className={`flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-control text-base transition whitespace-nowrap ${
                     isActive
                       ? "bg-gray-100 text-gray-900"
                       : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
@@ -189,7 +189,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                   localStorage.removeItem("zebri:branding-onboarded");
                   window.location.href = "/branding?onboarding=1";
                 }}
-                className="w-full flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-base text-gray-800 hover:bg-gray-50 hover:text-gray-900 transition whitespace-nowrap cursor-pointer"
+                className="w-full flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-control text-base text-gray-800 hover:bg-gray-50 hover:text-gray-900 transition whitespace-nowrap cursor-pointer"
               >
                 <RotateCcw size={18} strokeWidth={1.5} className="flex-shrink-0" />
                 <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
@@ -221,7 +221,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
 
         <button
           onClick={onToggle}
-          className="hidden md:flex absolute top-1/2 -translate-y-1/2 -right-3.5 z-10 items-center justify-center w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-400 hover:text-gray-700 shadow-sm transition"
+          className="hidden md:flex absolute top-1/2 -translate-y-1/2 -right-3.5 z-10 items-center justify-center w-7 h-7 rounded-pill bg-white border border-gray-200 text-gray-400 hover:text-gray-700 shadow-sm transition"
         >
           {isExpanded ? <ChevronLeft size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
         </button>

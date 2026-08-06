@@ -1,8 +1,8 @@
 'use client'
 
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface DatePickerProps {
   value: string
@@ -23,7 +23,7 @@ interface DatePickerProps {
    *  builder modals to make the date's purpose obvious at a glance. */
   displayPrefix?: string
   /** Trigger visual style. `outlined` is the default boxed input
-   *  (rounded border, used by builder modals). `underline` is the
+   *  (rounded-control border, used by builder modals). `underline` is the
    *  flat single-rule style used in form modals that follow the
    *  couple-modal vocabulary (transparent, bottom border, no ring).
    *  `meta` matches the builder meta-row controls (couple picker,
@@ -238,7 +238,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     const isCurrentMonth = date.getMonth() === viewMonth
 
     const base = `w-full aspect-square flex items-center justify-center ${
-      isSmall ? 'text-caption rounded-control' : 'text-sm rounded-lg'
+      isSmall ? 'text-caption rounded-control' : 'text-sm rounded-control'
     } cursor-pointer transition`
     if (isSelected) return `${base} bg-black text-white`
     if (isToday) return `${base} bg-gray-100 text-gray-900 hover:bg-gray-200`
@@ -266,7 +266,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       // radius — so a date field reads as a sibling of the text fields
       // beside it rather than a slightly rounder, slightly taller one.
       'border rounded-control px-2.5 h-8 bg-surface'
-    : 'border rounded-xl px-3 py-2'
+    : 'border rounded-control px-3 py-2'
   const stateChrome = disabled
     ? isMeta
       ? 'opacity-70 cursor-not-allowed'
@@ -326,13 +326,13 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     <>
       {/* Month header */}
       <div className="flex items-center justify-between mb-2">
-        <button type="button" onClick={prevMonth} className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer">
+        <button type="button" onClick={prevMonth} className="p-1 rounded-control hover:bg-gray-100 transition cursor-pointer">
           <ChevronLeft className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-600`} strokeWidth={1.5} />
         </button>
         <span className={`${isSmall ? 'text-caption' : 'text-sm'} font-medium text-gray-900`}>
           {MONTH_NAMES[viewMonth]} {viewYear}
         </span>
-        <button type="button" onClick={nextMonth} className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer">
+        <button type="button" onClick={nextMonth} className="p-1 rounded-control hover:bg-gray-100 transition cursor-pointer">
           <ChevronRight className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-600`} strokeWidth={1.5} />
         </button>
       </div>
@@ -377,7 +377,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
           {triggerContent}
         </button>
         {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] max-w-[320px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 animate-fade-in">
+          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] max-w-[320px] bg-white border border-gray-200 rounded-control shadow-lg p-3 z-20 animate-fade-in">
             {calendarBody}
           </div>
         )}
@@ -390,7 +390,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     <div
       ref={dropdownRef}
       style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 200 }}
-      className={`bg-white border border-gray-200 rounded-xl shadow-lg ${isSmall ? 'p-2.5' : 'p-3'} animate-fade-in`}
+      className={`bg-white border border-gray-200 rounded-control shadow-lg ${isSmall ? 'p-2.5' : 'p-3'} animate-fade-in`}
     >
       {calendarBody}
     </div>,

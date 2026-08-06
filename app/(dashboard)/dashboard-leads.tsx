@@ -24,10 +24,10 @@ export function DashboardLeads({ period }: DashboardLeadsProps) {
         <div className="space-y-4 flex-1 min-h-0">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="animate-pulse flex items-center gap-3">
-              <div className="h-3.5 bg-gray-100 rounded-md w-24 shrink-0" />
-              <div className="flex-1 h-2 bg-gray-100 rounded-full" />
-              <div className="h-3.5 bg-gray-100 rounded-md w-6 shrink-0" />
-              <div className="h-3 bg-gray-100 rounded-md w-8 shrink-0" />
+              <div className="h-3.5 bg-gray-100 rounded-control w-24 shrink-0" />
+              <div className="flex-1 h-2 bg-gray-100 rounded-pill" />
+              <div className="h-3.5 bg-gray-100 rounded-control w-6 shrink-0" />
+              <div className="h-3 bg-gray-100 rounded-control w-8 shrink-0" />
             </div>
           ))}
         </div>
@@ -49,9 +49,9 @@ export function DashboardLeads({ period }: DashboardLeadsProps) {
                 <span className="text-xs sm:text-sm text-gray-700 w-24 shrink-0">
                   {status.name}
                 </span>
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-gray-100 rounded-pill overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all bg-gray-900"
+                    className="h-full rounded-pill transition-all bg-gray-900"
                     style={{ width: `${pct}%` }}
                   />
                 </div>

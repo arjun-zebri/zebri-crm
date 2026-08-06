@@ -48,7 +48,7 @@ export function PaymentStageRow({
     <div className="relative">
       <span
         aria-hidden
-        className={`absolute -left-7 top-1 inline-flex h-3 w-3 rounded-full ${
+        className={`absolute -left-7 top-1 inline-flex h-3 w-3 rounded-pill ${
           paid ? 'bg-success' : 'border-2 border-warning bg-surface'
         }`}
       />
@@ -75,7 +75,7 @@ export function PaymentStageRow({
               type="button"
               onClick={onMarkPaid}
               disabled={markPending}
-              className="inline-flex h-7 cursor-pointer items-center rounded-lg bg-success px-2.5 text-caption font-medium text-text-inverse transition-colors hover:opacity-90 disabled:opacity-50"
+              className="inline-flex h-7 cursor-pointer items-center rounded-control bg-success px-2.5 text-caption font-medium text-text-inverse transition-colors hover:opacity-90 disabled:opacity-50"
             >
               {markPending ? 'Saving...' : 'Record payment'}
             </button>

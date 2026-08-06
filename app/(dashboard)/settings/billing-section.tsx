@@ -265,7 +265,7 @@ function ActivationBanner({
 
   if (activation === 'timed_out') {
     return (
-      <div className="flex flex-col gap-3 rounded-card border border-warning/40 bg-warning/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-control border border-warning/40 bg-warning/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <AlertCircle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-warning" />
           <div>
@@ -288,7 +288,7 @@ function ActivationBanner({
     );
   }
   return (
-    <div className="flex flex-col gap-3 rounded-card border border-success/40 bg-success/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-control border border-success/40 bg-success/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
         {activation === 'polling' ? (
           <Loader2 size={16} strokeWidth={1.5} className="shrink-0 animate-spin text-success" />

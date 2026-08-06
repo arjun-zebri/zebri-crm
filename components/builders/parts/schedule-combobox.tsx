@@ -73,7 +73,7 @@ export function ScheduleCombobox({
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-[95] w-[var(--radix-popover-trigger-width)] rounded-xl border border-border bg-card p-1 shadow-lg animate-fade-in"
+          className="z-[95] w-[var(--radix-popover-trigger-width)] rounded-control border border-border bg-card p-1 shadow-lg animate-fade-in"
         >
           {loading ? (
             <p className="px-2 py-2 text-caption text-text-subtle">Loading schedules...</p>
@@ -86,7 +86,7 @@ export function ScheduleCombobox({
               {schedules.map((s) => (
                 <div
                   key={s.id}
-                  className="group flex items-center gap-1 rounded-lg px-1 transition hover:bg-surface-muted"
+                  className="group flex items-center gap-1 rounded-control px-1 transition hover:bg-surface-muted"
                 >
                   <button
                     type="button"

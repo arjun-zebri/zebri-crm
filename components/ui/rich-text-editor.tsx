@@ -92,7 +92,7 @@ function MentionNodeView({ node, selected, extension }: NodeViewProps) {
       <NodeViewWrapper
         as="div"
         contentEditable={false}
-        className={`email-preview my-1 rounded-lg text-sm leading-relaxed text-text [&_a]:text-brand [&_p]:my-1 [&_img]:my-1 ${
+        className={`email-preview my-1 rounded-control text-sm leading-relaxed text-text [&_a]:text-brand [&_p]:my-1 [&_img]:my-1 ${
           selected ? 'ring-2 ring-brand ring-offset-2' : ''
         }`}
         // Sanitised upstream by renderSignatureHtml before being passed in.
@@ -105,7 +105,7 @@ function MentionNodeView({ node, selected, extension }: NodeViewProps) {
     <NodeViewWrapper
       as="span"
       contentEditable={false}
-      className={`inline-block rounded bg-red-100 px-1.5 py-0.5 text-sm font-medium text-red-700 ${
+      className={`inline-block rounded-control bg-red-100 px-1.5 py-0.5 text-sm font-medium text-red-700 ${
         selected ? 'ring-2 ring-red-400' : ''
       }`}
     >
@@ -149,8 +149,8 @@ export function RichTextEditor({
           HTMLAttributes: {
             class:
               mentionDisplay === 'label'
-                ? 'inline-block rounded bg-red-100 text-red-700 px-1.5 py-0.5 text-sm font-medium'
-                : 'inline-block rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-sm font-medium',
+                ? 'inline-block rounded-control bg-red-100 text-red-700 px-1.5 py-0.5 text-sm font-medium'
+                : 'inline-block rounded-control bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-sm font-medium',
           },
           renderHTML({ options, node }) {
             const id = String(node.attrs.id)
@@ -220,7 +220,7 @@ export function RichTextEditor({
     // focus-within mirrors the Input primitive's focus treatment (border
     // darkens to brand-fg) so clicking into the body reads like clicking
     // into any other field.
-    <div className={`border border-gray-200 rounded-xl overflow-hidden bg-white transition-colors focus-within:border-brand-fg ${className}`}>
+    <div className={`border border-gray-200 rounded-control overflow-hidden bg-white transition-colors focus-within:border-brand-fg ${className}`}>
       {editable && (
         <ToolbarRow
           editor={editor}
@@ -257,7 +257,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       title={title}
-      className={`p-1.5 rounded-md transition cursor-pointer ${
+      className={`p-1.5 rounded-control transition cursor-pointer ${
         active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
       }`}
     >
@@ -310,7 +310,7 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
     >
       <Popover.Trigger
         title="Link"
-        className={`p-1.5 rounded-md transition cursor-pointer ${
+        className={`p-1.5 rounded-control transition cursor-pointer ${
           active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
@@ -320,7 +320,7 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-[90] w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-2 animate-fade-in"
+          className="z-[90] w-72 bg-white border border-gray-200 rounded-control shadow-lg p-2 animate-fade-in"
         >
           <div className="flex items-center gap-1.5">
             <Input
@@ -431,7 +431,7 @@ function ToolbarRow({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition rounded-md px-2.5 py-1 cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition rounded-control px-2.5 py-1 cursor-pointer"
           >
             <AtSign size={13} strokeWidth={1.5} />
             Insert variable
@@ -441,7 +441,7 @@ function ToolbarRow({
           <Popover.Content
             align="end"
             sideOffset={6}
-            className="z-[90] w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-1 animate-fade-in"
+            className="z-[90] w-56 bg-white border border-gray-200 rounded-control shadow-lg p-1 animate-fade-in"
           >
             <div className="max-h-72 overflow-y-auto">
               {variables.map((v) => (
@@ -452,7 +452,7 @@ function ToolbarRow({
                     onInsertVariable(v.id)
                     setOpen(false)
                   }}
-                  className="w-full text-left px-2 py-1 rounded-md hover:bg-gray-50 cursor-pointer"
+                  className="w-full text-left px-2 py-1 rounded-control hover:bg-gray-50 cursor-pointer"
                 >
                   <p className="truncate text-caption text-gray-900">{v.label}</p>
                 </button>

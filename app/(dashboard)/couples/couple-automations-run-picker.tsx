@@ -23,8 +23,8 @@ function PickerSkeleton() {
     <div aria-hidden="true">
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="flex items-center justify-between gap-3 px-3 py-2">
-          <div className="h-3.5 flex-1 animate-pulse rounded bg-surface-muted" />
-          <div className="size-3 shrink-0 animate-pulse rounded bg-surface-muted" />
+          <div className="h-3.5 flex-1 animate-pulse rounded-control bg-surface-muted" />
+          <div className="size-3 shrink-0 animate-pulse rounded-control bg-surface-muted" />
         </div>
       ))}
     </div>
@@ -119,7 +119,7 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="bg-surface border border-border rounded-xl shadow-lg z-[80] w-64 py-1.5"
+          className="bg-surface border border-border rounded-control shadow-lg z-[80] w-64 py-1.5"
         >
           <p className="px-3 py-1.5 text-xs text-text-subtle">{cfg.hint}</p>
           {isLoading ? (

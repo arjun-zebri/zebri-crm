@@ -62,7 +62,7 @@ export interface ConflictProps {
 export function Conflict({ title, group, recommendation, children }: ConflictProps) {
   const data = group ? auditGroup(group) : undefined;
   return (
-    <div className="rounded-card border border-warning/40 bg-warning/5 p-4">
+    <div className="rounded-control border border-warning/40 bg-warning/5 p-4">
       <div className="flex items-start gap-2">
         <AlertTriangle
           className="mt-0.5 shrink-0 text-warning"

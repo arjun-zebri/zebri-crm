@@ -108,7 +108,7 @@ export function CategoryPickerBase({
           className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-left text-caption text-text transition-colors hover:border-border-strong focus:border-brand-fg focus:outline-none data-[state=open]:border-brand-fg"
         >
           {selected && (
-            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${categoryColorClasses(selected.color).dot}`} />
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-pill ${categoryColorClasses(selected.color).dot}`} />
           )}
           <span className={`min-w-0 flex-1 truncate ${selected ? '' : 'text-text-subtle'}`}>
             {selected ? selected.name : 'No category'}
@@ -121,7 +121,7 @@ export function CategoryPickerBase({
             sideOffset={6}
             // Radix exposes the trigger's width as a CSS var, so the
             // popover matches the control exactly — like a native Select.
-            className="z-[90] w-[var(--radix-popover-trigger-width)] rounded-xl border border-border bg-card p-1 shadow-lg animate-fade-in"
+            className="z-[90] w-[var(--radix-popover-trigger-width)] rounded-control border border-border bg-card p-1 shadow-lg animate-fade-in"
           >
             {managing ? (
               <>
@@ -246,12 +246,12 @@ function CategoryOption({
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-surface-muted"
+      className="flex w-full cursor-pointer items-center gap-2 rounded-control px-2 py-1 text-left transition hover:bg-surface-muted"
     >
       {dotClass ? (
-        <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
+        <span className={`h-2 w-2 shrink-0 rounded-pill ${dotClass}`} />
       ) : (
-        <span className="h-2 w-2 shrink-0 rounded-full border border-border" />
+        <span className="h-2 w-2 shrink-0 rounded-pill border border-border" />
       )}
       <span className="min-w-0 flex-1 truncate text-caption text-text">{label}</span>
       {selected && <Check size={12} strokeWidth={1.5} className="shrink-0 text-text" />}

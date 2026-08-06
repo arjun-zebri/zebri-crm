@@ -93,13 +93,13 @@ function ViewDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 border border-border rounded-md px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
       >
         <span className="capitalize">{view}</span>
         <ChevronDown size={11} strokeWidth={1.5} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-20 min-w-32 py-1">
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-control shadow-lg z-20 min-w-32 py-1">
           {options.map((v) => (
             <button
               key={v}
@@ -150,13 +150,13 @@ function StatusDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 border border-border rounded-md px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
       >
         <span>{label}</span>
         <ChevronDown size={11} strokeWidth={1.5} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-20 min-w-40 py-1">
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-control shadow-lg z-20 min-w-40 py-1">
           {statuses.map((status) => {
             const checked =
               activeStatuses === null || activeStatuses.has(status.slug);
@@ -167,7 +167,7 @@ function StatusDropdown({
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-text hover:bg-surface-muted transition cursor-pointer"
               >
                 <div
-                  className={`w-3.5 h-3.5 rounded-sm border flex-shrink-0 flex items-center justify-center ${
+                  className={`w-3.5 h-3.5 rounded-control border flex-shrink-0 flex items-center justify-center ${
                     checked
                       ? "border-brand-fg bg-brand-fg"
                       : "border-border-strong bg-surface"
@@ -459,7 +459,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                     // No-op on desktop where the sidebar is always mounted.
                     setSidebarOpen(false);
                   }}
-                  className={`h-7 w-7 mx-auto flex flex-col items-center justify-center text-xs rounded-md transition cursor-pointer relative ${
+                  className={`h-7 w-7 mx-auto flex flex-col items-center justify-center text-xs rounded-control transition cursor-pointer relative ${
                     isSelectedDay
                       ? "bg-brand-fg text-text-inverse hover:opacity-90"
                       : isMiniMonth
@@ -469,10 +469,10 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                 >
                   {date.getDate()}
                   {hasEvents && !isSelectedDay && (
-                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-success"></div>
+                    <div className="absolute bottom-0.5 w-1 h-1 rounded-pill bg-success"></div>
                   )}
                   {hasEvents && isSelectedDay && (
-                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-surface"></div>
+                    <div className="absolute bottom-0.5 w-1 h-1 rounded-pill bg-surface"></div>
                   )}
                 </button>
               );
@@ -493,7 +493,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                   className="w-full flex items-center gap-2 py-1.5 rounded-control text-xs text-text hover:bg-surface-muted transition cursor-pointer text-left"
                 >
                   <div
-                    className={`w-3.5 h-3.5 rounded-sm border flex-shrink-0 flex items-center justify-center ${
+                    className={`w-3.5 h-3.5 rounded-control border flex-shrink-0 flex items-center justify-center ${
                       checked ? "border-brand-fg bg-brand-fg" : "border-border-strong bg-surface"
                     }`}
                   >
@@ -523,7 +523,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                     onClick={() =>
                       event.couple && onSelectCouple(event.couple.id)
                     }
-                    className="text-left w-full px-2.5 py-2 rounded-lg bg-surface border border-border transition hover:shadow-sm cursor-pointer"
+                    className="text-left w-full px-2.5 py-2 rounded-control bg-surface border border-border transition hover:shadow-sm cursor-pointer"
                   >
                     <div className="text-xs font-semibold truncate text-text">
                       {formatEventLabel(event)}
@@ -550,7 +550,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-md transition cursor-pointer"
+              className="md:hidden inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-control transition cursor-pointer"
             >
               <SlidersHorizontal size={14} strokeWidth={1.5} />
             </button>
@@ -559,14 +559,14 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                 setCurrentDate(new Date());
                 setMiniNavDate(new Date());
               }}
-              className="inline-flex items-center border border-border rounded-md px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
             >
               Today
             </button>
             <button
               data-testid="calendar-prev-btn"
               onClick={handlePrev}
-              className="inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-md transition cursor-pointer"
+              className="inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-control transition cursor-pointer"
             >
               <ChevronLeft size={14} strokeWidth={1.5} />
             </button>
@@ -579,7 +579,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
             <button
               data-testid="calendar-next-btn"
               onClick={handleNext}
-              className="inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-md transition cursor-pointer"
+              className="inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-control transition cursor-pointer"
             >
               <ChevronRight size={14} strokeWidth={1.5} />
             </button>
@@ -752,8 +752,8 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
                 >
                   {date.getDate()}
                 </div>
-                <div className="h-6 bg-surface-emphasis rounded animate-pulse" />
-                <div className="h-6 bg-surface-emphasis rounded animate-pulse" />
+                <div className="h-6 bg-surface-emphasis rounded-control animate-pulse" />
+                <div className="h-6 bg-surface-emphasis rounded-control animate-pulse" />
               </div>
             );
           })}
@@ -783,7 +783,7 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="w-full h-12 bg-surface-emphasis rounded-lg animate-pulse"
+                  className="w-full h-12 bg-surface-emphasis rounded-control animate-pulse"
                 />
               ))}
             </div>
@@ -799,21 +799,21 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
       {Array.from({ length: 4 }).map((_, idx) => (
         <div
           key={idx}
-          className="relative bg-surface-emphasis rounded-card overflow-hidden mb-3 p-5 animate-pulse"
+          className="relative bg-surface-emphasis rounded-control overflow-hidden mb-3 p-5 animate-pulse"
         >
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-border-strong" />
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <div className="h-5 bg-border rounded w-3/4 mb-2" />
-              <div className="h-4 bg-border rounded w-1/2" />
+              <div className="h-5 bg-border rounded-control w-3/4 mb-2" />
+              <div className="h-4 bg-border rounded-control w-1/2" />
             </div>
-            <div className="h-6 w-16 bg-border rounded-full flex-shrink-0" />
+            <div className="h-6 w-16 bg-border rounded-pill flex-shrink-0" />
           </div>
-          <div className="h-4 bg-border rounded w-full mt-3" />
-          <div className="h-4 bg-border rounded w-2/3 mt-2" />
+          <div className="h-4 bg-border rounded-control w-full mt-3" />
+          <div className="h-4 bg-border rounded-control w-2/3 mt-2" />
           <div className="flex items-center gap-5 mt-4 pt-4">
-            <div className="h-4 bg-border rounded w-20" />
-            <div className="h-4 bg-border rounded w-20" />
+            <div className="h-4 bg-border rounded-control w-20" />
+            <div className="h-4 bg-border rounded-control w-20" />
           </div>
         </div>
       ))}
@@ -878,7 +878,7 @@ function MonthView({
                 <span
                   className={
                     isCurrentDay
-                      ? "bg-brand-fg text-text-inverse rounded-md w-5 h-5 inline-flex items-center justify-center"
+                      ? "bg-brand-fg text-text-inverse rounded-control w-5 h-5 inline-flex items-center justify-center"
                       : ""
                   }
                 >
@@ -892,11 +892,11 @@ function MonthView({
                   {dayEvents.slice(0, 3).map((event) => (
                     <div
                       key={event.id}
-                      className="w-1.5 h-1.5 rounded-full bg-text-subtle"
+                      className="w-1.5 h-1.5 rounded-pill bg-text-subtle"
                     />
                   ))}
                   {dayEvents.length > 3 && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-border-strong" />
+                    <div className="w-1.5 h-1.5 rounded-pill bg-border-strong" />
                   )}
                 </div>
               )}
@@ -961,7 +961,7 @@ function WeekView({
                 <span
                   className={
                     isCurrentDay
-                      ? "bg-brand-fg text-text-inverse rounded-md w-6 h-6 inline-flex items-center justify-center text-xs"
+                      ? "bg-brand-fg text-text-inverse rounded-control w-6 h-6 inline-flex items-center justify-center text-xs"
                       : ""
                   }
                 >
@@ -987,7 +987,7 @@ function WeekView({
                       onClick={() =>
                         event.couple && onSelectCouple(event.couple.id)
                       }
-                      className="text-left w-full px-2.5 py-2 rounded-lg bg-surface border border-border transition hover:shadow-md cursor-pointer"
+                      className="text-left w-full px-2.5 py-2 rounded-control bg-surface border border-border transition hover:shadow-md cursor-pointer"
                     >
                       <div className="text-xs font-semibold text-text break-words">
                         {formatEventLabel(event)}
@@ -1068,7 +1068,7 @@ function DayView({
               <div
                 key={event.id}
                 onClick={() => event.couple && onSelectCouple(event.couple.id)}
-                className="bg-surface border border-border rounded-card transition hover:shadow-md cursor-pointer"
+                className="bg-surface border border-border rounded-control transition hover:shadow-md cursor-pointer"
               >
                 <div className="px-4 py-4">
                   {/* Top row: name + status badge */}
@@ -1089,7 +1089,7 @@ function DayView({
                       )}
                     </div>
                     <span
-                      className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 capitalize border border-border ${classes.pill}`}
+                      className={`text-xs font-medium px-2.5 py-1 rounded-pill flex-shrink-0 capitalize border border-border ${classes.pill}`}
                     >
                       {statusName}
                     </span>

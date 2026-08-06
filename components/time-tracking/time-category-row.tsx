@@ -85,7 +85,7 @@ export function TimeCategoryRow({
 
   return (
     <div
-      className={`group mx-1.5 flex items-center gap-0.5 rounded-lg pl-2 pr-1 transition ${
+      className={`group mx-1.5 flex items-center gap-0.5 rounded-control pl-2 pr-1 transition ${
         selected ? 'bg-surface-emphasis' : 'hover:bg-surface-emphasis'
       }`}
     >
@@ -103,7 +103,7 @@ export function TimeCategoryRow({
           <button
             type="button"
             aria-label={`Colour for ${category.name}`}
-            className="mr-1.5 size-3 shrink-0 cursor-pointer rounded-full ring-1 ring-black/10 transition hover:scale-110"
+            className="mr-1.5 size-3 shrink-0 cursor-pointer rounded-pill ring-1 ring-black/10 transition hover:scale-110"
             style={{ background: category.color ?? UNCATEGORISED_COLOR }}
           />
         }
@@ -124,7 +124,7 @@ export function TimeCategoryRow({
           setEditing(true);
         }}
         aria-label={`Rename ${category.name}`}
-        className="shrink-0 cursor-pointer rounded-md p-1 text-text-subtle opacity-0 transition hover:text-text focus:opacity-100 group-hover:opacity-100"
+        className="shrink-0 cursor-pointer rounded-control p-1 text-text-subtle opacity-0 transition hover:text-text focus:opacity-100 group-hover:opacity-100"
       >
         <Pencil size={12} strokeWidth={1.5} />
       </button>
@@ -132,7 +132,7 @@ export function TimeCategoryRow({
         type="button"
         onClick={onDelete}
         aria-label={`Delete ${category.name}`}
-        className="shrink-0 cursor-pointer rounded-md p-1 text-text-subtle opacity-0 transition hover:text-danger focus:opacity-100 group-hover:opacity-100"
+        className="shrink-0 cursor-pointer rounded-control p-1 text-text-subtle opacity-0 transition hover:text-danger focus:opacity-100 group-hover:opacity-100"
       >
         <Trash2 size={12} strokeWidth={1.5} />
       </button>

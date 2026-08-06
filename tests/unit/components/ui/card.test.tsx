@@ -3,11 +3,12 @@ import { render, screen } from '@testing-library/react';
 import { Card } from '@/components/ui/card';
 
 describe('<Card />', () => {
-  it('applies the card radius, border and surface tokens by default', () => {
+  it('applies the radius, border and surface tokens by default', () => {
     render(<Card>body</Card>);
 
     const card = screen.getByText('body');
-    expect(card).toHaveClass('rounded-card');
+    // One corner radius app-wide: cards share it with buttons and inputs.
+    expect(card).toHaveClass('rounded-control');
     expect(card).toHaveClass('border', 'border-border');
     expect(card).toHaveClass('bg-card');
   });
@@ -42,7 +43,7 @@ describe('<Card />', () => {
 
     const card = screen.getByText('body');
     expect(card).not.toHaveClass('border');
-    expect(card).toHaveClass('rounded-card', 'p-6');
+    expect(card).toHaveClass('rounded-control', 'p-6');
   });
 
   it('appends caller classes after its own so layout can be overridden', () => {
@@ -50,7 +51,7 @@ describe('<Card />', () => {
 
     const card = screen.getByText('body');
     expect(card).toHaveClass('flex', 'flex-col', 'max-h-80');
-    expect(card).toHaveClass('rounded-card');
+    expect(card).toHaveClass('rounded-control');
   });
 
   it('renders a different element when asked', () => {

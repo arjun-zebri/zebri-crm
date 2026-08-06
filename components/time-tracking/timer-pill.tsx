@@ -33,7 +33,7 @@ export function TimerPill({ hidden }: TimerPillProps) {
   return (
     <div
       data-testid="timer-pill"
-      className="fixed right-3 top-16 z-[90] flex items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 py-1.5 shadow-lg md:top-3"
+      className="fixed right-3 top-16 z-[90] flex items-center gap-2.5 rounded-control border border-border bg-card px-2.5 py-1.5 shadow-lg md:top-3"
     >
       <Timer size={14} strokeWidth={1.5} className="shrink-0 text-text-muted" />
       <div className="min-w-0">

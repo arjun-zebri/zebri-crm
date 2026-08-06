@@ -74,7 +74,7 @@ export function Card({
   children,
 }: CardProps) {
   const classes = [
-    'rounded-card',
+    'rounded-control',
     borderless ? null : 'border border-border',
     SURFACE_CLASSES[surface],
     PADDING_CLASSES[padding],

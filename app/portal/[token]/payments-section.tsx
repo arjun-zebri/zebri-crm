@@ -35,7 +35,7 @@ export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
   if (!hasInvoices) {
     return (
       <div
-        className="rounded-card p-6 text-center"
+        className="rounded-control p-6 text-center"
         style={{
           border: `1px solid ${branding.border_color}`,
           backgroundColor: branding.surface_color,
@@ -69,7 +69,7 @@ export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {totalInvoices > 0 && (
             <div
-              className="rounded-card p-3"
+              className="rounded-control p-3"
               style={{
                 border: `1px solid ${branding.border_color}`,
                 backgroundColor: branding.surface_color,
@@ -102,7 +102,7 @@ export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
           )}
           {overdueInvoices.length > 0 && (
             <div
-              className="rounded-card p-3"
+              className="rounded-control p-3"
               style={{
                 border: `1px solid ${STATUS_COLORS.error}20`,
                 backgroundColor: `${STATUS_COLORS.error}10`,
@@ -157,7 +157,7 @@ export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
               return (
                 <div
                   key={invoice.id}
-                  className="rounded-card p-4 flex flex-col"
+                  className="rounded-control p-4 flex flex-col"
                   style={{
                     border: `1px solid ${overdue ? STATUS_COLORS.error : branding.border_color}30`,
                     backgroundColor: overdue ? `${STATUS_COLORS.error}10` : branding.surface_color,

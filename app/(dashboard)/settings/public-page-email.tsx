@@ -103,9 +103,9 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
 
       {emailMode === 'oauth' && status === 'connected' && (
         <div className="mt-4 pl-7 max-w-xl">
-          <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 rounded-control bg-gray-50 px-4 py-3">
             <span className="flex items-center gap-2 text-sm text-gray-700">
-              <span className="inline-flex h-2 w-2 rounded-full bg-green-500" />
+              <span className="inline-flex h-2 w-2 rounded-pill bg-green-500" />
               Connected{provider ? ` (${PROVIDER_LABEL[provider]})` : ''} — sending from {email}
             </span>
             <button
@@ -126,14 +126,14 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
             <button
               type="button"
               onClick={() => connect('google')}
-              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+              className="rounded-control border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
             >
               Connect Gmail
             </button>
             <button
               type="button"
               onClick={() => connect('microsoft')}
-              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+              className="rounded-control border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
             >
               Connect Outlook
             </button>
@@ -159,11 +159,11 @@ function EmailOption({ selected, onSelect, title, description }: EmailOptionProp
   return (
     <button type="button" onClick={onSelect} className="flex w-full items-start gap-3 text-left cursor-pointer">
       <span
-        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition ${
+        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-pill border transition ${
           selected ? 'border-gray-900' : 'border-gray-300'
         }`}
       >
-        {selected && <span className="h-2 w-2 rounded-full bg-gray-900" />}
+        {selected && <span className="h-2 w-2 rounded-pill bg-gray-900" />}
       </span>
       <span>
         <span className="block text-sm text-gray-900">{title}</span>

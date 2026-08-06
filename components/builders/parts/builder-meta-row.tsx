@@ -165,7 +165,7 @@ function CouplePicker({
           sideOffset={4}
           // `w-56` matches the trigger so the popover doesn't "jump"
           // wider than the button.
-          className="z-[90] w-56 rounded-card border border-border bg-surface shadow-lg p-2 animate-fade-in"
+          className="z-[90] w-56 rounded-control border border-border bg-surface shadow-lg p-2 animate-fade-in"
         >
           <div className="relative mb-2">
             <Search
@@ -242,7 +242,7 @@ function TermsPicker({
         <Popover.Content
           align="start"
           sideOffset={4}
-          className="z-[90] w-44 rounded-card border border-border bg-surface shadow-lg p-1 animate-fade-in"
+          className="z-[90] w-44 rounded-control border border-border bg-surface shadow-lg p-1 animate-fade-in"
         >
           {PAYMENT_TERMS_OPTIONS.map((o) => (
             <button

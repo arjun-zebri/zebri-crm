@@ -48,7 +48,7 @@ export function QuestionnaireQuestionRow({ question, issue = null, onChange, onD
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`rounded-xl bg-surface-muted p-3 ${isDragging ? 'opacity-60' : ''}`}
+      className={`rounded-control bg-surface-muted p-3 ${isDragging ? 'opacity-60' : ''}`}
     >
       <div className="flex items-start gap-2">
         <button

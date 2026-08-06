@@ -125,7 +125,7 @@ export function RunHistoryPanel({ automationId, actions, open, onClose }: Props)
             {runs.map((run) => (
               <li
                 key={run.id}
-                className="rounded-lg border border-border bg-card px-3 py-2.5"
+                className="rounded-control border border-border bg-card px-3 py-2.5"
               >
                 <div className="flex items-center justify-between gap-2">
                   <StatePill
@@ -143,7 +143,7 @@ export function RunHistoryPanel({ automationId, actions, open, onClose }: Props)
                 </p>
 
                 {run.status === 'errored' ? (
-                  <div className="mt-2 rounded-md bg-danger/10 px-2.5 py-2 text-caption text-danger">
+                  <div className="mt-2 rounded-control bg-danger/10 px-2.5 py-2 text-caption text-danger">
                     <div className="flex items-center gap-1.5 font-medium">
                       <AlertTriangle size={12} strokeWidth={1.5} />
                       {stepLabel(run.current_action_id)

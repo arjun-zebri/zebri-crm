@@ -60,7 +60,7 @@ export function Spec({
         ) : null}
       </header>
       {description ? <p className="text-caption text-text-muted">{description}</p> : null}
-      <div className="rounded-card border border-border bg-surface p-5">{children}</div>
+      <div className="rounded-control border border-border bg-surface p-5">{children}</div>
     </article>
   );
 }
@@ -107,7 +107,7 @@ export function DemoRow({ children }: { children: ReactNode }) {
  */
 export function SampleFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-card border border-dashed border-border-strong bg-surface-muted p-4">
+    <div className="rounded-control border border-dashed border-border-strong bg-surface-muted p-4">
       {children}
     </div>
   );

@@ -29,7 +29,7 @@ export function RoadmapVoting() {
             type="button"
             aria-pressed={selected}
             onClick={() => setSelectedId(selected ? null : option.id)}
-            className={`w-full rounded-card border bg-card p-4 text-left transition-colors cursor-pointer ${
+            className={`w-full rounded-control border bg-card p-4 text-left transition-colors cursor-pointer ${
               selected
                 ? 'border-brand-fg shadow-sm'
                 : 'border-border hover:border-border-strong'

@@ -102,7 +102,7 @@ export function PreviewEmail({ doc, coupleEmail }: PreviewEmailProps) {
 
   return (
     <div className="flex h-full flex-col gap-3">
-      <div className="space-y-1 rounded-card border border-border bg-surface px-4 py-3 text-caption text-text-muted">
+      <div className="space-y-1 rounded-control border border-border bg-surface px-4 py-3 text-caption text-text-muted">
         <div>
           <span className="font-medium text-text">From</span> · {fromAddress}
         </div>
@@ -122,7 +122,7 @@ export function PreviewEmail({ doc, coupleEmail }: PreviewEmailProps) {
         srcDoc={html}
         title="Email preview"
         sandbox="allow-popups allow-popups-to-escape-sandbox"
-        className="flex-1 rounded-card border border-border bg-surface"
+        className="flex-1 rounded-control border border-border bg-surface"
       />
     </div>
   );

@@ -19,7 +19,7 @@ interface CouplesImportUploadProps {
 function Step({ n, children }: { n: number; children: ReactNode }) {
   return (
     <li className="flex gap-3">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-gray-100 text-xs font-medium text-gray-600">
         {n}
       </span>
       <span className="text-sm text-gray-600">{children}</span>
@@ -77,7 +77,7 @@ export function CouplesImportUpload({
 
       <button
         onClick={onChoose}
-        className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-300 px-6 py-8 text-center transition hover:border-gray-400 hover:bg-gray-50"
+        className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-control border border-dashed border-gray-300 px-6 py-8 text-center transition hover:border-gray-400 hover:bg-gray-50"
       >
         <Upload size={22} strokeWidth={1.5} className="text-gray-400" />
         <span className="text-sm text-gray-900">

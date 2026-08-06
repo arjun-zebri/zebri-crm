@@ -29,10 +29,10 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="animate-pulse flex items-center gap-2 py-2">
               <div className="flex-1 min-w-0">
-                <div className="h-3.5 bg-gray-100 rounded-md w-40 mb-1.5" />
-                <div className="h-3 bg-gray-100 rounded-md w-24" />
+                <div className="h-3.5 bg-gray-100 rounded-control w-40 mb-1.5" />
+                <div className="h-3 bg-gray-100 rounded-control w-24" />
               </div>
-              <div className="h-3 bg-gray-100 rounded-md w-12 shrink-0" />
+              <div className="h-3 bg-gray-100 rounded-control w-12 shrink-0" />
             </div>
           ))}
         </div>

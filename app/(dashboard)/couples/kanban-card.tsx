@@ -101,7 +101,7 @@ export function KanbanCard({ couple, index, isSelected, onClick, activeDrag }: K
             data-couple-id={couple.id}
             style={getDragStyle(provided.draggableProps.style, snapshot)}
             onClick={(e) => onClick(e)}
-            className={`group flex items-start gap-1.5 cursor-pointer px-3 py-2.5 mb-2 last:mb-0 border rounded-xl select-none transition relative ${
+            className={`group flex items-start gap-1.5 cursor-pointer px-3 py-2.5 mb-2 last:mb-0 border rounded-control select-none transition relative ${
               snapshot.isDragging
                 ? "shadow-lg opacity-95 bg-white border-gray-200"
                 : isMovingButGhosted
@@ -118,7 +118,7 @@ export function KanbanCard({ couple, index, isSelected, onClick, activeDrag }: K
                 {otherMoving.map((c) => (
                   <div
                     key={c.id}
-                    className="flex items-start gap-1.5 px-3 py-2.5 bg-white border border-gray-200 rounded-xl shadow-lg"
+                    className="flex items-start gap-1.5 px-3 py-2.5 bg-white border border-gray-200 rounded-control shadow-lg"
                   >
                     <CardBody couple={c} />
                   </div>

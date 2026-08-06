@@ -68,7 +68,7 @@ export function PaginationBar({
             <button
               onClick={() => canPrev && onPageChange(safePageIndex - 1)}
               disabled={!canPrev}
-              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
+              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-control transition text-gray-600"
               aria-label="Previous page"
             >
               <ChevronLeft size={16} strokeWidth={1.5} />
@@ -76,7 +76,7 @@ export function PaginationBar({
             <button
               onClick={() => canNext && onPageChange(safePageIndex + 1)}
               disabled={!canNext}
-              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
+              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-control transition text-gray-600"
               aria-label="Next page"
             >
               <ChevronRight size={16} strokeWidth={1.5} />
@@ -94,7 +94,7 @@ export function PaginationBar({
                 <button
                   onClick={() => canPrev && onPageChange(safePageIndex - 1)}
                   disabled={!canPrev}
-                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600 shrink-0"
+                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded-control text-gray-600 shrink-0"
                   title="Previous page"
                 >
                   <ChevronLeft size={16} strokeWidth={1.5} />
@@ -105,7 +105,7 @@ export function PaginationBar({
                     <button
                       key={p}
                       onClick={() => onPageChange(p)}
-                      className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs font-medium rounded-control transition cursor-pointer ${
                         safePageIndex === p
                           ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:bg-gray-100'
@@ -118,7 +118,7 @@ export function PaginationBar({
                   {showLastJump && (
                     <button
                       onClick={() => onPageChange(lastPage)}
-                      className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs font-medium rounded-control transition cursor-pointer ${
                         safePageIndex === lastPage
                           ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:bg-gray-100'
@@ -132,7 +132,7 @@ export function PaginationBar({
                 <button
                   onClick={() => canNext && onPageChange(safePageIndex + 1)}
                   disabled={!canNext}
-                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600 shrink-0"
+                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded-control text-gray-600 shrink-0"
                   title="Next page"
                 >
                   <ChevronRight size={16} strokeWidth={1.5} />
@@ -146,12 +146,12 @@ export function PaginationBar({
           <div ref={pageSizeRef} className="relative">
             <button
               onClick={() => setPageSizeOpen(!pageSizeOpen)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
+              className="border border-gray-200 rounded-control px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
             >
               {pageSize}/page
             </button>
             {pageSizeOpen && (
-              <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 min-w-[88px]">
+              <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-control shadow-lg z-50 py-1 min-w-[88px]">
                 {PAGE_SIZES.map((size) => (
                   <button
                     key={size}

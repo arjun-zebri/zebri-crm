@@ -54,107 +54,31 @@
     {
       "id": "radius",
       "title": "Corner radius",
-      "note": "Three token radii exist. The app mostly ignores them.",
+      "note": "Two tokens: 6px for anything with corners, pill for anything round.",
       "entries": [
         {
           "label": "rounded-control",
           "verdict": "token",
-          "count": 72,
+          "count": 1042,
           "files": [
             {
-              "path": "app/portal/[token]/timeline-section.tsx",
-              "hits": 9
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 76
             },
             {
-              "path": "components/builders/parts/builder-meta-row.tsx",
-              "hits": 5
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 30
             },
             {
               "path": "components/builders/parts/builder-modal-shell.tsx",
-              "hits": 5
-            }
-          ]
-        },
-        {
-          "label": "rounded-card",
-          "verdict": "token",
-          "count": 61,
-          "files": [
-            {
-              "path": "components/builders/parts/builder-modal-shell.tsx",
-              "hits": 9
-            },
-            {
-              "path": "app/(dashboard)/settings/payment-settings-section.tsx",
-              "hits": 5
-            },
-            {
-              "path": "app/portal/[token]/payments-section.tsx",
-              "hits": 4
+              "hits": 26
             }
           ]
         },
         {
           "label": "rounded-pill",
           "verdict": "token",
-          "count": 12,
-          "files": [
-            {
-              "path": "app/roadmap/roadmap-voting.tsx",
-              "hits": 3
-            },
-            {
-              "path": "app/(dashboard)/couples/portal-section-nav.tsx",
-              "hits": 2
-            },
-            {
-              "path": "app/portal/[token]/timeline-section.tsx",
-              "hits": 2
-            }
-          ]
-        },
-        {
-          "label": "rounded-xl",
-          "verdict": "legacy",
-          "count": 305,
-          "files": [
-            {
-              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
-              "hits": 17
-            },
-            {
-              "path": "app/(dashboard)/couples/couple-timeline.tsx",
-              "hits": 10
-            },
-            {
-              "path": "app/(dashboard)/couples/portal-modals.tsx",
-              "hits": 7
-            }
-          ]
-        },
-        {
-          "label": "rounded-md",
-          "verdict": "legacy",
-          "count": 257,
-          "files": [
-            {
-              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
-              "hits": 47
-            },
-            {
-              "path": "app/(dashboard)/branding/blocks/text-style-controls.tsx",
-              "hits": 10
-            },
-            {
-              "path": "app/(dashboard)/branding/editor-topbar.tsx",
-              "hits": 10
-            }
-          ]
-        },
-        {
-          "label": "rounded-full",
-          "verdict": "legacy",
-          "count": 195,
+          "count": 207,
           "files": [
             {
               "path": "app/(dashboard)/branding/onboarding/onboarding-modal-skeleton.tsx",
@@ -171,61 +95,58 @@
           ]
         },
         {
+          "label": "rounded-card",
+          "verdict": "legacy",
+          "count": 0,
+          "files": []
+        },
+        {
+          "label": "rounded-xl",
+          "verdict": "legacy",
+          "count": 0,
+          "files": []
+        },
+        {
+          "label": "rounded-md",
+          "verdict": "legacy",
+          "count": 0,
+          "files": []
+        },
+        {
+          "label": "rounded-full",
+          "verdict": "legacy",
+          "count": 0,
+          "files": []
+        },
+        {
           "label": "rounded-lg",
           "verdict": "legacy",
-          "count": 155,
-          "files": [
-            {
-              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
-              "hits": 9
-            },
-            {
-              "path": "app/(dashboard)/branding/brand-panel.tsx",
-              "hits": 7
-            },
-            {
-              "path": "app/(dashboard)/contacts/contact-profile.tsx",
-              "hits": 6
-            }
-          ]
+          "count": 0,
+          "files": []
         },
         {
           "label": "rounded-2xl",
           "verdict": "legacy",
-          "count": 14,
-          "files": [
-            {
-              "path": "components/questionnaires/experience-preview.tsx",
-              "hits": 2
-            },
-            {
-              "path": "app/(dashboard)/contacts/contact-profile.tsx",
-              "hits": 1
-            },
-            {
-              "path": "app/(dashboard)/couples/bulk-action-bar.tsx",
-              "hits": 1
-            }
-          ]
+          "count": 0,
+          "files": []
         },
         {
           "label": "rounded-sm",
           "verdict": "legacy",
-          "count": 22,
-          "files": [
-            {
-              "path": "app/(dashboard)/branding/surface-tabs.tsx",
-              "hits": 9
-            },
-            {
-              "path": "app/(dashboard)/branding/blocks/render.tsx",
-              "hits": 3
-            },
-            {
-              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
-              "hits": 2
-            }
-          ]
+          "count": 0,
+          "files": []
+        },
+        {
+          "label": "rounded (bare, 4px)",
+          "verdict": "legacy",
+          "count": 0,
+          "files": []
+        },
+        {
+          "label": "per-side (rounded-t-lg etc.)",
+          "verdict": "legacy",
+          "count": 0,
+          "files": []
         }
       ]
     },
@@ -769,7 +690,7 @@
         {
           "label": "p-2",
           "verdict": "legacy",
-          "count": 15,
+          "count": 16,
           "files": [
             {
               "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
@@ -788,19 +709,19 @@
         {
           "label": "p-3",
           "verdict": "legacy",
-          "count": 35,
+          "count": 42,
           "files": [
             {
               "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
               "hits": 12
             },
             {
-              "path": "app/portal/[token]/payments-section.tsx",
+              "path": "app/(auth)/reset-password/reset-password-form.tsx",
               "hits": 2
             },
             {
-              "path": "app/(dashboard)/automations/[id]/canvas-skeleton.tsx",
-              "hits": 1
+              "path": "app/portal/[token]/payments-section.tsx",
+              "hits": 2
             }
           ]
         },

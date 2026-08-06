@@ -45,7 +45,7 @@ export function QuestionnaireSendPreview({ name, questions, displayMode, coupleN
     <button
       type="button"
       onClick={() => setTab(value)}
-      className={`cursor-pointer rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`cursor-pointer rounded-control px-3 py-1.5 text-sm font-medium transition-colors ${
         tab === value ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'
       }`}
     >
@@ -69,7 +69,7 @@ export function QuestionnaireSendPreview({ name, questions, displayMode, coupleN
               type="button"
               aria-label="Desktop preview"
               onClick={() => setFrame('desktop')}
-              className={`cursor-pointer rounded-xl p-1.5 transition-colors ${frame === 'desktop' ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'}`}
+              className={`cursor-pointer rounded-control p-1.5 transition-colors ${frame === 'desktop' ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'}`}
             >
               <Monitor size={15} strokeWidth={1.5} />
             </button>
@@ -77,7 +77,7 @@ export function QuestionnaireSendPreview({ name, questions, displayMode, coupleN
               type="button"
               aria-label="Phone preview"
               onClick={() => setFrame('mobile')}
-              className={`cursor-pointer rounded-xl p-1.5 transition-colors ${frame === 'mobile' ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'}`}
+              className={`cursor-pointer rounded-control p-1.5 transition-colors ${frame === 'mobile' ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'}`}
             >
               <Smartphone size={15} strokeWidth={1.5} />
             </button>
@@ -91,7 +91,7 @@ export function QuestionnaireSendPreview({ name, questions, displayMode, coupleN
       <div className={tab === 'questionnaire' ? '' : 'hidden'}>
         <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} frame={frame} heightClass="h-[58vh]" />
       </div>
-      <div className={`h-[58vh] flex-col overflow-hidden rounded-2xl border border-border ${tab === 'email' ? 'flex' : 'hidden'}`}>
+      <div className={`h-[58vh] flex-col overflow-hidden rounded-control border border-border ${tab === 'email' ? 'flex' : 'hidden'}`}>
         <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-muted px-4 py-2.5 text-sm text-text-muted">
           <Mail size={14} strokeWidth={1.5} />
           <span className="truncate">

@@ -50,7 +50,7 @@ export function CompositesQuestionnaires() {
         file="components/questionnaires/classic-form.tsx"
         description="Every question on one page. Used by the couple-facing fill page and the MC preview."
       >
-        <div className="max-h-[28rem] overflow-y-auto rounded-card border border-border">
+        <div className="max-h-[28rem] overflow-y-auto rounded-control border border-border">
           <ClassicForm
             questions={QUESTIONS}
             responses={responses}
@@ -67,7 +67,7 @@ export function CompositesQuestionnaires() {
         file="components/questionnaires/typeform-flow.tsx"
         description="One question at a time, with a progress bar and auto-advance."
       >
-        <div className="max-h-[28rem] overflow-y-auto rounded-card border border-border">
+        <div className="max-h-[28rem] overflow-y-auto rounded-control border border-border">
           <TypeformFlow
             questions={QUESTIONS}
             responses={responses}

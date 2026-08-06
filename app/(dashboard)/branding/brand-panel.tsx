@@ -162,7 +162,7 @@ export function BrandPanel(props: BrandPanelProps) {
             type="button"
             onClick={props.resetToTheme}
             title="Reset customisations"
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-control text-[11px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
           >
             <RotateCcw size={10} strokeWidth={1.75} />
             Reset
@@ -264,7 +264,7 @@ function Accordion({
         onClick={onToggle}
         className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-gray-50/60 transition cursor-pointer"
       >
-        <span className="w-6 h-6 rounded-md bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
+        <span className="w-6 h-6 rounded-control bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
           {icon}
         </span>
         <div className="flex-1 min-w-0">
@@ -336,7 +336,7 @@ function ContrastWarnings({
   const fails = checks.filter((c) => c.level === 'fail')
   if (fails.length === 0) return null
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-2.5 space-y-1">
+    <div className="rounded-control border border-amber-200 bg-amber-50/60 p-2.5 space-y-1">
       <p className="text-[11px] font-medium text-amber-800">Low contrast</p>
       {fails.map((c) => (
         <p key={c.label} className="text-[11px] text-amber-700">
@@ -370,7 +370,7 @@ function ColorRow({
         trigger={
           <button
             type="button"
-            className="w-9 h-9 rounded-lg ring-1 ring-black/10 cursor-pointer shrink-0 relative overflow-hidden hover:ring-black/20 transition"
+            className="w-9 h-9 rounded-control ring-1 ring-black/10 cursor-pointer shrink-0 relative overflow-hidden hover:ring-black/20 transition"
             style={{ background: value }}
             aria-label={`${label} colour`}
             title={value}
@@ -489,13 +489,13 @@ function WeightPills({ label, value, onChange, compact }: { label: string; value
   return (
     <div>
       <p className={`mb-1 ${compact ? 'text-[11px] text-gray-500' : 'text-[11px] text-gray-400'}`}>{label}</p>
-      <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+      <div className="inline-flex bg-gray-100 rounded-control p-0.5 w-full">
         {FONT_WEIGHTS.map((w) => (
           <button
             key={w}
             type="button"
             onClick={() => onChange(w)}
-            className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
+            className={`flex-1 px-2 py-1 text-[11px] rounded-control transition cursor-pointer ${
               value === w ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
             }`}
             style={{ fontWeight: w }}
@@ -523,7 +523,7 @@ function CasePills({ label, value, onChange }: { label: string; value: TextCase;
   return (
     <div>
       <p className="text-[11px] text-gray-500 mb-1">{label}</p>
-      <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+      <div className="inline-flex bg-gray-100 rounded-control p-0.5 w-full">
         {cases.map((c) => (
           // Shared Tooltip rather than the native `title` attribute: title
           // tooltips are slow to appear and fire inconsistently. This one shows
@@ -533,7 +533,7 @@ function CasePills({ label, value, onChange }: { label: string; value: TextCase;
               type="button"
               onClick={() => onChange(c.id)}
               aria-label={c.label}
-              className={`w-full px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
+              className={`w-full px-2 py-1 text-[11px] rounded-control transition cursor-pointer ${
                 value === c.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -564,7 +564,7 @@ function FontPicker<V extends HeadingFont | BodyFont>({
         <button
           type="button"
           aria-label={`${role} font`}
-          className="w-full flex items-center gap-2 border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-left hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer transition"
+          className="w-full flex items-center gap-2 border border-gray-200 rounded-control px-2.5 py-1.5 bg-white text-left hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer transition"
         >
           {/* No role badge here. The group heading directly above already says
               HEADING or BODY, so repeating it inside the control was noise. */}
@@ -578,7 +578,7 @@ function FontPicker<V extends HeadingFont | BodyFont>({
         <Popover.Content
           align="start"
           sideOffset={4}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl p-1 z-[60] animate-modal-in"
+          className="bg-white border border-gray-200 rounded-control shadow-xl p-1 z-[60] animate-modal-in"
           style={{
             minWidth: 'var(--radix-popover-trigger-width)',
             maxHeight: 'min(360px, var(--radix-popover-content-available-height))',
@@ -595,7 +595,7 @@ function FontPicker<V extends HeadingFont | BodyFont>({
                   onChange(opt)
                   setOpen(false)
                 }}
-                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-[12px] hover:bg-gray-50 cursor-pointer ${
+                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-control text-[12px] hover:bg-gray-50 cursor-pointer ${
                   active ? 'text-gray-900' : 'text-gray-700'
                 }`}
                 style={{ fontFamily: FONT_STACKS[opt] }}
@@ -648,13 +648,13 @@ function GlobalStylesSection({
         <div className="space-y-2">
           <div>
             <p className="text-[11px] text-gray-500 mb-1">Variant</p>
-            <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+            <div className="inline-flex bg-gray-100 rounded-control p-0.5 w-full">
               {(['fill', 'outline'] as const).map((v) => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => setButtonVariant(v)}
-                  className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
+                  className={`flex-1 px-2 py-1 text-[11px] rounded-control transition cursor-pointer ${
                     buttonVariant === v ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -665,13 +665,13 @@ function GlobalStylesSection({
           </div>
           <div>
             <p className="text-[11px] text-gray-500 mb-1">Size</p>
-            <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+            <div className="inline-flex bg-gray-100 rounded-control p-0.5 w-full">
               {(['sm', 'md', 'lg'] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setButtonSize(s)}
-                  className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
+                  className={`flex-1 px-2 py-1 text-[11px] rounded-control transition cursor-pointer ${
                     buttonSize === s ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >

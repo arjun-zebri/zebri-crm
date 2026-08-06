@@ -105,7 +105,7 @@ export function Modal({
         {...backdropHandlers}
       >
         <div
-          className={`bg-white rounded-2xl border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
+          className={`bg-white rounded-control border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
             // Fullscreen modals lock to 90vh so the size doesn't
             // shrink while content is loading. Matches the couple-
             // profile overlay's vertical sizing. Other sizes keep
@@ -169,7 +169,7 @@ export function Modal({
           </div>
 
           {footer && (
-            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-2xl">
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-control">
               {footer}
             </div>
           )}

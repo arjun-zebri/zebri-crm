@@ -191,7 +191,7 @@ export function CouplesList({
                           e.stopPropagation();
                           handleSelectAll();
                         }}
-                        className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
+                        className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded-control border transition cursor-pointer flex items-center justify-center ${
                           allPageSelected || somePageSelected
                             ? 'bg-emerald-500 border-emerald-500 opacity-100'
                             : 'border-gray-300 hover:border-gray-500 opacity-0 group-hover/header:opacity-100'
@@ -228,7 +228,7 @@ export function CouplesList({
                         className="pl-0 pr-2 py-2 border-b border-gray-100"
                       >
                         <div
-                          className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
+                          className={`h-4 bg-gray-100 rounded-control ${skeletonWidths[j]}`}
                         />
                       </td>
                     ))}
@@ -269,7 +269,7 @@ export function CouplesList({
                                   e.stopPropagation();
                                   handleToggleRow(row.original.id, e);
                                 }}
-                                className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
+                                className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded-control border transition cursor-pointer flex items-center justify-center ${
                                   isSelected
                                     ? 'bg-emerald-500 border-emerald-500 opacity-100'
                                     : `border-gray-300 hover:border-gray-500 ${

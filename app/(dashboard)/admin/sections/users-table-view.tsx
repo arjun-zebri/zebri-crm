@@ -73,7 +73,7 @@ export function UsersTableView({
         />
       </div>
 
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-control overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface-muted border-b border-border">
@@ -103,7 +103,7 @@ export function UsersTableView({
                     <td className="px-4 py-3 font-medium text-text">
                       {user.display_name || ' - '}
                       {user.account_type === 'admin' && (
-                        <span className="ml-2 text-xs bg-surface-emphasis text-text-muted px-1.5 py-0.5 rounded">
+                        <span className="ml-2 text-xs bg-surface-emphasis text-text-muted px-1.5 py-0.5 rounded-control">
                           admin
                         </span>
                       )}

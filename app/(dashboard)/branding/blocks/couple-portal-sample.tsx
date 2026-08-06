@@ -105,7 +105,7 @@ export function CouplePortalSample({
           {visibleSections.map((s) => {
             const Icon = s.icon
             return (
-              <div key={s.label} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${s.active ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500'}`}>
+              <div key={s.label} className={`flex items-center gap-3 px-3 py-2 rounded-control transition ${s.active ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500'}`}>
                 <Icon size={15} strokeWidth={1.5} className="shrink-0" />
                 <span className="flex-1 text-sm">{s.label}</span>
                 <span className="text-[11px] text-gray-400">{s.count}</span>
@@ -118,7 +118,7 @@ export function CouplePortalSample({
             <h2 data-subtarget="heading" className="font-semibold" style={headingCss}>Overview</h2>
             <p data-subtarget="body" className="mt-1" style={bodyCss}>Your details and upcoming events</p>
           </div>
-          <div className="border rounded-xl p-6" style={cardStyle}>
+          <div className="border rounded-control p-6" style={cardStyle}>
             <p className="text-xs font-medium text-gray-500 mb-4">Your details</p>
             <div className="grid grid-cols-2 gap-4">
               <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Name</p><p className="text-lg font-semibold text-gray-900" style={headingFontCss}>Alex &amp; Jordan</p></div>
@@ -127,19 +127,19 @@ export function CouplePortalSample({
           </div>
           <div>
             <p className="text-xs font-medium text-gray-500 mb-2">Your events</p>
-            <div className="border rounded-xl p-5" style={cardStyle}>
+            <div className="border rounded-control p-5" style={cardStyle}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-base font-medium text-gray-900">Saturday, 14 September 2026</p>
                   <p className="text-sm text-gray-500 mt-0.5">The Glasshouse, Sydney</p>
                 </div>
-                <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${branding.brand_color}26`, color: pillForeground(branding.brand_color, branding.brand_color, branding.surface_color) }}>127 days away</span>
+                <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-pill whitespace-nowrap" style={{ background: `${branding.brand_color}26`, color: pillForeground(branding.brand_color, branding.brand_color, branding.surface_color) }}>127 days away</span>
               </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="border rounded-xl p-5" style={cardStyle}><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Next payment</p><p className="text-lg font-semibold text-gray-900" style={headingFontCss}>$1,250</p><p className="text-xs text-gray-500 mt-1">Due 1 August 2026</p></div>
-            <div className="border rounded-xl p-5" style={cardStyle}><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Contract</p><p className="text-lg font-semibold text-gray-900" style={headingFontCss}>Signed</p><p className="text-xs text-gray-500 mt-1">12 April 2026</p></div>
+            <div className="border rounded-control p-5" style={cardStyle}><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Next payment</p><p className="text-lg font-semibold text-gray-900" style={headingFontCss}>$1,250</p><p className="text-xs text-gray-500 mt-1">Due 1 August 2026</p></div>
+            <div className="border rounded-control p-5" style={cardStyle}><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Contract</p><p className="text-lg font-semibold text-gray-900" style={headingFontCss}>Signed</p><p className="text-xs text-gray-500 mt-1">12 April 2026</p></div>
           </div>
         </div>
       </div>

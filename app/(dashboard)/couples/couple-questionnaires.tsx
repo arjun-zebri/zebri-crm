@@ -202,7 +202,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         <Popover.Content
           align={align}
           sideOffset={6}
-          className="min-w-64 rounded-xl border border-border bg-card py-1 shadow-xl animate-modal-in"
+          className="min-w-64 rounded-control border border-border bg-card py-1 shadow-xl animate-modal-in"
         >
           {(templates?.length ?? 0) === 0 ? (
             <p className="px-3 py-2 text-sm text-text-muted">
@@ -251,7 +251,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         )}
       >
         {isLoading ? (
-          <div className="space-y-2">{[1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-surface-muted" />)}</div>
+          <div className="space-y-2">{[1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-control bg-surface-muted" />)}</div>
         ) : all.length === 0 ? (
           <CoupleTabEmpty
             icon={ClipboardList}

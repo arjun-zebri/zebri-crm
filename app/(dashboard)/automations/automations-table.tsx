@@ -7,7 +7,7 @@
  * subtle `hover:bg-gray-50/60` row highlight.
  *
  * Skeleton rows match the couples loading pattern (`animate-pulse`
- * + `h-4 bg-gray-100 rounded-md`).
+ * + `h-4 bg-gray-100 rounded-control`).
  *
  * @module app/(dashboard)/automations/automations-table
  */
@@ -89,7 +89,7 @@ export function AutomationsTable({ automations, loading, onOpen, onChange }: Pro
                 <tr key={i} className="animate-pulse">
                   {SKELETON_WIDTHS.map((w, j) => (
                     <td key={j} className="pl-0 pr-2 py-2 border-b border-gray-100">
-                      <div className={`h-4 bg-gray-100 rounded-md ${w}`} />
+                      <div className={`h-4 bg-gray-100 rounded-control ${w}`} />
                     </td>
                   ))}
                 </tr>
@@ -114,8 +114,8 @@ export function AutomationsTable({ automations, loading, onOpen, onChange }: Pro
                 key={i}
                 className="border-b border-gray-100 px-1 py-3 animate-pulse space-y-2"
               >
-                <div className="h-4 w-40 bg-gray-100 rounded" />
-                <div className="h-3 w-24 bg-gray-100 rounded" />
+                <div className="h-4 w-40 bg-gray-100 rounded-control" />
+                <div className="h-3 w-24 bg-gray-100 rounded-control" />
               </div>
             ))
           : automations.map((a) => <MobileRow key={a.id} automation={a} onOpen={onOpen} />)}
@@ -239,14 +239,14 @@ function Row({
             e.stopPropagation()
             setMenuOpen((v) => !v)
           }}
-          className="p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+          className="p-1.5 rounded-control text-gray-400 hover:bg-gray-100 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition cursor-pointer"
           aria-label="More actions"
         >
           <MoreHorizontal size={14} strokeWidth={1.5} />
         </button>
         {menuOpen && (
           <div
-            className="absolute right-0 mt-1 z-10 w-32 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden"
+            className="absolute right-0 mt-1 z-10 w-32 bg-white border border-gray-200 rounded-control shadow-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -312,12 +312,12 @@ function ToggleSwitch({
       className="cursor-pointer"
     >
       <span
-        className={`relative inline-flex h-4 w-7 items-center rounded-full transition ${
+        className={`relative inline-flex h-4 w-7 items-center rounded-pill transition ${
           checked ? 'bg-emerald-500' : 'bg-gray-200'
         }`}
       >
         <span
-          className={`inline-block h-3 w-3 rounded-full bg-white shadow transform transition ${
+          className={`inline-block h-3 w-3 rounded-pill bg-white shadow transform transition ${
             checked ? 'translate-x-3.5' : 'translate-x-0.5'
           }`}
         />

@@ -85,7 +85,7 @@ export function ConfirmDialog({
         className={`fixed inset-0 flex items-center justify-center p-4 ${OVERLAY_Z.top.panel}`}
         {...backdropHandlers}
       >
-        <div className="w-full max-w-sm rounded-card border border-border bg-surface shadow-xl animate-modal-in">
+        <div className="w-full max-w-sm rounded-control border border-border bg-surface shadow-xl animate-modal-in">
           <div className="px-6 py-6">
             <h2 id={titleId} className="mb-2 text-body font-semibold text-text">
               {title}

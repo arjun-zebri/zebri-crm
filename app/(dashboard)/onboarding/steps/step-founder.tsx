@@ -18,7 +18,7 @@ export function StepFounder() {
         alt="Arjun Punekar, founder of Zebri"
         width={144}
         height={144}
-        className="w-28 h-28 sm:w-36 sm:h-36 rounded-full object-cover border border-border shadow-sm"
+        className="w-28 h-28 sm:w-36 sm:h-36 rounded-pill object-cover border border-border shadow-sm"
       />
 
       <h2 className="text-xl font-semibold text-text">A note from the founder</h2>

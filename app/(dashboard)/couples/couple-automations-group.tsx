@@ -58,13 +58,13 @@ export function AutomationGroupRow({
   const runCount = group.runs.length
   const subtitle = group.triggerDescription || group.triggerLabel
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className="rounded-control border border-border bg-card">
       <button
         onClick={onToggle}
         aria-expanded={open}
         className="w-full flex items-start gap-3 px-4 py-3.5 text-left cursor-pointer"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-muted">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-surface-muted">
           <Zap size={15} strokeWidth={1.5} className="text-text-subtle" />
         </span>
         <div className="flex-1 min-w-0">

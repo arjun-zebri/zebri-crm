@@ -79,7 +79,7 @@ function TriggerNodeCard({
         <div className="text-[10px] uppercase tracking-wide text-text-subtle text-center mb-2">
           Trigger
         </div>
-        <div className="flex flex-col items-center justify-center gap-1 px-4 py-4 rounded-xl border border-dashed border-border bg-surface text-text-muted hover:text-text hover:border-border-strong hover:bg-surface-muted transition cursor-pointer">
+        <div className="flex flex-col items-center justify-center gap-1 px-4 py-4 rounded-control border border-dashed border-border bg-surface text-text-muted hover:text-text hover:border-border-strong hover:bg-surface-muted transition cursor-pointer">
           <div className="flex items-center gap-2">
             <Plus size={18} strokeWidth={1.5} />
             <span className="text-sm font-medium">Add trigger</span>
@@ -121,7 +121,7 @@ function TriggerShell({ selected, children }: { selected: boolean; children: Rea
     ? 'border-brand shadow-sm'
     : 'border-border hover:border-border-strong'
   return (
-    <div className={`bg-surface rounded-xl border ${ringClass} relative transition`}>
+    <div className={`bg-surface rounded-control border ${ringClass} relative transition`}>
       {children}
     </div>
   )
@@ -241,7 +241,7 @@ function AddActionPlaceholder() {
         position={Position.Top}
         style={{ background: 'transparent', border: 'none', width: 1, height: 1, top: -1 }}
       />
-      <div className="flex items-center gap-2 justify-center px-3 py-3 rounded-xl border border-dashed border-border bg-surface text-text-muted hover:text-text hover:border-border-strong transition cursor-pointer">
+      <div className="flex items-center gap-2 justify-center px-3 py-3 rounded-control border border-dashed border-border bg-surface text-text-muted hover:text-text hover:border-border-strong transition cursor-pointer">
         <Plus size={14} strokeWidth={1.5} />
         <span className="text-sm">Add action</span>
       </div>
@@ -273,7 +273,7 @@ function NodeShell({
 }) {
   const ringClass = selected ? 'border-brand shadow-sm' : 'border-border hover:border-border-strong'
   return (
-    <div className={`bg-surface rounded-xl border ${ringClass} w-[240px] relative transition`}>
+    <div className={`bg-surface rounded-control border ${ringClass} w-[240px] relative transition`}>
       {topHandle && <Handle type="target" position={Position.Top} style={handleStyle} />}
       {children}
       {bottomHandle && (

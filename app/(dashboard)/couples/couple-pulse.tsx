@@ -81,8 +81,8 @@ export function CouplePulse({ couple }: CouplePulseProps) {
   return (
     <div className="space-y-8">
       {/* Coming soon banner */}
-      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 ring-1 ring-gray-200">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-gray-900 text-white text-xs font-medium tracking-wide shrink-0">
+      <div className="flex items-center gap-3 px-4 py-3 rounded-control bg-gray-50 ring-1 ring-gray-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-pill bg-gray-900 text-white text-xs font-medium tracking-wide shrink-0">
           Coming soon
         </span>
         <p className="text-sm text-gray-500">
@@ -116,13 +116,13 @@ export function CouplePulse({ couple }: CouplePulseProps) {
             </h3>
             <p className="text-sm text-gray-400 mt-1 mb-3">Overall assessment of booking likelihood</p>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-gray-200 text-gray-600">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-xs font-medium ring-1 ring-gray-200 text-gray-600">
                 {SAMPLE.bookingProbability}% booking probability
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-emerald-200 text-emerald-700 bg-emerald-50">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-xs font-medium ring-1 ring-emerald-200 text-emerald-700 bg-emerald-50">
                 <ArrowUpRight size={11} strokeWidth={2} />+{SAMPLE.trend} this week
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-amber-200 text-amber-700 bg-amber-50">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-xs font-medium ring-1 ring-amber-200 text-amber-700 bg-amber-50">
                 {SAMPLE.urgency} urgency
               </span>
             </div>
@@ -134,10 +134,10 @@ export function CouplePulse({ couple }: CouplePulseProps) {
           {SAMPLE.subScores.map((s) => {
             const c = scoreColor(s.value);
             return (
-              <div key={s.label} className="relative ring-1 ring-gray-200 rounded-xl p-3 sm:p-4">
+              <div key={s.label} className="relative ring-1 ring-gray-200 rounded-control p-3 sm:p-4">
                 <div className="absolute top-2.5 left-2.5 group">
                   <Info size={13} strokeWidth={1.75} className="text-gray-300 cursor-default" />
-                  <div className="pointer-events-none absolute top-0 left-full ml-2 w-56 rounded-xl border border-black bg-white px-3 py-2.5 text-xs text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10 shadow-sm leading-relaxed">
+                  <div className="pointer-events-none absolute top-0 left-full ml-2 w-56 rounded-control border border-black bg-white px-3 py-2.5 text-xs text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10 shadow-sm leading-relaxed">
                     {s.description}
                   </div>
                 </div>
@@ -145,8 +145,8 @@ export function CouplePulse({ couple }: CouplePulseProps) {
                   <span className="text-sm font-medium text-gray-900">{s.label}</span>
                   <span className={`text-xl sm:text-2xl font-light tabular-nums leading-none ${c.text}`}>{s.value}</span>
                 </div>
-                <div className="h-1 rounded-full bg-gray-100">
-                  <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${s.value}%` }} />
+                <div className="h-1 rounded-pill bg-gray-100">
+                  <div className={`h-full rounded-pill ${c.bar}`} style={{ width: `${s.value}%` }} />
                 </div>
               </div>
             );
@@ -188,14 +188,14 @@ export function CouplePulse({ couple }: CouplePulseProps) {
         </div>
 
         {/* Recommended Action */}
-        <div className="ring-1 ring-gray-200 rounded-2xl p-5">
-          <span className="inline-block px-2 py-0.5 bg-gray-900 text-white text-xs font-medium rounded-full mb-3">Recommended</span>
+        <div className="ring-1 ring-gray-200 rounded-control p-5">
+          <span className="inline-block px-2 py-0.5 bg-gray-900 text-white text-xs font-medium rounded-pill mb-3">Recommended</span>
           <h4 className="text-sm font-semibold text-gray-900 mb-1.5 flex items-center gap-2">
             <Lightbulb size={14} strokeWidth={1.5} />
             {SAMPLE.recommendation.action}
           </h4>
           <p className="text-sm text-gray-500 leading-relaxed mb-3">{SAMPLE.recommendation.rationale}</p>
-          <div className="bg-emerald-50 ring-1 ring-emerald-100 rounded-xl px-3 py-2 mb-4">
+          <div className="bg-emerald-50 ring-1 ring-emerald-100 rounded-control px-3 py-2 mb-4">
             <p className="text-xs text-emerald-700 flex items-center gap-1.5">
               <ArrowUpRight size={12} strokeWidth={2} />
               {SAMPLE.recommendation.impact}
@@ -204,7 +204,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
           <a
             href={hasEmail ? `mailto:${couple.email}` : undefined}
             onClick={!hasEmail ? (e) => e.preventDefault() : undefined}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition ${
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-control text-sm font-medium transition ${
               hasEmail ? "bg-black text-white hover:bg-gray-800 cursor-pointer" : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
           >

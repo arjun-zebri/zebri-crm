@@ -53,14 +53,14 @@ function KindBadge({ entry }: { entry: PreviewEntry }) {
   }
   if (entry.kind === 'duplicate') {
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-amber-50 px-2 py-0.5 text-xs text-amber-600">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-control bg-amber-50 px-2 py-0.5 text-xs text-amber-600">
         <CopyCheck size={12} strokeWidth={1.5} />
         Possible duplicate
       </span>
     );
   }
   return (
-    <span className="whitespace-nowrap rounded-md bg-green-50 px-2 py-0.5 text-xs text-green-600">
+    <span className="whitespace-nowrap rounded-control bg-green-50 px-2 py-0.5 text-xs text-green-600">
       Ready
     </span>
   );

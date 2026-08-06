@@ -52,8 +52,8 @@ export default function EventTimelinePage() {
       <div className="mb-8">
         {isLoading ? (
           <div className="space-y-2">
-            <div className="h-8 w-48 bg-gray-100 rounded animate-pulse" />
-            <div className="h-4 w-32 bg-gray-100 rounded animate-pulse" />
+            <div className="h-8 w-48 bg-gray-100 rounded-control animate-pulse" />
+            <div className="h-4 w-32 bg-gray-100 rounded-control animate-pulse" />
           </div>
         ) : event ? (
           <>

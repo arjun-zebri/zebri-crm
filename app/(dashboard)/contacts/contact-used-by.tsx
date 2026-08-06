@@ -109,9 +109,9 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
   if (isLoading) {
     return (
       <div className="space-y-2">
-        <div className="h-3 w-16 bg-gray-100 rounded-full mb-3 animate-pulse" />
+        <div className="h-3 w-16 bg-gray-100 rounded-pill mb-3 animate-pulse" />
         {[1, 2].map((i) => (
-          <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+          <div key={i} className="h-12 bg-gray-100 rounded-control animate-pulse" />
         ))}
       </div>
     );
@@ -135,7 +135,7 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
       </div>
 
       {couples.length === 0 ? (
-        <div className="border border-dashed border-gray-200 rounded-xl px-4 py-8 text-center">
+        <div className="border border-dashed border-gray-200 rounded-control px-4 py-8 text-center">
           <Users size={20} strokeWidth={1.5} className="text-gray-300 mx-auto mb-2" />
           <p className="text-sm text-gray-500">Not linked to any couples yet.</p>
           <p className="text-xs text-gray-400 mt-1">
@@ -150,7 +150,7 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
               <button
                 key={couple.id}
                 onClick={() => handleOpenCouple(couple.id)}
-                className="group w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50/60 transition cursor-pointer"
+                className="group w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-control border border-gray-200 hover:border-gray-300 hover:bg-gray-50/60 transition cursor-pointer"
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-gray-900 truncate">

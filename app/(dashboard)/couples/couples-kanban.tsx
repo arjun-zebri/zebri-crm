@@ -183,14 +183,14 @@ export function CouplesKanban({
         {Array.from({ length: 4 }).map((_, colIdx) => (
           <div key={colIdx} className="w-64 shrink-0 p-3">
             <div className="animate-pulse flex items-center gap-2 mb-3">
-              <div className="h-5 bg-gray-100 rounded-md w-20" />
-              <div className="h-4 bg-gray-100 rounded w-5" />
+              <div className="h-5 bg-gray-100 rounded-control w-20" />
+              <div className="h-4 bg-gray-100 rounded-control w-5" />
             </div>
             <div className="space-y-2">
               {Array.from({ length: [3, 2, 2, 1][colIdx] }).map((_, cardIdx) => (
-                <div key={cardIdx} className="animate-pulse bg-white border border-gray-100 rounded-xl p-3">
-                  <div className="h-3 bg-gray-100 rounded w-28 mb-2" />
-                  <div className="h-3 bg-gray-100 rounded w-16" />
+                <div key={cardIdx} className="animate-pulse bg-white border border-gray-100 rounded-control p-3">
+                  <div className="h-3 bg-gray-100 rounded-control w-28 mb-2" />
+                  <div className="h-3 bg-gray-100 rounded-control w-16" />
                 </div>
               ))}
             </div>

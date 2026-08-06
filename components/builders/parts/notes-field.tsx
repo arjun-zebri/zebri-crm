@@ -38,7 +38,7 @@ export function NotesField({
         rows={10}
         readOnly={!canEdit}
         disabled={!canEdit}
-        className="w-full resize-none rounded-card border border-border bg-surface px-3 py-2.5 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong disabled:opacity-70"
+        className="w-full resize-none rounded-control border border-border bg-surface px-3 py-2.5 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong disabled:opacity-70"
       />
     </div>
   );

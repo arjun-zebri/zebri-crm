@@ -161,7 +161,7 @@ export function BlockRenderer({
           <button
             type="button"
             onClick={() => requestAddAfter(null)}
-            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-control bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
           >
             <Plus size={14} strokeWidth={2} />
             Add your first block
@@ -213,7 +213,7 @@ export function BlockRenderer({
                 }}
                 aria-label="Add block above"
                 title="Add block above"
-                className="absolute left-1/2 -translate-x-1/2 -top-3 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer"
+                className="absolute left-1/2 -translate-x-1/2 -top-3 z-10 w-6 h-6 rounded-pill bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer"
               >
                 <Plus size={12} strokeWidth={2} />
               </button>
@@ -275,7 +275,7 @@ export function BlockRenderer({
           <DragOverlay dropAnimation={null}>
             {activeBlock ? (
               <div
-                className="opacity-90 shadow-2xl rounded-md bg-white"
+                className="opacity-90 shadow-2xl rounded-control bg-white"
                 style={{ outline: `2px solid ${state.brandColor || '#111827'}` }}
               >
                 {renderBlock(activeBlock, state, updateBlock, {}, surface)}
@@ -346,7 +346,7 @@ function SpacerWithResize({ block, heightPx, updateBlock }: SpacerWithResizeProp
           resizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         }`}
       >
-        <div className="h-1 w-10 rounded-full bg-gray-900/50 ring-1 ring-white/80 shadow-sm" />
+        <div className="h-1 w-10 rounded-pill bg-gray-900/50 ring-1 ring-white/80 shadow-sm" />
       </div>
     </div>
   )

@@ -129,7 +129,7 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
       >
         {isLoading ? (
           <div className="space-y-2" aria-hidden="true">
-            {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}
+            {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-control animate-pulse" />)}
           </div>
         ) : all.length === 0 ? (
           atLimit ? (
@@ -141,7 +141,7 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
                 </p>
                 <Link
                   href="/settings/billing"
-                  className="inline-block text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+                  className="inline-block text-xs text-gray-700 border border-gray-200 rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
                 >
                   Upgrade to Pro
                 </Link>
@@ -161,14 +161,14 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
                 <button
                   key={c.id}
                   onClick={() => openContract(c.id)}
-                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
+                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-control hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
                 >
                   <FileSignature size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-900 truncate">{c.title}</p>
                     <p className="text-xs text-gray-400">{c.contract_number}</p>
                   </div>
-                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full capitalize ${STATUS_STYLES[c.status] || STATUS_STYLES.draft}`}>
+                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-pill capitalize ${STATUS_STYLES[c.status] || STATUS_STYLES.draft}`}>
                     {c.status}
                   </span>
                 </button>

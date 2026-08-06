@@ -154,7 +154,7 @@ function CategorySection({
             <div
               key={song.id}
               onClick={() => onEditSong(song)}
-              className="inline-flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-2.5 hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer group/song w-[200px]"
+              className="inline-flex items-center gap-3 border border-gray-200 rounded-control px-4 py-2.5 hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer group/song w-[200px]"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-900 truncate">{song.title}</p>
@@ -282,7 +282,7 @@ export function McPortalSongs({ coupleId, onEditSong, onAddSong }: McPortalSongs
     >
       {isCategoriesLoading ? (
         <div className="space-y-4" aria-hidden="true">
-          {[1, 2, 3].map((i) => <div key={i} className="h-6 bg-gray-100 rounded animate-pulse" />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-6 bg-gray-100 rounded-control animate-pulse" />)}
         </div>
       ) : isEmpty ? (
         <CoupleTabEmpty

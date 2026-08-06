@@ -53,7 +53,7 @@ function ColorPickerRow({
             if (onClickStop) e.stopPropagation()
             onChange(c)
           }}
-          className={`w-4 h-4 rounded-full border transition cursor-pointer ${
+          className={`w-4 h-4 rounded-pill border transition cursor-pointer ${
             value === c ? 'border-gray-900' : 'border-transparent'
           } ${TASK_OPTION_DOT_CLASS[c]}`}
           aria-label={c}
@@ -69,7 +69,7 @@ function ColorPickerRow({
 // background, otherwise Radix restoring focus to the trigger after
 // closing the popover leaves a sticky grey shadow behind the pill.
 const cellTriggerClass =
-  'w-full h-full px-2 py-1 -my-1 -mx-2 text-left text-sm rounded transition cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50'
+  'w-full h-full px-2 py-1 -my-1 -mx-2 text-left text-sm rounded-control transition cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50'
 
 // ─── Status cell ───────────────────────────────────────────────────────────
 /**
@@ -180,7 +180,7 @@ export function StatusCell({
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-60"
+          className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] w-60"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 py-1.5 border-b border-gray-100">
@@ -290,10 +290,10 @@ export function StatusCell({
                 <Plus size={12} strokeWidth={1.5} />
                 Create{' '}
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-control text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${TASK_OPTION_DOT_CLASS[createColor]}`}
+                    className={`w-1.5 h-1.5 rounded-pill ${TASK_OPTION_DOT_CLASS[createColor]}`}
                   />
                   {draft.trim()}
                 </span>
@@ -326,9 +326,9 @@ export function StatusPill({
     : getStatusDotClass(value)
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${pillClass}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-control text-xs ring-1 ring-inset ${pillClass}`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+      <span className={`w-1.5 h-1.5 rounded-pill ${dotClass}`} />
       {getStatusLabel(value)}
     </span>
   )
@@ -445,7 +445,7 @@ export function PriorityCell({
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-60"
+          className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] w-60"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 py-1.5 border-b border-gray-100">
@@ -484,7 +484,7 @@ export function PriorityCell({
                     className="flex-1 min-w-0 text-left px-2 py-1.5 flex items-center justify-between gap-2"
                   >
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${pillClass}`}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-control text-xs ring-1 ring-inset ${pillClass}`}
                     >
                       {label}
                     </span>
@@ -567,7 +567,7 @@ export function PriorityCell({
                 <Plus size={12} strokeWidth={1.5} />
                 Create{' '}
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
+                  className={`inline-flex items-center px-2 py-0.5 rounded-control text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
                 >
                   {draft.trim()}
                 </span>
@@ -610,7 +610,7 @@ export function PriorityPill({
     : getPriorityPillClass(value)
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${pillClass}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-control text-xs ring-1 ring-inset ${pillClass}`}
     >
       {getPriorityLabel(value)}
     </span>
@@ -652,7 +652,7 @@ export function DueDateCell({
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-[80] w-72"
+          className="bg-white border border-gray-200 rounded-control shadow-lg p-2 z-[80] w-72"
           onClick={(e) => e.stopPropagation()}
         >
           <DatePicker
@@ -753,7 +753,7 @@ export function TaskTypeCell({
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-60 max-h-80 overflow-y-auto"
+          className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] w-60 max-h-80 overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 py-1.5 border-b border-gray-100">
@@ -786,7 +786,7 @@ export function TaskTypeCell({
                     className="flex-1 min-w-0 text-left px-2 py-1.5 flex items-center justify-between gap-2"
                   >
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[option.color]}`}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-control text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[option.color]}`}
                     >
                       {option.name}
                     </span>
@@ -864,7 +864,7 @@ export function TaskTypeCell({
                 <Plus size={12} strokeWidth={1.5} />
                 Create{' '}
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
+                  className={`inline-flex items-center px-2 py-0.5 rounded-control text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
                 >
                   {draft.trim()}
                 </span>
@@ -905,7 +905,7 @@ export function TaskTypePill({
   const pillClass = options ? resolveTypePillClass(value, options) : taskTypeColor(value)
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${pillClass}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-control text-xs ring-1 ring-inset ${pillClass}`}
     >
       {value}
     </span>
@@ -971,7 +971,7 @@ export function TitleCell({
             setDraft(displayValue)
           }
         }}
-        className="w-full bg-white rounded-md px-1.5 py-0.5 text-sm text-gray-900 outline-none shadow-[0_1px_6px_rgba(0,0,0,0.1)] select-text"
+        className="w-full bg-white rounded-control px-1.5 py-0.5 text-sm text-gray-900 outline-none shadow-[0_1px_6px_rgba(0,0,0,0.1)] select-text"
       />
     )
   }
@@ -983,7 +983,7 @@ export function TitleCell({
         e.stopPropagation()
         startEdit()
       }}
-      className={`w-full text-left text-sm truncate px-1.5 py-0.5 rounded sm:hover:bg-gray-50 transition pointer-events-none sm:pointer-events-auto sm:cursor-text ${
+      className={`w-full text-left text-sm truncate px-1.5 py-0.5 rounded-control sm:hover:bg-gray-50 transition pointer-events-none sm:pointer-events-auto sm:cursor-text ${
         done ? 'text-gray-400 line-through' : 'text-gray-900'
       }`}
     >

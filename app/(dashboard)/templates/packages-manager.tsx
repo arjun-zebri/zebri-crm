@@ -88,7 +88,7 @@ function PackageRow({
 
   return (
     <div
-      className={`group flex items-center gap-2 rounded-xl px-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
+      className={`group flex items-center gap-2 rounded-control px-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
     >
       <button
         type="button"
@@ -453,7 +453,7 @@ export function PackagesManager() {
     return (
       <div className="space-y-3 animate-pulse">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-surface-muted rounded-xl" />
+          <div key={i} className="h-12 bg-surface-muted rounded-control" />
         ))}
       </div>
     )
@@ -559,7 +559,7 @@ export function PackagesManager() {
                   {groups.map((group) => (
                     <section key={group.key}>
                       <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
-                        {group.dotClass && <span className={`h-2 w-2 rounded-full ${group.dotClass}`} />}
+                        {group.dotClass && <span className={`h-2 w-2 rounded-pill ${group.dotClass}`} />}
                         {group.label}
                       </h3>
                       <div className="mt-1 space-y-1">

@@ -120,7 +120,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
         <Popover.Content
           align="end"
           sideOffset={8}
-          className="bg-white border border-gray-200 rounded-xl shadow-2xl z-[60] w-[360px] animate-modal-in"
+          className="bg-white border border-gray-200 rounded-control shadow-2xl z-[60] w-[360px] animate-modal-in"
         >
           <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100">
             <Search size={14} strokeWidth={1.75} className="text-gray-400 shrink-0" />
@@ -133,7 +133,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
               placeholder="Search blocks…"
               className="flex-1 text-sm bg-transparent outline-none placeholder:text-gray-400"
             />
-            <kbd className="text-[10px] text-gray-400 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 font-mono">
+            <kbd className="text-[10px] text-gray-400 bg-gray-50 border border-gray-200 rounded-control px-1.5 py-0.5 font-mono">
               esc
             </kbd>
           </div>
@@ -161,11 +161,11 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                         onAdd(type)
                         handleOpenChange(false)
                       }}
-                      className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
+                      className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-control text-left transition cursor-pointer ${
                         active ? 'bg-gray-100' : 'hover:bg-gray-50'
                       }`}
                     >
-                      <span className="w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                      <span className="w-9 h-9 rounded-control bg-white border border-gray-200 flex items-center justify-center shrink-0">
                         <Icon size={15} strokeWidth={1.5} className="text-gray-500" />
                       </span>
                       <span className="flex-1 min-w-0">

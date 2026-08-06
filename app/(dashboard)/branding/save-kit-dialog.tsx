@@ -52,7 +52,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
           <button
             type="button"
             onClick={onClose}
-            className="px-4 h-9 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white cursor-pointer transition"
+            className="px-4 h-9 rounded-control text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white cursor-pointer transition"
           >
             Cancel
           </button>
@@ -60,7 +60,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
             type="button"
             onClick={handleSave}
             disabled={!trimmed}
-            className="px-4 h-9 rounded-lg bg-gray-900 hover:bg-black text-white text-sm font-medium cursor-pointer transition disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="px-4 h-9 rounded-control bg-gray-900 hover:bg-black text-white text-sm font-medium cursor-pointer transition disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
             Save kit
           </button>
@@ -88,7 +88,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
               }
             }}
             placeholder="e.g. Sunset Studio, Autumn 2026"
-            className="w-full px-3 py-2 text-sm text-gray-900 placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition"
+            className="w-full px-3 py-2 text-sm text-gray-900 placeholder-gray-400 border border-gray-200 rounded-control focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition"
           />
         </label>
       </div>
@@ -99,7 +99,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
 function KitPreviewCard({ state }: { state: BrandPreviewState }) {
   return (
     <div
-      className="rounded-xl border border-gray-200 p-4 flex items-center gap-4"
+      className="rounded-control border border-gray-200 p-4 flex items-center gap-4"
       style={{ background: state.surfaceColor }}
     >
       <div className="min-w-0 flex-1">
@@ -125,10 +125,10 @@ function KitPreviewCard({ state }: { state: BrandPreviewState }) {
         </p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.brandColor }} title="Primary" />
-        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.headingColor }} title="Heading" />
-        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.textColor }} title="Text" />
-        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.secondaryColor }} title="Secondary" />
+        <span className="w-6 h-6 rounded-pill ring-1 ring-black/10" style={{ background: state.brandColor }} title="Primary" />
+        <span className="w-6 h-6 rounded-pill ring-1 ring-black/10" style={{ background: state.headingColor }} title="Heading" />
+        <span className="w-6 h-6 rounded-pill ring-1 ring-black/10" style={{ background: state.textColor }} title="Text" />
+        <span className="w-6 h-6 rounded-pill ring-1 ring-black/10" style={{ background: state.secondaryColor }} title="Secondary" />
       </div>
     </div>
   )

@@ -126,7 +126,7 @@ export function InlineAsset({
             onClick={openPicker}
             aria-label={label}
             title="Upload image"
-            className="pointer-events-auto flex items-center justify-center w-11 h-11 rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-400 cursor-pointer transition shadow-sm"
+            className="pointer-events-auto flex items-center justify-center w-11 h-11 rounded-control border border-gray-300 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-400 cursor-pointer transition shadow-sm"
           >
             <Upload size={16} strokeWidth={1.5} />
           </button>
@@ -136,9 +136,9 @@ export function InlineAsset({
       {dragOver && (
         <div
           aria-hidden
-          className="absolute inset-0 rounded-md bg-gray-900/10 ring-2 ring-gray-900/40 ring-inset pointer-events-none flex items-center justify-center"
+          className="absolute inset-0 rounded-control bg-gray-900/10 ring-2 ring-gray-900/40 ring-inset pointer-events-none flex items-center justify-center"
         >
-          <span className="text-xs font-medium text-gray-900 bg-white/95 rounded px-2 py-1 shadow-sm">
+          <span className="text-xs font-medium text-gray-900 bg-white/95 rounded-control px-2 py-1 shadow-sm">
             Drop to upload
           </span>
         </div>
@@ -147,7 +147,7 @@ export function InlineAsset({
       {busy && (
         <div
           aria-hidden
-          className="absolute inset-0 rounded-md bg-white/60 pointer-events-none flex items-center justify-center"
+          className="absolute inset-0 rounded-control bg-white/60 pointer-events-none flex items-center justify-center"
         >
           <Loader2 size={16} className="animate-spin text-gray-700" />
         </div>
@@ -164,7 +164,7 @@ export function InlineAsset({
           <button
             type="button"
             onClick={openPicker}
-            className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-900/90 text-white hover:bg-gray-900 cursor-pointer transition shadow-sm"
+            className="inline-flex items-center justify-center w-6 h-6 rounded-control bg-gray-900/90 text-white hover:bg-gray-900 cursor-pointer transition shadow-sm"
             title="Replace"
             aria-label="Replace"
           >
@@ -174,7 +174,7 @@ export function InlineAsset({
             <button
               type="button"
               onClick={() => onClear()}
-              className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
+              className="inline-flex items-center justify-center w-6 h-6 rounded-control bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
               title="Remove"
               aria-label="Remove"
             >
@@ -197,7 +197,7 @@ export function InlineAsset({
           <button
             type="button"
             onClick={openPicker}
-            className="inline-flex items-center gap-1 px-2 h-7 rounded-md bg-gray-900/90 text-white text-[11px] font-medium hover:bg-gray-900 cursor-pointer transition shadow-sm"
+            className="inline-flex items-center gap-1 px-2 h-7 rounded-control bg-gray-900/90 text-white text-[11px] font-medium hover:bg-gray-900 cursor-pointer transition shadow-sm"
           >
             <RefreshCw size={11} strokeWidth={1.5} />
             Replace
@@ -206,7 +206,7 @@ export function InlineAsset({
             <button
               type="button"
               onClick={() => onClear()}
-              className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
+              className="inline-flex items-center justify-center w-7 h-7 rounded-control bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
               title="Remove"
               aria-label="Remove"
             >

@@ -104,7 +104,7 @@ export function AutomationsHome({
           onChange={onChange}
         />
       ) : (
-        <div className="text-sm text-text-muted px-1 py-12 text-center border border-border rounded-xl bg-surface">
+        <div className="text-sm text-text-muted px-1 py-12 text-center border border-border rounded-control bg-surface">
           No automations match.
         </div>
       )}
@@ -174,7 +174,7 @@ function Toolbar({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search automations..."
-          className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+          className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
         />
         {query && (
           <button
@@ -188,7 +188,7 @@ function Toolbar({
       </div>
       <button
         type="button"
-        className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
         title="Filter (coming soon)"
       >
         <FilterIcon size={11} strokeWidth={1.5} />
@@ -196,7 +196,7 @@ function Toolbar({
       </button>
       <button
         type="button"
-        className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
         title="Sort (coming soon)"
       >
         <ArrowUp size={11} strokeWidth={1.5} />
@@ -214,12 +214,12 @@ function StatsCardsSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
-          className="border border-border rounded-xl bg-surface px-4 py-3 flex items-center gap-3 animate-pulse"
+          className="border border-border rounded-control bg-surface px-4 py-3 flex items-center gap-3 animate-pulse"
         >
-          <div className="w-9 h-9 rounded-lg bg-gray-100 shrink-0" />
+          <div className="w-9 h-9 rounded-control bg-gray-100 shrink-0" />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="h-2.5 w-20 bg-gray-100 rounded" />
-            <div className="h-5 w-10 bg-gray-100 rounded" />
+            <div className="h-2.5 w-20 bg-gray-100 rounded-control" />
+            <div className="h-5 w-10 bg-gray-100 rounded-control" />
           </div>
         </div>
       ))}
@@ -246,7 +246,7 @@ function EmptyState({ onCreate, pending }: { onCreate: () => void; pending: bool
       <button
         onClick={onCreate}
         disabled={pending}
-        className="px-4 py-2 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+        className="px-4 py-2 bg-gray-900 text-white text-sm rounded-control hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
       >
         New automation
       </button>

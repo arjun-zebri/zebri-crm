@@ -38,7 +38,7 @@ export function QuestionnairesSection({ questionnaires, branding }: Questionnair
   if (questionnaires.length === 0) {
     return (
       <div
-        className="rounded-card p-6 text-center"
+        className="rounded-control p-6 text-center"
         style={{
           border: `1px solid ${branding.border_color}`,
           backgroundColor: branding.surface_color,
@@ -67,7 +67,7 @@ export function QuestionnairesSection({ questionnaires, branding }: Questionnair
         return (
           <div
             key={q.id}
-            className="flex flex-col rounded-card p-4"
+            className="flex flex-col rounded-control p-4"
             style={{
               border: `1px solid ${isDone ? STATUS_COLORS.success : branding.border_color}30`,
               backgroundColor: isDone ? `${STATUS_COLORS.success}10` : branding.surface_color,
@@ -106,7 +106,7 @@ export function QuestionnairesSection({ questionnaires, branding }: Questionnair
             {q.share_token_enabled && q.share_token ? (
               <a
                 href={`/questionnaire/${q.share_token}`}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl px-3 py-2 font-medium transition cursor-pointer sm:w-auto hover:opacity-90"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-control px-3 py-2 font-medium transition cursor-pointer sm:w-auto hover:opacity-90"
                 style={{
                   fontSize: `${finePrintDefaults.fontSize}px`,
                   color: isDone ? branding.brand_color : 'white',

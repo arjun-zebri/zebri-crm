@@ -70,14 +70,14 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
           <button
             onClick={handleClose}
             disabled={isCreating}
-            className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+            className="text-sm px-4 py-2 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={isCreating || !name.trim()}
-            className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+            className="text-sm px-4 py-2 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
           >
             {isCreating ? 'Creating...' : 'Create'}
           </button>
@@ -94,7 +94,7 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Inquiry, Interested, Engaged"
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
+            className="w-full text-sm border border-gray-200 rounded-control px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
             autoFocus
           />
         </div>
@@ -105,15 +105,15 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
             <Popover.Trigger asChild>
               <button
                 type="button"
-                className="w-full flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition text-sm cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-control hover:bg-gray-50 transition text-sm cursor-pointer"
               >
-                <div className={`w-5 h-5 rounded-full ${getStatusClasses(color).dot}`} />
+                <div className={`w-5 h-5 rounded-pill ${getStatusClasses(color).dot}`} />
                 <span className="text-gray-900 capitalize">{color}</span>
               </button>
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content
-                className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-[9999]"
+                className="bg-white border border-gray-200 rounded-control shadow-lg p-2 z-[9999]"
                 sideOffset={4}
                 align="start"
               >
@@ -126,7 +126,7 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
                         setColor(c);
                         setColorOpen(false);
                       }}
-                      className={`w-6 h-6 rounded-full border-2 transition cursor-pointer ${
+                      className={`w-6 h-6 rounded-pill border-2 transition cursor-pointer ${
                         color === c ? 'border-black' : 'border-gray-300'
                       } ${getStatusClasses(c).dot}`}
                       title={c}

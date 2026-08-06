@@ -432,7 +432,7 @@ function SortableRow({ item, onEdit, branding }: SortableRowProps) {
       {/* Right column: card */}
       <div
         onClick={() => onEdit(item)}
-        className={`flex-1 rounded-card border bg-surface hover:shadow-sm transition-all cursor-pointer mb-3 ${
+        className={`flex-1 rounded-control border bg-surface hover:shadow-sm transition-all cursor-pointer mb-3 ${
           approved ? "border-border hover:border-border-strong" : ""
         }`}
         // An unapproved item is a status, so its outline and wash come from the
@@ -441,7 +441,7 @@ function SortableRow({ item, onEdit, branding }: SortableRowProps) {
       >
         <div className="flex h-full">
           <div
-            className={`w-[3px] rounded-full my-3 ml-3 shrink-0 ${approved ? "bg-brand-fg" : ""}`}
+            className={`w-[3px] rounded-pill my-3 ml-3 shrink-0 ${approved ? "bg-brand-fg" : ""}`}
             style={approved ? undefined : { backgroundColor: STATUS_COLORS.warning }}
           />
           <div className="flex-1 pl-3 pr-4 py-3 flex items-start justify-between gap-3">

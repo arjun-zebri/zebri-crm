@@ -594,7 +594,7 @@ export default function TasksPage() {
         group: g,
         header: (
           <span className="inline-flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${TASK_GROUP_DOT_CLASS[g.color]}`} />
+            <span className={`w-2 h-2 rounded-pill ${TASK_GROUP_DOT_CLASS[g.color]}`} />
             <span className="text-sm font-medium text-gray-900">{g.name}</span>
           </span>
         ),
@@ -706,7 +706,7 @@ export default function TasksPage() {
           actions={
             <button
               onClick={() => handleCreateTask()}
-              className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
+              className="sm:hidden flex items-center justify-center w-8 h-8 rounded-pill bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
               aria-label="New task"
             >
               <Plus size={16} strokeWidth={2} />
@@ -727,7 +727,7 @@ export default function TasksPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tasks..."
-              className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+              className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
             />
             {searchQuery && (
               <button
@@ -755,7 +755,7 @@ export default function TasksPage() {
             <GroupByToggle value={groupBy} onChange={setGroupBy} />
             <button
               onClick={() => handleCreateTask()}
-              className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
+              className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
             >
               <Plus size={11} strokeWidth={2} />
               New task
@@ -769,7 +769,7 @@ export default function TasksPage() {
         {isLoading ? (
           <div className="space-y-2 mt-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
+              <div key={i} className="h-9 bg-gray-100 rounded-control animate-pulse" />
             ))}
           </div>
         ) : isEmpty ? (
@@ -865,7 +865,7 @@ export default function TasksPage() {
                   const name = window.prompt("Group name");
                   if (name && name.trim()) createGroup.mutate({ name: name.trim() });
                 }}
-                className="mt-2 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 border border-dashed border-gray-200 hover:border-gray-300 rounded-xl px-3 py-1.5 transition cursor-pointer"
+                className="mt-2 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 border border-dashed border-gray-200 hover:border-gray-300 rounded-control px-3 py-1.5 transition cursor-pointer"
               >
                 <Plus size={13} strokeWidth={1.5} />
                 New group

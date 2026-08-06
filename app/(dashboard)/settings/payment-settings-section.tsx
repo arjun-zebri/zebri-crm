@@ -315,14 +315,14 @@ export function PaymentSettingsSection({
                 onSync={syncFromStripe}
               />
             ) : statusLoading ? (
-              <div className="rounded-card border border-border bg-surface p-4 text-body text-text-muted">
+              <div className="rounded-control border border-border bg-surface p-4 text-body text-text-muted">
                 Loading account status…
               </div>
             ) : null}
 
             {connectInstance ? (
               <ConnectComponentsProvider connectInstance={connectInstance}>
-                <div className="rounded-card border border-border bg-surface p-4 space-y-3">
+                <div className="rounded-control border border-border bg-surface p-4 space-y-3">
                   <ConnectNotificationBanner />
                   {chargesLive ? (
                     <ConnectAccountManagement />
@@ -354,7 +354,7 @@ export function PaymentSettingsSection({
                 so the section flips back to the empty-state CTA
                 and a fresh account can be created. */}
             {!connectState && !statusLoading ? (
-              <div className="flex items-center justify-between rounded-card border border-border bg-surface-muted/40 p-3">
+              <div className="flex items-center justify-between rounded-control border border-border bg-surface-muted/40 p-3">
                 <p className="text-caption text-text-muted">
                   Stuck? If the form above shows an error, the connected
                   Stripe account may be stale. Reset to start fresh.
@@ -419,7 +419,7 @@ function BankField({
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         placeholder={placeholder}
-        className="w-full border border-border rounded-xl px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+        className="w-full border border-border rounded-control px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
       />
     </div>
   );
@@ -438,7 +438,7 @@ function EmptyCardPaymentsCard({
   loading: boolean;
 }) {
   return (
-    <div className="rounded-card border border-border bg-surface p-5">
+    <div className="rounded-control border border-border bg-surface p-5">
       <div className="flex items-start gap-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-muted">
           <CreditCard
@@ -475,7 +475,7 @@ function EmptyCardPaymentsCard({
  */
 function PublishableKeyMissingCard() {
   return (
-    <div className="flex items-start gap-3 rounded-card border border-warning/40 bg-warning/5 p-4">
+    <div className="flex items-start gap-3 rounded-control border border-warning/40 bg-warning/5 p-4">
       <AlertTriangle
         size={18}
         strokeWidth={1.5}

@@ -85,14 +85,14 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
+              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-control transition text-gray-600"
             >
               <ChevronLeft size={16} strokeWidth={1.5} />
             </button>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
+              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-control transition text-gray-600"
             >
               <ChevronRight size={16} strokeWidth={1.5} />
             </button>
@@ -109,7 +109,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                 <button
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
-                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600 shrink-0"
+                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded-control text-gray-600 shrink-0"
                   title="Previous page"
                 >
                   <ChevronLeft size={16} strokeWidth={1.5} />
@@ -123,7 +123,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                     <button
                       key={pageNum}
                       onClick={() => table.setPageIndex(pageNum)}
-                      className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-xs font-medium rounded-control transition cursor-pointer ${
                         table.getState().pagination.pageIndex === pageNum
                           ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:bg-gray-100'
@@ -148,7 +148,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                         )}
                         <button
                           onClick={() => table.setPageIndex(lastPage)}
-                          className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
+                          className={`px-2.5 py-1 text-xs font-medium rounded-control transition cursor-pointer ${
                             table.getState().pagination.pageIndex === lastPage
                               ? 'bg-gray-900 text-white'
                               : 'text-gray-600 hover:bg-gray-100'
@@ -164,7 +164,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                 <button
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
-                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600 shrink-0"
+                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded-control text-gray-600 shrink-0"
                   title="Next page"
                 >
                   <ChevronRight size={16} strokeWidth={1.5} />
@@ -178,13 +178,13 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
           <div ref={pageSizeRef}>
             <button
               onClick={() => setPageSizeOpen(!pageSizeOpen)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
+              className="border border-gray-200 rounded-control px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
             >
               {table.getState().pagination.pageSize}/page
             </button>
             {pageSizeOpen && popoverPos && (
               <div
-                className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
+                className="fixed bg-white border border-gray-200 rounded-control shadow-lg z-50 py-1"
                 style={{
                   bottom: popoverPos.bottom,
                   right: popoverPos.right,

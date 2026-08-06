@@ -31,7 +31,7 @@ export function PastDueList({
             <li
               key={row.id}
               onClick={() => onOpenUser(row.id)}
-              className="flex items-center justify-between gap-3 px-2 py-1.5 rounded-md hover:bg-surface-emphasis cursor-pointer"
+              className="flex items-center justify-between gap-3 px-2 py-1.5 rounded-control hover:bg-surface-emphasis cursor-pointer"
             >
               <div className="min-w-0">
                 <p className="text-sm text-text truncate">

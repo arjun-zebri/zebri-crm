@@ -45,7 +45,7 @@ function StatusRowBase({ status, onUpdate, onDelete }: StatusRowProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 rounded-xl border bg-white transition-colors ${
+      className={`flex items-center gap-3 p-3 rounded-control border bg-white transition-colors ${
         isDragging
           ? 'border-gray-300 bg-gray-50 shadow-lg'
           : 'border-gray-200 hover:bg-gray-50'
@@ -64,7 +64,7 @@ function StatusRowBase({ status, onUpdate, onDelete }: StatusRowProps) {
         type="text"
         value={status.name}
         onChange={(e) => onUpdate({ ...status, name: e.target.value })}
-        className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200"
+        className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-control focus:outline-none focus:ring-2 focus:ring-green-200"
         placeholder="Status name"
       />
 
@@ -72,15 +72,15 @@ function StatusRowBase({ status, onUpdate, onDelete }: StatusRowProps) {
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="shrink-0 flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-sm cursor-pointer"
+            className="shrink-0 flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-control hover:bg-gray-50 transition text-sm cursor-pointer"
           >
-            <div className={`w-3 h-3 rounded-full ${classes.dot}`} />
+            <div className={`w-3 h-3 rounded-pill ${classes.dot}`} />
             <ChevronDown size={14} strokeWidth={1.5} />
           </button>
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
-            className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-[9999]"
+            className="bg-white border border-gray-200 rounded-control shadow-lg p-2 z-[9999]"
             sideOffset={4}
             align="end"
           >
@@ -95,7 +95,7 @@ function StatusRowBase({ status, onUpdate, onDelete }: StatusRowProps) {
                       onUpdate({ ...status, color });
                       setColorOpen(false);
                     }}
-                    className={`w-6 h-6 rounded-full border-2 transition cursor-pointer ${
+                    className={`w-6 h-6 rounded-pill border-2 transition cursor-pointer ${
                       status.color === color ? 'border-black' : 'border-gray-300'
                     } ${colorClasses.dot}`}
                     title={color}
@@ -110,7 +110,7 @@ function StatusRowBase({ status, onUpdate, onDelete }: StatusRowProps) {
       <button
         type="button"
         onClick={() => onDelete(status.id)}
-        className="shrink-0 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition cursor-pointer"
+        className="shrink-0 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-control transition cursor-pointer"
       >
         <Trash2 size={16} strokeWidth={1.5} />
       </button>

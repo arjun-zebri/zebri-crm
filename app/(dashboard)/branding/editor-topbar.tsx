@@ -57,13 +57,13 @@ export function EditorTopbar({
         />
       </div>
 
-      <div className="hidden md:flex items-center bg-gray-100 rounded-lg p-0.5">
+      <div className="hidden md:flex items-center bg-gray-100 rounded-control p-0.5">
         <button
           type="button"
           onClick={() => setDevice('desktop')}
           aria-label="Desktop preview"
           title="Desktop"
-          className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition cursor-pointer ${
+          className={`inline-flex items-center justify-center w-7 h-7 rounded-control transition cursor-pointer ${
             device === 'desktop' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
           }`}
         >
@@ -74,7 +74,7 @@ export function EditorTopbar({
           onClick={() => setDevice('mobile')}
           aria-label="Mobile preview"
           title="Mobile"
-          className={`inline-flex items-center justify-center w-7 h-7 rounded-md transition cursor-pointer ${
+          className={`inline-flex items-center justify-center w-7 h-7 rounded-control transition cursor-pointer ${
             device === 'mobile' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
           }`}
         >
@@ -90,7 +90,7 @@ export function EditorTopbar({
             type="button"
             onClick={onUndo}
             disabled={!canUndo}
-            className={`p-1.5 rounded-md transition ${
+            className={`p-1.5 rounded-control transition ${
               canUndo
                 ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
                 : 'text-gray-300 cursor-not-allowed'
@@ -104,7 +104,7 @@ export function EditorTopbar({
             type="button"
             onClick={onRedo}
             disabled={!canRedo}
-            className={`p-1.5 rounded-md transition ${
+            className={`p-1.5 rounded-control transition ${
               canRedo
                 ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
                 : 'text-gray-300 cursor-not-allowed'
@@ -121,7 +121,7 @@ export function EditorTopbar({
         <button
           type="button"
           onClick={onPreview}
-          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-black cursor-pointer transition"
+          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-control bg-gray-900 text-white text-xs font-medium hover:bg-black cursor-pointer transition"
         >
           <Eye size={12} strokeWidth={2} />
           Preview
@@ -168,7 +168,7 @@ function KitNameField({ value, onChange }: { value: string; onChange: (v: string
             }
           }}
           onFocus={(e) => e.currentTarget.select()}
-          className="h-7 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-md px-2 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 min-w-0 w-[220px]"
+          className="h-7 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-control px-2 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 min-w-0 w-[220px]"
         />
       </div>
     )
@@ -179,7 +179,7 @@ function KitNameField({ value, onChange }: { value: string; onChange: (v: string
       type="button"
       onClick={() => setEditing(true)}
       title="Rename brand kit"
-      className="inline-flex items-center h-7 px-1.5 -ml-1.5 rounded-md hover:bg-gray-100 cursor-pointer transition min-w-0"
+      className="inline-flex items-center h-7 px-1.5 -ml-1.5 rounded-control hover:bg-gray-100 cursor-pointer transition min-w-0"
     >
       <span className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{value}</span>
     </button>
@@ -206,7 +206,7 @@ function KitPicker({
           type="button"
           aria-label="Switch brand kit"
           title="Switch brand kit"
-          className="inline-flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition shrink-0"
+          className="inline-flex items-center justify-center w-6 h-6 rounded-control text-gray-400 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition shrink-0"
         >
           <ChevronDown size={12} strokeWidth={2} />
         </button>
@@ -215,7 +215,7 @@ function KitPicker({
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl p-1.5 z-50 w-[260px] animate-modal-in"
+          className="bg-white border border-gray-200 rounded-control shadow-xl p-1.5 z-50 w-[260px] animate-modal-in"
         >
           <div className="px-2 pt-1 pb-1.5 flex items-center justify-between">
             <p className="text-[11px] font-medium text-gray-400 uppercase tracking-[0.06em]">Saved kits</p>
@@ -230,11 +230,11 @@ function KitPicker({
               {kits.map((kit) => {
                 const active = kit.name === currentName
                 return (
-                  <li key={kit.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50">
+                  <li key={kit.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-control hover:bg-gray-50">
                     <span className="flex items-center gap-0.5 shrink-0">
-                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.brandColor }} />
-                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.headingColor }} />
-                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.textColor }} />
+                      <span className="w-3 h-3 rounded-pill ring-1 ring-black/5" style={{ background: kit.brandColor }} />
+                      <span className="w-3 h-3 rounded-pill ring-1 ring-black/5" style={{ background: kit.headingColor }} />
+                      <span className="w-3 h-3 rounded-pill ring-1 ring-black/5" style={{ background: kit.textColor }} />
                     </span>
                     <Popover.Close asChild>
                       <button
@@ -251,7 +251,7 @@ function KitPicker({
                       <button
                         type="button"
                         onClick={() => onDelete(kit.id)}
-                        className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition opacity-0 group-hover:opacity-100"
+                        className="p-1 rounded-control text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition opacity-0 group-hover:opacity-100"
                         title="Delete kit"
                         aria-label="Delete kit"
                       >
@@ -268,7 +268,7 @@ function KitPicker({
               <button
                 type="button"
                 onClick={onCreateNewKit}
-                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-control text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 <Plus size={11} strokeWidth={1.75} className="text-gray-400" />
                 Create new kit
@@ -302,13 +302,13 @@ function SaveStatusPill({ status, onRetry }: { status: SaveStatus; onRetry?: () 
     return (
       <div className="inline-flex items-center gap-1.5">
         <span className={`inline-flex items-center gap-1.5 text-[11px] ${tone}`}>
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+          <span className={`w-1.5 h-1.5 rounded-pill shrink-0 ${dot}`} />
           <span className="truncate">{text}</span>
         </span>
         <button
           type="button"
           onClick={onRetry}
-          className="px-2 py-1 text-[11px] font-medium text-danger hover:text-danger hover:bg-danger/10 rounded-xl cursor-pointer transition"
+          className="px-2 py-1 text-[11px] font-medium text-danger hover:text-danger hover:bg-danger/10 rounded-control cursor-pointer transition"
         >
           Retry
         </button>
@@ -321,7 +321,7 @@ function SaveStatusPill({ status, onRetry }: { status: SaveStatus; onRetry?: () 
       className={`inline-flex items-center gap-1.5 text-[11px] ${tone}`}
       style={{ width: 96 }}
     >
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+      <span className={`w-1.5 h-1.5 rounded-pill shrink-0 ${dot}`} />
       <span className="truncate">{text}</span>
     </span>
   )

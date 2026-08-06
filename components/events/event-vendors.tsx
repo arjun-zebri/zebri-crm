@@ -89,7 +89,7 @@ export function EventVendors({ eventId }: EventVendorsProps) {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
+          <div key={i} className="h-12 bg-gray-200 rounded-control animate-pulse" />
         ))}
       </div>
     )
@@ -104,7 +104,7 @@ export function EventVendors({ eventId }: EventVendorsProps) {
             excludeIds={[]}
             onAdd={(id) => addVendor.mutate(id)}
           >
-            <button className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
+            <button className="text-sm text-gray-700 border border-gray-200 rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
               + Add Contact
             </button>
           </ContactPopover>
@@ -115,7 +115,7 @@ export function EventVendors({ eventId }: EventVendorsProps) {
             {vendors.map((link) => (
               <div
                 key={link.id}
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:bg-gray-50"
+                className="flex items-center justify-between p-3 border border-gray-200 rounded-control hover:bg-gray-50"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">{link.vendor.name}</p>
@@ -135,7 +135,7 @@ export function EventVendors({ eventId }: EventVendorsProps) {
             excludeIds={vendors.map((v) => v.contact_id)}
             onAdd={(id) => addVendor.mutate(id)}
           >
-            <button className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
+            <button className="w-full text-sm text-gray-700 border border-gray-200 rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
               + Add Contact
             </button>
           </ContactPopover>

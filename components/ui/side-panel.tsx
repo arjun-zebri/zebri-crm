@@ -47,7 +47,7 @@ export function SidePanel({
             {headerActions}
             <button
               onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-control transition cursor-pointer"
               aria-label="Close"
             >
               <X size={18} strokeWidth={1.5} />

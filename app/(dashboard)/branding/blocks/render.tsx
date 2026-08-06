@@ -206,7 +206,7 @@ export function RenderHeaderBanner({
   const chrome = (
     <>
       {imageScale > 1 && (
-        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
+        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-control bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
           {Math.round(imageScale * 100)}%
         </div>
       )}
@@ -259,7 +259,7 @@ export function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.M
       }`}
       title="Drag to resize"
     >
-      <div className="h-1 w-10 rounded-full bg-gray-900/60 ring-1 ring-white/80 shadow-sm" />
+      <div className="h-1 w-10 rounded-pill bg-gray-900/60 ring-1 ring-white/80 shadow-sm" />
     </div>
   )
 }
@@ -403,7 +403,7 @@ export function RenderImage({
   const chrome = (
     <>
       {imageScale > 1 && (
-        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
+        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-control bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
           {Math.round(imageScale * 100)}%
         </div>
       )}
@@ -508,7 +508,7 @@ export function RenderBusinessName({
   const logoSlot = uploadLogo ? (
     <div
       data-subtarget="logo"
-      className="group/logo relative h-full rounded-md ring-inset ring-0 hover:ring-1 hover:ring-gray-300 transition"
+      className="group/logo relative h-full rounded-control ring-inset ring-0 hover:ring-1 hover:ring-gray-300 transition"
     >
       <InlineAsset
         value={logoUrl || null}
@@ -549,7 +549,7 @@ export function RenderBusinessName({
           resizing ? 'opacity-100' : 'opacity-0 group-hover/logo:opacity-100'
         }`}
       >
-        <div className="w-2.5 h-2.5 rounded-sm bg-gray-900/70 ring-1 ring-white/80 shadow-sm" />
+        <div className="w-2.5 h-2.5 rounded-control bg-gray-900/70 ring-1 ring-white/80 shadow-sm" />
       </div>
     </div>
   ) : undefined
@@ -779,14 +779,14 @@ export function RenderAction({
       <div
         onMouseDown={makeResizeHandler('primary', 'primaryWidthPx', 'primaryPaddingY', primaryPadY)}
         title="Drag to resize primary button"
-        className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/pbtn:opacity-100 transition z-20 pointer-events-auto"
+        className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-control bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/pbtn:opacity-100 transition z-20 pointer-events-auto"
         style={{ left: 'auto', top: 'auto' }}
       />
       {block.secondary !== null && (
         <div
           onMouseDown={makeResizeHandler('secondary', 'secondaryWidthPx', 'secondaryPaddingY', secondaryPadY)}
           title="Drag to resize secondary button"
-          className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/sbtn:opacity-100 transition z-20 pointer-events-auto"
+          className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-control bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/sbtn:opacity-100 transition z-20 pointer-events-auto"
           style={{ left: 'auto', top: 'auto' }}
         />
       )}
@@ -799,7 +799,7 @@ export function RenderAction({
               secondary: 'Secondary',
             })
           }}
-          className={`absolute left-1/2 -translate-x-1/2 mt-2 px-4 border border-dashed border-text-muted rounded-md text-xs text-text-muted hover:text-text hover:border-text cursor-pointer transition ${
+          className={`absolute left-1/2 -translate-x-1/2 mt-2 px-4 border border-dashed border-text-muted rounded-control text-xs text-text-muted hover:text-text hover:border-text cursor-pointer transition ${
             selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
           }`}
           title="Add secondary button"
@@ -1092,7 +1092,7 @@ export function RenderContractSign({ state, block }: { state: BrandPreviewState;
           {/* Agreement line (checkbox is decorative in the mock). */}
           <div className="flex items-start gap-3">
             <span
-              className="mt-0.5 w-4 h-4 rounded border shrink-0"
+              className="mt-0.5 w-4 h-4 rounded-control border shrink-0"
               style={{ borderColor: pub.border_color }}
               aria-hidden
             />
@@ -1276,11 +1276,11 @@ export function RenderQuestionnairePreview({
               {/* Progress bar. */}
               <div className="space-y-2">
                 <div
-                  className="h-1 rounded-full"
+                  className="h-1 rounded-pill"
                   style={{ background: muted + '20' }}
                 >
                   <div
-                    className="h-full rounded-full transition-all"
+                    className="h-full rounded-pill transition-all"
                     style={{ width: '33%', background: brand }}
                   />
                 </div>

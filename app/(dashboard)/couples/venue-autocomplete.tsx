@@ -141,7 +141,7 @@ export function VenueAutocomplete({
           autoComplete="off"
         />
         {open && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+          <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded-control border border-gray-200 bg-white shadow-lg">
             {suggestions.map((s) => (
               <button
                 key={s.placeId}

@@ -66,9 +66,9 @@ export function PasswordStrengthMeter({ password, id }: PasswordStrengthMeterPro
     <div id={id} className="mt-2 h-7" aria-live="polite">
       {cfg ? (
         <>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-surface-muted">
+          <div className="h-1 w-full overflow-hidden rounded-pill bg-surface-muted">
             <div
-              className={`h-full rounded-full transition-all ${cfg.widthClass} ${cfg.barClass}`}
+              className={`h-full rounded-pill transition-all ${cfg.widthClass} ${cfg.barClass}`}
             />
           </div>
           <p className={`mt-1 text-caption ${cfg.textClass}`}>{cfg.label} password</p>

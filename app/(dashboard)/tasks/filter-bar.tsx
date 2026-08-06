@@ -109,7 +109,7 @@ export function FilterBar({
         <button
           key={`sort-${i}`}
           type="button"
-          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 transition cursor-pointer text-gray-700"
+          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-control bg-gray-100 hover:bg-gray-200 transition cursor-pointer text-gray-700"
           title="Toggle direction"
           onClick={() => toggleSortDir(i)}
         >
@@ -135,7 +135,7 @@ export function FilterBar({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <FilterIcon size={11} strokeWidth={1.5} />
             <span>Filter</span>
@@ -145,7 +145,7 @@ export function FilterBar({
           <Popover.Content
             sideOffset={4}
             align="start"
-            className="bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[80] min-w-32"
+            className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] min-w-32"
           >
             {(['status', 'priority', 'task_type', 'couple'] as FilterProperty[]).map((p) => (
               <button
@@ -168,7 +168,7 @@ export function FilterBar({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <ArrowUp size={11} strokeWidth={1.5} />
             <span>Sort</span>
@@ -178,7 +178,7 @@ export function FilterBar({
           <Popover.Content
             sideOffset={4}
             align="start"
-            className="bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[80] min-w-32"
+            className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] min-w-32"
           >
             {(['due_date', 'status', 'priority', 'title'] as SortProperty[]).map((p) => (
               <button
@@ -245,7 +245,7 @@ function FilterChip({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs px-1.5 py-1 rounded-md bg-gray-100 hover:bg-gray-200 transition cursor-pointer text-gray-700"
+          className="inline-flex items-center gap-1 text-xs px-1.5 py-1 rounded-control bg-gray-100 hover:bg-gray-200 transition cursor-pointer text-gray-700"
         >
           <span className="text-gray-500">{PROPERTY_LABEL[filter.property]}</span>
           <span className="text-gray-300">:</span>
@@ -265,7 +265,7 @@ function FilterChip({
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[80] min-w-32 max-h-72 overflow-y-auto"
+          className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] min-w-32 max-h-72 overflow-y-auto"
         >
           {filter.property === 'status' &&
             statusList.map((s) => (

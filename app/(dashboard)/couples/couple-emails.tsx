@@ -83,13 +83,13 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
       {isLoading ? (
         <div className="space-y-3" aria-hidden="true">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3.5">
-              <div className="size-8 shrink-0 animate-pulse rounded-lg bg-surface-muted" />
+            <div key={i} className="flex items-start gap-3 rounded-control border border-border bg-card px-4 py-3.5">
+              <div className="size-8 shrink-0 animate-pulse rounded-control bg-surface-muted" />
               <div className="flex-1 space-y-2">
-                <div className="h-3.5 w-40 animate-pulse rounded-md bg-surface-muted" />
-                <div className="h-3 w-56 max-w-full animate-pulse rounded-md bg-surface-muted" />
+                <div className="h-3.5 w-40 animate-pulse rounded-control bg-surface-muted" />
+                <div className="h-3 w-56 max-w-full animate-pulse rounded-control bg-surface-muted" />
               </div>
-              <div className="h-5 w-14 shrink-0 animate-pulse rounded-full bg-surface-muted" />
+              <div className="h-5 w-14 shrink-0 animate-pulse rounded-pill bg-surface-muted" />
             </div>
           ))}
         </div>
@@ -104,8 +104,8 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
       ) : (
         <div className="space-y-3">
           {emails.map((email) => (
-            <div key={email.id} className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3.5">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-muted">
+            <div key={email.id} className="flex items-start gap-3 rounded-control border border-border bg-card px-4 py-3.5">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-surface-muted">
                 <Mail size={15} strokeWidth={1.5} className="text-text-subtle" />
               </span>
               <div className="min-w-0 flex-1">

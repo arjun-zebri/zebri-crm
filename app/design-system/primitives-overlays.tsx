@@ -113,8 +113,7 @@ export function PrimitivesOverlays() {
             All three take Escape, body-scroll locking and backdrop dismissal from{' '}
             <code>useOverlay()</code>, so they cannot drift apart again. What is left is cosmetic:
             Modal and SidePanel still use <code>bg-white</code> and <code>border-gray-200</code>{' '}
-            rather than tokens, and Modal is <code>rounded-2xl</code> where the card token is 12px.
-            Fold those in when the radius sweep runs.
+            rather than tokens. Radius is settled: all three are now <code>rounded-control</code>.
           </>
         }
       >
@@ -134,7 +133,7 @@ export function PrimitivesOverlays() {
                 ['Locks body scroll', 'Yes', 'Yes', 'Yes'],
                 ['aria-modal', 'Yes', 'Yes', 'Yes'],
                 ['role="dialog"', 'On panel', 'On panel', 'On panel'],
-                ['Corner radius', 'rounded-2xl (16px)', 'None', 'rounded-card (12px)'],
+                ['Corner radius', 'rounded-control (6px)', 'None', 'rounded-control (6px)'],
                 ['Surface colour', 'bg-white', 'bg-white', 'bg-surface'],
                 ['Border colour', 'border-gray-200', 'border-gray-200', 'border-border'],
                 ['Action buttons', 'Caller supplies', 'Caller supplies', 'Button primitive'],
@@ -152,29 +151,6 @@ export function PrimitivesOverlays() {
         </div>
       </Conflict>
 
-      <Conflict
-        title="Overlay surfaces use rounded-2xl, but the card token is 12px"
-        recommendation={
-          <>
-            Modal and ConfirmDialog both hard-code <code>rounded-2xl</code> (16px) while{' '}
-            <code>--radius-card</code> is 12px, so a modal never matches the cards inside it. Either
-            move both to <code>rounded-card</code>, or add a dedicated{' '}
-            <code>--radius-overlay</code> token so the 16px is a deliberate choice rather than an
-            accident.
-          </>
-        }
-      >
-        <DemoRow>
-          <div className="space-y-1 text-center">
-            <div className="h-16 w-24 rounded-card border border-border bg-surface-muted" />
-            <code className="text-caption text-text-subtle">rounded-card · 12px</code>
-          </div>
-          <div className="space-y-1 text-center">
-            <div className="h-16 w-24 rounded-2xl border border-border bg-surface-muted" />
-            <code className="text-caption text-text-subtle">rounded-2xl · 16px</code>
-          </div>
-        </DemoRow>
-      </Conflict>
 
       <Conflict
         title="The primitives share one ladder; call sites still hard-code theirs"

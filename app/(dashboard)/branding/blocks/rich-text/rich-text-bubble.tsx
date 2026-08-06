@@ -21,7 +21,7 @@ const HIGHLIGHTS = ['#FEF08A', '#FBBF24', '#FCA5A5', '#A7F3D0', '#93C5FD', '#D8B
  */
 export function RichTextBubble({ editor, surface }: { editor: Editor; surface: SurfaceTab }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border border-gray-200 bg-white px-1 py-1 shadow-lg">
+    <div className="flex items-center gap-0.5 rounded-control border border-gray-200 bg-white px-1 py-1 shadow-lg">
       <Toggle active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold"><Bold size={15} strokeWidth={1.75} /></Toggle>
       <Toggle active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic"><Italic size={15} strokeWidth={1.75} /></Toggle>
       <Toggle active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline"><Underline size={15} strokeWidth={1.75} /></Toggle>
@@ -32,9 +32,9 @@ export function RichTextBubble({ editor, surface }: { editor: Editor; surface: S
         onChange={(c) => editor.chain().setColor(c).run()}
         swatches={TEXT_COLOURS}
         trigger={
-          <button type="button" title="Text colour" className="flex items-center gap-1 px-1.5 h-7 rounded-md text-gray-700 hover:bg-gray-100 cursor-pointer">
+          <button type="button" title="Text colour" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-gray-700 hover:bg-gray-100 cursor-pointer">
             <span className="text-sm font-semibold leading-none">A</span>
-            <span className="w-3.5 h-1.5 rounded-sm" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#111827' }} />
+            <span className="w-3.5 h-1.5 rounded-control" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#111827' }} />
           </button>
         }
       />
@@ -43,7 +43,7 @@ export function RichTextBubble({ editor, surface }: { editor: Editor; surface: S
         onChange={(c) => editor.chain().setHighlight({ color: c }).run()}
         swatches={HIGHLIGHTS}
         trigger={
-          <button type="button" title="Highlight" className="flex items-center gap-1 px-1.5 h-7 rounded-md text-gray-700 hover:bg-gray-100 cursor-pointer">
+          <button type="button" title="Highlight" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-gray-700 hover:bg-gray-100 cursor-pointer">
             <Highlighter size={15} strokeWidth={1.75} />
           </button>
         }
@@ -64,7 +64,7 @@ function Toggle({ active, onClick, title, children }: { active?: boolean; onClic
       type="button"
       title={title}
       onClick={onClick}
-      className={`inline-flex items-center justify-center w-7 h-7 rounded-md cursor-pointer transition ${active ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-control cursor-pointer transition ${active ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
     >
       {children}
     </button>
@@ -77,13 +77,13 @@ function SizeMenu({ editor }: { editor: Editor }) {
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button type="button" title="Font size" className="flex items-center gap-1 px-1.5 h-7 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-100 cursor-pointer">
+        <button type="button" title="Font size" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-xs font-medium text-gray-700 hover:bg-gray-100 cursor-pointer">
           {current ? current.replace('px', '') : 'Size'}
           <ChevronDown size={12} strokeWidth={2} className="text-gray-400" />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="start" sideOffset={6} className="z-[80] bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[5rem]">
+        <Popover.Content align="start" sideOffset={6} className="z-[80] bg-white border border-gray-200 rounded-control shadow-lg py-1 min-w-[5rem]">
           {RICH_TEXT_FONT_SIZES.map((s) => (
             <Popover.Close asChild key={s}>
               <button type="button" onClick={() => editor.chain().focus().setFontSize(`${s}px`).run()} className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{s}</button>
@@ -105,13 +105,13 @@ function VariableMenu({ editor, surface }: { editor: Editor; surface: SurfaceTab
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button type="button" title="Insert variable" className="flex items-center gap-1 px-2 h-7 rounded-md text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
+        <button type="button" title="Insert variable" className="flex items-center gap-1 px-2 h-7 rounded-control text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
           <Plus size={13} strokeWidth={2} />
           Variable
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="end" sideOffset={6} className="z-[80] bg-white border border-gray-200 rounded-xl shadow-xl p-2 w-[220px] max-h-[300px] overflow-y-auto">
+        <Popover.Content align="end" sideOffset={6} className="z-[80] bg-white border border-gray-200 rounded-control shadow-xl p-2 w-[220px] max-h-[300px] overflow-y-auto">
           {groups.map((group, gi) => (
             <div key={group} className={gi > 0 ? 'mt-2 pt-2 border-t border-gray-100' : ''}>
               <div className="px-2 pb-1 text-[10px] uppercase tracking-[0.08em] text-gray-400">{group}</div>
@@ -120,7 +120,7 @@ function VariableMenu({ editor, surface }: { editor: Editor; surface: SurfaceTab
                   <button
                     type="button"
                     onClick={() => editor.chain().focus().insertContent({ type: 'variable', attrs: { id: v.id } }).run()}
-                    className="w-full text-left px-2 py-1.5 rounded-md text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                    className="w-full text-left px-2 py-1.5 rounded-control text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
                   >
                     {v.label}
                   </button>

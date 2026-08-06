@@ -60,7 +60,7 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
     >
       <span
         aria-hidden
-        className={`hidden h-1.5 w-1.5 justify-self-center rounded-full sm:block ${
+        className={`hidden h-1.5 w-1.5 justify-self-center rounded-pill sm:block ${
           locked ? 'bg-success' : 'border-2 border-brand-fg bg-surface'
         }`}
       />

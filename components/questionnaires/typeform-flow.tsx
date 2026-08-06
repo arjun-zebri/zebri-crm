@@ -108,8 +108,8 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
         }
       }}
     >
-      <div className="mb-2 h-1 w-full shrink-0 overflow-hidden rounded-full" style={{ background: `${textColor}14` }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: brand }} />
+      <div className="mb-2 h-1 w-full shrink-0 overflow-hidden rounded-pill" style={{ background: `${textColor}14` }}>
+        <div className="h-full rounded-pill transition-all" style={{ width: `${progress}%`, background: brand }} />
       </div>
       <p className="mb-6 min-h-4 shrink-0 text-right" style={{ color: saveState === 'error' ? STATUS_COLORS.error : mutedColor, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, lineHeight: bodyStyles.lineHeight }}>{saveLabel}</p>
 

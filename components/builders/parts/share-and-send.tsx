@@ -111,7 +111,7 @@ export function ShareAndSend({
             {lastSentAt ? (
               <span className="inline-flex items-center gap-1.5 text-text">
                 <span
-                  className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-success/10"
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-pill bg-success/10"
                   aria-hidden
                 >
                   <Check size={10} strokeWidth={2} className="text-success" />

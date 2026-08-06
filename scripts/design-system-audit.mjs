@@ -104,16 +104,18 @@ const audit = {
   scannedFiles: SOURCES.length,
   topPaletteClasses: topPaletteClasses(),
   groups: [
-    group('radius', 'Corner radius', 'Three token radii exist. The app mostly ignores them.', [
+    group('radius', 'Corner radius', 'Two tokens: 6px for anything with corners, pill for anything round.', [
       { label: 'rounded-control', pattern: 'rounded-control\\b', verdict: 'token' },
-      { label: 'rounded-card', pattern: 'rounded-card\\b', verdict: 'token' },
       { label: 'rounded-pill', pattern: 'rounded-pill\\b', verdict: 'token' },
+      { label: 'rounded-card', pattern: 'rounded-card\\b', verdict: 'legacy' },
       { label: 'rounded-xl', pattern: 'rounded-xl\\b', verdict: 'legacy' },
       { label: 'rounded-md', pattern: 'rounded-md\\b', verdict: 'legacy' },
       { label: 'rounded-full', pattern: 'rounded-full\\b', verdict: 'legacy' },
       { label: 'rounded-lg', pattern: 'rounded-lg\\b', verdict: 'legacy' },
       { label: 'rounded-2xl', pattern: 'rounded-2xl\\b', verdict: 'legacy' },
       { label: 'rounded-sm', pattern: 'rounded-sm\\b', verdict: 'legacy' },
+      { label: 'rounded (bare, 4px)', pattern: '\\brounded\\b(?!-)', verdict: 'legacy' },
+      { label: 'per-side (rounded-t-lg etc.)', pattern: 'rounded-[trbl][lr]?-(?:none|sm|md|lg|xl|2xl|3xl|full)\\b', verdict: 'legacy' },
     ]),
     group('colour', 'Colour', 'Semantic tokens vs the raw Tailwind palette.', [
       { label: 'text-text*', pattern: 'text-text(?:-(?:muted|subtle|inverse))?\\b', verdict: 'token' },
@@ -152,12 +154,12 @@ const audit = {
       { label: '1', pattern: 'strokeWidth=\\{1\\}', verdict: 'legacy' },
     ]),
     group('padding', 'Container padding', 'Padding on rounded containers. No canonical card padding exists.', [
-      { label: 'p-2', pattern: 'rounded-(?:xl|lg|card|2xl)[^"\']*\\bp-2\\b', verdict: 'legacy' },
-      { label: 'p-3', pattern: 'rounded-(?:xl|lg|card|2xl)[^"\']*\\bp-3\\b', verdict: 'legacy' },
-      { label: 'p-4', pattern: 'rounded-(?:xl|lg|card|2xl)[^"\']*\\bp-4\\b', verdict: 'legacy' },
-      { label: 'p-5', pattern: 'rounded-(?:xl|lg|card|2xl)[^"\']*\\bp-5\\b', verdict: 'legacy' },
-      { label: 'p-6', pattern: 'rounded-(?:xl|lg|card|2xl)[^"\']*\\bp-6\\b', verdict: 'legacy' },
-      { label: 'p-8', pattern: 'rounded-(?:xl|lg|card|2xl)[^"\']*\\bp-8\\b', verdict: 'legacy' },
+      { label: 'p-2', pattern: 'rounded-control[^"\']*\\bp-2\\b', verdict: 'legacy' },
+      { label: 'p-3', pattern: 'rounded-control[^"\']*\\bp-3\\b', verdict: 'legacy' },
+      { label: 'p-4', pattern: 'rounded-control[^"\']*\\bp-4\\b', verdict: 'legacy' },
+      { label: 'p-5', pattern: 'rounded-control[^"\']*\\bp-5\\b', verdict: 'legacy' },
+      { label: 'p-6', pattern: 'rounded-control[^"\']*\\bp-6\\b', verdict: 'legacy' },
+      { label: 'p-8', pattern: 'rounded-control[^"\']*\\bp-8\\b', verdict: 'legacy' },
     ]),
   ],
 };

@@ -31,7 +31,7 @@ export function PublicTimelineItem({
   return (
     <div className="relative ml-4 pl-6 pb-6 border-l-2 border-border last:pb-0">
       {/* Rail dot */}
-      <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-border-strong" />
+      <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-pill bg-border-strong" />
 
       {/* Time row */}
       <div className="flex items-center justify-between mb-0.5">

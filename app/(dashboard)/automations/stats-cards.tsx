@@ -47,8 +47,8 @@ export function StatsCards({ payload }: Props) {
 function StatsCard({ card }: { card: Card }) {
   const Icon = card.icon
   return (
-    <div className="border border-border rounded-xl bg-surface px-4 py-3 flex items-center gap-3">
-      <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-surface-muted shrink-0">
+    <div className="border border-border rounded-control bg-surface px-4 py-3 flex items-center gap-3">
+      <span className="inline-flex items-center justify-center w-9 h-9 rounded-control bg-surface-muted shrink-0">
         <Icon size={16} strokeWidth={1.5} className="text-text-muted" />
       </span>
       <div className="min-w-0">

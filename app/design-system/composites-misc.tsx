@@ -155,7 +155,7 @@ export function CompositesMisc() {
         file="components/time-tracking/time-category-row.tsx"
         description="One row inside the picker. Selected and unselected states."
       >
-        <div className="max-w-sm rounded-card border border-border">
+        <div className="max-w-sm rounded-control border border-border">
           {FIXTURES.timeCategories.map((c, i) => (
             <TimeCategoryRow
               key={c.id}

@@ -204,7 +204,7 @@ export function QuestionnaireTemplateManager() {
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl bg-surface-muted" />
+            <div key={i} className="h-14 animate-pulse rounded-control bg-surface-muted" />
           ))}
         </div>
       ) : (templates?.length ?? 0) === 0 ? (
@@ -233,7 +233,7 @@ export function QuestionnaireTemplateManager() {
                       type="button"
                       onClick={() => setSelectedId(t.id)}
                       aria-current={active ? 'true' : undefined}
-                      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-control px-2 py-2 text-left transition ${
                         active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
                       }`}
                     >

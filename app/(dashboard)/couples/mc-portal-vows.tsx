@@ -87,7 +87,7 @@ function HistoryPopover({
         <History size={14} strokeWidth={1.5} /> History ({history.length})
       </button>
       <div
-        className={`absolute right-0 mt-2 w-52 z-30 origin-top-right rounded-xl border border-gray-100 bg-white shadow-lg py-1 text-sm transition-all duration-150 ${
+        className={`absolute right-0 mt-2 w-52 z-30 origin-top-right rounded-control border border-gray-100 bg-white shadow-lg py-1 text-sm transition-all duration-150 ${
           open ? 'opacity-100 scale-100' : 'pointer-events-none opacity-0 scale-95'
         }`}
       >
@@ -133,10 +133,10 @@ function VowsSkeleton() {
       {[0, 1].map((i) => (
         <div key={i} className="flex flex-col min-h-[280px]">
           <div className="flex items-center justify-between mb-2 px-3">
-            <div className="h-4 w-28 rounded bg-gray-100" />
-            <div className="h-4 w-20 rounded bg-gray-100" />
+            <div className="h-4 w-28 rounded-control bg-gray-100" />
+            <div className="h-4 w-20 rounded-control bg-gray-100" />
           </div>
-          <div className="flex-1 w-full rounded-md bg-gray-100" />
+          <div className="flex-1 w-full rounded-control bg-gray-100" />
         </div>
       ))}
     </div>
@@ -237,7 +237,7 @@ export function McPortalVows({ coupleId, primaryName, secondaryName }: McPortalV
                   </div>
                 </div>
                 <textarea
-                  className="flex-1 w-full resize-none rounded-md border border-border bg-surface p-3 text-sm text-text transition-shadow focus:outline-none focus:ring-2 focus:ring-brand/30"
+                  className="flex-1 w-full resize-none rounded-control border border-border bg-surface p-3 text-sm text-text transition-shadow focus:outline-none focus:ring-2 focus:ring-brand/30"
                   value={value}
                   placeholder="No vows written yet."
                   onChange={(e) => setDrafts((d) => ({ ...d, [vow.id]: e.target.value }))}

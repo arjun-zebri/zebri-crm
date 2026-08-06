@@ -80,12 +80,12 @@ export function StatePill({
     >
       {dot === 'filled' ? (
         <span
-          className={`h-1.5 w-1.5 rounded-full ${DOT_BG_BY_TONE[tone]}`}
+          className={`h-1.5 w-1.5 rounded-pill ${DOT_BG_BY_TONE[tone]}`}
           aria-hidden
         />
       ) : dot === 'hollow' ? (
         <span
-          className={`h-1.5 w-1.5 rounded-full border ${dotBorderForTone(tone)}`}
+          className={`h-1.5 w-1.5 rounded-pill border ${dotBorderForTone(tone)}`}
           aria-hidden
         />
       ) : null}

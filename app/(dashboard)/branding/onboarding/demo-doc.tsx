@@ -120,12 +120,12 @@ export function DemoDoc({ headingHex, fontHeading, headingSize, buttonColor, sel
       <div
         ref={overlayRef}
         data-cursor="doc-accept"
-        className={`absolute pointer-events-none rounded-md ${selected ? 'ring-2 ring-gray-900 ring-offset-2' : ''}`}
+        className={`absolute pointer-events-none rounded-control ${selected ? 'ring-2 ring-gray-900 ring-offset-2' : ''}`}
       >
         {toolbarOpen && (
           <div
             data-testid="demo-block-toolbar"
-            className="absolute -top-10 left-1/2 -translate-x-1/2 z-10 rounded-xl border border-gray-200 bg-white shadow-[0_8px_24px_-8px_rgba(15,23,42,0.18)] animate-modal-in"
+            className="absolute -top-10 left-1/2 -translate-x-1/2 z-10 rounded-control border border-gray-200 bg-white shadow-[0_8px_24px_-8px_rgba(15,23,42,0.18)] animate-modal-in"
           >
             {/* Mirrors the real block toolbar: type label, then controls. */}
             <p className="px-2 pt-1 text-[9px] font-medium text-gray-600 capitalize">action</p>
@@ -134,7 +134,7 @@ export function DemoDoc({ headingHex, fontHeading, headingSize, buttonColor, sel
                 <span
                   key={c}
                   data-cursor={c === DEMO_GOLD ? 'toolbar-gold' : undefined}
-                  className={`size-3.5 rounded-full border border-black/10 ${
+                  className={`size-3.5 rounded-pill border border-black/10 ${
                     (buttonColor ?? branding.brand_color) === c ? 'ring-2 ring-gray-900 ring-offset-1' : ''
                   }`}
                   style={{ background: c }}

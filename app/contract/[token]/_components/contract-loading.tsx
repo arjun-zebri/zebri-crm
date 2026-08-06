@@ -16,13 +16,13 @@ export function ContractLoading({ radius }: ContractLoadingProps) {
       className="bg-surface shadow-sm border border-border p-8 space-y-4"
       style={{ borderRadius: radius }}
     >
-      <div className="h-5 w-32 bg-surface-muted rounded animate-pulse" />
-      <div className="h-7 w-72 bg-surface-muted rounded animate-pulse" />
+      <div className="h-5 w-32 bg-surface-muted rounded-control animate-pulse" />
+      <div className="h-7 w-72 bg-surface-muted rounded-control animate-pulse" />
       <div className="space-y-2 pt-4">
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="h-4 bg-surface-muted rounded animate-pulse"
+            className="h-4 bg-surface-muted rounded-control animate-pulse"
           />
         ))}
       </div>

@@ -102,18 +102,18 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       {isLoading && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 animate-pulse">
           <div className="space-y-4">
-            <div className="h-3 w-16 bg-gray-100 rounded-full" />
+            <div className="h-3 w-16 bg-gray-100 rounded-pill" />
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center justify-between py-3">
-                <div className="h-3 w-20 bg-gray-100 rounded-full" />
-                <div className="h-3 w-32 bg-gray-100 rounded-full" />
+                <div className="h-3 w-20 bg-gray-100 rounded-pill" />
+                <div className="h-3 w-32 bg-gray-100 rounded-pill" />
               </div>
             ))}
-            <div className="h-16 bg-gray-100 rounded-xl mt-2" />
+            <div className="h-16 bg-gray-100 rounded-control mt-2" />
           </div>
           <div>
-            <div className="h-3 w-16 bg-gray-100 rounded-full mb-4" />
-            {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-xl mb-2" />)}
+            <div className="h-3 w-16 bg-gray-100 rounded-pill mb-4" />
+            {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-control mb-2" />)}
           </div>
         </div>
       )}
@@ -167,7 +167,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
 
         {/* Lead Source */}
         <div
-          className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2 cursor-pointer"
+          className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2 cursor-pointer"
           onClick={() => {
             if (editingField !== "leadSource") {
               setEditingField("leadSource");
@@ -202,7 +202,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-48"
+                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-48"
                   sideOffset={4}
                   align="end"
                 >
@@ -269,7 +269,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
         ) : null}
 
         {/* Notes */}
-        <div className="group flex-1 flex flex-col py-3 rounded-xl -mx-2 px-2 min-h-0">
+        <div className="group flex-1 flex flex-col py-3 rounded-control -mx-2 px-2 min-h-0">
           <div className="flex items-start justify-between">
             <span className="text-sm text-gray-700 w-28 shrink-0 pt-0.5">Notes</span>
             <Pencil
@@ -391,7 +391,7 @@ function EditableRow({
 }: EditableRowProps) {
   const isEditing = editingField === fieldName;
   return (
-    <div className="group flex items-center justify-between py-2 rounded-xl -mx-2 px-2">
+    <div className="group flex items-center justify-between py-2 rounded-control -mx-2 px-2">
       <span className="text-sm text-gray-500 w-20 shrink-0">{label}</span>
       <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
         <input

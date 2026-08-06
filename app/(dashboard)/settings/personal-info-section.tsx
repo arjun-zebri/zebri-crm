@@ -209,7 +209,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   }, [saveSignal])
 
   const inputClass =
-    'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
+    'w-full border border-gray-200 rounded-control px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
 
   const selectedLabel = businessTypeOptions
     .filter((o) => businessTypes.includes(o.value))
@@ -281,7 +281,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-50 w-[var(--radix-popover-trigger-width)]"
+                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-50 w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -300,7 +300,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                           checked ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'
                         }`}
                       >
-                        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${checked ? 'bg-green-600 border-green-600' : 'border-gray-300'}`}>
+                        <span className={`w-4 h-4 rounded-control border flex items-center justify-center shrink-0 ${checked ? 'bg-green-600 border-green-600' : 'border-gray-300'}`}>
                           {checked && (
                             <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                               <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -395,7 +395,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               Used as your typed signature on contracts you send.
             </p>
             {mcSignatureName && (
-              <div className="mt-2 border border-gray-100 bg-gray-50 rounded-xl p-3">
+              <div className="mt-2 border border-gray-100 bg-gray-50 rounded-control p-3">
                 <p className="text-xs text-gray-500 mb-1">Preview</p>
                 <p className="text-2xl text-gray-900" style={{ fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
                   {mcSignatureName}

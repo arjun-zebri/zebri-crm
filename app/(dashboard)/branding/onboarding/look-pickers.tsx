@@ -6,7 +6,7 @@ import type { Density } from '@/lib/branding/themes'
 /** Shared tile styling for the pickers; single-width border so selection
  *  never shifts layout. */
 const OPTION_CLASSES = (selected: boolean) =>
-  `rounded-lg border cursor-pointer transition ${
+  `rounded-control border cursor-pointer transition ${
     selected ? 'border-border-strong bg-surface-muted' : 'border-border hover:border-border-strong'
   }`
 
@@ -36,7 +36,7 @@ export function ColorField({ label, value, onChange }: ColorFieldProps) {
           trigger={
             <button
               type="button"
-              className="w-8 h-8 shrink-0 rounded-lg border border-border cursor-pointer focus-visible:ring-2 focus-visible:ring-brand/50 transition"
+              className="w-8 h-8 shrink-0 rounded-control border border-border cursor-pointer focus-visible:ring-2 focus-visible:ring-brand/50 transition"
               style={{ backgroundColor: value }}
               aria-label={`Pick ${label.toLowerCase()}`}
             />
@@ -47,7 +47,7 @@ export function ColorField({ label, value, onChange }: ColorFieldProps) {
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full min-w-0 h-8 text-xs px-2.5 rounded-lg border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand"
+          className="w-full min-w-0 h-8 text-xs px-2.5 rounded-control border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand"
           aria-label={`${label} hex`}
         />
       </div>
@@ -109,7 +109,7 @@ function DensityGlyph({ density }: { density: Density }) {
   return (
     <div className={`flex flex-col ${gaps[density]}`} aria-hidden>
       {[0, 1, 2].map((i) => (
-        <div key={i} className={`h-0.5 rounded-full bg-text-subtle ${i === 2 ? 'w-5' : 'w-8'}`} />
+        <div key={i} className={`h-0.5 rounded-pill bg-text-subtle ${i === 2 ? 'w-5' : 'w-8'}`} />
       ))}
     </div>
   )

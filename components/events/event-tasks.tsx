@@ -204,7 +204,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
+          <div key={i} className="h-9 bg-gray-100 rounded-control animate-pulse" />
         ))}
       </div>
     )
@@ -219,7 +219,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
           <p className="text-sm text-gray-400 mb-3">No tasks yet.</p>
           <button
             onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
-            className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+            className="text-xs text-gray-500 border border-gray-200 rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add task
           </button>

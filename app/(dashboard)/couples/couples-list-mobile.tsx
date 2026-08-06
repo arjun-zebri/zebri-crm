@@ -36,10 +36,10 @@ export function CouplesListMobile({
               className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
             >
               <div className="flex-1 pr-3">
-                <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
-                <div className="h-3 bg-gray-100 rounded-md w-24" />
+                <div className="h-4 bg-gray-100 rounded-control w-36 mb-1.5" />
+                <div className="h-3 bg-gray-100 rounded-control w-24" />
               </div>
-              <div className="h-5 bg-gray-100 rounded-full w-16" />
+              <div className="h-5 bg-gray-100 rounded-pill w-16" />
             </div>
           ))
         : rows.map((row) => {
@@ -75,7 +75,7 @@ export function CouplesListMobile({
                   )}
                 </div>
                 <span
-                  className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${classes.pill}`}
+                  className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-medium whitespace-nowrap ${classes.pill}`}
                 >
                   {statusName}
                 </span>

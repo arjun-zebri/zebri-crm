@@ -77,7 +77,7 @@ function initials(name: string) {
 
 function CountBadge({ count }: { count: number }) {
   return (
-    <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] bg-gray-100 text-gray-400 font-normal tabular-nums">
+    <span className="inline-flex items-center justify-center rounded-control px-1.5 py-0.5 text-[10px] bg-gray-100 text-gray-400 font-normal tabular-nums">
       {count}
     </span>
   )
@@ -283,7 +283,7 @@ export function McPortalContacts({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className={`bg-white border border-gray-200 rounded-xl shadow-lg z-[70] py-1 ${addMode === 'vendor' ? 'w-72' : 'w-44'}`}
+          className={`bg-white border border-gray-200 rounded-control shadow-lg z-[70] py-1 ${addMode === 'vendor' ? 'w-72' : 'w-44'}`}
           sideOffset={6}
           align="end"
           onOpenAutoFocus={(e) => {
@@ -344,10 +344,10 @@ export function McPortalContacts({
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center gap-3 min-h-[40px]">
-              <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse shrink-0" />
+              <div className="w-8 h-8 rounded-pill bg-gray-100 animate-pulse shrink-0" />
               <div className="flex-1 space-y-1.5">
-                <div className="h-3 w-28 bg-gray-100 rounded-full animate-pulse" />
-                <div className="h-2.5 w-16 bg-gray-100 rounded-full animate-pulse" />
+                <div className="h-3 w-28 bg-gray-100 rounded-pill animate-pulse" />
+                <div className="h-2.5 w-16 bg-gray-100 rounded-pill animate-pulse" />
               </div>
             </div>
           ))}
@@ -372,9 +372,9 @@ export function McPortalContacts({
                 {couplePartners.map((p) => (
                   <div
                     key={p.role}
-                    className="flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-lg"
+                    className="flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-control"
                   >
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0 select-none bg-emerald-50 text-emerald-600">
+                    <div className="w-8 h-8 rounded-pill flex items-center justify-center text-xs font-medium shrink-0 select-none bg-emerald-50 text-emerald-600">
                       {p.name ? initials(p.name) : '?'}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -406,10 +406,10 @@ export function McPortalContacts({
                   {items.map((person) => (
                     <div
                       key={person.id}
-                      className="flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-lg hover:bg-gray-50 transition cursor-pointer group"
+                      className="flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-control hover:bg-gray-50 transition cursor-pointer group"
                       onClick={() => onEditPerson(person, roles)}
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0 select-none ${avatarColor}`}>
+                      <div className={`w-8 h-8 rounded-pill flex items-center justify-center text-xs font-medium shrink-0 select-none ${avatarColor}`}>
                         {person.full_name ? initials(person.full_name) : '?'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -427,7 +427,7 @@ export function McPortalContacts({
                           <AudioPlayButton
                             src={person.audio_url}
                             title="Play pronunciation"
-                            className="flex items-center justify-center w-7 h-7 transition cursor-pointer rounded-lg"
+                            className="flex items-center justify-center w-7 h-7 transition cursor-pointer rounded-control"
                             idleClassName="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
                             playingClassName="text-emerald-600 bg-emerald-50"
                           />
@@ -452,7 +452,7 @@ export function McPortalContacts({
                   <div
                     key={link.id}
                     onClick={() => setEditingContact(link.vendor)}
-                    className="group flex items-center py-2.5 -mx-2 px-2 rounded-lg hover:bg-gray-50 transition cursor-pointer"
+                    className="group flex items-center py-2.5 -mx-2 px-2 rounded-control hover:bg-gray-50 transition cursor-pointer"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900">{link.vendor.name}</p>

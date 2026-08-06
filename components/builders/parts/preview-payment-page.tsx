@@ -53,8 +53,8 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
 
   if (loading || !branding) {
     return (
-      <div className="flex h-full items-center justify-center rounded-card border border-border bg-surface-muted/40">
-        <div className="h-3 w-32 animate-pulse rounded bg-surface-muted" />
+      <div className="flex h-full items-center justify-center rounded-control border border-border bg-surface-muted/40">
+        <div className="h-3 w-32 animate-pulse rounded-control bg-surface-muted" />
       </div>
     );
   }
@@ -105,7 +105,7 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
 
   return (
     <div
-      className={`h-full overflow-y-auto rounded-card border border-border ${padding.page}`}
+      className={`h-full overflow-y-auto rounded-control border border-border ${padding.page}`}
       style={{
         backgroundColor: bg,
         color: branding.text_color,

@@ -36,7 +36,7 @@ export function WizardChrome({ step, saving, onBack, onSkip, onNext, onFinish }:
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-3 min-w-0">
         <div
-          className="h-1 w-24 sm:w-40 rounded-full bg-surface-muted overflow-hidden"
+          className="h-1 w-24 sm:w-40 rounded-pill bg-surface-muted overflow-hidden"
           role="progressbar"
           aria-valuenow={step}
           aria-valuemin={1}

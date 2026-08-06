@@ -75,7 +75,7 @@ export function ContactProfile({
       >
         <div
           data-testid="contact-profile-panel"
-          className="bg-white rounded-2xl shadow-xl w-full sm:max-w-2xl h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
+          className="bg-white rounded-control shadow-xl w-full sm:max-w-2xl h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Compact header */}
@@ -86,12 +86,12 @@ export function ContactProfile({
                 <h2 className="text-lg font-semibold text-gray-900 truncate">
                   {vendor.name}
                 </h2>
-                <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                <span className="shrink-0 px-2 py-0.5 rounded-pill text-xs font-medium bg-gray-100 text-gray-600">
                   {CATEGORY_LABELS[vendor.category]}
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div
-                    className={`w-1.5 h-1.5 rounded-full ${
+                    className={`w-1.5 h-1.5 rounded-pill ${
                       vendor.status === "active"
                         ? "bg-emerald-400"
                         : "bg-gray-300"
@@ -109,14 +109,14 @@ export function ContactProfile({
                   <Popover.Trigger asChild>
                     <button
                       title="Actions"
-                      className="shrink-0 p-1.5 ring-1 ring-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                      className="shrink-0 p-1.5 ring-1 ring-gray-200 rounded-control text-gray-700 hover:bg-gray-100 transition cursor-pointer"
                     >
                       <MoreHorizontal size={16} strokeWidth={1.5} />
                     </button>
                   </Popover.Trigger>
                   <Popover.Portal>
                     <Popover.Content
-                      className="bg-white border border-gray-200 rounded-xl shadow-lg z-[70] w-44 py-1.5"
+                      className="bg-white border border-gray-200 rounded-control shadow-lg z-[70] w-44 py-1.5"
                       sideOffset={6}
                       align="end"
                     >
@@ -169,7 +169,7 @@ export function ContactProfile({
                 </Popover.Root>
                 <button
                   onClick={onClose}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-control transition cursor-pointer"
                 >
                   <X size={18} strokeWidth={1.5} />
                 </button>
@@ -179,7 +179,7 @@ export function ContactProfile({
               <div className="hidden sm:flex items-center">
                 <button
                   onClick={() => setDeleteConfirm(true)}
-                  className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                  className="p-1.5 rounded-control text-red-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
                 >
                   <Trash2 size={16} strokeWidth={1.5} />
                 </button>
@@ -191,7 +191,7 @@ export function ContactProfile({
                         <a
                           href={`tel:${vendor.phone}`}
                           title={`Call ${vendor.phone}`}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                          className="p-1.5 rounded-control text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                         >
                           <Phone size={16} strokeWidth={1.5} />
                         </a>
@@ -200,7 +200,7 @@ export function ContactProfile({
                         <a
                           href={`mailto:${vendor.email}`}
                           title={`Email ${vendor.email}`}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                          className="p-1.5 rounded-control text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                         >
                           <Mail size={16} strokeWidth={1.5} />
                         </a>
@@ -211,7 +211,7 @@ export function ContactProfile({
                           target="_blank"
                           rel="noopener noreferrer"
                           title="WhatsApp"
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                          className="p-1.5 rounded-control text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                         >
                           <PiWhatsappLogoLight size={17} />
                         </a>
@@ -222,7 +222,7 @@ export function ContactProfile({
                 <div className="w-px h-4 bg-gray-200 mx-2" />
                 <button
                   onClick={onClose}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-control transition cursor-pointer"
                 >
                   <X size={18} strokeWidth={1.5} />
                 </button>

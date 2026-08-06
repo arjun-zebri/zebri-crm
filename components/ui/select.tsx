@@ -163,7 +163,7 @@ export function Select({
             // (z-[80]); at z-50 it opened *behind* any modal it was used in.
             // Callers may override. Height is capped to the space below the
             // trigger so long lists scroll instead of running off-screen.
-            className={`${contentClassName} max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-card border border-border bg-surface text-text shadow-lg animate-fade-in`}
+            className={`${contentClassName} max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-control border border-border bg-surface text-text shadow-lg animate-fade-in`}
           >
             <RadixSelect.Viewport className="max-h-(--radix-select-content-available-height) overflow-y-auto p-1">
               {options.map((opt) => (

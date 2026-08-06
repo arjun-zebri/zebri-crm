@@ -110,10 +110,10 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                   className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
                 >
                   <div className="flex-1 pr-3">
-                    <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
-                    <div className="h-3 bg-gray-100 rounded-md w-24" />
+                    <div className="h-4 bg-gray-100 rounded-control w-36 mb-1.5" />
+                    <div className="h-3 bg-gray-100 rounded-control w-24" />
                   </div>
-                  <div className="h-5 bg-gray-100 rounded-full w-16" />
+                  <div className="h-5 bg-gray-100 rounded-pill w-16" />
                 </div>
               ))
             : mapped.map((r) => (
@@ -189,7 +189,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                   <tr key={i} className="animate-pulse">
                     {[0, 1, 2, 3, 4, 5].map((j) => (
                       <td key={j} className="pl-0 pr-2 py-2 border-b border-gray-100">
-                        <div className="h-4 bg-gray-100 rounded-md w-24" />
+                        <div className="h-4 bg-gray-100 rounded-control w-24" />
                       </td>
                     ))}
                   </tr>

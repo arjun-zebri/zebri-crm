@@ -21,7 +21,7 @@ const TOKEN_RE = /\{\{\s*([^}]+?)\s*\}\}/g
 
 function VarChip({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-block rounded bg-blue-50 px-1.5 py-0.5 text-sm font-medium text-blue-700">
+    <span className="inline-block rounded-control bg-blue-50 px-1.5 py-0.5 text-sm font-medium text-blue-700">
       {children}
     </span>
   )
@@ -53,7 +53,7 @@ export function EmailTemplatePreview({ subject, content }: EmailTemplatePreviewP
   const bodyHtml = useMemo(() => renderTemplateChips(content), [content])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-control border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
         <p className="text-xs text-text-subtle">Subject</p>
         <p className="text-sm font-medium text-text">

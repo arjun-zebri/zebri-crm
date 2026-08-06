@@ -76,7 +76,7 @@ export function SignatureEditor({ value, onChange, placeholder = 'Warm regards, 
   if (!editor) return null
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+    <div className="border border-gray-200 rounded-control overflow-hidden bg-white">
       <SignatureToolbar editor={editor} />
       <EditorContent
         editor={editor}

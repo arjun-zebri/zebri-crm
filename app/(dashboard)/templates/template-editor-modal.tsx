@@ -228,13 +228,13 @@ export function TemplateEditorModal({
             <div className="flex items-center gap-1">
             <EmailAppearancePopover prefs={prefs} onChange={setPrefs} />
             {/* Same segmented device toggle as the branding editor. */}
-            <div className="flex items-center rounded-lg bg-surface-muted p-0.5">
+            <div className="flex items-center rounded-control bg-surface-muted p-0.5">
               <button
                 type="button"
                 onClick={() => setDevice('desktop')}
                 aria-label="Desktop preview"
                 title="Desktop"
-                className={`inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-md transition ${
+                className={`inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-control transition ${
                   device === 'desktop' ? 'bg-card text-text shadow-sm' : 'text-text-subtle hover:text-text'
                 }`}
               >
@@ -245,7 +245,7 @@ export function TemplateEditorModal({
                 onClick={() => setDevice('mobile')}
                 aria-label="Mobile preview"
                 title="Mobile"
-                className={`inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-md transition ${
+                className={`inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-control transition ${
                   device === 'mobile' ? 'bg-card text-text shadow-sm' : 'text-text-subtle hover:text-text'
                 }`}
               >

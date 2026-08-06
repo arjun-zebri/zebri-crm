@@ -141,7 +141,7 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
     return (
       <div className="space-y-3 animate-pulse">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-gray-100 rounded-xl" />
+          <div key={i} className="h-12 bg-gray-100 rounded-control" />
         ))}
       </div>
     );
@@ -174,7 +174,7 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
       <div className="border-t border-gray-200 pt-6 flex items-center justify-between gap-3">
         <button
           onClick={() => setIsAddOpen(true)}
-          className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
+          className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
         >
           <Plus size={11} strokeWidth={2} />
           Add status
@@ -182,7 +182,7 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
         {hasChanges && (
           <button
             onClick={handleSaveChanges}
-            className="inline-flex items-center px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
+            className="inline-flex items-center px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
           >
             Save changes
           </button>

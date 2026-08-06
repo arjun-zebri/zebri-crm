@@ -61,7 +61,7 @@ function EmptyStateCard({
   if (templates.length === 0) return null;
 
   return (
-    <div className="rounded-card border border-border bg-surface-muted/40 p-4 space-y-3">
+    <div className="rounded-control border border-border bg-surface-muted/40 p-4 space-y-3">
       <div className="flex items-center gap-2">
         <Layers size={14} strokeWidth={1.5} className="text-text-muted" />
         <p className="text-body font-medium text-text">Start from a package or template</p>
@@ -118,7 +118,7 @@ function InlinePicker({
         <Popover.Content
           align="start"
           sideOffset={4}
-          className="z-[90] w-64 rounded-card border border-border bg-surface shadow-lg p-1 animate-fade-in"
+          className="z-[90] w-64 rounded-control border border-border bg-surface shadow-lg p-1 animate-fade-in"
         >
           <p className="px-2 py-1 text-caption font-medium uppercase tracking-wide text-text-muted">
             Packages &amp; templates

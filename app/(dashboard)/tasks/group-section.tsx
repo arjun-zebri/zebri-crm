@@ -103,7 +103,7 @@ export function GroupSection({
   }
 
   return (
-    <section ref={setDroppableRef} className={`mb-6 ${isOver ? 'bg-emerald-50/30 rounded-lg' : ''}`}>
+    <section ref={setDroppableRef} className={`mb-6 ${isOver ? 'bg-emerald-50/30 rounded-control' : ''}`}>
       <div
         ref={group ? sortable.setNodeRef : undefined}
         style={headerStyle}
@@ -119,7 +119,7 @@ export function GroupSection({
               if (e.key === 'Enter') commitRename()
               if (e.key === 'Escape') setEditing(false)
             }}
-            className="text-sm font-medium text-gray-900 bg-white border border-blue-300 rounded px-1.5 py-0.5 outline-none ring-2 ring-blue-100"
+            className="text-sm font-medium text-gray-900 bg-white border border-blue-300 rounded-control px-1.5 py-0.5 outline-none ring-2 ring-blue-100"
           />
         ) : (
           header
@@ -133,7 +133,7 @@ export function GroupSection({
               <Popover.Trigger asChild>
                 <button
                   type="button"
-                  className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer opacity-0 group-hover/header:opacity-100 focus:opacity-100"
+                  className="p-1 rounded-control text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer opacity-0 group-hover/header:opacity-100 focus:opacity-100"
                   aria-label="Change colour"
                 >
                   <Palette size={12} strokeWidth={1.5} />
@@ -143,7 +143,7 @@ export function GroupSection({
                 <Popover.Content
                   sideOffset={4}
                   align="end"
-                  className="z-[70] bg-white border border-gray-200 rounded-xl shadow-lg p-2 flex gap-1.5"
+                  className="z-[70] bg-white border border-gray-200 rounded-control shadow-lg p-2 flex gap-1.5"
                 >
                   {TASK_GROUP_COLORS.map((c) => (
                     <button
@@ -153,7 +153,7 @@ export function GroupSection({
                         onRecolor(group.id, c)
                         setColorOpen(false)
                       }}
-                      className={`w-5 h-5 rounded-full border-2 transition cursor-pointer ${
+                      className={`w-5 h-5 rounded-pill border-2 transition cursor-pointer ${
                         group.color === c ? 'border-gray-900' : 'border-transparent'
                       } ${TASK_GROUP_DOT_CLASS[c]}`}
                       aria-label={c}
@@ -168,7 +168,7 @@ export function GroupSection({
               <Popover.Trigger asChild>
                 <button
                   type="button"
-                  className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer opacity-0 group-hover/header:opacity-100 focus:opacity-100"
+                  className="p-1 rounded-control text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer opacity-0 group-hover/header:opacity-100 focus:opacity-100"
                   aria-label="Group menu"
                 >
                   <MoreHorizontal size={13} strokeWidth={1.5} />
@@ -178,7 +178,7 @@ export function GroupSection({
                 <Popover.Content
                   sideOffset={4}
                   align="end"
-                  className="z-[70] bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-40"
+                  className="z-[70] bg-white border border-gray-200 rounded-control shadow-lg py-1 min-w-40"
                 >
                   {onRename && (
                     <button
@@ -214,7 +214,7 @@ export function GroupSection({
             <button
               type="button"
               onClick={onAddTask}
-              className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer opacity-0 group-hover/header:opacity-100 focus:opacity-100"
+              className="p-1 rounded-control text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer opacity-0 group-hover/header:opacity-100 focus:opacity-100"
               aria-label="Add task"
             >
               <Plus size={13} strokeWidth={1.5} />
@@ -226,7 +226,7 @@ export function GroupSection({
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className="ml-auto p-0.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition cursor-pointer"
+          className="ml-auto p-0.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-control transition cursor-pointer"
           aria-label={collapsed ? 'Expand group' : 'Collapse group'}
         >
           {collapsed ? (

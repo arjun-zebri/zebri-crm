@@ -62,7 +62,7 @@ function TemplateRow({
         type="button"
         onClick={() => onSelect(template)}
         aria-current={active ? 'true' : undefined}
-        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-control px-2 py-2 text-left transition ${
           active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
         }`}
       >
@@ -120,7 +120,7 @@ export function TemplatesLibrary({ templates, archived = [], isLoading, isError,
       {groups.map((group) => (
         <section key={group.key}>
           <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
-            {group.dotClass && <span className={`h-2 w-2 rounded-full ${group.dotClass}`} />}
+            {group.dotClass && <span className={`h-2 w-2 rounded-pill ${group.dotClass}`} />}
             {group.label}
           </h3>
           <ul className="mt-1 space-y-0.5">

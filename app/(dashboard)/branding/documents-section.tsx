@@ -75,7 +75,7 @@ export function DocumentsSection({ enabledSurfaces, onToggleSurface }: Documents
               type="button"
               onClick={() => handleToggle(surface.id)}
               disabled={isLastEnabled}
-              className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition cursor-pointer text-left ${
+              className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-control transition cursor-pointer text-left ${
                 isLastEnabled
                   ? 'opacity-50 cursor-not-allowed'
                   : armed

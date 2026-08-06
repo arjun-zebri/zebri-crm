@@ -43,7 +43,7 @@ export function ContractSignatureDisplay({
 }: ContractSignatureDisplayProps) {
   if (kind === 'signed') {
     return (
-      <div className="rounded-card border border-success/30 bg-success/10 p-4 space-y-1.5">
+      <div className="rounded-control border border-success/30 bg-success/10 p-4 space-y-1.5">
         <div className="flex items-center gap-2 text-body text-success">
           <CheckCircle2 size={16} strokeWidth={1.5} />
           <span className="font-medium">
@@ -60,7 +60,7 @@ export function ContractSignatureDisplay({
   }
 
   return (
-    <div className="rounded-card border border-danger/30 bg-danger/10 p-4 space-y-1.5">
+    <div className="rounded-control border border-danger/30 bg-danger/10 p-4 space-y-1.5">
       <div className="flex items-center gap-2 text-body text-danger">
         <XCircle size={16} strokeWidth={1.5} />
         <span className="font-medium">Declined</span>

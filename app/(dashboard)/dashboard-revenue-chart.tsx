@@ -68,16 +68,16 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
             <ChevronDown className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
           </button>
           {modeOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-control shadow-lg z-10 min-w-[120px]">
               <button
                 onClick={() => { setMode('revenue'); setModeOpen(false) }}
-                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-t-lg ${mode === 'revenue' ? 'font-medium text-gray-900' : 'text-gray-600'}`}
+                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-t-control ${mode === 'revenue' ? 'font-medium text-gray-900' : 'text-gray-600'}`}
               >
                 Revenue
               </button>
               <button
                 onClick={() => { setMode('leads'); setModeOpen(false) }}
-                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-b-lg ${mode === 'leads' ? 'font-medium text-gray-900' : 'text-gray-600'}`}
+                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-b-control ${mode === 'leads' ? 'font-medium text-gray-900' : 'text-gray-600'}`}
               >
                 Leads
               </button>
@@ -89,8 +89,8 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
 
       {isLoading ? (
         <div className="animate-pulse flex flex-col flex-1 min-h-0">
-          <div className="h-8 w-32 bg-gray-100 rounded-md mb-4" />
-          <div className="flex-1 min-h-0 bg-gray-100 rounded-lg" />
+          <div className="h-8 w-32 bg-gray-100 rounded-control mb-4" />
+          <div className="flex-1 min-h-0 bg-gray-100 rounded-control" />
         </div>
       ) : !data || data.chartData.length === 0 ? (
         <div className="text-center py-16">
@@ -104,7 +104,7 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
             </span>
             {data.percentChange !== 0 && (
               <span
-                className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-md ${
+                className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-control ${
                   data.percentChange > 0
                     ? 'bg-emerald-50 text-emerald-600'
                     : 'bg-red-50 text-red-600'

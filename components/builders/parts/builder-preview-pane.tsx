@@ -69,7 +69,7 @@ export function BuilderPreviewPane({
     // separate the preview pane from the editor without a border.
     // Padding grows on lg so the inner preview card has breathing
     // room.
-    <div className="flex h-full flex-col gap-3 rounded-card bg-surface-muted/60 p-4 sm:p-5">
+    <div className="flex h-full flex-col gap-3 rounded-control bg-surface-muted/60 p-4 sm:p-5">
       {/* Header: Preview label + tabs */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <h2 className="text-section font-semibold text-text">Preview</h2>
@@ -88,7 +88,7 @@ export function BuilderPreviewPane({
         ) : null}
 
         <div
-          className={`flex items-center gap-1 rounded-card border border-border bg-surface p-1 ${
+          className={`flex items-center gap-1 rounded-control border border-border bg-surface p-1 ${
             onDownloadPdf ? '' : 'ml-auto'
           }`}
         >

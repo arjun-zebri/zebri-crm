@@ -50,7 +50,7 @@ export function AutomationsFilter({
             key={p.value}
             type="button"
             onClick={() => onStatusChange(p.value)}
-            className={`text-xs px-2.5 py-1 rounded-md transition cursor-pointer ${
+            className={`text-xs px-2.5 py-1 rounded-control transition cursor-pointer ${
               status === p.value
                 ? 'bg-text text-surface'
                 : 'text-text-muted hover:text-text hover:bg-surface-muted'
@@ -60,7 +60,7 @@ export function AutomationsFilter({
           </button>
         ))}
       </div>
-      <div className="flex items-center gap-2 px-2.5 py-1 bg-surface-muted rounded-md ml-auto min-w-[200px] max-w-xs">
+      <div className="flex items-center gap-2 px-2.5 py-1 bg-surface-muted rounded-control ml-auto min-w-[200px] max-w-xs">
         <Search size={13} strokeWidth={1.5} className="text-text-muted shrink-0" />
         <input
           type="text"

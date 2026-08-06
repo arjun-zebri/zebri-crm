@@ -38,7 +38,7 @@ export function WizardChrome(props: WizardChromeProps) {
         {!props.intro && (
           <>
             <div
-              className="h-1 w-24 sm:w-40 rounded-full bg-surface-muted overflow-hidden"
+              className="h-1 w-24 sm:w-40 rounded-pill bg-surface-muted overflow-hidden"
               role="progressbar"
               aria-valuenow={props.step}
               aria-valuemin={1}
@@ -67,7 +67,7 @@ export function WizardChrome(props: WizardChromeProps) {
           Skip, use defaults
         </Button>
         {props.intro ? (
-          <Button variant="primary" size="sm" onClick={props.onStart} disabled={props.loading} className="rounded-xl">
+          <Button variant="primary" size="sm" onClick={props.onStart} disabled={props.loading} className="rounded-control">
             Get started
             <ChevronRight size={14} strokeWidth={1.5} />
           </Button>
@@ -79,7 +79,7 @@ export function WizardChrome(props: WizardChromeProps) {
               </Button>
             )}
             {props.step < TOTAL_STEPS ? (
-              <Button variant="primary" size="sm" onClick={props.onNext} disabled={props.loading} className="rounded-xl">
+              <Button variant="primary" size="sm" onClick={props.onNext} disabled={props.loading} className="rounded-control">
                 Next
                 <ChevronRight size={14} strokeWidth={1.5} />
               </Button>
@@ -90,7 +90,7 @@ export function WizardChrome(props: WizardChromeProps) {
                 onClick={props.onFinish}
                 disabled={props.loading || !props.canFinish}
                 loading={props.loading}
-                className="rounded-xl"
+                className="rounded-control"
               >
                 Finish setup
               </Button>

@@ -17,7 +17,6 @@ const TYPE_SCALE = [
   { cls: 'text-caption', name: 'text-caption', size: '0.75rem', legacy: 'text-xs' },
 ];
 
-const RADII = ['rounded-sm', 'rounded-md', 'rounded-lg', 'rounded-xl', 'rounded-2xl', 'rounded-full'];
 const STROKES = [1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
 /** Typography, radius, icon-weight and padding specs plus their conflicts. */
@@ -60,37 +59,49 @@ export function FoundationsShape() {
         </DemoRow>
       </Conflict>
 
-      <Spec name="Radius" file="app/globals.css" description="Three token radii.">
-        <DemoGrid cols={3}>
-          <Demo label="rounded-control · 6px · buttons, inputs">
+      <Spec name="Radius" file="app/globals.css" description="Two tokens, deliberately.">
+        <DemoGrid cols={2}>
+          <Demo label="rounded-control · 6px · everything with corners">
             <div className="h-14 rounded-control border border-border bg-surface-muted" />
           </Demo>
-          <Demo label="rounded-card · 12px · cards, panels">
-            <div className="h-14 rounded-card border border-border bg-surface-muted" />
-          </Demo>
-          <Demo label="rounded-pill · 9999px · badges">
+          <Demo label="rounded-pill · 9999px · pills, chips, avatars, dots">
             <div className="h-14 rounded-pill border border-border bg-surface-muted" />
           </Demo>
         </DemoGrid>
       </Spec>
 
       <Conflict
-        title="Six competing corner radii across the app"
+        title="Resolved: six rendered radii collapsed to two"
         group="radius"
         recommendation={
           <>
-            Standardise on the three tokens. <code>rounded-xl</code> (12px) already equals{' '}
-            <code>rounded-card</code> and <code>rounded-md</code> (6px) equals{' '}
-            <code>rounded-control</code>, so most of the debt is a pure rename with no visual change
-            at all.
+            The app rendered 2px, 4px, 6px, 8px, 12px and 16px corners against a three-token
+            system almost nobody followed. Everything with corners is now <code>rounded-control</code>{' '}
+            (6px) and everything round is <code>rounded-pill</code>. The <code>--radius-card</code>{' '}
+            (12px) and <code>rounded-2xl</code> (16px) tiers are gone, so cards and modals read
+            flatter than before. That is the intended change.
+            <br />
+            Two arbitrary values survive on purpose: a 12px swatch at <code>rounded-[4px]</code> and
+            a 2px progress segment, both of which 6px would turn into blobs. Public branded surfaces
+            set <code>borderRadius</code> inline from each MC&apos;s brand kit and are not governed
+            by these tokens.
           </>
         }
       >
         <DemoRow>
-          {RADII.map((cls) => (
-            <div key={cls} className="space-y-1 text-center">
+          {(
+            [
+              ['2px', 'rounded-[2px]'],
+              ['4px', 'rounded-[4px]'],
+              ['6px (token)', 'rounded-control'],
+              ['8px', 'rounded-[8px]'],
+              ['12px', 'rounded-[12px]'],
+              ['16px', 'rounded-[16px]'],
+            ] as const
+          ).map(([label, cls]) => (
+            <div key={label} className="space-y-1 text-center">
               <div className={`h-12 w-16 border border-border-strong bg-surface ${cls}`} />
-              <code className="text-caption text-text-subtle">{cls}</code>
+              <code className="text-caption text-text-subtle">{label}</code>
             </div>
           ))}
         </DemoRow>
@@ -143,7 +154,7 @@ export function FoundationsShape() {
       >
         <DemoRow>
           {['p-2', 'p-3', 'p-4', 'p-5', 'p-6', 'p-8'].map((p) => (
-            <div key={p} className={`rounded-card border border-border bg-surface ${p}`}>
+            <div key={p} className={`rounded-control border border-border bg-surface ${p}`}>
               <div className="h-6 w-16 rounded-control bg-surface-emphasis" />
               <code className="mt-1 block text-center text-caption text-text-subtle">{p}</code>
             </div>

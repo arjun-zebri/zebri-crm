@@ -61,7 +61,7 @@ export function ContractBodyEditor({
         // surface exactly. Previously this used `prose prose-sm`
         // which rendered noticeably tighter than what the couple
         // actually saw.
-        className="contract-content rounded-card border border-border bg-surface-muted/40 p-4 text-sm"
+        className="contract-content rounded-control border border-border bg-surface-muted/40 p-4 text-sm"
         // Locked HTML is server-rendered from the TipTap JSON at
         // send time via `renderContractHtml` — sanitised on the way
         // out. Safe to dangerouslySetInnerHTML here.
@@ -89,7 +89,7 @@ export function ContractBodyEditor({
               <Popover.Content
                 align="end"
                 sideOffset={4}
-                className="z-[90] w-72 rounded-card border border-border bg-surface shadow-lg p-2 animate-fade-in"
+                className="z-[90] w-72 rounded-control border border-border bg-surface shadow-lg p-2 animate-fade-in"
               >
                 <div className="max-h-64 overflow-y-auto">
                   {templates.map((t) => (
@@ -121,7 +121,7 @@ export function ContractBodyEditor({
 
       <p className="text-caption text-text-subtle">
         Variables like{' '}
-        <span className="font-mono bg-surface-muted px-1 py-0.5 rounded text-text-muted">
+        <span className="font-mono bg-surface-muted px-1 py-0.5 rounded-control text-text-muted">
           {'{{couple_name}}'}
         </span>{' '}
         are replaced with real data when you send the contract.

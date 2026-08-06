@@ -273,7 +273,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
       {isLoading ? (
         <div className="space-y-2" aria-hidden="true">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
+            <div key={i} className="h-9 bg-gray-100 rounded-control animate-pulse" />
           ))}
         </div>
       ) : all.length === 0 ? (

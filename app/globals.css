@@ -85,9 +85,14 @@
   --color-info: var(--info);
 
   /* Radii (theme-agnostic) */
-  --radius-control: 0.375rem; /* 6px — buttons, inputs */
-  --radius-card:    0.75rem;  /* 12px — cards, panels (matches dashboard `rounded-xl`) */
-  --radius-pill:    9999px;
+  /* Two radii, deliberately. Everything with corners is 6px; anything
+     that should read as a pill or a circle is fully round. The 12px
+     card tier and the 16px overlay tier were removed on 2026-08-06:
+     six radii were rendering across the app against three tokens, and
+     collapsing to one corner value is simpler to hold than a scale
+     nobody was following. */
+  --radius-control: 0.375rem; /* 6px — everything with corners */
+  --radius-pill:    9999px;   /* pills, chips, avatars, dots */
 
   /* Typography (semantic — anchored to CLAUDE.md typography rules) */
   --text-display: 1.875rem; /* page titles  (≡ text-3xl + font-semibold) */

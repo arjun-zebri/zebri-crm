@@ -43,7 +43,7 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
   // Hold a quiet skeleton until the MC's branding resolves — rendering the
   // default palette first would flash the wrong brand colour for a beat.
   if (loading && !branding) {
-    return <div className={`${heightClass} animate-pulse rounded-2xl`} style={{ backgroundColor: theme.pageBg, opacity: 0.5 }} />
+    return <div className={`${heightClass} animate-pulse rounded-control`} style={{ backgroundColor: theme.pageBg, opacity: 0.5 }} />
   }
 
   return (
@@ -51,7 +51,7 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
     // preview moves between questions; the page scrolls internally, exactly
     // like a phone viewport would.
     <div
-      className={`flex ${heightClass} flex-col overflow-y-auto rounded-2xl p-6 sm:p-8`}
+      className={`flex ${heightClass} flex-col overflow-y-auto rounded-control p-6 sm:p-8`}
       style={{ background: theme.pageBg, color: theme.textColor, fontFamily: theme.bodyStack }}
     >
       {/* The live typeform page centres the question vertically in the
@@ -64,7 +64,7 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
           {theme.logoUrl ? (
             // User-uploaded brand asset, not a next/image source.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+            <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-pill object-cover" />
           ) : null}
           <span style={{ fontSize: `${theme.bodyFontSize}px`, fontWeight: 500, color: theme.mutedColor }}>
             {theme.businessName}

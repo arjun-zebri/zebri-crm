@@ -60,7 +60,7 @@ export function LineItemPreview({ eyebrow, name, subtitle, meta, actions, items,
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </div>
 
-      <div className="mt-5 overflow-hidden rounded-lg border border-border">
+      <div className="mt-5 overflow-hidden rounded-control border border-border">
         <div className="flex items-center justify-between bg-surface-muted px-4 py-2.5">
           <span className="text-xs font-medium uppercase tracking-wide text-text-subtle">
             Line items

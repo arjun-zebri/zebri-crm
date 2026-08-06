@@ -43,7 +43,7 @@ export function Select<V extends string>({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className={`inline-flex items-center justify-between gap-1.5 border border-gray-200 rounded-lg ${triggerSize} bg-white text-left text-gray-900 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer w-full transition ${className}`}
+          className={`inline-flex items-center justify-between gap-1.5 border border-gray-200 rounded-control ${triggerSize} bg-white text-left text-gray-900 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer w-full transition ${className}`}
           style={selected?.fontFamily ? { fontFamily: selected.fontFamily } : undefined}
         >
           <span className="truncate flex-1">
@@ -56,7 +56,7 @@ export function Select<V extends string>({
         <Popover.Content
           align={align}
           sideOffset={4}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl p-1 z-[60] animate-modal-in"
+          className="bg-white border border-gray-200 rounded-control shadow-xl p-1 z-[60] animate-modal-in"
           style={{
             minWidth: 'var(--radix-popover-trigger-width)',
             maxHeight: 'min(360px, var(--radix-popover-content-available-height))',
@@ -73,7 +73,7 @@ export function Select<V extends string>({
                   onChange(opt.value)
                   setOpen(false)
                 }}
-                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-sm hover:bg-gray-50 cursor-pointer ${
+                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-control text-sm hover:bg-gray-50 cursor-pointer ${
                   active ? 'text-gray-900' : 'text-gray-600'
                 }`}
                 style={opt.fontFamily ? { fontFamily: opt.fontFamily } : undefined}

@@ -46,7 +46,7 @@ export function SectionAudit() {
       title="Audit summary"
       description="Every scanned group, ordered by how much off-system usage it carries. Adoption is the share of uses already on the token or primitive."
     >
-      <div className="overflow-x-auto rounded-card border border-border">
+      <div className="overflow-x-auto rounded-control border border-border">
         <table className="w-full min-w-[36rem] text-body">
           <thead className="bg-surface-muted text-caption text-text-muted">
             <tr className="text-left">
@@ -81,14 +81,12 @@ export function SectionAudit() {
         </table>
       </div>
 
-      <div className="rounded-card border border-border bg-surface-muted p-5">
+      <div className="rounded-control border border-border bg-surface-muted p-5">
         <h3 className="text-body font-semibold text-text">Suggested order</h3>
         <ol className="mt-2 space-y-2 text-caption text-text-muted">
           <li>
-            <span className="font-medium text-text">1. Free renames.</span>{' '}
-            <code>rounded-xl</code> to <code>rounded-card</code> and <code>rounded-md</code> to{' '}
-            <code>rounded-control</code> are pixel-identical swaps that clear most of the radius
-            debt with zero visual risk.
+            <span className="font-medium text-text line-through">1. Free renames.</span> Done.
+            563 sites swapped; radius adoption went from 13% to 65% with no visual change.
           </li>
           <li>
             <span className="font-medium text-text">2. The four grey aliases.</span>{' '}

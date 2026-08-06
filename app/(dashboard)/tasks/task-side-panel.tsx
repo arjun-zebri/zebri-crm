@@ -221,7 +221,7 @@ function TaskSidePanelInner({
               <button
                 type="button"
                 onClick={() => setDeleteConfirm(true)}
-                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl text-red-600 hover:bg-red-50 transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-control text-red-600 hover:bg-red-50 transition cursor-pointer"
               >
                 <Trash2 size={14} strokeWidth={1.5} />
                 Delete task
@@ -298,12 +298,12 @@ function TaskSidePanelInner({
                   <Popover.Trigger asChild>
                     <button
                       type="button"
-                      className="w-full text-left px-2 py-1 -mx-2 rounded hover:bg-gray-50 transition cursor-pointer"
+                      className="w-full text-left px-2 py-1 -mx-2 rounded-control hover:bg-gray-50 transition cursor-pointer"
                     >
                       {selectedGroup ? (
                         <span className="inline-flex items-center gap-1.5 text-sm text-gray-900">
                           <span
-                            className={`w-2 h-2 rounded-full shrink-0 ${TASK_GROUP_DOT_CLASS[selectedGroup.color]}`}
+                            className={`w-2 h-2 rounded-pill shrink-0 ${TASK_GROUP_DOT_CLASS[selectedGroup.color]}`}
                           />
                           {selectedGroup.name}
                         </span>
@@ -316,7 +316,7 @@ function TaskSidePanelInner({
                     <Popover.Content
                       sideOffset={4}
                       align="start"
-                      className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-56 max-h-56 overflow-y-auto"
+                      className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] w-56 max-h-56 overflow-y-auto"
                     >
                       <button
                         type="button"
@@ -346,7 +346,7 @@ function TaskSidePanelInner({
                               : 'text-gray-700 hover:bg-gray-50'
                           }`}
                         >
-                          <span className={`w-2 h-2 rounded-full ${TASK_GROUP_DOT_CLASS[g.color]}`} />
+                          <span className={`w-2 h-2 rounded-pill ${TASK_GROUP_DOT_CLASS[g.color]}`} />
                           <span className="truncate">{g.name}</span>
                         </button>
                       ))}
@@ -362,7 +362,7 @@ function TaskSidePanelInner({
                   <Popover.Trigger asChild>
                     <button
                       type="button"
-                      className="w-full text-left px-2 py-1 -mx-2 rounded hover:bg-gray-50 transition cursor-pointer"
+                      className="w-full text-left px-2 py-1 -mx-2 rounded-control hover:bg-gray-50 transition cursor-pointer"
                     >
                       {selectedCouple ? (
                         <span className="inline-flex items-center text-sm text-gray-900">
@@ -377,7 +377,7 @@ function TaskSidePanelInner({
                     <Popover.Content
                       sideOffset={4}
                       align="start"
-                      className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-56 max-h-56 overflow-y-auto"
+                      className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] w-56 max-h-56 overflow-y-auto"
                     >
                       <button
                         type="button"

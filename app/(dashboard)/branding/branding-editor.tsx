@@ -1009,12 +1009,12 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             trigger={
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-white border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 text-xs font-medium cursor-pointer transition"
+                className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-control bg-white border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 text-xs font-medium cursor-pointer transition"
                 title="Add block"
               >
                 <Plus size={12} strokeWidth={2} />
                 Add block
-                <kbd className="text-[10px] px-1 py-0.5 bg-gray-50 border border-gray-200 rounded font-mono text-gray-400 ml-0.5">/</kbd>
+                <kbd className="text-[10px] px-1 py-0.5 bg-gray-50 border border-gray-200 rounded-control font-mono text-gray-400 ml-0.5">/</kbd>
               </button>
             }
           />

@@ -44,7 +44,7 @@ export function PaymentsHeader({
   const mobileNewButton = (
     <button
       onClick={onNew}
-      className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
+      className="sm:hidden flex items-center justify-center w-8 h-8 rounded-pill bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
       aria-label={`New ${newLabel}`}
     >
       <Plus size={16} strokeWidth={2} />
@@ -54,7 +54,7 @@ export function PaymentsHeader({
   const desktopNewButton = (
     <button
       onClick={onNew}
-      className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
+      className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
     >
       <Plus size={11} strokeWidth={2} />
       New {newLabel}
@@ -79,7 +79,7 @@ export function PaymentsHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={`Search ${activeTab}...`}
-            className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+            className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
           />
           {search && (
             <button

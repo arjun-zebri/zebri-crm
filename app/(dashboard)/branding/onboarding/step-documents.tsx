@@ -95,7 +95,7 @@ export function StepDocuments(props: StepDocumentsProps) {
           return (
             <label
               key={surface}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-control border cursor-pointer transition ${
                 enabled
                   ? 'border-border-strong bg-surface-muted'
                   : 'border-border hover:border-border-strong'

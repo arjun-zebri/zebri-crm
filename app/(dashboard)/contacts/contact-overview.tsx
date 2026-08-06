@@ -58,7 +58,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
         </h3>
 
         {/* Name */}
-        <div className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2">
+        <div className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2">
           <span className="text-sm text-gray-700 w-28 shrink-0">Name</span>
           <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
             <input
@@ -88,7 +88,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
         </div>
 
         {/* Contact person */}
-        <div className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2">
+        <div className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2">
           <span className="text-sm text-gray-700 w-28 shrink-0">
             Contact person
           </span>
@@ -120,7 +120,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
         </div>
 
         {/* Phone */}
-        <div className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2">
+        <div className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2">
           <span className="text-sm text-gray-700 w-28 shrink-0">Phone</span>
           <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
             <input
@@ -150,7 +150,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
         </div>
 
         {/* Email */}
-        <div className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2">
+        <div className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2">
           <span className="text-sm text-gray-700 w-28 shrink-0">Email</span>
           <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
             <input
@@ -180,7 +180,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
         </div>
 
         {/* Notes */}
-        <div className="group py-3 rounded-xl -mx-2 px-2">
+        <div className="group py-3 rounded-control -mx-2 px-2">
           <div className="flex items-start justify-between">
             <span className="text-sm text-gray-700 w-28 shrink-0 pt-0.5">
               Notes

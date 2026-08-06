@@ -64,7 +64,7 @@ export function Checkbox({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       style={branded ? { backgroundColor: color, borderColor: color } : undefined}
-      className={`shrink-0 w-4 h-4 rounded border transition flex items-center justify-center ${
+      className={`shrink-0 w-4 h-4 rounded-control border transition flex items-center justify-center ${
         disabled
           ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
           : checked

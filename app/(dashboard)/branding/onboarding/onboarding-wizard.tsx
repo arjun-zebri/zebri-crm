@@ -138,7 +138,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   return (
     <div className="flex flex-col h-full">
       {props.error && (
-        <div className="mx-6 mt-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-sm text-danger">
+        <div className="mx-6 mt-4 p-3 bg-danger/10 border border-danger/20 rounded-control text-sm text-danger">
           {props.error}
         </div>
       )}

@@ -171,7 +171,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
             fills the column so the panel reaches the bottom of the modal
             (flex-1 + min-h-0 lets the inner preview scroll rather than the
             panel growing past the modal). */}
-        <div className="hidden rounded-2xl bg-surface-muted p-4 lg:flex lg:flex-1 lg:min-w-0 lg:flex-col">
+        <div className="hidden rounded-control bg-surface-muted p-4 lg:flex lg:flex-1 lg:min-w-0 lg:flex-col">
           <p className="mb-3 px-2 text-xs uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
           <div className="min-h-0 lg:flex-1">
             <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} heightClass="h-full min-h-[600px]" />

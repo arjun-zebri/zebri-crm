@@ -157,7 +157,7 @@ export function CouplesImportModal({
         <button
           onClick={() => setStep(step === 'preview' ? 'map' : 'upload')}
           disabled={importing}
-          className="cursor-pointer rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-900 transition hover:bg-gray-200 disabled:opacity-50"
+          className="cursor-pointer rounded-control bg-gray-100 px-3 py-1.5 text-xs text-gray-900 transition hover:bg-gray-200 disabled:opacity-50"
         >
           Back
         </button>
@@ -165,7 +165,7 @@ export function CouplesImportModal({
       <button
         onClick={onClose}
         disabled={importing}
-        className="cursor-pointer rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-900 transition hover:bg-gray-200 disabled:opacity-50"
+        className="cursor-pointer rounded-control bg-gray-100 px-3 py-1.5 text-xs text-gray-900 transition hover:bg-gray-200 disabled:opacity-50"
       >
         Cancel
       </button>
@@ -173,7 +173,7 @@ export function CouplesImportModal({
         <button
           onClick={goToPreview}
           disabled={!canMap}
-          className="cursor-pointer rounded-md bg-black px-3 py-1.5 text-xs text-white transition hover:bg-neutral-800 disabled:opacity-50"
+          className="cursor-pointer rounded-control bg-black px-3 py-1.5 text-xs text-white transition hover:bg-neutral-800 disabled:opacity-50"
         >
           Continue
         </button>
@@ -182,7 +182,7 @@ export function CouplesImportModal({
         <button
           onClick={handleImport}
           disabled={importing || selectedCount === 0}
-          className="cursor-pointer rounded-md bg-black px-3 py-1.5 text-xs text-white transition hover:bg-neutral-800 disabled:opacity-50"
+          className="cursor-pointer rounded-control bg-black px-3 py-1.5 text-xs text-white transition hover:bg-neutral-800 disabled:opacity-50"
         >
           {importing
             ? 'Importing…'

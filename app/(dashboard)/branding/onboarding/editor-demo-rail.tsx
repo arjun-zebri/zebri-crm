@@ -69,7 +69,7 @@ export function DemoRail(props: DemoRailProps) {
         return (
           <div key={title} className="border-b border-gray-50">
             <span data-cursor={cursor} className="flex items-center gap-1.5 px-2.5 py-1.5">
-              <span className="w-4.5 h-4.5 rounded bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 p-1">
+              <span className="w-4.5 h-4.5 rounded-control bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 p-1">
                 <Icon size={9} strokeWidth={1.75} className="text-gray-500" />
               </span>
               <span className="flex-1 min-w-0">
@@ -97,19 +97,19 @@ export function DemoRail(props: DemoRailProps) {
                 <div className="relative">
                   <span
                     data-cursor="font-picker"
-                    className="flex items-center justify-between gap-1 rounded-md border border-gray-200 px-1.5 py-1 text-[9px] text-gray-900"
+                    className="flex items-center justify-between gap-1 rounded-control border border-gray-200 px-1.5 py-1 text-[9px] text-gray-900"
                     style={{ fontFamily: FONT_STACKS[props.fontHeading] }}
                   >
                     {FONT_OPTIONS.find((f) => f.id === props.fontHeading)?.label}
                     <ChevronDown size={8} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                   </span>
                   {props.fontMenuOpen && (
-                    <div className="absolute inset-x-0 top-full mt-1 z-20 rounded-lg border border-gray-200 bg-white p-1 shadow-xl animate-modal-in">
+                    <div className="absolute inset-x-0 top-full mt-1 z-20 rounded-control border border-gray-200 bg-white p-1 shadow-xl animate-modal-in">
                       {FONT_OPTIONS.map((f) => (
                         <span
                           key={f.id}
                           data-cursor={f.id === 'playfair' ? 'font-playfair' : undefined}
-                          className={`block rounded px-1.5 py-1 text-[9px] ${
+                          className={`block rounded-control px-1.5 py-1 text-[9px] ${
                             f.id === props.fontHeading ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700'
                           }`}
                           style={{ fontFamily: FONT_STACKS[f.id] }}
@@ -128,9 +128,9 @@ export function DemoRail(props: DemoRailProps) {
                   {/* Mini slider; the thumb sits at the size's position on the
                       real 16-64px range and glides when the pointer clicks. */}
                   <div data-cursor="size-slider" className="relative h-3 flex items-center">
-                    <div className="h-1 w-full rounded-full bg-gray-200" />
+                    <div className="h-1 w-full rounded-pill bg-gray-200" />
                     <span
-                      className="absolute size-2.5 rounded-full bg-white border border-gray-300 shadow-sm -translate-x-1/2 transition-[left] duration-500 motion-reduce:transition-none"
+                      className="absolute size-2.5 rounded-pill bg-white border border-gray-300 shadow-sm -translate-x-1/2 transition-[left] duration-500 motion-reduce:transition-none"
                       style={{ left: `${((props.headingSize - 16) / 48) * 100}%` }}
                     />
                   </div>
@@ -150,17 +150,17 @@ function ColorRow({ label, hex, cursor, paletteOpen }: { label: string; hex: str
     <div className="relative flex items-center gap-1.5">
       <span
         data-cursor={cursor}
-        className="size-3.5 rounded-full border border-black/10 shrink-0 transition-colors duration-500 motion-reduce:transition-none"
+        className="size-3.5 rounded-pill border border-black/10 shrink-0 transition-colors duration-500 motion-reduce:transition-none"
         style={{ background: hex }}
       />
       <span className="text-[8px] text-gray-400 uppercase tracking-[0.08em] truncate">{label}</span>
       {paletteOpen && (
-        <div className="absolute left-0 top-full mt-1 z-20 flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1.5 shadow-xl animate-modal-in">
+        <div className="absolute left-0 top-full mt-1 z-20 flex items-center gap-1 rounded-control border border-gray-200 bg-white p-1.5 shadow-xl animate-modal-in">
           {PALETTE.map((c) => (
             <span
               key={c}
               data-cursor={c === DEMO_GREEN ? 'pick-green' : undefined}
-              className={`size-3 rounded-full border border-black/10 shrink-0 ${hex === c ? 'ring-2 ring-gray-900 ring-offset-1' : ''}`}
+              className={`size-3 rounded-pill border border-black/10 shrink-0 ${hex === c ? 'ring-2 ring-gray-900 ring-offset-1' : ''}`}
               style={{ background: c }}
             />
           ))}

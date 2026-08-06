@@ -70,7 +70,7 @@ function DroppableSection({ id, children, isUnscheduled }: {
   return (
     <div ref={setNodeRef}>
       {children}
-      <div className={`h-16 rounded-xl border-2 border-dashed mt-2 transition-colors duration-150 ${
+      <div className={`h-16 rounded-control border-2 border-dashed mt-2 transition-colors duration-150 ${
         isOver
           ? isUnscheduled
             ? 'border-gray-300 bg-gray-100'
@@ -224,20 +224,20 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 animate-pulse">
           {/* Left: calendar area */}
           <div className="flex-[3] space-y-2">
-            <div className="h-8 w-44 bg-gray-100 rounded-xl mb-4" />
+            <div className="h-8 w-44 bg-gray-100 rounded-control mb-4" />
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-10 bg-gray-100 rounded-xl" />
+              <div key={i} className="h-10 bg-gray-100 rounded-control" />
             ))}
           </div>
           {/* Right: Unscheduled + To Review */}
           <div className="w-full sm:w-[260px] flex-shrink-0 flex flex-col gap-8 pt-1">
             <div>
-              <div className="h-3 w-20 bg-gray-100 rounded-full mb-4" />
-              {[1, 2].map((i) => <div key={i} className="h-12 bg-gray-100 rounded-xl mb-2" />)}
+              <div className="h-3 w-20 bg-gray-100 rounded-pill mb-4" />
+              {[1, 2].map((i) => <div key={i} className="h-12 bg-gray-100 rounded-control mb-2" />)}
             </div>
             <div>
-              <div className="h-3 w-16 bg-gray-100 rounded-full mb-4" />
-              <div className="h-12 bg-gray-100 rounded-xl" />
+              <div className="h-3 w-16 bg-gray-100 rounded-pill mb-4" />
+              <div className="h-12 bg-gray-100 rounded-control" />
             </div>
           </div>
         </div>
@@ -254,14 +254,14 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
             {/* Custom event dropdown */}
             <Popover.Root open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <Popover.Trigger asChild>
-                <button type="button" className="inline-flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-200">
+                <button type="button" className="inline-flex items-center gap-2 border border-gray-200 rounded-control px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-200">
                   <span className="text-gray-700">{activeEvent ? `${formatDate(activeEvent.date)}${activeEvent.venue ? `, ${activeEvent.venue}` : ''}` : ''}</span>
                   {events.length > 1 && <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />}
                 </button>
               </Popover.Trigger>
             {events.length > 1 && (
               <Popover.Portal>
-                <Popover.Content className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-64" sideOffset={4} align="start">
+                <Popover.Content className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-64" sideOffset={4} align="start">
                   {events.map((event) => (
                     <button key={event.id} type="button"
                       onClick={() => { setSelectedEventId(event.id); setDropdownOpen(false) }}
@@ -305,7 +305,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
                             <DraggableSidebarCard
                               key={item.id}
                               id={item.id}
-                              className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition"
+                              className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-control hover:border-gray-300 hover:bg-gray-50 transition"
                               onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
                             >
                               <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
@@ -330,7 +330,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
                             <DraggableSidebarCard
                               key={item.id}
                               id={item.id}
-                              className="flex flex-col gap-0.5 px-3 py-2.5 border border-amber-200 border-l-2 border-l-amber-400 rounded-xl hover:bg-amber-50/50 transition"
+                              className="flex flex-col gap-0.5 px-3 py-2.5 border border-amber-200 border-l-2 border-l-amber-400 rounded-control hover:bg-amber-50/50 transition"
                               onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
                             >
                               <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
@@ -347,7 +347,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
 
               <DragOverlay>
                 {activeId ? (
-                  <div className="w-52 px-3 py-2.5 bg-white border border-gray-300 rounded-xl shadow-lg text-xs font-medium text-gray-700 cursor-grabbing truncate">
+                  <div className="w-52 px-3 py-2.5 bg-white border border-gray-300 rounded-control shadow-lg text-xs font-medium text-gray-700 cursor-grabbing truncate">
                     {items.find((i) => i.id === activeId)?.title ?? ''}
                   </div>
                 ) : null}

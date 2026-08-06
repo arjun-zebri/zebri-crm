@@ -61,7 +61,7 @@ function CategorySection({
         {isLoading ? (
           <>
             {[1, 2].map((i) => (
-              <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+              <div key={i} className="h-14 bg-gray-100 rounded-control animate-pulse" />
             ))}
           </>
         ) : items.length === 0 ? (
@@ -70,7 +70,7 @@ function CategorySection({
           items.map((person) => (
             <div
               key={person.id}
-              className="flex items-center gap-3 border border-gray-200 rounded-xl px-5 py-3.5 hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer group"
+              className="flex items-center gap-3 border border-gray-200 rounded-control px-5 py-3.5 hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer group"
               onClick={() => onEditPerson(person, roles)}
             >
               <div className="flex-1 min-w-0">
@@ -84,7 +84,7 @@ function CategorySection({
                   <AudioPlayButton
                     src={person.audio_url}
                     label="Listen"
-                    className="flex items-center gap-1 text-xs border rounded-lg px-2.5 py-1.5 transition cursor-pointer"
+                    className="flex items-center gap-1 text-xs border rounded-control px-2.5 py-1.5 transition cursor-pointer"
                     idleClassName="text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
                     playingClassName="text-emerald-700 border-emerald-300 bg-emerald-100 hover:bg-emerald-200"
                   />

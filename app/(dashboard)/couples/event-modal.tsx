@@ -270,7 +270,7 @@ export function EventModal({
               <button
                 onClick={() => setShowDeleteModal(true)}
                 disabled={loading}
-                className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+                className="text-sm px-4 py-2 rounded-control bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
               >
                 Delete
               </button>
@@ -279,14 +279,14 @@ export function EventModal({
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="text-xs px-3 py-1.5 rounded-md bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+                className="text-xs px-3 py-1.5 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={loading || !date.trim()}
-                className="text-xs px-3 py-1.5 rounded-md bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="text-xs px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? 'Saving...' : 'Save'}
               </button>
@@ -344,7 +344,7 @@ export function EventModal({
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content
-                    className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                    className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                     sideOffset={4}
                     align="start"
                   >
@@ -385,7 +385,7 @@ export function EventModal({
                 autoComplete="off"
               />
               {venueDropdownOpen && venueSuggestions.length > 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-control shadow-lg z-50 max-h-48 overflow-y-auto">
                   {venueSuggestions.map((s) => (
                     <button
                       key={s.placeId}
@@ -460,7 +460,7 @@ export function EventModal({
                 {selectedVendors.map((v) => (
                   <span
                     key={v.id}
-                    className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-gray-100 rounded-xl text-sm text-gray-700"
+                    className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-gray-100 rounded-control text-sm text-gray-700"
                   >
                     <span className="truncate max-w-[12rem]">{v.name}</span>
                     <span className="text-xs text-gray-400">
@@ -499,7 +499,7 @@ export function EventModal({
         <>
           <div className="fixed inset-0 bg-black/20 z-[70]" onClick={() => setShowDeleteModal(false)} />
           <div className="fixed inset-0 z-[80] flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
+            <div className="bg-white rounded-control shadow-xl max-w-sm w-full mx-4">
               <div className="px-6 py-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Event</h3>
                 <p className="text-sm text-gray-600 mb-6">
@@ -509,14 +509,14 @@ export function EventModal({
                   <button
                     onClick={() => setShowDeleteModal(false)}
                     disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                    className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-control hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleConfirmDelete}
                     disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
+                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-control hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
                   >
                     {loading ? 'Deleting...' : 'Delete'}
                   </button>

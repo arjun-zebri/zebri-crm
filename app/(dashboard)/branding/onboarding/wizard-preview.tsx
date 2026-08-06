@@ -205,23 +205,23 @@ function DocSkeleton() {
   return (
     <div className="px-6 pb-6 pt-1 flex flex-col gap-5" aria-hidden>
       <div className="flex flex-col gap-2">
-        <div className="h-2 rounded-full bg-gray-200 w-full" />
-        <div className="h-2 rounded-full bg-gray-200 w-4/5" />
+        <div className="h-2 rounded-pill bg-gray-200 w-full" />
+        <div className="h-2 rounded-pill bg-gray-200 w-4/5" />
       </div>
       <div className="flex flex-col gap-3">
         {[0, 1, 2].map((i) => (
           <div key={i} className="flex items-center justify-between">
-            <div className={`h-2 rounded-full bg-gray-200 ${i === 1 ? 'w-1/3' : 'w-2/5'}`} />
-            <div className="h-2 rounded-full bg-gray-200 w-12" />
+            <div className={`h-2 rounded-pill bg-gray-200 ${i === 1 ? 'w-1/3' : 'w-2/5'}`} />
+            <div className="h-2 rounded-pill bg-gray-200 w-12" />
           </div>
         ))}
       </div>
       <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-        <div className="h-2.5 rounded-full bg-gray-300 w-16" />
-        <div className="h-2.5 rounded-full bg-gray-300 w-20" />
+        <div className="h-2.5 rounded-pill bg-gray-300 w-16" />
+        <div className="h-2.5 rounded-pill bg-gray-300 w-20" />
       </div>
-      <div className="h-9 rounded-lg bg-gray-200 w-full" />
-      <div className="h-2 rounded-full bg-gray-100 w-1/2 mx-auto" />
+      <div className="h-9 rounded-control bg-gray-200 w-full" />
+      <div className="h-2 rounded-pill bg-gray-100 w-1/2 mx-auto" />
     </div>
   )
 }

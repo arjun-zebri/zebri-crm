@@ -76,14 +76,14 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col lg:h-full">
+    <div className="bg-white rounded-control border border-gray-200 p-5 flex flex-col lg:h-full">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base sm:text-xl font-semibold text-gray-900">Calendar</h2>
         {/* Month nav */}
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={prevMonth}
-            className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+            className="p-1 rounded-control hover:bg-gray-100 transition cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
           </button>
@@ -92,7 +92,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
           </span>
           <button
             onClick={nextMonth}
-            className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+            className="p-1 rounded-control hover:bg-gray-100 transition cursor-pointer"
           >
             <ChevronRight className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
           </button>
@@ -105,7 +105,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
           <div className="hidden sm:grid grid-cols-7 gap-y-1">
             {Array.from({ length: 35 }).map((_, i) => (
               <div key={i} className="h-7 flex items-center">
-                <div className="h-6 w-6 bg-gray-100 rounded-full" />
+                <div className="h-6 w-6 bg-gray-100 rounded-pill" />
               </div>
             ))}
           </div>
@@ -113,9 +113,9 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
           <div className="mt-4 space-y-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-3 py-2">
-                <div className="w-2 h-2 rounded-full bg-gray-100 shrink-0" />
-                <div className="h-3 bg-gray-100 rounded-md w-10 shrink-0" />
-                <div className="h-3 bg-gray-100 rounded-md flex-1" />
+                <div className="w-2 h-2 rounded-pill bg-gray-100 shrink-0" />
+                <div className="h-3 bg-gray-100 rounded-control w-10 shrink-0" />
+                <div className="h-3 bg-gray-100 rounded-control flex-1" />
               </div>
             ))}
           </div>
@@ -145,7 +145,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
               return (
                 <div key={i} className="h-7 flex items-center justify-between">
                   <div
-                    className={`h-6 w-6 flex items-center justify-center rounded-full text-xs relative ${
+                    className={`h-6 w-6 flex items-center justify-center rounded-pill text-xs relative ${
                       todayHighlight ? "bg-black text-white" : "text-gray-700"
                     }`}
                   >
@@ -173,10 +173,10 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
                       onClick={() => {
                         if (event.couple) onEventClick(event.couple);
                       }}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition cursor-pointer text-sm"
+                      className="flex items-center gap-3 px-3 py-2 rounded-control hover:bg-gray-50 transition cursor-pointer text-sm"
                     >
                       <span
-                        className={`w-2 h-2 rounded-full shrink-0 ${getStatusDotColor(
+                        className={`w-2 h-2 rounded-pill shrink-0 ${getStatusDotColor(
                           event.couple?.status
                         )}`}
                       />
