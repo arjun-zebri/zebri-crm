@@ -1,17 +1,25 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
 
-// Tracks how many Modal instances are currently open so only the topmost
-// one responds to Escape - prevents nested modals from closing their parent.
-let _openModalDepth = 0;
+import {
+  getOpenOverlayDepth,
+  OVERLAY_Z,
+  useBackdropDismiss,
+  useOverlay,
+  type OverlayLayer,
+} from './use-overlay';
 
-/** Returns the number of Modal instances currently open. Use this in custom
- *  overlays that manage their own Escape handler to skip closing when a nested
- *  Modal is on top. */
-export function getOpenModalDepth() {
-  return _openModalDepth;
+/**
+ * How many overlays are open right now.
+ *
+ * @deprecated Prefer {@link getOpenOverlayDepth} from
+ * `components/ui/use-overlay`. Re-exported here because the count now
+ * spans every overlay surface, not just Modal, and callers that guard
+ * their own Escape handler want the broader number anyway.
+ */
+export function getOpenModalDepth(): number {
+  return getOpenOverlayDepth();
 }
 
 interface ModalProps {
@@ -24,6 +32,13 @@ interface ModalProps {
   footer?: React.ReactNode;
   headerActions?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'fullscreen';
+  /** Stacking tier. `'nested'` for a modal opened from another modal;
+   *  `'top'` for a surface that must clear everything, which is what
+   *  ConfirmDialog uses. Defaults to `'base'`, or `'nested'` when the
+   *  legacy `nested` prop is set. */
+  layer?: OverlayLayer;
+  /** @deprecated Pass `layer="nested"` instead. Kept so existing call
+   *  sites keep working unchanged. */
   nested?: boolean;
   /** Drop the body's default bottom padding so children can bleed
    *  to the modal's rounded bottom edge. Used by full-bleed tables
@@ -58,38 +73,16 @@ export function Modal({
   footer,
   headerActions,
   size = 'md',
+  layer,
   nested = false,
   flushBottom = false,
   floatingClose = false,
 }: ModalProps) {
-  useEffect(() => {
-    if (!isOpen) return;
-    _openModalDepth++;
-    const myDepth = _openModalDepth;
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && _openModalDepth === myDepth) onClose();
-    };
-    document.addEventListener('keydown', handleEscape);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      _openModalDepth--;
-      if (_openModalDepth === 0) document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
+  // `nested` predates `layer`; honour it when `layer` is not given.
+  const z = OVERLAY_Z[layer ?? (nested ? 'nested' : 'base')];
 
-  // Only close on a backdrop click whose press ALSO started on the
-  // backdrop. Without this, dragging to select text inside an input and
-  // releasing outside it makes the browser fire `click` on the nearest
-  // common ancestor (this wrapper), which would otherwise close the modal.
-  const pressedOnBackdrop = useRef(false);
-  const handleBackdropMouseDown = (e: React.MouseEvent) => {
-    pressedOnBackdrop.current = e.target === e.currentTarget;
-  };
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && pressedOnBackdrop.current) onClose();
-    pressedOnBackdrop.current = false;
-  };
+  useOverlay({ isOpen, onClose });
+  const backdropHandlers = useBackdropDismiss(onClose);
 
   if (!isOpen) return null;
 
@@ -102,16 +95,14 @@ export function Modal({
           (notably the bottom edge of the compare-plans modal —
           regression caught during Phase 2B UI verification). */}
       <div
-        className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
-        onMouseDown={handleBackdropMouseDown}
-        onClick={handleBackdropClick}
+        className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${z.backdrop}`}
+        {...backdropHandlers}
       />
       <div
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-0 flex items-center justify-center p-4 ${nested ? 'z-[80]' : 'z-[60]'}`}
-        onMouseDown={handleBackdropMouseDown}
-        onClick={handleBackdropClick}
+        className={`fixed inset-0 flex items-center justify-center p-4 ${z.panel}`}
+        {...backdropHandlers}
       >
         <div
           className={`bg-white rounded-2xl border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${

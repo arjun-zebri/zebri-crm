@@ -97,9 +97,10 @@ export function SectionAudit() {
             debt.
           </li>
           <li>
-            <span className="font-medium text-text">3. Fix the real bugs.</span> ConfirmDialog does
-            not close on Escape and does not lock body scroll. The z-index ladder double-books{' '}
-            <code>z-[80]</code>.
+            <span className="font-medium text-text line-through">3. Fix the real bugs.</span>{' '}
+            Done. Escape, body-scroll locking and backdrop dismissal now come from one shared{' '}
+            <code>useOverlay()</code> hook, and ConfirmDialog has its own stacking tier so the{' '}
+            <code>z-[80]</code> collision is gone.
           </li>
           <li>
             <span className="font-medium text-text">4. Consolidate the chips.</span> Four status-chip

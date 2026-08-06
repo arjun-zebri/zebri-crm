@@ -25,14 +25,13 @@ import { Demo, DemoGrid, DemoRow, Spec } from './showroom';
 const MODAL_SIZES = ['sm', 'md', 'lg', 'xl', '2xl', 'fullscreen'] as const;
 type ModalSize = (typeof MODAL_SIZES)[number];
 
-/** The Z-index ladder as actually implemented, gathered from source. */
+/** The overlay ladder, now declared once in `OVERLAY_Z`. */
 const Z_LADDER = [
-  { z: 'z-50', owner: 'Modal backdrop, SidePanel backdrop', file: 'modal.tsx, side-panel.tsx' },
-  { z: 'z-[60]', owner: 'Modal panel, SidePanel panel', file: 'modal.tsx, side-panel.tsx' },
-  { z: 'z-[70]', owner: 'ConfirmDialog backdrop', file: 'confirm-dialog.tsx' },
-  { z: 'z-[75]', owner: 'Nested Modal backdrop', file: 'modal.tsx' },
-  { z: 'z-[80]', owner: 'Nested Modal panel, ConfirmDialog panel', file: 'modal.tsx, confirm-dialog.tsx' },
-  { z: 'z-[90]', owner: 'Select dropdown', file: 'select.tsx' },
+  { z: 'z-50 / z-[60]', owner: "layer='base' — Modal, SidePanel", file: 'use-overlay.ts' },
+  { z: 'z-[75] / z-[80]', owner: "layer='nested' — a modal opened from a modal", file: 'use-overlay.ts' },
+  { z: 'z-[90]', owner: 'Popover tier — Select dropdown and friends', file: 'select.tsx' },
+  { z: 'z-[120] / z-[130]', owner: "layer='top' — ConfirmDialog", file: 'use-overlay.ts' },
+  { z: 'z-[200]', owner: 'Toasts, deliberately above everything', file: 'toast.tsx' },
 ];
 
 /** All overlay primitives, each openable for comparison. */
@@ -108,12 +107,14 @@ export function PrimitivesOverlays() {
       </Spec>
 
       <Conflict
-        title="Three dialog surfaces, three different implementations"
+        title="Behaviour is shared now; the surfaces still are not"
         recommendation={
           <>
-            Rebuild <code>ConfirmDialog</code> on top of <code>Modal size=&quot;sm&quot;</code> with{' '}
-            <code>Button</code> for its actions, and migrate all three to tokens. The Escape gap is
-            the one to fix first: it is a real behavioural bug, not a styling nit.
+            All three take Escape, body-scroll locking and backdrop dismissal from{' '}
+            <code>useOverlay()</code>, so they cannot drift apart again. What is left is cosmetic:
+            Modal and SidePanel still use <code>bg-white</code> and <code>border-gray-200</code>{' '}
+            rather than tokens, and Modal is <code>rounded-2xl</code> where the card token is 12px.
+            Fold those in when the radius sweep runs.
           </>
         }
       >
@@ -129,15 +130,15 @@ export function PrimitivesOverlays() {
             </thead>
             <tbody className="text-text-muted">
               {[
-                ['Closes on Escape', 'Yes (depth-aware)', 'Yes', 'No'],
-                ['Locks body scroll', 'Yes', 'Yes', 'No'],
-                ['aria-modal', 'Yes', 'No', 'No'],
-                ['role="dialog"', 'On panel', 'None', 'On backdrop and panel'],
-                ['Corner radius', 'rounded-2xl (16px)', 'None', 'rounded-2xl (16px)'],
-                ['Surface colour', 'bg-white', 'bg-white', 'bg-white'],
-                ['Border colour', 'border-gray-200', 'border-gray-200', 'none'],
-                ['Action buttons', 'Caller supplies', 'Caller supplies', 'Native buttons, bg-red-600'],
-                ['Size options', 'Six', 'One', 'One'],
+                ['Closes on Escape', 'Depth-aware', 'Depth-aware', 'Depth-aware'],
+                ['Locks body scroll', 'Yes', 'Yes', 'Yes'],
+                ['aria-modal', 'Yes', 'Yes', 'Yes'],
+                ['role="dialog"', 'On panel', 'On panel', 'On panel'],
+                ['Corner radius', 'rounded-2xl (16px)', 'None', 'rounded-card (12px)'],
+                ['Surface colour', 'bg-white', 'bg-white', 'bg-surface'],
+                ['Border colour', 'border-gray-200', 'border-gray-200', 'border-border'],
+                ['Action buttons', 'Caller supplies', 'Caller supplies', 'Button primitive'],
+                ['Size options', 'Six', 'One', 'One (max-w-sm)'],
               ].map(([k, ...cells]) => (
                 <tr key={k} className="border-t border-border/60">
                   <td className="py-1 pr-3 font-medium text-text whitespace-nowrap">{k}</td>
@@ -176,13 +177,16 @@ export function PrimitivesOverlays() {
       </Conflict>
 
       <Conflict
-        title="The z-index ladder is undocumented and overlaps"
+        title="The primitives share one ladder; call sites still hard-code theirs"
         recommendation={
           <>
-            <code>z-[80]</code> is claimed by both the nested Modal panel and the ConfirmDialog
-            panel, so a confirm opened from a nested modal stacks by DOM order rather than by
-            intent. Promote this ladder to named tokens in <code>globals.css</code> and document it
-            in <code>frontend-design.md</code>.
+            The overlap is gone: <code>z-[80]</code> used to be claimed by both the nested Modal
+            panel and the ConfirmDialog panel, so a confirm raised from a nested modal stacked by
+            DOM order rather than intent. ConfirmDialog now owns the <code>top</code> tier. The
+            ladder below lives in <code>OVERLAY_Z</code> (<code>use-overlay.ts</code>), but roughly
+            a hundred call sites still write raw <code>z-[…]</code> values across fifteen tiers,
+            including a <code>z-[9999]</code> in <code>add-status-modal.tsx</code>. Point those at{' '}
+            <code>OVERLAY_Z</code> as each page gets hardened.
           </>
         }
       >

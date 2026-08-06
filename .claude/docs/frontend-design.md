@@ -35,11 +35,39 @@ not get rediscovered:
 - **Status chips.** Four implementations coexist: `StatePill` (tokens,
   keep), `Badge` (21 raw-palette variants), `StatBadge` inside
   `dashboard-stats.tsx`, and the vendor badges.
-- **Overlays.** `ConfirmDialog` does not close on Escape and does not
-  lock body scroll, unlike `Modal` and `SidePanel`. The z-index ladder
-  double-books `z-[80]`.
 - **Missing primitives.** `PageHeader`, `Card`, `SectionNav` and
   `DataTable` are copy-pasted markup, not components.
+
+------------------------------------------------------------------------
+
+## Overlays and the z-index ladder
+
+`Modal`, `SidePanel` and `ConfirmDialog` all take their behaviour from
+**`components/ui/use-overlay.ts`**. Never hand-roll Escape handling or
+body-scroll locking in a new overlay; call `useOverlay({ isOpen, onClose })`
+and you get depth-aware Escape (only the topmost overlay reacts) plus a
+scroll lock that releases when the last overlay closes.
+
+`useBackdropDismiss(onClose)` covers click-to-dismiss while ignoring
+drags that began inside the panel.
+
+Stacking comes from `OVERLAY_Z`, keyed by `layer`:
+
+| Layer | Backdrop / panel | Used by |
+|---|---|---|
+| `base` | `z-50` / `z-[60]` | `Modal` (default), `SidePanel` |
+| `nested` | `z-[75]` / `z-[80]` | a modal opened from another modal |
+| (popover) | `z-[90]` | `Select` dropdown and other popovers |
+| `top` | `z-[120]` / `z-[130]` | `ConfirmDialog` |
+| (toast) | `z-[200]` | `Toast`, above everything by design |
+
+`Modal` takes `layer="nested" | "top"`. The older `nested` boolean still
+works and maps to `layer="nested"`.
+
+Known gap: roughly a hundred call sites still hard-code raw `z-[…]`
+values across fifteen tiers, including a `z-[9999]` in
+`add-status-modal.tsx`. Point those at `OVERLAY_Z` as each page is
+hardened rather than in one sweep.
 
 ------------------------------------------------------------------------
 
