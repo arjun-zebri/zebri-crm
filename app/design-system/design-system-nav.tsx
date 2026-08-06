@@ -11,6 +11,7 @@
 /** Section anchors, in page order. */
 export const NAV_ITEMS = [
   { id: 'foundations', label: 'Foundations' },
+  { id: 'layout', label: 'Layout' },
   { id: 'forms', label: 'Form controls' },
   { id: 'feedback', label: 'Feedback' },
   { id: 'overlays', label: 'Overlays' },

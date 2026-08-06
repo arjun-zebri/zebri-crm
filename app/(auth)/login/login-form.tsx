@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useActionState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
 import { emptyAuthState } from '../action-state';
@@ -27,7 +28,7 @@ export interface LoginFormProps {
 export function LoginForm({ next }: LoginFormProps) {
   const [state, formAction, pending] = useActionState(loginAction, emptyAuthState);
   return (
-    <div className="rounded-card border border-border bg-card p-6 shadow-sm sm:p-8">
+    <Card className="shadow-sm sm:p-8">
       <div className="mb-6 flex justify-center">
         <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
       </div>
@@ -86,6 +87,6 @@ export function LoginForm({ next }: LoginFormProps) {
           Sign up
         </Link>
       </p>
-    </div>
+    </Card>
   );
 }

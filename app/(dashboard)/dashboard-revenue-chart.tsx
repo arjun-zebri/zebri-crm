@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+
+import { Card } from '@/components/ui/card'
+
 import { useRevenueChart, useLeadsChart, DashboardPeriod } from './use-dashboard'
 
 type ChartMode = 'revenue' | 'leads'
@@ -53,7 +56,7 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
   const label = mode === 'revenue' ? 'Revenue' : 'Leads'
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 h-[260px] sm:h-[340px] lg:h-full flex flex-col">
+    <Card className="h-[260px] sm:h-[340px] lg:h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         {/* Mode dropdown */}
         <div className="relative" ref={modeRef}>
@@ -166,6 +169,6 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
           </div>
         </>
       )}
-    </div>
+    </Card>
   )
 }

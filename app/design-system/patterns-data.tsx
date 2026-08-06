@@ -46,13 +46,14 @@ export function PatternsData() {
       </Spec>
 
       <Conflict
-        title="Three card shells, none of them using rounded-card"
+        title="Resolved for 22 sites: extracted as Card"
         recommendation={
           <>
-            Extract a <code>&lt;Card /&gt;</code> primitive using{' '}
-            <code>rounded-card border-border bg-card</code> and one padding scale. The three shells
-            above are visually near-identical, which is exactly why the drift went unnoticed and
-            will keep spreading.
+            The three shells above are what the app used to render, and they are visually
+            near-identical, which is exactly why the drift went unnoticed. The dashboard panels,
+            admin lists, template previews and auth forms now use <code>&lt;Card /&gt;</code>; see
+            the Layout section. The remaining hand-written containers convert as each page is
+            hardened.
           </>
         }
       />

@@ -28,7 +28,7 @@ const H1_VARIANTS = [
 export function PatternsChrome() {
   return (
     <>
-      <Spec name="Page header" description="Title, count and actions. Every dashboard page builds this by hand.">
+      <Spec name="Page header (before)" description="What every dashboard page used to hand-write, kept for comparison.">
         <SampleFrame>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-baseline gap-3">
@@ -47,13 +47,12 @@ export function PatternsChrome() {
       </Spec>
 
       <Conflict
-        title="Page titles are declared twelve different ways. The five distinct looks:"
+        title="Resolved: extracted as PageHeader"
         recommendation={
           <>
-            Extract a <code>&lt;PageHeader title count actions /&gt;</code> component using{' '}
-            <code>text-display font-semibold text-text</code>. Right now the same visual role is
-            written five different ways, and the round add button also violates the{' '}
-            <code>rounded-xl</code>, never <code>rounded-full</code> rule.
+            The five treatments below are what the app used to render. Every dashboard page now
+            uses <code>&lt;PageHeader /&gt;</code>; see the Layout section above. Kept here as the
+            record of what was replaced.
           </>
         }
       >

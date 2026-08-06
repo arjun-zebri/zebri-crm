@@ -1,5 +1,6 @@
 'use client'
 
+import { Card } from '@/components/ui/card'
 import { isPastDue } from '@/lib/utils'
 
 import { useDashboardInvoices } from './use-dashboard'
@@ -26,7 +27,7 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <Card>
         <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Invoices</h2>
         <div className="space-y-1">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -40,23 +41,23 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     )
   }
 
   if (!invoices || invoices.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <Card>
         <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Invoices</h2>
         <div className="text-center py-12">
           <p className="text-gray-500 text-sm">No outstanding invoices.</p>
         </div>
-      </div>
+      </Card>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col">
+    <Card className="flex flex-col">
       <h2 className="text-xl font-semibold text-gray-900 mb-4 shrink-0">Outstanding Invoices</h2>
       <div className="space-y-1 flex-1 max-h-60 overflow-y-auto scrollbar-hover pr-1">
         {invoices.map((invoice) => {
@@ -88,6 +89,6 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
           )
         })}
       </div>
-    </div>
+    </Card>
   )
 }

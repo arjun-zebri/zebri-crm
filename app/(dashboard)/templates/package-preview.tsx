@@ -13,6 +13,7 @@
 
 import type { ReactNode } from 'react'
 
+import { Card } from '@/components/ui/card'
 import { flattenItem, packageTotals, type PackagePricedItem } from '@/lib/payments/package-math'
 import type { PackageCategory } from '@/types/package'
 
@@ -72,7 +73,7 @@ export function PackagePreview({
   if (weekendLoadingPercent) terms.push(`weekend rate +${String(weekendLoadingPercent)}%`)
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
+    <Card>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wide text-brand">Package</p>
@@ -169,6 +170,6 @@ export function PackagePreview({
       )}
 
       <p className="mt-4 text-xs text-text-muted first-letter:uppercase">{terms.join(' · ')}</p>
-    </div>
+    </Card>
   )
 }

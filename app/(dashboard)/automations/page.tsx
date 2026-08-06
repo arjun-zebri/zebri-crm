@@ -13,12 +13,13 @@ import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { PageHeader } from '@/components/ui/page-header'
 import type { AutomationsHomePayload } from '@/types/automations'
 
+import { createAutomationAction, loadAutomationsHomeAction } from './actions'
 import { applyFilter, type StatusFilter } from './automations-filter'
 import { AutomationsHome } from './automations-home'
 import { PaginationBar } from './pagination-bar'
-import { createAutomationAction, loadAutomationsHomeAction } from './actions'
 
 export default function AutomationsPage() {
   const router = useRouter()
@@ -70,9 +71,11 @@ export default function AutomationsPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-6 sm:px-[3.75rem] pt-6 pb-3 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-semibold text-gray-900">Automations</h1>
-          {!isEmptyState && (
+        <PageHeader
+          title="Automations"
+          className="mb-4"
+          actions={
+            !isEmptyState && (
             <>
               <button
                 onClick={handleCreate}
@@ -91,8 +94,9 @@ export default function AutomationsPage() {
                 <Plus size={14} strokeWidth={2} />
               </button>
             </>
-          )}
-        </div>
+            )
+          }
+        />
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">

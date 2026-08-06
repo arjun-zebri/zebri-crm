@@ -15,6 +15,7 @@
 
 import type { ReactNode } from 'react'
 
+import { Card } from '@/components/ui/card'
 import { formatAUD } from '@/lib/payments/format'
 
 /** A priced line item to preview. */
@@ -46,7 +47,7 @@ export function LineItemPreview({ eyebrow, name, subtitle, meta, actions, items,
   const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
+    <Card>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wide text-brand">{eyebrow}</p>
@@ -104,6 +105,6 @@ export function LineItemPreview({ eyebrow, name, subtitle, meta, actions, items,
           <p className="mt-1.5 whitespace-pre-wrap text-sm text-text-muted">{notes}</p>
         </div>
       ) : null}
-    </div>
+    </Card>
   )
 }

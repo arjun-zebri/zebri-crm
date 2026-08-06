@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useDashboardStats, useDashboardTasks, DashboardPeriod } from "./use-dashboard";
-import { DashboardStats } from "./dashboard-stats";
-import { DashboardRevenueChart } from "./dashboard-revenue-chart";
-import { DashboardCalendar } from "./dashboard-calendar";
-import { DashboardLeads } from "./dashboard-leads";
-import { DashboardLeadSources } from "./dashboard-lead-sources";
-import { DashboardTasks } from "./dashboard-tasks";
-import { DashboardInvoices } from "./dashboard-invoices";
-import { CoupleProfile } from "./couples/couple-profile";
-import { Couple } from '@/types/couple';
 import { ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+
+import { PageHeader } from "@/components/ui/page-header";
+import { Couple } from '@/types/couple';
+
+import { CoupleProfile } from "./couples/couple-profile";
+import { DashboardCalendar } from "./dashboard-calendar";
+import { DashboardInvoices } from "./dashboard-invoices";
+import { DashboardLeadSources } from "./dashboard-lead-sources";
+import { DashboardLeads } from "./dashboard-leads";
+import { DashboardRevenueChart } from "./dashboard-revenue-chart";
+import { DashboardStats } from "./dashboard-stats";
+import { useDashboardStats, useDashboardTasks, DashboardPeriod } from "./use-dashboard";
+import { DashboardTasks } from "./dashboard-tasks";
+
 
 const periodOptions: { value: DashboardPeriod; label: string }[] = [
   { value: "week", label: "Weekly" },
@@ -96,8 +100,9 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-6 md:px-[3.75rem] pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Dashboard</h1>
+        <PageHeader
+          title="Dashboard"
+          actions={
           <div className="relative" ref={periodRef}>
             <button
               onClick={() => setPeriodOpen(!periodOpen)}
@@ -122,7 +127,8 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </div>
+          }
+        />
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hover">

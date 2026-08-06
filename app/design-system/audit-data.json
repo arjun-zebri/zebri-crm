@@ -1,17 +1,17 @@
 {
-  "scannedFiles": 379,
+  "scannedFiles": 382,
   "topPaletteClasses": [
     {
       "label": "text-gray-400",
-      "count": 386
+      "count": 383
     },
     {
       "label": "text-gray-900",
-      "count": 326
+      "count": 320
     },
     {
       "label": "border-gray-200",
-      "count": 292
+      "count": 283
     },
     {
       "label": "bg-gray-100",
@@ -78,7 +78,7 @@
         {
           "label": "rounded-card",
           "verdict": "token",
-          "count": 64,
+          "count": 61,
           "files": [
             {
               "path": "components/builders/parts/builder-modal-shell.tsx",
@@ -116,7 +116,7 @@
         {
           "label": "rounded-xl",
           "verdict": "legacy",
-          "count": 321,
+          "count": 305,
           "files": [
             {
               "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
@@ -256,7 +256,7 @@
         {
           "label": "bg-surface*",
           "verdict": "token",
-          "count": 375,
+          "count": 372,
           "files": [
             {
               "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
@@ -275,7 +275,7 @@
         {
           "label": "border-border*",
           "verdict": "token",
-          "count": 308,
+          "count": 298,
           "files": [
             {
               "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
@@ -294,7 +294,7 @@
         {
           "label": "raw palette",
           "verdict": "legacy",
-          "count": 2956,
+          "count": 2938,
           "files": [
             {
               "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
@@ -437,13 +437,18 @@
         {
           "label": "text-display",
           "verdict": "token",
-          "count": 0,
-          "files": []
+          "count": 3,
+          "files": [
+            {
+              "path": "components/ui/page-header.tsx",
+              "hits": 3
+            }
+          ]
         },
         {
           "label": "text-section",
           "verdict": "token",
-          "count": 9,
+          "count": 10,
           "files": [
             {
               "path": "app/(dashboard)/settings/billing/current-plan-card.tsx",
@@ -462,7 +467,7 @@
         {
           "label": "text-body",
           "verdict": "token",
-          "count": 67,
+          "count": 68,
           "files": [
             {
               "path": "app/(dashboard)/settings/payment-settings-section.tsx",
@@ -500,18 +505,18 @@
         {
           "label": "text-3xl",
           "verdict": "legacy",
-          "count": 15,
+          "count": 7,
           "files": [
             {
-              "path": "app/(dashboard)/admin/page.tsx",
+              "path": "components/ui/page-header.tsx",
+              "hits": 2
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-pulse.tsx",
               "hits": 1
             },
             {
-              "path": "app/(dashboard)/automations/page.tsx",
-              "hits": 1
-            },
-            {
-              "path": "app/(dashboard)/calendar/page.tsx",
+              "path": "app/(dashboard)/dashboard-revenue-chart.tsx",
               "hits": 1
             }
           ]
@@ -519,11 +524,11 @@
         {
           "label": "text-2xl",
           "verdict": "legacy",
-          "count": 16,
+          "count": 17,
           "files": [
             {
-              "path": "app/(dashboard)/admin/page.tsx",
-              "hits": 1
+              "path": "components/ui/page-header.tsx",
+              "hits": 3
             },
             {
               "path": "app/(dashboard)/admin/sections/metric-chart-card.tsx",
@@ -595,7 +600,7 @@
         {
           "label": "text-sm",
           "verdict": "legacy",
-          "count": 594,
+          "count": 591,
           "files": [
             {
               "path": "app/(dashboard)/couples/couple-profile-header.tsx",
@@ -840,18 +845,18 @@
         {
           "label": "p-6",
           "verdict": "legacy",
-          "count": 29,
+          "count": 9,
           "files": [
             {
-              "path": "app/(dashboard)/dashboard-invoices.tsx",
-              "hits": 3
+              "path": "app/(dashboard)/branding/blocks/couple-portal-sample.tsx",
+              "hits": 1
             },
             {
-              "path": "app/(dashboard)/dashboard-tasks.tsx",
-              "hits": 3
+              "path": "app/(dashboard)/dashboard-stats.tsx",
+              "hits": 1
             },
             {
-              "path": "app/(auth)/login/login-form.tsx",
+              "path": "app/error.tsx",
               "hits": 1
             }
           ]
@@ -859,18 +864,14 @@
         {
           "label": "p-8",
           "verdict": "legacy",
-          "count": 10,
+          "count": 6,
           "files": [
             {
               "path": "app/branding/preview/[surface]/page.tsx",
               "hits": 5
             },
             {
-              "path": "app/(auth)/login/login-form.tsx",
-              "hits": 1
-            },
-            {
-              "path": "app/(auth)/reset-password/reset-password-form.tsx",
+              "path": "components/questionnaires/experience-preview.tsx",
               "hits": 1
             }
           ]

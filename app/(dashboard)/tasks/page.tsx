@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   closestCenter,
@@ -11,15 +9,37 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { useToast } from "@/components/ui/toast";
-import { useCouples } from "@/app/(dashboard)/couples/use-couples";
-import { useCoupleStatuses } from "@/app/(dashboard)/couples/use-couple-statuses";
-import { useUpdateCouple, useDeleteCouple } from "@/app/(dashboard)/couples/use-couples";
-import { CoupleProfile } from "@/app/(dashboard)/couples/couple-profile";
+import { useState, useMemo, useEffect } from "react";
+
 import { CoupleModal } from "@/app/(dashboard)/couples/couple-modal";
+import { CoupleProfile } from "@/app/(dashboard)/couples/couple-profile";
+import { useCoupleStatuses } from "@/app/(dashboard)/couples/use-couple-statuses";
+import { useCouples } from "@/app/(dashboard)/couples/use-couples";
+import { useUpdateCouple, useDeleteCouple } from "@/app/(dashboard)/couples/use-couples";
+import { PageHeader } from "@/components/ui/page-header";
+import { useToast } from "@/components/ui/toast";
+import { createClient } from "@/lib/supabase/client";
 import { Couple } from '@/types/couple';
+import {
+  PRIORITY_ORDER,
+  STATUS_ORDER,
+  TaskPriority,
+  TaskStatus,
+} from '@/types/task';
+
+import {
+  bulkDeleteTasksAction,
+  bulkUpdateTasksAction,
+  createTaskAction,
+  deleteTaskAction,
+  reorderTasksAction,
+  updateTaskAction,
+} from './actions';
+import { BulkActionsBar } from "./bulk-actions-bar";
+import { GroupByToggle, GroupByMode } from "./group-by-toggle";
+import { TaskRow, TaskRowTask } from "./task-row";
 import {
   useTaskGroups,
   useCreateTaskGroup,
@@ -43,31 +63,16 @@ import {
   useUpdateTaskStatus,
   useUpdateTaskType,
 } from "./use-task-options";
-import { TaskRow, TaskRowTask } from "./task-row";
 import { TaskSidePanel, TaskFieldUpdate } from "./task-side-panel";
-import { GroupByToggle, GroupByMode } from "./group-by-toggle";
 import { GroupSection, UNGROUPED_ID } from "./group-section";
-import { BulkActionsBar } from "./bulk-actions-bar";
 import { FilterBar, TaskFilter, TaskSort } from "./filter-bar";
 import {
   PriorityPill,
   StatusPill,
 } from "./task-cells";
-import {
-  PRIORITY_ORDER,
-  STATUS_ORDER,
-  TaskPriority,
-  TaskStatus,
-} from '@/types/task';
 
-import {
-  bulkDeleteTasksAction,
-  bulkUpdateTasksAction,
-  createTaskAction,
-  deleteTaskAction,
-  reorderTasksAction,
-  updateTaskAction,
-} from './actions';
+
+
 
 /** Throw on `ok: false` so React Query treats it as an error. */
 function unwrap<T>(
@@ -695,16 +700,19 @@ export default function TasksPage() {
     <div className="flex flex-col h-full overflow-hidden bg-white">
       {/* Page header */}
       <div className="px-6 sm:px-[3.75rem] pt-6 pb-3 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-semibold text-gray-900">Tasks</h1>
-          <button
-            onClick={() => handleCreateTask()}
-            className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
-            aria-label="New task"
-          >
-            <Plus size={16} strokeWidth={2} />
-          </button>
-        </div>
+        <PageHeader
+          title="Tasks"
+          className="mb-4"
+          actions={
+            <button
+              onClick={() => handleCreateTask()}
+              className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
+              aria-label="New task"
+            >
+              <Plus size={16} strokeWidth={2} />
+            </button>
+          }
+        />
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 mt-3 flex-wrap">

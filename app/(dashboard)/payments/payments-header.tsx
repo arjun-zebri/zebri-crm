@@ -14,6 +14,8 @@
 import { FileSignature, Plus, Receipt, Search, X } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
+import { PageHeader } from '@/components/ui/page-header';
+
 import type { PaymentsTab } from './use-payments-shortcut';
 
 export interface PaymentsHeaderProps {
@@ -61,14 +63,7 @@ export function PaymentsHeader({
 
   return (
     <div className="px-6 sm:px-[3.75rem] pt-6 pb-2 flex-shrink-0">
-      {/* Title row */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-3xl font-semibold text-gray-900">Payments</h1>
-          <span className="text-sm text-gray-400">{count} total</span>
-        </div>
-        {mobileNewButton}
-      </div>
+      <PageHeader title="Payments" count={count} className="mb-4" actions={mobileNewButton} />
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 mt-3 flex-wrap">

@@ -1,10 +1,12 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+
 import { EventDayCalendar } from "@/components/events/event-day-calendar";
+import { PageHeader } from "@/components/ui/page-header";
+import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
 
 export default function EventTimelinePage() {
@@ -55,9 +57,7 @@ export default function EventTimelinePage() {
           </div>
         ) : event ? (
           <>
-            <h1 className="text-3xl font-semibold text-gray-900">
-              {event.couple?.name ?? "Timeline"}
-            </h1>
+            <PageHeader title={event.couple?.name ?? "Timeline"} />
             <p className="text-sm text-gray-500 mt-1">
               {event.date ? formatDate(event.date) : ""}
               {event.date && event.venue ? " · " : ""}

@@ -35,8 +35,26 @@ not get rediscovered:
 - **Status chips.** Four implementations coexist: `StatePill` (tokens,
   keep), `Badge` (21 raw-palette variants), `StatBadge` inside
   `dashboard-stats.tsx`, and the vendor badges.
-- **Missing primitives.** `PageHeader`, `Card`, `SectionNav` and
-  `DataTable` are copy-pasted markup, not components.
+- **Missing primitives.** `SectionNav` and `DataTable` are still
+  copy-pasted markup. `PageHeader` and `Card` were extracted (see below).
+
+### Layout primitives
+
+- **`<PageHeader title count actions />`** (`components/ui/page-header.tsx`)
+  is the title row for every dashboard page. Title is `text-2xl` below
+  `sm` and `text-display` above it. `count` renders as "N total"; use
+  `meta` for anything else. Page gutters stay with the page, since a
+  full-height calendar and a scrolling list legitimately differ.
+- **`<Card padding surface borderless />`** (`components/ui/card.tsx`)
+  is the standard bordered panel: `rounded-card`, `border-border`, and
+  a padding scale of `none` / `sm` (16px) / `md` (24px, default) /
+  `lg` (32px). Do **not** use it for popovers, dropdowns or menus:
+  those carry their own z-index, shadow and entry animation and should
+  keep their own markup.
+
+  22 sites are migrated (dashboard panels, admin lists, template
+  previews, auth forms). The rest of the roughly 89 bordered containers
+  convert as each page is hardened.
 
 ------------------------------------------------------------------------
 

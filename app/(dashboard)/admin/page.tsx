@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ui/page-header';
 import {
   getAdminDashboard,
   listUsersWithSubscription,
@@ -21,7 +22,7 @@ export default async function AdminPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 flex-shrink-0">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-text">Admin</h1>
+        <PageHeader title="Admin" />
       </div>
 
       <AdminDashboardView users={users} dashboard={dashboard} />

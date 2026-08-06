@@ -2,6 +2,7 @@
 
 import { ExternalLink } from 'lucide-react';
 
+import { Card } from '@/components/ui/card';
 import type { PastDueUser } from '@/lib/admin/admin-analytics';
 
 /**
@@ -17,7 +18,7 @@ export function PastDueList({
   onOpenUser: (userId: string) => void;
 }) {
   return (
-    <div className="bg-surface rounded-xl border border-border p-6 flex flex-col max-h-80">
+    <Card className="flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base sm:text-xl font-semibold text-text">Past-due</h2>
         <span className="text-sm text-text-muted">{rows.length}</span>
@@ -56,6 +57,6 @@ export function PastDueList({
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import type { UpcomingRenewals } from '@/lib/admin/admin-analytics';
 
 const formatAUD = (value: number) =>
@@ -25,7 +26,7 @@ export function UpcomingRenewalsList({
   onOpenUser: (userId: string) => void;
 }) {
   return (
-    <div className="bg-surface rounded-xl border border-border p-6 flex flex-col max-h-80">
+    <Card className="flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-base sm:text-xl font-semibold text-text">
           Upcoming renewals
@@ -74,6 +75,6 @@ export function UpcomingRenewalsList({
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

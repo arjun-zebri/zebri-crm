@@ -1,6 +1,7 @@
 import { PrimitivesEditors } from './primitives-editors';
 import { PrimitivesFeedback } from './primitives-feedback';
 import { PrimitivesForms } from './primitives-forms';
+import { PrimitivesLayout } from './primitives-layout';
 import { PrimitivesOverlays } from './primitives-overlays';
 import { Section } from './showroom';
 
@@ -15,6 +16,14 @@ import { Section } from './showroom';
 export function SectionPrimitives() {
   return (
     <>
+      <Section
+        id="layout"
+        title="Primitives · Layout"
+        description="PageHeader and Card, extracted from markup that every page used to hand-write."
+      >
+        <PrimitivesLayout />
+      </Section>
+
       <Section
         id="forms"
         title="Primitives · Form controls"

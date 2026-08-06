@@ -3,6 +3,7 @@
 import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, Upload, X, Settings2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Couple,
   CoupleStatusRecord,
@@ -105,13 +106,12 @@ export function CouplesHeader({
 
   return (
     <div>
-      {/* Title row */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-3xl font-semibold text-gray-900">Couples</h1>
-          <span className="text-sm text-gray-400">{couples.length} total</span>
-        </div>
-        <div className="relative sm:hidden" ref={mobileAddRef}>
+      <PageHeader
+        title="Couples"
+        count={couples.length}
+        className="mb-4"
+        actions={
+          <div className="relative sm:hidden" ref={mobileAddRef}>
           <button
             onClick={() => setMobileAddOpen((o) => !o)}
             className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
@@ -135,8 +135,9 @@ export function CouplesHeader({
               </button>
             </div>
           )}
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 mt-3 flex-wrap">

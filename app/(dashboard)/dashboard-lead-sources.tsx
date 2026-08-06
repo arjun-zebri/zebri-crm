@@ -1,7 +1,9 @@
 "use client";
 
-import { useLeadSources, DashboardPeriod } from "./use-dashboard";
+import { Card } from '@/components/ui/card';
 import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple';
+
+import { useLeadSources, DashboardPeriod } from "./use-dashboard";
 
 interface DashboardLeadSourcesProps {
   period: DashboardPeriod;
@@ -17,7 +19,7 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col max-h-80">
+    <Card className="flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base sm:text-xl font-semibold text-gray-900">Lead Sources</h2>
         {data && (
@@ -74,6 +76,6 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
             })}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

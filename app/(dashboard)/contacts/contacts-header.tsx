@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import { Plus, Search, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Contact,
   ContactCategory,
@@ -97,20 +99,20 @@ export function ContactsHeader({
 
   return (
     <div>
-      {/* Title row */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-3xl font-semibold text-gray-900">Contacts</h1>
-          <span className="text-sm text-gray-400">{vendors.length} total</span>
-        </div>
-        <button
-          onClick={onAddClick}
-          className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
-          aria-label="New contact"
-        >
-          <Plus size={16} strokeWidth={2} />
-        </button>
-      </div>
+      <PageHeader
+        title="Contacts"
+        count={vendors.length}
+        className="mb-4"
+        actions={
+          <button
+            onClick={onAddClick}
+            className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
+            aria-label="New contact"
+          >
+            <Plus size={16} strokeWidth={2} />
+          </button>
+        }
+      />
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 mt-3 flex-wrap">

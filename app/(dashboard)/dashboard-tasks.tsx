@@ -1,5 +1,6 @@
 'use client';
 
+import { Card } from '@/components/ui/card';
 import { formatRelativeDate, isPastDue } from '@/lib/utils';
 
 interface DashboardTask {
@@ -22,7 +23,7 @@ const isOverdue = isPastDue;
 export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTasksProps) {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <Card>
         <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Tasks</h2>
         <div className="space-y-1">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -35,23 +36,23 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     );
   }
 
   if (tasks.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <Card>
         <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Tasks</h2>
         <div className="text-center py-12">
           <p className="text-gray-500 text-sm">All caught up.</p>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col">
+    <Card className="flex flex-col">
       <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4 shrink-0">
         Outstanding Tasks
       </h2>
@@ -85,6 +86,6 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }

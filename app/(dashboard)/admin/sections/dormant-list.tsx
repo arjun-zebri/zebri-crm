@@ -1,5 +1,6 @@
 'use client';
 
+import { Card } from '@/components/ui/card';
 import type { DormantUser } from '@/lib/admin/admin-analytics';
 
 /**
@@ -15,7 +16,7 @@ export function DormantList({
   onOpenUser: (userId: string) => void;
 }) {
   return (
-    <div className="bg-surface rounded-xl border border-border p-6 flex flex-col max-h-80">
+    <Card className="flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base sm:text-xl font-semibold text-text">
           Dormant accounts
@@ -49,6 +50,6 @@ export function DormantList({
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }
