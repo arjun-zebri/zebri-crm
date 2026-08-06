@@ -36,7 +36,7 @@ export function KanbanColumn({
     <div className="w-full sm:w-64 shrink-0 sm:rounded-control px-0 py-2 sm:p-3 sm:flex sm:flex-col">
       <div className="flex items-center gap-2 mb-2 shrink-0">
         <button
-          className="sm:hidden text-gray-400 transition cursor-pointer"
+          className="sm:hidden text-text-subtle transition cursor-pointer"
           onClick={() => setCollapsed((c) => !c)}
         >
           <ChevronDown
@@ -53,7 +53,7 @@ export function KanbanColumn({
         <span className="text-xs text-gray-300 flex-1">{couples.length}</span>
         <button
           onClick={() => onAddClick?.(status.slug)}
-          className="text-gray-400 hover:text-gray-600 transition cursor-pointer"
+          className="text-text-subtle hover:text-gray-600 transition cursor-pointer"
         >
           <Plus size={14} strokeWidth={1.5} />
         </button>

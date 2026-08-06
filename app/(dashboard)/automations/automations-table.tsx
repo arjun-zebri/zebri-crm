@@ -3,11 +3,11 @@
  *
  * Real HTML `<table>` (no card-bordered wrapper around it), sticky
  * `<thead>` with icon-prefixed column labels (`text-xs font-normal
- * text-gray-400`), rows separated by `border-b border-gray-100`,
+ * text-text-subtle`), rows separated by `border-b border-gray-100`,
  * subtle `hover:bg-gray-50/60` row highlight.
  *
  * Skeleton rows match the couples loading pattern (`animate-pulse`
- * + `h-4 bg-gray-100 rounded-control`).
+ * + `h-4 bg-surface-emphasis rounded-control`).
  *
  * @module app/(dashboard)/automations/automations-table
  */
@@ -67,7 +67,7 @@ export function AutomationsTable({ automations, loading, onOpen, onChange }: Pro
   return (
     <div className="relative">
       <table className="hidden sm:table w-full table-fixed border-separate border-spacing-0 min-w-[800px] select-none">
-        <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
+        <thead className="sticky top-0 bg-surface z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
           <tr>
             <Th id="on" textOnly="On" />
             <Th id="name" textOnly="Aa" label="Name" />
@@ -89,7 +89,7 @@ export function AutomationsTable({ automations, loading, onOpen, onChange }: Pro
                 <tr key={i} className="animate-pulse">
                   {SKELETON_WIDTHS.map((w, j) => (
                     <td key={j} className="pl-0 pr-2 py-2 border-b border-gray-100">
-                      <div className={`h-4 bg-gray-100 rounded-control ${w}`} />
+                      <div className={`h-4 bg-surface-emphasis rounded-control ${w}`} />
                     </td>
                   ))}
                 </tr>
@@ -114,8 +114,8 @@ export function AutomationsTable({ automations, loading, onOpen, onChange }: Pro
                 key={i}
                 className="border-b border-gray-100 px-1 py-3 animate-pulse space-y-2"
               >
-                <div className="h-4 w-40 bg-gray-100 rounded-control" />
-                <div className="h-3 w-24 bg-gray-100 rounded-control" />
+                <div className="h-4 w-40 bg-surface-emphasis rounded-control" />
+                <div className="h-3 w-24 bg-surface-emphasis rounded-control" />
               </div>
             ))
           : automations.map((a) => <MobileRow key={a.id} automation={a} onOpen={onOpen} />)}
@@ -139,7 +139,7 @@ function Th({
 }) {
   return (
     <th
-      className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400"
+      className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle"
       style={{ width: COL_WIDTHS[id] }}
     >
       <span className="flex items-center gap-1.5">
@@ -203,17 +203,17 @@ function Row({
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
-        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+        <span className="text-sm text-text-muted group-hover:text-text truncate block">
           {a.name}
         </span>
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
-        <span className="text-sm text-gray-500 truncate block">{a.triggerLabel}</span>
+        <span className="text-sm text-text-muted truncate block">{a.triggerLabel}</span>
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
-        <span className="text-sm text-gray-500">{a.runCount}</span>
+        <span className="text-sm text-text-muted">{a.runCount}</span>
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
@@ -221,13 +221,13 @@ function Row({
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-text-muted">
           {a.lastFiredAt ? relativePast(a.lastFiredAt) : '-'}
         </span>
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-text-muted">
           {a.nextWakeAt ? relativeFuture(a.nextWakeAt) : '-'}
         </span>
       </td>
@@ -239,14 +239,14 @@ function Row({
             e.stopPropagation()
             setMenuOpen((v) => !v)
           }}
-          className="p-1.5 rounded-control text-gray-400 hover:bg-gray-100 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+          className="p-1.5 rounded-control text-text-subtle hover:bg-surface-emphasis hover:text-gray-700 opacity-0 group-hover:opacity-100 transition cursor-pointer"
           aria-label="More actions"
         >
           <MoreHorizontal size={14} strokeWidth={1.5} />
         </button>
         {menuOpen && (
           <div
-            className="absolute right-0 mt-1 z-10 w-32 bg-white border border-gray-200 rounded-control shadow-lg overflow-hidden"
+            className="absolute right-0 mt-1 z-10 w-32 bg-surface border border-border rounded-control shadow-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -285,8 +285,8 @@ function MobileRow({
       onClick={() => onOpen(a.id)}
       className="w-full text-left border-b border-gray-100 px-1 py-3 hover:bg-gray-50/60 cursor-pointer transition"
     >
-      <div className="text-sm text-gray-900 truncate">{a.name}</div>
-      <div className="text-xs text-gray-500 mt-0.5 truncate">
+      <div className="text-sm text-text truncate">{a.name}</div>
+      <div className="text-xs text-text-muted mt-0.5 truncate">
         {a.triggerLabel} · {a.runCount} runs
         {a.lastFiredAt && ` · last ${relativePast(a.lastFiredAt)}`}
       </div>
@@ -317,7 +317,7 @@ function ToggleSwitch({
         }`}
       >
         <span
-          className={`inline-block h-3 w-3 rounded-pill bg-white shadow transform transition ${
+          className={`inline-block h-3 w-3 rounded-pill bg-surface shadow transform transition ${
             checked ? 'translate-x-3.5' : 'translate-x-0.5'
           }`}
         />
@@ -329,13 +329,13 @@ function ToggleSwitch({
 /* ─── Success-rate cell ───────────────────────────────────────── */
 
 function SuccessRate({ rate }: { rate: number | null }) {
-  if (rate === null) return <span className="text-sm text-gray-400">-</span>
+  if (rate === null) return <span className="text-sm text-text-subtle">-</span>
   const pct = Math.round(rate * 100)
   const tone =
     pct >= 95
       ? 'text-emerald-600'
       : pct >= 80
-        ? 'text-gray-500'
+        ? 'text-text-muted'
         : 'text-amber-600'
   return <span className={`text-sm ${tone}`}>{pct}%</span>
 }

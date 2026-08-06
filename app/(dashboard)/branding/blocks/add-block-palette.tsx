@@ -120,10 +120,10 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
         <Popover.Content
           align="end"
           sideOffset={8}
-          className="bg-white border border-gray-200 rounded-control shadow-2xl z-[60] w-[360px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-2xl z-[60] w-[360px] animate-modal-in"
         >
           <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100">
-            <Search size={14} strokeWidth={1.75} className="text-gray-400 shrink-0" />
+            <Search size={14} strokeWidth={1.75} className="text-text-subtle shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -131,16 +131,16 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="Search blocks…"
-              className="flex-1 text-sm bg-transparent outline-none placeholder:text-gray-400"
+              className="flex-1 text-sm bg-transparent outline-none placeholder:text-text-subtle"
             />
-            <kbd className="text-[10px] text-gray-400 bg-gray-50 border border-gray-200 rounded-control px-1.5 py-0.5 font-mono">
+            <kbd className="text-[10px] text-text-subtle bg-gray-50 border border-border rounded-control px-1.5 py-0.5 font-mono">
               esc
             </kbd>
           </div>
 
           <div className="max-h-[320px] overflow-y-auto p-1">
             {flatBlocks.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-6">No matching blocks</p>
+              <p className="text-sm text-text-subtle text-center py-6">No matching blocks</p>
             ) : (
               flatBlocks.map(({ type, group }, idx) => {
                 const Icon = BLOCK_ICONS[type] ?? Type
@@ -150,7 +150,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                 return (
                   <div key={type}>
                     {showHeader ? (
-                      <p className="px-2.5 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                      <p className="px-2.5 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-text-subtle">
                         {group}
                       </p>
                     ) : null}
@@ -162,15 +162,15 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                         handleOpenChange(false)
                       }}
                       className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-control text-left transition cursor-pointer ${
-                        active ? 'bg-gray-100' : 'hover:bg-gray-50'
+                        active ? 'bg-surface-emphasis' : 'hover:bg-gray-50'
                       }`}
                     >
-                      <span className="w-9 h-9 rounded-control bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                        <Icon size={15} strokeWidth={1.5} className="text-gray-500" />
+                      <span className="w-9 h-9 rounded-control bg-surface border border-border flex items-center justify-center shrink-0">
+                        <Icon size={15} strokeWidth={1.5} className="text-text-muted" />
                       </span>
                       <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-medium text-gray-900">{blockLabel(type, surface)}</span>
-                        <span className="block text-xs text-gray-500 truncate">{BLOCK_DESCRIPTIONS[type]}</span>
+                        <span className="block text-sm font-medium text-text">{blockLabel(type, surface)}</span>
+                        <span className="block text-xs text-text-muted truncate">{BLOCK_DESCRIPTIONS[type]}</span>
                       </span>
                     </button>
                   </div>

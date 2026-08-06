@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+
 import { useCalendarEvents } from "./use-dashboard";
 
 interface DashboardCalendarProps {
@@ -76,23 +77,23 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   return (
-    <div className="bg-white rounded-control border border-gray-200 p-5 flex flex-col lg:h-full">
+    <div className="bg-surface rounded-control border border-border p-5 flex flex-col lg:h-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base sm:text-xl font-semibold text-gray-900">Calendar</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-text">Calendar</h2>
         {/* Month nav */}
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={prevMonth}
-            className="p-1 rounded-control hover:bg-gray-100 transition cursor-pointer"
+            className="p-1 rounded-control hover:bg-surface-emphasis transition cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
           </button>
-          <span className="text-sm font-medium text-gray-900 w-20 text-center">
+          <span className="text-sm font-medium text-text w-20 text-center">
             {monthLabel}
           </span>
           <button
             onClick={nextMonth}
-            className="p-1 rounded-control hover:bg-gray-100 transition cursor-pointer"
+            className="p-1 rounded-control hover:bg-surface-emphasis transition cursor-pointer"
           >
             <ChevronRight className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
           </button>
@@ -105,7 +106,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
           <div className="hidden sm:grid grid-cols-7 gap-y-1">
             {Array.from({ length: 35 }).map((_, i) => (
               <div key={i} className="h-7 flex items-center">
-                <div className="h-6 w-6 bg-gray-100 rounded-pill" />
+                <div className="h-6 w-6 bg-surface-emphasis rounded-pill" />
               </div>
             ))}
           </div>
@@ -113,9 +114,9 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
           <div className="mt-4 space-y-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-3 py-2">
-                <div className="w-2 h-2 rounded-pill bg-gray-100 shrink-0" />
-                <div className="h-3 bg-gray-100 rounded-control w-10 shrink-0" />
-                <div className="h-3 bg-gray-100 rounded-control flex-1" />
+                <div className="w-2 h-2 rounded-pill bg-surface-emphasis shrink-0" />
+                <div className="h-3 bg-surface-emphasis rounded-control w-10 shrink-0" />
+                <div className="h-3 bg-surface-emphasis rounded-control flex-1" />
               </div>
             ))}
           </div>
@@ -127,7 +128,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div
                 key={d}
-                className="h-7 flex items-center justify-between text-xs text-gray-400 font-medium"
+                className="h-7 flex items-center justify-between text-xs text-text-subtle font-medium"
               >
                 {d}
               </div>
@@ -180,10 +181,10 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
                           event.couple?.status
                         )}`}
                       />
-                      <span className="text-xs font-medium text-gray-500 shrink-0">
+                      <span className="text-xs font-medium text-text-muted shrink-0">
                         {dayNum} {monthShort}
                       </span>
-                      <span className="text-gray-900 truncate flex-1">
+                      <span className="text-text truncate flex-1">
                         {event.couple?.name || "Unknown"}
                       </span>
                     </div>
@@ -191,7 +192,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
                 })}
               </div>
             ) : (
-              <p className="text-gray-400 text-xs text-center py-4">
+              <p className="text-text-subtle text-xs text-center py-4">
                 No events this month
               </p>
             )}

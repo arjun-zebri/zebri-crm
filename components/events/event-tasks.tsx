@@ -204,7 +204,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-9 bg-gray-100 rounded-control animate-pulse" />
+          <div key={i} className="h-9 bg-surface-emphasis rounded-control animate-pulse" />
         ))}
       </div>
     )
@@ -216,10 +216,10 @@ export function EventTasks({ eventId }: EventTasksProps) {
     <>
       {all.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-sm text-gray-400 mb-3">No tasks yet.</p>
+          <p className="text-sm text-text-subtle mb-3">No tasks yet.</p>
           <button
             onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
-            className="text-xs text-gray-500 border border-gray-200 rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+            className="text-xs text-text-muted border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add task
           </button>
@@ -278,7 +278,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
           ))}
           <button
             onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
-            className="w-full flex items-center gap-2 pl-3.5 pr-2 py-2 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
+            className="w-full flex items-center gap-2 pl-3.5 pr-2 py-2 text-sm text-text-subtle hover:text-gray-600 transition cursor-pointer"
           >
             <Plus size={13} strokeWidth={1.5} />
             New task

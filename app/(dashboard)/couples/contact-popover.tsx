@@ -146,7 +146,7 @@ export function ContactPopover({
         <Popover.Trigger asChild>{children}</Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
-            className="w-72 bg-white border border-gray-200 rounded-control shadow-lg z-[80] overflow-hidden"
+            className="w-72 bg-surface border border-border rounded-control shadow-lg z-[80] overflow-hidden"
             sideOffset={6}
             align="start"
           >
@@ -157,16 +157,16 @@ export function ContactPopover({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoFocus
-                className="w-full text-sm text-gray-900 placeholder:text-gray-400 outline-none border-none bg-transparent"
+                className="w-full text-sm text-text placeholder:text-text-subtle outline-none border-none bg-transparent"
               />
             </div>
             <div className="max-h-64 overflow-y-auto py-1">
               {isLoading ? (
-                <p className="text-xs text-gray-400 text-center py-4">
+                <p className="text-xs text-text-subtle text-center py-4">
                   Loading...
                 </p>
               ) : filtered.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">
+                <p className="text-xs text-text-subtle text-center py-4">
                   {(contacts?.length ?? 0) === 0
                     ? 'No contacts yet'
                     : 'No matches'}
@@ -183,10 +183,10 @@ export function ContactPopover({
                     }}
                     className="w-full text-left px-3 py-2 hover:bg-gray-50 transition cursor-pointer flex items-center justify-between gap-2"
                   >
-                    <span className="text-sm text-gray-900 truncate">
+                    <span className="text-sm text-text truncate">
                       {c.name}
                     </span>
-                    <span className="text-xs text-gray-400 shrink-0">
+                    <span className="text-xs text-text-subtle shrink-0">
                       {CATEGORY_LABELS[
                         c.category as keyof typeof CATEGORY_LABELS
                       ] || c.category}
@@ -209,7 +209,7 @@ export function ContactPopover({
                 <Plus
                   size={12}
                   strokeWidth={2}
-                  className="text-gray-400"
+                  className="text-text-subtle"
                 />
                 Create new contact
               </button>

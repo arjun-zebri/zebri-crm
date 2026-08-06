@@ -44,7 +44,7 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-pill bg-white shadow transition-transform ${
+        className={`inline-block h-4 w-4 transform rounded-pill bg-surface shadow transition-transform ${
           enabled ? 'translate-x-[18px]' : 'translate-x-0.5'
         }`}
       />
@@ -129,8 +129,8 @@ export function LeadCaptureSection() {
   return (
     <div className="space-y-10">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Lead capture</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-text">Lead capture</h2>
+        <p className="mt-1 text-sm text-text-muted">
           Embed an enquiry form on your website. Submissions arrive as new couples.
         </p>
       </div>
@@ -142,7 +142,7 @@ export function LeadCaptureSection() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-gray-700">Form enabled</p>
-              <p className="text-xs text-gray-400">Turn off to stop accepting new enquiries.</p>
+              <p className="text-xs text-text-subtle">Turn off to stop accepting new enquiries.</p>
             </div>
             <Toggle
               enabled={enabled}

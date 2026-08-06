@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+
 import { Modal } from '@/components/ui/modal'
 import { TimelineItem } from '@/types/event'
 
@@ -82,27 +83,27 @@ export function TimePicker({
         onClick={() => setOpen(!open)}
         className={`flex items-center justify-between w-36 text-sm transition cursor-pointer focus:outline-none ${
           variant === 'underline'
-            ? 'border-0 border-b border-gray-200 bg-transparent px-0 py-2 hover:border-gray-400 focus:border-gray-400'
-            : 'border border-gray-200 rounded-control px-3 py-2 hover:bg-gray-50'
+            ? 'border-0 border-b border-border bg-transparent px-0 py-2 hover:border-gray-400 focus:border-gray-400'
+            : 'border border-border rounded-control px-3 py-2 hover:bg-gray-50'
         }`}
       >
-        <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+        <span className={value ? 'text-text' : 'text-text-subtle'}>
           {formatTimeDisplay(value)}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-2 flex-shrink-0" />
+        <ChevronDown className="w-3.5 h-3.5 text-text-subtle ml-2 flex-shrink-0" />
       </button>
 
       {open && (
         <div
           ref={listRef}
-          className="absolute z-50 mt-1 w-36 bg-white border border-gray-200 rounded-control shadow-lg overflow-y-auto py-1"
+          className="absolute z-50 mt-1 w-36 bg-surface border border-border rounded-control shadow-lg overflow-y-auto py-1"
           style={{ maxHeight: '220px' }}
         >
           <button
             type="button"
             onClick={() => { onChange(''); setOpen(false) }}
             className={`w-full text-left px-3 py-2 text-sm transition hover:bg-gray-50 ${
-              !value ? 'font-medium text-gray-900' : 'text-gray-400'
+              !value ? 'font-medium text-text' : 'text-text-subtle'
             }`}
           >
             No time
@@ -113,7 +114,7 @@ export function TimePicker({
               type="button"
               onClick={() => { onChange(t); setOpen(false) }}
               className={`w-full text-left px-3 py-2 text-sm transition hover:bg-gray-50 ${
-                t === value ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-700'
+                t === value ? 'bg-gray-50 font-medium text-text' : 'text-gray-700'
               }`}
             >
               {formatTimeDisplay(t)}
@@ -145,7 +146,7 @@ export function addMinutesToTime(t: string, mins: number): string {
 // modals (`border-b`, transparent background, calm focus). All three open
 // off the couple profile, so they should read as one product.
 const inputClass =
-  'w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition'
+  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition'
 const labelClass = 'block text-sm text-gray-600 mb-1'
 
 export function EventTimelineModal({
@@ -263,7 +264,7 @@ export function EventTimelineModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-xs px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
@@ -282,7 +283,7 @@ export function EventTimelineModal({
         {showStatus && item && (
           <div>
             <label className={labelClass}>Status</label>
-            <div className="flex border border-gray-200 rounded-control overflow-hidden">
+            <div className="flex border border-border rounded-control overflow-hidden">
               {(['timeline', 'unscheduled', 'review'] as const).map((s) => (
                 <button
                   key={s}
@@ -308,7 +309,7 @@ export function EventTimelineModal({
             <label className={labelClass}>From</label>
             <TimePicker value={startTime} onChange={handleStartChange} variant="underline" />
           </div>
-          <span className="text-sm text-gray-400 pb-2">→</span>
+          <span className="text-sm text-text-subtle pb-2">→</span>
           <div>
             <label className={labelClass}>To</label>
             <TimePicker value={endTime} onChange={setEndTime} variant="underline" />

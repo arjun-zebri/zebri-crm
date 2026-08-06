@@ -13,8 +13,8 @@ import { DashboardLeadSources } from "./dashboard-lead-sources";
 import { DashboardLeads } from "./dashboard-leads";
 import { DashboardRevenueChart } from "./dashboard-revenue-chart";
 import { DashboardStats } from "./dashboard-stats";
-import { useDashboardStats, useDashboardTasks, DashboardPeriod } from "./use-dashboard";
 import { DashboardTasks } from "./dashboard-tasks";
+import { useDashboardStats, useDashboardTasks, DashboardPeriod } from "./use-dashboard";
 
 
 const periodOptions: { value: DashboardPeriod; label: string }[] = [
@@ -106,19 +106,19 @@ export default function DashboardPage() {
           <div className="relative" ref={periodRef}>
             <button
               onClick={() => setPeriodOpen(!periodOpen)}
-              className="flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-control transition cursor-pointer"
+              className="flex items-center gap-1 text-xs font-medium text-gray-600 bg-surface-emphasis hover:bg-gray-200 px-2.5 py-1.5 rounded-control transition cursor-pointer"
             >
               {periodOptions.find((o) => o.value === period)?.label}
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400" strokeWidth={1.5} />
+              <ChevronDown className="w-3.5 h-3.5 text-text-subtle" strokeWidth={1.5} />
             </button>
             {periodOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-control shadow-lg z-10 min-w-[110px]">
+              <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-control shadow-lg z-10 min-w-[110px]">
                 {periodOptions.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => { setPeriod(opt.value); setPeriodOpen(false); }}
                     className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition first:rounded-t-control last:rounded-b-control ${
-                      period === opt.value ? "font-medium text-gray-900" : "text-gray-600"
+                      period === opt.value ? "font-medium text-text" : "text-gray-600"
                     }`}
                   >
                     {opt.label}

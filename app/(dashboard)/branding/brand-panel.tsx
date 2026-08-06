@@ -148,12 +148,12 @@ export function BrandPanel(props: BrandPanelProps) {
   const toggle = (id: SectionId) => setOpen((p) => ({ ...p, [id]: !p[id] }))
 
   return (
-    <aside className="w-[320px] border-r border-gray-100 bg-white overflow-y-auto shrink-0 flex flex-col">
-      <div className="px-4 pt-4 pb-3 flex items-center justify-between sticky top-0 bg-white z-10 border-b border-gray-50">
+    <aside className="w-[320px] border-r border-gray-100 bg-surface overflow-y-auto shrink-0 flex flex-col">
+      <div className="px-4 pt-4 pb-3 flex items-center justify-between sticky top-0 bg-surface z-10 border-b border-gray-50">
         <div className="min-w-0">
-          <p className="text-[11px] font-medium text-gray-400 uppercase tracking-[0.08em]">Brand kit</p>
-          <p className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-            <Globe size={13} strokeWidth={1.75} className="text-gray-400 shrink-0" />
+          <p className="text-[11px] font-medium text-text-subtle uppercase tracking-[0.08em]">Brand kit</p>
+          <p className="text-sm font-medium text-text flex items-center gap-1.5">
+            <Globe size={13} strokeWidth={1.75} className="text-text-subtle shrink-0" />
             Applies to every document
           </p>
         </div>
@@ -162,7 +162,7 @@ export function BrandPanel(props: BrandPanelProps) {
             type="button"
             onClick={props.resetToTheme}
             title="Reset customisations"
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-control text-[11px] text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-control text-[11px] text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
           >
             <RotateCcw size={10} strokeWidth={1.75} />
             Reset
@@ -172,7 +172,7 @@ export function BrandPanel(props: BrandPanelProps) {
 
       <div className="pb-12">
         <Accordion
-          icon={<Globe size={13} strokeWidth={1.75} className="text-gray-500" />}
+          icon={<Globe size={13} strokeWidth={1.75} className="text-text-muted" />}
           title="Your business"
           subtitle="Name, phone, social links, favicon"
           open={open.business}
@@ -209,7 +209,7 @@ export function BrandPanel(props: BrandPanelProps) {
             applies to every document. */}
 
         <Accordion
-          icon={<Paintbrush size={13} strokeWidth={1.75} className="text-gray-500" />}
+          icon={<Paintbrush size={13} strokeWidth={1.75} className="text-text-muted" />}
           title="Brand colours"
           subtitle="Primary, accent, surface…"
           open={open.colors}
@@ -219,7 +219,7 @@ export function BrandPanel(props: BrandPanelProps) {
         </Accordion>
 
         <Accordion
-          icon={<TypeIcon size={13} strokeWidth={1.75} className="text-gray-500" />}
+          icon={<TypeIcon size={13} strokeWidth={1.75} className="text-text-muted" />}
           title="Typography"
           subtitle="Fonts, weights, scale"
           open={open.fonts}
@@ -229,7 +229,7 @@ export function BrandPanel(props: BrandPanelProps) {
         </Accordion>
 
         <Accordion
-          icon={<Layout size={13} strokeWidth={1.75} className="text-gray-500" />}
+          icon={<Layout size={13} strokeWidth={1.75} className="text-text-muted" />}
           title="Global styles"
           subtitle="Radius, links, buttons, spacing"
           open={open.globalStyles}
@@ -268,13 +268,13 @@ function Accordion({
           {icon}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-medium text-gray-900 truncate">{title}</p>
-          {subtitle && <p className="text-[11px] text-gray-400 truncate">{subtitle}</p>}
+          <p className="text-[13px] font-medium text-text truncate">{title}</p>
+          {subtitle && <p className="text-[11px] text-text-subtle truncate">{subtitle}</p>}
         </div>
         <ChevronDown
           size={13}
           strokeWidth={2}
-          className={`text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`text-text-subtle shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
         />
       </button>
       {open && <div className="px-4 pb-5 pt-1">{children}</div>}
@@ -378,8 +378,8 @@ function ColorRow({
         }
       />
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">{label}</p>
-        <p className="text-[11px] text-gray-500">{description}</p>
+        <p className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">{label}</p>
+        <p className="text-[11px] text-text-muted">{description}</p>
         <p className="text-xs font-mono text-gray-700 truncate">{value}</p>
       </div>
     </div>
@@ -406,23 +406,23 @@ function FontSection({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Heading</p>
+        <p className="text-[11px] text-text-subtle uppercase tracking-[0.08em] mb-2">Heading</p>
         <div className="space-y-2.5">
           <div>
-            <p className="text-[11px] text-gray-500 mb-1">Font</p>
+            <p className="text-[11px] text-text-muted mb-1">Font</p>
             <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] text-gray-500">Size</span>
+                <span className="text-[11px] text-text-muted">Size</span>
                 <span className="text-[11px] font-mono text-gray-700 tabular-nums">{headingSize}px</span>
               </div>
               <Slider value={headingSize} min={16} max={64} step={1} onChange={setHeadingSize} ariaLabel="Heading size" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] text-gray-500">Letter sp.</span>
+                <span className="text-[11px] text-text-muted">Letter sp.</span>
                 <span className="text-[11px] font-mono text-gray-700 tabular-nums">{headingLetterSpacing.toFixed(2)}</span>
               </div>
               <Slider value={headingLetterSpacing} min={-0.05} max={0.1} step={0.01} onChange={setHeadingLetterSpacing} ariaLabel="Heading letter spacing" />
@@ -434,16 +434,16 @@ function FontSection({
       </div>
 
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Subheading</p>
+        <p className="text-[11px] text-text-subtle uppercase tracking-[0.08em] mb-2">Subheading</p>
         {/* The small labels across every document: invoice "Ref"/"Expires",
             "Account name"/"BSB"/"Account number", and the like. Sits between
             heading and body because that is its visual weight. Colour is set in
             Brand colours (Subheading); size, weight and case live here. */}
-        <p className="text-[11px] text-gray-500 mb-2 leading-snug">Labels like Ref, Expires and bank details. Colour is under Brand colours.</p>
+        <p className="text-[11px] text-text-muted mb-2 leading-snug">Labels like Ref, Expires and bank details. Colour is under Brand colours.</p>
         <div className="space-y-2.5">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-gray-500">Size</span>
+              <span className="text-[11px] text-text-muted">Size</span>
               <span className="text-[11px] font-mono text-gray-700 tabular-nums">{subheadingSize}px</span>
             </div>
             <Slider value={subheadingSize} min={8} max={24} step={1} onChange={setSubheadingSize} ariaLabel="Subheading size" />
@@ -454,23 +454,23 @@ function FontSection({
       </div>
 
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Body</p>
+        <p className="text-[11px] text-text-subtle uppercase tracking-[0.08em] mb-2">Body</p>
         <div className="space-y-2.5">
           <div>
-            <p className="text-[11px] text-gray-500 mb-1">Font</p>
+            <p className="text-[11px] text-text-muted mb-1">Font</p>
             <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] text-gray-500">Size</span>
+                <span className="text-[11px] text-text-muted">Size</span>
                 <span className="text-[11px] font-mono text-gray-700 tabular-nums">{bodySize}px</span>
               </div>
               <Slider value={bodySize} min={12} max={24} step={1} onChange={setBodySize} ariaLabel="Body size" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] text-gray-500">Line ht.</span>
+                <span className="text-[11px] text-text-muted">Line ht.</span>
                 <span className="text-[11px] font-mono text-gray-700 tabular-nums">{bodyLineHeight.toFixed(2)}</span>
               </div>
               <Slider value={bodyLineHeight} min={1.2} max={2} step={0.05} onChange={setBodyLineHeight} ariaLabel="Body line height" />
@@ -488,15 +488,15 @@ function FontSection({
 function WeightPills({ label, value, onChange, compact }: { label: string; value: FontWeight; onChange: (v: FontWeight) => void; compact?: boolean }) {
   return (
     <div>
-      <p className={`mb-1 ${compact ? 'text-[11px] text-gray-500' : 'text-[11px] text-gray-400'}`}>{label}</p>
-      <div className="inline-flex bg-gray-100 rounded-control p-0.5 w-full">
+      <p className={`mb-1 ${compact ? 'text-[11px] text-text-muted' : 'text-[11px] text-text-subtle'}`}>{label}</p>
+      <div className="inline-flex bg-surface-emphasis rounded-control p-0.5 w-full">
         {FONT_WEIGHTS.map((w) => (
           <button
             key={w}
             type="button"
             onClick={() => onChange(w)}
             className={`flex-1 px-2 py-1 text-[11px] rounded-control transition cursor-pointer ${
-              value === w ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+              value === w ? 'bg-surface text-text shadow-sm font-medium' : 'text-text-muted hover:text-gray-700'
             }`}
             style={{ fontWeight: w }}
           >
@@ -522,8 +522,8 @@ function CasePills({ label, value, onChange }: { label: string; value: TextCase;
   ]
   return (
     <div>
-      <p className="text-[11px] text-gray-500 mb-1">{label}</p>
-      <div className="inline-flex bg-gray-100 rounded-control p-0.5 w-full">
+      <p className="text-[11px] text-text-muted mb-1">{label}</p>
+      <div className="inline-flex bg-surface-emphasis rounded-control p-0.5 w-full">
         {cases.map((c) => (
           // Shared Tooltip rather than the native `title` attribute: title
           // tooltips are slow to appear and fire inconsistently. This one shows
@@ -534,7 +534,7 @@ function CasePills({ label, value, onChange }: { label: string; value: TextCase;
               onClick={() => onChange(c.id)}
               aria-label={c.label}
               className={`w-full px-2 py-1 text-[11px] rounded-control transition cursor-pointer ${
-                value === c.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+                value === c.id ? 'bg-surface text-text shadow-sm font-medium' : 'text-text-muted hover:text-gray-700'
               }`}
             >
               {c.preview}
@@ -564,21 +564,21 @@ function FontPicker<V extends HeadingFont | BodyFont>({
         <button
           type="button"
           aria-label={`${role} font`}
-          className="w-full flex items-center gap-2 border border-gray-200 rounded-control px-2.5 py-1.5 bg-white text-left hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer transition"
+          className="w-full flex items-center gap-2 border border-border rounded-control px-2.5 py-1.5 bg-surface text-left hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-border-strong cursor-pointer transition"
         >
           {/* No role badge here. The group heading directly above already says
               HEADING or BODY, so repeating it inside the control was noise. */}
-          <span className="flex-1 min-w-0 truncate text-[12px] text-gray-900" style={{ fontFamily: FONT_STACKS[value] }}>
+          <span className="flex-1 min-w-0 truncate text-[12px] text-text" style={{ fontFamily: FONT_STACKS[value] }}>
             {FONT_LABELS[value]}
           </span>
-          <ChevronDown size={12} strokeWidth={2} className="text-gray-400 shrink-0" />
+          <ChevronDown size={12} strokeWidth={2} className="text-text-subtle shrink-0" />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
           align="start"
           sideOffset={4}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-1 z-[60] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-1 z-[60] animate-modal-in"
           style={{
             minWidth: 'var(--radix-popover-trigger-width)',
             maxHeight: 'min(360px, var(--radix-popover-content-available-height))',
@@ -596,12 +596,12 @@ function FontPicker<V extends HeadingFont | BodyFont>({
                   setOpen(false)
                 }}
                 className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-control text-[12px] hover:bg-gray-50 cursor-pointer ${
-                  active ? 'text-gray-900' : 'text-gray-700'
+                  active ? 'text-text' : 'text-gray-700'
                 }`}
                 style={{ fontFamily: FONT_STACKS[opt] }}
               >
                 <span className="flex-1 text-left truncate">{FONT_LABELS[opt]}</span>
-                {active && <Check size={12} strokeWidth={2.5} className="text-gray-900 shrink-0" />}
+                {active && <Check size={12} strokeWidth={2.5} className="text-text shrink-0" />}
               </button>
             )
           })}
@@ -629,7 +629,7 @@ function GlobalStylesSection({
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-500">Corner radius</span>
+          <span className="text-[11px] text-text-muted">Corner radius</span>
           <span className="text-[11px] font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
         </div>
         <Slider value={cornerRadius} min={0} max={24} step={1} onChange={setCornerRadius} ariaLabel="Corner radius" />
@@ -637,25 +637,25 @@ function GlobalStylesSection({
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-500">Document padding</span>
+          <span className="text-[11px] text-text-muted">Document padding</span>
           <span className="text-[11px] font-mono text-gray-700 tabular-nums">{docPadding}px</span>
         </div>
         <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
       </div>
 
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Button style</p>
+        <p className="text-[11px] text-text-subtle uppercase tracking-[0.08em] mb-2">Button style</p>
         <div className="space-y-2">
           <div>
-            <p className="text-[11px] text-gray-500 mb-1">Variant</p>
-            <div className="inline-flex bg-gray-100 rounded-control p-0.5 w-full">
+            <p className="text-[11px] text-text-muted mb-1">Variant</p>
+            <div className="inline-flex bg-surface-emphasis rounded-control p-0.5 w-full">
               {(['fill', 'outline'] as const).map((v) => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => setButtonVariant(v)}
                   className={`flex-1 px-2 py-1 text-[11px] rounded-control transition cursor-pointer ${
-                    buttonVariant === v ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+                    buttonVariant === v ? 'bg-surface text-text shadow-sm font-medium' : 'text-text-muted hover:text-gray-700'
                   }`}
                 >
                   {v === 'fill' ? 'Filled' : 'Outline'}
@@ -664,15 +664,15 @@ function GlobalStylesSection({
             </div>
           </div>
           <div>
-            <p className="text-[11px] text-gray-500 mb-1">Size</p>
-            <div className="inline-flex bg-gray-100 rounded-control p-0.5 w-full">
+            <p className="text-[11px] text-text-muted mb-1">Size</p>
+            <div className="inline-flex bg-surface-emphasis rounded-control p-0.5 w-full">
               {(['sm', 'md', 'lg'] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setButtonSize(s)}
                   className={`flex-1 px-2 py-1 text-[11px] rounded-control transition cursor-pointer ${
-                    buttonSize === s ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+                    buttonSize === s ? 'bg-surface text-text shadow-sm font-medium' : 'text-text-muted hover:text-gray-700'
                   }`}
                 >
                   {s === 'sm' ? 'Small' : s === 'md' ? 'Medium' : 'Large'}
@@ -682,7 +682,7 @@ function GlobalStylesSection({
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-gray-500">Radius</span>
+              <span className="text-[11px] text-text-muted">Radius</span>
               <span className="text-[11px] font-mono text-gray-700 tabular-nums">{buttonRadius}px</span>
             </div>
             <Slider value={buttonRadius} min={0} max={16} step={1} onChange={setButtonRadius} ariaLabel="Button radius" />

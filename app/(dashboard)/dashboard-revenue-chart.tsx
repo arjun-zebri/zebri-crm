@@ -62,22 +62,22 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
         <div className="relative" ref={modeRef}>
           <button
             onClick={() => { setModeOpen(!modeOpen) }}
-            className="flex items-center gap-1 text-base sm:text-xl font-semibold text-gray-900 cursor-pointer hover:text-gray-700 transition"
+            className="flex items-center gap-1 text-base sm:text-xl font-semibold text-text cursor-pointer hover:text-gray-700 transition"
           >
             {label}
-            <ChevronDown className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
+            <ChevronDown className="w-4 h-4 text-text-subtle" strokeWidth={1.5} />
           </button>
           {modeOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-control shadow-lg z-10 min-w-[120px]">
+            <div className="absolute top-full left-0 mt-1 bg-surface border border-border rounded-control shadow-lg z-10 min-w-[120px]">
               <button
                 onClick={() => { setMode('revenue'); setModeOpen(false) }}
-                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-t-control ${mode === 'revenue' ? 'font-medium text-gray-900' : 'text-gray-600'}`}
+                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-t-control ${mode === 'revenue' ? 'font-medium text-text' : 'text-gray-600'}`}
               >
                 Revenue
               </button>
               <button
                 onClick={() => { setMode('leads'); setModeOpen(false) }}
-                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-b-control ${mode === 'leads' ? 'font-medium text-gray-900' : 'text-gray-600'}`}
+                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-b-control ${mode === 'leads' ? 'font-medium text-text' : 'text-gray-600'}`}
               >
                 Leads
               </button>
@@ -89,17 +89,17 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
 
       {isLoading ? (
         <div className="animate-pulse flex flex-col flex-1 min-h-0">
-          <div className="h-8 w-32 bg-gray-100 rounded-control mb-4" />
-          <div className="flex-1 min-h-0 bg-gray-100 rounded-control" />
+          <div className="h-8 w-32 bg-surface-emphasis rounded-control mb-4" />
+          <div className="flex-1 min-h-0 bg-surface-emphasis rounded-control" />
         </div>
       ) : !data || data.chartData.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-gray-500 text-sm">No {label.toLowerCase()} data yet.</p>
+          <p className="text-text-muted text-sm">No {label.toLowerCase()} data yet.</p>
         </div>
       ) : (
         <>
           <div className="flex flex-wrap items-baseline gap-2 mb-4">
-            <span className="text-2xl sm:text-3xl font-semibold text-gray-900">
+            <span className="text-2xl sm:text-3xl font-semibold text-text">
               {mode === 'revenue' ? formatAUD(data.total) : data.total}
             </span>
             {data.percentChange !== 0 && (
@@ -113,7 +113,7 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
                 {data.percentChange > 0 ? '+' : ''}{data.percentChange}%
               </span>
             )}
-            <span className="text-xs text-gray-500 whitespace-nowrap">vs {previousPeriodLabels[period]}</span>
+            <span className="text-xs text-text-muted whitespace-nowrap">vs {previousPeriodLabels[period]}</span>
           </div>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">

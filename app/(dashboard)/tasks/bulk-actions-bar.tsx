@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { CheckSquare, Calendar as CalendarIcon, FolderInput, Trash2, X } from 'lucide-react'
+import { useState } from 'react'
+
 import { DatePicker } from '@/components/ui/date-picker'
+
 import { TASK_GROUP_DOT_CLASS, TaskGroup } from './use-task-groups'
 
 interface BulkActionsBarProps {
@@ -31,11 +33,11 @@ export function BulkActionsBar({
   if (count === 0) return null
 
   const btn =
-    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-control text-sm text-gray-700 hover:bg-gray-100 transition cursor-pointer'
+    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-control text-sm text-gray-700 hover:bg-surface-emphasis transition cursor-pointer'
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-control shadow-xl px-3 py-2 flex items-center gap-1 animate-fade-in">
-      <span className="text-sm text-gray-500 px-2 tabular-nums">{count} selected</span>
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-surface border border-border rounded-control shadow-xl px-3 py-2 flex items-center gap-1 animate-fade-in">
+      <span className="text-sm text-text-muted px-2 tabular-nums">{count} selected</span>
       <span className="w-px h-4 bg-gray-200 mx-1" />
       <button type="button" onClick={onMarkDone} className={btn} title="Mark done">
         <CheckSquare size={14} strokeWidth={1.5} />
@@ -51,7 +53,7 @@ export function BulkActionsBar({
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content sideOffset={8} align="center" className="z-[60]">
-            <div className="bg-white border border-gray-200 rounded-control shadow-lg p-2 w-72">
+            <div className="bg-surface border border-border rounded-control shadow-lg p-2 w-72">
               <DatePicker
                 value=""
                 onChange={(v) => {
@@ -68,7 +70,7 @@ export function BulkActionsBar({
                     setDatePickerOpen(false)
                     onChangeDate(null)
                   }}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                  className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer"
                 >
                   Clear due date
                 </button>
@@ -88,14 +90,14 @@ export function BulkActionsBar({
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content sideOffset={8} align="center" className="z-[60]">
-              <div className="bg-white border border-gray-200 rounded-control shadow-lg py-1 min-w-44 max-h-56 overflow-y-auto">
+              <div className="bg-surface border border-border rounded-control shadow-lg py-1 min-w-44 max-h-56 overflow-y-auto">
                 <button
                   type="button"
                   onClick={() => {
                     setGroupPickerOpen(false)
                     onMoveToGroup(null)
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 transition"
+                  className="w-full text-left px-3 py-2 text-sm text-text-muted hover:bg-gray-50 transition"
                 >
                   Ungrouped
                 </button>
@@ -133,7 +135,7 @@ export function BulkActionsBar({
       <button
         type="button"
         onClick={onClear}
-        className="p-1.5 rounded-control text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+        className="p-1.5 rounded-control text-text-subtle hover:text-gray-700 hover:bg-surface-emphasis transition cursor-pointer"
         title="Clear selection (Esc)"
       >
         <X size={14} strokeWidth={1.5} />

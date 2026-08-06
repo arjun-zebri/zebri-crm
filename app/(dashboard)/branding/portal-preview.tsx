@@ -35,14 +35,14 @@ export function PortalSectionsBar({
 }) {
   const toggleable = SECTIONS.filter((s) => s.toggleable) as (Section & { id: SectionKey })[]
   return (
-    <div className="bg-white border border-gray-200 rounded-control shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-3 mb-3">
+    <div className="bg-surface border border-border rounded-control shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-3 mb-3">
       <div className="flex items-start gap-2.5">
         <span className="w-6 h-6 rounded-control bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 mt-0.5">
           <Info size={12} strokeWidth={1.75} className="text-amber-600" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-medium text-gray-900">Portal layout</p>
-          <p className="text-[11px] text-gray-500 leading-relaxed">
+          <p className="text-[12px] font-medium text-text">Portal layout</p>
+          <p className="text-[11px] text-text-muted leading-relaxed">
             Parts of the portal layout are fixed, but you can add blocks around it. Toggle which sections couples see below.
           </p>
         </div>
@@ -59,7 +59,7 @@ export function PortalSectionsBar({
               className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-pill text-[11px] cursor-pointer transition border ${
                 enabled
                   ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 hover:border-gray-300'
+                  : 'bg-surface text-text-subtle border-border hover:text-gray-700 hover:border-border-strong'
               }`}
               title={enabled ? `Hide ${s.label}` : `Show ${s.label}`}
             >

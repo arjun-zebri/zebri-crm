@@ -43,13 +43,13 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
-      <div className="max-w-md w-full bg-white border border-gray-200 rounded-control shadow-sm p-6">
+    <div className="flex items-center justify-center min-h-screen bg-surface">
+      <div className="max-w-md w-full bg-surface border border-border rounded-control shadow-sm p-6">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-control bg-red-50 mb-4">
             <span className="text-2xl">⚠️</span>
           </div>
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">
+          <h1 className="text-xl font-semibold text-text mb-2">
             Something went wrong
           </h1>
           <p className="text-sm text-gray-600 mb-6">

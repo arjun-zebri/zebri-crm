@@ -36,18 +36,18 @@ export function SidePanel({
       <div
         role="dialog"
         aria-modal="true"
-        className={`fixed top-0 right-0 bottom-0 ${OVERLAY_Z.base.panel} w-full sm:w-[640px] lg:w-[760px] bg-white shadow-2xl flex flex-col animate-slide-in-right`}
+        className={`fixed top-0 right-0 bottom-0 ${OVERLAY_Z.base.panel} w-full sm:w-[640px] lg:w-[760px] bg-surface shadow-2xl flex flex-col animate-slide-in-right`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-gray-200">
+        <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-border">
           {title && (
-            <h2 className="flex-1 text-sm font-medium text-gray-500 truncate">{title}</h2>
+            <h2 className="flex-1 text-sm font-medium text-text-muted truncate">{title}</h2>
           )}
           <div className="flex items-center gap-1 ml-auto">
             {headerActions}
             <button
               onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-control transition cursor-pointer"
+              className="p-1.5 text-text-subtle hover:text-gray-700 hover:bg-surface-emphasis rounded-control transition cursor-pointer"
               aria-label="Close"
             >
               <X size={18} strokeWidth={1.5} />
@@ -58,7 +58,7 @@ export function SidePanel({
         <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4">{children}</div>
 
         {footer && (
-          <div className="border-t border-gray-200 px-4 sm:px-5 py-3 bg-gray-50">{footer}</div>
+          <div className="border-t border-border px-4 sm:px-5 py-3 bg-gray-50">{footer}</div>
         )}
       </div>
     </>

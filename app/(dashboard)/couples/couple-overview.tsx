@@ -102,18 +102,18 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       {isLoading && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 animate-pulse">
           <div className="space-y-4">
-            <div className="h-3 w-16 bg-gray-100 rounded-pill" />
+            <div className="h-3 w-16 bg-surface-emphasis rounded-pill" />
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center justify-between py-3">
-                <div className="h-3 w-20 bg-gray-100 rounded-pill" />
-                <div className="h-3 w-32 bg-gray-100 rounded-pill" />
+                <div className="h-3 w-20 bg-surface-emphasis rounded-pill" />
+                <div className="h-3 w-32 bg-surface-emphasis rounded-pill" />
               </div>
             ))}
-            <div className="h-16 bg-gray-100 rounded-control mt-2" />
+            <div className="h-16 bg-surface-emphasis rounded-control mt-2" />
           </div>
           <div>
-            <div className="h-3 w-16 bg-gray-100 rounded-pill mb-4" />
-            {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-control mb-2" />)}
+            <div className="h-3 w-16 bg-surface-emphasis rounded-pill mb-4" />
+            {[1, 2].map((i) => <div key={i} className="h-10 bg-surface-emphasis rounded-control mb-2" />)}
           </div>
         </div>
       )}
@@ -123,7 +123,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       {/* Column 1: General Info */}
       <div className="flex flex-col">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900">General</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text">General</h3>
         </div>
 
         {/* Primary + Secondary partner contacts. Six inline-editable
@@ -192,17 +192,17 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
                   className="flex-1 flex items-center justify-end gap-1 text-sm bg-transparent outline-none border-none cursor-pointer"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className={leadSource ? "text-gray-900" : "text-gray-400"}>
+                  <span className={leadSource ? "text-text" : "text-text-subtle"}>
                     {leadSource
                       ? LEAD_SOURCE_LABELS[leadSource as LeadSource]
                       : "Select source"}
                   </span>
-                  <Pencil size={11} className="opacity-60 shrink-0 text-gray-500" />
+                  <Pencil size={11} className="opacity-60 shrink-0 text-text-muted" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-48"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-48"
                   sideOffset={4}
                   align="end"
                 >
@@ -215,7 +215,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
                     }}
                     className={`w-full text-left px-3 py-2 text-sm transition ${
                       !leadSource
-                        ? "bg-gray-100 text-gray-900 font-medium"
+                        ? "bg-surface-emphasis text-text font-medium"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
@@ -232,7 +232,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
                       }}
                       className={`w-full text-left px-3 py-2 text-sm transition ${
                         leadSource === s
-                          ? "bg-gray-100 text-gray-900 font-medium"
+                          ? "bg-surface-emphasis text-text font-medium"
                           : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
@@ -245,13 +245,13 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
           ) : (
             <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
               {leadSourceLabel ? (
-                <span className="text-sm text-gray-500">{leadSourceLabel}</span>
+                <span className="text-sm text-text-muted">{leadSourceLabel}</span>
               ) : (
                 <span className="text-sm text-gray-300"> - </span>
               )}
               <Pencil
                 size={11}
-                className="opacity-0 group-hover:opacity-60 shrink-0 text-gray-400"
+                className="opacity-0 group-hover:opacity-60 shrink-0 text-text-subtle"
               />
             </div>
           )}
@@ -262,7 +262,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
         {couple.referral_source ? (
           <div className="flex items-center justify-between py-3 -mx-2 px-2">
             <span className="text-sm text-gray-700 w-28 shrink-0">Heard via</span>
-            <span className="flex-1 text-right text-sm text-gray-500 min-w-0 break-words">
+            <span className="flex-1 text-right text-sm text-text-muted min-w-0 break-words">
               {couple.referral_source}
             </span>
           </div>
@@ -274,7 +274,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             <span className="text-sm text-gray-700 w-28 shrink-0 pt-0.5">Notes</span>
             <Pencil
               size={11}
-              className={`shrink-0 mt-1 text-gray-500 transition ${editingField === "notes" ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
+              className={`shrink-0 mt-1 text-text-muted transition ${editingField === "notes" ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
             />
           </div>
           <textarea
@@ -283,7 +283,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             onFocus={() => setEditingField("notes")}
             onBlur={() => handleSaveField("notes", notes)}
             placeholder="Any additional notes..."
-            className="flex-1 w-full bg-transparent outline-none border-none resize-none mt-1 text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed min-h-[6rem]"
+            className="flex-1 w-full bg-transparent outline-none border-none resize-none mt-1 text-sm text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed min-h-[6rem]"
           />
         </div>
       </div>
@@ -326,7 +326,7 @@ function PartnerBlock({
 }: PartnerBlockProps) {
   return (
     <div className="mt-2 first:mt-0">
-      <h4 className="text-xs uppercase tracking-wider text-gray-400 mt-3 mb-1">
+      <h4 className="text-xs uppercase tracking-wider text-text-subtle mt-3 mb-1">
         {label}
       </h4>
       <EditableRow
@@ -392,7 +392,7 @@ function EditableRow({
   const isEditing = editingField === fieldName;
   return (
     <div className="group flex items-center justify-between py-2 rounded-control -mx-2 px-2">
-      <span className="text-sm text-gray-500 w-20 shrink-0">{label}</span>
+      <span className="text-sm text-text-muted w-20 shrink-0">{label}</span>
       <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
         <input
           type={type}
@@ -408,7 +408,7 @@ function EditableRow({
         />
         <Pencil
           size={11}
-          className={`shrink-0 text-gray-400 transition ${isEditing ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
+          className={`shrink-0 text-text-subtle transition ${isEditing ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
         />
       </div>
     </div>

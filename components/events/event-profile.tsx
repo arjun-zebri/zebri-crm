@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
 import { X, Pencil } from 'lucide-react'
-import { Event, STATUS_LABELS } from '@/types/event'
+import { useState } from 'react'
+
 import { Badge } from '@/components/ui/badge'
+import { Event, STATUS_LABELS } from '@/types/event'
+
 import { EventOverview } from './event-overview'
-import { EventVendors } from './event-vendors'
 import { EventTasks } from './event-tasks'
 import { EventTimeline } from './event-timeline'
+import { EventVendors } from './event-vendors'
 
 interface EventProfileProps {
   event: Event | null
@@ -29,19 +31,19 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
       />
 
       {/* Panel */}
-      <div className="fixed top-0 right-0 h-full w-[640px] bg-white shadow-2xl z-50 flex flex-col animate-slide-in-right">
+      <div className="fixed top-0 right-0 h-full w-[640px] bg-surface shadow-2xl z-50 flex flex-col animate-slide-in-right">
         {/* Header */}
         <div className="flex-shrink-0 px-8 pt-6 pb-5">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-semibold text-gray-900 mb-1">{event.couple?.name}</h1>
+              <h1 className="text-xl font-semibold text-text mb-1">{event.couple?.name}</h1>
               {event.date && (
-                <p className="text-sm text-gray-500">{new Date(event.date).toLocaleDateString()}</p>
+                <p className="text-sm text-text-muted">{new Date(event.date).toLocaleDateString()}</p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              className="p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
             >
               <X size={20} strokeWidth={1.5} />
             </button>
@@ -58,7 +60,7 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(event)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-control hover:bg-gray-50 transition cursor-pointer ml-auto"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-border rounded-control hover:bg-gray-50 transition cursor-pointer ml-auto"
             >
               <Pencil size={14} strokeWidth={1.5} />
               Edit
@@ -67,14 +69,14 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex-shrink-0 border-t border-b border-gray-200 px-8">
+        <div className="flex-shrink-0 border-t border-b border-border px-8">
           <div className="flex gap-6">
             <button
               onClick={() => setActiveTab('overview')}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'overview'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                  ? 'border-gray-900 text-text'
+                  : 'border-transparent text-text-subtle hover:text-gray-600'
               }`}
             >
               Overview
@@ -83,8 +85,8 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
               onClick={() => setActiveTab('vendors')}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'vendors'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                  ? 'border-gray-900 text-text'
+                  : 'border-transparent text-text-subtle hover:text-gray-600'
               }`}
             >
               Vendors
@@ -93,8 +95,8 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
               onClick={() => setActiveTab('tasks')}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'tasks'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                  ? 'border-gray-900 text-text'
+                  : 'border-transparent text-text-subtle hover:text-gray-600'
               }`}
             >
               Tasks
@@ -103,8 +105,8 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
               onClick={() => setActiveTab('timeline')}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'timeline'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                  ? 'border-gray-900 text-text'
+                  : 'border-transparent text-text-subtle hover:text-gray-600'
               }`}
             >
               Timeline

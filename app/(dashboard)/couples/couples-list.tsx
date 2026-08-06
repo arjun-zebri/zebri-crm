@@ -169,7 +169,7 @@ export function CouplesList({
         />
 
         <table className="hidden sm:table w-full table-fixed border-separate border-spacing-0 min-w-[400px] md:max-w-[1800px] select-none">
-          <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
+          <thead className="sticky top-0 bg-surface z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
             <tr className="group/header">
               {table.getHeaderGroups()[0]?.headers.map((header, idx) => {
                 const meta = header.column.columnDef.meta as
@@ -179,7 +179,7 @@ export function CouplesList({
                   <th
                     key={header.id}
                     data-couple-checkbox={idx === 0 ? true : undefined}
-                    className={`pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400 ${
+                    className={`pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle ${
                       idx === 0 ? 'relative' : ''
                     } ${meta?.hidden || ''}`}
                     style={{ width: COL_WIDTHS[header.id] }}
@@ -194,7 +194,7 @@ export function CouplesList({
                         className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded-control border transition cursor-pointer flex items-center justify-center ${
                           allPageSelected || somePageSelected
                             ? 'bg-emerald-500 border-emerald-500 opacity-100'
-                            : 'border-gray-300 hover:border-gray-500 opacity-0 group-hover/header:opacity-100'
+                            : 'border-border-strong hover:border-gray-500 opacity-0 group-hover/header:opacity-100'
                         }`}
                         aria-label={
                           allPageSelected ? 'Deselect all' : 'Select all'
@@ -228,7 +228,7 @@ export function CouplesList({
                         className="pl-0 pr-2 py-2 border-b border-gray-100"
                       >
                         <div
-                          className={`h-4 bg-gray-100 rounded-control ${skeletonWidths[j]}`}
+                          className={`h-4 bg-surface-emphasis rounded-control ${skeletonWidths[j]}`}
                         />
                       </td>
                     ))}
@@ -272,7 +272,7 @@ export function CouplesList({
                                 className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded-control border transition cursor-pointer flex items-center justify-center ${
                                   isSelected
                                     ? 'bg-emerald-500 border-emerald-500 opacity-100'
-                                    : `border-gray-300 hover:border-gray-500 ${
+                                    : `border-border-strong hover:border-gray-500 ${
                                         selectedIds.size > 0
                                           ? 'opacity-100'
                                           : 'opacity-0 group-hover:opacity-100'

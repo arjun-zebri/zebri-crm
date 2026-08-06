@@ -1,18 +1,21 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Trash2 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import { SidePanel } from '@/components/ui/side-panel'
+import { Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { TASK_GROUP_DOT_CLASS, TaskGroup } from './use-task-groups'
+import { SidePanel } from '@/components/ui/side-panel'
+import { TaskOption, TaskOptionColor, TaskPriority } from '@/types/task'
+
 import {
   DueDateCell,
   PriorityCell,
   StatusCell,
   TaskTypeCell,
 } from './task-cells'
-import { TaskOption, TaskOptionColor, TaskPriority } from '@/types/task'
+import { TASK_GROUP_DOT_CLASS, TaskGroup } from './use-task-groups'
+
 
 export interface TaskPanelTask {
   id: string
@@ -248,7 +251,7 @@ function TaskSidePanelInner({
                 ;(e.target as HTMLTextAreaElement).blur()
               }
             }}
-            className="w-full text-xl sm:text-3xl font-semibold text-gray-900 placeholder:text-gray-300 outline-none bg-transparent mb-6 px-1 resize-none overflow-hidden leading-tight"
+            className="w-full text-xl sm:text-3xl font-semibold text-text placeholder:text-gray-300 outline-none bg-transparent mb-6 px-1 resize-none overflow-hidden leading-tight"
             placeholder="Untitled"
             autoFocus={!task.title}
           />
@@ -301,7 +304,7 @@ function TaskSidePanelInner({
                       className="w-full text-left px-2 py-1 -mx-2 rounded-control hover:bg-gray-50 transition cursor-pointer"
                     >
                       {selectedGroup ? (
-                        <span className="inline-flex items-center gap-1.5 text-sm text-gray-900">
+                        <span className="inline-flex items-center gap-1.5 text-sm text-text">
                           <span
                             className={`w-2 h-2 rounded-pill shrink-0 ${TASK_GROUP_DOT_CLASS[selectedGroup.color]}`}
                           />
@@ -316,7 +319,7 @@ function TaskSidePanelInner({
                     <Popover.Content
                       sideOffset={4}
                       align="start"
-                      className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] w-56 max-h-56 overflow-y-auto"
+                      className="bg-surface border border-border rounded-control shadow-lg py-1 z-[80] w-56 max-h-56 overflow-y-auto"
                     >
                       <button
                         type="button"
@@ -326,7 +329,7 @@ function TaskSidePanelInner({
                           patch({ group_id: null })
                         }}
                         className={`w-full text-left px-3 py-1.5 text-xs transition ${
-                          !groupId ? 'bg-gray-50 text-gray-900' : 'text-gray-500 hover:bg-gray-50'
+                          !groupId ? 'bg-gray-50 text-text' : 'text-text-muted hover:bg-gray-50'
                         }`}
                       >
                         Ungrouped
@@ -342,7 +345,7 @@ function TaskSidePanelInner({
                           }}
                           className={`w-full text-left px-3 py-1.5 text-xs transition flex items-center gap-2 ${
                             groupId === g.id
-                              ? 'bg-gray-50 text-gray-900'
+                              ? 'bg-gray-50 text-text'
                               : 'text-gray-700 hover:bg-gray-50'
                           }`}
                         >
@@ -365,7 +368,7 @@ function TaskSidePanelInner({
                       className="w-full text-left px-2 py-1 -mx-2 rounded-control hover:bg-gray-50 transition cursor-pointer"
                     >
                       {selectedCouple ? (
-                        <span className="inline-flex items-center text-sm text-gray-900">
+                        <span className="inline-flex items-center text-sm text-text">
                           {selectedCouple.name}
                         </span>
                       ) : (
@@ -377,7 +380,7 @@ function TaskSidePanelInner({
                     <Popover.Content
                       sideOffset={4}
                       align="start"
-                      className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] w-56 max-h-56 overflow-y-auto"
+                      className="bg-surface border border-border rounded-control shadow-lg py-1 z-[80] w-56 max-h-56 overflow-y-auto"
                     >
                       <button
                         type="button"
@@ -387,7 +390,7 @@ function TaskSidePanelInner({
                           patch({ related_couple_id: null })
                         }}
                         className={`w-full text-left px-3 py-1.5 text-xs transition ${
-                          !coupleId ? 'bg-gray-50 text-gray-900' : 'text-gray-500 hover:bg-gray-50'
+                          !coupleId ? 'bg-gray-50 text-text' : 'text-text-muted hover:bg-gray-50'
                         }`}
                       >
                         No couple
@@ -403,7 +406,7 @@ function TaskSidePanelInner({
                           }}
                           className={`w-full text-left px-3 py-1.5 text-xs truncate transition ${
                             coupleId === c.id
-                              ? 'bg-gray-50 text-gray-900'
+                              ? 'bg-gray-50 text-text'
                               : 'text-gray-700 hover:bg-gray-50'
                           }`}
                         >
@@ -427,7 +430,7 @@ function TaskSidePanelInner({
                 const prev = task.description ?? null
                 if (next !== prev) patch({ description: next })
               }}
-              className="w-full text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent resize-none px-1"
+              className="w-full text-sm text-gray-800 placeholder:text-text-subtle outline-none bg-transparent resize-none px-1"
               placeholder="Add a note, link, or details..."
               rows={8}
             />
@@ -452,7 +455,7 @@ function TaskSidePanelInner({
 function PropertyRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 py-1">
-      <div className="w-32 shrink-0 text-sm text-gray-400 pt-1">{label}</div>
+      <div className="w-32 shrink-0 text-sm text-text-subtle pt-1">{label}</div>
       <div className="flex-1 min-w-0">{children}</div>
     </div>
   )

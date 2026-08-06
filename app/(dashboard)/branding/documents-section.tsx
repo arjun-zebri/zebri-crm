@@ -94,10 +94,10 @@ export function DocumentsSection({ enabledSurfaces, onToggleSurface }: Documents
                 tabIndex={-1}
               />
               <div className="flex-1 min-w-0">
-                <p className={`text-[11px] font-medium leading-tight ${enabled ? 'text-gray-900' : 'text-gray-400'}`}>
+                <p className={`text-[11px] font-medium leading-tight ${enabled ? 'text-text' : 'text-text-subtle'}`}>
                   {surface.label}
                 </p>
-                <p className={`text-[10px] leading-tight truncate ${armed ? 'text-red-500' : 'text-gray-400'}`}>
+                <p className={`text-[10px] leading-tight truncate ${armed ? 'text-red-500' : 'text-text-subtle'}`}>
                   {armed ? 'Hide and clear this design?' : surface.description}
                 </p>
               </div>

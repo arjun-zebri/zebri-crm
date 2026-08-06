@@ -60,15 +60,15 @@ export function PaginationBar({
     <>
       {/* Mobile: prev/next only */}
       {pageCount > 1 && (
-        <div className="sm:hidden border-t border-gray-200 bg-white py-3 flex items-center justify-between px-4">
-          <span className="text-sm text-gray-500">
+        <div className="sm:hidden border-t border-border bg-surface py-3 flex items-center justify-between px-4">
+          <span className="text-sm text-text-muted">
             Page {safePageIndex + 1} of {pageCount}
           </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => canPrev && onPageChange(safePageIndex - 1)}
               disabled={!canPrev}
-              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-control transition text-gray-600"
+              className="p-2 hover:bg-surface-emphasis disabled:opacity-30 disabled:cursor-not-allowed rounded-control transition text-gray-600"
               aria-label="Previous page"
             >
               <ChevronLeft size={16} strokeWidth={1.5} />
@@ -76,7 +76,7 @@ export function PaginationBar({
             <button
               onClick={() => canNext && onPageChange(safePageIndex + 1)}
               disabled={!canNext}
-              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-control transition text-gray-600"
+              className="p-2 hover:bg-surface-emphasis disabled:opacity-30 disabled:cursor-not-allowed rounded-control transition text-gray-600"
               aria-label="Next page"
             >
               <ChevronRight size={16} strokeWidth={1.5} />
@@ -86,7 +86,7 @@ export function PaginationBar({
       )}
 
       {/* Desktop: full pagination + page-size picker */}
-      <div className="hidden sm:flex border-t border-gray-200 bg-white px-6 py-3.5 justify-end relative">
+      <div className="hidden sm:flex border-t border-border bg-surface px-6 py-3.5 justify-end relative">
         <div className="flex items-center gap-3">
           {pageCount > 1 && (
             <>
@@ -94,7 +94,7 @@ export function PaginationBar({
                 <button
                   onClick={() => canPrev && onPageChange(safePageIndex - 1)}
                   disabled={!canPrev}
-                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded-control text-gray-600 shrink-0"
+                  className="p-1.5 hover:bg-surface-emphasis disabled:opacity-30 disabled:cursor-not-allowed transition rounded-control text-gray-600 shrink-0"
                   title="Previous page"
                 >
                   <ChevronLeft size={16} strokeWidth={1.5} />
@@ -108,20 +108,20 @@ export function PaginationBar({
                       className={`px-2.5 py-1 text-xs font-medium rounded-control transition cursor-pointer ${
                         safePageIndex === p
                           ? 'bg-gray-900 text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          : 'text-gray-600 hover:bg-surface-emphasis'
                       }`}
                     >
                       {p + 1}
                     </button>
                   ))}
-                  {showEllipsis && <span className="px-1 text-xs text-gray-400">…</span>}
+                  {showEllipsis && <span className="px-1 text-xs text-text-subtle">…</span>}
                   {showLastJump && (
                     <button
                       onClick={() => onPageChange(lastPage)}
                       className={`px-2.5 py-1 text-xs font-medium rounded-control transition cursor-pointer ${
                         safePageIndex === lastPage
                           ? 'bg-gray-900 text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          : 'text-gray-600 hover:bg-surface-emphasis'
                       }`}
                     >
                       {lastPage + 1}
@@ -132,7 +132,7 @@ export function PaginationBar({
                 <button
                   onClick={() => canNext && onPageChange(safePageIndex + 1)}
                   disabled={!canNext}
-                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded-control text-gray-600 shrink-0"
+                  className="p-1.5 hover:bg-surface-emphasis disabled:opacity-30 disabled:cursor-not-allowed transition rounded-control text-gray-600 shrink-0"
                   title="Next page"
                 >
                   <ChevronRight size={16} strokeWidth={1.5} />
@@ -146,12 +146,12 @@ export function PaginationBar({
           <div ref={pageSizeRef} className="relative">
             <button
               onClick={() => setPageSizeOpen(!pageSizeOpen)}
-              className="border border-gray-200 rounded-control px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
+              className="border border-border rounded-control px-3 py-2 text-sm bg-surface text-gray-600 hover:border-border-strong cursor-pointer transition"
             >
               {pageSize}/page
             </button>
             {pageSizeOpen && (
-              <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-control shadow-lg z-50 py-1 min-w-[88px]">
+              <div className="absolute bottom-full right-0 mb-2 bg-surface border border-border rounded-control shadow-lg z-50 py-1 min-w-[88px]">
                 {PAGE_SIZES.map((size) => (
                   <button
                     key={size}
@@ -161,7 +161,7 @@ export function PaginationBar({
                     }}
                     className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
                       pageSize === size
-                        ? 'bg-gray-50 text-gray-900 font-medium'
+                        ? 'bg-gray-50 text-text font-medium'
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >

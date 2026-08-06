@@ -534,16 +534,16 @@ export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps
     <>
       <div className="space-y-3">
         {/* Section label — the add action lives in the Overview header (top right). */}
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-900">Events</h3>
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text">Events</h3>
 
         {isLoading ? (
           <div className="space-y-2">
             {[1, 2].map((i) => (
-              <div key={i} className="h-10 bg-gray-100 rounded-control animate-pulse" />
+              <div key={i} className="h-10 bg-surface-emphasis rounded-control animate-pulse" />
             ))}
           </div>
         ) : !events || events.length === 0 ? (
-          <p className="text-sm text-gray-400 py-1">No events yet.</p>
+          <p className="text-sm text-text-subtle py-1">No events yet.</p>
         ) : (
           <div className="space-y-5">
             {events.reduce<EventWithTime[][]>((acc, ev) => {
@@ -552,7 +552,7 @@ export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps
               return acc
             }, []).map((group) => (
               <div key={`${group[0].date}-${group[0].id}`}>
-                <p className="text-xs text-gray-400 mb-2">{formatGroupDate(group[0].date)}</p>
+                <p className="text-xs text-text-subtle mb-2">{formatGroupDate(group[0].date)}</p>
                 <div className="relative">
                   <div className="absolute left-[4px] top-2 bottom-2 w-px bg-gray-200" aria-hidden />
                   {group.map((event, idx) => {
@@ -577,19 +577,19 @@ export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps
                           <p className="text-sm text-gray-700 truncate">
                             {event.title || event.venue || 'Untitled'}
                             {event.title && event.venue && (
-                              <span className="text-gray-400"> · {event.venue}</span>
+                              <span className="text-text-subtle"> · {event.venue}</span>
                             )}
                           </p>
-                          <Pencil size={11} strokeWidth={1.5} className="text-gray-400 opacity-0 group-hover:opacity-60 shrink-0 ml-2" />
+                          <Pencil size={11} strokeWidth={1.5} className="text-text-subtle opacity-0 group-hover:opacity-60 shrink-0 ml-2" />
                         </div>
                         {calculatingDriveTime ? (
                           <p className="text-xs text-gray-300 mt-0.5">Calculating...</p>
                         ) : meta ? (
-                          <p className="text-xs text-gray-400 mt-0.5">{meta}</p>
+                          <p className="text-xs text-text-subtle mt-0.5">{meta}</p>
                         ) : null}
                       </div>
                       {event.drive_time_to_next_event_seconds != null && idx < group.length - 1 && (
-                        <p className="text-xs text-gray-400 pl-6 py-1.5">
+                        <p className="text-xs text-text-subtle pl-6 py-1.5">
                           → {formatDriveTime(event.drive_time_to_next_event_seconds)}
                           {event.drive_distance_to_next_event_meters != null ? ` · ${formatDriveDistance(event.drive_distance_to_next_event_meters)}` : ''} drive
                         </p>

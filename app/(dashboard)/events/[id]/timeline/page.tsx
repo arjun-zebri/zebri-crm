@@ -42,7 +42,7 @@ export default function EventTimelinePage() {
       {/* Back */}
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition cursor-pointer mb-6"
+        className="flex items-center gap-1.5 text-sm text-text-muted hover:text-gray-700 transition cursor-pointer mb-6"
       >
         <ArrowLeft size={16} strokeWidth={1.5} />
         Back
@@ -52,13 +52,13 @@ export default function EventTimelinePage() {
       <div className="mb-8">
         {isLoading ? (
           <div className="space-y-2">
-            <div className="h-8 w-48 bg-gray-100 rounded-control animate-pulse" />
-            <div className="h-4 w-32 bg-gray-100 rounded-control animate-pulse" />
+            <div className="h-8 w-48 bg-surface-emphasis rounded-control animate-pulse" />
+            <div className="h-4 w-32 bg-surface-emphasis rounded-control animate-pulse" />
           </div>
         ) : event ? (
           <>
             <PageHeader title={event.couple?.name ?? "Timeline"} />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-text-muted mt-1">
               {event.date ? formatDate(event.date) : ""}
               {event.date && event.venue ? " · " : ""}
               {event.venue}

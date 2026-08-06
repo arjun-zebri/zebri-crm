@@ -72,14 +72,14 @@ export const VariableSuggestionList = forwardRef<ListHandle, ListProps>(function
 
   if (items.length === 0) {
     return (
-      <div className="w-56 rounded-control border border-gray-200 bg-white p-3 shadow-lg">
-        <p className="text-caption text-gray-500">No matching variables</p>
+      <div className="w-56 rounded-control border border-border bg-surface p-3 shadow-lg">
+        <p className="text-caption text-text-muted">No matching variables</p>
       </div>
     )
   }
 
   return (
-    <div className="max-h-72 w-56 overflow-y-auto rounded-control border border-gray-200 bg-white p-1 shadow-lg">
+    <div className="max-h-72 w-56 overflow-y-auto rounded-control border border-border bg-surface p-1 shadow-lg">
       {items.map((v, i) => (
         <button
           key={v.id}
@@ -88,7 +88,7 @@ export const VariableSuggestionList = forwardRef<ListHandle, ListProps>(function
           onMouseEnter={() => setSelected(i)}
           className={`w-full cursor-pointer rounded-control px-2 py-1 text-left ${i === active ? 'bg-gray-50' : ''}`}
         >
-          <p className="truncate text-caption text-gray-900">{v.label}</p>
+          <p className="truncate text-caption text-text">{v.label}</p>
         </button>
       ))}
     </div>

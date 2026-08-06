@@ -220,7 +220,7 @@ export function RichTextEditor({
     // focus-within mirrors the Input primitive's focus treatment (border
     // darkens to brand-fg) so clicking into the body reads like clicking
     // into any other field.
-    <div className={`border border-gray-200 rounded-control overflow-hidden bg-white transition-colors focus-within:border-brand-fg ${className}`}>
+    <div className={`border border-border rounded-control overflow-hidden bg-surface transition-colors focus-within:border-brand-fg ${className}`}>
       {editable && (
         <ToolbarRow
           editor={editor}
@@ -231,7 +231,7 @@ export function RichTextEditor({
       )}
       <EditorContent
         editor={editor}
-        className={`contract-content text-sm text-gray-900 focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-gray-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 ${
+        className={`contract-content text-sm text-text focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-text-subtle [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 ${
           dense
             ? 'p-3 min-h-[200px] [&_.ProseMirror]:min-h-[170px]'
             : 'p-4 min-h-[320px] [&_.ProseMirror]:min-h-[280px]'
@@ -258,7 +258,7 @@ function ToolbarButton({
       onClick={onClick}
       title={title}
       className={`p-1.5 rounded-control transition cursor-pointer ${
-        active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+        active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-surface-emphasis'
       }`}
     >
       {children}
@@ -311,7 +311,7 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
       <Popover.Trigger
         title="Link"
         className={`p-1.5 rounded-control transition cursor-pointer ${
-          active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+          active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-surface-emphasis'
         }`}
       >
         <Link2 size={16} strokeWidth={1.5} />
@@ -320,7 +320,7 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-[90] w-72 bg-white border border-gray-200 rounded-control shadow-lg p-2 animate-fade-in"
+          className="z-[90] w-72 bg-surface border border-border rounded-control shadow-lg p-2 animate-fade-in"
         >
           <div className="flex items-center gap-1.5">
             <Input
@@ -441,7 +441,7 @@ function ToolbarRow({
           <Popover.Content
             align="end"
             sideOffset={6}
-            className="z-[90] w-56 bg-white border border-gray-200 rounded-control shadow-lg p-1 animate-fade-in"
+            className="z-[90] w-56 bg-surface border border-border rounded-control shadow-lg p-1 animate-fade-in"
           >
             <div className="max-h-72 overflow-y-auto">
               {variables.map((v) => (
@@ -454,7 +454,7 @@ function ToolbarRow({
                   }}
                   className="w-full text-left px-2 py-1 rounded-control hover:bg-gray-50 cursor-pointer"
                 >
-                  <p className="truncate text-caption text-gray-900">{v.label}</p>
+                  <p className="truncate text-caption text-text">{v.label}</p>
                 </button>
               ))}
             </div>

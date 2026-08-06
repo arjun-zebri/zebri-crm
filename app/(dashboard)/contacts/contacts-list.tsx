@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useState } from "react";
 import { Store, ChevronRight, User, Mail, Phone } from "lucide-react";
+import { Fragment, useState } from "react";
+
 import { Contact, CATEGORIES, CATEGORY_LABELS } from '@/types/contact';
 
 const INACTIVE_KEY = "__inactive__";
@@ -29,7 +30,7 @@ function ColumnHeaderRow() {
   return (
     <tr>
       <th
-        className="px-0 py-1.5 text-left text-xs font-normal text-gray-400 border-b border-gray-200"
+        className="px-0 py-1.5 text-left text-xs font-normal text-text-subtle border-b border-border"
         style={{ width: COL_WIDTHS.name }}
       >
         <span className="flex items-center gap-1.5">
@@ -38,7 +39,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-xs font-normal text-gray-400 border-b border-gray-200"
+        className="px-0 py-1.5 text-left text-xs font-normal text-text-subtle border-b border-border"
         style={{ width: COL_WIDTHS.contact }}
       >
         <span className="flex items-center gap-1.5">
@@ -47,7 +48,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-xs font-normal text-gray-400 border-b border-gray-200 hidden md:table-cell"
+        className="px-0 py-1.5 text-left text-xs font-normal text-text-subtle border-b border-border hidden md:table-cell"
         style={{ width: COL_WIDTHS.email }}
       >
         <span className="flex items-center gap-1.5">
@@ -56,7 +57,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-xs font-normal text-gray-400 border-b border-gray-200 hidden lg:table-cell"
+        className="px-0 py-1.5 text-left text-xs font-normal text-text-subtle border-b border-border hidden lg:table-cell"
         style={{ width: COL_WIDTHS.phone }}
       >
         <span className="flex items-center gap-1.5">
@@ -104,7 +105,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Store size={40} className="text-gray-300 mb-3" strokeWidth={1.5} />
         <p className="text-gray-600 font-medium mb-2">No contacts yet.</p>
-        <p className="text-sm text-gray-500">Start building your contact network.</p>
+        <p className="text-sm text-text-muted">Start building your contact network.</p>
       </div>
     );
   }
@@ -121,8 +122,8 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                   className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
                 >
                   <div className="flex-1 pr-3">
-                    <div className="h-4 bg-gray-100 rounded-control w-36 mb-1.5" />
-                    <div className="h-3 bg-gray-100 rounded-control w-24" />
+                    <div className="h-4 bg-surface-emphasis rounded-control w-36 mb-1.5" />
+                    <div className="h-3 bg-surface-emphasis rounded-control w-24" />
                   </div>
                 </div>
               ))
@@ -135,16 +136,16 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                       onClick={() => toggle(group.key)}
                       className="flex items-center gap-2 w-full text-left py-2"
                     >
-                      <h3 className="text-sm font-semibold text-gray-900">
+                      <h3 className="text-sm font-semibold text-text">
                         {group.label}
                       </h3>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-text-subtle">
                         {group.contacts.length}
                       </span>
                       <ChevronRight
                         size={14}
                         strokeWidth={1.5}
-                        className={`text-gray-400 transition-transform ${
+                        className={`text-text-subtle transition-transform ${
                           isCollapsed ? "" : "rotate-90"
                         }`}
                       />
@@ -168,11 +169,11 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                             className="flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 transition"
                           >
                             <div className="min-w-0 flex-1 pr-3">
-                              <p className="text-sm font-medium text-gray-900 truncate">
+                              <p className="text-sm font-medium text-text truncate">
                                 {contact.name}
                               </p>
                               {secondary && (
-                                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                                <p className="text-xs text-text-subtle mt-0.5 truncate">
                                   {secondary}
                                 </p>
                               )}
@@ -193,7 +194,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                   <tr key={i} className="animate-pulse">
                     {[0, 1, 2, 3].map((j) => (
                       <td key={j} className="px-0 py-2 border-b border-gray-100">
-                        <div className="h-4 bg-gray-100 rounded-control w-32" />
+                        <div className="h-4 bg-surface-emphasis rounded-control w-32" />
                       </td>
                     ))}
                   </tr>
@@ -212,16 +213,16 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                           className="px-0 pt-6 pb-2"
                         >
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-gray-900">
+                            <h3 className="text-sm font-semibold text-text">
                               {group.label}
                             </h3>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-text-subtle">
                               {group.contacts.length}
                             </span>
                             <ChevronRight
                               size={14}
                               strokeWidth={1.5}
-                              className={`text-gray-400 transition-transform ${
+                              className={`text-text-subtle transition-transform ${
                                 isCollapsed ? "" : "rotate-90"
                               }`}
                             />
@@ -245,7 +246,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                               className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100"
                               style={{ width: COL_WIDTHS.name }}
                             >
-                              <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+                              <span className="text-sm text-text-muted group-hover:text-text truncate block">
                                 {contact.name}
                               </span>
                             </td>
@@ -253,7 +254,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                               className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100"
                               style={{ width: COL_WIDTHS.contact }}
                             >
-                              <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+                              <span className="text-sm text-text-muted group-hover:text-text truncate block">
                                 {contact.contact_name}
                               </span>
                             </td>
@@ -261,7 +262,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                               className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100 hidden md:table-cell"
                               style={{ width: COL_WIDTHS.email }}
                             >
-                              <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+                              <span className="text-sm text-text-muted group-hover:text-text truncate block">
                                 {contact.email}
                               </span>
                             </td>
@@ -269,7 +270,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                               className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100 hidden lg:table-cell"
                               style={{ width: COL_WIDTHS.phone }}
                             >
-                              <span className="text-sm text-gray-500 group-hover:text-gray-900">
+                              <span className="text-sm text-text-muted group-hover:text-text">
                                 {contact.phone}
                               </span>
                             </td>

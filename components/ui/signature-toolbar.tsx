@@ -85,7 +85,7 @@ export function SignatureToolbar({ editor }: { editor: Editor }) {
         onChange={(c) => editor.chain().setColor(c).run()}
         swatches={TEXT_COLOURS}
         trigger={
-          <button type="button" title="Text colour" className="flex items-center gap-1 px-2 py-1.5 rounded-control text-gray-700 hover:bg-gray-100 transition cursor-pointer">
+          <button type="button" title="Text colour" className="flex items-center gap-1 px-2 py-1.5 rounded-control text-gray-700 hover:bg-surface-emphasis transition cursor-pointer">
             <span className="text-sm font-semibold leading-none">A</span>
             <span className="w-4 h-1.5 rounded-control" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000000' }} />
           </button>
@@ -96,7 +96,7 @@ export function SignatureToolbar({ editor }: { editor: Editor }) {
         onChange={(c) => editor.chain().setHighlight({ color: c }).run()}
         swatches={HIGHLIGHTS}
         trigger={
-          <button type="button" title="Highlight colour" className="flex items-center gap-1 px-2 py-1.5 rounded-control text-gray-700 hover:bg-gray-100 transition cursor-pointer">
+          <button type="button" title="Highlight colour" className="flex items-center gap-1 px-2 py-1.5 rounded-control text-gray-700 hover:bg-surface-emphasis transition cursor-pointer">
             <Highlighter size={16} strokeWidth={1.5} />
             <span className="w-4 h-1.5 rounded-control" style={{ backgroundColor: editor.getAttributes('highlight').color || '#FEF08A' }} />
           </button>
@@ -136,7 +136,7 @@ function IconToggle({ onClick, active, title, disabled, children }: {
       disabled={disabled}
       title={title}
       className={`p-1.5 rounded-control transition cursor-pointer ${
-        disabled ? 'text-gray-300 cursor-not-allowed' : active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+        disabled ? 'text-gray-300 cursor-not-allowed' : active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-surface-emphasis'
       }`}
     >
       {children}
@@ -152,13 +152,13 @@ function ToolbarPopover({ title, trigger, children }: {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button type="button" title={title} className="flex items-center gap-1.5 px-2 py-1.5 rounded-control text-sm text-gray-700 hover:bg-gray-100 transition cursor-pointer">
+        <button type="button" title={title} className="flex items-center gap-1.5 px-2 py-1.5 rounded-control text-sm text-gray-700 hover:bg-surface-emphasis transition cursor-pointer">
           {trigger}
-          <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+          <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="start" sideOffset={6} className="z-[70] bg-white border border-gray-200 rounded-control shadow-lg py-1 min-w-[9rem]">
+        <Popover.Content align="start" sideOffset={6} className="z-[70] bg-surface border border-border rounded-control shadow-lg py-1 min-w-[9rem]">
           {children(() => setOpen(false))}
         </Popover.Content>
       </Popover.Portal>
@@ -238,12 +238,12 @@ function LinkControl({ editor }: { editor: Editor }) {
   return (
     <Popover.Root open={open} onOpenChange={(o) => { setOpen(o); if (o) setUrl(editor.getAttributes('link').href || '') }}>
       <Popover.Trigger asChild>
-        <button type="button" title="Link" className={`p-1.5 rounded-control transition cursor-pointer ${isActive ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button type="button" title="Link" className={`p-1.5 rounded-control transition cursor-pointer ${isActive ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-surface-emphasis'}`}>
           <Link2 size={16} strokeWidth={1.5} />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="start" sideOffset={6} className="z-[70] bg-white border border-gray-200 rounded-control shadow-lg p-3 w-64">
+        <Popover.Content align="start" sideOffset={6} className="z-[70] bg-surface border border-border rounded-control shadow-lg p-3 w-64">
           <input
             type="text"
             value={url}
@@ -251,7 +251,7 @@ function LinkControl({ editor }: { editor: Editor }) {
             onKeyDown={(e) => e.key === 'Enter' && apply()}
             placeholder="https://example.com"
             autoFocus
-            className="w-full border border-gray-200 rounded-control px-2 py-1 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+            className="w-full border border-border rounded-control px-2 py-1 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
           />
           <div className="flex gap-2 mt-3">
             <button type="button" onClick={apply} className="flex-1 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-control hover:bg-gray-800 transition cursor-pointer">Apply</button>
@@ -320,7 +320,7 @@ function ImageControl({ editor }: { editor: Editor }) {
       />
       <IconToggle onClick={() => fileInputRef.current?.click()} title="Add image" disabled={uploading}>
         {uploading
-          ? <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-pill animate-spin" />
+          ? <span className="w-4 h-4 border-2 border-border-strong border-t-gray-600 rounded-pill animate-spin" />
           : <ImageIcon size={16} strokeWidth={1.5} />}
       </IconToggle>
     </>

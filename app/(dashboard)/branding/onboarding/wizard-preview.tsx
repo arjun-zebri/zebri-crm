@@ -221,7 +221,7 @@ function DocSkeleton() {
         <div className="h-2.5 rounded-pill bg-gray-300 w-20" />
       </div>
       <div className="h-9 rounded-control bg-gray-200 w-full" />
-      <div className="h-2 rounded-pill bg-gray-100 w-1/2 mx-auto" />
+      <div className="h-2 rounded-pill bg-surface-emphasis w-1/2 mx-auto" />
     </div>
   )
 }

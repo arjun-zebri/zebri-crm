@@ -62,7 +62,7 @@ export function RowActionsMenu({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className={`shrink-0 p-1.5 rounded-control text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer ${
+          className={`shrink-0 p-1.5 rounded-control text-text-subtle hover:text-gray-700 hover:bg-surface-emphasis transition cursor-pointer ${
             alwaysVisible ? '' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'
           }`}
           aria-label="Row actions"
@@ -72,7 +72,7 @@ export function RowActionsMenu({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className={`bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[80] ${contentWidth}`}
+          className={`bg-surface border border-border rounded-control shadow-lg py-1 z-[80] ${contentWidth}`}
           sideOffset={4}
           align="end"
           onClick={(e) => e.stopPropagation()}
@@ -93,11 +93,11 @@ export function RowActionsMenu({
                   {sub.icon}
                   {sub.label}
                 </span>
-                <ChevronRight size={13} strokeWidth={1.5} className="text-gray-400" />
+                <ChevronRight size={13} strokeWidth={1.5} className="text-text-subtle" />
               </button>
               {submenuKey === sub.label && (
                 <div
-                  className="absolute left-full top-0 ml-1 bg-white border border-gray-200 rounded-control shadow-lg py-1 min-w-36"
+                  className="absolute left-full top-0 ml-1 bg-surface border border-border rounded-control shadow-lg py-1 min-w-36"
                   onMouseLeave={() => setSubmenuKey(null)}
                 >
                   {sub.items.map((item, i) => (

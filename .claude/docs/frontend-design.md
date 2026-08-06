@@ -21,17 +21,45 @@ Regenerate after any sweep so the page reports today's reality:
 npm run design-system:audit
 ```
 
-Known divergences the showroom currently reports, kept here so they do
-not get rediscovered:
+### Radius: two tokens only
 
-- **Radius.** Three token radii exist (`rounded-control` 6px,
-  `rounded-card` 12px, `rounded-pill`) but the app mostly uses
-  `rounded-xl` / `rounded-md` / `rounded-full` / `rounded-lg`.
-  `rounded-xl` == `rounded-card` and `rounded-md` == `rounded-control`,
-  so most of that is a pure rename.
+```
+--radius-control  6px      everything with corners
+--radius-pill     9999px   pills, chips, avatars, dots
+```
+
+That is the whole scale. The 12px card tier and the 16px overlay tier
+were removed on 2026-08-06 after the app was found rendering six radii
+against three tokens. Cards, modals, inputs and buttons all share 6px.
+Do not reintroduce a third value without a deliberate decision.
+
+Exceptions, both intentional: two arbitrary values (a 12px colour swatch
+and a 2px progress segment, where 6px would round them into blobs), and
+public branded surfaces, which set `borderRadius` inline from each MC's
+brand kit.
+
+### Colour: mind the Tailwind 4 palette shift
+
+Tailwind 4 changed its default grays, so the raw classes and our tokens
+are **not** the same colour:
+
+| Class | Tailwind 4 | Token | |
+|---|---|---|---|
+| `text-gray-900` | `#101828` | `--text` `#111827` | differ |
+| `text-gray-500` | `#6a7282` | `--text-muted` `#6b7280` | differ |
+| `text-gray-400` | `#99a1af` | `--text-subtle` `#9ca3af` | differ |
+| `border-gray-200` | `#e5e7eb` | `--border` `#e5e7eb` | same |
+| `bg-gray-100` | `#f3f4f6` | `--surface-emphasis` | same |
+
+Always use the token. Mixing raw grays with tokens puts two palettes on
+the same screen. 1,735 sites were swept onto tokens on 2026-08-06;
+`gray-600`, `gray-700` and `gray-50` remain because no token matches.
+
+Known divergences the showroom still reports:
+
 - **Buttons.** The CLAUDE.md "buttons are `rounded-xl`" rule contradicts
-  the `Button` primitive, which is `rounded-control` (6px) to match the
-  Input and Select triggers. The primitive is the intended look.
+  the `Button` primitive, which is `rounded-control` (6px). The
+  primitive is the intended look; the rule is stale.
 - **Status chips.** Four implementations coexist: `StatePill` (tokens,
   keep), `Badge` (21 raw-palette variants), `StatBadge` inside
   `dashboard-stats.tsx`, and the vendor badges.

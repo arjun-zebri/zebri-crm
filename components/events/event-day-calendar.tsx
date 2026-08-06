@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, type ReactNode } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   useDraggable,
@@ -12,11 +10,15 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useRef, useCallback, useEffect, type ReactNode } from "react";
+
 import { useToast } from "@/components/ui/toast";
-import { TimelineItem } from '@/types/event';
+import { createClient } from "@/lib/supabase/client";
 import { CATEGORY_LABELS } from '@/types/contact';
+import { TimelineItem } from '@/types/event';
+
 import { EventTimelineModal } from "./event-timeline-modal";
 import { EventTimelineShare } from "./event-timeline-share";
 
@@ -204,8 +206,8 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize, hasOverlay }: 
           ? hasOverlay ? "opacity-0" : "shadow-2xl border-gray-400 ring-2 ring-gray-200 opacity-90"
           : item.pending_review
           ? "border-dashed border-amber-300 shadow-sm cursor-grab active:cursor-grabbing opacity-60"
-          : "border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 cursor-grab active:cursor-grabbing"
-      } bg-white`}
+          : "border-border shadow-sm hover:shadow-md hover:border-border-strong cursor-grab active:cursor-grabbing"
+      } bg-surface`}
       onClick={(e) => {
         e.stopPropagation();
         if (!isDragging && !resizing.current) onEdit(item);
@@ -219,20 +221,20 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize, hasOverlay }: 
         className="pl-3.5 pr-2 py-1.5 overflow-hidden"
         style={{ height: heightPx - 12 }}
       >
-        <p className="text-xs font-semibold text-gray-900 leading-tight truncate">
+        <p className="text-xs font-semibold text-text leading-tight truncate">
           {item.title}
         </p>
         {heightPx > 50 && item.contact && (
-          <p className="text-xs text-gray-500 mt-0.5 truncate">
+          <p className="text-xs text-text-muted mt-0.5 truncate">
             {item.contact.name}
             {categoryLabel ? ` · ${categoryLabel}` : ""}
           </p>
         )}
         {heightPx > 65 && (
-          <p className="text-xs text-gray-400 mt-0.5">{liveDuration} min</p>
+          <p className="text-xs text-text-subtle mt-0.5">{liveDuration} min</p>
         )}
         {heightPx > 85 && item.description && (
-          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.description}</p>
+          <p className="text-xs text-text-subtle mt-0.5 line-clamp-2">{item.description}</p>
         )}
       </div>
 
@@ -628,7 +630,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
     return (
       <div className="space-y-2">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-16 bg-gray-100 rounded-control animate-pulse" />
+          <div key={i} className="h-16 bg-surface-emphasis rounded-control animate-pulse" />
         ))}
       </div>
     );
@@ -639,14 +641,14 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
       <div className="flex flex-col flex-1 min-h-0 gap-4">
         {/* + Add item */}
         <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-text-subtle">
             Click anywhere on the grid to add an item, or drag to reschedule.
           </p>
           <div className="flex items-center gap-2 ml-4 flex-shrink-0">
             {items.length > 0 && (
               <button
                 onClick={exportCsv}
-                className="text-xs text-gray-500 border border-gray-200 rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
+                className="text-xs text-text-muted border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
               >
                 <Download size={12} strokeWidth={1.5} />
                 Export
@@ -658,7 +660,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                 setClickTime("");
                 setShowModal(true);
               }}
-              className="text-xs text-gray-700 border border-gray-200 rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+              className="text-xs text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add item
             </button>
@@ -693,7 +695,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
           )}
           <div
             ref={scrollContainerRef}
-            className="flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded-control bg-white min-w-0"
+            className="flex-1 min-h-0 overflow-y-auto border border-border rounded-control bg-surface min-w-0"
           >
             <MaybeDndContext
               skip={skipDndContext}
@@ -714,7 +716,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                         className="absolute right-3"
                         style={{ top: idx * 60 * MIN_PX - 9 }}
                       >
-                        <span className="text-xs text-gray-400 font-medium whitespace-nowrap">
+                        <span className="text-xs text-text-subtle font-medium whitespace-nowrap">
                           {formatHourLabel(hour)}
                         </span>
                       </div>
@@ -724,7 +726,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                   {/* Grid + events */}
                   <div
                     ref={(el) => { gridRef.current = el; setCalendarDropRef(el); }}
-                    className="flex-1 relative border-l border-gray-200 cursor-crosshair"
+                    className="flex-1 relative border-l border-border cursor-crosshair"
                     style={{ height: TOTAL_HEIGHT }}
                     onClick={handleGridClick}
                   >
@@ -732,7 +734,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                     {HOURS.map((_, idx) => (
                       <div
                         key={`h-${idx}`}
-                        className="absolute left-0 right-0 border-t border-gray-200"
+                        className="absolute left-0 right-0 border-t border-border"
                         style={{ top: idx * 60 * MIN_PX }}
                       />
                     ))}
@@ -777,7 +779,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
           {/* Unscheduled items - right column */}
           {!hideUnscheduled && untimedItems.length > 0 && (
             <div className="w-44 flex-shrink-0 overflow-y-auto min-h-0">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+              <p className="text-xs font-medium text-text-subtle uppercase tracking-wide mb-2">
                 Unscheduled
               </p>
               <div className="space-y-2">
@@ -795,13 +797,13 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                         setClickTime("");
                         setShowModal(true);
                       }}
-                      className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-control hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer"
+                      className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-border rounded-control hover:border-border-strong hover:bg-gray-50 transition cursor-pointer"
                     >
                       <p className="text-xs font-medium text-gray-700 truncate">
                         {item.title}
                       </p>
                       {item.contact && (
-                        <p className="text-xs text-gray-400 truncate">
+                        <p className="text-xs text-text-subtle truncate">
                           {item.contact.name}
                           {catLabel ? ` · ${catLabel}` : ""}
                         </p>

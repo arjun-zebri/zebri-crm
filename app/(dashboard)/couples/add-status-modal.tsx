@@ -70,7 +70,7 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
           <button
             onClick={handleClose}
             disabled={isCreating}
-            className="text-sm px-4 py-2 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+            className="text-sm px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
@@ -94,7 +94,7 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Inquiry, Interested, Engaged"
-            className="w-full text-sm border border-gray-200 rounded-control px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
+            className="w-full text-sm border border-border rounded-control px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
             autoFocus
           />
         </div>
@@ -105,15 +105,15 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
             <Popover.Trigger asChild>
               <button
                 type="button"
-                className="w-full flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-control hover:bg-gray-50 transition text-sm cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2 border border-border rounded-control hover:bg-gray-50 transition text-sm cursor-pointer"
               >
                 <div className={`w-5 h-5 rounded-pill ${getStatusClasses(color).dot}`} />
-                <span className="text-gray-900 capitalize">{color}</span>
+                <span className="text-text capitalize">{color}</span>
               </button>
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content
-                className="bg-white border border-gray-200 rounded-control shadow-lg p-2 z-[9999]"
+                className="bg-surface border border-border rounded-control shadow-lg p-2 z-[9999]"
                 sideOffset={4}
                 align="start"
               >
@@ -127,7 +127,7 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
                         setColorOpen(false);
                       }}
                       className={`w-6 h-6 rounded-pill border-2 transition cursor-pointer ${
-                        color === c ? 'border-black' : 'border-gray-300'
+                        color === c ? 'border-black' : 'border-border-strong'
                       } ${getStatusClasses(c).dot}`}
                       title={c}
                     />

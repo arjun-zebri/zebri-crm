@@ -84,7 +84,7 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
   return (
     <div>
       <h3 className="text-sm font-medium text-gray-700 mb-1">Email</h3>
-      <p className="text-xs text-gray-400 mb-3">Where the emails you send to couples come from.</p>
+      <p className="text-xs text-text-subtle mb-3">Where the emails you send to couples come from.</p>
 
       <div className="space-y-2 max-w-xl">
         <EmailOption
@@ -112,7 +112,7 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
               type="button"
               onClick={disconnect}
               disabled={busy}
-              className="shrink-0 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
+              className="shrink-0 text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
             >
               Disconnect
             </button>
@@ -126,19 +126,19 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
             <button
               type="button"
               onClick={() => connect('google')}
-              className="rounded-control border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+              className="rounded-control border border-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
             >
               Connect Gmail
             </button>
             <button
               type="button"
               onClick={() => connect('microsoft')}
-              className="rounded-control border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+              className="rounded-control border border-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
             >
               Connect Outlook
             </button>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-text-subtle">
             You&rsquo;ll be sent to Google or Microsoft to approve access, then brought back here.
           </p>
         </div>
@@ -160,14 +160,14 @@ function EmailOption({ selected, onSelect, title, description }: EmailOptionProp
     <button type="button" onClick={onSelect} className="flex w-full items-start gap-3 text-left cursor-pointer">
       <span
         className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-pill border transition ${
-          selected ? 'border-gray-900' : 'border-gray-300'
+          selected ? 'border-gray-900' : 'border-border-strong'
         }`}
       >
         {selected && <span className="h-2 w-2 rounded-pill bg-gray-900" />}
       </span>
       <span>
-        <span className="block text-sm text-gray-900">{title}</span>
-        <span className="block text-xs text-gray-400">{description}</span>
+        <span className="block text-sm text-text">{title}</span>
+        <span className="block text-xs text-text-subtle">{description}</span>
       </span>
     </button>
   );

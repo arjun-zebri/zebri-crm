@@ -34,7 +34,7 @@ export function ColorPopover({
         <Popover.Content
           align={align}
           sideOffset={6}
-          className={`bg-white border border-gray-200 rounded-control shadow-xl p-3 ${zClassName} w-[280px] animate-modal-in`}
+          className={`bg-surface border border-border rounded-control shadow-xl p-3 ${zClassName} w-[280px] animate-modal-in`}
         >
           <ColorPickerBody value={value} onChange={onChange} swatches={swatches} />
         </Popover.Content>
@@ -102,7 +102,7 @@ function ColorPickerBody({ value, onChange, swatches = [] }: BodyProps) {
             onClick={useEyedropper}
             title="Pick from screen"
             aria-label="Pick from screen"
-            className="w-8 h-8 rounded-pill ring-1 ring-black/10 bg-white flex items-center justify-center text-gray-600 hover:text-gray-900 hover:ring-black/20 cursor-pointer transition shrink-0"
+            className="w-8 h-8 rounded-pill ring-1 ring-black/10 bg-surface flex items-center justify-center text-gray-600 hover:text-text hover:ring-black/20 cursor-pointer transition shrink-0"
           >
             <Pipette size={13} strokeWidth={1.75} />
           </button>
@@ -162,7 +162,7 @@ function ColorPickerBody({ value, onChange, swatches = [] }: BodyProps) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
           }}
-          className="flex-1 border border-gray-200 rounded-control px-2.5 py-1.5 text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+          className="flex-1 border border-border rounded-control px-2.5 py-1.5 text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-border-strong"
           placeholder="#000000"
           maxLength={7}
           spellCheck={false}
@@ -289,7 +289,7 @@ function HueStrip({
       }}
     >
       <div
-        className="absolute top-1/2 w-4 h-4 -ml-2 -mt-2 rounded-pill bg-white border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)] pointer-events-none"
+        className="absolute top-1/2 w-4 h-4 -ml-2 -mt-2 rounded-pill bg-surface border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)] pointer-events-none"
         style={{ left: `${(hue / 360) * 100}%`, background: hsvToHex(hue, 1, 1) }}
       />
     </div>

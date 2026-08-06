@@ -42,10 +42,26 @@ function collect(dir, acc = []) {
   return acc;
 }
 
+/**
+ * Strip comments before scanning.
+ *
+ * TSDoc blocks routinely quote class names to explain what a component
+ * renders, and prose uses words like "rounded" in their English sense.
+ * Counting those inflated every group: the radius scan reported six
+ * stragglers that were all the sentence "results are rounded to cents"
+ * and friends. Only real markup should score.
+ *
+ * Block comments cover the JSDoc/TSDoc cases; `//` is matched only at
+ * the start of a line so it cannot eat the `//` in a URL.
+ */
+function stripComments(text) {
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
 const FILES = SCAN_DIRS.flatMap((d) => collect(join(ROOT, d)));
 const SOURCES = FILES.map((f) => ({
   path: relative(ROOT, f).split(sep).join('/'),
-  text: readFileSync(f, 'utf8'),
+  text: stripComments(readFileSync(f, 'utf8')),
 }));
 
 /**

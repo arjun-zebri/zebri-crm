@@ -56,7 +56,7 @@ function TextField({ label, value, onChange, placeholder }: { label: string; val
   // primitive for the control (design-system rule: no raw <input>).
   return (
     <div className="block">
-      <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1 block">{label}</span>
+      <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em] mb-1 block">{label}</span>
       <Input
         size="sm"
         value={value}
@@ -104,14 +104,14 @@ function IdentityTile({ label, hint, url, onUpload, onRemove, accept, square }: 
 
   return (
     <div className="space-y-1" onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
-      <div role="button" tabIndex={0} onClick={openPicker} onKeyDown={handleKeyDown} onDragOver={handleDragOver} onDragLeave={() => setDragging(false)} onDrop={handleDrop} className={`relative ${sizeClass} rounded-control bg-gray-50 border border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-gray-900/10 transition ${dragging ? 'border-gray-900 bg-gray-100' : filled ? 'border-gray-200 hover:border-gray-300' : 'border-gray-300 hover:border-gray-400'}`}>
-        {filled && url ? <Image src={url} alt="" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" width={64} height={64} /> : uploading ? <span className="text-[10px] text-gray-400 pointer-events-none">Uploading...</span> : <ImageIcon size={20} strokeWidth={1.25} className="text-gray-400 pointer-events-none opacity-50" />}
-        {filled && hovering && <span className="absolute inset-0 bg-gray-900/40 flex items-center justify-center pointer-events-none"><span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill bg-white/95 text-gray-800 text-[11px] font-medium shadow-sm"><Upload size={11} strokeWidth={2} />Replace</span></span>}
-        {filled && <button type="button" onClick={(e) => { e.stopPropagation(); onRemove() }} className={`absolute top-1.5 right-1.5 inline-flex items-center justify-center w-6 h-6 rounded-control bg-white/95 backdrop-blur-sm border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 shadow-sm cursor-pointer transition ${hovering ? 'opacity-100' : 'opacity-0'}`}><Trash2 size={12} strokeWidth={1.75} /></button>}
+      <div role="button" tabIndex={0} onClick={openPicker} onKeyDown={handleKeyDown} onDragOver={handleDragOver} onDragLeave={() => setDragging(false)} onDrop={handleDrop} className={`relative ${sizeClass} rounded-control bg-gray-50 border border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-gray-900/10 transition ${dragging ? 'border-gray-900 bg-surface-emphasis' : filled ? 'border-border hover:border-border-strong' : 'border-border-strong hover:border-gray-400'}`}>
+        {filled && url ? <Image src={url} alt="" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" width={64} height={64} /> : uploading ? <span className="text-[10px] text-text-subtle pointer-events-none">Uploading...</span> : <ImageIcon size={20} strokeWidth={1.25} className="text-text-subtle pointer-events-none opacity-50" />}
+        {filled && hovering && <span className="absolute inset-0 bg-gray-900/40 flex items-center justify-center pointer-events-none"><span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill bg-surface/95 text-gray-800 text-[11px] font-medium shadow-sm"><Upload size={11} strokeWidth={2} />Replace</span></span>}
+        {filled && <button type="button" onClick={(e) => { e.stopPropagation(); onRemove() }} className={`absolute top-1.5 right-1.5 inline-flex items-center justify-center w-6 h-6 rounded-control bg-surface/95 backdrop-blur-sm border border-border text-text-muted hover:text-text hover:border-border-strong shadow-sm cursor-pointer transition ${hovering ? 'opacity-100' : 'opacity-0'}`}><Trash2 size={12} strokeWidth={1.75} /></button>}
       </div>
       <div className="flex items-center justify-between gap-1">
         <p className="text-[10px] font-medium text-gray-600 uppercase tracking-[0.06em]">{label}</p>
-        {hint && <p className="text-[10px] text-gray-400 truncate">{hint}</p>}
+        {hint && <p className="text-[10px] text-text-subtle truncate">{hint}</p>}
       </div>
       <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) onFile(file); if (inputRef.current) inputRef.current.value = '' }} />
     </div>

@@ -1,9 +1,14 @@
 'use client'
 
-import { memo } from 'react'
-import { GripVertical, Maximize2 } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { GripVertical, Maximize2 } from 'lucide-react'
+import { memo } from 'react'
+
+
+import { formatRelativeDate } from '@/lib/utils'
+import { TaskOption, TaskOptionColor, TaskPriority } from '@/types/task'
+
 import {
   DueDateCell,
   PriorityCell,
@@ -11,8 +16,6 @@ import {
   TaskTypeCell,
   TitleCell,
 } from './task-cells'
-import { TaskOption, TaskOptionColor, TaskPriority } from '@/types/task'
-import { formatRelativeDate } from '@/lib/utils'
 
 export interface TaskRowTask {
   id: string
@@ -178,7 +181,7 @@ const TaskRowContent = memo(function TaskRowContent({
         hideGutter={hideGutter}
         mobileSub={
           task.due_date ? (
-            <span className={`block text-xs mt-0.5 px-1.5 ${overdue ? 'text-red-400' : 'text-gray-400'}`}>
+            <span className={`block text-xs mt-0.5 px-1.5 ${overdue ? 'text-red-400' : 'text-text-subtle'}`}>
               {formatRelativeDate(task.due_date)}
             </span>
           ) : undefined
@@ -191,7 +194,7 @@ const TaskRowContent = memo(function TaskRowContent({
                 {...dragAttributes}
                 {...dragListeners}
                 onClick={(e) => e.stopPropagation()}
-                className="hidden sm:flex shrink-0 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none transition opacity-0 group-hover:opacity-100"
+                className="hidden sm:flex shrink-0 text-gray-300 hover:text-text-muted cursor-grab active:cursor-grabbing touch-none transition opacity-0 group-hover:opacity-100"
                 tabIndex={-1}
                 aria-label="Drag to reorder"
               >
@@ -208,7 +211,7 @@ const TaskRowContent = memo(function TaskRowContent({
               className={`shrink-0 w-4 h-4 rounded-control border transition cursor-pointer ${
                 selected
                   ? 'bg-emerald-500 border-emerald-500 opacity-100'
-                  : `border-gray-300 hover:border-gray-500 ${
+                  : `border-border-strong hover:border-gray-500 ${
                       selectionActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                     }`
               } flex items-center justify-center`}
@@ -230,7 +233,7 @@ const TaskRowContent = memo(function TaskRowContent({
                   e.stopPropagation()
                   onCoupleClick?.(task.couple!.id)
                 }}
-                className="text-xs bg-gray-100 text-gray-500 rounded-pill px-2 py-0.5 hover:bg-gray-200 hover:text-gray-700 transition cursor-pointer whitespace-nowrap shrink-0"
+                className="text-xs bg-surface-emphasis text-text-muted rounded-pill px-2 py-0.5 hover:bg-gray-200 hover:text-gray-700 transition cursor-pointer whitespace-nowrap shrink-0"
               >
                 {task.couple.name}
               </button>
@@ -242,7 +245,7 @@ const TaskRowContent = memo(function TaskRowContent({
                   e.stopPropagation()
                   onOpen()
                 }}
-                className="shrink-0 text-xs text-gray-500 hover:text-gray-900 px-1.5 py-0.5 rounded-control border border-gray-200 hover:border-gray-300 bg-white shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition flex items-center gap-1 cursor-pointer"
+                className="shrink-0 text-xs text-text-muted hover:text-text px-1.5 py-0.5 rounded-control border border-border hover:border-border-strong bg-surface shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition flex items-center gap-1 cursor-pointer"
                 title="Open"
                 aria-label="Open task"
               >

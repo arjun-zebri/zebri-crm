@@ -45,7 +45,7 @@ export function EditorTopbar({
   addBlockSlot,
 }: EditorTopbarProps) {
   return (
-    <header className="flex items-center justify-between gap-3 h-12 px-3 border-b border-gray-100 bg-white shrink-0">
+    <header className="flex items-center justify-between gap-3 h-12 px-3 border-b border-gray-100 bg-surface shrink-0">
       <div className="flex items-center gap-1 min-w-0 flex-1">
         <KitNameField value={kitName} onChange={setKitName} />
         <KitPicker
@@ -57,14 +57,14 @@ export function EditorTopbar({
         />
       </div>
 
-      <div className="hidden md:flex items-center bg-gray-100 rounded-control p-0.5">
+      <div className="hidden md:flex items-center bg-surface-emphasis rounded-control p-0.5">
         <button
           type="button"
           onClick={() => setDevice('desktop')}
           aria-label="Desktop preview"
           title="Desktop"
           className={`inline-flex items-center justify-center w-7 h-7 rounded-control transition cursor-pointer ${
-            device === 'desktop' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
+            device === 'desktop' ? 'bg-surface text-text shadow-sm' : 'text-text-subtle hover:text-gray-700'
           }`}
         >
           <Monitor size={13} strokeWidth={1.75} />
@@ -75,7 +75,7 @@ export function EditorTopbar({
           aria-label="Mobile preview"
           title="Mobile"
           className={`inline-flex items-center justify-center w-7 h-7 rounded-control transition cursor-pointer ${
-            device === 'mobile' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
+            device === 'mobile' ? 'bg-surface text-text shadow-sm' : 'text-text-subtle hover:text-gray-700'
           }`}
         >
           <Smartphone size={13} strokeWidth={1.75} />
@@ -92,7 +92,7 @@ export function EditorTopbar({
             disabled={!canUndo}
             className={`p-1.5 rounded-control transition ${
               canUndo
-                ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
+                ? 'text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer'
                 : 'text-gray-300 cursor-not-allowed'
             }`}
             title="Undo (⌘Z)"
@@ -106,7 +106,7 @@ export function EditorTopbar({
             disabled={!canRedo}
             className={`p-1.5 rounded-control transition ${
               canRedo
-                ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
+                ? 'text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer'
                 : 'text-gray-300 cursor-not-allowed'
             }`}
             title="Redo (⌘⇧Z)"
@@ -168,7 +168,7 @@ function KitNameField({ value, onChange }: { value: string; onChange: (v: string
             }
           }}
           onFocus={(e) => e.currentTarget.select()}
-          className="h-7 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-control px-2 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 min-w-0 w-[220px]"
+          className="h-7 text-sm font-medium text-text bg-surface border border-border-strong rounded-control px-2 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 min-w-0 w-[220px]"
         />
       </div>
     )
@@ -179,9 +179,9 @@ function KitNameField({ value, onChange }: { value: string; onChange: (v: string
       type="button"
       onClick={() => setEditing(true)}
       title="Rename brand kit"
-      className="inline-flex items-center h-7 px-1.5 -ml-1.5 rounded-control hover:bg-gray-100 cursor-pointer transition min-w-0"
+      className="inline-flex items-center h-7 px-1.5 -ml-1.5 rounded-control hover:bg-surface-emphasis cursor-pointer transition min-w-0"
     >
-      <span className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{value}</span>
+      <span className="text-sm font-medium text-text truncate max-w-[220px]">{value}</span>
     </button>
   )
 }
@@ -206,7 +206,7 @@ function KitPicker({
           type="button"
           aria-label="Switch brand kit"
           title="Switch brand kit"
-          className="inline-flex items-center justify-center w-6 h-6 rounded-control text-gray-400 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition shrink-0"
+          className="inline-flex items-center justify-center w-6 h-6 rounded-control text-text-subtle hover:text-text hover:bg-surface-emphasis cursor-pointer transition shrink-0"
         >
           <ChevronDown size={12} strokeWidth={2} />
         </button>
@@ -215,14 +215,14 @@ function KitPicker({
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-1.5 z-50 w-[260px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-1.5 z-50 w-[260px] animate-modal-in"
         >
           <div className="px-2 pt-1 pb-1.5 flex items-center justify-between">
-            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-[0.06em]">Saved kits</p>
-            <span className="text-[10px] text-gray-400">{kits.length}</span>
+            <p className="text-[11px] font-medium text-text-subtle uppercase tracking-[0.06em]">Saved kits</p>
+            <span className="text-[10px] text-text-subtle">{kits.length}</span>
           </div>
           {kits.length === 0 ? (
-            <p className="px-2 py-2 text-[11px] text-gray-400">
+            <p className="px-2 py-2 text-[11px] text-text-subtle">
               No saved kits yet. Save your current setup to switch back later.
             </p>
           ) : (
@@ -243,15 +243,15 @@ function KitPicker({
                         className="flex-1 min-w-0 text-left cursor-pointer"
                         title={`Apply ${kit.name}`}
                       >
-                        <p className="text-xs font-medium text-gray-900 truncate">{kit.name}</p>
+                        <p className="text-xs font-medium text-text truncate">{kit.name}</p>
                       </button>
                     </Popover.Close>
-                    {active && <Check size={11} strokeWidth={2.5} className="text-gray-900 shrink-0" />}
+                    {active && <Check size={11} strokeWidth={2.5} className="text-text shrink-0" />}
                     {kits.length > 1 && (
                       <button
                         type="button"
                         onClick={() => onDelete(kit.id)}
-                        className="p-1 rounded-control text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition opacity-0 group-hover:opacity-100"
+                        className="p-1 rounded-control text-text-subtle hover:text-red-600 hover:bg-red-50 cursor-pointer transition opacity-0 group-hover:opacity-100"
                         title="Delete kit"
                         aria-label="Delete kit"
                       >
@@ -270,7 +270,7 @@ function KitPicker({
                 onClick={onCreateNewKit}
                 className="flex items-center gap-2 w-full px-2 py-1.5 rounded-control text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
-                <Plus size={11} strokeWidth={1.75} className="text-gray-400" />
+                <Plus size={11} strokeWidth={1.75} className="text-text-subtle" />
                 Create new kit
               </button>
             </Popover.Close>
@@ -296,7 +296,7 @@ function SaveStatusPill({ status, onRetry }: { status: SaveStatus; onRetry?: () 
     status === 'error' ? 'bg-red-500' :
     status === 'saved' ? 'bg-emerald-500' :
     'bg-gray-300'
-  const tone = status === 'error' ? 'text-red-600' : 'text-gray-400'
+  const tone = status === 'error' ? 'text-red-600' : 'text-text-subtle'
 
   if (status === 'error' && onRetry) {
     return (

@@ -20,12 +20,12 @@ import { PaymentsTable } from './payments-table';
 import type { Contract } from './use-payments-data';
 
 const CONTRACT_STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600',
+  draft: 'bg-surface-emphasis text-gray-600',
   sent: 'bg-blue-50 text-blue-600',
   signed: 'bg-emerald-50 text-emerald-600',
   declined: 'bg-red-50 text-red-600',
-  expired: 'bg-gray-100 text-gray-500',
-  revoked: 'bg-gray-100 text-gray-500',
+  expired: 'bg-surface-emphasis text-text-muted',
+  revoked: 'bg-surface-emphasis text-text-muted',
 };
 
 function pill(status: string, opts?: { wrap?: boolean }): ReactNode {
@@ -68,7 +68,7 @@ export function ContractsList({ loading, contracts, searching, onOpen }: Contrac
         coupleName: contract.couple.name,
         statusPill: pill(contract.status),
         valueCell: (
-          <span className="text-sm text-gray-500 group-hover:text-gray-900">
+          <span className="text-sm text-text-muted group-hover:text-text">
             {contract.signed_at
               ? new Date(contract.signed_at).toLocaleDateString('en-AU', {
                   day: 'numeric',
@@ -78,7 +78,7 @@ export function ContractsList({ loading, contracts, searching, onOpen }: Contrac
           </span>
         ),
         lastCell: (
-          <span className="text-sm text-gray-500 group-hover:text-gray-900">
+          <span className="text-sm text-text-muted group-hover:text-text">
             {new Date(contract.created_at).toLocaleDateString('en-AU', {
               day: 'numeric',
               month: 'short',

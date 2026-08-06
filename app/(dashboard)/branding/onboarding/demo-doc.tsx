@@ -125,7 +125,7 @@ export function DemoDoc({ headingHex, fontHeading, headingSize, buttonColor, sel
         {toolbarOpen && (
           <div
             data-testid="demo-block-toolbar"
-            className="absolute -top-10 left-1/2 -translate-x-1/2 z-10 rounded-control border border-gray-200 bg-white shadow-[0_8px_24px_-8px_rgba(15,23,42,0.18)] animate-modal-in"
+            className="absolute -top-10 left-1/2 -translate-x-1/2 z-10 rounded-control border border-border bg-surface shadow-[0_8px_24px_-8px_rgba(15,23,42,0.18)] animate-modal-in"
           >
             {/* Mirrors the real block toolbar: type label, then controls. */}
             <p className="px-2 pt-1 text-[9px] font-medium text-gray-600 capitalize">action</p>

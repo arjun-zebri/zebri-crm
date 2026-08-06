@@ -15,7 +15,7 @@ import type { PortalPerson, PortalSong } from './use-portal-data'
 // kept locally because this file is consumed before the shared
 // modals module mounts in dev.
 const inputClass =
-  'w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition'
+  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition'
 const labelClass = 'block text-sm text-gray-600 mb-1'
 
 // ── Audio recorder ──────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ export function AudioRecorder({
 
   if (uploading) {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+      <div className="flex items-center gap-1.5 text-xs text-text-subtle">
         <Loader2 size={13} className="animate-spin" />
         Uploading...
       </div>
@@ -134,11 +134,11 @@ export function AudioRecorder({
           idleClassName="text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
           playingClassName="text-emerald-700 border-emerald-300 bg-emerald-100 hover:bg-emerald-200"
         />
-        <button type="button" onClick={startRecording} className="p-1 text-gray-400 hover:text-gray-600 transition cursor-pointer" title="Re-record">
+        <button type="button" onClick={startRecording} className="p-1 text-text-subtle hover:text-gray-600 transition cursor-pointer" title="Re-record">
           <Mic size={13} strokeWidth={1.5} />
         </button>
         {onDelete && (
-          <button type="button" onClick={onDelete} className="p-1 text-gray-400 hover:text-red-400 transition cursor-pointer" title="Delete recording">
+          <button type="button" onClick={onDelete} className="p-1 text-text-subtle hover:text-red-400 transition cursor-pointer" title="Delete recording">
             <Trash2 size={13} strokeWidth={1.5} />
           </button>
         )}
@@ -151,7 +151,7 @@ export function AudioRecorder({
       <button
         type="button"
         onClick={startRecording}
-        className="self-start flex items-center gap-1 text-xs text-gray-500 border border-gray-200 rounded-control px-2.5 py-1.5 hover:bg-gray-100 transition cursor-pointer"
+        className="self-start flex items-center gap-1 text-xs text-text-muted border border-border rounded-control px-2.5 py-1.5 hover:bg-surface-emphasis transition cursor-pointer"
       >
         <Mic size={12} strokeWidth={1.5} />
         Record pronunciation
@@ -210,9 +210,9 @@ export function PersonModal({
           {person && onDelete ? (
             confirmDelete ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Remove this person?</span>
+                <span className="text-xs text-text-muted">Remove this person?</span>
                 <button type="button" onClick={onDelete} className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer">Yes, remove</button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">Cancel</button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer">Cancel</button>
               </div>
             ) : (
               <button
@@ -229,7 +229,7 @@ export function PersonModal({
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="text-sm px-4 py-2 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-sm px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
@@ -265,15 +265,15 @@ export function PersonModal({
                 type="button"
                 className={`${inputClass} flex items-center justify-between text-left`}
               >
-                <span className={role ? 'text-gray-900' : 'text-gray-400'}>
+                <span className={role ? 'text-text' : 'text-text-subtle'}>
                   {role || 'No role'}
                 </span>
-                <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
               </button>
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content
-                className="bg-white border border-gray-200 rounded-control shadow-lg z-[90] py-1 max-h-60 overflow-y-auto w-[var(--radix-popover-trigger-width)]"
+                className="bg-surface border border-border rounded-control shadow-lg z-[90] py-1 max-h-60 overflow-y-auto w-[var(--radix-popover-trigger-width)]"
                 sideOffset={4}
                 align="start"
               >
@@ -281,7 +281,7 @@ export function PersonModal({
                   type="button"
                   onClick={() => { setRole(''); setRoleOpen(false) }}
                   className={`w-full text-left px-3 py-2 text-sm transition cursor-pointer ${
-                    !role ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-50'
+                    !role ? 'bg-surface-emphasis text-text font-medium' : 'text-text-muted hover:bg-gray-50'
                   }`}
                 >
                   No role
@@ -292,7 +292,7 @@ export function PersonModal({
                     type="button"
                     onClick={() => { setRole(r); setRoleOpen(false) }}
                     className={`w-full text-left px-3 py-2 text-sm transition cursor-pointer ${
-                      role === r ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                      role === r ? 'bg-surface-emphasis text-text font-medium' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     {r}
@@ -365,9 +365,9 @@ export function SongModal({
           {song && onDelete ? (
             confirmDelete ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Remove this song?</span>
+                <span className="text-xs text-text-muted">Remove this song?</span>
                 <button type="button" onClick={onDelete} className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer">Yes, remove</button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">Cancel</button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer">Cancel</button>
               </div>
             ) : (
               <button
@@ -384,7 +384,7 @@ export function SongModal({
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="text-sm px-4 py-2 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-sm px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>

@@ -2,32 +2,12 @@
   "scannedFiles": 382,
   "topPaletteClasses": [
     {
-      "label": "text-gray-400",
-      "count": 383
-    },
-    {
-      "label": "text-gray-900",
-      "count": 320
-    },
-    {
-      "label": "border-gray-200",
-      "count": 283
-    },
-    {
-      "label": "bg-gray-100",
-      "count": 260
-    },
-    {
       "label": "bg-gray-50",
-      "count": 224
+      "count": 222
     },
     {
       "label": "text-gray-700",
       "count": 222
-    },
-    {
-      "label": "text-gray-500",
-      "count": 209
     },
     {
       "label": "text-gray-600",
@@ -35,7 +15,7 @@
     },
     {
       "label": "border-gray-100",
-      "count": 91
+      "count": 90
     },
     {
       "label": "bg-gray-900",
@@ -46,8 +26,28 @@
       "count": 58
     },
     {
-      "label": "border-gray-300",
-      "count": 57
+      "label": "bg-gray-200",
+      "count": 53
+    },
+    {
+      "label": "text-red-600",
+      "count": 41
+    },
+    {
+      "label": "text-red-500",
+      "count": 36
+    },
+    {
+      "label": "bg-red-50",
+      "count": 33
+    },
+    {
+      "label": "border-gray-900",
+      "count": 29
+    },
+    {
+      "label": "bg-emerald-50",
+      "count": 24
     }
   ],
   "groups": [
@@ -59,7 +59,7 @@
         {
           "label": "rounded-control",
           "verdict": "token",
-          "count": 1042,
+          "count": 1030,
           "files": [
             {
               "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
@@ -78,7 +78,7 @@
         {
           "label": "rounded-pill",
           "verdict": "token",
-          "count": 207,
+          "count": 206,
           "files": [
             {
               "path": "app/(dashboard)/branding/onboarding/onboarding-modal-skeleton.tsx",
@@ -158,27 +158,31 @@
         {
           "label": "text-text*",
           "verdict": "token",
-          "count": 994,
+          "count": 1900,
           "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 73
+            },
             {
               "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
               "hits": 57
             },
             {
-              "path": "app/portal/[token]/timeline-section.tsx",
-              "hits": 24
-            },
-            {
-              "path": "app/(dashboard)/automations/[id]/inspector-panel.tsx",
-              "hits": 22
+              "path": "app/(dashboard)/branding/brand-panel.tsx",
+              "hits": 46
             }
           ]
         },
         {
           "label": "bg-surface*",
           "verdict": "token",
-          "count": 372,
+          "count": 846,
           "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 64
+            },
             {
               "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
               "hits": 29
@@ -186,18 +190,18 @@
             {
               "path": "components/builders/parts/builder-modal-shell.tsx",
               "hits": 26
-            },
-            {
-              "path": "app/portal/[token]/timeline-section.tsx",
-              "hits": 15
             }
           ]
         },
         {
           "label": "border-border*",
           "verdict": "token",
-          "count": 298,
+          "count": 637,
           "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 56
+            },
             {
               "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
               "hits": 25
@@ -205,29 +209,25 @@
             {
               "path": "app/portal/[token]/timeline-section.tsx",
               "hits": 11
-            },
-            {
-              "path": "app/(dashboard)/automations/[id]/canvas-node.tsx",
-              "hits": 8
             }
           ]
         },
         {
           "label": "raw palette",
           "verdict": "legacy",
-          "count": 2938,
+          "count": 1420,
           "files": [
             {
               "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
-              "hits": 220
+              "hits": 73
             },
             {
               "path": "app/(dashboard)/couples/couple-profile-header.tsx",
-              "hits": 95
+              "hits": 65
             },
             {
-              "path": "app/(dashboard)/branding/brand-panel.tsx",
-              "hits": 82
+              "path": "components/ui/badge.tsx",
+              "hits": 62
             }
           ]
         }
@@ -241,7 +241,7 @@
         {
           "label": "<Button>",
           "verdict": "token",
-          "count": 129,
+          "count": 124,
           "files": [
             {
               "path": "app/(dashboard)/templates/contract-template-manager.tsx",
@@ -260,7 +260,7 @@
         {
           "label": "<Input>",
           "verdict": "token",
-          "count": 75,
+          "count": 72,
           "files": [
             {
               "path": "app/lead/[token]/_components/lead-form.tsx",
@@ -279,7 +279,7 @@
         {
           "label": "<Select>",
           "verdict": "token",
-          "count": 11,
+          "count": 10,
           "files": [
             {
               "path": "app/(dashboard)/branding/onboarding/step-look.tsx",
@@ -298,7 +298,7 @@
         {
           "label": "native <button>",
           "verdict": "legacy",
-          "count": 661,
+          "count": 658,
           "files": [
             {
               "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
@@ -317,7 +317,7 @@
         {
           "label": "native <input>",
           "verdict": "legacy",
-          "count": 119,
+          "count": 114,
           "files": [
             {
               "path": "app/(dashboard)/settings/personal-info-section.tsx",
@@ -336,14 +336,10 @@
         {
           "label": "native <select>",
           "verdict": "legacy",
-          "count": 2,
+          "count": 1,
           "files": [
             {
               "path": "components/questionnaires/question-field.tsx",
-              "hits": 1
-            },
-            {
-              "path": "components/ui/select.tsx",
               "hits": 1
             }
           ]
@@ -358,18 +354,18 @@
         {
           "label": "text-display",
           "verdict": "token",
-          "count": 3,
+          "count": 1,
           "files": [
             {
               "path": "components/ui/page-header.tsx",
-              "hits": 3
+              "hits": 1
             }
           ]
         },
         {
           "label": "text-section",
           "verdict": "token",
-          "count": 10,
+          "count": 9,
           "files": [
             {
               "path": "app/(dashboard)/settings/billing/current-plan-card.tsx",
@@ -407,11 +403,11 @@
         {
           "label": "text-caption",
           "verdict": "token",
-          "count": 202,
+          "count": 200,
           "files": [
             {
               "path": "app/(dashboard)/automations/[id]/inspector-panel.tsx",
-              "hits": 10
+              "hits": 9
             },
             {
               "path": "components/builders/parts/schedule-modal.tsx",
@@ -426,12 +422,8 @@
         {
           "label": "text-3xl",
           "verdict": "legacy",
-          "count": 7,
+          "count": 5,
           "files": [
-            {
-              "path": "components/ui/page-header.tsx",
-              "hits": 2
-            },
             {
               "path": "app/(dashboard)/couples/couple-pulse.tsx",
               "hits": 1
@@ -439,18 +431,18 @@
             {
               "path": "app/(dashboard)/dashboard-revenue-chart.tsx",
               "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/onboarding/steps/step-welcome.tsx",
+              "hits": 1
             }
           ]
         },
         {
           "label": "text-2xl",
           "verdict": "legacy",
-          "count": 17,
+          "count": 15,
           "files": [
-            {
-              "path": "components/ui/page-header.tsx",
-              "hits": 3
-            },
             {
               "path": "app/(dashboard)/admin/sections/metric-chart-card.tsx",
               "hits": 1
@@ -458,13 +450,17 @@
             {
               "path": "app/(dashboard)/branding/blocks/render.tsx",
               "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/branding/save-kit-dialog.tsx",
+              "hits": 1
             }
           ]
         },
         {
           "label": "text-xl",
           "verdict": "legacy",
-          "count": 55,
+          "count": 54,
           "files": [
             {
               "path": "app/(dashboard)/dashboard-invoices.tsx",
@@ -521,7 +517,7 @@
         {
           "label": "text-sm",
           "verdict": "legacy",
-          "count": 591,
+          "count": 588,
           "files": [
             {
               "path": "app/(dashboard)/couples/couple-profile-header.tsx",
@@ -540,7 +536,7 @@
         {
           "label": "text-xs",
           "verdict": "legacy",
-          "count": 571,
+          "count": 569,
           "files": [
             {
               "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",

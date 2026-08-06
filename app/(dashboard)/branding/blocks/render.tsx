@@ -180,7 +180,7 @@ export function RenderHeaderBanner({
             className="w-full h-full"
             emptyState={
               <div
-                className="w-full h-full border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center"
+                className="w-full h-full border-2 border-dashed border-border bg-gray-50/40 flex items-center justify-center"
                 style={{ borderRadius: state.cornerRadius }}
               >
                 <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
@@ -191,7 +191,7 @@ export function RenderHeaderBanner({
           </InlineAsset>
         ) : (
           <div
-            className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+            className="w-full h-full flex items-center justify-center border-2 border-dashed border-border bg-gray-50/40"
             style={{ borderRadius: state.cornerRadius }}
           >
             <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
@@ -379,7 +379,7 @@ export function RenderImage({
             className="w-full h-full"
             emptyState={
               <div
-                className="w-full h-full border-2 border-dashed border-gray-200 bg-gray-50/40"
+                className="w-full h-full border-2 border-dashed border-border bg-gray-50/40"
                 style={{ borderRadius: state.cornerRadius }}
               />
             }
@@ -388,7 +388,7 @@ export function RenderImage({
           </InlineAsset>
         ) : (
           <div
-            className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+            className="w-full h-full flex items-center justify-center border-2 border-dashed border-border bg-gray-50/40"
             style={{ borderRadius: state.cornerRadius }}
           >
             <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
@@ -521,7 +521,7 @@ export function RenderBusinessName({
         selectableWhenEmpty={false}
         emptyState={
           <div
-            className="flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+            className="flex items-center justify-center border-2 border-dashed border-border bg-gray-50/40"
             style={{
               width: logoHeight,
               height: logoHeight,
@@ -1229,7 +1229,7 @@ export function RenderQuestionnairePreview({
             >
               Sample · your live questions appear here
             </p>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-text-subtle">
               {mode === 'oneAtATime' ? 'One at a time' : 'All on one page'}
             </span>
           </div>

@@ -141,7 +141,7 @@ export function VenueAutocomplete({
           autoComplete="off"
         />
         {open && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded-control border border-gray-200 bg-white shadow-lg">
+          <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded-control border border-border bg-surface shadow-lg">
             {suggestions.map((s) => (
               <button
                 key={s.placeId}
@@ -149,9 +149,9 @@ export function VenueAutocomplete({
                 onMouseDown={() => handleSelect(s)}
                 className="w-full cursor-pointer px-3 py-2 text-left transition hover:bg-gray-50"
               >
-                <p className="text-sm font-medium text-gray-900">{s.mainText}</p>
+                <p className="text-sm font-medium text-text">{s.mainText}</p>
                 {s.secondaryText && (
-                  <p className="text-xs text-gray-500">{s.secondaryText}</p>
+                  <p className="text-xs text-text-muted">{s.secondaryText}</p>
                 )}
               </button>
             ))}
@@ -162,18 +162,18 @@ export function VenueAutocomplete({
         <div className="mt-2 flex flex-col gap-1.5">
           {value.venue_phone && (
             <div className="flex items-center gap-2">
-              <Phone size={11} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+              <Phone size={11} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
               <span className="text-xs text-gray-600">{value.venue_phone}</span>
             </div>
           )}
           {value.venue_website && (
             <div className="flex min-w-0 items-center gap-2">
-              <Globe size={11} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+              <Globe size={11} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
               <a
                 href={value.venue_website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="truncate text-xs text-gray-600 underline hover:text-gray-900"
+                className="truncate text-xs text-gray-600 underline hover:text-text"
               >
                 {value.venue_website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
               </a>

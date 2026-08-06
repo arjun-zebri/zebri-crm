@@ -65,7 +65,7 @@ export function Tooltip({ label, shortcut, side = 'bottom', className = '', chil
           style={{ top: position.top, left: position.left }}
         >
           {label}
-          {shortcut && <span className="ml-1.5 text-gray-400 font-mono">{shortcut}</span>}
+          {shortcut && <span className="ml-1.5 text-text-subtle font-mono">{shortcut}</span>}
         </span>,
         document.body,
       )}

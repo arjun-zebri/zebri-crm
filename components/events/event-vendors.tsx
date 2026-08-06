@@ -99,12 +99,12 @@ export function EventVendors({ eventId }: EventVendorsProps) {
     <div className="space-y-4">
       {!vendors || vendors.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-sm text-gray-500 mb-3">No contacts assigned yet.</p>
+          <p className="text-sm text-text-muted mb-3">No contacts assigned yet.</p>
           <ContactPopover
             excludeIds={[]}
             onAdd={(id) => addVendor.mutate(id)}
           >
-            <button className="text-sm text-gray-700 border border-gray-200 rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
+            <button className="text-sm text-gray-700 border border-border rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
               + Add Contact
             </button>
           </ContactPopover>
@@ -115,16 +115,16 @@ export function EventVendors({ eventId }: EventVendorsProps) {
             {vendors.map((link) => (
               <div
                 key={link.id}
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-control hover:bg-gray-50"
+                className="flex items-center justify-between p-3 border border-border rounded-control hover:bg-gray-50"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{link.vendor.name}</p>
-                  <p className="text-xs text-gray-500">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
+                  <p className="text-sm font-medium text-text">{link.vendor.name}</p>
+                  <p className="text-xs text-text-muted">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
                 </div>
                 <button
                   onClick={() => removeVendor.mutate(link.contact_id)}
                   disabled={removeVendor.isPending}
-                  className="p-1 text-gray-400 hover:text-red-600 transition disabled:opacity-50"
+                  className="p-1 text-text-subtle hover:text-red-600 transition disabled:opacity-50"
                 >
                   <X size={16} strokeWidth={1.5} />
                 </button>
@@ -135,7 +135,7 @@ export function EventVendors({ eventId }: EventVendorsProps) {
             excludeIds={vendors.map((v) => v.contact_id)}
             onAdd={(id) => addVendor.mutate(id)}
           >
-            <button className="w-full text-sm text-gray-700 border border-gray-200 rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
+            <button className="w-full text-sm text-gray-700 border border-border rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
               + Add Contact
             </button>
           </ContactPopover>

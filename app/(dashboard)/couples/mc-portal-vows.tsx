@@ -87,12 +87,12 @@ function HistoryPopover({
         <History size={14} strokeWidth={1.5} /> History ({history.length})
       </button>
       <div
-        className={`absolute right-0 mt-2 w-52 z-30 origin-top-right rounded-control border border-gray-100 bg-white shadow-lg py-1 text-sm transition-all duration-150 ${
+        className={`absolute right-0 mt-2 w-52 z-30 origin-top-right rounded-control border border-gray-100 bg-surface shadow-lg py-1 text-sm transition-all duration-150 ${
           open ? 'opacity-100 scale-100' : 'pointer-events-none opacity-0 scale-95'
         }`}
       >
         {history.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-gray-400">No history yet</p>
+          <p className="px-3 py-2 text-xs text-text-subtle">No history yet</p>
         ) : (
           <ul className="max-h-64 overflow-y-auto">
             {history.map((r, i) => (
@@ -109,12 +109,12 @@ function HistoryPopover({
                   <span className="min-w-0">
                     <span className="block">
                       {r.author === 'couple' ? "Couple's version" : 'Your edit'}
-                      {i === 0 && <span className="text-gray-400"> · current</span>}
+                      {i === 0 && <span className="text-text-subtle"> · current</span>}
                     </span>
-                    <span className="block text-xs text-gray-400">{timeAgo(r.created_at)}</span>
+                    <span className="block text-xs text-text-subtle">{timeAgo(r.created_at)}</span>
                   </span>
                   {i !== 0 && (
-                    <RotateCcw size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+                    <RotateCcw size={13} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
                   )}
                 </button>
               </li>
@@ -133,10 +133,10 @@ function VowsSkeleton() {
       {[0, 1].map((i) => (
         <div key={i} className="flex flex-col min-h-[280px]">
           <div className="flex items-center justify-between mb-2 px-3">
-            <div className="h-4 w-28 rounded-control bg-gray-100" />
-            <div className="h-4 w-20 rounded-control bg-gray-100" />
+            <div className="h-4 w-28 rounded-control bg-surface-emphasis" />
+            <div className="h-4 w-20 rounded-control bg-surface-emphasis" />
           </div>
-          <div className="flex-1 w-full rounded-control bg-gray-100" />
+          <div className="flex-1 w-full rounded-control bg-surface-emphasis" />
         </div>
       ))}
     </div>

@@ -162,31 +162,31 @@ export function CommandPalette({
         role="dialog"
         aria-label={title}
         style={{ left: position.left, top: position.top, width: POPOVER_WIDTH }}
-        className="fixed z-50 bg-white rounded-control border border-gray-200 shadow-xl flex flex-col overflow-hidden"
+        className="fixed z-50 bg-surface rounded-control border border-border shadow-xl flex flex-col overflow-hidden"
         onKeyDown={handleKey}
       >
       <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
-        <Search size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+        <Search size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
         <input
           type="text"
           autoFocus
           placeholder={placeholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-gray-400"
+          className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-text-subtle"
           aria-label={title}
         />
       </div>
       <div className="overflow-y-auto py-1" style={{ maxHeight: POPOVER_MAX_HEIGHT - 50 }}>
         {flat.length === 0 ? (
-          <div className="px-3 py-6 text-xs text-gray-500 text-center">No matches</div>
+          <div className="px-3 py-6 text-xs text-text-muted text-center">No matches</div>
         ) : (
           groupOrder.map((group) => {
             const inGroup = filtered.filter((i) => i.group === group.slug)
             if (inGroup.length === 0) return null
             return (
               <div key={group.slug} className="mb-1">
-                <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-gray-400">
+                <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-text-subtle">
                   {group.label}
                 </div>
                 {inGroup.map((item) => {
@@ -202,19 +202,19 @@ export function CommandPalette({
                       onClick={() => !item.disabled && onPick(item.id)}
                       className={`w-full text-left px-3 py-1.5 flex items-center gap-3 transition cursor-pointer disabled:cursor-default ${
                         isHighlighted ? 'bg-gray-50' : ''
-                      } ${item.disabled ? 'opacity-50' : ''} ${item.active ? 'text-brand' : 'text-gray-900'}`}
+                      } ${item.disabled ? 'opacity-50' : ''} ${item.active ? 'text-brand' : 'text-text'}`}
                     >
                       {Icon && (
                         <Icon
                           size={14}
                           strokeWidth={1.5}
-                          className={`shrink-0 ${item.active ? 'text-brand' : 'text-gray-400'}`}
+                          className={`shrink-0 ${item.active ? 'text-brand' : 'text-text-subtle'}`}
                         />
                       )}
                       <div className="min-w-0 flex-1">
                         <div className="text-sm truncate">{item.label}</div>
                         {item.description && (
-                          <div className="text-xs text-gray-500 truncate">{item.description}</div>
+                          <div className="text-xs text-text-muted truncate">{item.description}</div>
                         )}
                       </div>
                     </button>

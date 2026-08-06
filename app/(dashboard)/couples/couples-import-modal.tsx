@@ -157,7 +157,7 @@ export function CouplesImportModal({
         <button
           onClick={() => setStep(step === 'preview' ? 'map' : 'upload')}
           disabled={importing}
-          className="cursor-pointer rounded-control bg-gray-100 px-3 py-1.5 text-xs text-gray-900 transition hover:bg-gray-200 disabled:opacity-50"
+          className="cursor-pointer rounded-control bg-surface-emphasis px-3 py-1.5 text-xs text-text transition hover:bg-gray-200 disabled:opacity-50"
         >
           Back
         </button>
@@ -165,7 +165,7 @@ export function CouplesImportModal({
       <button
         onClick={onClose}
         disabled={importing}
-        className="cursor-pointer rounded-control bg-gray-100 px-3 py-1.5 text-xs text-gray-900 transition hover:bg-gray-200 disabled:opacity-50"
+        className="cursor-pointer rounded-control bg-surface-emphasis px-3 py-1.5 text-xs text-text transition hover:bg-gray-200 disabled:opacity-50"
       >
         Cancel
       </button>
@@ -211,7 +211,7 @@ export function CouplesImportModal({
 
       {step === 'map' && mapping && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-text-muted">
             Match each Zebri field to a column from your file.
           </p>
           <CouplesImportMapping
@@ -231,7 +231,7 @@ export function CouplesImportModal({
 
       {step === 'preview' && preview && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-text-muted">
             {selectedCount} of {preview.entries.length} rows will import
           </p>
           <CouplesImportPreview

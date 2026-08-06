@@ -104,31 +104,31 @@ function CategorySection({
             onChange={(e) => setRenameValue(e.target.value)}
             onBlur={handleRenameCommit}
             onKeyDown={handleRenameKeyDown}
-            className="text-xs font-semibold uppercase tracking-wider bg-transparent border-b border-gray-400 outline-none text-gray-900 w-48"
+            className="text-xs font-semibold uppercase tracking-wider bg-transparent border-b border-gray-400 outline-none text-text w-48"
           />
         ) : (
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900">{category.label}</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text">{category.label}</h3>
         )}
 
         {!renaming && (
           <>
             <button
               onClick={startRename}
-              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition cursor-pointer text-gray-500"
+              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition cursor-pointer text-text-muted"
               title="Rename"
             >
               <Pencil size={11} strokeWidth={1.5} />
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
-              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition cursor-pointer text-gray-500"
+              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition cursor-pointer text-text-muted"
               title="Delete category"
             >
               <Trash2 size={11} strokeWidth={1.5} />
             </button>
             <button
               onClick={onAdd}
-              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition cursor-pointer text-gray-500"
+              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition cursor-pointer text-text-muted"
               title="Add song"
             >
               <Plus size={12} strokeWidth={2} />
@@ -138,9 +138,9 @@ function CategorySection({
 
         {confirmDelete && (
           <div className="flex items-center gap-2 ml-1">
-            <span className="text-xs text-gray-400">Remove category?</span>
+            <span className="text-xs text-text-subtle">Remove category?</span>
             <button onClick={() => onDelete(category.id)} className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer">Yes</button>
-            <button onClick={() => setConfirmDelete(false)} className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">No</button>
+            <button onClick={() => setConfirmDelete(false)} className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer">No</button>
           </div>
         )}
       </div>
@@ -154,13 +154,13 @@ function CategorySection({
             <div
               key={song.id}
               onClick={() => onEditSong(song)}
-              className="inline-flex items-center gap-3 border border-gray-200 rounded-control px-4 py-2.5 hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer group/song w-[200px]"
+              className="inline-flex items-center gap-3 border border-border rounded-control px-4 py-2.5 hover:border-border-strong hover:bg-gray-50/50 transition cursor-pointer group/song w-[200px]"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900 truncate">{song.title}</p>
-                {song.artist && <p className="text-xs text-gray-400 truncate">{song.artist}</p>}
+                <p className="text-sm font-medium text-text truncate">{song.title}</p>
+                {song.artist && <p className="text-xs text-text-subtle truncate">{song.artist}</p>}
               </div>
-              <Pencil size={12} strokeWidth={1.5} className="text-gray-400 shrink-0 opacity-0 group-hover/song:opacity-60 transition" />
+              <Pencil size={12} strokeWidth={1.5} className="text-text-subtle shrink-0 opacity-0 group-hover/song:opacity-60 transition" />
             </div>
           ))
         )}
@@ -282,7 +282,7 @@ export function McPortalSongs({ coupleId, onEditSong, onAddSong }: McPortalSongs
     >
       {isCategoriesLoading ? (
         <div className="space-y-4" aria-hidden="true">
-          {[1, 2, 3].map((i) => <div key={i} className="h-6 bg-gray-100 rounded-control animate-pulse" />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-6 bg-surface-emphasis rounded-control animate-pulse" />)}
         </div>
       ) : isEmpty ? (
         <CoupleTabEmpty
@@ -317,18 +317,18 @@ export function McPortalSongs({ coupleId, onEditSong, onAddSong }: McPortalSongs
                 }}
                 placeholder="Category name"
                 autoFocus
-                className="text-sm border-b border-gray-300 outline-none bg-transparent text-gray-700 placeholder:text-gray-300 w-48 pb-0.5"
+                className="text-sm border-b border-border-strong outline-none bg-transparent text-gray-700 placeholder:text-gray-300 w-48 pb-0.5"
               />
               <button
                 onClick={() => { if (newCategoryLabel.trim()) addCategory.mutate(newCategoryLabel.trim()) }}
                 disabled={!newCategoryLabel.trim() || addCategory.isPending}
-                className="text-xs text-gray-500 hover:text-gray-700 transition cursor-pointer disabled:opacity-40"
+                className="text-xs text-text-muted hover:text-gray-700 transition cursor-pointer disabled:opacity-40"
               >
                 Add
               </button>
               <button
                 onClick={() => { setShowAddCategory(false); setNewCategoryLabel('') }}
-                className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer"
               >
                 Cancel
               </button>

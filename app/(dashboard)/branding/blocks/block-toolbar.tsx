@@ -71,7 +71,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
 
   return (
     <div
-      className="bg-white border border-gray-200 rounded-control shadow-[0_8px_24px_-8px_rgba(15,23,42,0.18),0_2px_6px_-2px_rgba(15,23,42,0.06)] animate-modal-in"
+      className="bg-surface border border-border rounded-control shadow-[0_8px_24px_-8px_rgba(15,23,42,0.18),0_2px_6px_-2px_rgba(15,23,42,0.06)] animate-modal-in"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
@@ -140,7 +140,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
               type="button"
               onClick={onResetBlock}
               aria-label="Reset block to theme defaults"
-              className="p-1.5 rounded-control text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+              className="p-1.5 rounded-control text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
             >
               <RotateCcw size={13} strokeWidth={1.75} />
             </button>
@@ -150,7 +150,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
               type="button"
               onClick={onDuplicate}
               aria-label="Duplicate block"
-              className="p-1.5 rounded-control text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+              className="p-1.5 rounded-control text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
             >
               <Copy size={13} strokeWidth={1.75} />
             </button>
@@ -164,8 +164,8 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
               aria-label={canDelete ? 'Delete block' : 'This block cannot be deleted'}
               className={`p-1.5 rounded-control transition ${
                 canDelete
-                  ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 cursor-pointer'
-                  : 'text-gray-500 opacity-40 cursor-not-allowed'
+                  ? 'text-text-muted hover:text-red-600 hover:bg-red-50 cursor-pointer'
+                  : 'text-text-muted opacity-40 cursor-not-allowed'
               }`}
             >
               <Trash2 size={13} strokeWidth={1.75} />
@@ -285,7 +285,7 @@ function QuestionnaireControls({
           trigger={
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200 text-xs text-gray-700"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border text-xs text-gray-700"
             >
               <span className="w-4 h-4 rounded-control ring-1 ring-black/10" style={{ background: buttonColor }} />
               Button
@@ -402,10 +402,10 @@ function TitleIncludeDropdown({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-control text-xs hover:bg-gray-100 cursor-pointer border border-gray-200 text-gray-700 shrink-0"
+            className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-control text-xs hover:bg-surface-emphasis cursor-pointer border border-border text-gray-700 shrink-0"
           >
-            <span className="text-gray-900 font-medium">Include</span>
-            <ChevronDown size={10} strokeWidth={2} className="text-gray-400" />
+            <span className="text-text font-medium">Include</span>
+            <ChevronDown size={10} strokeWidth={2} className="text-text-subtle" />
           </button>
         </Popover.Trigger>
       </Tooltip>
@@ -413,7 +413,7 @@ function TitleIncludeDropdown({
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-2 z-[60] w-[200px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-2 z-[60] w-[200px] animate-modal-in"
         >
           {rows.map((row) => (
             <button
@@ -421,11 +421,11 @@ function TitleIncludeDropdown({
               type="button"
               onClick={() => row.set(!row.active)}
               aria-pressed={row.active}
-              className="flex w-full items-center gap-2 px-2 py-1.5 rounded-control text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+              className="flex w-full items-center gap-2 px-2 py-1.5 rounded-control text-xs text-gray-700 hover:bg-surface-emphasis cursor-pointer"
             >
               <span
                 className={`inline-flex items-center justify-center w-4 h-4 rounded-control border shrink-0 ${
-                  row.active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-300 text-transparent'
+                  row.active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-surface border-border-strong text-transparent'
                 }`}
               >
                 <Check size={11} strokeWidth={3} />
@@ -558,7 +558,7 @@ function ActionControls({
               <button
                 type="button"
                 title="Button fill"
-                className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200"
+                className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border"
               >
                 <span className="w-4 h-4 rounded-control ring-1 ring-black/10" style={{ background: buttonColor }} />
               </button>
@@ -577,7 +577,7 @@ function ActionControls({
               <button
                 type="button"
                 title="Button fill"
-                className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200"
+                className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border"
               >
                 <span className="w-4 h-4 rounded-control ring-1 ring-black/10" style={{ background: block.secondaryColor ?? state.secondaryColor }} />
               </button>
@@ -618,7 +618,7 @@ function ActionBlockControls({
     <>
       {/* Variant and Size */}
       <div className="inline-flex items-center gap-0.5">
-        <div className="inline-flex items-center bg-gray-50 rounded-control border border-gray-200">
+        <div className="inline-flex items-center bg-gray-50 rounded-control border border-border">
           {([
             { value: 'fill', label: 'Fill' },
             { value: 'outline', label: 'Outline' },
@@ -632,8 +632,8 @@ function ActionBlockControls({
                   aria-label={label}
                   className={`px-2.5 h-8 text-xs font-medium transition cursor-pointer ${
                     active
-                      ? 'bg-white text-gray-900 shadow-sm rounded-control m-0.5'
-                      : 'text-gray-500 hover:text-gray-900'
+                      ? 'bg-surface text-text shadow-sm rounded-control m-0.5'
+                      : 'text-text-muted hover:text-text'
                   }`}
                 >
                   {label}
@@ -642,7 +642,7 @@ function ActionBlockControls({
             )
           })}
         </div>
-        <div className="inline-flex items-center bg-gray-50 rounded-control border border-gray-200">
+        <div className="inline-flex items-center bg-gray-50 rounded-control border border-border">
           {([
             { value: 'sm' as const, label: 'S' },
             { value: 'md' as const, label: 'M' },
@@ -657,8 +657,8 @@ function ActionBlockControls({
                   aria-label={label}
                   className={`w-7 h-8 text-xs font-medium transition cursor-pointer ${
                     active
-                      ? 'bg-white text-gray-900 shadow-sm rounded-control m-0.5'
-                      : 'text-gray-500 hover:text-gray-900'
+                      ? 'bg-surface text-text shadow-sm rounded-control m-0.5'
+                      : 'text-text-muted hover:text-text'
                   }`}
                 >
                   {label}
@@ -670,7 +670,7 @@ function ActionBlockControls({
       </div>
       <Divider />
       {/* Justify */}
-      <div className="inline-flex items-center bg-gray-50 rounded-control border border-gray-200">
+      <div className="inline-flex items-center bg-gray-50 rounded-control border border-border">
         {([
           { value: 'start', Icon: AlignLeft, label: 'Align left' },
           { value: 'center', Icon: AlignCenter, label: 'Align center' },
@@ -683,7 +683,7 @@ function ActionBlockControls({
                 type="button"
                 onClick={() => updateBlock<ActionBlock>(block.id, { buttonJustify: value })}
                 aria-label={label}
-                className={`p-1.5 transition cursor-pointer ${active ? 'bg-white text-gray-900 shadow-sm rounded-control m-0.5' : 'text-gray-500 hover:text-gray-900'}`}
+                className={`p-1.5 transition cursor-pointer ${active ? 'bg-surface text-text shadow-sm rounded-control m-0.5' : 'text-text-muted hover:text-text'}`}
               >
                 <Icon size={12} strokeWidth={1.75} />
               </button>
@@ -701,7 +701,7 @@ function ActionBlockControls({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200 text-gray-700"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border text-gray-700"
             >
               <Square size={12} strokeWidth={1.75} />
               {radius !== state.cornerRadius && (
@@ -714,13 +714,13 @@ function ActionBlockControls({
           <Popover.Content
             align="start"
             sideOffset={4}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px]"
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px]"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-gray-600">Radius</span>
-              <span className="text-xs font-mono text-gray-900">{radius}px</span>
+              <span className="text-xs font-mono text-text">{radius}px</span>
             </div>
             <Slider
               value={radius}
@@ -739,7 +739,7 @@ function ActionBlockControls({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
             >
               <Equal size={12} strokeWidth={1.75} />
               {block.primaryWidthPx !== undefined && (
@@ -752,10 +752,10 @@ function ActionBlockControls({
           <Popover.Content
             align="center"
             sideOffset={6}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Primary width</span>
+              <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Primary width</span>
               <span className="text-xs font-mono text-gray-700 tabular-nums">{block.primaryWidthPx ?? 'auto'}px</span>
             </div>
             <Slider
@@ -789,7 +789,7 @@ function ActionBlockControls({
               <Popover.Trigger asChild>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+                  className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
                 >
                   <Equal size={12} strokeWidth={1.75} />
                   {block.secondaryWidthPx !== undefined && (
@@ -802,10 +802,10 @@ function ActionBlockControls({
               <Popover.Content
                 align="center"
                 sideOffset={6}
-                className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+                className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Secondary width</span>
+                  <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Secondary width</span>
                   <span className="text-xs font-mono text-gray-700 tabular-nums">{block.secondaryWidthPx ?? 'auto'}px</span>
                 </div>
                 <Slider
@@ -827,7 +827,7 @@ function ActionBlockControls({
                 secondaryWidthPx: block.primaryWidthPx,
                 secondaryPaddingY: block.primaryPaddingY,
               })}
-              className="inline-flex items-center gap-1 px-2 h-8 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200 text-gray-700 text-xs"
+              className="inline-flex items-center gap-1 px-2 h-8 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border text-gray-700 text-xs"
             >
               <Equal size={12} strokeWidth={1.75} />
               Match
@@ -878,7 +878,7 @@ function BusinessNameControls({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
             >
               <Square size={12} strokeWidth={1.75} />
               {logoHeight !== 40 && (
@@ -891,10 +891,10 @@ function BusinessNameControls({
           <Popover.Content
             align="center"
             sideOffset={6}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Logo Height</span>
+              <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Logo Height</span>
               <span className="text-xs font-mono text-gray-700 tabular-nums">{logoHeight}px</span>
             </div>
             <Slider
@@ -1014,7 +1014,7 @@ function TotalsControls({
             className={`inline-flex items-center justify-center w-8 h-8 rounded-control border cursor-pointer transition ${
               (block.colSpread ?? true)
                 ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+                : 'bg-surface text-gray-600 border-border hover:text-text'
             }`}
           >
             <ColSpreadIcon />
@@ -1197,7 +1197,7 @@ function LineItemsControls({
             className={`inline-flex items-center justify-center w-8 h-8 rounded-control border cursor-pointer transition ${
               block.colSpread
                 ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+                : 'bg-surface text-gray-600 border-border hover:text-text'
             }`}
           >
             <ColSpreadIcon />
@@ -1275,8 +1275,8 @@ function HeaderBannerControls({
         onChange={(v) => updateBlock<HeaderBannerBlock>(block.id, { fit: v as 'cover' | 'contain' })}
       />
       <Divider />
-      <div className="inline-flex items-center gap-2 h-8 px-2 rounded-control border border-gray-200 bg-white shrink-0">
-        <span className="text-[11px] text-gray-500">Zoom</span>
+      <div className="inline-flex items-center gap-2 h-8 px-2 rounded-control border border-border bg-surface shrink-0">
+        <span className="text-[11px] text-text-muted">Zoom</span>
         <div className="w-20">
           <Slider
             value={scale}
@@ -1300,7 +1300,7 @@ function HeaderBannerControls({
           <button
             type="button"
             title="Overlay colour"
-            className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200"
+            className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border"
           >
             <span
               className="w-4 h-4 rounded-control ring-1 ring-black/10"
@@ -1318,7 +1318,7 @@ function HeaderBannerControls({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
             >
               <Square size={12} strokeWidth={1.75} />
               {(block.overlayOpacity ?? 0.5) !== 0.5 && (
@@ -1331,10 +1331,10 @@ function HeaderBannerControls({
           <Popover.Content
             align="center"
             sideOffset={6}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Opacity</span>
+              <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Opacity</span>
               <span className="text-xs font-mono text-gray-700 tabular-nums">{Math.round((block.overlayOpacity ?? 0.5) * 100)}%</span>
             </div>
             <Slider
@@ -1364,13 +1364,13 @@ function HeaderBannerControls({
         disabled={!customised && !block.overlayColor}
         className={`inline-flex items-center px-2 h-8 rounded-control text-xs border transition ${
           customised || block.overlayColor
-            ? 'bg-white text-gray-700 border-gray-200 hover:text-gray-900 hover:bg-gray-50 cursor-pointer'
-            : 'bg-white text-gray-300 border-gray-100 cursor-not-allowed'
+            ? 'bg-surface text-gray-700 border-border hover:text-text hover:bg-gray-50 cursor-pointer'
+            : 'bg-surface text-gray-300 border-gray-100 cursor-not-allowed'
         }`}
       >
         Reset
       </button>
-      <span className="hidden lg:inline text-[11px] text-gray-400 pl-1">
+      <span className="hidden lg:inline text-[11px] text-text-subtle pl-1">
         Drag to pan · +scroll to zoom · Drag edge to resize
       </span>
     </div>
@@ -1404,7 +1404,7 @@ function ImageControls({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
             >
               <Equal size={12} strokeWidth={1.75} />
               {(block.heightPx ?? 160) !== 160 && (
@@ -1417,10 +1417,10 @@ function ImageControls({
           <Popover.Content
             align="center"
             sideOffset={6}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Height</span>
+              <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Height</span>
               <span className="text-xs font-mono text-gray-700 tabular-nums">{block.heightPx ?? 160}px</span>
             </div>
             <Slider
@@ -1467,7 +1467,7 @@ function DividerControls({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
             >
               <Minus size={12} strokeWidth={1.75} />
               {(block.thickness ?? 1) > 1 && (
@@ -1480,10 +1480,10 @@ function DividerControls({
           <Popover.Content
             align="center"
             sideOffset={6}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Thickness</span>
+              <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Thickness</span>
               <span className="text-xs font-mono text-gray-700 tabular-nums">{block.thickness ?? 1}px</span>
             </div>
             <Slider
@@ -1506,7 +1506,7 @@ function DividerControls({
           trigger={
             <button
               type="button"
-              className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200"
+              className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border"
             >
               <span
                 className="w-4 h-4 rounded-control ring-1 ring-black/10"
@@ -1524,7 +1524,7 @@ function DividerControls({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
             >
               <Equal size={12} strokeWidth={1.75} />
               {widthPct !== 100 && (
@@ -1537,10 +1537,10 @@ function DividerControls({
           <Popover.Content
             align="center"
             sideOffset={6}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Width</span>
+              <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Width</span>
               <span className="text-xs font-mono text-gray-700 tabular-nums">{widthPct}%</span>
             </div>
             <Slider
@@ -1658,10 +1658,10 @@ function FooterIncludeDropdown({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-control text-xs hover:bg-gray-100 cursor-pointer border border-gray-200 text-gray-700 shrink-0"
+            className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-control text-xs hover:bg-surface-emphasis cursor-pointer border border-border text-gray-700 shrink-0"
           >
-            <span className="text-gray-900 font-medium">Include</span>
-            <ChevronDown size={10} strokeWidth={2} className="text-gray-400" />
+            <span className="text-text font-medium">Include</span>
+            <ChevronDown size={10} strokeWidth={2} className="text-text-subtle" />
           </button>
         </Popover.Trigger>
       </Tooltip>
@@ -1669,11 +1669,11 @@ function FooterIncludeDropdown({
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-2 z-[60] w-[220px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-2 z-[60] w-[220px] animate-modal-in"
         >
           {groups.map((group, gi) => (
             <div key={group.title} className={gi > 0 ? 'mt-2 pt-2 border-t border-gray-100' : ''}>
-              <div className="px-2 pb-1 text-[10px] uppercase tracking-[0.08em] text-gray-400">{group.title}</div>
+              <div className="px-2 pb-1 text-[10px] uppercase tracking-[0.08em] text-text-subtle">{group.title}</div>
               {group.rows.map((row) => {
                 const RowIcon = 'Icon' in row ? row.Icon : undefined
                 return (
@@ -1682,16 +1682,16 @@ function FooterIncludeDropdown({
                     type="button"
                     onClick={() => row.set(!row.active)}
                     aria-pressed={row.active}
-                    className="flex w-full items-center gap-2 px-2 py-1.5 rounded-control text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+                    className="flex w-full items-center gap-2 px-2 py-1.5 rounded-control text-xs text-gray-700 hover:bg-surface-emphasis cursor-pointer"
                   >
                     <span
                       className={`inline-flex items-center justify-center w-4 h-4 rounded-control border shrink-0 ${
-                        row.active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-300 text-transparent'
+                        row.active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-surface border-border-strong text-transparent'
                       }`}
                     >
                       <Check size={11} strokeWidth={3} />
                     </span>
-                    {RowIcon && <RowIcon size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />}
+                    {RowIcon && <RowIcon size={13} strokeWidth={1.5} className="text-text-subtle shrink-0" />}
                     <span>{row.label}</span>
                   </button>
                 )
@@ -1722,7 +1722,7 @@ function FooterGapControl({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition shrink-0 bg-white text-gray-600 border-gray-200 hover:text-gray-900"
+            className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition shrink-0 bg-surface text-gray-600 border-border hover:text-text"
           >
             <Minus size={12} strokeWidth={1.75} className="rotate-90" />
             <span className="font-mono text-[10px] opacity-80">{gap}px</span>
@@ -1733,10 +1733,10 @@ function FooterGapControl({
         <Popover.Content
           align="center"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-2.5 z-[60] w-[200px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-2.5 z-[60] w-[200px] animate-modal-in"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-gray-400 uppercase tracking-[0.08em]">Space below note</span>
+            <span className="text-[10px] text-text-subtle uppercase tracking-[0.08em]">Space below note</span>
             <span className="text-[10px] font-mono text-gray-700 tabular-nums">{gap}px</span>
           </div>
           <Slider
@@ -1787,7 +1787,7 @@ function FooterSocialControls({
           trigger={
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200 text-xs text-gray-700"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border text-xs text-gray-700"
             >
               <span className="w-4 h-4 rounded-pill ring-1 ring-black/10" style={{ background: block.socialIconColor || '#6B7280' }} />
               Icon
@@ -1810,7 +1810,7 @@ function FooterSocialControls({
               trigger={
                 <button
                   type="button"
-                  className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200"
+                  className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border"
                 >
                   <span className="w-4 h-4 rounded-control ring-1 ring-black/10" style={{ background: block.socialIconBg || '#F3F4F6' }} />
                 </button>
@@ -1999,7 +1999,7 @@ function ContractSignControls({
             <button
               type="button"
               title="Button fill"
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200 text-xs text-gray-600"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border text-xs text-gray-600"
             >
               <span className="w-4 h-4 rounded-control ring-1 ring-black/10" style={{ background: buttonColor }} />
               Fill
@@ -2221,14 +2221,14 @@ function TextField({
   onChange: (v: string) => void
 }) {
   return (
-    <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 border border-gray-200 rounded-control px-2 h-8">
-      <span className="text-gray-500 shrink-0">{label}</span>
+    <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 border border-border rounded-control px-2 h-8">
+      <span className="text-text-muted shrink-0">{label}</span>
       <input
         type="text"
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-24 bg-transparent outline-none text-gray-900 placeholder:text-gray-400"
+        className="w-24 bg-transparent outline-none text-text placeholder:text-text-subtle"
       />
     </label>
   )
@@ -2261,7 +2261,7 @@ function MiniSlider({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition shrink-0 bg-white text-gray-600 border-gray-200 hover:text-gray-900"
+            className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition shrink-0 bg-surface text-gray-600 border-border hover:text-text"
           >
             {icon}
             <span className="font-mono text-[10px] opacity-80">{value}px</span>
@@ -2272,10 +2272,10 @@ function MiniSlider({
         <Popover.Content
           align="center"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-2.5 z-[60] w-[200px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-2.5 z-[60] w-[200px] animate-modal-in"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-gray-400 uppercase tracking-[0.08em]">{label}</span>
+            <span className="text-[10px] text-text-subtle uppercase tracking-[0.08em]">{label}</span>
             <span className="text-[10px] font-mono text-gray-700 tabular-nums">{value}px</span>
           </div>
           <Slider value={value} min={min} max={max} step={1} onChange={onChange} ariaLabel={label} />
@@ -2297,7 +2297,7 @@ function Toggle({ label, active, onChange }: { label: string; active: boolean; o
       className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs cursor-pointer border ${
         active
           ? 'bg-gray-900 text-white border-gray-900'
-          : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+          : 'bg-surface text-gray-600 border-border hover:text-text'
       }`}
     >
       {active && <Check size={11} strokeWidth={2.5} />}
@@ -2316,7 +2316,7 @@ function PillToggle<V extends string>({
   onChange: (v: V) => void
 }) {
   return (
-    <div className="inline-flex bg-gray-100 rounded-control p-0.5">
+    <div className="inline-flex bg-surface-emphasis rounded-control p-0.5">
       {options.map((opt) => {
         const btn = (
           <button
@@ -2324,7 +2324,7 @@ function PillToggle<V extends string>({
             type="button"
             onClick={() => onChange(opt.value)}
             className={`px-2 py-1 text-xs rounded-control cursor-pointer transition ${
-              value === opt.value ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-900'
+              value === opt.value ? 'bg-surface text-text shadow-sm font-medium' : 'text-text-muted hover:text-text'
             }`}
           >
             {opt.icon ?? opt.label}
@@ -2345,7 +2345,7 @@ function PillToggle<V extends string>({
  */
 function ActiveTargetLabel({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center h-8 px-2.5 rounded-control bg-gray-100 text-xs font-medium text-gray-900 whitespace-nowrap shrink-0">
+    <span className="inline-flex items-center h-8 px-2.5 rounded-control bg-surface-emphasis text-xs font-medium text-text whitespace-nowrap shrink-0">
       {label}
     </span>
   )
@@ -2401,8 +2401,8 @@ function NumberField({
   }, [])
 
   return (
-    <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 border border-gray-200 rounded-control px-2 h-8">
-      <span className="text-gray-500">{label}</span>
+    <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 border border-border rounded-control px-2 h-8">
+      <span className="text-text-muted">{label}</span>
       <input
         type="text"
         inputMode="decimal"
@@ -2426,7 +2426,7 @@ function NumberField({
             onChange(clamped)
           }
         }}
-        className="w-12 bg-transparent outline-none text-gray-900"
+        className="w-12 bg-transparent outline-none text-text"
       />
     </label>
   )
@@ -2456,7 +2456,7 @@ function RadiusControl({
             className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition shrink-0 ${
               active
                 ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+                : 'bg-surface text-gray-600 border-border hover:text-text'
             }`}
           >
             <span className="w-3 h-3 rounded-[4px] border-[1.5px] border-current" />
@@ -2468,10 +2468,10 @@ function RadiusControl({
         <Popover.Content
           align="center"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Corner radius</span>
+            <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Corner radius</span>
             <span className="text-xs font-mono text-gray-700 tabular-nums">{radius ?? 'theme'}</span>
           </div>
           <Slider
@@ -2486,7 +2486,7 @@ function RadiusControl({
             <button
               type="button"
               onClick={() => updateBlock(block.id, { blockRadius: undefined } as Partial<Block>)}
-              className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
+              className="mt-3 w-full text-[11px] text-text-muted hover:text-text cursor-pointer"
             >
               Reset to theme
             </button>
@@ -2557,7 +2557,7 @@ function SpacerControls({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
             >
               <Equal size={12} strokeWidth={1.75} />
               {(block.heightPx ?? 32) !== 32 && (
@@ -2570,10 +2570,10 @@ function SpacerControls({
           <Popover.Content
             align="center"
             sideOffset={6}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Height</span>
+              <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Height</span>
               <span className="text-xs font-mono text-gray-700 tabular-nums">{block.heightPx ?? 32}px</span>
             </div>
             <Slider
@@ -2611,7 +2611,7 @@ function BackgroundControl({
         trigger={
           <button
             type="button"
-            className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200"
+            className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border"
           >
             <span className="w-4 h-4 rounded-control ring-1 ring-black/10" style={{ background: block.bgColor || '#FFFFFF' }} />
           </button>
@@ -2641,7 +2641,7 @@ function SpacingControl({
             className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition shrink-0 ${
               active
                 ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+                : 'bg-surface text-gray-600 border-border hover:text-text'
             }`}
           >
             <Equal size={12} strokeWidth={1.75} />
@@ -2653,12 +2653,12 @@ function SpacingControl({
         <Popover.Content
           align="center"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
         >
           <div className="space-y-3">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Space above</span>
+                <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Space above</span>
                 <span className="text-xs font-mono text-gray-700 tabular-nums">{spaceAbove}px</span>
               </div>
               <Slider
@@ -2672,7 +2672,7 @@ function SpacingControl({
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Space below</span>
+                <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Space below</span>
                 <span className="text-xs font-mono text-gray-700 tabular-nums">{spaceBelow}px</span>
               </div>
               <Slider
@@ -2694,7 +2694,7 @@ function SpacingControl({
                   spaceBelow: undefined,
                 } as Partial<Block>)
               }
-              className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
+              className="mt-3 w-full text-[11px] text-text-muted hover:text-text cursor-pointer"
             >
               Clear spacing
             </button>
@@ -2724,7 +2724,7 @@ function BorderControl({
             className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs border cursor-pointer transition shrink-0 ${
               active
                 ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+                : 'bg-surface text-gray-600 border-border hover:text-text'
             }`}
           >
             <Square size={12} strokeWidth={1.75} />
@@ -2736,10 +2736,10 @@ function BorderControl({
         <Popover.Content
           align="center"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Thickness</span>
+            <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Thickness</span>
             <span className="text-xs font-mono text-gray-700 tabular-nums">{width}px</span>
           </div>
           <Slider
@@ -2751,7 +2751,7 @@ function BorderControl({
             ariaLabel="Border thickness"
           />
           <div className="mt-3 flex items-center justify-between mb-2">
-            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Color</span>
+            <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Color</span>
             <ColorPopover
               value={color}
               onChange={(v) => updateBlock(block.id, { borderColor: v } as Partial<Block>)}
@@ -2759,7 +2759,7 @@ function BorderControl({
               trigger={
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded-control text-xs hover:bg-gray-100 cursor-pointer border border-gray-200"
+                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded-control text-xs hover:bg-surface-emphasis cursor-pointer border border-border"
                   title="Border color"
                 >
                   <span
@@ -2775,7 +2775,7 @@ function BorderControl({
             <button
               type="button"
               onClick={() => updateBlock(block.id, { borderWidth: 0 } as Partial<Block>)}
-              className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
+              className="mt-3 w-full text-[11px] text-text-muted hover:text-text cursor-pointer"
             >
               Clear border
             </button>

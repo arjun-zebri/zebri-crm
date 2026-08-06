@@ -126,7 +126,7 @@ function Tabs({
   loading: boolean
 }) {
   return (
-    <div className="flex items-center gap-6 border-b border-gray-200">
+    <div className="flex items-center gap-6 border-b border-border">
       {TABS.map((t) => {
         const active = status === t.value
         const Icon = t.icon
@@ -138,13 +138,13 @@ function Tabs({
             onClick={() => onChange(t.value)}
             className={`flex items-center gap-1.5 pb-2.5 -mb-px text-sm transition cursor-pointer ${
               active
-                ? 'text-gray-900 font-medium border-b-2 border-gray-900'
-                : 'text-gray-500 hover:text-gray-900'
+                ? 'text-text font-medium border-b-2 border-gray-900'
+                : 'text-text-muted hover:text-text'
             }`}
           >
             <Icon size={13} strokeWidth={1.5} />
             <span>{t.label}</span>
-            {!loading && <span className="text-xs text-gray-400">{count}</span>}
+            {!loading && <span className="text-xs text-text-subtle">{count}</span>}
           </button>
         )
       })}
@@ -167,19 +167,19 @@ function Toolbar({
         <Search
           size={11}
           strokeWidth={1.5}
-          className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
         />
         <input
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search automations..."
-          className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+          className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
         />
         {query && (
           <button
             onClick={() => onQueryChange('')}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-gray-700 transition cursor-pointer p-0.5"
             aria-label="Clear search"
           >
             <X size={10} strokeWidth={2} />
@@ -188,7 +188,7 @@ function Toolbar({
       </div>
       <button
         type="button"
-        className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
         title="Filter (coming soon)"
       >
         <FilterIcon size={11} strokeWidth={1.5} />
@@ -196,7 +196,7 @@ function Toolbar({
       </button>
       <button
         type="button"
-        className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
         title="Sort (coming soon)"
       >
         <ArrowUp size={11} strokeWidth={1.5} />
@@ -216,10 +216,10 @@ function StatsCardsSkeleton() {
           key={i}
           className="border border-border rounded-control bg-surface px-4 py-3 flex items-center gap-3 animate-pulse"
         >
-          <div className="w-9 h-9 rounded-control bg-gray-100 shrink-0" />
+          <div className="w-9 h-9 rounded-control bg-surface-emphasis shrink-0" />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="h-2.5 w-20 bg-gray-100 rounded-control" />
-            <div className="h-5 w-10 bg-gray-100 rounded-control" />
+            <div className="h-2.5 w-20 bg-surface-emphasis rounded-control" />
+            <div className="h-5 w-10 bg-surface-emphasis rounded-control" />
           </div>
         </div>
       ))}

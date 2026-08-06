@@ -38,8 +38,15 @@ import {
   updateTaskAction,
 } from './actions';
 import { BulkActionsBar } from "./bulk-actions-bar";
+import { FilterBar, TaskFilter, TaskSort } from "./filter-bar";
 import { GroupByToggle, GroupByMode } from "./group-by-toggle";
+import { GroupSection, UNGROUPED_ID } from "./group-section";
+import {
+  PriorityPill,
+  StatusPill,
+} from "./task-cells";
 import { TaskRow, TaskRowTask } from "./task-row";
+import { TaskSidePanel, TaskFieldUpdate } from "./task-side-panel";
 import {
   useTaskGroups,
   useCreateTaskGroup,
@@ -63,13 +70,6 @@ import {
   useUpdateTaskStatus,
   useUpdateTaskType,
 } from "./use-task-options";
-import { TaskSidePanel, TaskFieldUpdate } from "./task-side-panel";
-import { GroupSection, UNGROUPED_ID } from "./group-section";
-import { FilterBar, TaskFilter, TaskSort } from "./filter-bar";
-import {
-  PriorityPill,
-  StatusPill,
-} from "./task-cells";
 
 
 
@@ -540,7 +540,7 @@ export default function TasksPage() {
       }));
       out.push({
         droppableId: `priority:none`,
-        header: <span className="text-sm text-gray-400">No priority</span>,
+        header: <span className="text-sm text-text-subtle">No priority</span>,
         tasks: filteredTasks.filter((t) => !t.priority),
         addTaskDefaults: { priority: null },
       });
@@ -563,7 +563,7 @@ export default function TasksPage() {
         if (!list) continue;
         out.push({
           droppableId: `couple:${c.id}`,
-          header: <span className="text-sm font-medium text-gray-900">{c.name}</span>,
+          header: <span className="text-sm font-medium text-text">{c.name}</span>,
           tasks: list,
           addTaskDefaults: { related_couple_id: c.id },
         });
@@ -571,7 +571,7 @@ export default function TasksPage() {
       if (unassigned.length > 0) {
         out.push({
           droppableId: `couple:none`,
-          header: <span className="text-sm text-gray-400">Unassigned</span>,
+          header: <span className="text-sm text-text-subtle">Unassigned</span>,
           tasks: unassigned,
           addTaskDefaults: { related_couple_id: null },
         });
@@ -595,7 +595,7 @@ export default function TasksPage() {
         header: (
           <span className="inline-flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-pill ${TASK_GROUP_DOT_CLASS[g.color]}`} />
-            <span className="text-sm font-medium text-gray-900">{g.name}</span>
+            <span className="text-sm font-medium text-text">{g.name}</span>
           </span>
         ),
         tasks: map.get(g.id) ?? [],
@@ -603,7 +603,7 @@ export default function TasksPage() {
       }));
       out.push({
         droppableId: UNGROUPED_ID,
-        header: <span className="text-sm text-gray-400">Ungrouped</span>,
+        header: <span className="text-sm text-text-subtle">Ungrouped</span>,
         tasks: ungrouped,
         addTaskDefaults: { group_id: null },
       });
@@ -635,19 +635,19 @@ export default function TasksPage() {
         },
         {
           droppableId: "date:today",
-          header: <span className="text-sm font-medium text-gray-900">Today</span>,
+          header: <span className="text-sm font-medium text-text">Today</span>,
           tasks: todayTasks,
           addTaskDefaults: { due_date: addDaysYMD(0) },
         },
         {
           droppableId: "date:upcoming",
-          header: <span className="text-sm font-medium text-gray-900">Upcoming</span>,
+          header: <span className="text-sm font-medium text-text">Upcoming</span>,
           tasks: upcoming,
           addTaskDefaults: { due_date: addDaysYMD(1) },
         },
         {
           droppableId: "date:none",
-          header: <span className="text-sm text-gray-400">No date</span>,
+          header: <span className="text-sm text-text-subtle">No date</span>,
           tasks: noDate,
           addTaskDefaults: { due_date: null },
         },
@@ -657,7 +657,7 @@ export default function TasksPage() {
     return [
       {
         droppableId: "all",
-        header: <span className="text-sm font-medium text-gray-900">All tasks</span>,
+        header: <span className="text-sm font-medium text-text">All tasks</span>,
         tasks: filteredTasks,
       },
     ];
@@ -697,7 +697,7 @@ export default function TasksPage() {
   const visibleIds = flatVisible;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-white">
+    <div className="flex flex-col h-full overflow-hidden bg-surface">
       {/* Page header */}
       <div className="px-6 sm:px-[3.75rem] pt-6 pb-3 flex-shrink-0">
         <PageHeader
@@ -720,19 +720,19 @@ export default function TasksPage() {
             <Search
               size={11}
               strokeWidth={1.5}
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tasks..."
-              className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+              className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-gray-700 transition cursor-pointer p-0.5"
               >
                 <X size={10} strokeWidth={2} />
               </button>
@@ -769,12 +769,12 @@ export default function TasksPage() {
         {isLoading ? (
           <div className="space-y-2 mt-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-9 bg-gray-100 rounded-control animate-pulse" />
+              <div key={i} className="h-9 bg-surface-emphasis rounded-control animate-pulse" />
             ))}
           </div>
         ) : isEmpty ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-gray-400 text-sm">No tasks match these filters.</p>
+            <p className="text-text-subtle text-sm">No tasks match these filters.</p>
           </div>
         ) : (
           <DndContext
@@ -865,7 +865,7 @@ export default function TasksPage() {
                   const name = window.prompt("Group name");
                   if (name && name.trim()) createGroup.mutate({ name: name.trim() });
                 }}
-                className="mt-2 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 border border-dashed border-gray-200 hover:border-gray-300 rounded-control px-3 py-1.5 transition cursor-pointer"
+                className="mt-2 inline-flex items-center gap-2 text-sm text-text-muted hover:text-gray-800 border border-dashed border-border hover:border-border-strong rounded-control px-3 py-1.5 transition cursor-pointer"
               >
                 <Plus size={13} strokeWidth={1.5} />
                 New group

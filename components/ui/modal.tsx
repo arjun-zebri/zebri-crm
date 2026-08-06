@@ -105,7 +105,7 @@ export function Modal({
         {...backdropHandlers}
       >
         <div
-          className={`bg-white rounded-control border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
+          className={`bg-surface rounded-control border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
             // Fullscreen modals lock to 90vh so the size doesn't
             // shrink while content is loading. Matches the couple-
             // profile overlay's vertical sizing. Other sizes keep
@@ -120,7 +120,7 @@ export function Modal({
             // the very top instead of below an otherwise-empty header band.
             <button
               onClick={onClose}
-              className="absolute top-3 right-3 z-10 p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              className="absolute top-3 right-3 z-10 p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
             >
               <X size={18} strokeWidth={1.5} />
             </button>
@@ -131,12 +131,12 @@ export function Modal({
                padding or content size, update the calc() in the
                body's maxHeight to match. */
             <div
-              className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}
+              className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-border' : ''}`}
             >
               {title && (
                 // A real heading: screen readers announce the dialog name
                 // and e2e selectors can target `h2:has-text(...)`.
-                <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                <h2 className="flex items-center gap-2 text-xl font-semibold text-text">
                   {title}
                 </h2>
               )}
@@ -149,7 +149,7 @@ export function Modal({
                 )}
                 <button
                   onClick={onClose}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                  className="p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
                 >
                   <X size={18} strokeWidth={1.5} />
                 </button>
@@ -169,7 +169,7 @@ export function Modal({
           </div>
 
           {footer && (
-            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-control">
+            <div className="border-t border-border px-6 py-4 bg-gray-50 rounded-b-control">
               {footer}
             </div>
           )}

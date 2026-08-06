@@ -71,7 +71,7 @@ export function PaymentsHeader({
           <Search
             size={11}
             strokeWidth={1.5}
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
           />
           <input
             ref={searchInputRef}
@@ -79,7 +79,7 @@ export function PaymentsHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={`Search ${activeTab}...`}
-            className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
           />
           {search && (
             <button
@@ -87,7 +87,7 @@ export function PaymentsHeader({
                 onSearchChange('');
                 searchInputRef.current?.focus();
               }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-gray-700 transition cursor-pointer p-0.5"
             >
               <X size={10} strokeWidth={2} />
             </button>
@@ -98,7 +98,7 @@ export function PaymentsHeader({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
+      <div className="flex items-center gap-6 border-b border-border mt-6">
         <TabButton
           active={activeTab === 'invoices'}
           onClick={() => onTabChange('invoices')}
@@ -132,8 +132,8 @@ function TabButton({
       onClick={onClick}
       className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
         active
-          ? 'border-gray-900 text-gray-900'
-          : 'border-transparent text-gray-400 hover:text-gray-600'
+          ? 'border-gray-900 text-text'
+          : 'border-transparent text-text-subtle hover:text-gray-600'
       }`}
     >
       {icon} {label}

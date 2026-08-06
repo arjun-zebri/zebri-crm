@@ -107,19 +107,19 @@ export function TextStyleControls({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="inline-flex items-center gap-1 px-2 h-8 rounded-control text-xs hover:bg-gray-100 cursor-pointer text-gray-700 border border-gray-200"
+            className="inline-flex items-center gap-1 px-2 h-8 rounded-control text-xs hover:bg-surface-emphasis cursor-pointer text-gray-700 border border-border"
             title="Weight"
           >
             <Type size={12} strokeWidth={1.75} />
             {FONT_WEIGHT_LABELS[eff.fontWeight as FontWeight] ?? 'Reg'}
-            <ChevronDown size={10} strokeWidth={2} className="text-gray-400" />
+            <ChevronDown size={10} strokeWidth={2} className="text-text-subtle" />
           </button>
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
             align="start"
             sideOffset={4}
-            className="bg-white border border-gray-200 rounded-control shadow-xl p-1 z-[60] flex"
+            className="bg-surface border border-border rounded-control shadow-xl p-1 z-[60] flex"
           >
             {FONT_WEIGHTS.map((w) => (
               <Popover.Close asChild key={w}>
@@ -127,7 +127,7 @@ export function TextStyleControls({
                   type="button"
                   onClick={() => onChange({ fontWeight: w })}
                   className={`px-2.5 py-1 text-xs rounded-control cursor-pointer ${
-                    eff.fontWeight === w ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-700'
+                    eff.fontWeight === w ? 'bg-gray-900 text-white' : 'hover:bg-surface-emphasis text-gray-700'
                   }`}
                   style={{ fontWeight: w }}
                 >
@@ -171,7 +171,7 @@ export function TextStyleControls({
           trigger={
             <button
               type="button"
-              className="inline-flex items-center gap-1 px-1.5 h-8 rounded-control hover:bg-gray-100 cursor-pointer border border-gray-200"
+              className="inline-flex items-center gap-1 px-1.5 h-8 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border"
             >
               <span
                 className="w-4 h-4 rounded-control ring-1 ring-black/10"
@@ -187,7 +187,7 @@ export function TextStyleControls({
       <Divider />
 
       {/* Alignment */}
-      <div className="inline-flex items-center bg-gray-50 rounded-control border border-gray-200">
+      <div className="inline-flex items-center bg-gray-50 rounded-control border border-border">
         {(['left', 'center', 'right'] as const).map((a) => (
           <Tooltip key={a} label={`Align ${a}`}>
             <button
@@ -195,7 +195,7 @@ export function TextStyleControls({
               onClick={() => onChange({ align: a })}
               aria-label={`Align ${a}`}
               className={`p-1.5 transition cursor-pointer ${
-                eff.align === a ? 'bg-white text-gray-900 shadow-sm rounded-control m-0.5' : 'text-gray-500 hover:text-gray-900'
+                eff.align === a ? 'bg-surface text-text shadow-sm rounded-control m-0.5' : 'text-text-muted hover:text-text'
               }`}
             >
               {a === 'left' && <AlignLeft size={12} strokeWidth={1.75} />}
@@ -228,7 +228,7 @@ export function TextStyleControls({
             onChange={(v) => onChange({ letterSpacing: v })}
           />
           <Divider />
-          <div className="inline-flex items-center bg-gray-50 rounded-control border border-gray-200">
+          <div className="inline-flex items-center bg-gray-50 rounded-control border border-border">
             {CASE_OPTIONS.map((t) => (
               <Tooltip key={t.id} label={t.tooltip}>
                 <button
@@ -237,8 +237,8 @@ export function TextStyleControls({
                   aria-label={t.tooltip}
                   className={`px-2 py-1 text-xs transition cursor-pointer ${
                     eff.textTransform === t.id
-                      ? 'bg-white text-gray-900 shadow-sm rounded-control m-0.5 font-medium'
-                      : 'text-gray-500 hover:text-gray-900'
+                      ? 'bg-surface text-text shadow-sm rounded-control m-0.5 font-medium'
+                      : 'text-text-muted hover:text-text'
                   }`}
                 >
                   {t.glyph}
@@ -273,7 +273,7 @@ function ToggleButton({
       className={`p-1.5 rounded-control border cursor-pointer ${
         active
           ? 'bg-gray-900 text-white border-gray-900'
-          : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+          : 'bg-surface text-gray-600 border-border hover:text-text'
       }`}
     >
       {children}
@@ -297,11 +297,11 @@ function NumberStepper({
   ariaLabel: string
 }) {
   return (
-    <div className="inline-flex items-center border border-gray-200 rounded-control h-8">
+    <div className="inline-flex items-center border border-border rounded-control h-8">
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - step))}
-        className="w-5 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-xs"
+        className="w-5 h-full text-text-muted hover:text-text hover:bg-gray-50 transition cursor-pointer text-xs"
         aria-label="Decrease"
       >
         −
@@ -317,12 +317,12 @@ function NumberStepper({
           if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)))
         }}
         aria-label={ariaLabel}
-        className="w-8 h-full text-xs text-center bg-transparent text-gray-900 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-8 h-full text-xs text-center bg-transparent text-text outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + step))}
-        className="w-5 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-xs"
+        className="w-5 h-full text-text-muted hover:text-text hover:bg-gray-50 transition cursor-pointer text-xs"
         aria-label="Increase"
       >
         +
@@ -353,10 +353,10 @@ function SliderPopover({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs hover:bg-gray-100 cursor-pointer text-gray-700 border border-gray-200"
+          className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-xs hover:bg-surface-emphasis cursor-pointer text-gray-700 border border-border"
           title={label}
         >
-          <span className="text-[10px] text-gray-400">{label}</span>
+          <span className="text-[10px] text-text-subtle">{label}</span>
           <span className="font-mono">{format(value)}</span>
         </button>
       </Popover.Trigger>
@@ -364,11 +364,11 @@ function SliderPopover({
         <Popover.Content
           align="center"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-control shadow-xl p-3 z-[60] w-[220px] animate-modal-in"
+          className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[220px] animate-modal-in"
         >
           <div className="flex items-center justify-between mb-2 text-xs">
             <span className="text-gray-600">{label}</span>
-            <span className="font-mono text-gray-900">{format(value)}</span>
+            <span className="font-mono text-text">{format(value)}</span>
           </div>
           <Slider value={value} min={min} max={max} step={step} onChange={onChange} ariaLabel={label} />
         </Popover.Content>

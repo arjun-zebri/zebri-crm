@@ -68,7 +68,7 @@ function DiffText({
   };
 
   return (
-    <span className="text-xs text-gray-500">
+    <span className="text-xs text-text-muted">
       {isPositive ? "+" : "-"}
       {formatter(Math.abs(diff))} vs {periodLabels[period]}
     </span>
@@ -132,22 +132,22 @@ export function DashboardStats({
       {cards.map((card) => (
         <div
           key={card.label}
-          className="bg-white rounded-control border border-gray-200 p-4 sm:p-6"
+          className="bg-surface rounded-control border border-border p-4 sm:p-6"
         >
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
               {card.label}
             </span>
             {!isLoading && <StatBadge percent={card.percent} unit={card.percentUnit} />}
           </div>
           {isLoading ? (
             <div className="animate-pulse pt-1">
-              <div className="h-7 w-24 bg-gray-100 rounded-control" />
+              <div className="h-7 w-24 bg-surface-emphasis rounded-control" />
             </div>
           ) : (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="text-xl sm:text-2xl font-semibold text-gray-900">
+                <span className="text-xl sm:text-2xl font-semibold text-text">
                   {card.value}
                 </span>
                 {card.diff !== 0 && (
@@ -155,7 +155,7 @@ export function DashboardStats({
                 )}
               </div>
               {card.extra && (
-                <p className="text-xs text-gray-400 mt-1">{card.extra}</p>
+                <p className="text-xs text-text-subtle mt-1">{card.extra}</p>
               )}
             </>
           )}

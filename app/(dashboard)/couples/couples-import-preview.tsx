@@ -112,14 +112,14 @@ export function CouplesImportPreview({
     onChange(allSelected ? new Set() : new Set(selectablePositions));
   }
 
-  const th = 'whitespace-nowrap px-2 py-2 text-xs font-normal text-gray-400';
+  const th = 'whitespace-nowrap px-2 py-2 text-xs font-normal text-text-subtle';
 
   return (
     <div className="max-h-[55vh] overflow-auto">
       <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10 bg-white">
-          <tr className="border-b border-gray-200 text-left">
-            <th className="sticky left-0 z-20 bg-white px-1 py-2">
+        <thead className="sticky top-0 z-10 bg-surface">
+          <tr className="border-b border-border text-left">
+            <th className="sticky left-0 z-20 bg-surface px-1 py-2">
               <input
                 ref={headRef}
                 type="checkbox"
@@ -144,7 +144,7 @@ export function CouplesImportPreview({
             const selectable = entry.kind !== 'invalid';
             return (
               <tr key={entry.rowNumber} className={selectable ? '' : 'opacity-60'}>
-                <td className="sticky left-0 bg-white px-1 py-2">
+                <td className="sticky left-0 bg-surface px-1 py-2">
                   <input
                     type="checkbox"
                     checked={selected.has(position)}
@@ -153,7 +153,7 @@ export function CouplesImportPreview({
                     className="h-4 w-4 accent-gray-900 disabled:opacity-40"
                   />
                 </td>
-                <td className="px-2 py-2 text-xs text-gray-400">
+                <td className="px-2 py-2 text-xs text-text-subtle">
                   {entry.rowNumber}
                 </td>
                 <td className="px-2 py-2">

@@ -60,7 +60,7 @@ export function SettingsNav({ navItems, activeTab, onTabChange }: SettingsNavPro
   return (
     <>
       {/* Mobile: horizontal scrollable tab bar */}
-      <div className="sm:hidden shrink-0 border-b border-gray-200 overflow-x-auto">
+      <div className="sm:hidden shrink-0 border-b border-border overflow-x-auto">
         <div className="flex px-2 py-2 gap-1 min-w-max">
           {navItems.map((item) => (
             <button
@@ -68,8 +68,8 @@ export function SettingsNav({ navItems, activeTab, onTabChange }: SettingsNavPro
               onClick={() => onTabChange(item.key)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-control text-xs whitespace-nowrap transition cursor-pointer ${
                 activeTab === item.key
-                  ? 'bg-gray-100 text-gray-900 font-medium'
-                  : 'text-gray-500'
+                  ? 'bg-surface-emphasis text-text font-medium'
+                  : 'text-text-muted'
               }`}
             >
               {item.icon}
@@ -80,15 +80,15 @@ export function SettingsNav({ navItems, activeTab, onTabChange }: SettingsNavPro
       </div>
 
       {/* Desktop: vertical sidebar */}
-      <nav className="hidden sm:block w-[200px] shrink-0 border-r border-gray-200 overflow-y-auto px-3 py-4 space-y-0.5">
+      <nav className="hidden sm:block w-[200px] shrink-0 border-r border-border overflow-y-auto px-3 py-4 space-y-0.5">
         {navItems.map((item) => (
           <button
             key={item.key}
             onClick={() => onTabChange(item.key)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-control text-sm transition cursor-pointer ${
               activeTab === item.key
-                ? 'bg-gray-100 text-gray-900 font-medium'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                ? 'bg-surface-emphasis text-text font-medium'
+                : 'text-text-muted hover:text-gray-700 hover:bg-surface-emphasis'
             }`}
           >
             {item.icon}

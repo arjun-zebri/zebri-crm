@@ -134,15 +134,15 @@ export function SettingsModal() {
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4" onClick={handleClose}>
         <div
           data-testid="settings-panel"
-          className="bg-white rounded-control shadow-xl w-full sm:w-[90vw] sm:max-w-[1100px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
+          className="bg-surface rounded-control shadow-xl w-full sm:w-[90vw] sm:max-w-[1100px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 shrink-0">
-            <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border shrink-0">
+            <h1 className="text-xl font-semibold text-text">Settings</h1>
             <button
               onClick={handleClose}
-              className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              className="p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
               aria-label="Close settings"
             >
               <X size={18} strokeWidth={1.5} />
@@ -157,9 +157,9 @@ export function SettingsModal() {
             ) : (
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="px-5 sm:px-8 py-6 space-y-4 max-w-2xl animate-pulse">
-                  <div className="h-9 bg-gray-100 rounded-control w-full" />
-                  <div className="h-9 bg-gray-100 rounded-control w-full" />
-                  <div className="h-9 bg-gray-100 rounded-control w-full" />
+                  <div className="h-9 bg-surface-emphasis rounded-control w-full" />
+                  <div className="h-9 bg-surface-emphasis rounded-control w-full" />
+                  <div className="h-9 bg-surface-emphasis rounded-control w-full" />
                 </div>
               </div>
             )}

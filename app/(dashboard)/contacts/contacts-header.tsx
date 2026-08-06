@@ -121,7 +121,7 @@ export function ContactsHeader({
           <Search
             size={11}
             strokeWidth={1.5}
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
           />
           <input
             ref={searchInputRef}
@@ -129,7 +129,7 @@ export function ContactsHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search contacts..."
-            className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
           />
           {search && (
             <button
@@ -137,7 +137,7 @@ export function ContactsHeader({
                 onSearchChange('')
                 searchInputRef.current?.focus()
               }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-gray-700 transition cursor-pointer p-0.5"
             >
               <X size={10} strokeWidth={2} />
             </button>
@@ -148,8 +148,8 @@ export function ContactsHeader({
         <div className="relative" ref={filtersRef}>
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className={`flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
-              hasActiveFilter ? 'text-gray-900 bg-gray-50' : 'text-gray-500'
+            className={`flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
+              hasActiveFilter ? 'text-text bg-gray-50' : 'text-text-muted'
             }`}
           >
             <SlidersHorizontal size={11} strokeWidth={1.5} />
@@ -160,14 +160,14 @@ export function ContactsHeader({
                   e.stopPropagation()
                   onFilterChange(null)
                 }}
-                className="ml-0.5 text-gray-400 hover:text-gray-700 cursor-pointer"
+                className="ml-0.5 text-text-subtle hover:text-gray-700 cursor-pointer"
               >
                 <X size={10} strokeWidth={1.5} />
               </span>
             )}
           </button>
           {filtersOpen && (
-            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-control shadow-lg z-20 min-w-36 py-1">
+            <div className="absolute top-full mt-1 left-0 bg-surface border border-border rounded-control shadow-lg z-20 min-w-36 py-1">
               <button
                 onClick={() => {
                   onFilterChange(null)
@@ -175,7 +175,7 @@ export function ContactsHeader({
                 }}
                 className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
                   categoryFilter === null && statusFilter === null
-                    ? 'bg-gray-50 text-gray-900 font-medium'
+                    ? 'bg-gray-50 text-text font-medium'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -191,7 +191,7 @@ export function ContactsHeader({
                   }}
                   className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
                     categoryFilter === category
-                      ? 'bg-gray-50 text-gray-900 font-medium'
+                      ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -199,7 +199,7 @@ export function ContactsHeader({
                 </button>
               ))}
 
-              <div className="border-t border-gray-200 my-1" />
+              <div className="border-t border-border my-1" />
 
               {STATUSES.map((status) => (
                 <button
@@ -210,7 +210,7 @@ export function ContactsHeader({
                   }}
                   className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
                     statusFilter === status
-                      ? 'bg-gray-50 text-gray-900 font-medium'
+                      ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -225,13 +225,13 @@ export function ContactsHeader({
         <div className="relative" ref={sortRef}>
           <button
             onClick={() => setSortOpen(!sortOpen)}
-            className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <ArrowUpDown size={11} strokeWidth={1.5} />
             <span>{activeSortLabel || 'Sort'}</span>
           </button>
           {sortOpen && (
-            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-control shadow-lg z-20 min-w-40 py-1">
+            <div className="absolute top-full mt-1 left-0 bg-surface border border-border rounded-control shadow-lg z-20 min-w-40 py-1">
               {SORT_OPTIONS.map((option) => (
                 <button
                   key={`${option.field}-${option.direction}`}
@@ -241,7 +241,7 @@ export function ContactsHeader({
                   }}
                   className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
                     sortField === option.field && sortDirection === option.direction
-                      ? 'bg-gray-50 text-gray-900 font-medium'
+                      ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >

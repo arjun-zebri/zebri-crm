@@ -51,7 +51,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       header: () => <HeaderLabel textOnly="Aa" label="Name" />,
       enableSorting: false,
       cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+        <span className="text-sm text-text-muted group-hover:text-text truncate block">
           {info.getValue()}
         </span>
       ),
@@ -70,7 +70,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       cell: (info) => {
         const couple = info.row.original;
         return (
-          <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+          <span className="text-sm text-text-muted group-hover:text-text truncate block">
             {couple.primary_email || couple.email}
           </span>
         );
@@ -88,7 +88,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       cell: (info) => {
         const couple = info.row.original;
         return (
-          <span className="text-sm text-gray-500 group-hover:text-gray-900">
+          <span className="text-sm text-text-muted group-hover:text-text">
             {couple.primary_phone || couple.phone}
           </span>
         );
@@ -104,7 +104,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       meta: { hidden: 'hidden sm:table-cell' },
       cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900">
+        <span className="text-sm text-text-muted group-hover:text-text">
           {formatDate(info.getValue() ?? null)}
         </span>
       ),
@@ -119,7 +119,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       meta: { hidden: 'hidden lg:table-cell' },
       cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+        <span className="text-sm text-text-muted group-hover:text-text truncate block">
           {info.getValue()}
         </span>
       ),

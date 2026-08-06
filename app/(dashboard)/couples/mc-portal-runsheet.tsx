@@ -31,8 +31,8 @@ export function McPortalRunsheet({ items, onApprove, isApproving }: McPortalRuns
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-        <p className="text-sm text-gray-500">No pending suggestions</p>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-text-muted">No pending suggestions</p>
+        <p className="text-sm text-text-subtle">
           Couple suggestions from the portal will appear here for your review.
         </p>
       </div>
@@ -41,7 +41,7 @@ export function McPortalRunsheet({ items, onApprove, isApproving }: McPortalRuns
 
   return (
     <div className="space-y-2.5">
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-text-muted mb-4">
         {items.length} suggestion{items.length !== 1 ? 's' : ''} from the couple waiting for your review.
       </p>
       {items.map((item) => (
@@ -53,9 +53,9 @@ export function McPortalRunsheet({ items, onApprove, isApproving }: McPortalRuns
             {formatTime(item.start_time)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-base font-medium text-gray-900">{item.title}</p>
+            <p className="text-base font-medium text-text">{item.title}</p>
             {item.description && (
-              <p className="text-sm text-gray-500 mt-0.5">{item.description}</p>
+              <p className="text-sm text-text-muted mt-0.5">{item.description}</p>
             )}
           </div>
           <button

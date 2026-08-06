@@ -120,7 +120,7 @@ export function CouplesHeader({
             <Plus size={16} strokeWidth={2} />
           </button>
           {mobileAddOpen && (
-            <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-control shadow-lg z-30 min-w-44 py-1">
+            <div className="absolute top-full mt-1 right-0 bg-surface border border-border rounded-control shadow-lg z-30 min-w-44 py-1">
               <button
                 onClick={() => { setMobileAddOpen(false); onAddClick() }}
                 className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
@@ -146,7 +146,7 @@ export function CouplesHeader({
           <Search
             size={11}
             strokeWidth={1.5}
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
           />
           <input
             ref={searchInputRef}
@@ -154,7 +154,7 @@ export function CouplesHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search couples..."
-            className="w-full border border-gray-200 rounded-control pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
           />
           {search && (
             <button
@@ -162,7 +162,7 @@ export function CouplesHeader({
                 onSearchChange('')
                 searchInputRef.current?.focus()
               }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-gray-700 transition cursor-pointer p-0.5"
             >
               <X size={10} strokeWidth={2} />
             </button>
@@ -173,8 +173,8 @@ export function CouplesHeader({
         <div className="relative hidden sm:block" ref={filtersRef}>
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className={`flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
-              hasActiveFilter ? 'text-gray-900 bg-gray-50' : 'text-gray-500'
+            className={`flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
+              hasActiveFilter ? 'text-text bg-gray-50' : 'text-text-muted'
             }`}
           >
             <SlidersHorizontal size={11} strokeWidth={1.5} />
@@ -185,14 +185,14 @@ export function CouplesHeader({
                   e.stopPropagation()
                   onStatusFilterChange('all')
                 }}
-                className="ml-0.5 text-gray-400 hover:text-gray-700 cursor-pointer"
+                className="ml-0.5 text-text-subtle hover:text-gray-700 cursor-pointer"
               >
                 <X size={10} strokeWidth={1.5} />
               </span>
             )}
           </button>
           {filtersOpen && (
-            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-control shadow-lg z-20 min-w-32 py-1">
+            <div className="absolute top-full mt-1 left-0 bg-surface border border-border rounded-control shadow-lg z-20 min-w-32 py-1">
               <button
                 onClick={() => {
                   onStatusFilterChange('all')
@@ -200,7 +200,7 @@ export function CouplesHeader({
                 }}
                 className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
                   statusFilter === 'all'
-                    ? 'bg-gray-50 text-gray-900 font-medium'
+                    ? 'bg-gray-50 text-text font-medium'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -215,7 +215,7 @@ export function CouplesHeader({
                   }}
                   className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
                     statusFilter === status.slug
-                      ? 'bg-gray-50 text-gray-900 font-medium'
+                      ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -230,13 +230,13 @@ export function CouplesHeader({
         <div className="relative" ref={sortRef}>
           <button
             onClick={() => setSortOpen(!sortOpen)}
-            className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <ArrowUpDown size={11} strokeWidth={1.5} />
             <span>{activeSortLabel || 'Sort'}</span>
           </button>
           {sortOpen && (
-            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-control shadow-lg z-20 min-w-40 py-1">
+            <div className="absolute top-full mt-1 left-0 bg-surface border border-border rounded-control shadow-lg z-20 min-w-40 py-1">
               {SORT_OPTIONS.map((option) => (
                 <button
                   key={`${option.field}-${option.direction}`}
@@ -246,7 +246,7 @@ export function CouplesHeader({
                   }}
                   className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
                     sortField === option.field && sortDirection === option.direction
-                      ? 'bg-gray-50 text-gray-900 font-medium'
+                      ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -266,7 +266,7 @@ export function CouplesHeader({
               rather than under Settings. Visible in both List and Board views. */}
           <button
             onClick={onManageStatuses}
-            className="flex items-center gap-1 border border-gray-200 rounded-control px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
             aria-label="Manage statuses"
             title="Manage statuses"
           >
@@ -284,7 +284,7 @@ export function CouplesHeader({
               New couple
             </button>
             {addOpen && (
-              <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-control shadow-lg z-30 min-w-44 py-1">
+              <div className="absolute top-full mt-1 right-0 bg-surface border border-border rounded-control shadow-lg z-30 min-w-44 py-1">
                 <button
                   onClick={() => { setAddOpen(false); onAddClick() }}
                   className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
@@ -304,13 +304,13 @@ export function CouplesHeader({
       </div>
 
       {/* View mode tabs */}
-      <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
+      <div className="flex items-center gap-6 border-b border-border mt-6">
         <button
           onClick={() => onViewModeChange('kanban')}
           className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
             viewMode === 'kanban'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              ? 'border-gray-900 text-text'
+              : 'border-transparent text-text-subtle hover:text-gray-600'
           }`}
         >
           <LayoutGrid size={15} strokeWidth={1.5} /> Board
@@ -319,8 +319,8 @@ export function CouplesHeader({
           onClick={() => onViewModeChange('list')}
           className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
             viewMode === 'list'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              ? 'border-gray-900 text-text'
+              : 'border-transparent text-text-subtle hover:text-gray-600'
           }`}
         >
           <List size={15} strokeWidth={1.5} /> List
@@ -334,7 +334,7 @@ export function CouplesHeader({
           className={`flex-none px-3 py-1.5 rounded-pill text-xs font-medium whitespace-nowrap transition cursor-pointer ${
             statusFilter === 'all'
               ? 'bg-gray-900 text-white'
-              : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+              : 'bg-surface-emphasis text-gray-600 active:bg-gray-200'
           }`}
         >
           All
@@ -346,7 +346,7 @@ export function CouplesHeader({
             className={`flex-none px-3 py-1.5 rounded-pill text-xs font-medium whitespace-nowrap transition cursor-pointer ${
               statusFilter === status.slug
                 ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+                : 'bg-surface-emphasis text-gray-600 active:bg-gray-200'
             }`}
           >
             {status.name}

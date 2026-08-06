@@ -214,11 +214,11 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: 
 function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => void }) {
   const pct = Math.round(zoom * 100)
   return (
-    <div className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 bg-white border border-gray-200 rounded-pill shadow-[0_4px_18px_-4px_rgba(15,23,42,0.18)] pl-1 pr-1 py-1">
+    <div className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 bg-surface border border-border rounded-pill shadow-[0_4px_18px_-4px_rgba(15,23,42,0.18)] pl-1 pr-1 py-1">
       <button
         type="button"
         onClick={() => setZoom(zoom - 0.1)}
-        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
         aria-label="Zoom out"
         title="Zoom out"
       >
@@ -230,7 +230,7 @@ function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => v
       <button
         type="button"
         onClick={() => setZoom(zoom + 0.1)}
-        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
         aria-label="Zoom in"
         title="Zoom in"
       >
@@ -240,7 +240,7 @@ function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => v
       <button
         type="button"
         onClick={() => setZoom(1)}
-        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
         aria-label="Fit to width"
         title="Reset zoom"
       >

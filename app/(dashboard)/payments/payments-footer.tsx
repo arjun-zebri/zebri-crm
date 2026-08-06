@@ -27,12 +27,12 @@ export function PaymentsFooter({ tab, count, total }: PaymentsFooterProps) {
   const noun = count === 1 ? singular : `${singular}s`;
 
   return (
-    <div className="fixed bottom-0 left-0 md:left-[68px] right-0 z-30 bg-white border-t border-gray-100 px-6 py-5 flex items-center justify-between">
-      <p className="text-sm text-gray-400">
+    <div className="fixed bottom-0 left-0 md:left-[68px] right-0 z-30 bg-surface border-t border-gray-100 px-6 py-5 flex items-center justify-between">
+      <p className="text-sm text-text-subtle">
         {count} {noun}
       </p>
       {total !== undefined && (
-        <p className="text-sm font-semibold text-gray-900 tabular-nums">
+        <p className="text-sm font-semibold text-text tabular-nums">
           {formatCurrency(total)}
         </p>
       )}

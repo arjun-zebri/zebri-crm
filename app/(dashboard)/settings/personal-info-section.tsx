@@ -209,7 +209,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   }, [saveSignal])
 
   const inputClass =
-    'w-full border border-gray-200 rounded-control px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
+    'w-full border border-border rounded-control px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
 
   const selectedLabel = businessTypeOptions
     .filter((o) => businessTypes.includes(o.value))
@@ -218,8 +218,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-1">Personal info</h2>
-      <p className="text-sm text-gray-500 mb-5">Update your name, contact details, and business information. Changes save automatically.</p>
+      <h2 className="text-xl font-semibold text-text mb-1">Personal info</h2>
+      <p className="text-sm text-text-muted mb-5">Update your name, contact details, and business information. Changes save automatically.</p>
       {/* Auto-save on blur: `onBlur` on the form catches the bubbled
           focusout of any field within it, so leaving a field persists
           it. `autoSave` no-ops when nothing changed. */}
@@ -273,15 +273,15 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                   type="button"
                   className={`${inputClass} flex items-center justify-between text-left cursor-pointer`}
                 >
-                  <span className={selectedLabel ? 'text-gray-900' : 'text-gray-400'}>
+                  <span className={selectedLabel ? 'text-text' : 'text-text-subtle'}>
                     {selectedLabel || 'Select types'}
                   </span>
-                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-50 w-[var(--radix-popover-trigger-width)]"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-50 w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -300,7 +300,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                           checked ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'
                         }`}
                       >
-                        <span className={`w-4 h-4 rounded-control border flex items-center justify-center shrink-0 ${checked ? 'bg-green-600 border-green-600' : 'border-gray-300'}`}>
+                        <span className={`w-4 h-4 rounded-control border flex items-center justify-center shrink-0 ${checked ? 'bg-green-600 border-green-600' : 'border-border-strong'}`}>
                           {checked && (
                             <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                               <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -391,13 +391,13 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               className={inputClass}
               placeholder="Your full legal name"
             />
-            <p className="text-xs text-gray-400 mt-1.5">
+            <p className="text-xs text-text-subtle mt-1.5">
               Used as your typed signature on contracts you send.
             </p>
             {mcSignatureName && (
               <div className="mt-2 border border-gray-100 bg-gray-50 rounded-control p-3">
-                <p className="text-xs text-gray-500 mb-1">Preview</p>
-                <p className="text-2xl text-gray-900" style={{ fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+                <p className="text-xs text-text-muted mb-1">Preview</p>
+                <p className="text-2xl text-text" style={{ fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
                   {mcSignatureName}
                 </p>
               </div>

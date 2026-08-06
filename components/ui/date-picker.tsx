@@ -241,9 +241,9 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       isSmall ? 'text-caption rounded-control' : 'text-sm rounded-control'
     } cursor-pointer transition`
     if (isSelected) return `${base} bg-black text-white`
-    if (isToday) return `${base} bg-gray-100 text-gray-900 hover:bg-gray-200`
+    if (isToday) return `${base} bg-surface-emphasis text-text hover:bg-gray-200`
     if (!isCurrentMonth) return `${base} text-gray-300 hover:bg-gray-50`
-    return `${base} text-gray-900 hover:bg-gray-50`
+    return `${base} text-text hover:bg-gray-50`
   }
 
   const triggerLayout =
@@ -271,14 +271,14 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     ? isMeta
       ? 'opacity-70 cursor-not-allowed'
       : isUnderline
-      ? 'border-gray-100 text-gray-400 cursor-not-allowed'
-      : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+      ? 'border-gray-100 text-text-subtle cursor-not-allowed'
+      : 'border-gray-100 bg-gray-50 text-text-subtle cursor-not-allowed'
     : isMeta
     ? 'hover:bg-surface-muted'
     : isUnderline
     ? open
       ? 'border-gray-400'
-      : 'border-gray-200 hover:border-gray-300 focus:border-gray-400'
+      : 'border-border hover:border-border-strong focus:border-gray-400'
     : isSmall
     ? // Same focus treatment as `Input`: the border darkens, no ring.
       // The outlined default's green ring is a leftover from the builder
@@ -287,8 +287,8 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       ? 'border-border-strong'
       : 'border-border hover:bg-surface-muted focus-visible:border-brand-fg'
     : open && inline
-    ? 'border-green-300 ring-2 ring-green-100 bg-white hover:bg-white'
-    : 'border-gray-200 hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
+    ? 'border-green-300 ring-2 ring-green-100 bg-surface hover:bg-surface'
+    : 'border-border hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
   const triggerClass = `flex items-center ${
     isMeta ? 'justify-start gap-1.5' : triggerLayout
   } w-full ${isSmall ? 'text-caption' : 'text-sm'} focus:outline-none ${
@@ -298,7 +298,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
   const calendarIcon = isMeta || isSmall ? (
     <CalendarDays className="w-3.5 h-3.5 text-text-subtle flex-shrink-0" strokeWidth={1.5} />
   ) : (
-    <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
+    <CalendarDays className="w-4 h-4 text-text-subtle flex-shrink-0" strokeWidth={1.5} />
   )
   const displayedValue = value
     ? displayPrefix
@@ -310,8 +310,8 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       ? 'text-text truncate'
       : 'text-text-subtle truncate'
     : value
-    ? 'text-gray-900'
-    : 'text-gray-400'
+    ? 'text-text'
+    : 'text-text-subtle'
   const triggerContent = (
     <>
       {iconPosition === 'left' ? calendarIcon : null}
@@ -326,13 +326,13 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     <>
       {/* Month header */}
       <div className="flex items-center justify-between mb-2">
-        <button type="button" onClick={prevMonth} className="p-1 rounded-control hover:bg-gray-100 transition cursor-pointer">
+        <button type="button" onClick={prevMonth} className="p-1 rounded-control hover:bg-surface-emphasis transition cursor-pointer">
           <ChevronLeft className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-600`} strokeWidth={1.5} />
         </button>
-        <span className={`${isSmall ? 'text-caption' : 'text-sm'} font-medium text-gray-900`}>
+        <span className={`${isSmall ? 'text-caption' : 'text-sm'} font-medium text-text`}>
           {MONTH_NAMES[viewMonth]} {viewYear}
         </span>
-        <button type="button" onClick={nextMonth} className="p-1 rounded-control hover:bg-gray-100 transition cursor-pointer">
+        <button type="button" onClick={nextMonth} className="p-1 rounded-control hover:bg-surface-emphasis transition cursor-pointer">
           <ChevronRight className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-600`} strokeWidth={1.5} />
         </button>
       </div>
@@ -340,7 +340,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       {/* Day-of-week labels */}
       <div className="grid grid-cols-7 mb-1">
         {DAY_LABELS.map((d) => (
-          <div key={d} className={`text-center text-caption text-gray-400 ${isSmall ? 'py-0.5' : 'py-1'}`}>{d}</div>
+          <div key={d} className={`text-center text-caption text-text-subtle ${isSmall ? 'py-0.5' : 'py-1'}`}>{d}</div>
         ))}
       </div>
 
@@ -356,7 +356,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       {/* Clear */}
       {value && (
         <div className="mt-2 pt-2 border-t border-gray-100 text-center">
-          <button type="button" onClick={handleClear} className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">
+          <button type="button" onClick={handleClear} className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer">
             Clear
           </button>
         </div>
@@ -377,7 +377,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
           {triggerContent}
         </button>
         {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] max-w-[320px] bg-white border border-gray-200 rounded-control shadow-lg p-3 z-20 animate-fade-in">
+          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] max-w-[320px] bg-surface border border-border rounded-control shadow-lg p-3 z-20 animate-fade-in">
             {calendarBody}
           </div>
         )}
@@ -390,7 +390,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     <div
       ref={dropdownRef}
       style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 200 }}
-      className={`bg-white border border-gray-200 rounded-control shadow-lg ${isSmall ? 'p-2.5' : 'p-3'} animate-fade-in`}
+      className={`bg-surface border border-border rounded-control shadow-lg ${isSmall ? 'p-2.5' : 'p-3'} animate-fade-in`}
     >
       {calendarBody}
     </div>,

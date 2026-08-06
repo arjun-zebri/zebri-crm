@@ -52,7 +52,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
           <button
             type="button"
             onClick={onClose}
-            className="px-4 h-9 rounded-control text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-white cursor-pointer transition"
+            className="px-4 h-9 rounded-control text-sm font-medium text-gray-600 hover:text-text hover:bg-surface cursor-pointer transition"
           >
             Cancel
           </button>
@@ -60,7 +60,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
             type="button"
             onClick={handleSave}
             disabled={!trimmed}
-            className="px-4 h-9 rounded-control bg-gray-900 hover:bg-black text-white text-sm font-medium cursor-pointer transition disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="px-4 h-9 rounded-control bg-gray-900 hover:bg-black text-white text-sm font-medium cursor-pointer transition disabled:bg-gray-200 disabled:text-text-subtle disabled:cursor-not-allowed"
           >
             Save kit
           </button>
@@ -68,7 +68,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
       }
     >
       <div className="space-y-5">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-text-muted">
           Capture this look, colours, fonts and assets, so you can switch back later.
         </p>
 
@@ -88,7 +88,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
               }
             }}
             placeholder="e.g. Sunset Studio, Autumn 2026"
-            className="w-full px-3 py-2 text-sm text-gray-900 placeholder-gray-400 border border-gray-200 rounded-control focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition"
+            className="w-full px-3 py-2 text-sm text-text placeholder-gray-400 border border-border rounded-control focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition"
           />
         </label>
       </div>
@@ -99,7 +99,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
 function KitPreviewCard({ state }: { state: BrandPreviewState }) {
   return (
     <div
-      className="rounded-control border border-gray-200 p-4 flex items-center gap-4"
+      className="rounded-control border border-border p-4 flex items-center gap-4"
       style={{ background: state.surfaceColor }}
     >
       <div className="min-w-0 flex-1">

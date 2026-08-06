@@ -78,8 +78,8 @@ export function CoupleTimerControl({
           aria-label={label}
           className={`flex cursor-pointer items-center gap-1.5 rounded-control p-1.5 transition ${
             runningHere
-              ? 'bg-gray-100 text-gray-900'
-              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+              ? 'bg-surface-emphasis text-text'
+              : 'text-text-subtle hover:bg-surface-emphasis hover:text-gray-600'
           }`}
         >
           {runningHere ? (

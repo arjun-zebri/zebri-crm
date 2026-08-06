@@ -232,7 +232,7 @@ export function BlockFrame({
       />
       <div
         aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-control border border-transparent group-hover:border-gray-300/70 transition"
+        className="absolute inset-0 pointer-events-none rounded-control border border-transparent group-hover:border-border-strong/70 transition"
       />
 
       {/* Drag handle */}
@@ -247,7 +247,7 @@ export function BlockFrame({
           {...listeners}
           aria-label="Drag to reorder"
           title="Drag to reorder"
-          className="cursor-grab active:cursor-grabbing inline-flex items-center justify-center w-5 h-5 rounded-control text-gray-400 hover:text-gray-700 hover:bg-gray-100/80"
+          className="cursor-grab active:cursor-grabbing inline-flex items-center justify-center w-5 h-5 rounded-control text-text-subtle hover:text-gray-700 hover:bg-surface-emphasis/80"
         >
           <GripVertical size={14} strokeWidth={1.5} />
         </button>
@@ -280,7 +280,7 @@ export function BlockFrame({
           }}
           aria-label="Add block below"
           title="Add block below"
-          className="absolute left-1/2 -translate-x-1/2 -bottom-3 z-10 w-6 h-6 rounded-pill bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+          className="absolute left-1/2 -translate-x-1/2 -bottom-3 z-10 w-6 h-6 rounded-pill bg-surface border border-border shadow-sm flex items-center justify-center text-text-subtle hover:text-text hover:border-border-strong opacity-0 group-hover:opacity-100 transition cursor-pointer"
         >
           <Plus size={12} strokeWidth={2} />
         </button>
@@ -406,7 +406,7 @@ function ContextMenu({
   return (
     <div
       role="menu"
-      className="fixed z-[80] w-[180px] bg-white border border-gray-200 rounded-control shadow-xl p-1 animate-modal-in"
+      className="fixed z-[80] w-[180px] bg-surface border border-border rounded-control shadow-xl p-1 animate-modal-in"
       style={{ left, top }}
       onPointerDown={(e) => e.stopPropagation()}
     >
@@ -423,7 +423,7 @@ function ContextMenu({
             item.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
-          <span className={item.danger ? 'text-red-500' : 'text-gray-400'}>{item.icon}</span>
+          <span className={item.danger ? 'text-red-500' : 'text-text-subtle'}>{item.icon}</span>
           {item.label}
         </button>
       ))}

@@ -140,7 +140,7 @@ export function CoupleModal({
   };
 
   const inputClass =
-    "w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition";
+    "w-full border-0 border-b border-border bg-transparent px-0 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition";
 
   const selectedStatus = statuses.find(s => s.slug === status);
   const selectedLabel = selectedStatus?.name || "Select status";
@@ -166,7 +166,7 @@ export function CoupleModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-control bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-xs px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
@@ -311,17 +311,17 @@ export function CoupleModal({
                 >
                   <span
                     className={
-                      selectedLabel ? "text-gray-900" : "text-gray-400"
+                      selectedLabel ? "text-text" : "text-text-subtle"
                     }
                   >
                     {selectedLabel || "Select status"}
                   </span>
-                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -359,17 +359,17 @@ export function CoupleModal({
                 >
                   <span
                     className={
-                      leadSource ? "text-gray-900" : "text-gray-400"
+                      leadSource ? "text-text" : "text-text-subtle"
                     }
                   >
                     {leadSource ? LEAD_SOURCE_LABELS[leadSource as LeadSource] : "Select source"}
                   </span>
-                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >

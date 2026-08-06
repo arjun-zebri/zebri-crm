@@ -60,15 +60,21 @@ export function FoundationsColour() {
       </Spec>
 
       <Conflict
-        title="Raw palette colours still outnumber token usages"
+        title="Mostly resolved: the four bulk aliases are swept"
         group="colour"
         recommendation={
           <>
-            Keep the tokens. Most raw classes are a straight substitution:{' '}
-            <code>text-gray-900</code> to <code>text-text</code>, <code>text-gray-500</code> to{' '}
-            <code>text-text-muted</code>, <code>text-gray-400</code> to{' '}
-            <code>text-text-subtle</code>, <code>border-gray-200</code> to{' '}
-            <code>border-border</code>. Those four alone cover roughly half the total.
+            1,735 sites moved onto tokens: <code>text-gray-900</code>, <code>text-gray-500</code>,{' '}
+            <code>text-gray-400</code>, <code>border-gray-200</code>, <code>border-gray-300</code>,{' '}
+            <code>bg-white</code> and <code>bg-gray-100</code>. Worth knowing: Tailwind 4 shifted its
+            gray palette, so <code>text-gray-900</code> was rendering <code>#101828</code> while the
+            token is <code>#111827</code>. The app had two gray palettes side by side; the sweep
+            removes that. The three text swaps shift by 1 to 3 of 255, which is imperceptible but not
+            literally identical.
+            <br />
+            What is left has no exact token: <code>gray-600</code>, <code>gray-700</code>,{' '}
+            <code>gray-50</code> and the semantic hues used by <code>Badge</code>. Public branded
+            surfaces are excluded by design.
           </>
         }
       >

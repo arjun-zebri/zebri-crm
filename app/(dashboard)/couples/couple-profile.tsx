@@ -315,7 +315,7 @@ export function CoupleProfile({
       >
         <div
           data-testid="couple-profile-panel"
-          className="bg-white rounded-control shadow-xl w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
+          className="bg-surface rounded-control shadow-xl w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
           <CoupleProfileHeader

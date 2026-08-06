@@ -42,7 +42,7 @@ const variantStyles: Record<
     text: "text-emerald-700",
     dot: "bg-emerald-400",
   },
-  complete: { bg: "bg-gray-100", text: "text-gray-600", dot: "bg-gray-400" },
+  complete: { bg: "bg-surface-emphasis", text: "text-gray-600", dot: "bg-gray-400" },
   venue: { bg: "bg-rose-50", text: "text-rose-700", dot: "bg-rose-400" },
   celebrant: {
     bg: "bg-violet-50",

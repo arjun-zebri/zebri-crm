@@ -126,7 +126,7 @@ export function InlineAsset({
             onClick={openPicker}
             aria-label={label}
             title="Upload image"
-            className="pointer-events-auto flex items-center justify-center w-11 h-11 rounded-control border border-gray-300 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-400 cursor-pointer transition shadow-sm"
+            className="pointer-events-auto flex items-center justify-center w-11 h-11 rounded-control border border-border-strong bg-surface text-text-muted hover:text-text hover:border-gray-400 cursor-pointer transition shadow-sm"
           >
             <Upload size={16} strokeWidth={1.5} />
           </button>
@@ -138,7 +138,7 @@ export function InlineAsset({
           aria-hidden
           className="absolute inset-0 rounded-control bg-gray-900/10 ring-2 ring-gray-900/40 ring-inset pointer-events-none flex items-center justify-center"
         >
-          <span className="text-xs font-medium text-gray-900 bg-white/95 rounded-control px-2 py-1 shadow-sm">
+          <span className="text-xs font-medium text-text bg-surface/95 rounded-control px-2 py-1 shadow-sm">
             Drop to upload
           </span>
         </div>
@@ -147,7 +147,7 @@ export function InlineAsset({
       {busy && (
         <div
           aria-hidden
-          className="absolute inset-0 rounded-control bg-white/60 pointer-events-none flex items-center justify-center"
+          className="absolute inset-0 rounded-control bg-surface/60 pointer-events-none flex items-center justify-center"
         >
           <Loader2 size={16} className="animate-spin text-gray-700" />
         </div>
@@ -174,7 +174,7 @@ export function InlineAsset({
             <button
               type="button"
               onClick={() => onClear()}
-              className="inline-flex items-center justify-center w-6 h-6 rounded-control bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
+              className="inline-flex items-center justify-center w-6 h-6 rounded-control bg-surface/90 text-gray-700 hover:bg-surface hover:text-red-600 cursor-pointer transition shadow-sm"
               title="Remove"
               aria-label="Remove"
             >
@@ -206,7 +206,7 @@ export function InlineAsset({
             <button
               type="button"
               onClick={() => onClear()}
-              className="inline-flex items-center justify-center w-7 h-7 rounded-control bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
+              className="inline-flex items-center justify-center w-7 h-7 rounded-control bg-surface/90 text-gray-700 hover:bg-surface hover:text-red-600 cursor-pointer transition shadow-sm"
               title="Remove"
               aria-label="Remove"
             >

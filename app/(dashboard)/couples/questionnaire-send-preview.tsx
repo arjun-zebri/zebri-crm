@@ -100,7 +100,7 @@ export function QuestionnaireSendPreview({ name, questions, displayMode, coupleN
         </div>
         {/* Sandboxed: the email HTML is trusted output of questionnaireHtml,
             but the iframe keeps its styles from leaking either way. */}
-        <iframe title="Email preview" sandbox="" srcDoc={emailHtml} className="min-h-0 w-full flex-1 bg-white" />
+        <iframe title="Email preview" sandbox="" srcDoc={emailHtml} className="min-h-0 w-full flex-1 bg-surface" />
       </div>
     </div>
   )

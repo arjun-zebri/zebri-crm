@@ -75,7 +75,7 @@ export function PreviewPdf({ doc, surface = 'invoice' }: PreviewPdfProps) {
       srcDoc={html}
       title="PDF preview"
       sandbox=""
-      className="h-full w-full rounded-control border border-border bg-white"
+      className="h-full w-full rounded-control border border-border bg-surface"
     />
   );
 }
