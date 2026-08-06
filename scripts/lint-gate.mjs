@@ -202,7 +202,7 @@ const ERROR_BUDGET = 54;
 // threaded through the fill renderers and both preview surfaces. Deleting the
 // toggle + "fixed" preview note and tightening imports netted out three
 // warnings (256 -> 253). Locking in.
-const WARNING_BUDGET = 252;
+const WARNING_BUDGET = 250;
 
 function runEslintJson() {
   try {
