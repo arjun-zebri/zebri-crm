@@ -16,6 +16,7 @@ import { X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { useScrollLock } from '@/components/ui/use-overlay';
 import { createClient } from '@/lib/supabase/client';
 
 import {
@@ -108,15 +109,17 @@ export function SettingsModal() {
     else router.push('/');
   };
 
+  // Shared count rather than a local overflow write, so a confirm dialog
+  // raised from a settings section cannot unlock the page behind it.
+  useScrollLock(true);
+
   useEffect(() => {
     const onEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose();
     };
     document.addEventListener('keydown', onEscape);
-    document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onEscape);
-      document.body.style.overflow = 'unset';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -37,7 +37,9 @@ describe('<ConfirmDialog />', () => {
     expect(document.body.style.overflow).toBe('hidden');
 
     rerender(<ConfirmDialog {...base} open={false} />);
-    expect(document.body.style.overflow).toBe('unset');
+    // The inline style is removed rather than overwritten, so the
+    // stylesheet decides again.
+    expect(document.body.style.overflow).not.toBe('hidden');
   });
 
   it('exposes exactly one dialog, named and described by its own copy', () => {
@@ -99,20 +101,6 @@ describe('<ConfirmDialog />', () => {
 
     expect(cancelConfirm).toHaveBeenCalledTimes(1);
     expect(closeModal).not.toHaveBeenCalled();
-  });
-
-  it('hands the scroll lock back to a bespoke overlay that set it first', () => {
-    // The couple profile, contact profile and settings modal lock body
-    // scroll themselves without going through useOverlay. Restoring a
-    // hard-coded 'unset' here would unlock the page underneath them.
-    document.body.style.overflow = 'hidden';
-
-    const { rerender } = render(<ConfirmDialog {...base} open />);
-    expect(document.body.style.overflow).toBe('hidden');
-
-    rerender(<ConfirmDialog {...base} open={false} />);
-
-    expect(document.body.style.overflow).toBe('hidden');
   });
 
   it('keeps the scroll lock when only the topmost overlay closes', () => {

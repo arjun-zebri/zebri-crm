@@ -26,17 +26,16 @@ import { useEffect, useRef } from 'react';
 let openOverlayDepth = 0;
 
 /**
- * `document.body.style.overflow` as it was before the first overlay
- * opened.
+ * How many surfaces currently want the page frozen.
  *
- * Not every scroll-locking surface goes through this hook: the couple
- * profile, the contact profile and the settings modal are bespoke
- * overlays that set `overflow: hidden` themselves. Restoring a hard-coded
- * `'unset'` would unlock the page underneath them the moment a
- * ConfirmDialog raised from one of them closed. Capturing the real prior
- * value hands it back intact.
+ * Every locker has to go through {@link useScrollLock}, including the
+ * bespoke overlays that predate this module (couple profile, contact
+ * profile, settings modal). Independent lockers cannot be made to work:
+ * whoever releases last has no safe value to restore, so it either
+ * unlocks the page while another surface is still up or leaves it frozen
+ * with nothing open. A single count has one owner and one answer.
  */
-let overflowBeforeFirstOverlay: string | null = null;
+let scrollLockCount = 0;
 
 /**
  * How many overlays are open right now.
@@ -68,6 +67,34 @@ export const OVERLAY_Z: Record<OverlayLayer, { backdrop: string; panel: string }
   top: { backdrop: 'z-[120]', panel: 'z-[130]' },
 };
 
+/**
+ * Freezes page scrolling while `active`, counted across every caller.
+ *
+ * Use this in any surface that covers the page, not just ones built on
+ * {@link useOverlay}. The lock lifts only when the last caller releases,
+ * and it clears the inline style rather than writing a guessed value
+ * back, so whatever the stylesheet says takes over again.
+ *
+ * @example
+ * ```tsx
+ * // A bespoke overlay that isn't built on Modal:
+ * useScrollLock(Boolean(couple));
+ * ```
+ */
+export function useScrollLock(active: boolean): void {
+  useEffect(() => {
+    if (!active) return;
+
+    scrollLockCount++;
+    if (scrollLockCount === 1) document.body.style.overflow = 'hidden';
+
+    return () => {
+      scrollLockCount--;
+      if (scrollLockCount === 0) document.body.style.removeProperty('overflow');
+    };
+  }, [active]);
+}
+
 export interface UseOverlayOptions {
   /** Whether the overlay is currently rendered. */
   isOpen: boolean;
@@ -95,34 +122,25 @@ export function useOverlay({ isOpen, onClose }: UseOverlayOptions): void {
     onCloseRef.current = onClose;
   }, [onClose]);
 
+  // Scrolling is handled by the shared count, so bespoke overlays that
+  // also lock can interleave with this one safely.
+  useScrollLock(isOpen);
+
   useEffect(() => {
     if (!isOpen) return;
 
     openOverlayDepth++;
     const myDepth = openOverlayDepth;
 
-    // Read the prior value only on the way from zero to one. Later
-    // overlays would read the 'hidden' that the first one just set.
-    if (openOverlayDepth === 1) {
-      overflowBeforeFirstOverlay = document.body.style.overflow;
-    }
-
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && openOverlayDepth === myDepth) onCloseRef.current();
     };
 
     document.addEventListener('keydown', handleEscape);
-    document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
       openOverlayDepth--;
-      // Only the last overlay out restores scrolling; otherwise closing a
-      // nested dialog would unlock the page while its parent is still up.
-      if (openOverlayDepth === 0) {
-        document.body.style.overflow = overflowBeforeFirstOverlay || 'unset';
-        overflowBeforeFirstOverlay = null;
-      }
     };
   }, [isOpen]);
 }

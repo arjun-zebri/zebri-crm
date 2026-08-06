@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Phone, Mail, MoreHorizontal, Trash2 } from "lucide-react";
-import { PiWhatsappLogoLight } from "react-icons/pi";
 import * as Popover from "@radix-ui/react-popover";
+import { X, Phone, Mail, MoreHorizontal, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { PiWhatsappLogoLight } from "react-icons/pi";
+
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useScrollLock } from "@/components/ui/use-overlay";
 import {
   Contact,
   CATEGORY_LABELS,
   STATUS_LABELS,
 } from '@/types/contact';
+
 import { ContactOverview } from "./contact-overview";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ContactProfileProps {
   vendor: Contact | null;
@@ -42,13 +45,15 @@ export function ContactProfile({
     };
     if (vendor) {
       document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
       return () => {
         document.removeEventListener("keydown", handleEscape);
-        document.body.style.overflow = "unset";
       };
     }
   }, [vendor, onClose]);
+
+  // Shared count rather than a local overflow write, so a confirm dialog
+  // opened from here cannot unlock the page behind this panel.
+  useScrollLock(Boolean(vendor));
 
   if (!vendor) return null;
 
