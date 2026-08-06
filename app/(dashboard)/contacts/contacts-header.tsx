@@ -129,7 +129,7 @@ export function ContactsHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search contacts..."
-            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
           />
           {search && (
             <button
@@ -148,7 +148,7 @@ export function ContactsHeader({
         <div className="relative" ref={filtersRef}>
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className={`flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
               hasActiveFilter ? 'text-text bg-gray-50' : 'text-text-muted'
             }`}
           >
@@ -173,7 +173,7 @@ export function ContactsHeader({
                   onFilterChange(null)
                   setFiltersOpen(false)
                 }}
-                className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                className={`w-full text-left px-2.5 py-1.5 text-caption transition cursor-pointer ${
                   categoryFilter === null && statusFilter === null
                     ? 'bg-gray-50 text-text font-medium'
                     : 'text-gray-700 hover:bg-gray-50'
@@ -189,7 +189,7 @@ export function ContactsHeader({
                     onFilterChange({ type: 'category', value: category })
                     setFiltersOpen(false)
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                  className={`w-full text-left px-2.5 py-1.5 text-caption transition cursor-pointer ${
                     categoryFilter === category
                       ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -208,7 +208,7 @@ export function ContactsHeader({
                     onFilterChange({ type: 'status', value: status })
                     setFiltersOpen(false)
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                  className={`w-full text-left px-2.5 py-1.5 text-caption transition cursor-pointer ${
                     statusFilter === status
                       ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -225,7 +225,7 @@ export function ContactsHeader({
         <div className="relative" ref={sortRef}>
           <button
             onClick={() => setSortOpen(!sortOpen)}
-            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <ArrowUpDown size={11} strokeWidth={1.5} />
             <span>{activeSortLabel || 'Sort'}</span>
@@ -239,7 +239,7 @@ export function ContactsHeader({
                     onSortChange(option.field, option.direction)
                     setSortOpen(false)
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                  className={`w-full text-left px-2.5 py-1.5 text-caption transition cursor-pointer ${
                     sortField === option.field && sortDirection === option.direction
                       ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -256,7 +256,7 @@ export function ContactsHeader({
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onAddClick}
-            className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
           >
             <Plus size={11} strokeWidth={2} />
             New contact

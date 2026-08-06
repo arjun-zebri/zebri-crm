@@ -123,7 +123,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       {/* Column 1: General Info */}
       <div className="flex flex-col">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-text">General</h3>
+          <h3 className="text-caption font-semibold uppercase tracking-wider text-text">General</h3>
         </div>
 
         {/* Primary + Secondary partner contacts. Six inline-editable
@@ -175,7 +175,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             }
           }}
         >
-          <span className="text-sm text-gray-700 w-28 shrink-0">
+          <span className="text-body text-gray-700 w-28 shrink-0">
             Lead source
           </span>
           {editingField === "leadSource" ? (
@@ -189,7 +189,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
               <Popover.Trigger asChild>
                 <button
                   type="button"
-                  className="flex-1 flex items-center justify-end gap-1 text-sm bg-transparent outline-none border-none cursor-pointer"
+                  className="flex-1 flex items-center justify-end gap-1 text-body bg-transparent outline-none border-none cursor-pointer"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className={leadSource ? "text-text" : "text-text-subtle"}>
@@ -213,7 +213,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
                       handleSaveField("leadSource", null);
                       setLeadSourceOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm transition ${
+                    className={`w-full text-left px-3 py-2 text-body transition ${
                       !leadSource
                         ? "bg-surface-emphasis text-text font-medium"
                         : "text-gray-700 hover:bg-gray-50"
@@ -230,7 +230,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
                         handleSaveField("leadSource", s);
                         setLeadSourceOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                      className={`w-full text-left px-3 py-2 text-body transition ${
                         leadSource === s
                           ? "bg-surface-emphasis text-text font-medium"
                           : "text-gray-700 hover:bg-gray-50"
@@ -245,9 +245,9 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
           ) : (
             <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
               {leadSourceLabel ? (
-                <span className="text-sm text-text-muted">{leadSourceLabel}</span>
+                <span className="text-body text-text-muted">{leadSourceLabel}</span>
               ) : (
-                <span className="text-sm text-gray-300"> - </span>
+                <span className="text-body text-gray-300"> - </span>
               )}
               <Pencil
                 size={11}
@@ -261,8 +261,8 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             Read-only here; edited via the couple modal. */}
         {couple.referral_source ? (
           <div className="flex items-center justify-between py-3 -mx-2 px-2">
-            <span className="text-sm text-gray-700 w-28 shrink-0">Heard via</span>
-            <span className="flex-1 text-right text-sm text-text-muted min-w-0 break-words">
+            <span className="text-body text-gray-700 w-28 shrink-0">Heard via</span>
+            <span className="flex-1 text-right text-body text-text-muted min-w-0 break-words">
               {couple.referral_source}
             </span>
           </div>
@@ -271,7 +271,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
         {/* Notes */}
         <div className="group flex-1 flex flex-col py-3 rounded-control -mx-2 px-2 min-h-0">
           <div className="flex items-start justify-between">
-            <span className="text-sm text-gray-700 w-28 shrink-0 pt-0.5">Notes</span>
+            <span className="text-body text-gray-700 w-28 shrink-0 pt-0.5">Notes</span>
             <Pencil
               size={11}
               className={`shrink-0 mt-1 text-text-muted transition ${editingField === "notes" ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
@@ -283,7 +283,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             onFocus={() => setEditingField("notes")}
             onBlur={() => handleSaveField("notes", notes)}
             placeholder="Any additional notes..."
-            className="flex-1 w-full bg-transparent outline-none border-none resize-none mt-1 text-sm text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed min-h-[6rem]"
+            className="flex-1 w-full bg-transparent outline-none border-none resize-none mt-1 text-body text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed min-h-[6rem]"
           />
         </div>
       </div>
@@ -326,7 +326,7 @@ function PartnerBlock({
 }: PartnerBlockProps) {
   return (
     <div className="mt-2 first:mt-0">
-      <h4 className="text-xs uppercase tracking-wider text-text-subtle mt-3 mb-1">
+      <h4 className="text-caption uppercase tracking-wider text-text-subtle mt-3 mb-1">
         {label}
       </h4>
       <EditableRow
@@ -392,7 +392,7 @@ function EditableRow({
   const isEditing = editingField === fieldName;
   return (
     <div className="group flex items-center justify-between py-2 rounded-control -mx-2 px-2">
-      <span className="text-sm text-text-muted w-20 shrink-0">{label}</span>
+      <span className="text-body text-text-muted w-20 shrink-0">{label}</span>
       <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
         <input
           type={type}
@@ -404,7 +404,7 @@ function EditableRow({
             e.key === "Enter" && (e.target as HTMLInputElement).blur()
           }
           placeholder={placeholder}
-          className="flex-1 text-right bg-transparent outline-none border-none text-sm text-gray-700 placeholder:text-gray-300 cursor-pointer focus:cursor-text"
+          className="flex-1 text-right bg-transparent outline-none border-none text-body text-gray-700 placeholder:text-gray-300 cursor-pointer focus:cursor-text"
         />
         <Pencil
           size={11}

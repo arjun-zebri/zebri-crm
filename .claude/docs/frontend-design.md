@@ -38,6 +38,18 @@ and a 2px progress segment, where 6px would round them into blobs), and
 public branded surfaces, which set `borderRadius` inline from each MC's
 brand kit.
 
+### Typography: tokens carry their line-height
+
+`--text-display` / `--text-section` / `--text-body` / `--text-caption`
+each ship a paired `--text-*--line-height` matching the Tailwind default
+they replace, so `text-body` and `text-sm` are byte-identical (14px /
+20px) and `leading-*` still overrides. Before 2026-08-06 the tokens set
+font-size only and inherited their leading, rendering ~1px looser per
+line than the class they claimed to equal.
+
+1,186 sites were swept onto tokens. `text-2xl`, `text-lg` and
+`text-base` remain because no token defines them.
+
 ### Colour: mind the Tailwind 4 palette shift
 
 Tailwind 4 changed its default grays, so the raw classes and our tokens
@@ -74,7 +86,7 @@ Known divergences the showroom still reports:
   `meta` for anything else. Page gutters stay with the page, since a
   full-height calendar and a scrolling list legitimately differ.
 - **`<Card padding surface borderless />`** (`components/ui/card.tsx`)
-  is the standard bordered panel: `rounded-card`, `border-border`, and
+  is the standard bordered panel: `rounded-control`, `border-border`, and
   a padding scale of `none` / `sm` (16px) / `md` (24px, default) /
   `lg` (32px). Do **not** use it for popovers, dropdowns or menus:
   those carry their own z-index, shadow and entry animation and should

@@ -81,7 +81,7 @@ export function TimePicker({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`flex items-center justify-between w-36 text-sm transition cursor-pointer focus:outline-none ${
+        className={`flex items-center justify-between w-36 text-body transition cursor-pointer focus:outline-none ${
           variant === 'underline'
             ? 'border-0 border-b border-border bg-transparent px-0 py-2 hover:border-gray-400 focus:border-gray-400'
             : 'border border-border rounded-control px-3 py-2 hover:bg-gray-50'
@@ -102,7 +102,7 @@ export function TimePicker({
           <button
             type="button"
             onClick={() => { onChange(''); setOpen(false) }}
-            className={`w-full text-left px-3 py-2 text-sm transition hover:bg-gray-50 ${
+            className={`w-full text-left px-3 py-2 text-body transition hover:bg-gray-50 ${
               !value ? 'font-medium text-text' : 'text-text-subtle'
             }`}
           >
@@ -113,7 +113,7 @@ export function TimePicker({
               key={t}
               type="button"
               onClick={() => { onChange(t); setOpen(false) }}
-              className={`w-full text-left px-3 py-2 text-sm transition hover:bg-gray-50 ${
+              className={`w-full text-left px-3 py-2 text-body transition hover:bg-gray-50 ${
                 t === value ? 'bg-gray-50 font-medium text-text' : 'text-gray-700'
               }`}
             >
@@ -146,8 +146,8 @@ export function addMinutesToTime(t: string, mins: number): string {
 // modals (`border-b`, transparent background, calm focus). All three open
 // off the couple profile, so they should read as one product.
 const inputClass =
-  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition'
-const labelClass = 'block text-sm text-gray-600 mb-1'
+  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition'
+const labelClass = 'block text-body text-gray-600 mb-1'
 
 export function EventTimelineModal({
   isOpen,
@@ -250,7 +250,7 @@ export function EventTimelineModal({
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className={`text-xs px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 ${
+                className={`text-caption px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 ${
                   deleteConfirm
                     ? 'bg-red-600 text-white hover:bg-red-700'
                     : 'bg-red-50 text-red-600 hover:bg-red-100'
@@ -264,14 +264,14 @@ export function EventTimelineModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-caption px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={loading || !title.trim()}
-              className="text-xs px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+              className="text-caption px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'Saving...' : 'Save'}
             </button>
@@ -289,7 +289,7 @@ export function EventTimelineModal({
                   key={s}
                   type="button"
                   onClick={() => handleStatusChange(s)}
-                  className={`flex-1 text-xs py-2 transition cursor-pointer ${
+                  className={`flex-1 text-caption py-2 transition cursor-pointer ${
                     statusSelection === s
                       ? s === 'review'
                         ? 'bg-amber-500 text-white'
@@ -309,7 +309,7 @@ export function EventTimelineModal({
             <label className={labelClass}>From</label>
             <TimePicker value={startTime} onChange={handleStartChange} variant="underline" />
           </div>
-          <span className="text-sm text-text-subtle pb-2">→</span>
+          <span className="text-body text-text-subtle pb-2">→</span>
           <div>
             <label className={labelClass}>To</label>
             <TimePicker value={endTime} onChange={setEndTime} variant="underline" />

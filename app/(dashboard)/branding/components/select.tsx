@@ -36,7 +36,7 @@ export function Select<V extends string>({
 }: SelectProps<V>) {
   const [open, setOpen] = useState(false)
   const selected = options.find(o => o.value === value)
-  const triggerSize = size === 'xs' ? 'px-2.5 h-8 text-xs' : size === 'sm' ? 'px-2.5 py-1.5 text-sm' : 'px-3 py-2 text-sm'
+  const triggerSize = size === 'xs' ? 'px-2.5 h-8 text-caption' : size === 'sm' ? 'px-2.5 py-1.5 text-body' : 'px-3 py-2 text-body'
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -73,7 +73,7 @@ export function Select<V extends string>({
                   onChange(opt.value)
                   setOpen(false)
                 }}
-                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-control text-sm hover:bg-gray-50 cursor-pointer ${
+                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-control text-body hover:bg-gray-50 cursor-pointer ${
                   active ? 'text-text' : 'text-gray-600'
                 }`}
                 style={opt.fontFamily ? { fontFamily: opt.fontFamily } : undefined}

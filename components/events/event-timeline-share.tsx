@@ -41,7 +41,7 @@ export function EventTimelineShare({
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <p className="text-sm font-medium text-text">Share link</p>
+        <p className="text-body font-medium text-text">Share link</p>
         <button
           onClick={() => onToggle(!shareEnabled)}
           disabled={loading}
@@ -58,7 +58,7 @@ export function EventTimelineShare({
         </button>
       </div>
 
-      <p className="text-xs text-text-subtle mb-3">
+      <p className="text-caption text-text-subtle mb-3">
         {shareEnabled
           ? 'Anyone with this link can view the timeline.'
           : 'Enable to share with vendors and couples.'}
@@ -68,7 +68,7 @@ export function EventTimelineShare({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-border rounded-control hover:bg-gray-50 transition cursor-pointer"
+            className="flex items-center gap-1.5 text-body px-3 py-1.5 border border-border rounded-control hover:bg-gray-50 transition cursor-pointer"
           >
             {copied ? (
               <Check size={14} strokeWidth={1.5} className="text-emerald-500" />
@@ -80,17 +80,17 @@ export function EventTimelineShare({
 
           {regenConfirm ? (
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-text-muted">Break existing link?</span>
+              <span className="text-caption text-text-muted">Break existing link?</span>
               <button
                 onClick={handleRegen}
                 disabled={loading}
-                className="text-xs text-red-600 hover:underline cursor-pointer disabled:opacity-50"
+                className="text-caption text-red-600 hover:underline cursor-pointer disabled:opacity-50"
               >
                 Confirm
               </button>
               <button
                 onClick={() => setRegenConfirm(false)}
-                className="text-xs text-text-subtle hover:underline cursor-pointer"
+                className="text-caption text-text-subtle hover:underline cursor-pointer"
               >
                 Cancel
               </button>

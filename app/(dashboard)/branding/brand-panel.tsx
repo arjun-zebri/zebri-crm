@@ -152,7 +152,7 @@ export function BrandPanel(props: BrandPanelProps) {
       <div className="px-4 pt-4 pb-3 flex items-center justify-between sticky top-0 bg-surface z-10 border-b border-gray-50">
         <div className="min-w-0">
           <p className="text-[11px] font-medium text-text-subtle uppercase tracking-[0.08em]">Brand kit</p>
-          <p className="text-sm font-medium text-text flex items-center gap-1.5">
+          <p className="text-body font-medium text-text flex items-center gap-1.5">
             <Globe size={13} strokeWidth={1.75} className="text-text-subtle shrink-0" />
             Applies to every document
           </p>
@@ -380,7 +380,7 @@ function ColorRow({
       <div className="flex-1 min-w-0">
         <p className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">{label}</p>
         <p className="text-[11px] text-text-muted">{description}</p>
-        <p className="text-xs font-mono text-gray-700 truncate">{value}</p>
+        <p className="text-caption font-mono text-gray-700 truncate">{value}</p>
       </div>
     </div>
   )

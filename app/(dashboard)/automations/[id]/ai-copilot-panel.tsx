@@ -60,7 +60,7 @@ function Header({ onClose }: { onClose: () => void }) {
         <span className="inline-flex items-center justify-center w-7 h-7 rounded-control bg-brand/10">
           <Sparkles size={14} strokeWidth={1.5} className="text-brand" />
         </span>
-        <span className="text-sm font-semibold">Zebri AI</span>
+        <span className="text-body font-semibold">Zebri AI</span>
       </div>
       <div className="flex items-center gap-1 text-text-muted">
         <button
@@ -98,7 +98,7 @@ function Conversation() {
 
 function AssistantBubble({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-surface-muted rounded-control px-3 py-2 text-xs text-text leading-relaxed">
+    <div className="bg-surface-muted rounded-control px-3 py-2 text-caption text-text leading-relaxed">
       {children}
     </div>
   )
@@ -123,7 +123,7 @@ function Composer({
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g. When a couple accepts a quote, send a thank-you and create a contract task"
           rows={3}
-          className="flex-1 bg-transparent text-xs px-3 py-2 resize-none focus:outline-none placeholder:text-text-muted"
+          className="flex-1 bg-transparent text-caption px-3 py-2 resize-none focus:outline-none placeholder:text-text-muted"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()

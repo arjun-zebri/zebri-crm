@@ -52,8 +52,8 @@ function StatsCard({ card }: { card: Card }) {
         <Icon size={16} strokeWidth={1.5} className="text-text-muted" />
       </span>
       <div className="min-w-0">
-        <div className="text-xs text-text-muted truncate">{card.label}</div>
-        <div className="text-xl font-semibold text-text leading-tight">{card.value}</div>
+        <div className="text-caption text-text-muted truncate">{card.label}</div>
+        <div className="text-section font-semibold text-text leading-tight">{card.value}</div>
       </div>
     </div>
   )

@@ -83,7 +83,7 @@ function MentionNodeView({ node, selected, extension }: NodeViewProps) {
   if (id === SIGNATURE_PATH) {
     if (!signatureHtml) {
       return (
-        <NodeViewWrapper as="span" contentEditable={false} className="text-sm text-text-subtle">
+        <NodeViewWrapper as="span" contentEditable={false} className="text-body text-text-subtle">
           (no signature set)
         </NodeViewWrapper>
       )
@@ -92,7 +92,7 @@ function MentionNodeView({ node, selected, extension }: NodeViewProps) {
       <NodeViewWrapper
         as="div"
         contentEditable={false}
-        className={`email-preview my-1 rounded-control text-sm leading-relaxed text-text [&_a]:text-brand [&_p]:my-1 [&_img]:my-1 ${
+        className={`email-preview my-1 rounded-control text-body leading-relaxed text-text [&_a]:text-brand [&_p]:my-1 [&_img]:my-1 ${
           selected ? 'ring-2 ring-brand ring-offset-2' : ''
         }`}
         // Sanitised upstream by renderSignatureHtml before being passed in.
@@ -105,7 +105,7 @@ function MentionNodeView({ node, selected, extension }: NodeViewProps) {
     <NodeViewWrapper
       as="span"
       contentEditable={false}
-      className={`inline-block rounded-control bg-red-100 px-1.5 py-0.5 text-sm font-medium text-red-700 ${
+      className={`inline-block rounded-control bg-red-100 px-1.5 py-0.5 text-body font-medium text-red-700 ${
         selected ? 'ring-2 ring-red-400' : ''
       }`}
     >
@@ -149,8 +149,8 @@ export function RichTextEditor({
           HTMLAttributes: {
             class:
               mentionDisplay === 'label'
-                ? 'inline-block rounded-control bg-red-100 text-red-700 px-1.5 py-0.5 text-sm font-medium'
-                : 'inline-block rounded-control bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-sm font-medium',
+                ? 'inline-block rounded-control bg-red-100 text-red-700 px-1.5 py-0.5 text-body font-medium'
+                : 'inline-block rounded-control bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-body font-medium',
           },
           renderHTML({ options, node }) {
             const id = String(node.attrs.id)
@@ -231,7 +231,7 @@ export function RichTextEditor({
       )}
       <EditorContent
         editor={editor}
-        className={`contract-content text-sm text-text focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-text-subtle [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 ${
+        className={`contract-content text-body text-text focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-text-subtle [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 ${
           dense
             ? 'p-3 min-h-[200px] [&_.ProseMirror]:min-h-[170px]'
             : 'p-4 min-h-[320px] [&_.ProseMirror]:min-h-[280px]'
@@ -431,7 +431,7 @@ function ToolbarRow({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition rounded-control px-2.5 py-1 cursor-pointer"
+            className="flex items-center gap-1.5 text-caption font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition rounded-control px-2.5 py-1 cursor-pointer"
           >
             <AtSign size={13} strokeWidth={1.5} />
             Insert variable

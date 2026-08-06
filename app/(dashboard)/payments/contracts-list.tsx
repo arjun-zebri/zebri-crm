@@ -29,7 +29,7 @@ const CONTRACT_STATUS_STYLES: Record<string, string> = {
 };
 
 function pill(status: string, opts?: { wrap?: boolean }): ReactNode {
-  const className = `inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-medium capitalize${opts?.wrap === false ? ' whitespace-nowrap' : ''} ${CONTRACT_STATUS_STYLES[status] || CONTRACT_STATUS_STYLES.draft}`;
+  const className = `inline-flex items-center px-2 py-0.5 rounded-pill text-caption font-medium capitalize${opts?.wrap === false ? ' whitespace-nowrap' : ''} ${CONTRACT_STATUS_STYLES[status] || CONTRACT_STATUS_STYLES.draft}`;
   return <span className={className}>{status}</span>;
 }
 
@@ -68,7 +68,7 @@ export function ContractsList({ loading, contracts, searching, onOpen }: Contrac
         coupleName: contract.couple.name,
         statusPill: pill(contract.status),
         valueCell: (
-          <span className="text-sm text-text-muted group-hover:text-text">
+          <span className="text-body text-text-muted group-hover:text-text">
             {contract.signed_at
               ? new Date(contract.signed_at).toLocaleDateString('en-AU', {
                   day: 'numeric',
@@ -78,7 +78,7 @@ export function ContractsList({ loading, contracts, searching, onOpen }: Contrac
           </span>
         ),
         lastCell: (
-          <span className="text-sm text-text-muted group-hover:text-text">
+          <span className="text-body text-text-muted group-hover:text-text">
             {new Date(contract.created_at).toLocaleDateString('en-AU', {
               day: 'numeric',
               month: 'short',

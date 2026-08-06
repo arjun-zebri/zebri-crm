@@ -173,13 +173,13 @@ export function CommandPalette({
           placeholder={placeholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-text-subtle"
+          className="flex-1 bg-transparent text-body focus:outline-none placeholder:text-text-subtle"
           aria-label={title}
         />
       </div>
       <div className="overflow-y-auto py-1" style={{ maxHeight: POPOVER_MAX_HEIGHT - 50 }}>
         {flat.length === 0 ? (
-          <div className="px-3 py-6 text-xs text-text-muted text-center">No matches</div>
+          <div className="px-3 py-6 text-caption text-text-muted text-center">No matches</div>
         ) : (
           groupOrder.map((group) => {
             const inGroup = filtered.filter((i) => i.group === group.slug)
@@ -212,9 +212,9 @@ export function CommandPalette({
                         />
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm truncate">{item.label}</div>
+                        <div className="text-body truncate">{item.label}</div>
                         {item.description && (
-                          <div className="text-xs text-text-muted truncate">{item.description}</div>
+                          <div className="text-caption text-text-muted truncate">{item.description}</div>
                         )}
                       </div>
                     </button>

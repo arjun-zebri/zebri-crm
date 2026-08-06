@@ -48,7 +48,7 @@ export function UserProfileSection({
 
   return (
     <section>
-      <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted mb-3">
+      <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted mb-3">
         Profile
       </h3>
       <div className="space-y-3">

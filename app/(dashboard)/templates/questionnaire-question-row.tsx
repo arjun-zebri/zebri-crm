@@ -108,7 +108,7 @@ export function QuestionnaireQuestionRow({ question, issue = null, onChange, onD
             <Checkbox checked={question.required} onChange={(v) => onChange({ required: v })} label="Required" />
           )}
 
-          {issue && <p className="text-xs text-red-600">{issue}</p>}
+          {issue && <p className="text-caption text-red-600">{issue}</p>}
         </div>
 
         <div className="mt-2 flex flex-col gap-2">

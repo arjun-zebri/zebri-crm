@@ -65,9 +65,9 @@ function nextSaturday(from: Date = new Date()): string {
 // state). The event modal opens alongside the couple modal so the
 // two should look like one product, not two visually distinct forms.
 const inputClass =
-  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition'
+  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition'
 
-const labelClass = 'block text-sm text-gray-600 mb-1'
+const labelClass = 'block text-body text-gray-600 mb-1'
 
 export function EventModal({
   isOpen,
@@ -270,7 +270,7 @@ export function EventModal({
               <button
                 onClick={() => setShowDeleteModal(true)}
                 disabled={loading}
-                className="text-sm px-4 py-2 rounded-control bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+                className="text-body px-4 py-2 rounded-control bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
               >
                 Delete
               </button>
@@ -279,14 +279,14 @@ export function EventModal({
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="text-xs px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+                className="text-caption px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={loading || !date.trim()}
-                className="text-xs px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="text-caption px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? 'Saving...' : 'Save'}
               </button>
@@ -326,7 +326,7 @@ export function EventModal({
                 defaultViewDate={defaultDate ?? nextSaturday()}
               />
               {dateError && (
-                <p className="text-xs text-red-500 mt-1">{dateError}</p>
+                <p className="text-caption text-red-500 mt-1">{dateError}</p>
               )}
             </div>
 
@@ -356,7 +356,7 @@ export function EventModal({
                           setStatus(s)
                           setStatusOpen(false)
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm transition ${
+                        className={`w-full text-left px-3 py-2 text-body transition ${
                           status === s
                             ? 'bg-surface-emphasis text-text font-medium'
                             : 'text-gray-700 hover:bg-gray-50'
@@ -393,9 +393,9 @@ export function EventModal({
                       onMouseDown={() => handleVenueSelect(s)}
                       className="w-full text-left px-3 py-2 hover:bg-gray-50 transition"
                     >
-                      <p className="text-sm font-medium text-text">{s.mainText}</p>
+                      <p className="text-body font-medium text-text">{s.mainText}</p>
                       {s.secondaryText && (
-                        <p className="text-xs text-text-muted">{s.secondaryText}</p>
+                        <p className="text-caption text-text-muted">{s.secondaryText}</p>
                       )}
                     </button>
                   ))}
@@ -407,7 +407,7 @@ export function EventModal({
                 {venuePhone && (
                   <div className="flex items-center gap-2">
                     <Phone size={11} strokeWidth={1.5} className="text-text-subtle shrink-0" />
-                    <span className="text-xs text-gray-600">{venuePhone}</span>
+                    <span className="text-caption text-gray-600">{venuePhone}</span>
                   </div>
                 )}
                 {venueWebsite && (
@@ -417,7 +417,7 @@ export function EventModal({
                       href={venueWebsite}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gray-600 hover:text-text underline truncate"
+                      className="text-caption text-gray-600 hover:text-text underline truncate"
                     >
                       {venueWebsite.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                     </a>
@@ -443,7 +443,7 @@ export function EventModal({
                 type="button"
                 className="group flex items-center gap-1.5 mb-2 cursor-pointer"
               >
-                <span className="text-sm text-gray-600 group-hover:text-text transition">
+                <span className="text-body text-gray-600 group-hover:text-text transition">
                   Vendor Contacts
                 </span>
                 <Plus
@@ -454,16 +454,16 @@ export function EventModal({
               </button>
             </ContactPopover>
             {selectedVendors.length === 0 ? (
-              <p className="text-sm text-text-subtle">No contacts added</p>
+              <p className="text-body text-text-subtle">No contacts added</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {selectedVendors.map((v) => (
                   <span
                     key={v.id}
-                    className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-surface-emphasis rounded-control text-sm text-gray-700"
+                    className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-surface-emphasis rounded-control text-body text-gray-700"
                   >
                     <span className="truncate max-w-[12rem]">{v.name}</span>
-                    <span className="text-xs text-text-subtle">
+                    <span className="text-caption text-text-subtle">
                       {CATEGORY_LABELS[v.category as keyof typeof CATEGORY_LABELS] || v.category}
                     </span>
                     <button
@@ -502,21 +502,21 @@ export function EventModal({
             <div className="bg-surface rounded-control shadow-xl max-w-sm w-full mx-4">
               <div className="px-6 py-6">
                 <h3 className="text-lg font-semibold text-text mb-2">Delete Event</h3>
-                <p className="text-sm text-gray-600 mb-6">
+                <p className="text-body text-gray-600 mb-6">
                   Are you sure you want to delete this event? This action cannot be undone.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDeleteModal(false)}
                     disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm border border-border rounded-control hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                    className="flex-1 px-4 py-2 text-body border border-border rounded-control hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleConfirmDelete}
                     disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-control hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
+                    className="flex-1 px-4 py-2 text-body bg-red-600 text-white rounded-control hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
                   >
                     {loading ? 'Deleting...' : 'Delete'}
                   </button>

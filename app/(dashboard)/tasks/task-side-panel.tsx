@@ -224,7 +224,7 @@ function TaskSidePanelInner({
               <button
                 type="button"
                 onClick={() => setDeleteConfirm(true)}
-                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-control text-red-600 hover:bg-red-50 transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-body px-3 py-1.5 rounded-control text-red-600 hover:bg-red-50 transition cursor-pointer"
               >
                 <Trash2 size={14} strokeWidth={1.5} />
                 Delete task
@@ -251,7 +251,7 @@ function TaskSidePanelInner({
                 ;(e.target as HTMLTextAreaElement).blur()
               }
             }}
-            className="w-full text-xl sm:text-3xl font-semibold text-text placeholder:text-gray-300 outline-none bg-transparent mb-6 px-1 resize-none overflow-hidden leading-tight"
+            className="w-full text-section sm:text-display font-semibold text-text placeholder:text-gray-300 outline-none bg-transparent mb-6 px-1 resize-none overflow-hidden leading-tight"
             placeholder="Untitled"
             autoFocus={!task.title}
           />
@@ -304,14 +304,14 @@ function TaskSidePanelInner({
                       className="w-full text-left px-2 py-1 -mx-2 rounded-control hover:bg-gray-50 transition cursor-pointer"
                     >
                       {selectedGroup ? (
-                        <span className="inline-flex items-center gap-1.5 text-sm text-text">
+                        <span className="inline-flex items-center gap-1.5 text-body text-text">
                           <span
                             className={`w-2 h-2 rounded-pill shrink-0 ${TASK_GROUP_DOT_CLASS[selectedGroup.color]}`}
                           />
                           {selectedGroup.name}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-300">Empty</span>
+                        <span className="text-caption text-gray-300">Empty</span>
                       )}
                     </button>
                   </Popover.Trigger>
@@ -328,7 +328,7 @@ function TaskSidePanelInner({
                           setGroupOpen(false)
                           patch({ group_id: null })
                         }}
-                        className={`w-full text-left px-3 py-1.5 text-xs transition ${
+                        className={`w-full text-left px-3 py-1.5 text-caption transition ${
                           !groupId ? 'bg-gray-50 text-text' : 'text-text-muted hover:bg-gray-50'
                         }`}
                       >
@@ -343,7 +343,7 @@ function TaskSidePanelInner({
                             setGroupOpen(false)
                             patch({ group_id: g.id })
                           }}
-                          className={`w-full text-left px-3 py-1.5 text-xs transition flex items-center gap-2 ${
+                          className={`w-full text-left px-3 py-1.5 text-caption transition flex items-center gap-2 ${
                             groupId === g.id
                               ? 'bg-gray-50 text-text'
                               : 'text-gray-700 hover:bg-gray-50'
@@ -368,11 +368,11 @@ function TaskSidePanelInner({
                       className="w-full text-left px-2 py-1 -mx-2 rounded-control hover:bg-gray-50 transition cursor-pointer"
                     >
                       {selectedCouple ? (
-                        <span className="inline-flex items-center text-sm text-text">
+                        <span className="inline-flex items-center text-body text-text">
                           {selectedCouple.name}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-300">Empty</span>
+                        <span className="text-caption text-gray-300">Empty</span>
                       )}
                     </button>
                   </Popover.Trigger>
@@ -389,7 +389,7 @@ function TaskSidePanelInner({
                           setCoupleOpen(false)
                           patch({ related_couple_id: null })
                         }}
-                        className={`w-full text-left px-3 py-1.5 text-xs transition ${
+                        className={`w-full text-left px-3 py-1.5 text-caption transition ${
                           !coupleId ? 'bg-gray-50 text-text' : 'text-text-muted hover:bg-gray-50'
                         }`}
                       >
@@ -404,7 +404,7 @@ function TaskSidePanelInner({
                             setCoupleOpen(false)
                             patch({ related_couple_id: c.id })
                           }}
-                          className={`w-full text-left px-3 py-1.5 text-xs truncate transition ${
+                          className={`w-full text-left px-3 py-1.5 text-caption truncate transition ${
                             coupleId === c.id
                               ? 'bg-gray-50 text-text'
                               : 'text-gray-700 hover:bg-gray-50'
@@ -430,7 +430,7 @@ function TaskSidePanelInner({
                 const prev = task.description ?? null
                 if (next !== prev) patch({ description: next })
               }}
-              className="w-full text-sm text-gray-800 placeholder:text-text-subtle outline-none bg-transparent resize-none px-1"
+              className="w-full text-body text-gray-800 placeholder:text-text-subtle outline-none bg-transparent resize-none px-1"
               placeholder="Add a note, link, or details..."
               rows={8}
             />
@@ -455,7 +455,7 @@ function TaskSidePanelInner({
 function PropertyRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 py-1">
-      <div className="w-32 shrink-0 text-sm text-text-subtle pt-1">{label}</div>
+      <div className="w-32 shrink-0 text-body text-text-subtle pt-1">{label}</div>
       <div className="flex-1 min-w-0">{children}</div>
     </div>
   )

@@ -86,7 +86,7 @@ export function SignatureToolbar({ editor }: { editor: Editor }) {
         swatches={TEXT_COLOURS}
         trigger={
           <button type="button" title="Text colour" className="flex items-center gap-1 px-2 py-1.5 rounded-control text-gray-700 hover:bg-surface-emphasis transition cursor-pointer">
-            <span className="text-sm font-semibold leading-none">A</span>
+            <span className="text-body font-semibold leading-none">A</span>
             <span className="w-4 h-1.5 rounded-control" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000000' }} />
           </button>
         }
@@ -102,7 +102,7 @@ export function SignatureToolbar({ editor }: { editor: Editor }) {
           </button>
         }
       />
-      <IconToggle onClick={() => editor.chain().focus().unsetHighlight().run()} title="Remove highlight"><span className="text-xs font-medium line-through">H</span></IconToggle>
+      <IconToggle onClick={() => editor.chain().focus().unsetHighlight().run()} title="Remove highlight"><span className="text-caption font-medium line-through">H</span></IconToggle>
       <Divider />
       <LinkControl editor={editor} />
       <ImageControl editor={editor} />
@@ -152,7 +152,7 @@ function ToolbarPopover({ title, trigger, children }: {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button type="button" title={title} className="flex items-center gap-1.5 px-2 py-1.5 rounded-control text-sm text-gray-700 hover:bg-surface-emphasis transition cursor-pointer">
+        <button type="button" title={title} className="flex items-center gap-1.5 px-2 py-1.5 rounded-control text-body text-gray-700 hover:bg-surface-emphasis transition cursor-pointer">
           {trigger}
           <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
         </button>
@@ -193,7 +193,7 @@ function MenuSelect({ title, options, current, fallback, onPick, onClear, leadin
                 type="button"
                 onClick={() => { onPick(o.value); close() }}
                 style={previewFont ? { fontFamily: o.value } : undefined}
-                className={`w-full flex items-center gap-2 text-left px-3 py-2 text-sm transition cursor-pointer ${current === o.value ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                className={`w-full flex items-center gap-2 text-left px-3 py-2 text-body transition cursor-pointer ${current === o.value ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
               >
                 {Icon ? <Icon size={14} strokeWidth={1.5} /> : null}
                 {o.label}
@@ -201,7 +201,7 @@ function MenuSelect({ title, options, current, fallback, onPick, onClear, leadin
             )
           })}
           {onClear && (
-            <button type="button" onClick={() => { onClear(); close() }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer">Default</button>
+            <button type="button" onClick={() => { onClear(); close() }} className="w-full text-left px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition cursor-pointer">Default</button>
           )}
         </>
       )}
@@ -251,12 +251,12 @@ function LinkControl({ editor }: { editor: Editor }) {
             onKeyDown={(e) => e.key === 'Enter' && apply()}
             placeholder="https://example.com"
             autoFocus
-            className="w-full border border-border rounded-control px-2 py-1 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+            className="w-full border border-border rounded-control px-2 py-1 text-body text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
           />
           <div className="flex gap-2 mt-3">
-            <button type="button" onClick={apply} className="flex-1 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-control hover:bg-gray-800 transition cursor-pointer">Apply</button>
+            <button type="button" onClick={apply} className="flex-1 px-3 py-1.5 bg-gray-900 text-white text-body rounded-control hover:bg-gray-800 transition cursor-pointer">Apply</button>
             {isActive && (
-              <button type="button" onClick={() => { editor.chain().focus().unsetLink().run(); setOpen(false) }} className="flex-1 px-3 py-1.5 bg-red-50 text-red-700 text-sm rounded-control hover:bg-red-100 transition cursor-pointer">Remove</button>
+              <button type="button" onClick={() => { editor.chain().focus().unsetLink().run(); setOpen(false) }} className="flex-1 px-3 py-1.5 bg-red-50 text-red-700 text-body rounded-control hover:bg-red-100 transition cursor-pointer">Remove</button>
             )}
           </div>
         </Popover.Content>

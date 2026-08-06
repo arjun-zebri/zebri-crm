@@ -93,7 +93,7 @@ function ViewDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
       >
         <span className="capitalize">{view}</span>
         <ChevronDown size={11} strokeWidth={1.5} />
@@ -107,7 +107,7 @@ function ViewDropdown({
                 onChange(v);
                 setOpen(false);
               }}
-              className={`w-full text-left px-2.5 py-1.5 text-xs capitalize transition cursor-pointer ${
+              className={`w-full text-left px-2.5 py-1.5 text-caption capitalize transition cursor-pointer ${
                 view === v
                   ? "bg-surface-muted text-text font-medium"
                   : "text-text hover:bg-surface-muted"
@@ -150,7 +150,7 @@ function StatusDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
       >
         <span>{label}</span>
         <ChevronDown size={11} strokeWidth={1.5} />
@@ -164,7 +164,7 @@ function StatusDropdown({
               <button
                 key={status.slug}
                 onClick={() => onToggle(status.slug)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-text hover:bg-surface-muted transition cursor-pointer"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-caption text-text hover:bg-surface-muted transition cursor-pointer"
               >
                 <div
                   className={`w-3.5 h-3.5 rounded-control border flex-shrink-0 flex items-center justify-center ${
@@ -409,7 +409,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
             >
               <ChevronLeft size={14} strokeWidth={1.5} />
             </button>
-            <span className="text-sm font-medium text-text">
+            <span className="text-body font-medium text-text">
               {MONTHS_SHORT[miniNavDate.getMonth()]} {miniNavDate.getFullYear()}
             </span>
             <button
@@ -431,7 +431,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
           {/* Mini weekday headers */}
           <div className="grid grid-cols-7 gap-x-[9px] pb-2">
             {WEEKDAYS_SHORT.map((day, i) => (
-              <div key={i} className="text-center text-xs text-text-subtle py-1">
+              <div key={i} className="text-center text-caption text-text-subtle py-1">
                 {day}
               </div>
             ))}
@@ -459,7 +459,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                     // No-op on desktop where the sidebar is always mounted.
                     setSidebarOpen(false);
                   }}
-                  className={`h-7 w-7 mx-auto flex flex-col items-center justify-center text-xs rounded-control transition cursor-pointer relative ${
+                  className={`h-7 w-7 mx-auto flex flex-col items-center justify-center text-caption rounded-control transition cursor-pointer relative ${
                     isSelectedDay
                       ? "bg-brand-fg text-text-inverse hover:opacity-90"
                       : isMiniMonth
@@ -482,7 +482,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
 
         {/* Status filters - mobile only */}
         <div className="md:hidden border-t border-border pt-4">
-          <h3 className="text-xs font-medium text-text-muted mb-2">Filter by status</h3>
+          <h3 className="text-caption font-medium text-text-muted mb-2">Filter by status</h3>
           <div className="flex flex-col">
             {statuses.map((status) => {
               const checked = activeStatuses === null || activeStatuses.has(status.slug);
@@ -490,7 +490,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                 <button
                   key={status.slug}
                   onClick={() => toggleStatus(status.slug)}
-                  className="w-full flex items-center gap-2 py-1.5 rounded-control text-xs text-text hover:bg-surface-muted transition cursor-pointer text-left"
+                  className="w-full flex items-center gap-2 py-1.5 rounded-control text-caption text-text hover:bg-surface-muted transition cursor-pointer text-left"
                 >
                   <div
                     className={`w-3.5 h-3.5 rounded-control border flex-shrink-0 flex items-center justify-center ${
@@ -508,13 +508,13 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
 
         {/* Day Events Timeline */}
         <div className="flex-1 min-h-0 flex flex-col border-t border-border pt-4">
-          <h3 className="text-xs font-medium text-text-muted mb-2">
+          <h3 className="text-caption font-medium text-text-muted mb-2">
             Events · {WEEKDAYS[currentDate.getDay()]} {currentDate.getDate()}{" "}
             {MONTHS_SHORT[currentDate.getMonth()]}
           </h3>
           <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
             {(eventsByDate[formatDateKey(currentDate)] || []).length === 0 ? (
-              <div className="text-xs text-text-subtle py-4">No events</div>
+              <div className="text-caption text-text-subtle py-4">No events</div>
             ) : (
               (eventsByDate[formatDateKey(currentDate)] || []).map((event) => {
                 return (
@@ -525,11 +525,11 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                     }
                     className="text-left w-full px-2.5 py-2 rounded-control bg-surface border border-border transition hover:shadow-sm cursor-pointer"
                   >
-                    <div className="text-xs font-semibold truncate text-text">
+                    <div className="text-caption font-semibold truncate text-text">
                       {formatEventLabel(event)}
                     </div>
                     {event.venue && (
-                      <div className="text-xs text-text-muted truncate mt-0.5 flex items-center gap-1">
+                      <div className="text-caption text-text-muted truncate mt-0.5 flex items-center gap-1">
                         <MapPin size={10} strokeWidth={1.5} />
                         {event.venue}
                       </div>
@@ -559,7 +559,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                 setCurrentDate(new Date());
                 setMiniNavDate(new Date());
               }}
-              className="inline-flex items-center border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
             >
               Today
             </button>
@@ -572,7 +572,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
             </button>
             <h2
               data-testid="calendar-header"
-              className="text-sm font-semibold text-text min-w-0 sm:min-w-32 md:min-w-44 text-center select-none truncate max-w-[180px] sm:max-w-none"
+              className="text-body font-semibold text-text min-w-0 sm:min-w-32 md:min-w-44 text-center select-none truncate max-w-[180px] sm:max-w-none"
             >
               {getHeaderLabel()}
             </h2>
@@ -711,7 +711,7 @@ function EventPill({
         e.stopPropagation();
         if (event.couple) onSelectCouple(event.couple.id);
       }}
-      className="text-left w-full px-2.5 py-1.5 rounded-control text-xs font-medium truncate bg-surface border border-border transition hover:shadow-sm cursor-pointer"
+      className="text-left w-full px-2.5 py-1.5 rounded-control text-caption font-medium truncate bg-surface border border-border transition hover:shadow-sm cursor-pointer"
     >
       {formatEventLabel(event)}
     </button>
@@ -729,7 +729,7 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
           {WEEKDAYS.map((day) => (
             <div
               key={day}
-              className="text-center text-xs font-medium text-text-muted py-2"
+              className="text-center text-caption font-medium text-text-muted py-2"
             >
               {day}
             </div>
@@ -746,7 +746,7 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
                 }`}
               >
                 <div
-                  className={`text-xs font-medium mb-0.5 ${
+                  className={`text-caption font-medium mb-0.5 ${
                     isCurrent ? "text-text" : "text-text-subtle"
                   }`}
                 >
@@ -772,10 +772,10 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
             className="flex flex-col border-r border-border last:border-r-0 min-h-0"
           >
             <div className="px-2 py-3 text-center border-b border-border flex-shrink-0">
-              <div className="text-xs text-text-muted font-medium">
+              <div className="text-caption text-text-muted font-medium">
                 {WEEKDAYS[date.getDay()]}
               </div>
-              <div className="text-sm font-semibold mt-0.5 text-text">
+              <div className="text-body font-semibold mt-0.5 text-text">
                 {date.getDate()}
               </div>
             </div>
@@ -845,7 +845,7 @@ function MonthView({
           <div
             key={day}
             data-testid={`weekday-${day}`}
-            className="text-center text-xs font-medium text-text-muted py-3"
+            className="text-center text-caption font-medium text-text-muted py-3"
           >
             <span className="hidden md:inline">{day}</span>
             <span className="md:hidden">{WEEKDAYS_SHORT[i]}</span>
@@ -871,7 +871,7 @@ function MonthView({
               }`}
             >
               <div
-                className={`text-xs font-medium mb-0.5 ${
+                className={`text-caption font-medium mb-0.5 ${
                   isCurrent ? "text-text" : "text-text-subtle"
                 }`}
               >
@@ -912,7 +912,7 @@ function MonthView({
                   />
                 ))}
                 {dayEvents.length > 3 && (
-                  <div className="text-xs text-text-subtle px-1">
+                  <div className="text-caption text-text-subtle px-1">
                     +{dayEvents.length - 3} more
                   </div>
                 )}
@@ -954,14 +954,14 @@ function WeekView({
           >
             {/* Day header */}
             <div className="px-3 h-14 flex flex-col items-center justify-center text-center border-b border-border flex-shrink-0">
-              <div className="text-xs text-text-muted font-medium">
+              <div className="text-caption text-text-muted font-medium">
                 {WEEKDAYS[date.getDay()]}
               </div>
-              <div className="text-sm font-semibold mt-0.5 text-text">
+              <div className="text-body font-semibold mt-0.5 text-text">
                 <span
                   className={
                     isCurrentDay
-                      ? "bg-brand-fg text-text-inverse rounded-control w-6 h-6 inline-flex items-center justify-center text-xs"
+                      ? "bg-brand-fg text-text-inverse rounded-control w-6 h-6 inline-flex items-center justify-center text-caption"
                       : ""
                   }
                 >
@@ -989,11 +989,11 @@ function WeekView({
                       }
                       className="text-left w-full px-2.5 py-2 rounded-control bg-surface border border-border transition hover:shadow-md cursor-pointer"
                     >
-                      <div className="text-xs font-semibold text-text break-words">
+                      <div className="text-caption font-semibold text-text break-words">
                         {formatEventLabel(event)}
                       </div>
                       {event.venue && (
-                        <div className="text-xs text-text-muted truncate mt-0.5 flex items-center gap-1">
+                        <div className="text-caption text-text-muted truncate mt-0.5 flex items-center gap-1">
                           <MapPin size={10} strokeWidth={1.5} />
                           {event.venue}
                         </div>
@@ -1046,7 +1046,7 @@ function DayView({
   return (
     <div className="flex flex-col h-full">
       {dayEvents.length === 0 ? (
-        <p className="text-sm text-text-subtle py-8">No events on this day.</p>
+        <p className="text-body text-text-subtle py-8">No events on this day.</p>
       ) : (
         <div className="flex flex-col gap-3 py-4">
           {dayEvents.map((event) => {
@@ -1078,7 +1078,7 @@ function DayView({
                         {formatEventLabel(event)}
                       </h4>
                       {event.venue && (
-                        <div className="flex items-center gap-1.5 mt-1.5 text-sm text-text-muted">
+                        <div className="flex items-center gap-1.5 mt-1.5 text-body text-text-muted">
                           <MapPin
                             size={14}
                             strokeWidth={1.5}
@@ -1089,7 +1089,7 @@ function DayView({
                       )}
                     </div>
                     <span
-                      className={`text-xs font-medium px-2.5 py-1 rounded-pill flex-shrink-0 capitalize border border-border ${classes.pill}`}
+                      className={`text-caption font-medium px-2.5 py-1 rounded-pill flex-shrink-0 capitalize border border-border ${classes.pill}`}
                     >
                       {statusName}
                     </span>
@@ -1097,14 +1097,14 @@ function DayView({
 
                   {/* Timeline notes */}
                   {event.timeline_notes && (
-                    <p className="text-sm text-text-muted mt-3 whitespace-pre-line leading-relaxed">
+                    <p className="text-body text-text-muted mt-3 whitespace-pre-line leading-relaxed">
                       {event.timeline_notes}
                     </p>
                   )}
 
                   {/* Footer: counts - only shown when non-zero */}
                   {(vendorCount > 0 || taskCount > 0) && (
-                    <div className="flex items-center gap-5 mt-4 pt-4 border-t border-border text-xs">
+                    <div className="flex items-center gap-5 mt-4 pt-4 border-t border-border text-caption">
                       {vendorCount > 0 && (
                         <span className="flex items-center gap-1.5 text-text-muted">
                           <Users size={14} strokeWidth={1.5} />

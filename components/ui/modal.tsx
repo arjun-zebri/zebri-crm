@@ -125,7 +125,7 @@ export function Modal({
               <X size={18} strokeWidth={1.5} />
             </button>
           ) : (
-            /* Header — height ≈ 4rem (py-4 + text-xl content). The
+            /* Header — height ≈ 4rem (py-4 + text-section content). The
                `flushBottom` body below subtracts that from 85vh to
                cap its scroll height. If you change the header
                padding or content size, update the calc() in the
@@ -136,7 +136,7 @@ export function Modal({
               {title && (
                 // A real heading: screen readers announce the dialog name
                 // and e2e selectors can target `h2:has-text(...)`.
-                <h2 className="flex items-center gap-2 text-xl font-semibold text-text">
+                <h2 className="flex items-center gap-2 text-section font-semibold text-text">
                   {title}
                 </h2>
               )}

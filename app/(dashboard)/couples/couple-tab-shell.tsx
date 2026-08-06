@@ -81,7 +81,7 @@ export function CoupleTabShell({ title, stats, actions, children }: CoupleTabShe
               <h2 className="truncate text-lg font-semibold text-text">{title}</h2>
             ) : null}
             {stats && stats.length > 0 ? (
-              <p className="mt-0.5 truncate text-sm text-text-muted">
+              <p className="mt-0.5 truncate text-body text-text-muted">
                 {stats.map((s, i) => (
                   <Fragment key={i}>
                     {i > 0 ? <span className="text-text-subtle"> · </span> : null}

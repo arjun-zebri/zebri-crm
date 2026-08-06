@@ -30,10 +30,10 @@ export default function RoadmapPage() {
             priority
           />
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold text-text">
+            <h1 className="text-display font-semibold text-text">
               What should we build next?
             </h1>
-            <p className="text-sm text-text-muted">
+            <p className="text-body text-text-muted">
               Zebri&apos;s roadmap is decided by the people who use it.
               One vote per MC. Pick the feature you want most.
             </p>

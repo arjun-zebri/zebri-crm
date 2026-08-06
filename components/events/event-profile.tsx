@@ -36,9 +36,9 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
         <div className="flex-shrink-0 px-8 pt-6 pb-5">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-semibold text-text mb-1">{event.couple?.name}</h1>
+              <h1 className="text-section font-semibold text-text mb-1">{event.couple?.name}</h1>
               {event.date && (
-                <p className="text-sm text-text-muted">{new Date(event.date).toLocaleDateString()}</p>
+                <p className="text-body text-text-muted">{new Date(event.date).toLocaleDateString()}</p>
               )}
             </div>
             <button
@@ -60,7 +60,7 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(event)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-border rounded-control hover:bg-gray-50 transition cursor-pointer ml-auto"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-body text-gray-700 border border-border rounded-control hover:bg-gray-50 transition cursor-pointer ml-auto"
             >
               <Pencil size={14} strokeWidth={1.5} />
               Edit
@@ -73,7 +73,7 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
           <div className="flex gap-6">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+              className={`py-3 text-body font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'overview'
                   ? 'border-gray-900 text-text'
                   : 'border-transparent text-text-subtle hover:text-gray-600'
@@ -83,7 +83,7 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
             </button>
             <button
               onClick={() => setActiveTab('vendors')}
-              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+              className={`py-3 text-body font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'vendors'
                   ? 'border-gray-900 text-text'
                   : 'border-transparent text-text-subtle hover:text-gray-600'
@@ -93,7 +93,7 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
             </button>
             <button
               onClick={() => setActiveTab('tasks')}
-              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+              className={`py-3 text-body font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'tasks'
                   ? 'border-gray-900 text-text'
                   : 'border-transparent text-text-subtle hover:text-gray-600'
@@ -103,7 +103,7 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
             </button>
             <button
               onClick={() => setActiveTab('timeline')}
-              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+              className={`py-3 text-body font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'timeline'
                   ? 'border-gray-900 text-text'
                   : 'border-transparent text-text-subtle hover:text-gray-600'

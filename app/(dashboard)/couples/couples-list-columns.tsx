@@ -51,7 +51,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       header: () => <HeaderLabel textOnly="Aa" label="Name" />,
       enableSorting: false,
       cell: (info) => (
-        <span className="text-sm text-text-muted group-hover:text-text truncate block">
+        <span className="text-body text-text-muted group-hover:text-text truncate block">
           {info.getValue()}
         </span>
       ),
@@ -70,7 +70,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       cell: (info) => {
         const couple = info.row.original;
         return (
-          <span className="text-sm text-text-muted group-hover:text-text truncate block">
+          <span className="text-body text-text-muted group-hover:text-text truncate block">
             {couple.primary_email || couple.email}
           </span>
         );
@@ -88,7 +88,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       cell: (info) => {
         const couple = info.row.original;
         return (
-          <span className="text-sm text-text-muted group-hover:text-text">
+          <span className="text-body text-text-muted group-hover:text-text">
             {couple.primary_phone || couple.phone}
           </span>
         );
@@ -104,7 +104,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       meta: { hidden: 'hidden sm:table-cell' },
       cell: (info) => (
-        <span className="text-sm text-text-muted group-hover:text-text">
+        <span className="text-body text-text-muted group-hover:text-text">
           {formatDate(info.getValue() ?? null)}
         </span>
       ),
@@ -119,7 +119,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       meta: { hidden: 'hidden lg:table-cell' },
       cell: (info) => (
-        <span className="text-sm text-text-muted group-hover:text-text truncate block">
+        <span className="text-body text-text-muted group-hover:text-text truncate block">
           {info.getValue()}
         </span>
       ),
@@ -143,7 +143,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
           statusSlug.charAt(0).toUpperCase() + statusSlug.slice(1);
         return (
           <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-pill text-xs font-medium ${classes.pill}`}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-pill text-caption font-medium ${classes.pill}`}
           >
             {statusName}
           </span>

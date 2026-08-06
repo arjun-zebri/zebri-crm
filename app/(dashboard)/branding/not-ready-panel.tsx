@@ -40,7 +40,7 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
         className="flex items-center gap-1.5 rounded-pill border border-amber-200 bg-amber-50 px-3 py-1 shadow-sm cursor-pointer"
       >
         <AlertTriangle size={13} strokeWidth={1.5} className="shrink-0 text-amber-500" />
-        <span className="text-xs font-semibold text-amber-900">Not ready to send</span>
+        <span className="text-caption font-semibold text-amber-900">Not ready to send</span>
         <ChevronDown
           size={13}
           strokeWidth={1.5}
@@ -53,7 +53,7 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
       >
         <ul className="list-disc space-y-0.5 pl-4 marker:text-amber-500">
           {readiness.issues.map((issue, idx) => (
-            <li key={idx} className="text-xs leading-snug text-amber-800">
+            <li key={idx} className="text-caption leading-snug text-amber-800">
               {issue.message}
             </li>
           ))}

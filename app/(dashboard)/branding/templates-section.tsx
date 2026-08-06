@@ -32,7 +32,7 @@ export function ResetLayoutButton({ onReset }: ResetLayoutButtonProps) {
     <button
       type="button"
       onClick={handleResetClick}
-      className={`w-full inline-flex items-center justify-center gap-1.5 h-8 rounded-control text-sm font-medium transition cursor-pointer ${
+      className={`w-full inline-flex items-center justify-center gap-1.5 h-8 rounded-control text-body font-medium transition cursor-pointer ${
         armedReset
           ? 'bg-red-50 hover:bg-red-100 text-red-700'
           : 'bg-surface-muted hover:bg-surface text-text border border-border'

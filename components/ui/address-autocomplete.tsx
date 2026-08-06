@@ -124,7 +124,7 @@ export function AddressAutocomplete({
               <button
                 type="button"
                 onMouseDown={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 text-sm text-text hover:bg-surface-muted cursor-pointer"
+                className="w-full text-left px-3 py-2 text-body text-text hover:bg-surface-muted cursor-pointer"
               >
                 {s.text}
               </button>

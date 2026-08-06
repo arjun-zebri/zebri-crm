@@ -70,14 +70,14 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
           <button
             onClick={handleClose}
             disabled={isCreating}
-            className="text-sm px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+            className="text-body px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={isCreating || !name.trim()}
-            className="text-sm px-4 py-2 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+            className="text-body px-4 py-2 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
           >
             {isCreating ? 'Creating...' : 'Create'}
           </button>
@@ -86,7 +86,7 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
     >
       <form onSubmit={handleCreate} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-body font-medium text-gray-700 mb-2">
             Status name <span className="text-red-500">*</span>
           </label>
           <input
@@ -94,18 +94,18 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Inquiry, Interested, Engaged"
-            className="w-full text-sm border border-border rounded-control px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
+            className="w-full text-body border border-border rounded-control px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
             autoFocus
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+          <label className="block text-body font-medium text-gray-700 mb-2">Color</label>
           <Popover.Root open={colorOpen} onOpenChange={setColorOpen}>
             <Popover.Trigger asChild>
               <button
                 type="button"
-                className="w-full flex items-center gap-3 px-3 py-2 border border-border rounded-control hover:bg-gray-50 transition text-sm cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2 border border-border rounded-control hover:bg-gray-50 transition text-body cursor-pointer"
               >
                 <div className={`w-5 h-5 rounded-pill ${getStatusClasses(color).dot}`} />
                 <span className="text-text capitalize">{color}</span>

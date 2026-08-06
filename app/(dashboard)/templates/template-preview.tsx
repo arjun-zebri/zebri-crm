@@ -90,8 +90,8 @@ export function TemplatePreview({ subject, content, ctx, mode = 'preview', overr
 
   const subjectRow = (
     <div className="border-b border-border px-4 py-3">
-      <p className="text-xs text-text-subtle">Subject</p>
-      <p className="text-sm font-medium text-text">
+      <p className="text-caption text-text-subtle">Subject</p>
+      <p className="text-body font-medium text-text">
         {subjectText || <span className="text-text-subtle">No subject</span>}
       </p>
     </div>
@@ -132,7 +132,7 @@ export function TemplatePreview({ subject, content, ctx, mode = 'preview', overr
         // types — an empty <p> otherwise collapses to zero height, so
         // intentional spacing vanished from the preview. List utilities
         // restore bullet/number markers Tailwind's reset strips.
-        className="email-preview px-4 py-4 text-sm leading-relaxed text-text [&_a]:text-brand [&_p]:my-2 [&_p:empty]:min-h-[1.4em] [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+        className="email-preview px-4 py-4 text-body leading-relaxed text-text [&_a]:text-brand [&_p]:my-2 [&_p:empty]:min-h-[1.4em] [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
         // Body HTML is sanitised by renderEmailTemplate before it reaches here.
         dangerouslySetInnerHTML={{ __html: bodyHtml }}
       />

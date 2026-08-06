@@ -53,12 +53,12 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
         title="Add Couple"
         footer={
           <>
-            <span className="text-xs px-3 py-1 rounded-control border border-transparent bg-surface-muted text-text">
+            <span className="text-caption px-3 py-1 rounded-control border border-transparent bg-surface-muted text-text">
               Cancel
             </span>
             <span
               data-cursor="save"
-              className="rounded-control px-3 py-1 text-xs border border-brand-fg bg-brand-fg text-text-inverse"
+              className="rounded-control px-3 py-1 text-caption border border-brand-fg bg-brand-fg text-text-inverse"
             >
               Save
             </span>
@@ -85,7 +85,7 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
         <div>
           <p className="text-[10px] text-text-muted mb-1">Status</p>
           <div className="border-b border-border h-6 flex items-center justify-between">
-            <span className="text-xs text-text">New</span>
+            <span className="text-caption text-text">New</span>
             <ChevronDown size={12} strokeWidth={1.5} className="text-text-subtle" />
           </div>
         </div>
@@ -107,11 +107,11 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-border animate-fade-in">
             <div>
               <span className="text-base font-semibold text-text">Couples</span>
-              <span className="text-xs text-text-muted ml-2">{show(8) ? '1' : '0'} total</span>
+              <span className="text-caption text-text-muted ml-2">{show(8) ? '1' : '0'} total</span>
             </div>
             <span
               data-cursor="new-couple"
-              className="inline-flex items-center gap-1 rounded-control px-2 py-1 text-xs border border-brand-fg bg-brand-fg text-text-inverse"
+              className="inline-flex items-center gap-1 rounded-control px-2 py-1 text-caption border border-brand-fg bg-brand-fg text-text-inverse"
             >
               <Plus size={12} strokeWidth={1.5} />
               <span className="hidden sm:inline">New couple</span>
@@ -121,10 +121,10 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
 
         {show(2) && !show(4) && (
           <div className="absolute right-4 top-11 z-10 w-40 rounded-control border border-border bg-card shadow-lg py-1 animate-fade-in">
-            <p data-cursor="add-manually" className="px-3 py-1.5 text-xs text-text hover:bg-surface-muted">
+            <p data-cursor="add-manually" className="px-3 py-1.5 text-caption text-text hover:bg-surface-muted">
               Add manually
             </p>
-            <p className="px-3 py-1.5 text-xs text-text-muted hover:bg-surface-muted">
+            <p className="px-3 py-1.5 text-caption text-text-muted hover:bg-surface-muted">
               Import from CSV
             </p>
           </div>
@@ -134,7 +134,7 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
           <div className="flex-1 flex gap-2 overflow-hidden">
             <BoardColumn tone="amber" label="New">
               <div className="rounded-control border border-border bg-card p-3 space-y-2 animate-fade-in">
-                <p className="text-xs font-semibold text-text">Ellie &amp; Tom</p>
+                <p className="text-caption font-semibold text-text">Ellie &amp; Tom</p>
                 <div className="flex items-center gap-1 text-[10px] text-text-subtle">
                   <Mail size={11} strokeWidth={1.5} />
                   <span>ellie@example.com</span>
@@ -178,7 +178,7 @@ function Field({
         {label}
         {required && <span className="text-danger"> *</span>}
       </p>
-      <div className="border-b border-border h-6 flex items-center text-xs text-text">
+      <div className="border-b border-border h-6 flex items-center text-caption text-text">
         {typing ? (
           <Typewriter text={value} typing />
         ) : value ? (

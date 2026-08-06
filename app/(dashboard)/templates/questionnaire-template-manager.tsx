@@ -222,7 +222,7 @@ export function QuestionnaireTemplateManager() {
           onBack={() => setSelectedId(null)}
           list={
             visible.length === 0 ? (
-              <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+              <p className="py-8 text-center text-body text-text-subtle">No matches.</p>
             ) : (
               <div className="space-y-0.5">
                 {visible.map((t) => {
@@ -239,8 +239,8 @@ export function QuestionnaireTemplateManager() {
                     >
                       <ClipboardList size={16} strokeWidth={1.5} className="shrink-0 text-text-muted" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-text">{t.name}</span>
-                        <span className="block truncate text-xs text-text-subtle">
+                        <span className="block truncate text-body font-medium text-text">{t.name}</span>
+                        <span className="block truncate text-caption text-text-subtle">
                           {t.description || `${t.questions.length} question${t.questions.length === 1 ? '' : 's'}`}
                         </span>
                       </span>
@@ -272,7 +272,7 @@ export function QuestionnaireTemplateManager() {
               </div>
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">
-                <p className="text-sm text-text-subtle">Select a questionnaire to preview.</p>
+                <p className="text-body text-text-subtle">Select a questionnaire to preview.</p>
               </div>
             )
           }
@@ -302,7 +302,7 @@ export function QuestionnaireTemplateManager() {
       {confirmDelete && (
         <Modal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete questionnaire?">
           <div className="space-y-4">
-            <p className="text-sm text-text-muted">This can&apos;t be undone.</p>
+            <p className="text-body text-text-muted">This can&apos;t be undone.</p>
             <div className="flex justify-end gap-3">
               <Button onClick={() => setConfirmDelete(null)} variant="outline" size="sm">
                 Cancel

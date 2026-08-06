@@ -42,7 +42,7 @@ export default function EventTimelinePage() {
       {/* Back */}
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-text-muted hover:text-gray-700 transition cursor-pointer mb-6"
+        className="flex items-center gap-1.5 text-body text-text-muted hover:text-gray-700 transition cursor-pointer mb-6"
       >
         <ArrowLeft size={16} strokeWidth={1.5} />
         Back
@@ -58,7 +58,7 @@ export default function EventTimelinePage() {
         ) : event ? (
           <>
             <PageHeader title={event.couple?.name ?? "Timeline"} />
-            <p className="text-sm text-text-muted mt-1">
+            <p className="text-body text-text-muted mt-1">
               {event.date ? formatDate(event.date) : ""}
               {event.date && event.venue ? " · " : ""}
               {event.venue}

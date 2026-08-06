@@ -94,7 +94,7 @@ function ChangePasswordCard() {
 
   return (
     <section>
-      <h2 className="mb-1 text-xl font-semibold text-text">Change password</h2>
+      <h2 className="mb-1 text-section font-semibold text-text">Change password</h2>
       <p className="mb-5 text-caption text-text-muted">Update your account password.</p>
 
       {state.error && !state.fieldErrors ? (
@@ -199,7 +199,7 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-text">Email preferences</h3>
+        <h3 className="text-body font-medium text-text">Email preferences</h3>
         <AutoSaveStatus state={saveState} />
       </div>
       <div className="space-y-3">
@@ -221,7 +221,7 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
               }}
               className="h-4 w-4 rounded-control border-border accent-brand-fg"
             />
-            <span className="text-sm text-text">{label}</span>
+            <span className="text-body text-text">{label}</span>
           </label>
         ))}
       </div>
@@ -251,7 +251,7 @@ function DangerZoneCard() {
 
   return (
     <section className="border-t border-border pt-8">
-      <h3 className="mb-1 text-sm font-medium text-danger">Danger zone</h3>
+      <h3 className="mb-1 text-body font-medium text-danger">Danger zone</h3>
       <p className="mb-4 text-caption text-text-muted">
         Permanently delete your account and all associated data.
       </p>

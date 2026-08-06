@@ -238,7 +238,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     const isCurrentMonth = date.getMonth() === viewMonth
 
     const base = `w-full aspect-square flex items-center justify-center ${
-      isSmall ? 'text-caption rounded-control' : 'text-sm rounded-control'
+      isSmall ? 'text-caption rounded-control' : 'text-body rounded-control'
     } cursor-pointer transition`
     if (isSelected) return `${base} bg-black text-white`
     if (isToday) return `${base} bg-surface-emphasis text-text hover:bg-gray-200`
@@ -291,7 +291,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     : 'border-border hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
   const triggerClass = `flex items-center ${
     isMeta ? 'justify-start gap-1.5' : triggerLayout
-  } w-full ${isSmall ? 'text-caption' : 'text-sm'} focus:outline-none ${
+  } w-full ${isSmall ? 'text-caption' : 'text-body'} focus:outline-none ${
     isMeta ? 'transition-colors' : 'transition'
   } cursor-pointer ${baseChrome} ${stateChrome} ${className ?? ''}`
 
@@ -329,7 +329,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
         <button type="button" onClick={prevMonth} className="p-1 rounded-control hover:bg-surface-emphasis transition cursor-pointer">
           <ChevronLeft className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-600`} strokeWidth={1.5} />
         </button>
-        <span className={`${isSmall ? 'text-caption' : 'text-sm'} font-medium text-text`}>
+        <span className={`${isSmall ? 'text-caption' : 'text-body'} font-medium text-text`}>
           {MONTH_NAMES[viewMonth]} {viewYear}
         </span>
         <button type="button" onClick={nextMonth} className="p-1 rounded-control hover:bg-surface-emphasis transition cursor-pointer">
@@ -356,7 +356,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       {/* Clear */}
       {value && (
         <div className="mt-2 pt-2 border-t border-gray-100 text-center">
-          <button type="button" onClick={handleClear} className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer">
+          <button type="button" onClick={handleClear} className="text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer">
             Clear
           </button>
         </div>

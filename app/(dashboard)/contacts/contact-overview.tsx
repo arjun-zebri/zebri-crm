@@ -55,13 +55,13 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
     <div className="flex flex-col gap-10">
       {/* Section 1: General */}
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-text mb-4">
+        <h3 className="text-caption font-semibold uppercase tracking-wider text-text mb-4">
           General
         </h3>
 
         {/* Name */}
         <div className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2">
-          <span className="text-sm text-gray-700 w-28 shrink-0">Name</span>
+          <span className="text-body text-gray-700 w-28 shrink-0">Name</span>
           <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
             <input
               type="text"
@@ -76,7 +76,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
                 e.key === "Enter" && (e.target as HTMLInputElement).blur()
               }
               placeholder="Contact name"
-              className="flex-1 text-right bg-transparent outline-none border-none text-sm text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text"
+              className="flex-1 text-right bg-transparent outline-none border-none text-body text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text"
             />
             <Pencil
               size={11}
@@ -91,7 +91,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
 
         {/* Contact person */}
         <div className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2">
-          <span className="text-sm text-gray-700 w-28 shrink-0">
+          <span className="text-body text-gray-700 w-28 shrink-0">
             Contact person
           </span>
           <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
@@ -108,7 +108,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
                 e.key === "Enter" && (e.target as HTMLInputElement).blur()
               }
               placeholder="e.g., John Smith"
-              className="flex-1 text-right bg-transparent outline-none border-none text-sm text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text"
+              className="flex-1 text-right bg-transparent outline-none border-none text-body text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text"
             />
             <Pencil
               size={11}
@@ -123,7 +123,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
 
         {/* Phone */}
         <div className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2">
-          <span className="text-sm text-gray-700 w-28 shrink-0">Phone</span>
+          <span className="text-body text-gray-700 w-28 shrink-0">Phone</span>
           <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
             <input
               type="tel"
@@ -138,7 +138,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
                 e.key === "Enter" && (e.target as HTMLInputElement).blur()
               }
               placeholder="+61 400 000 000"
-              className="flex-1 text-right bg-transparent outline-none border-none text-sm text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text"
+              className="flex-1 text-right bg-transparent outline-none border-none text-body text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text"
             />
             <Pencil
               size={11}
@@ -153,7 +153,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
 
         {/* Email */}
         <div className="group flex items-center justify-between py-3 rounded-control -mx-2 px-2">
-          <span className="text-sm text-gray-700 w-28 shrink-0">Email</span>
+          <span className="text-body text-gray-700 w-28 shrink-0">Email</span>
           <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
             <input
               type="email"
@@ -168,7 +168,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
                 e.key === "Enter" && (e.target as HTMLInputElement).blur()
               }
               placeholder="contact@example.com"
-              className="flex-1 text-right bg-transparent outline-none border-none text-sm text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text"
+              className="flex-1 text-right bg-transparent outline-none border-none text-body text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text"
             />
             <Pencil
               size={11}
@@ -184,7 +184,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
         {/* Notes */}
         <div className="group py-3 rounded-control -mx-2 px-2">
           <div className="flex items-start justify-between">
-            <span className="text-sm text-gray-700 w-28 shrink-0 pt-0.5">
+            <span className="text-body text-gray-700 w-28 shrink-0 pt-0.5">
               Notes
             </span>
             <Pencil
@@ -206,7 +206,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
             }}
             placeholder="Working notes, preferences, things to remember..."
             rows={editingField === "notes" ? 6 : 4}
-            className="w-full bg-transparent outline-none border-none resize-none mt-1 text-sm text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed"
+            className="w-full bg-transparent outline-none border-none resize-none mt-1 text-body text-text-muted placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed"
           />
         </div>
       </div>

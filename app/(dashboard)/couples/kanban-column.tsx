@@ -46,11 +46,11 @@ export function KanbanColumn({
           />
         </button>
         <span
-          className={`text-xs font-medium px-2 py-0.5 rounded-control ${classes.pill}`}
+          className={`text-caption font-medium px-2 py-0.5 rounded-control ${classes.pill}`}
         >
           {status.name}
         </span>
-        <span className="text-xs text-gray-300 flex-1">{couples.length}</span>
+        <span className="text-caption text-gray-300 flex-1">{couples.length}</span>
         <button
           onClick={() => onAddClick?.(status.slug)}
           className="text-text-subtle hover:text-gray-600 transition cursor-pointer"

@@ -134,14 +134,14 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
         ) : all.length === 0 ? (
           atLimit ? (
             <div className="text-center py-8">
-              <p className="text-sm text-text-subtle mb-3">Free plan limit reached</p>
-              <div className="text-xs text-text-muted space-y-2">
+              <p className="text-body text-text-subtle mb-3">Free plan limit reached</p>
+              <div className="text-caption text-text-muted space-y-2">
                 <p>
                   Contracts for {STARTER_CONTRACT_COUPLE_LIMIT} couples max on the free plan.
                 </p>
                 <Link
                   href="/settings/billing"
-                  className="inline-block text-xs text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+                  className="inline-block text-caption text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
                 >
                   Upgrade to Pro
                 </Link>
@@ -165,10 +165,10 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
                 >
                   <FileSignature size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-text truncate">{c.title}</p>
-                    <p className="text-xs text-text-subtle">{c.contract_number}</p>
+                    <p className="text-body text-text truncate">{c.title}</p>
+                    <p className="text-caption text-text-subtle">{c.contract_number}</p>
                   </div>
-                  <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-pill capitalize ${STATUS_STYLES[c.status] || STATUS_STYLES.draft}`}>
+                  <span className={`shrink-0 text-caption font-medium px-2 py-0.5 rounded-pill capitalize ${STATUS_STYLES[c.status] || STATUS_STYLES.draft}`}>
                     {c.status}
                   </span>
                 </button>
@@ -176,7 +176,7 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
             </div>
             <button
               onClick={() => openContract(null)}
-              className="text-sm text-text-subtle hover:text-gray-600 transition cursor-pointer px-2"
+              className="text-body text-text-subtle hover:text-gray-600 transition cursor-pointer px-2"
             >
               + New Contract
             </button>

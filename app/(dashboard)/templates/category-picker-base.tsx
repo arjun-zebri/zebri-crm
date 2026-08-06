@@ -126,7 +126,7 @@ export function CategoryPickerBase({
             {managing ? (
               <>
                 {categories.length === 0 && (
-                  <p className="px-2 py-3 text-xs text-text-subtle">
+                  <p className="px-2 py-3 text-caption text-text-subtle">
                     No categories yet. Create one first.
                   </p>
                 )}

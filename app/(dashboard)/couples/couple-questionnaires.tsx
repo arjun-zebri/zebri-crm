@@ -205,7 +205,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
           className="min-w-64 rounded-control border border-border bg-card py-1 shadow-xl animate-modal-in"
         >
           {(templates?.length ?? 0) === 0 ? (
-            <p className="px-3 py-2 text-sm text-text-muted">
+            <p className="px-3 py-2 text-body text-text-muted">
               No questionnaire templates yet. Create one under Templates → Questionnaires.
             </p>
           ) : (
@@ -217,7 +217,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
                   setSendOpen(false)
                   setPreview(t)
                 }}
-                className="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm text-text transition hover:bg-surface-muted"
+                className="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-body text-text transition hover:bg-surface-muted"
               >
                 <span className="truncate">{t.name}</span>
                 <Send size={14} strokeWidth={1.5} className="shrink-0 text-text-muted" />

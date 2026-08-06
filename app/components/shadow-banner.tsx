@@ -72,7 +72,7 @@ export function ShadowBanner() {
   if (!identity) return null;
 
   return (
-    <div className="bg-amber-50 border-b border-amber-200 px-4 h-10 flex items-center justify-between text-sm flex-shrink-0">
+    <div className="bg-amber-50 border-b border-amber-200 px-4 h-10 flex items-center justify-between text-body flex-shrink-0">
       <span className="text-amber-800 font-medium">
         Shadow Mode &middot; Viewing as {identity.name}{" "}
         <span className="font-normal text-amber-700">({identity.email})</span>
@@ -80,7 +80,7 @@ export function ShadowBanner() {
       <form action={exitShadow}>
         <button
           type="submit"
-          className="text-xs font-medium text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-200 px-2.5 py-1 rounded-control transition cursor-pointer"
+          className="text-caption font-medium text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-200 px-2.5 py-1 rounded-control transition cursor-pointer"
         >
           Exit
         </button>

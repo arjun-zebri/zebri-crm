@@ -149,7 +149,7 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-gray-600">
+      <p className="text-body text-gray-600">
         Customise the statuses that appear in your couples kanban board.
       </p>
 
@@ -174,7 +174,7 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
       <div className="border-t border-border pt-6 flex items-center justify-between gap-3">
         <button
           onClick={() => setIsAddOpen(true)}
-          className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
+          className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
         >
           <Plus size={11} strokeWidth={2} />
           Add status
@@ -182,7 +182,7 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
         {hasChanges && (
           <button
             onClick={handleSaveChanges}
-            className="inline-flex items-center px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
+            className="inline-flex items-center px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
           >
             Save changes
           </button>

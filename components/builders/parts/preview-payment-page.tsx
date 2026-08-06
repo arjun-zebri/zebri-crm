@@ -222,7 +222,7 @@ function ContractBodySurface({
       {/* Body */}
       <div className={cardSectionPad}>
         <div
-          className="contract-content text-sm"
+          className="contract-content text-body"
           style={{ color: text, fontFamily: bodyFontFamily(branding) }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
@@ -233,11 +233,11 @@ function ContractBodySurface({
         className={`${cardSectionPad} border-t`}
         style={{ borderColor: muted + '30' }}
       >
-        <p className="text-xs font-medium mb-1" style={{ color: muted }}>
+        <p className="text-caption font-medium mb-1" style={{ color: muted }}>
           Signed by MC
         </p>
         <p
-          className="text-xl"
+          className="text-section"
           style={{
             color: text,
             fontFamily: 'Caveat, "Brush Script MT", cursive',
@@ -246,7 +246,7 @@ function ContractBodySurface({
           {doc.mcSignatureName || doc.businessName || 'Your MC'}
         </p>
         {doc.businessName ? (
-          <p className="text-xs mt-1" style={{ color: muted }}>
+          <p className="text-caption mt-1" style={{ color: muted }}>
             {doc.businessName}
           </p>
         ) : null}
@@ -257,11 +257,11 @@ function ContractBodySurface({
         className={`${cardSectionPad} border-t space-y-4`}
         style={{ borderColor: muted + '30' }}
       >
-        <p className="text-xs font-medium" style={{ color: muted }}>
+        <p className="text-caption font-medium" style={{ color: muted }}>
           Sign to accept
         </p>
         <div>
-          <label className="block text-xs font-medium mb-1.5" style={{ color: muted }}>
+          <label className="block text-caption font-medium mb-1.5" style={{ color: muted }}>
             Your full legal name
           </label>
           <input
@@ -270,7 +270,7 @@ function ContractBodySurface({
             readOnly
             tabIndex={-1}
             aria-hidden="true"
-            className="w-full text-sm border px-3 py-2.5 cursor-not-allowed bg-surface-muted/30"
+            className="w-full text-body border px-3 py-2.5 cursor-not-allowed bg-surface-muted/30"
             style={{
               borderRadius: branding.corner_radius,
               borderColor: muted + '30',
@@ -287,7 +287,7 @@ function ContractBodySurface({
             aria-hidden="true"
             className="mt-0.5 w-4 h-4 cursor-not-allowed"
           />
-          <span className="text-sm" style={{ color: text }}>
+          <span className="text-body" style={{ color: text }}>
             I agree to the terms above and intend my typed name to serve as my legal signature.
           </span>
         </label>
@@ -302,7 +302,7 @@ function ContractBodySurface({
               color: '#ffffff',
               borderRadius: branding.corner_radius,
             }}
-            className="text-sm font-semibold px-5 py-2.5 cursor-not-allowed opacity-90"
+            className="text-body font-semibold px-5 py-2.5 cursor-not-allowed opacity-90"
           >
             Sign contract
           </button>
@@ -316,7 +316,7 @@ function ContractBodySurface({
               borderColor: muted + '40',
               color: muted,
             }}
-            className="text-sm font-medium px-4 py-2.5 border cursor-not-allowed"
+            className="text-body font-medium px-4 py-2.5 border cursor-not-allowed"
           >
             Decline
           </button>

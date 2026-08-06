@@ -157,11 +157,11 @@ export function BlockRenderer({
           }}
         />
         <div className="relative flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
-          <p className="text-xs text-text-muted mb-4">This document is empty</p>
+          <p className="text-caption text-text-muted mb-4">This document is empty</p>
           <button
             type="button"
             onClick={() => requestAddAfter(null)}
-            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-control bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-control bg-gray-900 text-white text-body font-medium hover:bg-black cursor-pointer transition shadow-sm"
           >
             <Plus size={14} strokeWidth={2} />
             Add your first block

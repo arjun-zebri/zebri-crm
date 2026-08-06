@@ -104,10 +104,10 @@ function CategorySection({
             onChange={(e) => setRenameValue(e.target.value)}
             onBlur={handleRenameCommit}
             onKeyDown={handleRenameKeyDown}
-            className="text-xs font-semibold uppercase tracking-wider bg-transparent border-b border-gray-400 outline-none text-text w-48"
+            className="text-caption font-semibold uppercase tracking-wider bg-transparent border-b border-gray-400 outline-none text-text w-48"
           />
         ) : (
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-text">{category.label}</h3>
+          <h3 className="text-caption font-semibold uppercase tracking-wider text-text">{category.label}</h3>
         )}
 
         {!renaming && (
@@ -138,9 +138,9 @@ function CategorySection({
 
         {confirmDelete && (
           <div className="flex items-center gap-2 ml-1">
-            <span className="text-xs text-text-subtle">Remove category?</span>
-            <button onClick={() => onDelete(category.id)} className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer">Yes</button>
-            <button onClick={() => setConfirmDelete(false)} className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer">No</button>
+            <span className="text-caption text-text-subtle">Remove category?</span>
+            <button onClick={() => onDelete(category.id)} className="text-caption text-red-500 hover:text-red-600 transition cursor-pointer">Yes</button>
+            <button onClick={() => setConfirmDelete(false)} className="text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer">No</button>
           </div>
         )}
       </div>
@@ -148,7 +148,7 @@ function CategorySection({
       {/* Songs */}
       <div className="flex flex-wrap gap-2">
         {songs.length === 0 ? (
-          <p className="text-sm text-gray-300 py-1">None added</p>
+          <p className="text-body text-gray-300 py-1">None added</p>
         ) : (
           songs.map((song) => (
             <div
@@ -157,8 +157,8 @@ function CategorySection({
               className="inline-flex items-center gap-3 border border-border rounded-control px-4 py-2.5 hover:border-border-strong hover:bg-gray-50/50 transition cursor-pointer group/song w-[200px]"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-text truncate">{song.title}</p>
-                {song.artist && <p className="text-xs text-text-subtle truncate">{song.artist}</p>}
+                <p className="text-body font-medium text-text truncate">{song.title}</p>
+                {song.artist && <p className="text-caption text-text-subtle truncate">{song.artist}</p>}
               </div>
               <Pencil size={12} strokeWidth={1.5} className="text-text-subtle shrink-0 opacity-0 group-hover/song:opacity-60 transition" />
             </div>
@@ -317,18 +317,18 @@ export function McPortalSongs({ coupleId, onEditSong, onAddSong }: McPortalSongs
                 }}
                 placeholder="Category name"
                 autoFocus
-                className="text-sm border-b border-border-strong outline-none bg-transparent text-gray-700 placeholder:text-gray-300 w-48 pb-0.5"
+                className="text-body border-b border-border-strong outline-none bg-transparent text-gray-700 placeholder:text-gray-300 w-48 pb-0.5"
               />
               <button
                 onClick={() => { if (newCategoryLabel.trim()) addCategory.mutate(newCategoryLabel.trim()) }}
                 disabled={!newCategoryLabel.trim() || addCategory.isPending}
-                className="text-xs text-text-muted hover:text-gray-700 transition cursor-pointer disabled:opacity-40"
+                className="text-caption text-text-muted hover:text-gray-700 transition cursor-pointer disabled:opacity-40"
               >
                 Add
               </button>
               <button
                 onClick={() => { setShowAddCategory(false); setNewCategoryLabel('') }}
-                className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer"
+                className="text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer"
               >
                 Cancel
               </button>

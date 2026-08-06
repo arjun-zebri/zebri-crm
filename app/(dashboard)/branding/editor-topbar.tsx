@@ -121,7 +121,7 @@ export function EditorTopbar({
         <button
           type="button"
           onClick={onPreview}
-          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-control bg-gray-900 text-white text-xs font-medium hover:bg-black cursor-pointer transition"
+          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-control bg-gray-900 text-white text-caption font-medium hover:bg-black cursor-pointer transition"
         >
           <Eye size={12} strokeWidth={2} />
           Preview
@@ -168,7 +168,7 @@ function KitNameField({ value, onChange }: { value: string; onChange: (v: string
             }
           }}
           onFocus={(e) => e.currentTarget.select()}
-          className="h-7 text-sm font-medium text-text bg-surface border border-border-strong rounded-control px-2 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 min-w-0 w-[220px]"
+          className="h-7 text-body font-medium text-text bg-surface border border-border-strong rounded-control px-2 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 min-w-0 w-[220px]"
         />
       </div>
     )
@@ -181,7 +181,7 @@ function KitNameField({ value, onChange }: { value: string; onChange: (v: string
       title="Rename brand kit"
       className="inline-flex items-center h-7 px-1.5 -ml-1.5 rounded-control hover:bg-surface-emphasis cursor-pointer transition min-w-0"
     >
-      <span className="text-sm font-medium text-text truncate max-w-[220px]">{value}</span>
+      <span className="text-body font-medium text-text truncate max-w-[220px]">{value}</span>
     </button>
   )
 }
@@ -243,7 +243,7 @@ function KitPicker({
                         className="flex-1 min-w-0 text-left cursor-pointer"
                         title={`Apply ${kit.name}`}
                       >
-                        <p className="text-xs font-medium text-text truncate">{kit.name}</p>
+                        <p className="text-caption font-medium text-text truncate">{kit.name}</p>
                       </button>
                     </Popover.Close>
                     {active && <Check size={11} strokeWidth={2.5} className="text-text shrink-0" />}
@@ -268,7 +268,7 @@ function KitPicker({
               <button
                 type="button"
                 onClick={onCreateNewKit}
-                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-control text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-control text-caption text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 <Plus size={11} strokeWidth={1.75} className="text-text-subtle" />
                 Create new kit

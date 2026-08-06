@@ -354,75 +354,7 @@
         {
           "label": "text-display",
           "verdict": "token",
-          "count": 1,
-          "files": [
-            {
-              "path": "components/ui/page-header.tsx",
-              "hits": 1
-            }
-          ]
-        },
-        {
-          "label": "text-section",
-          "verdict": "token",
-          "count": 9,
-          "files": [
-            {
-              "path": "app/(dashboard)/settings/billing/current-plan-card.tsx",
-              "hits": 2
-            },
-            {
-              "path": "components/builders/parts/builder-modal-shell.tsx",
-              "hits": 2
-            },
-            {
-              "path": "components/builders/parts/totals-panel.tsx",
-              "hits": 2
-            }
-          ]
-        },
-        {
-          "label": "text-body",
-          "verdict": "token",
-          "count": 68,
-          "files": [
-            {
-              "path": "app/(dashboard)/settings/payment-settings-section.tsx",
-              "hits": 7
-            },
-            {
-              "path": "app/(dashboard)/settings/billing/current-plan-card.tsx",
-              "hits": 6
-            },
-            {
-              "path": "components/builders/parts/builder-meta-row.tsx",
-              "hits": 5
-            }
-          ]
-        },
-        {
-          "label": "text-caption",
-          "verdict": "token",
-          "count": 200,
-          "files": [
-            {
-              "path": "app/(dashboard)/automations/[id]/inspector-panel.tsx",
-              "hits": 9
-            },
-            {
-              "path": "components/builders/parts/schedule-modal.tsx",
-              "hits": 8
-            },
-            {
-              "path": "app/(dashboard)/templates/category-picker-base.tsx",
-              "hits": 7
-            }
-          ]
-        },
-        {
-          "label": "text-3xl",
-          "verdict": "legacy",
-          "count": 5,
+          "count": 6,
           "files": [
             {
               "path": "app/(dashboard)/couples/couple-pulse.tsx",
@@ -437,6 +369,69 @@
               "hits": 1
             }
           ]
+        },
+        {
+          "label": "text-section",
+          "verdict": "token",
+          "count": 61,
+          "files": [
+            {
+              "path": "app/(dashboard)/dashboard-invoices.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/dashboard-tasks.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-pulse.tsx",
+              "hits": 2
+            }
+          ]
+        },
+        {
+          "label": "text-body",
+          "verdict": "token",
+          "count": 623,
+          "files": [
+            {
+              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
+              "hits": 14
+            },
+            {
+              "path": "app/(dashboard)/settings/personal-info-section.tsx",
+              "hits": 14
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-modal.tsx",
+              "hits": 13
+            }
+          ]
+        },
+        {
+          "label": "text-caption",
+          "verdict": "token",
+          "count": 763,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 45
+            },
+            {
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 26
+            },
+            {
+              "path": "app/(dashboard)/tasks/task-cells.tsx",
+              "hits": 19
+            }
+          ]
+        },
+        {
+          "label": "text-3xl",
+          "verdict": "legacy",
+          "count": 0,
+          "files": []
         },
         {
           "label": "text-2xl",
@@ -460,19 +455,15 @@
         {
           "label": "text-xl",
           "verdict": "legacy",
-          "count": 54,
+          "count": 2,
           "files": [
             {
-              "path": "app/(dashboard)/dashboard-invoices.tsx",
-              "hits": 3
+              "path": "app/lead/[token]/_components/lead-form-unavailable.tsx",
+              "hits": 1
             },
             {
-              "path": "app/(dashboard)/dashboard-tasks.tsx",
-              "hits": 3
-            },
-            {
-              "path": "app/(dashboard)/couples/couple-pulse.tsx",
-              "hits": 2
+              "path": "app/lead/[token]/_components/lead-form.tsx",
+              "hits": 1
             }
           ]
         },
@@ -517,38 +508,38 @@
         {
           "label": "text-sm",
           "verdict": "legacy",
-          "count": 588,
+          "count": 33,
           "files": [
             {
-              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
-              "hits": 14
+              "path": "app/portal/[token]/timeline-section.tsx",
+              "hits": 10
             },
             {
-              "path": "app/(dashboard)/settings/personal-info-section.tsx",
-              "hits": 14
+              "path": "app/timeline/[token]/page.tsx",
+              "hits": 6
             },
             {
-              "path": "app/(dashboard)/couples/couple-modal.tsx",
-              "hits": 13
+              "path": "app/branding/preview/[surface]/page.tsx",
+              "hits": 3
             }
           ]
         },
         {
           "label": "text-xs",
           "verdict": "legacy",
-          "count": 569,
+          "count": 6,
           "files": [
             {
-              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
-              "hits": 45
+              "path": "app/timeline/[token]/timeline-item.tsx",
+              "hits": 3
             },
             {
-              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
-              "hits": 26
+              "path": "app/branding/preview/[surface]/page.tsx",
+              "hits": 1
             },
             {
-              "path": "app/(dashboard)/tasks/task-cells.tsx",
-              "hits": 19
+              "path": "app/portal/[token]/page.tsx",
+              "hits": 1
             }
           ]
         }

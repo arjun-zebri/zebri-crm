@@ -11,7 +11,7 @@ export function CouplesListEmpty() {
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <Users size={40} strokeWidth={1.5} className="text-gray-300 mb-3" />
       <p className="text-gray-600 font-medium mb-2">No couples yet.</p>
-      <p className="text-sm text-text-muted mb-4">
+      <p className="text-body text-text-muted mb-4">
         Start by adding your first couple.
       </p>
     </div>

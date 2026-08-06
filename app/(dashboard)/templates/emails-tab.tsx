@@ -212,7 +212,7 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
                     <>
                       {category ? <CategoryChip category={category} /> : null}
                       {selected.archived_at ? (
-                        <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-xs text-text-muted">
+                        <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-caption text-text-muted">
                           Archived
                         </span>
                       ) : null}
@@ -242,7 +242,7 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
             </div>
           ) : (
             <div className="flex h-full items-center justify-center pb-[10vh]">
-              <p className="text-sm text-text-subtle">Select a template to preview.</p>
+              <p className="text-body text-text-subtle">Select a template to preview.</p>
             </div>
           )
         }

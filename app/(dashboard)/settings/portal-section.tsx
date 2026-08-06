@@ -96,8 +96,8 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
   return (
     <div className="max-w-2xl space-y-8">
       <div>
-        <h2 className="text-xl font-semibold text-text mb-1">Couple Portal</h2>
-        <p className="text-sm text-text-muted mb-6">Choose which sections are visible in the couple portal. Changes apply to all couples.</p>
+        <h2 className="text-section font-semibold text-text mb-1">Couple Portal</h2>
+        <p className="text-body text-text-muted mb-6">Choose which sections are visible in the couple portal. Changes apply to all couples.</p>
 
         <div className="space-y-0 border border-border rounded-control overflow-hidden">
           {SECTION_DEFS.map((section, i) => {
@@ -112,8 +112,8 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
                 <div className="flex items-center gap-3">
                   <Icon size={15} className="text-text-subtle flex-shrink-0" strokeWidth={1.5} />
                   <div>
-                    <p className="text-sm font-medium text-text">{section.label}</p>
-                    <p className="text-xs text-text-subtle">{section.description}</p>
+                    <p className="text-body font-medium text-text">{section.label}</p>
+                    <p className="text-caption text-text-subtle">{section.description}</p>
                   </div>
                 </div>
                 <Toggle enabled={settings[section.id]} onChange={() => toggle(section.id)} />
@@ -128,11 +128,11 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
           type="button"
           onClick={handleSave}
           disabled={saving || !isDirty}
-          className="bg-black text-white text-sm font-medium rounded-control px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
+          className="bg-black text-white text-body font-medium rounded-control px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
-        {isDirty && <span className="text-sm text-text-subtle">Unsaved changes</span>}
+        {isDirty && <span className="text-body text-text-subtle">Unsaved changes</span>}
       </div>
     </div>
   )

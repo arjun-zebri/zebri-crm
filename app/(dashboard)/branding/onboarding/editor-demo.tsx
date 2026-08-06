@@ -225,7 +225,7 @@ export function EditorDemo({ reducedMotion }: EditorDemoProps) {
       >
         <div key={shownTitle.index} className="flex flex-col items-center gap-2">
           <p className="text-lg font-semibold text-text demo-title-in">{shownTitle.copy.heading}</p>
-          <p className="text-sm text-text-muted max-w-[380px] demo-title-in [animation-delay:180ms]">
+          <p className="text-body text-text-muted max-w-[380px] demo-title-in [animation-delay:180ms]">
             {shownTitle.copy.sub}
           </p>
         </div>

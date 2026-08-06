@@ -80,7 +80,7 @@ export default function AutomationsPage() {
               <button
                 onClick={handleCreate}
                 disabled={pending}
-                className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+                className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
               >
                 <Plus size={11} strokeWidth={2} />
                 New automation

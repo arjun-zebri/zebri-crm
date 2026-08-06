@@ -21,9 +21,9 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
   return (
     <Card className="flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base sm:text-xl font-semibold text-text">Lead Sources</h2>
+        <h2 className="text-base sm:text-section font-semibold text-text">Lead Sources</h2>
         {data && (
-          <span className="text-sm text-text-muted">{data.total} total</span>
+          <span className="text-body text-text-muted">{data.total} total</span>
         )}
       </div>
 
@@ -40,7 +40,7 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
         </div>
       ) : !data || data.total === 0 ? (
         <div className="text-center py-12">
-          <p className="text-text-muted text-sm">No lead source data yet.</p>
+          <p className="text-text-muted text-body">No lead source data yet.</p>
         </div>
       ) : (
         <div className="space-y-4 flex-1 min-h-0 scrollbar-thin pr-1">
@@ -56,7 +56,7 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
 
               return (
                 <div key={source} className="flex items-center gap-3">
-                  <span className="text-xs sm:text-sm text-gray-700 w-28 shrink-0">
+                  <span className="text-caption sm:text-body text-gray-700 w-28 shrink-0">
                     {allLabels[source]}
                   </span>
                   <div className="flex-1 h-2 bg-surface-emphasis rounded-pill overflow-hidden">
@@ -65,10 +65,10 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <span className="text-xs sm:text-sm font-medium text-text w-6 text-right shrink-0">
+                  <span className="text-caption sm:text-body font-medium text-text w-6 text-right shrink-0">
                     {count}
                   </span>
-                  <span className="text-xs text-text-subtle w-10 text-right shrink-0">
+                  <span className="text-caption text-text-subtle w-10 text-right shrink-0">
                     {pct}%
                   </span>
                 </div>

@@ -50,7 +50,7 @@ export function AutomationsFilter({
             key={p.value}
             type="button"
             onClick={() => onStatusChange(p.value)}
-            className={`text-xs px-2.5 py-1 rounded-control transition cursor-pointer ${
+            className={`text-caption px-2.5 py-1 rounded-control transition cursor-pointer ${
               status === p.value
                 ? 'bg-text text-surface'
                 : 'text-text-muted hover:text-text hover:bg-surface-muted'
@@ -67,7 +67,7 @@ export function AutomationsFilter({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search…"
-          className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-text-muted"
+          className="flex-1 bg-transparent text-body focus:outline-none placeholder:text-text-muted"
         />
       </div>
     </div>

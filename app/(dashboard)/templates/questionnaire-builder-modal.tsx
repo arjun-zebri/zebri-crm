@@ -95,7 +95,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
       footer={
         <div className="flex items-center justify-end gap-3">
           {showIssues && issues.length > 0 && (
-            <p className="text-sm text-red-600">Fix the highlighted question{issues.length === 1 ? '' : 's'} to save.</p>
+            <p className="text-body text-red-600">Fix the highlighted question{issues.length === 1 ? '' : 's'} to save.</p>
           )}
           <Button onClick={onCancel} variant="outline" size="sm">
             Cancel
@@ -112,11 +112,11 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
         <div className="space-y-4 lg:flex-1 lg:min-w-0">
           <div className="space-y-3">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-text">Name</label>
+              <label className="mb-1.5 block text-body font-medium text-text">Name</label>
               <Input value={name} onChange={(e) => setName(e.target.value)} size="sm" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-text">Description (optional)</label>
+              <label className="mb-1.5 block text-body font-medium text-text">Description (optional)</label>
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -125,14 +125,14 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-text">Couples answer</label>
+              <label className="mb-1.5 block text-body font-medium text-text">Couples answer</label>
               <div className="inline-flex overflow-hidden rounded-control border border-border bg-surface">
                 {DISPLAY_MODES.map((m, i) => (
                   <button
                     key={m.value}
                     type="button"
                     onClick={() => setDisplayMode(m.value)}
-                    className={`cursor-pointer px-2.5 py-1 text-xs font-medium transition-colors ${i > 0 ? 'border-l border-border' : ''} ${
+                    className={`cursor-pointer px-2.5 py-1 text-caption font-medium transition-colors ${i > 0 ? 'border-l border-border' : ''} ${
                       displayMode === m.value ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'
                     }`}
                   >
@@ -172,7 +172,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
             (flex-1 + min-h-0 lets the inner preview scroll rather than the
             panel growing past the modal). */}
         <div className="hidden rounded-control bg-surface-muted p-4 lg:flex lg:flex-1 lg:min-w-0 lg:flex-col">
-          <p className="mb-3 px-2 text-xs uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
+          <p className="mb-3 px-2 text-caption uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
           <div className="min-h-0 lg:flex-1">
             <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} heightClass="h-full min-h-[600px]" />
           </div>

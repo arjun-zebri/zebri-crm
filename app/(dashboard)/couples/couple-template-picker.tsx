@@ -83,11 +83,11 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
           sideOffset={6}
           className="z-[80] w-72 rounded-control border border-border bg-surface py-1.5 shadow-lg"
         >
-          <p className="px-3 py-1.5 text-xs text-text-subtle">{cfg.hint}</p>
+          <p className="px-3 py-1.5 text-caption text-text-subtle">{cfg.hint}</p>
           {isLoading ? (
             <PickerSkeleton />
           ) : (templates ?? []).length === 0 ? (
-            <p className="px-3 py-1.5 text-xs text-text-muted">No templates yet. Add some on the Templates page.</p>
+            <p className="px-3 py-1.5 text-caption text-text-muted">No templates yet. Add some on the Templates page.</p>
           ) : (
             <div className="max-h-72 overflow-y-auto">
               {(templates ?? []).map((t) => (
@@ -98,11 +98,11 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
                     setOpen(false)
                     onPick(t.id)
                   }}
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-text transition hover:bg-surface-muted cursor-pointer"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-body text-text transition hover:bg-surface-muted cursor-pointer"
                 >
                   <span className="truncate">{t.name}</span>
                   {t.category && (
-                    <span className="shrink-0 text-xs text-text-subtle">{t.category.name}</span>
+                    <span className="shrink-0 text-caption text-text-subtle">{t.category.name}</span>
                   )}
                 </button>
               ))}

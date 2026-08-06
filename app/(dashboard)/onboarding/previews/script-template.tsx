@@ -86,7 +86,7 @@ export function ScriptTemplate({ active, reducedMotion }: PreviewScriptProps) {
         title="New template"
         wide
         footer={
-          <span className="rounded-control px-3 py-1 text-xs bg-brand-fg text-text-inverse">
+          <span className="rounded-control px-3 py-1 text-caption bg-brand-fg text-text-inverse">
             Save template
           </span>
         }
@@ -184,16 +184,16 @@ export function ScriptTemplate({ active, reducedMotion }: PreviewScriptProps) {
               <span className="text-base font-semibold text-text">Templates</span>
               <span
                 data-cursor="new-template"
-                className="inline-flex items-center gap-1 rounded-control px-2 py-1 text-xs border border-brand-fg bg-brand-fg text-text-inverse"
+                className="inline-flex items-center gap-1 rounded-control px-2 py-1 text-caption border border-brand-fg bg-brand-fg text-text-inverse"
               >
                 <Plus size={12} strokeWidth={1.5} />
                 <span className="hidden sm:inline">New template</span>
               </span>
             </div>
             <div className="flex gap-2 border-b border-border pb-1 animate-fade-in">
-              <span className="text-xs font-medium text-text border-b-2 border-brand-fg pb-1">Emails</span>
-              <span className="text-xs text-text-subtle">Packages</span>
-              <span className="text-xs text-text-subtle">Invoices</span>
+              <span className="text-caption font-medium text-text border-b-2 border-brand-fg pb-1">Emails</span>
+              <span className="text-caption text-text-subtle">Packages</span>
+              <span className="text-caption text-text-subtle">Invoices</span>
             </div>
           </>
         )}

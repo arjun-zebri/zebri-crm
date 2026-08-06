@@ -199,7 +199,7 @@ export function CoupleProfileHeader({
           <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
             <Popover.Trigger asChild>
               <button
-                className={`shrink-0 px-2 py-0.5 rounded-pill text-xs font-medium cursor-pointer transition hover:opacity-80 ${statusClasses.pill}`}
+                className={`shrink-0 px-2 py-0.5 rounded-pill text-caption font-medium cursor-pointer transition hover:opacity-80 ${statusClasses.pill}`}
               >
                 {statusName}
               </button>
@@ -230,7 +230,7 @@ export function CoupleProfileHeader({
                         });
                         setStatusOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition flex items-center gap-2 ${
+                      className={`w-full text-left px-3 py-2 text-body transition flex items-center gap-2 ${
                         couple.status === s.slug
                           ? 'bg-surface-emphasis font-medium text-text'
                           : 'text-gray-700 hover:bg-gray-50'
@@ -271,7 +271,7 @@ export function CoupleProfileHeader({
                     if (!hasPhone) e.preventDefault();
                     else setActionsOpen(false);
                   }}
-                  className={`flex items-center justify-between px-3 py-2 text-sm transition ${
+                  className={`flex items-center justify-between px-3 py-2 text-body transition ${
                     hasPhone
                       ? 'text-gray-700 hover:bg-gray-50 cursor-pointer'
                       : 'text-gray-300 cursor-not-allowed'
@@ -286,7 +286,7 @@ export function CoupleProfileHeader({
                     if (!hasEmail) e.preventDefault();
                     else setActionsOpen(false);
                   }}
-                  className={`flex items-center justify-between px-3 py-2 text-sm transition ${
+                  className={`flex items-center justify-between px-3 py-2 text-body transition ${
                     hasEmail
                       ? 'text-gray-700 hover:bg-gray-50 cursor-pointer'
                       : 'text-gray-300 cursor-not-allowed'
@@ -307,7 +307,7 @@ export function CoupleProfileHeader({
                     if (!hasPhone) e.preventDefault();
                     else setActionsOpen(false);
                   }}
-                  className={`flex items-center justify-between px-3 py-2 text-sm transition ${
+                  className={`flex items-center justify-between px-3 py-2 text-body transition ${
                     hasPhone
                       ? 'text-gray-700 hover:bg-gray-50 cursor-pointer'
                       : 'text-gray-300 cursor-not-allowed'
@@ -325,7 +325,7 @@ export function CoupleProfileHeader({
                         setActionsOpen(false);
                       }}
                       aria-label={timer.label}
-                      className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                      className="w-full flex items-center justify-between px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition cursor-pointer"
                     >
                       {timer.runningHere
                         ? `Stop timing (${timer.elapsed})`
@@ -343,7 +343,7 @@ export function CoupleProfileHeader({
                         copyLink(t.kind);
                         setTimeout(() => setActionsOpen(false), 900);
                       }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+                      className="w-full flex items-center justify-between px-3 py-2 text-body text-gray-600 hover:bg-gray-50 transition cursor-pointer"
                     >
                       <span>{t.label}</span>
                       {copied === t.kind ? (
@@ -362,7 +362,7 @@ export function CoupleProfileHeader({
                       onRotateLinks();
                       setActionsOpen(false);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-text-muted hover:bg-gray-50 transition cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 text-body text-text-muted hover:bg-gray-50 transition cursor-pointer"
                   >
                     Rotate links
                     <RefreshCw size={13} strokeWidth={1.5} />
@@ -379,7 +379,7 @@ export function CoupleProfileHeader({
                       );
                       setActionsOpen(false);
                     }}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition cursor-pointer"
                   >
                     <span className="truncate">
                       Vow for {couple.primary_name ?? couple.name}
@@ -395,7 +395,7 @@ export function CoupleProfileHeader({
                       );
                       setActionsOpen(false);
                     }}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition cursor-pointer"
                   >
                     <span className="truncate">
                       Vow for {couple.secondary_name ?? 'partner'}
@@ -407,7 +407,7 @@ export function CoupleProfileHeader({
                       void printTimelinePdf(couple.id, couple.name);
                       setActionsOpen(false);
                     }}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition cursor-pointer"
                   >
                     <span>Timeline</span>
                     <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
@@ -420,7 +420,7 @@ export function CoupleProfileHeader({
                       onSettingsToggle();
                       setActionsOpen(false);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition cursor-pointer"
                   >
                     {settingsMode ? 'Done editing tabs' : 'Edit tabs'}
                     <Settings size={14} strokeWidth={1.5} />
@@ -434,7 +434,7 @@ export function CoupleProfileHeader({
                       onDeleteRequest();
                       setActionsOpen(false);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 text-body text-red-500 hover:bg-red-50 transition cursor-pointer"
                   >
                     Delete couple
                     <Trash2 size={14} strokeWidth={1.5} />
@@ -499,7 +499,7 @@ export function CoupleProfileHeader({
                 side="bottom"
                 align="end"
                 sideOffset={6}
-                className="z-[80] w-60 bg-surface rounded-control shadow-lg border border-gray-100 py-1 text-sm"
+                className="z-[80] w-60 bg-surface rounded-control shadow-lg border border-gray-100 py-1 text-body"
               >
                 {linkTargets.map((t) => (
                   <button
@@ -552,7 +552,7 @@ export function CoupleProfileHeader({
                 side="bottom"
                 align="end"
                 sideOffset={6}
-                className="z-[80] w-60 bg-surface rounded-control shadow-lg border border-gray-100 py-1 text-sm"
+                className="z-[80] w-60 bg-surface rounded-control shadow-lg border border-gray-100 py-1 text-body"
               >
                 <button
                   onClick={() => {

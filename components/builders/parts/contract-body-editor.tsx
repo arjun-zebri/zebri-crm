@@ -61,7 +61,7 @@ export function ContractBodyEditor({
         // surface exactly. Previously this used `prose prose-sm`
         // which rendered noticeably tighter than what the couple
         // actually saw.
-        className="contract-content rounded-control border border-border bg-surface-muted/40 p-4 text-sm"
+        className="contract-content rounded-control border border-border bg-surface-muted/40 p-4 text-body"
         // Locked HTML is server-rendered from the TipTap JSON at
         // send time via `renderContractHtml` — sanitised on the way
         // out. Safe to dangerouslySetInnerHTML here.

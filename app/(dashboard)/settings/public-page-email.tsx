@@ -83,8 +83,8 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
 
   return (
     <div>
-      <h3 className="text-sm font-medium text-gray-700 mb-1">Email</h3>
-      <p className="text-xs text-text-subtle mb-3">Where the emails you send to couples come from.</p>
+      <h3 className="text-body font-medium text-gray-700 mb-1">Email</h3>
+      <p className="text-caption text-text-subtle mb-3">Where the emails you send to couples come from.</p>
 
       <div className="space-y-2 max-w-xl">
         <EmailOption
@@ -104,7 +104,7 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
       {emailMode === 'oauth' && status === 'connected' && (
         <div className="mt-4 pl-7 max-w-xl">
           <div className="flex items-center justify-between gap-3 rounded-control bg-gray-50 px-4 py-3">
-            <span className="flex items-center gap-2 text-sm text-gray-700">
+            <span className="flex items-center gap-2 text-body text-gray-700">
               <span className="inline-flex h-2 w-2 rounded-pill bg-green-500" />
               Connected{provider ? ` (${PROVIDER_LABEL[provider]})` : ''} — sending from {email}
             </span>
@@ -112,7 +112,7 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
               type="button"
               onClick={disconnect}
               disabled={busy}
-              className="shrink-0 text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
+              className="shrink-0 text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
             >
               Disconnect
             </button>
@@ -126,19 +126,19 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
             <button
               type="button"
               onClick={() => connect('google')}
-              className="rounded-control border border-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+              className="rounded-control border border-border px-4 py-2 text-body font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
             >
               Connect Gmail
             </button>
             <button
               type="button"
               onClick={() => connect('microsoft')}
-              className="rounded-control border border-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+              className="rounded-control border border-border px-4 py-2 text-body font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
             >
               Connect Outlook
             </button>
           </div>
-          <p className="text-xs text-text-subtle">
+          <p className="text-caption text-text-subtle">
             You&rsquo;ll be sent to Google or Microsoft to approve access, then brought back here.
           </p>
         </div>
@@ -166,8 +166,8 @@ function EmailOption({ selected, onSelect, title, description }: EmailOptionProp
         {selected && <span className="h-2 w-2 rounded-pill bg-gray-900" />}
       </span>
       <span>
-        <span className="block text-sm text-text">{title}</span>
-        <span className="block text-xs text-text-subtle">{description}</span>
+        <span className="block text-body text-text">{title}</span>
+        <span className="block text-caption text-text-subtle">{description}</span>
       </span>
     </button>
   );

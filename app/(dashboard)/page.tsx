@@ -106,7 +106,7 @@ export default function DashboardPage() {
           <div className="relative" ref={periodRef}>
             <button
               onClick={() => setPeriodOpen(!periodOpen)}
-              className="flex items-center gap-1 text-xs font-medium text-gray-600 bg-surface-emphasis hover:bg-gray-200 px-2.5 py-1.5 rounded-control transition cursor-pointer"
+              className="flex items-center gap-1 text-caption font-medium text-gray-600 bg-surface-emphasis hover:bg-gray-200 px-2.5 py-1.5 rounded-control transition cursor-pointer"
             >
               {periodOptions.find((o) => o.value === period)?.label}
               <ChevronDown className="w-3.5 h-3.5 text-text-subtle" strokeWidth={1.5} />
@@ -117,7 +117,7 @@ export default function DashboardPage() {
                   <button
                     key={opt.value}
                     onClick={() => { setPeriod(opt.value); setPeriodOpen(false); }}
-                    className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition first:rounded-t-control last:rounded-b-control ${
+                    className={`block w-full text-left px-3 py-2 text-body cursor-pointer hover:bg-gray-50 transition first:rounded-t-control last:rounded-b-control ${
                       period === opt.value ? "font-medium text-text" : "text-gray-600"
                     }`}
                   >

@@ -19,10 +19,10 @@ interface CouplesImportUploadProps {
 function Step({ n, children }: { n: number; children: ReactNode }) {
   return (
     <li className="flex gap-3">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-surface-emphasis text-xs font-medium text-gray-600">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-surface-emphasis text-caption font-medium text-gray-600">
         {n}
       </span>
-      <span className="text-sm text-gray-600">{children}</span>
+      <span className="text-body text-gray-600">{children}</span>
     </li>
   );
 }
@@ -80,15 +80,15 @@ export function CouplesImportUpload({
         className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-control border border-dashed border-border-strong px-6 py-8 text-center transition hover:border-gray-400 hover:bg-gray-50"
       >
         <Upload size={22} strokeWidth={1.5} className="text-text-subtle" />
-        <span className="text-sm text-text">
+        <span className="text-body text-text">
           {fileName || 'Click to choose a CSV file'}
         </span>
-        <span className="text-xs text-text-subtle">CSV files only</span>
+        <span className="text-caption text-text-subtle">CSV files only</span>
       </button>
 
-      {fileError && <p className="text-sm text-red-600">{fileError}</p>}
+      {fileError && <p className="text-body text-red-600">{fileError}</p>}
 
-      <p className="flex items-start gap-1.5 text-xs text-text-subtle">
+      <p className="flex items-start gap-1.5 text-caption text-text-subtle">
         <FileSpreadsheet
           size={13}
           strokeWidth={1.5}

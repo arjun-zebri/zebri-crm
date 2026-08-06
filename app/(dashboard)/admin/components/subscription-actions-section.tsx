@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
+import { useState } from 'react';
 
 import {
   cancelAtPeriodEnd,
@@ -117,12 +117,12 @@ export function SubscriptionActionsSection({
 
   return (
     <section>
-      <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted mb-3">
+      <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted mb-3">
         Subscription
       </h3>
 
       {/* Summary — clean 2-column property grid, no boxed inputs. */}
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mb-5">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-body mb-5">
         <Property label="Status">
           {user.subscription_status ? (
             <Badge variant={statusVariant[user.subscription_status]}>
@@ -135,10 +135,10 @@ export function SubscriptionActionsSection({
         <Property label="Plan">
           <span className="capitalize text-text">{user.subscription_plan ?? 'Starter'}</span>
           {user.is_comped && (
-            <span className="ml-2 text-xs text-text-muted">(comped)</span>
+            <span className="ml-2 text-caption text-text-muted">(comped)</span>
           )}
           {user.is_beta_user && (
-            <span className="ml-2 text-xs text-text-muted">(beta)</span>
+            <span className="ml-2 text-caption text-text-muted">(beta)</span>
           )}
         </Property>
         <Property label={user.cancel_at_period_end ? 'Access ends' : 'Renews'}>
@@ -153,7 +153,7 @@ export function SubscriptionActionsSection({
               href={`https://dashboard.stripe.com/customers/${user.stripe_customer_id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-text hover:text-text-muted text-sm font-mono"
+              className="inline-flex items-center gap-1 text-text hover:text-text-muted text-body font-mono"
             >
               {user.stripe_customer_id.slice(0, 16)}…
               <ExternalLink size={12} strokeWidth={1.5} />
@@ -191,8 +191,8 @@ export function SubscriptionActionsSection({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-text-muted">Refund last invoice</span>
-          <span className="text-xs text-text-muted">$</span>
+          <span className="text-caption text-text-muted">Refund last invoice</span>
+          <span className="text-caption text-text-muted">$</span>
           <Input
             type="number"
             step="0.01"
@@ -218,7 +218,7 @@ export function SubscriptionActionsSection({
           <button
             type="button"
             onClick={() => setShowLinkStripe(true)}
-            className="text-xs text-text-muted hover:text-text underline cursor-pointer"
+            className="text-caption text-text-muted hover:text-text underline cursor-pointer"
           >
             Link Stripe customer
           </button>
@@ -241,7 +241,7 @@ export function SubscriptionActionsSection({
                 setShowLinkStripe(false);
                 setLinkCustomerId('');
               }}
-              className="text-xs text-text-muted hover:text-text cursor-pointer"
+              className="text-caption text-text-muted hover:text-text cursor-pointer"
             >
               Cancel
             </button>
@@ -265,7 +265,7 @@ export function SubscriptionActionsSection({
 function Property({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs text-text-muted mb-0.5">{label}</dt>
+      <dt className="text-caption text-text-muted mb-0.5">{label}</dt>
       <dd className="text-text">{children}</dd>
     </div>
   );

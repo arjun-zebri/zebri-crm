@@ -82,9 +82,9 @@ function TriggerNodeCard({
         <div className="flex flex-col items-center justify-center gap-1 px-4 py-4 rounded-control border border-dashed border-border bg-surface text-text-muted hover:text-text hover:border-border-strong hover:bg-surface-muted transition cursor-pointer">
           <div className="flex items-center gap-2">
             <Plus size={18} strokeWidth={1.5} />
-            <span className="text-sm font-medium">Add trigger</span>
+            <span className="text-body font-medium">Add trigger</span>
           </div>
-          <span className="text-xs text-text-subtle leading-tight text-center">
+          <span className="text-caption text-text-subtle leading-tight text-center">
             Choose what starts this automation
           </span>
         </div>
@@ -140,8 +140,8 @@ function TriggerRow({
     <div className="flex items-start gap-3 px-4 py-3.5">
       <Icon size={18} strokeWidth={1.5} className="text-text-muted shrink-0 mt-0.5" />
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium truncate">{title}</div>
-        {subtitle && <div className="text-xs text-text-muted line-clamp-2">{subtitle}</div>}
+        <div className="text-body font-medium truncate">{title}</div>
+        {subtitle && <div className="text-caption text-text-muted line-clamp-2">{subtitle}</div>}
       </div>
     </div>
   )
@@ -243,7 +243,7 @@ function AddActionPlaceholder() {
       />
       <div className="flex items-center gap-2 justify-center px-3 py-3 rounded-control border border-dashed border-border bg-surface text-text-muted hover:text-text hover:border-border-strong transition cursor-pointer">
         <Plus size={14} strokeWidth={1.5} />
-        <span className="text-sm">Add action</span>
+        <span className="text-body">Add action</span>
       </div>
     </div>
   )
@@ -296,8 +296,8 @@ function NodeRow({
     <div className="flex items-center gap-3 px-3 py-2.5">
       <Icon size={16} strokeWidth={1.5} className="text-text-muted shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium truncate">{title}</div>
-        {subtitle && <div className="text-xs text-text-muted truncate">{subtitle}</div>}
+        <div className="text-body font-medium truncate">{title}</div>
+        {subtitle && <div className="text-caption text-text-muted truncate">{subtitle}</div>}
       </div>
     </div>
   )

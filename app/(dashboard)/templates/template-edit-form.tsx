@@ -126,20 +126,20 @@ export function TemplateEditForm({
       size="lg"
       title={
         <div className="min-w-0">
-          <p className="text-xl font-semibold text-text">{title}</p>
-          {subtitle ? <p className="mt-0.5 text-sm font-normal text-text-muted">{subtitle}</p> : null}
+          <p className="text-section font-semibold text-text">{title}</p>
+          {subtitle ? <p className="mt-0.5 text-body font-normal text-text-muted">{subtitle}</p> : null}
         </div>
       }
       footer={
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-caption font-medium uppercase tracking-wide text-text-muted">
               Template total
             </p>
-            <p className="truncate text-xl font-semibold tabular-nums text-text">
+            <p className="truncate text-section font-semibold tabular-nums text-text">
               {formatAUD(total)}
             </p>
-            {hint ? <p className="text-xs text-danger">{hint}</p> : null}
+            {hint ? <p className="text-caption text-danger">{hint}</p> : null}
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Button onClick={onClose} disabled={isSaving} variant="outline" size="sm">
@@ -191,8 +191,8 @@ export function TemplateEditForm({
         <div>
           <div className="mb-2 flex items-center justify-between gap-3">
             <p>
-              <span className="text-sm font-medium text-text">Line items</span>
-              <span className="ml-2 text-xs text-text-muted">Applied to the document as-is</span>
+              <span className="text-body font-medium text-text">Line items</span>
+              <span className="ml-2 text-caption text-text-muted">Applied to the document as-is</span>
             </p>
             {sources && sources.length > 0 ? <SourcePicker sources={sources} onPick={addFromSource} /> : null}
           </div>
@@ -226,7 +226,7 @@ function SourceGroup({
   if (items.length === 0) return null
   return (
     <>
-      <p className="px-2 pt-2 pb-1 text-xs font-medium text-text-subtle">{label}</p>
+      <p className="px-2 pt-2 pb-1 text-caption font-medium text-text-subtle">{label}</p>
       {items.map((s) => (
         <button
           key={`${s.kind}-${s.id}`}
@@ -234,8 +234,8 @@ function SourceGroup({
           onClick={() => onPick(s)}
           className="flex w-full items-center justify-between gap-3 rounded-control px-2 py-1.5 text-left hover:bg-surface-muted cursor-pointer"
         >
-          <span className="truncate text-sm text-text">{s.name}</span>
-          <span className="shrink-0 text-xs text-text-subtle">
+          <span className="truncate text-body text-text">{s.name}</span>
+          <span className="shrink-0 text-caption text-text-subtle">
             {s.items.length} item{s.items.length !== 1 ? 's' : ''}
           </span>
         </button>

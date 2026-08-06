@@ -186,7 +186,7 @@ export function ContractTemplateManager() {
           onBack={() => setSelectedId(null)}
           list={
             visible.length === 0 ? (
-              <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+              <p className="py-8 text-center text-body text-text-subtle">No matches.</p>
             ) : (
               <div className="space-y-0.5">
                 {visible.map((t) => {
@@ -203,8 +203,8 @@ export function ContractTemplateManager() {
                     >
                       <FileSignature size={16} strokeWidth={1.5} className="shrink-0 text-text-muted" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-text">{t.name}</span>
-                        {t.description && <span className="block truncate text-xs text-text-subtle">{t.description}</span>}
+                        <span className="block truncate text-body font-medium text-text">{t.name}</span>
+                        {t.description && <span className="block truncate text-caption text-text-subtle">{t.description}</span>}
                       </span>
                     </button>
                   )
@@ -225,7 +225,7 @@ export function ContractTemplateManager() {
               </div>
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">
-                <p className="text-sm text-text-subtle">Select a template to preview.</p>
+                <p className="text-body text-text-subtle">Select a template to preview.</p>
               </div>
             )
           }
@@ -255,7 +255,7 @@ export function ContractTemplateManager() {
       {confirmDelete && (
         <Modal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete template?">
           <div className="space-y-4">
-            <p className="text-sm text-text-muted">This can't be undone.</p>
+            <p className="text-body text-text-muted">This can't be undone.</p>
             <div className="flex gap-3 justify-end">
               <Button onClick={() => setConfirmDelete(null)} variant="outline" size="sm">
                 Cancel
@@ -292,7 +292,7 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
     <Modal isOpen={true} onClose={onCancel} title="Edit contract template" size="lg">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-text mb-2">Name</label>
+          <label className="block text-body font-medium text-text mb-2">Name</label>
           <Input
             type="text"
             value={name}
@@ -301,7 +301,7 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-text mb-2">Description (optional)</label>
+          <label className="block text-body font-medium text-text mb-2">Description (optional)</label>
           <Input
             type="text"
             value={description}
@@ -311,7 +311,7 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-text mb-2">Content</label>
+          <label className="block text-body font-medium text-text mb-2">Content</label>
           <RichTextEditor value={content} onChange={setContent} />
         </div>
         <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">

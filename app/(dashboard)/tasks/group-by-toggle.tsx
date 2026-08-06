@@ -27,7 +27,7 @@ export function GroupByToggle({ value, onChange }: GroupByToggleProps) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer">
+        <button className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer">
           <span className="text-text-subtle">Group by</span>
           <span className="text-gray-700">{LABELS[value]}</span>
           <ChevronDown size={10} strokeWidth={1.5} className="text-text-subtle shrink-0" />
@@ -47,7 +47,7 @@ export function GroupByToggle({ value, onChange }: GroupByToggleProps) {
                 onChange(mode)
                 setOpen(false)
               }}
-              className={`w-full text-left px-2.5 py-1.5 text-xs flex items-center justify-between transition ${
+              className={`w-full text-left px-2.5 py-1.5 text-caption flex items-center justify-between transition ${
                 value === mode ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'
               }`}
             >

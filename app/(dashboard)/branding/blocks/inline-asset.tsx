@@ -138,7 +138,7 @@ export function InlineAsset({
           aria-hidden
           className="absolute inset-0 rounded-control bg-gray-900/10 ring-2 ring-gray-900/40 ring-inset pointer-events-none flex items-center justify-center"
         >
-          <span className="text-xs font-medium text-text bg-surface/95 rounded-control px-2 py-1 shadow-sm">
+          <span className="text-caption font-medium text-text bg-surface/95 rounded-control px-2 py-1 shadow-sm">
             Drop to upload
           </span>
         </div>

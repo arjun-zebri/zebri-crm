@@ -111,7 +111,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
           {/* Time + duration row */}
           <div className="flex items-center justify-between mb-1">
             <span
-              className={`text-xs tabular-nums font-medium ${
+              className={`text-caption tabular-nums font-medium ${
                 hasTimed ? 'text-emerald-600' : 'text-gray-300'
               }`}
             >
@@ -119,22 +119,22 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
             </span>
             <div className="flex items-center gap-2">
               {isPending && (
-                <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 rounded-pill px-2 py-0.5">
+                <span className="text-caption bg-amber-50 text-amber-600 border border-amber-100 rounded-pill px-2 py-0.5">
                   Pending
                 </span>
               )}
               {item.duration_min && (
-                <span className="text-xs text-text-subtle tabular-nums">{item.duration_min} min</span>
+                <span className="text-caption text-text-subtle tabular-nums">{item.duration_min} min</span>
               )}
             </div>
           </div>
 
           {/* Title */}
-          <p className="text-sm font-semibold text-text leading-snug">{item.title}</p>
+          <p className="text-body font-semibold text-text leading-snug">{item.title}</p>
 
           {/* Contact */}
           {item.contact && (
-            <p className="text-xs text-text-muted mt-0.5">
+            <p className="text-caption text-text-muted mt-0.5">
               {item.contact.name}
               {categoryLabel ? ` · ${categoryLabel}` : ''}
             </p>
@@ -142,7 +142,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
 
           {/* Notes preview */}
           {item.description && (
-            <p className="text-xs text-text-subtle mt-1 truncate">{item.description}</p>
+            <p className="text-caption text-text-subtle mt-1 truncate">{item.description}</p>
           )}
         </div>
       </div>
@@ -151,7 +151,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
       {isPending && onApprove && (
         <button
           onClick={(e) => { e.stopPropagation(); onApprove(item.id) }}
-          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-control px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
+          className="flex items-center gap-1 text-caption text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-control px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
           title="Approve"
         >
           <Check size={12} strokeWidth={2} />
@@ -377,10 +377,10 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
       <div className="space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-text">Timeline</p>
+          <p className="text-body font-medium text-text">Timeline</p>
           <button
             onClick={handleOpenAdd}
-            className="text-xs text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+            className="text-caption text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add item
           </button>
@@ -389,10 +389,10 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
         {/* Items */}
         {items.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm text-text-muted mb-3">No items yet.</p>
+            <p className="text-body text-text-muted mb-3">No items yet.</p>
             <button
               onClick={handleOpenAdd}
-              className="text-sm text-gray-700 border border-border rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+              className="text-body text-gray-700 border border-border rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add first item
             </button>

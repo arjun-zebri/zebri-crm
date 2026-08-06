@@ -33,7 +33,7 @@ export function RichTextBubble({ editor, surface }: { editor: Editor; surface: S
         swatches={TEXT_COLOURS}
         trigger={
           <button type="button" title="Text colour" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-gray-700 hover:bg-surface-emphasis cursor-pointer">
-            <span className="text-sm font-semibold leading-none">A</span>
+            <span className="text-body font-semibold leading-none">A</span>
             <span className="w-3.5 h-1.5 rounded-control" style={{ backgroundColor: editor.getAttributes('textStyle').color || '#111827' }} />
           </button>
         }
@@ -77,7 +77,7 @@ function SizeMenu({ editor }: { editor: Editor }) {
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button type="button" title="Font size" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-xs font-medium text-gray-700 hover:bg-surface-emphasis cursor-pointer">
+        <button type="button" title="Font size" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-caption font-medium text-gray-700 hover:bg-surface-emphasis cursor-pointer">
           {current ? current.replace('px', '') : 'Size'}
           <ChevronDown size={12} strokeWidth={2} className="text-text-subtle" />
         </button>
@@ -86,11 +86,11 @@ function SizeMenu({ editor }: { editor: Editor }) {
         <Popover.Content align="start" sideOffset={6} className="z-[80] bg-surface border border-border rounded-control shadow-lg py-1 min-w-[5rem]">
           {RICH_TEXT_FONT_SIZES.map((s) => (
             <Popover.Close asChild key={s}>
-              <button type="button" onClick={() => editor.chain().focus().setFontSize(`${s}px`).run()} className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer">{s}</button>
+              <button type="button" onClick={() => editor.chain().focus().setFontSize(`${s}px`).run()} className="w-full text-left px-3 py-1.5 text-body text-gray-700 hover:bg-gray-50 cursor-pointer">{s}</button>
             </Popover.Close>
           ))}
           <Popover.Close asChild>
-            <button type="button" onClick={() => editor.chain().focus().unsetFontSize().run()} className="w-full text-left px-3 py-1.5 text-sm text-text-muted border-t border-gray-100 hover:bg-gray-50 cursor-pointer">Default</button>
+            <button type="button" onClick={() => editor.chain().focus().unsetFontSize().run()} className="w-full text-left px-3 py-1.5 text-body text-text-muted border-t border-gray-100 hover:bg-gray-50 cursor-pointer">Default</button>
           </Popover.Close>
         </Popover.Content>
       </Popover.Portal>
@@ -105,7 +105,7 @@ function VariableMenu({ editor, surface }: { editor: Editor; surface: SurfaceTab
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button type="button" title="Insert variable" className="flex items-center gap-1 px-2 h-7 rounded-control text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
+        <button type="button" title="Insert variable" className="flex items-center gap-1 px-2 h-7 rounded-control text-caption font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
           <Plus size={13} strokeWidth={2} />
           Variable
         </button>
@@ -120,7 +120,7 @@ function VariableMenu({ editor, surface }: { editor: Editor; surface: SurfaceTab
                   <button
                     type="button"
                     onClick={() => editor.chain().focus().insertContent({ type: 'variable', attrs: { id: v.id } }).run()}
-                    className="w-full text-left px-2 py-1.5 rounded-control text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                    className="w-full text-left px-2 py-1.5 rounded-control text-body text-gray-700 hover:bg-gray-50 cursor-pointer"
                   >
                     {v.label}
                   </button>

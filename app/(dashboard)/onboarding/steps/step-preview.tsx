@@ -49,9 +49,9 @@ export function StepPreview({ step, active }: StepPreviewProps) {
   return (
     <div className="flex flex-col h-full gap-5">
       <div className="shrink-0">
-        <h2 className="text-xl font-semibold text-text">{title}</h2>
+        <h2 className="text-section font-semibold text-text">{title}</h2>
         {/* Full modal width — no max-width clamp. */}
-        <p className="text-sm text-text-muted mt-2">{body}</p>
+        <p className="text-body text-text-muted mt-2">{body}</p>
       </div>
       <div className="flex-1 min-h-0">
         {step === 4 && <ScriptCouple {...scriptProps} />}

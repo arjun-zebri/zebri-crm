@@ -106,7 +106,7 @@ export function LineItemsTable({
     return (
       <div>
         {headerAccessory}
-        <div className="grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 pb-1 text-xs text-text-subtle">
+        <div className="grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 pb-1 text-caption text-text-subtle">
           <span className="hidden sm:block" />
           <span />
           <span className="text-right">Amount</span>

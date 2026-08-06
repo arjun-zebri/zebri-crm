@@ -28,7 +28,7 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
   if (isLoading) {
     return (
       <Card>
-        <h2 className="text-base sm:text-xl font-semibold text-text mb-4">Outstanding Invoices</h2>
+        <h2 className="text-base sm:text-section font-semibold text-text mb-4">Outstanding Invoices</h2>
         <div className="space-y-1">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="animate-pulse flex items-center gap-3 py-2">
@@ -48,9 +48,9 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
   if (!invoices || invoices.length === 0) {
     return (
       <Card>
-        <h2 className="text-base sm:text-xl font-semibold text-text mb-4">Outstanding Invoices</h2>
+        <h2 className="text-base sm:text-section font-semibold text-text mb-4">Outstanding Invoices</h2>
         <div className="text-center py-12">
-          <p className="text-text-muted text-sm">No outstanding invoices.</p>
+          <p className="text-text-muted text-body">No outstanding invoices.</p>
         </div>
       </Card>
     )
@@ -58,7 +58,7 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
 
   return (
     <Card className="flex flex-col">
-      <h2 className="text-xl font-semibold text-text mb-4 shrink-0">Outstanding Invoices</h2>
+      <h2 className="text-section font-semibold text-text mb-4 shrink-0">Outstanding Invoices</h2>
       <div className="space-y-1 flex-1 max-h-60 overflow-y-auto scrollbar-hover pr-1">
         {invoices.map((invoice) => {
           const overdue = isOverdue(invoice.due_date)
@@ -67,7 +67,7 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
             <div
               key={invoice.id}
               onClick={() => { if (invoice.couple) onCoupleClick(invoice.couple) }}
-              className={`flex items-center gap-3 py-2 transition text-sm ${
+              className={`flex items-center gap-3 py-2 transition text-body ${
                 clickable ? 'cursor-pointer group' : 'cursor-default'
               }`}
             >
@@ -75,13 +75,13 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
                 <span className="truncate block text-text transition-opacity group-hover:opacity-80">
                   {invoice.couple?.name ?? invoice.title}
                 </span>
-                <span className="text-xs text-text-subtle">{invoice.invoice_number}</span>
+                <span className="text-caption text-text-subtle">{invoice.invoice_number}</span>
               </div>
-              <span className="text-sm font-medium text-text tabular-nums shrink-0">
+              <span className="text-body font-medium text-text tabular-nums shrink-0">
                 {formatCurrency(invoice.subtotal)}
               </span>
               {invoice.due_date && (
-                <span className={`text-xs shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-text-muted'}`}>
+                <span className={`text-caption shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-text-muted'}`}>
                   {formatDueDate(invoice.due_date)}
                 </span>
               )}

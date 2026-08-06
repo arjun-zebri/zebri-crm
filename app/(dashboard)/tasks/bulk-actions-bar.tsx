@@ -33,11 +33,11 @@ export function BulkActionsBar({
   if (count === 0) return null
 
   const btn =
-    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-control text-sm text-gray-700 hover:bg-surface-emphasis transition cursor-pointer'
+    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-control text-body text-gray-700 hover:bg-surface-emphasis transition cursor-pointer'
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-surface border border-border rounded-control shadow-xl px-3 py-2 flex items-center gap-1 animate-fade-in">
-      <span className="text-sm text-text-muted px-2 tabular-nums">{count} selected</span>
+      <span className="text-body text-text-muted px-2 tabular-nums">{count} selected</span>
       <span className="w-px h-4 bg-gray-200 mx-1" />
       <button type="button" onClick={onMarkDone} className={btn} title="Mark done">
         <CheckSquare size={14} strokeWidth={1.5} />
@@ -70,7 +70,7 @@ export function BulkActionsBar({
                     setDatePickerOpen(false)
                     onChangeDate(null)
                   }}
-                  className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer"
+                  className="text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer"
                 >
                   Clear due date
                 </button>
@@ -97,7 +97,7 @@ export function BulkActionsBar({
                     setGroupPickerOpen(false)
                     onMoveToGroup(null)
                   }}
-                  className="w-full text-left px-3 py-2 text-sm text-text-muted hover:bg-gray-50 transition"
+                  className="w-full text-left px-3 py-2 text-body text-text-muted hover:bg-gray-50 transition"
                 >
                   Ungrouped
                 </button>
@@ -109,7 +109,7 @@ export function BulkActionsBar({
                       setGroupPickerOpen(false)
                       onMoveToGroup(g.id)
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
                   >
                     <span className={`w-2 h-2 rounded-pill ${TASK_GROUP_DOT_CLASS[g.color]}`} />
                     <span className="truncate">{g.name}</span>
@@ -124,7 +124,7 @@ export function BulkActionsBar({
       <button
         type="button"
         onClick={onDelete}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-control text-sm text-red-600 hover:bg-red-50 transition cursor-pointer"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-control text-body text-red-600 hover:bg-red-50 transition cursor-pointer"
         title="Delete"
       >
         <Trash2 size={14} strokeWidth={1.5} />

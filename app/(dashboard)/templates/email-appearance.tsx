@@ -149,7 +149,7 @@ export function EmailAppearancePopover({ prefs, onChange }: EmailAppearancePopov
               onChange={(showAccent) => onChange({ ...prefs, showAccent })}
               label={<span className="text-caption text-text">Brand colour bar</span>}
             />
-            <p className="text-xs text-text-subtle">Applies to every email you send.</p>
+            <p className="text-caption text-text-subtle">Applies to every email you send.</p>
           </div>
         </Popover.Content>
       </Popover.Portal>

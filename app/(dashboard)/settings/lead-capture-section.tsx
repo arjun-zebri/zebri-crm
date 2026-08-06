@@ -129,8 +129,8 @@ export function LeadCaptureSection() {
   return (
     <div className="space-y-10">
       <div>
-        <h2 className="text-xl font-semibold text-text">Lead capture</h2>
-        <p className="mt-1 text-sm text-text-muted">
+        <h2 className="text-section font-semibold text-text">Lead capture</h2>
+        <p className="mt-1 text-body text-text-muted">
           Embed an enquiry form on your website. Submissions arrive as new couples.
         </p>
       </div>
@@ -141,8 +141,8 @@ export function LeadCaptureSection() {
         <>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-gray-700">Form enabled</p>
-              <p className="text-xs text-text-subtle">Turn off to stop accepting new enquiries.</p>
+              <p className="text-body font-medium text-gray-700">Form enabled</p>
+              <p className="text-caption text-text-subtle">Turn off to stop accepting new enquiries.</p>
             </div>
             <Toggle
               enabled={enabled}

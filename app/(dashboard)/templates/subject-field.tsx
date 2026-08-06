@@ -106,7 +106,7 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="flex cursor-pointer items-center gap-1.5 rounded-control border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100"
+              className="flex cursor-pointer items-center gap-1.5 rounded-control border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700 transition hover:bg-emerald-100"
             >
               <AtSign size={13} strokeWidth={1.5} />
               Insert variable

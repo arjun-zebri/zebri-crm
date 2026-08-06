@@ -46,8 +46,8 @@ export function StepDetails({ value, email, onChange }: StepFormProps) {
   return (
     <div className="min-h-full flex flex-col justify-center max-w-xl mx-auto w-full gap-6 py-2">
       <div>
-        <h2 className="text-xl font-semibold text-text">Tell us about you</h2>
-        <p className="text-sm text-text-muted mt-2">
+        <h2 className="text-section font-semibold text-text">Tell us about you</h2>
+        <p className="text-body text-text-muted mt-2">
           This appears on the invoices and contracts you send.
           Your home address is used to calculate the distance to each event.
         </p>

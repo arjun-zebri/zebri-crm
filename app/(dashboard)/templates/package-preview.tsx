@@ -50,7 +50,7 @@ function formatAUD(amount: number) {
 
 /** Uppercase section label used on the table header bands. */
 function BandLabel({ children }: { children: ReactNode }) {
-  return <span className="text-xs font-medium uppercase tracking-wide text-text-subtle">{children}</span>
+  return <span className="text-caption font-medium uppercase tracking-wide text-text-subtle">{children}</span>
 }
 
 export function PackagePreview({
@@ -76,7 +76,7 @@ export function PackagePreview({
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-brand">Package</p>
+          <p className="text-caption font-medium uppercase tracking-wide text-brand">Package</p>
           <div className="mt-1 flex items-center gap-2">
             <h3 className="min-w-0 truncate text-2xl font-semibold text-text">
               {name || 'Untitled'}
@@ -89,30 +89,30 @@ export function PackagePreview({
               </span>
             )}
             {archived && (
-              <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-xs text-text-muted">
+              <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-caption text-text-muted">
                 Archived
               </span>
             )}
           </div>
-          {subtitle ? <p className="mt-1 text-sm text-text-muted">{subtitle}</p> : null}
+          {subtitle ? <p className="mt-1 text-body text-text-muted">{subtitle}</p> : null}
           {meta ? <div className="mt-2">{meta}</div> : null}
         </div>
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </div>
 
       {description ? (
-        <p className="mt-4 whitespace-pre-line text-sm text-text-muted">{description}</p>
+        <p className="mt-4 whitespace-pre-line text-body text-text-muted">{description}</p>
       ) : null}
 
       <div className="mt-5 overflow-hidden rounded-control border border-border">
         <div className="flex items-center justify-between bg-surface-muted px-4 py-2.5">
           <BandLabel>Line items</BandLabel>
-          <span className="text-xs text-text-muted">
+          <span className="text-caption text-text-muted">
             {baseItems.length} item{baseItems.length !== 1 ? 's' : ''}
           </span>
         </div>
         {baseItems.length === 0 ? (
-          <p className="border-t border-border px-4 py-4 text-sm text-text-subtle">
+          <p className="border-t border-border px-4 py-4 text-body text-text-subtle">
             No line items yet.
           </p>
         ) : (
@@ -122,12 +122,12 @@ export function PackagePreview({
                 const flat = flattenItem(item)
                 return (
                   <li key={i} className="flex items-baseline justify-between gap-4 px-4 py-3">
-                    <span className="min-w-0 truncate text-sm text-text">
+                    <span className="min-w-0 truncate text-body text-text">
                       {flat.description.trim() || (
                         <span className="text-text-subtle">Untitled item</span>
                       )}
                     </span>
-                    <span className="shrink-0 text-sm tabular-nums text-text">
+                    <span className="shrink-0 text-body tabular-nums text-text">
                       {formatAUD(flat.amount)}
                     </span>
                   </li>
@@ -135,7 +135,7 @@ export function PackagePreview({
               })}
             </ul>
             <div className="flex items-baseline justify-between gap-4 border-t border-border px-4 py-3">
-              <span className="text-sm font-medium text-text">Total</span>
+              <span className="text-body font-medium text-text">Total</span>
               <span className="shrink-0 text-lg font-semibold tabular-nums text-text">
                 {formatAUD(totals.base)}
               </span>
@@ -154,12 +154,12 @@ export function PackagePreview({
               const flat = flattenItem(item)
               return (
                 <li key={i} className="flex items-baseline justify-between gap-4 px-4 py-3">
-                  <span className="min-w-0 truncate text-sm text-text">
+                  <span className="min-w-0 truncate text-body text-text">
                     {flat.description.trim() || (
                       <span className="text-text-subtle">Untitled item</span>
                     )}
                   </span>
-                  <span className="shrink-0 text-sm tabular-nums text-text-muted">
+                  <span className="shrink-0 text-body tabular-nums text-text-muted">
                     + {formatAUD(flat.amount)}
                   </span>
                 </li>
@@ -169,7 +169,7 @@ export function PackagePreview({
         </div>
       )}
 
-      <p className="mt-4 text-xs text-text-muted first-letter:uppercase">{terms.join(' · ')}</p>
+      <p className="mt-4 text-caption text-text-muted first-letter:uppercase">{terms.join(' · ')}</p>
     </Card>
   )
 }

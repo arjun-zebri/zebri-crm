@@ -15,7 +15,7 @@ export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 export function AutoSaveStatus({ state }: { state: SaveState }) {
   if (state === 'saving') {
     return (
-      <span className="flex items-center gap-1.5 text-xs text-text-subtle">
+      <span className="flex items-center gap-1.5 text-caption text-text-subtle">
         <Loader2 size={13} strokeWidth={1.5} className="animate-spin" />
         Saving…
       </span>
@@ -23,14 +23,14 @@ export function AutoSaveStatus({ state }: { state: SaveState }) {
   }
   if (state === 'saved') {
     return (
-      <span className="flex items-center gap-1.5 text-xs text-text-subtle">
+      <span className="flex items-center gap-1.5 text-caption text-text-subtle">
         <Check size={13} strokeWidth={1.5} />
         Saved
       </span>
     );
   }
   if (state === 'error') {
-    return <span className="text-xs text-red-500">Couldn’t save. Try again</span>;
+    return <span className="text-caption text-red-500">Couldn’t save. Try again</span>;
   }
   return null;
 }

@@ -162,7 +162,7 @@ function ColorPickerBody({ value, onChange, swatches = [] }: BodyProps) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
           }}
-          className="flex-1 border border-border rounded-control px-2.5 py-1.5 text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-border-strong"
+          className="flex-1 border border-border rounded-control px-2.5 py-1.5 text-body font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-border-strong"
           placeholder="#000000"
           maxLength={7}
           spellCheck={false}

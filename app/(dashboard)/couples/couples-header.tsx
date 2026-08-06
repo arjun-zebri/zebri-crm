@@ -123,13 +123,13 @@ export function CouplesHeader({
             <div className="absolute top-full mt-1 right-0 bg-surface border border-border rounded-control shadow-lg z-30 min-w-44 py-1">
               <button
                 onClick={() => { setMobileAddOpen(false); onAddClick() }}
-                className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-caption text-gray-700 hover:bg-gray-50 transition cursor-pointer"
               >
                 <Plus size={13} strokeWidth={1.5} /> Add manually
               </button>
               <button
                 onClick={() => { setMobileAddOpen(false); onImportClick() }}
-                className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-caption text-gray-700 hover:bg-gray-50 transition cursor-pointer"
               >
                 <Upload size={13} strokeWidth={1.5} /> Import from CSV
               </button>
@@ -154,7 +154,7 @@ export function CouplesHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search couples..."
-            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
           />
           {search && (
             <button
@@ -173,7 +173,7 @@ export function CouplesHeader({
         <div className="relative hidden sm:block" ref={filtersRef}>
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className={`flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
               hasActiveFilter ? 'text-text bg-gray-50' : 'text-text-muted'
             }`}
           >
@@ -198,7 +198,7 @@ export function CouplesHeader({
                   onStatusFilterChange('all')
                   setFiltersOpen(false)
                 }}
-                className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                className={`w-full text-left px-2.5 py-1.5 text-caption transition cursor-pointer ${
                   statusFilter === 'all'
                     ? 'bg-gray-50 text-text font-medium'
                     : 'text-gray-700 hover:bg-gray-50'
@@ -213,7 +213,7 @@ export function CouplesHeader({
                     onStatusFilterChange(status.slug)
                     setFiltersOpen(false)
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                  className={`w-full text-left px-2.5 py-1.5 text-caption transition cursor-pointer ${
                     statusFilter === status.slug
                       ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -230,7 +230,7 @@ export function CouplesHeader({
         <div className="relative" ref={sortRef}>
           <button
             onClick={() => setSortOpen(!sortOpen)}
-            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <ArrowUpDown size={11} strokeWidth={1.5} />
             <span>{activeSortLabel || 'Sort'}</span>
@@ -244,7 +244,7 @@ export function CouplesHeader({
                     onSortChange(option.field, option.direction)
                     setSortOpen(false)
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                  className={`w-full text-left px-2.5 py-1.5 text-caption transition cursor-pointer ${
                     sortField === option.field && sortDirection === option.direction
                       ? 'bg-gray-50 text-text font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -266,7 +266,7 @@ export function CouplesHeader({
               rather than under Settings. Visible in both List and Board views. */}
           <button
             onClick={onManageStatuses}
-            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
             aria-label="Manage statuses"
             title="Manage statuses"
           >
@@ -278,7 +278,7 @@ export function CouplesHeader({
           <div className="hidden sm:block relative" ref={addRef}>
             <button
               onClick={() => setAddOpen((o) => !o)}
-              className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
             >
               <Plus size={11} strokeWidth={2} />
               New couple
@@ -287,13 +287,13 @@ export function CouplesHeader({
               <div className="absolute top-full mt-1 right-0 bg-surface border border-border rounded-control shadow-lg z-30 min-w-44 py-1">
                 <button
                   onClick={() => { setAddOpen(false); onAddClick() }}
-                  className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-caption text-gray-700 hover:bg-gray-50 transition cursor-pointer"
                 >
                   <Plus size={13} strokeWidth={1.5} /> Add manually
                 </button>
                 <button
                   onClick={() => { setAddOpen(false); onImportClick() }}
-                  className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-caption text-gray-700 hover:bg-gray-50 transition cursor-pointer"
                 >
                   <Upload size={13} strokeWidth={1.5} /> Import from CSV
                 </button>
@@ -307,7 +307,7 @@ export function CouplesHeader({
       <div className="flex items-center gap-6 border-b border-border mt-6">
         <button
           onClick={() => onViewModeChange('kanban')}
-          className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
+          className={`pb-2 text-body font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
             viewMode === 'kanban'
               ? 'border-gray-900 text-text'
               : 'border-transparent text-text-subtle hover:text-gray-600'
@@ -317,7 +317,7 @@ export function CouplesHeader({
         </button>
         <button
           onClick={() => onViewModeChange('list')}
-          className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
+          className={`pb-2 text-body font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
             viewMode === 'list'
               ? 'border-gray-900 text-text'
               : 'border-transparent text-text-subtle hover:text-gray-600'
@@ -331,7 +331,7 @@ export function CouplesHeader({
       <div className={`sm:hidden overflow-x-auto flex gap-2 pt-3 -mx-6 px-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${viewMode === 'kanban' ? 'hidden' : ''}`}>
         <button
           onClick={() => onStatusFilterChange('all')}
-          className={`flex-none px-3 py-1.5 rounded-pill text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+          className={`flex-none px-3 py-1.5 rounded-pill text-caption font-medium whitespace-nowrap transition cursor-pointer ${
             statusFilter === 'all'
               ? 'bg-gray-900 text-white'
               : 'bg-surface-emphasis text-gray-600 active:bg-gray-200'
@@ -343,7 +343,7 @@ export function CouplesHeader({
           <button
             key={status.slug}
             onClick={() => onStatusFilterChange(status.slug)}
-            className={`flex-none px-3 py-1.5 rounded-pill text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+            className={`flex-none px-3 py-1.5 rounded-pill text-caption font-medium whitespace-nowrap transition cursor-pointer ${
               statusFilter === status.slug
                 ? 'bg-gray-900 text-white'
                 : 'bg-surface-emphasis text-gray-600 active:bg-gray-200'

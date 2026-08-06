@@ -121,18 +121,18 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
           sideOffset={6}
           className="bg-surface border border-border rounded-control shadow-lg z-[80] w-64 py-1.5"
         >
-          <p className="px-3 py-1.5 text-xs text-text-subtle">{cfg.hint}</p>
+          <p className="px-3 py-1.5 text-caption text-text-subtle">{cfg.hint}</p>
           {isLoading ? (
             <PickerSkeleton />
           ) : (list ?? []).length === 0 ? (
-            <p className="px-3 py-2 text-sm text-text-muted">No active automations to run.</p>
+            <p className="px-3 py-2 text-body text-text-muted">No active automations to run.</p>
           ) : (
             (list ?? []).map((a) => (
               <button
                 key={a.id}
                 onClick={() => run(a.id)}
                 disabled={runningId !== null}
-                className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm text-text hover:bg-surface-muted transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-between gap-3 px-3 py-2 text-body text-text hover:bg-surface-muted transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <span className="truncate">{labelFor(a)}</span>
                 {runningId === a.id ? (
@@ -143,7 +143,7 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
               </button>
             ))
           )}
-          {error && <p className="px-3 py-2 text-xs text-danger">{error}</p>}
+          {error && <p className="px-3 py-2 text-caption text-danger">{error}</p>}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

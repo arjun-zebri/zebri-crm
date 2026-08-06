@@ -38,8 +38,8 @@ interface Props {
 function Meta({ label, value, align = 'left' }: { label: string; value: string; align?: 'left' | 'right' }) {
   return (
     <div className={`min-w-0 ${align === 'right' ? 'text-right' : ''}`}>
-      <p className="text-xs text-text-subtle">{label}</p>
-      <p className="text-sm text-text truncate mt-0.5">{value}</p>
+      <p className="text-caption text-text-subtle">{label}</p>
+      <p className="text-body text-text truncate mt-0.5">{value}</p>
     </div>
   )
 }
@@ -68,8 +68,8 @@ export function AutomationGroupRow({
           <Zap size={15} strokeWidth={1.5} className="text-text-subtle" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-text truncate">{group.title}</p>
-          {subtitle && <p className="text-xs text-text-muted truncate mt-0.5">{subtitle}</p>}
+          <p className="text-body font-medium text-text truncate">{group.title}</p>
+          {subtitle && <p className="text-caption text-text-muted truncate mt-0.5">{subtitle}</p>}
         </div>
         <StatePill tone={STATUS_TONE[group.headline]} label={RUN_STATUS_LABELS[group.headline]} className="shrink-0" />
         <ChevronDown

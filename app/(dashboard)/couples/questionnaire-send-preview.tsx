@@ -45,7 +45,7 @@ export function QuestionnaireSendPreview({ name, questions, displayMode, coupleN
     <button
       type="button"
       onClick={() => setTab(value)}
-      className={`cursor-pointer rounded-control px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`cursor-pointer rounded-control px-3 py-1.5 text-body font-medium transition-colors ${
         tab === value ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'
       }`}
     >
@@ -92,7 +92,7 @@ export function QuestionnaireSendPreview({ name, questions, displayMode, coupleN
         <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} frame={frame} heightClass="h-[58vh]" />
       </div>
       <div className={`h-[58vh] flex-col overflow-hidden rounded-control border border-border ${tab === 'email' ? 'flex' : 'hidden'}`}>
-        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-muted px-4 py-2.5 text-sm text-text-muted">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-muted px-4 py-2.5 text-body text-text-muted">
           <Mail size={14} strokeWidth={1.5} />
           <span className="truncate">
             Subject: {branding?.business_name || 'Your celebrant'} sent you a few questions

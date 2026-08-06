@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
 import { Trash2, UserCog } from 'lucide-react';
+import { useState, useTransition } from 'react';
 
 import { deleteUser, enterShadow, sendPasswordReset } from '@/app/admin/actions';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,7 @@ export function AccountActionsSection({
   return (
     <>
       <section>
-        <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted mb-3">
+        <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted mb-3">
           Account
         </h3>
         <div className="flex flex-wrap gap-2">
@@ -84,7 +84,7 @@ export function AccountActionsSection({
       </section>
 
       <section className="pt-4 border-t border-border">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-danger mb-3">
+        <h3 className="text-caption font-medium uppercase tracking-wide text-danger mb-3">
           Danger zone
         </h3>
         <Button onClick={() => setConfirmDelete(true)} variant="danger" size="sm">

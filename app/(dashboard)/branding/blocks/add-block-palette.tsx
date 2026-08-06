@@ -131,7 +131,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="Search blocks…"
-              className="flex-1 text-sm bg-transparent outline-none placeholder:text-text-subtle"
+              className="flex-1 text-body bg-transparent outline-none placeholder:text-text-subtle"
             />
             <kbd className="text-[10px] text-text-subtle bg-gray-50 border border-border rounded-control px-1.5 py-0.5 font-mono">
               esc
@@ -140,7 +140,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
 
           <div className="max-h-[320px] overflow-y-auto p-1">
             {flatBlocks.length === 0 ? (
-              <p className="text-sm text-text-subtle text-center py-6">No matching blocks</p>
+              <p className="text-body text-text-subtle text-center py-6">No matching blocks</p>
             ) : (
               flatBlocks.map(({ type, group }, idx) => {
                 const Icon = BLOCK_ICONS[type] ?? Type
@@ -169,8 +169,8 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                         <Icon size={15} strokeWidth={1.5} className="text-text-muted" />
                       </span>
                       <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-medium text-text">{blockLabel(type, surface)}</span>
-                        <span className="block text-xs text-text-muted truncate">{BLOCK_DESCRIPTIONS[type]}</span>
+                        <span className="block text-body font-medium text-text">{blockLabel(type, surface)}</span>
+                        <span className="block text-caption text-text-muted truncate">{BLOCK_DESCRIPTIONS[type]}</span>
                       </span>
                     </button>
                   </div>

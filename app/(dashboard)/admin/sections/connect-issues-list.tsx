@@ -19,13 +19,13 @@ export function ConnectIssuesList({
   return (
     <Card className="flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base sm:text-xl font-semibold text-text">
+        <h2 className="text-base sm:text-section font-semibold text-text">
           Connect issues
         </h2>
-        <span className="text-sm text-text-muted">{rows.length}</span>
+        <span className="text-body text-text-muted">{rows.length}</span>
       </div>
       {rows.length === 0 ? (
-        <p className="text-sm text-text-subtle py-4">
+        <p className="text-body text-text-subtle py-4">
           No vendors with broken payment Connect.
         </p>
       ) : (
@@ -37,7 +37,7 @@ export function ConnectIssuesList({
               className="px-2 py-1.5 rounded-control hover:bg-surface-emphasis cursor-pointer"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-mono text-text truncate">
+                <p className="text-body font-mono text-text truncate">
                   {row.account_id ?? '(no acct)'}
                 </p>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -50,12 +50,12 @@ export function ConnectIssuesList({
                 </div>
               </div>
               {row.disabled_reason && (
-                <p className="text-xs text-danger mt-0.5 truncate">
+                <p className="text-caption text-danger mt-0.5 truncate">
                   {row.disabled_reason}
                 </p>
               )}
               {row.requirements_past_due.length > 0 && (
-                <p className="text-xs text-text-muted mt-0.5 truncate">
+                <p className="text-caption text-text-muted mt-0.5 truncate">
                   past due · {row.requirements_past_due.join(', ')}
                 </p>
               )}

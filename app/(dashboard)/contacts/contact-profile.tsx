@@ -86,7 +86,7 @@ export function ContactProfile({
                 <h2 className="text-lg font-semibold text-text truncate">
                   {vendor.name}
                 </h2>
-                <span className="shrink-0 px-2 py-0.5 rounded-pill text-xs font-medium bg-surface-emphasis text-gray-600">
+                <span className="shrink-0 px-2 py-0.5 rounded-pill text-caption font-medium bg-surface-emphasis text-gray-600">
                   {CATEGORY_LABELS[vendor.category]}
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -97,7 +97,7 @@ export function ContactProfile({
                         : "bg-gray-300"
                     }`}
                   />
-                  <span className="text-xs text-text-subtle">
+                  <span className="text-caption text-text-subtle">
                     {STATUS_LABELS[vendor.status]}
                   </span>
                 </div>
@@ -124,7 +124,7 @@ export function ContactProfile({
                         <a
                           href={`tel:${vendor.phone}`}
                           onClick={() => setActionsOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition"
+                          className="flex items-center gap-2.5 px-3 py-2 text-body text-gray-700 hover:bg-gray-50 cursor-pointer transition"
                         >
                           <Phone size={14} strokeWidth={1.5} />
                           Call
@@ -134,7 +134,7 @@ export function ContactProfile({
                         <a
                           href={`mailto:${vendor.email}`}
                           onClick={() => setActionsOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition"
+                          className="flex items-center gap-2.5 px-3 py-2 text-body text-gray-700 hover:bg-gray-50 cursor-pointer transition"
                         >
                           <Mail size={14} strokeWidth={1.5} />
                           Email
@@ -146,7 +146,7 @@ export function ContactProfile({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => setActionsOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition"
+                          className="flex items-center gap-2.5 px-3 py-2 text-body text-gray-700 hover:bg-gray-50 cursor-pointer transition"
                         >
                           <PiWhatsappLogoLight size={15} />
                           WhatsApp
@@ -158,7 +158,7 @@ export function ContactProfile({
                             setDeleteConfirm(true);
                             setActionsOpen(false);
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition cursor-pointer"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-body text-red-500 hover:bg-red-50 transition cursor-pointer"
                         >
                           <Trash2 size={14} strokeWidth={1.5} />
                           Delete contact

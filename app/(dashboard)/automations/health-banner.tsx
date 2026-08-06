@@ -37,13 +37,13 @@ export function HealthBanner({ erroredCount, firstErrorAutomationId, firstErrorA
 
   if (!firstErrorAutomationId) {
     return (
-      <div className="bg-warning/10 text-warning text-xs px-3 py-2 rounded-control">{body}</div>
+      <div className="bg-warning/10 text-warning text-caption px-3 py-2 rounded-control">{body}</div>
     )
   }
   return (
     <Link
       href={`/automations/${firstErrorAutomationId}`}
-      className="block bg-warning/10 text-warning text-xs px-3 py-2 rounded-control hover:bg-warning/15 transition cursor-pointer"
+      className="block bg-warning/10 text-warning text-caption px-3 py-2 rounded-control hover:bg-warning/15 transition cursor-pointer"
     >
       {body}
     </Link>

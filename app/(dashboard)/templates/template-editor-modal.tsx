@@ -254,7 +254,7 @@ export function TemplateEditorModal({
             </div>
             </div>
           </div>
-          <p className="mb-2 shrink-0 text-xs text-text-subtle">Filled with example data so you can see the finished email.</p>
+          <p className="mb-2 shrink-0 text-caption text-text-subtle">Filled with example data so you can see the finished email.</p>
           {/* Desktop: exactly the pane's remaining height, so the outer
               column never scrolls. Stacked mobile: a fixed height keeps
               the iframe from collapsing in the auto-height column. */}

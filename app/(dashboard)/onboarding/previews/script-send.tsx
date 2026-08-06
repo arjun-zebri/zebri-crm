@@ -82,7 +82,7 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
             nav on the left, tab body on the right. */}
         <div className="w-[96%] h-[94%] rounded-control border border-border bg-card shadow-xl overflow-hidden flex flex-col animate-modal-in">
           <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border">
-            <span className="text-sm font-semibold text-text">Ellie &amp; Tom</span>
+            <span className="text-body font-semibold text-text">Ellie &amp; Tom</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded-pill bg-amber-50 text-amber-600 font-medium">New</span>
             <X size={13} strokeWidth={1.5} className="ml-auto text-text-subtle" />
           </div>
@@ -108,7 +108,7 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
             <div className="flex-1 min-w-0 p-2.5 relative flex flex-col">
               {!emailsTab ? (
                 <div className="space-y-2 pt-1" aria-hidden>
-                  <p className="text-xs font-semibold text-text">Overview</p>
+                  <p className="text-caption font-semibold text-text">Overview</p>
                   <div className="h-1.5 w-1/2 rounded-control bg-surface-muted" />
                   <div className="h-1.5 w-2/3 rounded-control bg-surface-muted" />
                   <div className="h-1.5 w-1/3 rounded-control bg-surface-muted" />
@@ -116,7 +116,7 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
               ) : (
                 <div className="animate-fade-in flex flex-col flex-1 min-h-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-semibold text-text">Emails</p>
+                    <p className="text-caption font-semibold text-text">Emails</p>
                     <div className="flex items-center gap-1.5">
                       <span className="inline-flex items-center gap-1 rounded-control px-2 py-1 text-[10px] border border-border text-text">
                         <FlaskConical size={10} strokeWidth={1.5} /> Test
@@ -168,12 +168,12 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
             title="Email Ellie & Tom"
             footer={
               <>
-                <span className="text-xs px-3 py-1 rounded-control text-text-muted">Cancel</span>
+                <span className="text-caption px-3 py-1 rounded-control text-text-muted">Cancel</span>
                 {/* Black from the moment it appears — never greyed. The only
                     change is the flip to a green Sent once the send lands. */}
                 <span
                   data-cursor="send"
-                  className={`inline-flex items-center justify-center gap-1 rounded-control px-3 py-1 text-xs border min-w-[92px] transition-colors duration-300 ${
+                  className={`inline-flex items-center justify-center gap-1 rounded-control px-3 py-1 text-caption border min-w-[92px] transition-colors duration-300 ${
                     sent
                       ? 'bg-success border-transparent text-text-inverse'
                       : 'bg-brand-fg border-brand-fg text-text-inverse'

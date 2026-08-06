@@ -124,11 +124,11 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-text">
+        <h3 className="text-caption font-semibold uppercase tracking-wider text-text">
           Used by
         </h3>
         {couples.length > 0 && (
-          <span className="text-xs text-text-subtle">
+          <span className="text-caption text-text-subtle">
             {couples.length} {couples.length === 1 ? "couple" : "couples"}
             {totalEvents > 0 && ` · ${totalEvents} ${totalEvents === 1 ? "event" : "events"}`}
           </span>
@@ -138,8 +138,8 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
       {couples.length === 0 ? (
         <div className="border border-dashed border-border rounded-control px-4 py-8 text-center">
           <Users size={20} strokeWidth={1.5} className="text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-text-muted">Not linked to any couples yet.</p>
-          <p className="text-xs text-text-subtle mt-1">
+          <p className="text-body text-text-muted">Not linked to any couples yet.</p>
+          <p className="text-caption text-text-subtle mt-1">
             Add this contact from a couple&apos;s profile to see them here.
           </p>
         </div>
@@ -154,11 +154,11 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
                 className="group w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-control border border-border hover:border-border-strong hover:bg-gray-50/60 transition cursor-pointer"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-text truncate">
+                  <div className="text-body font-medium text-text truncate">
                     {couple.name}
                   </div>
                   {next && (next.date || next.venue) ? (
-                    <div className="text-xs text-text-subtle truncate flex items-center gap-1.5 mt-0.5">
+                    <div className="text-caption text-text-subtle truncate flex items-center gap-1.5 mt-0.5">
                       <Calendar size={11} strokeWidth={1.5} />
                       <span>
                         {next.date ? formatDate(next.date) : "Date TBC"}
@@ -167,7 +167,7 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
                       </span>
                     </div>
                   ) : (
-                    <div className="text-xs text-text-subtle mt-0.5">
+                    <div className="text-caption text-text-subtle mt-0.5">
                       {couple.source === "couple" ? "No event yet" : ""}
                     </div>
                   )}

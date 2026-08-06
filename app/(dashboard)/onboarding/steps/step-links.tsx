@@ -25,8 +25,8 @@ export function StepLinks({ value, onChange }: StepLinksProps) {
   return (
     <div className="min-h-full flex flex-col justify-center max-w-xl mx-auto w-full gap-6 py-2">
       <div>
-        <h2 className="text-xl font-semibold text-text">Where can couples find you?</h2>
-        <p className="text-sm text-text-muted mt-2">
+        <h2 className="text-section font-semibold text-text">Where can couples find you?</h2>
+        <p className="text-body text-text-muted mt-2">
           All optional. You can add these later in Settings.
         </p>
       </div>

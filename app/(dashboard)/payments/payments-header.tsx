@@ -54,7 +54,7 @@ export function PaymentsHeader({
   const desktopNewButton = (
     <button
       onClick={onNew}
-      className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
+      className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
     >
       <Plus size={11} strokeWidth={2} />
       New {newLabel}
@@ -79,7 +79,7 @@ export function PaymentsHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={`Search ${activeTab}...`}
-            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
           />
           {search && (
             <button
@@ -130,7 +130,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
+      className={`pb-2 text-body font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
         active
           ? 'border-gray-900 text-text'
           : 'border-transparent text-text-subtle hover:text-gray-600'

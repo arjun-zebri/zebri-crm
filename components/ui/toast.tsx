@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="flex items-center gap-2.5 bg-surface border border-border rounded-control px-4 py-3 shadow-lg text-sm animate-slide-in-right pointer-events-auto"
+            className="flex items-center gap-2.5 bg-surface border border-border rounded-control px-4 py-3 shadow-lg text-body animate-slide-in-right pointer-events-auto"
           >
             {t.type === 'success' ? (
               <CheckCircle size={15} strokeWidth={1.5} className="text-emerald-500 flex-shrink-0" />
@@ -61,7 +61,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={t.action.onClick}
-                className="ml-auto pl-2 text-xs font-medium text-text-muted hover:text-text cursor-pointer rounded-control hover:bg-surface-muted px-2 py-1 transition"
+                className="ml-auto pl-2 text-caption font-medium text-text-muted hover:text-text cursor-pointer rounded-control hover:bg-surface-muted px-2 py-1 transition"
               >
                 {t.action.label}
               </button>

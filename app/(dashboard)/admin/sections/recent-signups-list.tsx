@@ -28,13 +28,13 @@ export function RecentSignupsList({
   return (
     <Card className="flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base sm:text-xl font-semibold text-text">
+        <h2 className="text-base sm:text-section font-semibold text-text">
           Recent signups
         </h2>
-        <span className="text-sm text-text-muted">last {rows.length}</span>
+        <span className="text-body text-text-muted">last {rows.length}</span>
       </div>
       {rows.length === 0 ? (
-        <p className="text-sm text-text-subtle py-4">No signups yet.</p>
+        <p className="text-body text-text-subtle py-4">No signups yet.</p>
       ) : (
         <ul className="flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-1 space-y-2">
           {rows.map((row) => (
@@ -44,12 +44,12 @@ export function RecentSignupsList({
               className="flex items-center justify-between gap-3 px-2 py-1.5 rounded-control hover:bg-surface-emphasis cursor-pointer"
             >
               <div className="min-w-0">
-                <p className="text-sm text-text truncate">
+                <p className="text-body text-text truncate">
                   {row.business_name || row.display_name || row.email}
                 </p>
-                <p className="text-xs text-text-muted truncate">{row.email}</p>
+                <p className="text-caption text-text-muted truncate">{row.email}</p>
               </div>
-              <span className="text-xs text-text-subtle shrink-0">
+              <span className="text-caption text-text-subtle shrink-0">
                 {formatRelative(row.created_at)}
               </span>
             </li>

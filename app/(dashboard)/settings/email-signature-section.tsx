@@ -92,8 +92,8 @@ export function EmailSignatureSection({ initialContent }: EmailSignatureSectionP
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-text mb-1">Signature</h2>
-      <p className="text-sm text-text-muted mb-5">
+      <h2 className="text-section font-semibold text-text mb-1">Signature</h2>
+      <p className="text-body text-text-muted mb-5">
         The sign-off added to your emails: your name, business, and any links. Drop it into any
         template with the <span className="font-medium text-gray-700">Your email signature</span>{' '}
         variable. Changes save automatically.

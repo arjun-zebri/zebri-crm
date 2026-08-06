@@ -227,7 +227,7 @@ function ScheduleModalBody({
   }
 
   return (
-    <div className="space-y-4 text-sm">
+    <div className="space-y-4 text-body">
       <div className="space-y-1.5">
         <span className="block text-caption font-medium text-text-muted">Schedule</span>
         <ScheduleCombobox

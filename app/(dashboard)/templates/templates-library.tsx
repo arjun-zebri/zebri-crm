@@ -67,8 +67,8 @@ function TemplateRow({
         }`}
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-text">{template.name}</span>
-          <span className="block truncate text-xs text-text-subtle">
+          <span className="block truncate text-body font-medium text-text">{template.name}</span>
+          <span className="block truncate text-caption text-text-subtle">
             {template.subject || 'No subject'}
           </span>
         </span>
@@ -112,14 +112,14 @@ export function TemplatesLibrary({ templates, archived = [], isLoading, isError,
   if (isLoading || categoriesLoading) return <TemplatesSkeleton />
   if (isError) return <ErrorState title="Couldn't load templates" onRetry={onRetry} />
   if (groups.length === 0 && archived.length === 0) {
-    return <p className="py-8 text-center text-sm text-text-subtle">No templates match your search.</p>
+    return <p className="py-8 text-center text-body text-text-subtle">No templates match your search.</p>
   }
 
   return (
     <div className="space-y-5">
       {groups.map((group) => (
         <section key={group.key}>
-          <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+          <h3 className="flex items-center gap-1.5 px-2 text-caption font-semibold uppercase tracking-wider text-text-subtle">
             {group.dotClass && <span className={`h-2 w-2 rounded-pill ${group.dotClass}`} />}
             {group.label}
           </h3>
@@ -136,7 +136,7 @@ export function TemplatesLibrary({ templates, archived = [], isLoading, isError,
           <button
             type="button"
             onClick={() => setShowArchived((v) => !v)}
-            className="flex cursor-pointer items-center gap-1 px-2 py-1 text-xs text-text-muted transition hover:text-text"
+            className="flex cursor-pointer items-center gap-1 px-2 py-1 text-caption text-text-muted transition hover:text-text"
           >
             {showArchived ? (
               <ChevronDown size={14} strokeWidth={1.5} />

@@ -60,14 +60,14 @@ export function CouplesToolbar({
           placeholder="Search couples..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 border border-border rounded-control text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+          className="w-full pl-9 pr-3 py-2 border border-border rounded-control text-body focus:outline-none focus:ring-2 focus:ring-green-200"
         />
       </div>
 
       <div className="relative" ref={filtersRef}>
         <button
           onClick={() => setFiltersOpen(!filtersOpen)}
-          className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-control transition ${
+          className={`flex items-center gap-1.5 text-body px-3 py-2 rounded-control transition ${
             statusFilter !== 'all'
               ? 'border border-gray-900 bg-gray-900 text-white'
               : 'border border-border text-gray-600 hover:bg-gray-50'
@@ -82,7 +82,7 @@ export function CouplesToolbar({
                 onStatusFilterChange('all')
                 setFiltersOpen(false)
               }}
-              className={`w-full text-left px-4 py-2 text-sm transition ${
+              className={`w-full text-left px-4 py-2 text-body transition ${
                 statusFilter === 'all'
                   ? 'bg-surface-emphasis text-text font-medium'
                   : 'text-gray-600 hover:bg-gray-50'
@@ -97,7 +97,7 @@ export function CouplesToolbar({
                   onStatusFilterChange(status.slug)
                   setFiltersOpen(false)
                 }}
-                className={`w-full text-left px-4 py-2 text-sm transition ${
+                className={`w-full text-left px-4 py-2 text-body transition ${
                   statusFilter === status.slug
                     ? 'bg-surface-emphasis text-text font-medium'
                     : 'text-gray-600 hover:bg-gray-50'

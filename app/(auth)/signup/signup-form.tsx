@@ -31,7 +31,7 @@ export function SignupForm() {
       <div className="mb-6 flex justify-center">
         <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
       </div>
-      <h1 className="mb-6 text-center text-xl font-semibold text-text">Create account</h1>
+      <h1 className="mb-6 text-center text-section font-semibold text-text">Create account</h1>
 
       {state.error && !state.fieldErrors ? (
         <div

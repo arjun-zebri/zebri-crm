@@ -101,7 +101,7 @@ export function RunHistoryPanel({ automationId, actions, open, onClose }: Props)
   return (
     <aside className="absolute inset-y-0 right-0 z-20 flex w-96 max-w-full flex-col border-l border-border bg-surface shadow-xl">
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold text-text">Run history</h2>
+        <h2 className="text-body font-semibold text-text">Run history</h2>
         <button
           type="button"
           onClick={onClose}

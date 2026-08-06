@@ -65,17 +65,17 @@ export function CouplesListMobile({
                 className="flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 transition"
               >
                 <div className="min-w-0 flex-1 pr-3">
-                  <p className="text-sm font-medium text-text truncate">
+                  <p className="text-body font-medium text-text truncate">
                     {couple.name}
                   </p>
                   {secondary && (
-                    <p className="text-xs text-text-subtle mt-0.5 truncate">
+                    <p className="text-caption text-text-subtle mt-0.5 truncate">
                       {secondary}
                     </p>
                   )}
                 </div>
                 <span
-                  className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-medium whitespace-nowrap ${classes.pill}`}
+                  className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-pill text-caption font-medium whitespace-nowrap ${classes.pill}`}
                 >
                   {statusName}
                 </span>

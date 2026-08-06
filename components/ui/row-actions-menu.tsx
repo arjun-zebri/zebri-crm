@@ -21,7 +21,7 @@ interface RowActionsMenuProps {
   /** Always visible (mobile / touch) - otherwise hover-only */
   alwaysVisible?: boolean
   /**
-   * Item text size. `'md'` (default, `text-sm`) matches the page-level
+   * Item text size. `'md'` (default, `text-body`) matches the page-level
    * lists; `'sm'` (`text-caption`) is for compact surfaces whose own rows
    * are caption-sized, so the menu does not tower over them.
    */
@@ -47,7 +47,7 @@ export function RowActionsMenu({
   const itemClass =
     size === 'sm'
       ? 'w-full text-left px-2.5 py-1.5 text-caption flex items-center gap-2 transition'
-      : 'w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition'
+      : 'w-full text-left px-3 py-2 text-body flex items-center gap-2 transition'
   const contentWidth = size === 'sm' ? 'min-w-36' : 'min-w-44'
 
   return (

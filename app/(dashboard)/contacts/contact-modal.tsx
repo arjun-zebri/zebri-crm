@@ -99,7 +99,7 @@ export function ContactModal({
   };
 
   const inputClass =
-    "w-full border-0 border-b border-border bg-transparent px-0 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-green-300 transition";
+    "w-full border-0 border-b border-border bg-transparent px-0 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-green-300 transition";
 
   const headerActions = vendor ? (
     <>
@@ -146,14 +146,14 @@ export function ContactModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="text-sm px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+            className="text-body px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading || !name.trim()}
-            className="text-sm px-4 py-2 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+            className="text-body px-4 py-2 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Saving..." : "Save"}
           </button>
@@ -164,7 +164,7 @@ export function ContactModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Contact / Business Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -178,7 +178,7 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Email <span className="text-text-subtle font-normal">(optional)</span>
             </label>
             <input
@@ -191,7 +191,7 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Phone <span className="text-text-subtle font-normal">(optional)</span>
             </label>
             <input
@@ -207,7 +207,7 @@ export function ContactModal({
               picklists and the modal feels too tall when stacked. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Category
             </label>
             <Popover.Root open={categoryOpen} onOpenChange={setCategoryOpen}>
@@ -237,7 +237,7 @@ export function ContactModal({
                         setCategory(cat);
                         setCategoryOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                      className={`w-full text-left px-3 py-2 text-body transition ${
                         category === cat
                           ? "bg-green-50 text-green-700"
                           : "text-gray-700 hover:bg-gray-50"
@@ -253,7 +253,7 @@ export function ContactModal({
 
           {/* Status */}
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Status
             </label>
             <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
@@ -280,7 +280,7 @@ export function ContactModal({
                         setStatus(stat);
                         setStatusOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                      className={`w-full text-left px-3 py-2 text-body transition ${
                         status === stat
                           ? "bg-green-50 text-green-700"
                           : "text-gray-700 hover:bg-gray-50"
@@ -296,7 +296,7 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Contact Person <span className="text-text-subtle font-normal">(optional)</span>
             </label>
             <input
@@ -310,7 +310,7 @@ export function ContactModal({
         </div>
 
         <div>
-          <label className="block text-sm text-gray-600 mb-1">
+          <label className="block text-body text-gray-600 mb-1">
             Notes <span className="text-text-subtle font-normal">(optional)</span>
           </label>
           <textarea

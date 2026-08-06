@@ -75,8 +75,8 @@ function parsePercent(raw: string): number | null {
 function SectionLabel({ label, hint }: { label: string; hint: string }) {
   return (
     <p className="mb-2">
-      <span className="text-sm font-medium text-text">{label}</span>
-      <span className="ml-2 text-xs text-text-muted">{hint}</span>
+      <span className="text-body font-medium text-text">{label}</span>
+      <span className="ml-2 text-caption text-text-muted">{hint}</span>
     </p>
   )
 }
@@ -121,8 +121,8 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
       size="lg"
       title={
         <div className="min-w-0">
-          <p className="text-xl font-semibold text-text">{title}</p>
-          <p className="mt-0.5 text-sm font-normal text-text-muted">
+          <p className="text-section font-semibold text-text">{title}</p>
+          <p className="mt-0.5 text-body font-normal text-text-muted">
             Build a reusable package you can drop into any quote.
           </p>
         </div>
@@ -130,13 +130,13 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
       footer={
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-caption font-medium uppercase tracking-wide text-text-muted">
               Package total
             </p>
-            <p className="truncate text-xl font-semibold tabular-nums text-text">
+            <p className="truncate text-section font-semibold tabular-nums text-text">
               {formatAUD(totals.base)}
               {totals.addOns > 0 && (
-                <span className="ml-2 text-xs font-normal tabular-nums text-text-muted">
+                <span className="ml-2 text-caption font-normal tabular-nums text-text-muted">
                   {formatAUD(totals.full)} with all add-ons
                 </span>
               )}

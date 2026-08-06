@@ -132,9 +132,9 @@ export function InspectorPanel({ selection, automationId, onClose, onSaved, onCh
       <div className="flex items-start justify-between gap-2 px-4 py-3 border-b border-border">
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-wide text-text-subtle">{meta.kindLabel}</div>
-          <div className="text-sm font-semibold truncate">{meta.title}</div>
+          <div className="text-body font-semibold truncate">{meta.title}</div>
           {meta.description && (
-            <div className="text-xs text-text-muted mt-0.5 line-clamp-2">{meta.description}</div>
+            <div className="text-caption text-text-muted mt-0.5 line-clamp-2">{meta.description}</div>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -1251,7 +1251,7 @@ function SendEmailForm({
         onChange={(id) => updateConfig({ templateId: id || undefined })}
       />
       {templateId ? (
-        <p className="text-xs text-text-muted">
+        <p className="text-caption text-text-muted">
           This email uses a saved template — edit its subject and body in Templates. If a variable
           can&apos;t be filled for a couple, the run pauses and you&apos;ll be alerted to fix &amp;
           retry.

@@ -50,26 +50,26 @@ function FileCard({ file, onDelete }: { file: PortalFile; onDelete: (id: string)
       <div className="flex items-start gap-2.5 min-w-0">
         <FileText size={14} strokeWidth={1.5} className="text-text-subtle shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-text truncate">{file.name}</p>
-          {file.file_size && <p className="text-xs text-text-subtle">{formatSize(file.file_size)}</p>}
+          <p className="text-body font-medium text-text truncate">{file.name}</p>
+          {file.file_size && <p className="text-caption text-text-subtle">{formatSize(file.file_size)}</p>}
         </div>
       </div>
 
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
         {confirmDelete ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-text-subtle">Remove?</span>
+            <span className="text-caption text-text-subtle">Remove?</span>
             <button
               type="button"
               onClick={() => onDelete(file.id)}
-              className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer"
+              className="text-caption text-red-500 hover:text-red-600 transition cursor-pointer"
             >
               Yes
             </button>
             <button
               type="button"
               onClick={() => setConfirmDelete(false)}
-              className="text-xs text-text-subtle hover:text-gray-600 transition cursor-pointer"
+              className="text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer"
             >
               No
             </button>

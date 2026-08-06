@@ -157,16 +157,16 @@ export function ContactPopover({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoFocus
-                className="w-full text-sm text-text placeholder:text-text-subtle outline-none border-none bg-transparent"
+                className="w-full text-body text-text placeholder:text-text-subtle outline-none border-none bg-transparent"
               />
             </div>
             <div className="max-h-64 overflow-y-auto py-1">
               {isLoading ? (
-                <p className="text-xs text-text-subtle text-center py-4">
+                <p className="text-caption text-text-subtle text-center py-4">
                   Loading...
                 </p>
               ) : filtered.length === 0 ? (
-                <p className="text-xs text-text-subtle text-center py-4">
+                <p className="text-caption text-text-subtle text-center py-4">
                   {(contacts?.length ?? 0) === 0
                     ? 'No contacts yet'
                     : 'No matches'}
@@ -183,10 +183,10 @@ export function ContactPopover({
                     }}
                     className="w-full text-left px-3 py-2 hover:bg-gray-50 transition cursor-pointer flex items-center justify-between gap-2"
                   >
-                    <span className="text-sm text-text truncate">
+                    <span className="text-body text-text truncate">
                       {c.name}
                     </span>
-                    <span className="text-xs text-text-subtle shrink-0">
+                    <span className="text-caption text-text-subtle shrink-0">
                       {CATEGORY_LABELS[
                         c.category as keyof typeof CATEGORY_LABELS
                       ] || c.category}
@@ -204,7 +204,7 @@ export function ContactPopover({
                   setOpen(false)
                   setCreateOpen(true)
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 transition cursor-pointer flex items-center gap-2 text-sm text-gray-700"
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 transition cursor-pointer flex items-center gap-2 text-body text-gray-700"
               >
                 <Plus
                   size={12}

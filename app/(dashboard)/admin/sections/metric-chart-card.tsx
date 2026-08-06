@@ -55,7 +55,7 @@ export function MetricChartCard({
     <div className="bg-surface rounded-control border border-border p-4 sm:p-5 flex flex-col gap-3 h-[180px]">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+          <p className="text-caption font-medium uppercase tracking-wide text-text-muted">
             {label}
           </p>
           <p
@@ -68,7 +68,7 @@ export function MetricChartCard({
         </div>
         {!isNeutral && (
           <span
-            className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-control ${
+            className={`inline-flex items-center text-caption font-medium px-1.5 py-0.5 rounded-control ${
               isGood ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
             }`}
           >
@@ -115,7 +115,7 @@ export function MetricChartCard({
       </div>
 
       {detail && (
-        <p className="text-xs text-text-muted truncate -mt-1">{detail}</p>
+        <p className="text-caption text-text-muted truncate -mt-1">{detail}</p>
       )}
     </div>
   );

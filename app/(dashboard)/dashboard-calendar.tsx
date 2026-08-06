@@ -79,7 +79,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
   return (
     <div className="bg-surface rounded-control border border-border p-5 flex flex-col lg:h-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base sm:text-xl font-semibold text-text">Calendar</h2>
+        <h2 className="text-base sm:text-section font-semibold text-text">Calendar</h2>
         {/* Month nav */}
         <div className="flex items-center justify-end gap-1">
           <button
@@ -88,7 +88,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
           >
             <ChevronLeft className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
           </button>
-          <span className="text-sm font-medium text-text w-20 text-center">
+          <span className="text-body font-medium text-text w-20 text-center">
             {monthLabel}
           </span>
           <button
@@ -128,7 +128,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div
                 key={d}
-                className="h-7 flex items-center justify-between text-xs text-text-subtle font-medium"
+                className="h-7 flex items-center justify-between text-caption text-text-subtle font-medium"
               >
                 {d}
               </div>
@@ -146,7 +146,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
               return (
                 <div key={i} className="h-7 flex items-center justify-between">
                   <div
-                    className={`h-6 w-6 flex items-center justify-center rounded-pill text-xs relative ${
+                    className={`h-6 w-6 flex items-center justify-center rounded-pill text-caption relative ${
                       todayHighlight ? "bg-black text-white" : "text-gray-700"
                     }`}
                   >
@@ -174,14 +174,14 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
                       onClick={() => {
                         if (event.couple) onEventClick(event.couple);
                       }}
-                      className="flex items-center gap-3 px-3 py-2 rounded-control hover:bg-gray-50 transition cursor-pointer text-sm"
+                      className="flex items-center gap-3 px-3 py-2 rounded-control hover:bg-gray-50 transition cursor-pointer text-body"
                     >
                       <span
                         className={`w-2 h-2 rounded-pill shrink-0 ${getStatusDotColor(
                           event.couple?.status
                         )}`}
                       />
-                      <span className="text-xs font-medium text-text-muted shrink-0">
+                      <span className="text-caption font-medium text-text-muted shrink-0">
                         {dayNum} {monthShort}
                       </span>
                       <span className="text-text truncate flex-1">
@@ -192,7 +192,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
                 })}
               </div>
             ) : (
-              <p className="text-text-subtle text-xs text-center py-4">
+              <p className="text-text-subtle text-caption text-center py-4">
                 No events this month
               </p>
             )}

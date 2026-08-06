@@ -49,7 +49,7 @@ export function WizardChrome(props: WizardChromeProps) {
                 style={{ width: `${(props.step / TOTAL_STEPS) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-text-subtle whitespace-nowrap">
+            <span className="text-caption text-text-subtle whitespace-nowrap">
               {props.step} of {TOTAL_STEPS}
             </span>
           </>
@@ -62,7 +62,7 @@ export function WizardChrome(props: WizardChromeProps) {
           size="sm"
           onClick={props.onSkip}
           disabled={props.loading}
-          className="text-xs text-text-muted"
+          className="text-caption text-text-muted"
         >
           Skip, use defaults
         </Button>

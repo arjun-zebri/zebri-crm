@@ -64,7 +64,7 @@ function StatusRowBase({ status, onUpdate, onDelete }: StatusRowProps) {
         type="text"
         value={status.name}
         onChange={(e) => onUpdate({ ...status, name: e.target.value })}
-        className="flex-1 text-sm px-3 py-2 border border-border rounded-control focus:outline-none focus:ring-2 focus:ring-green-200"
+        className="flex-1 text-body px-3 py-2 border border-border rounded-control focus:outline-none focus:ring-2 focus:ring-green-200"
         placeholder="Status name"
       />
 
@@ -72,7 +72,7 @@ function StatusRowBase({ status, onUpdate, onDelete }: StatusRowProps) {
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="shrink-0 flex items-center gap-2 px-3 py-2 border border-border rounded-control hover:bg-gray-50 transition text-sm cursor-pointer"
+            className="shrink-0 flex items-center gap-2 px-3 py-2 border border-border rounded-control hover:bg-gray-50 transition text-body cursor-pointer"
           >
             <div className={`w-3 h-3 rounded-pill ${classes.dot}`} />
             <ChevronDown size={14} strokeWidth={1.5} />

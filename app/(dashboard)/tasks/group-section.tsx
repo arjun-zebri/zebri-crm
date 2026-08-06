@@ -113,13 +113,13 @@ export function GroupSection({
               if (e.key === 'Enter') commitRename()
               if (e.key === 'Escape') setEditing(false)
             }}
-            className="text-sm font-medium text-text bg-surface border border-blue-300 rounded-control px-1.5 py-0.5 outline-none ring-2 ring-blue-100"
+            className="text-body font-medium text-text bg-surface border border-blue-300 rounded-control px-1.5 py-0.5 outline-none ring-2 ring-blue-100"
           />
         ) : (
           header
         )}
 
-        <span className="text-xs text-text-subtle tabular-nums">{count}</span>
+        <span className="text-caption text-text-subtle tabular-nums">{count}</span>
 
         <div className="ml-1 flex items-center gap-0.5">
           {group && onRecolor && (
@@ -181,7 +181,7 @@ export function GroupSection({
                         startEditing()
                         setMenuOpen(false)
                       }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
                     >
                       <Pencil size={13} strokeWidth={1.5} />
                       Rename
@@ -194,7 +194,7 @@ export function GroupSection({
                         onDelete(group.id)
                         setMenuOpen(false)
                       }}
-                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 text-body text-red-600 hover:bg-red-50 transition flex items-center gap-2"
                     >
                       <Trash2 size={13} strokeWidth={1.5} />
                       Delete group
@@ -253,7 +253,7 @@ export function GroupSection({
             <div>{children}</div>
           </SortableContext>
           {count === 0 && (
-            <div className="px-3 py-2 text-xs text-gray-300 italic border-b border-gray-100">
+            <div className="px-3 py-2 text-caption text-gray-300 italic border-b border-gray-100">
               No tasks
             </div>
           )}
@@ -261,7 +261,7 @@ export function GroupSection({
             <button
               type="button"
               onClick={onAddTask}
-              className="w-full flex items-center gap-2 pl-3.5 sm:pl-11 pr-2 py-2 text-sm text-text-subtle hover:text-gray-600 transition cursor-pointer border-b border-transparent"
+              className="w-full flex items-center gap-2 pl-3.5 sm:pl-11 pr-2 py-2 text-body text-text-subtle hover:text-gray-600 transition cursor-pointer border-b border-transparent"
             >
               <Plus size={13} strokeWidth={1.5} className="shrink-0" />
               New task
@@ -320,7 +320,7 @@ export function ColumnHeader({
   ].join(' ')
   return (
     <div
-      className="hidden sm:grid items-center gap-2 px-2 py-1.5 border-b border-border text-xs text-text-subtle"
+      className="hidden sm:grid items-center gap-2 px-2 py-1.5 border-b border-border text-caption text-text-subtle"
       style={{ gridTemplateColumns: template }}
     >
       {!hideGutter && <span />}

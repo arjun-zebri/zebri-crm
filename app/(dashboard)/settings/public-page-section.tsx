@@ -89,19 +89,19 @@ export function PublicPageSection({ seedName, initial }: PublicPageSectionProps)
     <div className="space-y-10">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <h2 className="text-xl font-semibold text-text">Public page</h2>
-          <span className="inline-flex items-center rounded-pill bg-surface-emphasis px-2 py-0.5 text-xs font-medium text-text-muted">
+          <h2 className="text-section font-semibold text-text">Public page</h2>
+          <span className="inline-flex items-center rounded-pill bg-surface-emphasis px-2 py-0.5 text-caption font-medium text-text-muted">
             Coming soon
           </span>
         </div>
-        <p className="text-sm text-text-muted">
+        <p className="text-body text-text-muted">
           Your branded web address, used everywhere your couples see you.
         </p>
       </div>
 
       {/* Subdomain editor */}
       <div>
-        <label htmlFor="subdomain" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="subdomain" className="block text-body font-medium text-gray-700 mb-1">
           Your Zebri address
         </label>
         <div className="flex items-stretch max-w-xl">
@@ -113,30 +113,30 @@ export function PublicPageSection({ seedName, initial }: PublicPageSectionProps)
             onBlur={handleSubdomainBlur}
             spellCheck={false}
             autoCapitalize="none"
-            className="min-w-0 flex-1 border border-border rounded-l-control px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+            className="min-w-0 flex-1 border border-border rounded-l-control px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
             placeholder="your-business"
           />
-          <span className="flex items-center px-3 text-sm text-text-subtle bg-gray-50 border border-l-0 border-border rounded-r-control whitespace-nowrap select-none">
+          <span className="flex items-center px-3 text-body text-text-subtle bg-gray-50 border border-l-0 border-border rounded-r-control whitespace-nowrap select-none">
             .{ROOT_DOMAIN}
           </span>
         </div>
         <div className="mt-1 flex items-center justify-between gap-3 h-5">
-          <p className="text-xs text-text-subtle">
+          <p className="text-caption text-text-subtle">
             {subdomainError ?? 'Letters, numbers and hyphens only.'}
           </p>
           <AutoSaveStatus state={saveState} />
         </div>
 
         {/* Where the subdomain shows up */}
-        <h3 className="mt-6 text-sm font-medium text-gray-700 mb-1">Where it&rsquo;s used</h3>
+        <h3 className="mt-6 text-body font-medium text-gray-700 mb-1">Where it&rsquo;s used</h3>
         <div className="divide-y divide-gray-100 border-t border-gray-100">
           {SURFACES.map((surface) => {
             const Icon = surface.icon;
             return (
               <div key={surface.id} className="flex items-center gap-3 py-3">
                 <Icon size={18} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
-                <span className="text-sm text-gray-700 w-28 shrink-0">{surface.label}</span>
-                <span className="min-w-0 flex-1 break-all font-mono text-xs text-text-muted">
+                <span className="text-body text-gray-700 w-28 shrink-0">{surface.label}</span>
+                <span className="min-w-0 flex-1 break-all font-mono text-caption text-text-muted">
                   {surface.build(host)}
                 </span>
               </div>

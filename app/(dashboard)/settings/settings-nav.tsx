@@ -66,7 +66,7 @@ export function SettingsNav({ navItems, activeTab, onTabChange }: SettingsNavPro
             <button
               key={item.key}
               onClick={() => onTabChange(item.key)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-control text-xs whitespace-nowrap transition cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-control text-caption whitespace-nowrap transition cursor-pointer ${
                 activeTab === item.key
                   ? 'bg-surface-emphasis text-text font-medium'
                   : 'text-text-muted'
@@ -85,7 +85,7 @@ export function SettingsNav({ navItems, activeTab, onTabChange }: SettingsNavPro
           <button
             key={item.key}
             onClick={() => onTabChange(item.key)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-control text-sm transition cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-control text-body transition cursor-pointer ${
               activeTab === item.key
                 ? 'bg-surface-emphasis text-text font-medium'
                 : 'text-text-muted hover:text-gray-700 hover:bg-surface-emphasis'

@@ -104,7 +104,7 @@ export function AutomationsHome({
           onChange={onChange}
         />
       ) : (
-        <div className="text-sm text-text-muted px-1 py-12 text-center border border-border rounded-control bg-surface">
+        <div className="text-body text-text-muted px-1 py-12 text-center border border-border rounded-control bg-surface">
           No automations match.
         </div>
       )}
@@ -136,7 +136,7 @@ function Tabs({
             key={t.value}
             type="button"
             onClick={() => onChange(t.value)}
-            className={`flex items-center gap-1.5 pb-2.5 -mb-px text-sm transition cursor-pointer ${
+            className={`flex items-center gap-1.5 pb-2.5 -mb-px text-body transition cursor-pointer ${
               active
                 ? 'text-text font-medium border-b-2 border-gray-900'
                 : 'text-text-muted hover:text-text'
@@ -144,7 +144,7 @@ function Tabs({
           >
             <Icon size={13} strokeWidth={1.5} />
             <span>{t.label}</span>
-            {!loading && <span className="text-xs text-text-subtle">{count}</span>}
+            {!loading && <span className="text-caption text-text-subtle">{count}</span>}
           </button>
         )
       })}
@@ -174,7 +174,7 @@ function Toolbar({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search automations..."
-          className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+          className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
         />
         {query && (
           <button
@@ -188,7 +188,7 @@ function Toolbar({
       </div>
       <button
         type="button"
-        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
         title="Filter (coming soon)"
       >
         <FilterIcon size={11} strokeWidth={1.5} />
@@ -196,7 +196,7 @@ function Toolbar({
       </button>
       <button
         type="button"
-        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
         title="Sort (coming soon)"
       >
         <ArrowUp size={11} strokeWidth={1.5} />
@@ -240,13 +240,13 @@ function EmptyState({ onCreate, pending }: { onCreate: () => void; pending: bool
     <div className="flex-1 flex flex-col items-center justify-center text-center pb-[88px]">
       <Sparkles size={32} strokeWidth={1.5} className="text-text-subtle mb-3" />
       <h2 className="text-base font-medium mb-1">No automations yet</h2>
-      <p className="text-sm text-text-muted mb-6 max-w-sm">
+      <p className="text-body text-text-muted mb-6 max-w-sm">
         Set up the work that happens for every couple, without you lifting a finger.
       </p>
       <button
         onClick={onCreate}
         disabled={pending}
-        className="px-4 py-2 bg-gray-900 text-white text-sm rounded-control hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+        className="px-4 py-2 bg-gray-900 text-white text-body rounded-control hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
       >
         New automation
       </button>

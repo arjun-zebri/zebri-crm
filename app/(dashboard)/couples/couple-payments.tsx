@@ -185,8 +185,8 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                   >
                     <Receipt size={13} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-text truncate">{invoice.title}</p>
-                      <p className="text-xs text-text-subtle">
+                      <p className="text-body text-text truncate">{invoice.title}</p>
+                      <p className="text-caption text-text-subtle">
                         {invoice.invoice_number}
                         {showProgress && (
                           <span className="text-emerald-600">
@@ -197,18 +197,18 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                       </p>
                     </div>
                     <span
-                      className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-pill ${
+                      className={`shrink-0 text-caption font-medium px-1.5 py-0.5 rounded-pill ${
                         STATUS_STYLES[invoice.status] || STATUS_STYLES.draft
                       }`}
                     >
                       {STATUS_LABELS[invoice.status] ?? invoice.status}
                     </span>
                     <span
-                      className={`hidden sm:inline shrink-0 text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-text-subtle'}`}
+                      className={`hidden sm:inline shrink-0 text-caption ${isOverdue ? 'text-red-500 font-medium' : 'text-text-subtle'}`}
                     >
                       {dueDateFormatted}
                     </span>
-                    <span className="shrink-0 text-sm text-gray-700 font-medium tabular-nums">
+                    <span className="shrink-0 text-body text-gray-700 font-medium tabular-nums">
                       {formatCurrency(invoice.subtotal)}
                     </span>
                   </button>
@@ -219,11 +219,11 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
 
           {/* Totals row */}
           <div className="mt-auto px-2 pt-6 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-text-subtle">Invoiced</span>
+            <span className="text-caption text-text-subtle">Invoiced</span>
             {isInvoicesLoading ? (
               <div className="h-4 w-16 bg-surface-emphasis rounded-control animate-pulse" />
             ) : (
-              <span className="text-sm font-semibold text-text tabular-nums">
+              <span className="text-body font-semibold text-text tabular-nums">
                 {formatCurrency(invoicesTotal)}
               </span>
             )}

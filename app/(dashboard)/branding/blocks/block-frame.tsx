@@ -419,7 +419,7 @@ function ContextMenu({
             item.onClick()
             onClose()
           }}
-          className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-control text-xs text-left cursor-pointer transition ${
+          className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-control text-caption text-left cursor-pointer transition ${
             item.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >

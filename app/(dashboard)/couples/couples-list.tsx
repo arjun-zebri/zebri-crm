@@ -179,7 +179,7 @@ export function CouplesList({
                   <th
                     key={header.id}
                     data-couple-checkbox={idx === 0 ? true : undefined}
-                    className={`pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle ${
+                    className={`pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle ${
                       idx === 0 ? 'relative' : ''
                     } ${meta?.hidden || ''}`}
                     style={{ width: COL_WIDTHS[header.id] }}
@@ -258,7 +258,7 @@ export function CouplesList({
                         return (
                           <td
                             key={cell.id}
-                            className={`pl-0 pr-2 py-2 text-sm ${borderClass} ${
+                            className={`pl-0 pr-2 py-2 text-body ${borderClass} ${
                               isFirstCell ? 'relative' : 'overflow-hidden'
                             } ${meta?.hidden || ''} ${isLastCell ? 'pr-3' : ''}`}
                           >

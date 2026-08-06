@@ -41,7 +41,7 @@ export function SidePanel({
       >
         <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-border">
           {title && (
-            <h2 className="flex-1 text-sm font-medium text-text-muted truncate">{title}</h2>
+            <h2 className="flex-1 text-body font-medium text-text-muted truncate">{title}</h2>
           )}
           <div className="flex items-center gap-1 ml-auto">
             {headerActions}

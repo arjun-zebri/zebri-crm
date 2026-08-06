@@ -37,7 +37,7 @@ function StatBadge({ percent, unit = "%" }: { percent: number; unit?: string }) 
   const isPositive = percent > 0;
   return (
     <span
-      className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-control ${
+      className={`inline-flex items-center text-caption font-medium px-1.5 py-0.5 rounded-control ${
         isPositive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
       }`}
     >
@@ -68,7 +68,7 @@ function DiffText({
   };
 
   return (
-    <span className="text-xs text-text-muted">
+    <span className="text-caption text-text-muted">
       {isPositive ? "+" : "-"}
       {formatter(Math.abs(diff))} vs {periodLabels[period]}
     </span>
@@ -135,7 +135,7 @@ export function DashboardStats({
           className="bg-surface rounded-control border border-border p-4 sm:p-6"
         >
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <span className="text-caption font-medium uppercase tracking-wide text-text-muted">
               {card.label}
             </span>
             {!isLoading && <StatBadge percent={card.percent} unit={card.percentUnit} />}
@@ -147,7 +147,7 @@ export function DashboardStats({
           ) : (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="text-xl sm:text-2xl font-semibold text-text">
+                <span className="text-section sm:text-2xl font-semibold text-text">
                   {card.value}
                 </span>
                 {card.diff !== 0 && (
@@ -155,7 +155,7 @@ export function DashboardStats({
                 )}
               </div>
               {card.extra && (
-                <p className="text-xs text-text-subtle mt-1">{card.extra}</p>
+                <p className="text-caption text-text-subtle mt-1">{card.extra}</p>
               )}
             </>
           )}

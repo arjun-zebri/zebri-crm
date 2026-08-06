@@ -32,7 +32,7 @@ export function LoginForm({ next }: LoginFormProps) {
       <div className="mb-6 flex justify-center">
         <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
       </div>
-      <h1 className="mb-6 text-center text-xl font-semibold text-text">Sign in</h1>
+      <h1 className="mb-6 text-center text-section font-semibold text-text">Sign in</h1>
 
       {state.error && !state.fieldErrors ? (
         <div

@@ -112,7 +112,7 @@ export function FilterBar({
         <button
           key={`sort-${i}`}
           type="button"
-          className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-control bg-surface-emphasis hover:bg-gray-200 transition cursor-pointer text-gray-700"
+          className="inline-flex items-center gap-1 text-caption px-2 py-1 rounded-control bg-surface-emphasis hover:bg-gray-200 transition cursor-pointer text-gray-700"
           title="Toggle direction"
           onClick={() => toggleSortDir(i)}
         >
@@ -138,7 +138,7 @@ export function FilterBar({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <FilterIcon size={11} strokeWidth={1.5} />
             <span>Filter</span>
@@ -158,7 +158,7 @@ export function FilterBar({
                   setFilters([...filters, { property: p, value: '' }])
                   setAddOpen(false)
                 }}
-                className="w-full text-left px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition"
+                className="w-full text-left px-2.5 py-1.5 text-caption text-gray-700 hover:bg-gray-50 transition"
               >
                 {PROPERTY_LABEL[p]}
               </button>
@@ -171,7 +171,7 @@ export function FilterBar({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-xs text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
           >
             <ArrowUp size={11} strokeWidth={1.5} />
             <span>Sort</span>
@@ -191,7 +191,7 @@ export function FilterBar({
                   setSorts([...sorts, { property: p, direction: 'asc' }])
                   setAddSortOpen(false)
                 }}
-                className="w-full text-left px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition"
+                className="w-full text-left px-2.5 py-1.5 text-caption text-gray-700 hover:bg-gray-50 transition"
               >
                 {SORT_LABEL[p]}
               </button>
@@ -248,7 +248,7 @@ function FilterChip({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs px-1.5 py-1 rounded-control bg-surface-emphasis hover:bg-gray-200 transition cursor-pointer text-gray-700"
+          className="inline-flex items-center gap-1 text-caption px-1.5 py-1 rounded-control bg-surface-emphasis hover:bg-gray-200 transition cursor-pointer text-gray-700"
         >
           <span className="text-text-muted">{PROPERTY_LABEL[filter.property]}</span>
           <span className="text-gray-300">:</span>
@@ -301,7 +301,7 @@ function FilterChip({
           {filter.property === 'task_type' && (
             <>
               {knownTypes.length === 0 && (
-                <p className="px-2 py-1.5 text-xs text-text-subtle">No types yet</p>
+                <p className="px-2 py-1.5 text-caption text-text-subtle">No types yet</p>
               )}
               {knownTypes.map((t) => (
                 <button
@@ -321,7 +321,7 @@ function FilterChip({
           {filter.property === 'couple' && (
             <>
               {couples.length === 0 && (
-                <p className="px-2 py-1.5 text-xs text-text-subtle">No couples</p>
+                <p className="px-2 py-1.5 text-caption text-text-subtle">No couples</p>
               )}
               {couples.map((c) => (
                 <button
@@ -331,7 +331,7 @@ function FilterChip({
                     onChange(c.id)
                     setOpen(false)
                   }}
-                  className="w-full text-left px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition truncate"
+                  className="w-full text-left px-2.5 py-1.5 text-caption text-gray-700 hover:bg-gray-50 transition truncate"
                 >
                   {c.name}
                 </button>

@@ -139,7 +139,7 @@ export function SettingsModal() {
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border shrink-0">
-            <h1 className="text-xl font-semibold text-text">Settings</h1>
+            <h1 className="text-section font-semibold text-text">Settings</h1>
             <button
               onClick={handleClose}
               className="p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"

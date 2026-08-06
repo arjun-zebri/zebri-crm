@@ -91,7 +91,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
     return (
       <div className="py-16 text-center">
         {emptyIcon}
-        <p className="text-sm text-text-subtle">{emptyMessage}</p>
+        <p className="text-body text-text-subtle">{emptyMessage}</p>
       </div>
     );
   }
@@ -124,13 +124,13 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-medium text-text-subtle shrink-0">{r.number}</span>
+                      <span className="text-caption font-medium text-text-subtle shrink-0">{r.number}</span>
                       {r.mobileStatus}
                     </div>
                     <div className="flex items-center gap-1 min-w-0">
-                      <span className="text-sm text-text truncate">{r.title}</span>
+                      <span className="text-body text-text truncate">{r.title}</span>
                       <span className="text-gray-300 shrink-0">·</span>
-                      <span className="text-sm text-text-muted truncate shrink-0 max-w-[140px]">
+                      <span className="text-body text-text-muted truncate shrink-0 max-w-[140px]">
                         {r.coupleName}
                       </span>
                       {r.mobileSecondary}
@@ -146,37 +146,37 @@ export function PaymentsTable<T extends PaymentsTableItem>({
           <thead className="sticky top-0 bg-surface z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
             <tr>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.number }}
               >
                 <HeaderLabel icon={<Hash size={12} strokeWidth={1.5} />} label="Number" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.title }}
               >
                 <HeaderLabel textOnly="Aa" label="Title" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.couple }}
               >
                 <HeaderLabel icon={<Users size={12} strokeWidth={1.5} />} label="Couple" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.status }}
               >
                 <HeaderLabel icon={<ListChecks size={12} strokeWidth={1.5} />} label="Status" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.value }}
               >
                 <HeaderLabel icon={valueColIcon} label={valueColLabel} />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.last }}
               >
                 <HeaderLabel icon={lastColIcon} label={lastColLabel} />
@@ -204,43 +204,43 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                       className="cursor-pointer transition group hover:bg-gray-50/60"
                     >
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.number }}
                       >
-                        <span className="text-sm text-text-muted group-hover:text-text truncate block">
+                        <span className="text-body text-text-muted group-hover:text-text truncate block">
                           {r.number}
                         </span>
                       </td>
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.title }}
                       >
-                        <span className="text-sm text-text-muted group-hover:text-text truncate block">
+                        <span className="text-body text-text-muted group-hover:text-text truncate block">
                           {r.title}
                         </span>
                       </td>
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.couple }}
                       >
-                        <span className="text-sm text-text-muted group-hover:text-text truncate block">
+                        <span className="text-body text-text-muted group-hover:text-text truncate block">
                           {r.coupleName}
                         </span>
                       </td>
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body ${borderClass}`}
                         style={{ width: COL_WIDTHS.status }}
                       >
                         {r.statusPill}
                       </td>
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.value }}
                       >
                         {r.valueCell}
                       </td>
                       <td
-                        className={`pl-0 pr-3 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-3 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.last }}
                       >
                         {r.lastCell}

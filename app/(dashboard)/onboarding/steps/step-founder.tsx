@@ -21,9 +21,9 @@ export function StepFounder() {
         className="w-28 h-28 sm:w-36 sm:h-36 rounded-pill object-cover border border-border shadow-sm"
       />
 
-      <h2 className="text-xl font-semibold text-text">A note from the founder</h2>
+      <h2 className="text-section font-semibold text-text">A note from the founder</h2>
 
-      <div className="space-y-3 max-w-lg text-sm text-text-muted leading-relaxed">
+      <div className="space-y-3 max-w-lg text-body text-text-muted leading-relaxed">
         <p>
           Thank you so much for joining Zebri. I started this after my own
           wedding. Our MC was brilliant, and watching the day up close showed
@@ -57,8 +57,8 @@ export function StepFounder() {
             className="h-10 w-auto max-w-none -ml-2"
           />
         </div>
-        <span className="text-sm font-medium text-text">Arjun Punekar</span>
-        <span className="text-xs text-text-subtle">Founder, Zebri</span>
+        <span className="text-body font-medium text-text">Arjun Punekar</span>
+        <span className="text-caption text-text-subtle">Founder, Zebri</span>
       </div>
     </div>
   )

@@ -41,23 +41,23 @@ export function FoundationsShape() {
       </Spec>
 
       <Conflict
-        title="text-display is never used; the raw Tailwind scale dominates"
+        title="Resolved: the type scale is on tokens"
         group="typography"
         recommendation={
           <>
-            Token and legacy classes render identically today, so this is cosmetic. It matters
-            because a future type-scale change would only reach a fifth of the app. Migrate the four
-            raw classes to their token equivalents and keep raw ones out of new code.
+            1,186 sites swept: <code>text-sm</code> to <code>text-body</code>,{' '}
+            <code>text-xs</code> to <code>text-caption</code>, <code>text-xl</code> to{' '}
+            <code>text-section</code>, <code>text-3xl</code> to <code>text-display</code>.
+            <br />
+            The tokens previously set a font-size and nothing else, so they inherited their leading
+            and rendered about 1px looser per line than the Tailwind classes they are documented as
+            equalling. Each token now carries Tailwind&apos;s own line-height ratio, so the pairs are
+            byte-identical and <code>leading-*</code> overrides still win. What is left is{' '}
+            <code>text-2xl</code>, <code>text-lg</code> and <code>text-base</code>, which have no
+            token.
           </>
         }
-      >
-        <DemoRow>
-          <span className="text-3xl font-semibold text-text">Aa</span>
-          <code className="text-caption text-text-subtle">text-3xl</code>
-          <span className="ml-4 text-display font-semibold text-text">Aa</span>
-          <code className="text-caption text-text-subtle">text-display</code>
-        </DemoRow>
-      </Conflict>
+      />
 
       <Spec name="Radius" file="app/globals.css" description="Two tokens, deliberately.">
         <DemoGrid cols={2}>

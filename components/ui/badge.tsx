@@ -80,7 +80,7 @@ export function Badge({ variant = "default", children, className }: BadgeProps) 
   const style = variantStyles[variant];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-pill text-xs font-medium ${style.bg} ${style.text}${className ? ` ${className}` : ""}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-pill text-caption font-medium ${style.bg} ${style.text}${className ? ` ${className}` : ""}`}
     >
       {/* <span className={`w-1.5 h-1.5 rounded-pill ${style.dot}`} /> */}
       {children}

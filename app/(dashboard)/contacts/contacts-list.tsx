@@ -30,7 +30,7 @@ function ColumnHeaderRow() {
   return (
     <tr>
       <th
-        className="px-0 py-1.5 text-left text-xs font-normal text-text-subtle border-b border-border"
+        className="px-0 py-1.5 text-left text-caption font-normal text-text-subtle border-b border-border"
         style={{ width: COL_WIDTHS.name }}
       >
         <span className="flex items-center gap-1.5">
@@ -39,7 +39,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-xs font-normal text-text-subtle border-b border-border"
+        className="px-0 py-1.5 text-left text-caption font-normal text-text-subtle border-b border-border"
         style={{ width: COL_WIDTHS.contact }}
       >
         <span className="flex items-center gap-1.5">
@@ -48,7 +48,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-xs font-normal text-text-subtle border-b border-border hidden md:table-cell"
+        className="px-0 py-1.5 text-left text-caption font-normal text-text-subtle border-b border-border hidden md:table-cell"
         style={{ width: COL_WIDTHS.email }}
       >
         <span className="flex items-center gap-1.5">
@@ -57,7 +57,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-xs font-normal text-text-subtle border-b border-border hidden lg:table-cell"
+        className="px-0 py-1.5 text-left text-caption font-normal text-text-subtle border-b border-border hidden lg:table-cell"
         style={{ width: COL_WIDTHS.phone }}
       >
         <span className="flex items-center gap-1.5">
@@ -105,7 +105,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Store size={40} className="text-gray-300 mb-3" strokeWidth={1.5} />
         <p className="text-gray-600 font-medium mb-2">No contacts yet.</p>
-        <p className="text-sm text-text-muted">Start building your contact network.</p>
+        <p className="text-body text-text-muted">Start building your contact network.</p>
       </div>
     );
   }
@@ -136,10 +136,10 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                       onClick={() => toggle(group.key)}
                       className="flex items-center gap-2 w-full text-left py-2"
                     >
-                      <h3 className="text-sm font-semibold text-text">
+                      <h3 className="text-body font-semibold text-text">
                         {group.label}
                       </h3>
-                      <span className="text-xs text-text-subtle">
+                      <span className="text-caption text-text-subtle">
                         {group.contacts.length}
                       </span>
                       <ChevronRight
@@ -169,11 +169,11 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                             className="flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 transition"
                           >
                             <div className="min-w-0 flex-1 pr-3">
-                              <p className="text-sm font-medium text-text truncate">
+                              <p className="text-body font-medium text-text truncate">
                                 {contact.name}
                               </p>
                               {secondary && (
-                                <p className="text-xs text-text-subtle mt-0.5 truncate">
+                                <p className="text-caption text-text-subtle mt-0.5 truncate">
                                   {secondary}
                                 </p>
                               )}
@@ -213,10 +213,10 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                           className="px-0 pt-6 pb-2"
                         >
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-text">
+                            <h3 className="text-body font-semibold text-text">
                               {group.label}
                             </h3>
-                            <span className="text-xs text-text-subtle">
+                            <span className="text-caption text-text-subtle">
                               {group.contacts.length}
                             </span>
                             <ChevronRight
@@ -243,34 +243,34 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                             className="cursor-pointer transition group hover:bg-gray-50/60"
                           >
                             <td
-                              className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100"
+                              className="px-0 py-2 text-body overflow-hidden border-b border-gray-100"
                               style={{ width: COL_WIDTHS.name }}
                             >
-                              <span className="text-sm text-text-muted group-hover:text-text truncate block">
+                              <span className="text-body text-text-muted group-hover:text-text truncate block">
                                 {contact.name}
                               </span>
                             </td>
                             <td
-                              className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100"
+                              className="px-0 py-2 text-body overflow-hidden border-b border-gray-100"
                               style={{ width: COL_WIDTHS.contact }}
                             >
-                              <span className="text-sm text-text-muted group-hover:text-text truncate block">
+                              <span className="text-body text-text-muted group-hover:text-text truncate block">
                                 {contact.contact_name}
                               </span>
                             </td>
                             <td
-                              className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100 hidden md:table-cell"
+                              className="px-0 py-2 text-body overflow-hidden border-b border-gray-100 hidden md:table-cell"
                               style={{ width: COL_WIDTHS.email }}
                             >
-                              <span className="text-sm text-text-muted group-hover:text-text truncate block">
+                              <span className="text-body text-text-muted group-hover:text-text truncate block">
                                 {contact.email}
                               </span>
                             </td>
                             <td
-                              className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100 hidden lg:table-cell"
+                              className="px-0 py-2 text-body overflow-hidden border-b border-gray-100 hidden lg:table-cell"
                               style={{ width: COL_WIDTHS.phone }}
                             >
-                              <span className="text-sm text-text-muted group-hover:text-text">
+                              <span className="text-body text-text-muted group-hover:text-text">
                                 {contact.phone}
                               </span>
                             </td>

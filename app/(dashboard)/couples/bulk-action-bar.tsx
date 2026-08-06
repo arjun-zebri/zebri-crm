@@ -47,7 +47,7 @@ export function BulkActionBar({
       className="hidden sm:flex fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-surface border border-border rounded-control shadow-lg px-2 py-2 items-center gap-0.5"
       onClick={(e) => e.stopPropagation()}
     >
-      <span className="text-sm text-text-muted px-3 tabular-nums">{selectedCount} selected</span>
+      <span className="text-body text-text-muted px-3 tabular-nums">{selectedCount} selected</span>
 
       <div className="w-px h-5 bg-gray-200 mx-1" />
 
@@ -55,7 +55,7 @@ export function BulkActionBar({
         <button
           onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
           disabled={loading}
-          className="flex items-center gap-1.5 text-sm text-gray-700 px-3 py-1.5 rounded-control hover:bg-gray-50 transition disabled:opacity-40 cursor-pointer font-medium"
+          className="flex items-center gap-1.5 text-body text-gray-700 px-3 py-1.5 rounded-control hover:bg-gray-50 transition disabled:opacity-40 cursor-pointer font-medium"
         >
           Change Status
           <ChevronDown size={13} strokeWidth={1.5} className="text-text-subtle" />
@@ -73,7 +73,7 @@ export function BulkActionBar({
                     setStatusDropdownOpen(false)
                   }}
                   disabled={loading}
-                  className="w-full text-left px-3 py-1.5 text-sm flex items-center gap-2.5 hover:bg-gray-50 transition disabled:opacity-40 cursor-pointer"
+                  className="w-full text-left px-3 py-1.5 text-body flex items-center gap-2.5 hover:bg-gray-50 transition disabled:opacity-40 cursor-pointer"
                 >
                   <div className={`w-2 h-2 rounded-pill shrink-0 ${classes.dot}`} />
                   <span className="text-gray-700">{status.name}</span>
@@ -87,7 +87,7 @@ export function BulkActionBar({
       <button
         onClick={onExportCSV}
         disabled={loading}
-        className="flex items-center gap-1.5 text-sm text-gray-700 px-3 py-1.5 rounded-control hover:bg-gray-50 transition disabled:opacity-40 cursor-pointer font-medium"
+        className="flex items-center gap-1.5 text-body text-gray-700 px-3 py-1.5 rounded-control hover:bg-gray-50 transition disabled:opacity-40 cursor-pointer font-medium"
       >
         <Download size={14} strokeWidth={1.5} className="text-text-subtle" />
         Export

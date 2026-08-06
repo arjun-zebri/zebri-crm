@@ -30,8 +30,8 @@ function Stat({ n, label, kind }: { n: number; label: string; kind: ChipKind }) 
   return (
     <span className="inline-flex items-center gap-2 rounded-control bg-surface-muted px-3 py-1.5">
       <span className={`h-1.5 w-1.5 rounded-pill ${DOT[kind]}`} />
-      <span className="text-sm font-semibold text-text tabular-nums">{n}</span>
-      <span className="text-xs text-text-muted">{label}</span>
+      <span className="text-body font-semibold text-text tabular-nums">{n}</span>
+      <span className="text-caption text-text-muted">{label}</span>
     </span>
   )
 }

@@ -77,7 +77,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
       {/* Mobile: prev/next only */}
       {table.getPageCount() > 1 && (
         <div className="sm:hidden border-t border-border bg-surface py-3 flex items-center justify-between">
-          <span className="text-sm text-text-muted">
+          <span className="text-body text-text-muted">
             Page {table.getState().pagination.pageIndex + 1} of{' '}
             {table.getPageCount()}
           </span>
@@ -123,7 +123,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                     <button
                       key={pageNum}
                       onClick={() => table.setPageIndex(pageNum)}
-                      className={`px-2.5 py-1 text-xs font-medium rounded-control transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-caption font-medium rounded-control transition cursor-pointer ${
                         table.getState().pagination.pageIndex === pageNum
                           ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:bg-surface-emphasis'
@@ -144,11 +144,11 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                     return (
                       <>
                         {!adjacent && (
-                          <span className="px-1 text-xs text-text-subtle">…</span>
+                          <span className="px-1 text-caption text-text-subtle">…</span>
                         )}
                         <button
                           onClick={() => table.setPageIndex(lastPage)}
-                          className={`px-2.5 py-1 text-xs font-medium rounded-control transition cursor-pointer ${
+                          className={`px-2.5 py-1 text-caption font-medium rounded-control transition cursor-pointer ${
                             table.getState().pagination.pageIndex === lastPage
                               ? 'bg-gray-900 text-white'
                               : 'text-gray-600 hover:bg-surface-emphasis'
@@ -178,7 +178,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
           <div ref={pageSizeRef}>
             <button
               onClick={() => setPageSizeOpen(!pageSizeOpen)}
-              className="border border-border rounded-control px-3 py-2 text-sm bg-surface text-gray-600 hover:border-border-strong cursor-pointer transition"
+              className="border border-border rounded-control px-3 py-2 text-body bg-surface text-gray-600 hover:border-border-strong cursor-pointer transition"
             >
               {table.getState().pagination.pageSize}/page
             </button>
@@ -198,7 +198,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                       table.setPageSize(pageSize);
                       setPageSizeOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
+                    className={`w-full text-left px-3 py-1.5 text-body transition cursor-pointer ${
                       table.getState().pagination.pageSize === pageSize
                         ? 'bg-gray-50 text-text font-medium'
                         : 'text-gray-600 hover:bg-gray-50'

@@ -540,7 +540,7 @@ export default function TasksPage() {
       }));
       out.push({
         droppableId: `priority:none`,
-        header: <span className="text-sm text-text-subtle">No priority</span>,
+        header: <span className="text-body text-text-subtle">No priority</span>,
         tasks: filteredTasks.filter((t) => !t.priority),
         addTaskDefaults: { priority: null },
       });
@@ -563,7 +563,7 @@ export default function TasksPage() {
         if (!list) continue;
         out.push({
           droppableId: `couple:${c.id}`,
-          header: <span className="text-sm font-medium text-text">{c.name}</span>,
+          header: <span className="text-body font-medium text-text">{c.name}</span>,
           tasks: list,
           addTaskDefaults: { related_couple_id: c.id },
         });
@@ -571,7 +571,7 @@ export default function TasksPage() {
       if (unassigned.length > 0) {
         out.push({
           droppableId: `couple:none`,
-          header: <span className="text-sm text-text-subtle">Unassigned</span>,
+          header: <span className="text-body text-text-subtle">Unassigned</span>,
           tasks: unassigned,
           addTaskDefaults: { related_couple_id: null },
         });
@@ -595,7 +595,7 @@ export default function TasksPage() {
         header: (
           <span className="inline-flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-pill ${TASK_GROUP_DOT_CLASS[g.color]}`} />
-            <span className="text-sm font-medium text-text">{g.name}</span>
+            <span className="text-body font-medium text-text">{g.name}</span>
           </span>
         ),
         tasks: map.get(g.id) ?? [],
@@ -603,7 +603,7 @@ export default function TasksPage() {
       }));
       out.push({
         droppableId: UNGROUPED_ID,
-        header: <span className="text-sm text-text-subtle">Ungrouped</span>,
+        header: <span className="text-body text-text-subtle">Ungrouped</span>,
         tasks: ungrouped,
         addTaskDefaults: { group_id: null },
       });
@@ -630,24 +630,24 @@ export default function TasksPage() {
       return [
         {
           droppableId: "date:overdue",
-          header: <span className="text-sm font-medium text-red-600">Overdue</span>,
+          header: <span className="text-body font-medium text-red-600">Overdue</span>,
           tasks: overdue,
         },
         {
           droppableId: "date:today",
-          header: <span className="text-sm font-medium text-text">Today</span>,
+          header: <span className="text-body font-medium text-text">Today</span>,
           tasks: todayTasks,
           addTaskDefaults: { due_date: addDaysYMD(0) },
         },
         {
           droppableId: "date:upcoming",
-          header: <span className="text-sm font-medium text-text">Upcoming</span>,
+          header: <span className="text-body font-medium text-text">Upcoming</span>,
           tasks: upcoming,
           addTaskDefaults: { due_date: addDaysYMD(1) },
         },
         {
           droppableId: "date:none",
-          header: <span className="text-sm text-text-subtle">No date</span>,
+          header: <span className="text-body text-text-subtle">No date</span>,
           tasks: noDate,
           addTaskDefaults: { due_date: null },
         },
@@ -657,7 +657,7 @@ export default function TasksPage() {
     return [
       {
         droppableId: "all",
-        header: <span className="text-sm font-medium text-text">All tasks</span>,
+        header: <span className="text-body font-medium text-text">All tasks</span>,
         tasks: filteredTasks,
       },
     ];
@@ -727,7 +727,7 @@ export default function TasksPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tasks..."
-              className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-xs text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+              className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
             />
             {searchQuery && (
               <button
@@ -755,7 +755,7 @@ export default function TasksPage() {
             <GroupByToggle value={groupBy} onChange={setGroupBy} />
             <button
               onClick={() => handleCreateTask()}
-              className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-control hover:bg-gray-700 transition cursor-pointer"
+              className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
             >
               <Plus size={11} strokeWidth={2} />
               New task
@@ -774,7 +774,7 @@ export default function TasksPage() {
           </div>
         ) : isEmpty ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-text-subtle text-sm">No tasks match these filters.</p>
+            <p className="text-text-subtle text-body">No tasks match these filters.</p>
           </div>
         ) : (
           <DndContext
@@ -865,7 +865,7 @@ export default function TasksPage() {
                   const name = window.prompt("Group name");
                   if (name && name.trim()) createGroup.mutate({ name: name.trim() });
                 }}
-                className="mt-2 inline-flex items-center gap-2 text-sm text-text-muted hover:text-gray-800 border border-dashed border-border hover:border-border-strong rounded-control px-3 py-1.5 transition cursor-pointer"
+                className="mt-2 inline-flex items-center gap-2 text-body text-text-muted hover:text-gray-800 border border-dashed border-border hover:border-border-strong rounded-control px-3 py-1.5 transition cursor-pointer"
               >
                 <Plus size={13} strokeWidth={1.5} />
                 New group

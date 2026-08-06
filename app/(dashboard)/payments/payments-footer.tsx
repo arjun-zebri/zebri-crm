@@ -28,11 +28,11 @@ export function PaymentsFooter({ tab, count, total }: PaymentsFooterProps) {
 
   return (
     <div className="fixed bottom-0 left-0 md:left-[68px] right-0 z-30 bg-surface border-t border-gray-100 px-6 py-5 flex items-center justify-between">
-      <p className="text-sm text-text-subtle">
+      <p className="text-body text-text-subtle">
         {count} {noun}
       </p>
       {total !== undefined && (
-        <p className="text-sm font-semibold text-text tabular-nums">
+        <p className="text-body font-semibold text-text tabular-nums">
           {formatCurrency(total)}
         </p>
       )}

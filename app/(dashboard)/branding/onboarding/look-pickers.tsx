@@ -28,7 +28,7 @@ interface ColorFieldProps {
 export function ColorField({ label, value, onChange }: ColorFieldProps) {
   return (
     <div className="flex-1 min-w-0">
-      <label className="block text-xs font-medium text-text-muted mb-2">{label}</label>
+      <label className="block text-caption font-medium text-text-muted mb-2">{label}</label>
       <div className="flex items-center gap-2">
         <ColorPopover
           value={value}
@@ -47,7 +47,7 @@ export function ColorField({ label, value, onChange }: ColorFieldProps) {
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full min-w-0 h-8 text-xs px-2.5 rounded-control border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand"
+          className="w-full min-w-0 h-8 text-caption px-2.5 rounded-control border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand"
           aria-label={`${label} hex`}
         />
       </div>
@@ -72,7 +72,7 @@ interface DensityPickerProps {
 export function DensityPicker(props: DensityPickerProps) {
   return (
     <div>
-      <label className="block text-xs font-medium text-text-muted mb-2">Spacing</label>
+      <label className="block text-caption font-medium text-text-muted mb-2">Spacing</label>
       <div className="grid grid-cols-3 gap-2">
         {(['compact', 'cozy', 'roomy'] as const).map((d) => {
           const selected = props.density === d
@@ -88,7 +88,7 @@ export function DensityPicker(props: DensityPickerProps) {
               />
               <div className={`flex flex-col items-center gap-2 px-2 py-3 ${OPTION_CLASSES(selected)}`}>
                 <DensityGlyph density={d} />
-                <span className="text-xs font-medium text-text capitalize">{d}</span>
+                <span className="text-caption font-medium text-text capitalize">{d}</span>
               </div>
             </label>
           )
