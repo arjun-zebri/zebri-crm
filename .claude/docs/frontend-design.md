@@ -7,6 +7,42 @@ Goal: minimal, calm, modern SaaS design.
 
 ------------------------------------------------------------------------
 
+## The showroom: `/design-system`
+
+A dev-only route (`app/design-system/`, 404s in production) that
+renders every primitive, page pattern and feature composite from its
+real source, and flags inline where two of them disagree. Use it before
+adding a component: if a variant already exists, it is on that page.
+
+Usage counts on the page come from `app/design-system/audit-data.json`.
+Regenerate after any sweep so the page reports today's reality:
+
+```sh
+npm run design-system:audit
+```
+
+Known divergences the showroom currently reports, kept here so they do
+not get rediscovered:
+
+- **Radius.** Three token radii exist (`rounded-control` 6px,
+  `rounded-card` 12px, `rounded-pill`) but the app mostly uses
+  `rounded-xl` / `rounded-md` / `rounded-full` / `rounded-lg`.
+  `rounded-xl` == `rounded-card` and `rounded-md` == `rounded-control`,
+  so most of that is a pure rename.
+- **Buttons.** The CLAUDE.md "buttons are `rounded-xl`" rule contradicts
+  the `Button` primitive, which is `rounded-control` (6px) to match the
+  Input and Select triggers. The primitive is the intended look.
+- **Status chips.** Four implementations coexist: `StatePill` (tokens,
+  keep), `Badge` (21 raw-palette variants), `StatBadge` inside
+  `dashboard-stats.tsx`, and the vendor badges.
+- **Overlays.** `ConfirmDialog` does not close on Escape and does not
+  lock body scroll, unlike `Modal` and `SidePanel`. The z-index ladder
+  double-books `z-[80]`.
+- **Missing primitives.** `PageHeader`, `Card`, `SectionNav` and
+  `DataTable` are copy-pasted markup, not components.
+
+------------------------------------------------------------------------
+
 ## Design tokens (Phase 0.5) — source of truth
 
 Tokens live in `app/globals.css` as Tailwind 4 `@theme` CSS variables; each

@@ -1,0 +1,881 @@
+{
+  "scannedFiles": 379,
+  "topPaletteClasses": [
+    {
+      "label": "text-gray-400",
+      "count": 386
+    },
+    {
+      "label": "text-gray-900",
+      "count": 327
+    },
+    {
+      "label": "border-gray-200",
+      "count": 293
+    },
+    {
+      "label": "bg-gray-100",
+      "count": 260
+    },
+    {
+      "label": "bg-gray-50",
+      "count": 225
+    },
+    {
+      "label": "text-gray-700",
+      "count": 222
+    },
+    {
+      "label": "text-gray-500",
+      "count": 210
+    },
+    {
+      "label": "text-gray-600",
+      "count": 164
+    },
+    {
+      "label": "border-gray-100",
+      "count": 91
+    },
+    {
+      "label": "bg-gray-900",
+      "count": 67
+    },
+    {
+      "label": "text-gray-300",
+      "count": 58
+    },
+    {
+      "label": "border-gray-300",
+      "count": 57
+    }
+  ],
+  "groups": [
+    {
+      "id": "radius",
+      "title": "Corner radius",
+      "note": "Three token radii exist. The app mostly ignores them.",
+      "entries": [
+        {
+          "label": "rounded-control",
+          "verdict": "token",
+          "count": 72,
+          "files": [
+            {
+              "path": "app/portal/[token]/timeline-section.tsx",
+              "hits": 9
+            },
+            {
+              "path": "components/builders/parts/builder-meta-row.tsx",
+              "hits": 5
+            },
+            {
+              "path": "components/builders/parts/builder-modal-shell.tsx",
+              "hits": 5
+            }
+          ]
+        },
+        {
+          "label": "rounded-card",
+          "verdict": "token",
+          "count": 63,
+          "files": [
+            {
+              "path": "components/builders/parts/builder-modal-shell.tsx",
+              "hits": 9
+            },
+            {
+              "path": "app/(dashboard)/settings/payment-settings-section.tsx",
+              "hits": 5
+            },
+            {
+              "path": "app/portal/[token]/payments-section.tsx",
+              "hits": 4
+            }
+          ]
+        },
+        {
+          "label": "rounded-pill",
+          "verdict": "token",
+          "count": 12,
+          "files": [
+            {
+              "path": "app/roadmap/roadmap-voting.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/couples/portal-section-nav.tsx",
+              "hits": 2
+            },
+            {
+              "path": "app/portal/[token]/timeline-section.tsx",
+              "hits": 2
+            }
+          ]
+        },
+        {
+          "label": "rounded-xl",
+          "verdict": "legacy",
+          "count": 323,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 17
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-timeline.tsx",
+              "hits": 10
+            },
+            {
+              "path": "app/(dashboard)/couples/portal-modals.tsx",
+              "hits": 7
+            }
+          ]
+        },
+        {
+          "label": "rounded-md",
+          "verdict": "legacy",
+          "count": 257,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 47
+            },
+            {
+              "path": "app/(dashboard)/branding/blocks/text-style-controls.tsx",
+              "hits": 10
+            },
+            {
+              "path": "app/(dashboard)/branding/editor-topbar.tsx",
+              "hits": 10
+            }
+          ]
+        },
+        {
+          "label": "rounded-full",
+          "verdict": "legacy",
+          "count": 195,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/onboarding/onboarding-modal-skeleton.tsx",
+              "hits": 9
+            },
+            {
+              "path": "app/(dashboard)/branding/onboarding/wizard-preview.tsx",
+              "hits": 7
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-pulse.tsx",
+              "hits": 7
+            }
+          ]
+        },
+        {
+          "label": "rounded-lg",
+          "verdict": "legacy",
+          "count": 155,
+          "files": [
+            {
+              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
+              "hits": 9
+            },
+            {
+              "path": "app/(dashboard)/branding/brand-panel.tsx",
+              "hits": 7
+            },
+            {
+              "path": "app/(dashboard)/contacts/contact-profile.tsx",
+              "hits": 6
+            }
+          ]
+        },
+        {
+          "label": "rounded-2xl",
+          "verdict": "legacy",
+          "count": 15,
+          "files": [
+            {
+              "path": "components/questionnaires/experience-preview.tsx",
+              "hits": 2
+            },
+            {
+              "path": "app/(dashboard)/contacts/contact-profile.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/couples/bulk-action-bar.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "rounded-sm",
+          "verdict": "legacy",
+          "count": 22,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/surface-tabs.tsx",
+              "hits": 9
+            },
+            {
+              "path": "app/(dashboard)/branding/blocks/render.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "colour",
+      "title": "Colour",
+      "note": "Semantic tokens vs the raw Tailwind palette.",
+      "entries": [
+        {
+          "label": "text-text*",
+          "verdict": "token",
+          "count": 992,
+          "files": [
+            {
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 57
+            },
+            {
+              "path": "app/portal/[token]/timeline-section.tsx",
+              "hits": 24
+            },
+            {
+              "path": "app/(dashboard)/automations/[id]/inspector-panel.tsx",
+              "hits": 22
+            }
+          ]
+        },
+        {
+          "label": "bg-surface*",
+          "verdict": "token",
+          "count": 374,
+          "files": [
+            {
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 29
+            },
+            {
+              "path": "components/builders/parts/builder-modal-shell.tsx",
+              "hits": 26
+            },
+            {
+              "path": "app/portal/[token]/timeline-section.tsx",
+              "hits": 15
+            }
+          ]
+        },
+        {
+          "label": "border-border*",
+          "verdict": "token",
+          "count": 307,
+          "files": [
+            {
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 25
+            },
+            {
+              "path": "app/portal/[token]/timeline-section.tsx",
+              "hits": 11
+            },
+            {
+              "path": "app/(dashboard)/automations/[id]/canvas-node.tsx",
+              "hits": 8
+            }
+          ]
+        },
+        {
+          "label": "raw palette",
+          "verdict": "legacy",
+          "count": 2962,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 220
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
+              "hits": 95
+            },
+            {
+              "path": "app/(dashboard)/branding/brand-panel.tsx",
+              "hits": 82
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "controls",
+      "title": "Form controls",
+      "note": "The design system forbids native controls. ESLint warns; the app still ships them.",
+      "entries": [
+        {
+          "label": "<Button>",
+          "verdict": "token",
+          "count": 127,
+          "files": [
+            {
+              "path": "app/(dashboard)/templates/contract-template-manager.tsx",
+              "hits": 6
+            },
+            {
+              "path": "app/(dashboard)/branding/onboarding/wizard-chrome.tsx",
+              "hits": 5
+            },
+            {
+              "path": "app/(dashboard)/settings/billing/current-plan-card.tsx",
+              "hits": 5
+            }
+          ]
+        },
+        {
+          "label": "<Input>",
+          "verdict": "token",
+          "count": 75,
+          "files": [
+            {
+              "path": "app/lead/[token]/_components/lead-form.tsx",
+              "hits": 9
+            },
+            {
+              "path": "app/(dashboard)/automations/[id]/inspector-extended.tsx",
+              "hits": 8
+            },
+            {
+              "path": "app/(auth)/signup/signup-form.tsx",
+              "hits": 4
+            }
+          ]
+        },
+        {
+          "label": "<Select>",
+          "verdict": "token",
+          "count": 11,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/onboarding/step-look.tsx",
+              "hits": 2
+            },
+            {
+              "path": "app/(dashboard)/admin/components/subscription-actions-section.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/automations/[id]/inspector-extended.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "native <button>",
+          "verdict": "legacy",
+          "count": 663,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 43
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
+              "hits": 23
+            },
+            {
+              "path": "app/(dashboard)/tasks/task-cells.tsx",
+              "hits": 20
+            }
+          ]
+        },
+        {
+          "label": "native <input>",
+          "verdict": "legacy",
+          "count": 119,
+          "files": [
+            {
+              "path": "app/(dashboard)/settings/personal-info-section.tsx",
+              "hits": 10
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-modal.tsx",
+              "hits": 8
+            },
+            {
+              "path": "app/portal/[token]/contacts-section.tsx",
+              "hits": 6
+            }
+          ]
+        },
+        {
+          "label": "native <select>",
+          "verdict": "legacy",
+          "count": 2,
+          "files": [
+            {
+              "path": "components/questionnaires/question-field.tsx",
+              "hits": 1
+            },
+            {
+              "path": "components/ui/select.tsx",
+              "hits": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "typography",
+      "title": "Typography",
+      "note": "Semantic type tokens vs the raw Tailwind scale.",
+      "entries": [
+        {
+          "label": "text-display",
+          "verdict": "token",
+          "count": 0,
+          "files": []
+        },
+        {
+          "label": "text-section",
+          "verdict": "token",
+          "count": 9,
+          "files": [
+            {
+              "path": "app/(dashboard)/settings/billing/current-plan-card.tsx",
+              "hits": 2
+            },
+            {
+              "path": "components/builders/parts/builder-modal-shell.tsx",
+              "hits": 2
+            },
+            {
+              "path": "components/builders/parts/totals-panel.tsx",
+              "hits": 2
+            }
+          ]
+        },
+        {
+          "label": "text-body",
+          "verdict": "token",
+          "count": 65,
+          "files": [
+            {
+              "path": "app/(dashboard)/settings/payment-settings-section.tsx",
+              "hits": 7
+            },
+            {
+              "path": "app/(dashboard)/settings/billing/current-plan-card.tsx",
+              "hits": 6
+            },
+            {
+              "path": "components/builders/parts/builder-meta-row.tsx",
+              "hits": 5
+            }
+          ]
+        },
+        {
+          "label": "text-caption",
+          "verdict": "token",
+          "count": 202,
+          "files": [
+            {
+              "path": "app/(dashboard)/automations/[id]/inspector-panel.tsx",
+              "hits": 10
+            },
+            {
+              "path": "components/builders/parts/schedule-modal.tsx",
+              "hits": 8
+            },
+            {
+              "path": "app/(dashboard)/templates/category-picker-base.tsx",
+              "hits": 7
+            }
+          ]
+        },
+        {
+          "label": "text-3xl",
+          "verdict": "legacy",
+          "count": 15,
+          "files": [
+            {
+              "path": "app/(dashboard)/admin/page.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/automations/page.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/calendar/page.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "text-2xl",
+          "verdict": "legacy",
+          "count": 16,
+          "files": [
+            {
+              "path": "app/(dashboard)/admin/page.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/admin/sections/metric-chart-card.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/branding/blocks/render.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "text-xl",
+          "verdict": "legacy",
+          "count": 55,
+          "files": [
+            {
+              "path": "app/(dashboard)/dashboard-invoices.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/dashboard-tasks.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-pulse.tsx",
+              "hits": 2
+            }
+          ]
+        },
+        {
+          "label": "text-lg",
+          "verdict": "legacy",
+          "count": 12,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/couple-portal-sample.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
+              "hits": 2
+            },
+            {
+              "path": "app/(dashboard)/branding/onboarding/editor-demo.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "text-base",
+          "verdict": "legacy",
+          "count": 28,
+          "files": [
+            {
+              "path": "app/(dashboard)/dashboard-tasks.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/components/sidebar.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/dashboard-invoices.tsx",
+              "hits": 2
+            }
+          ]
+        },
+        {
+          "label": "text-sm",
+          "verdict": "legacy",
+          "count": 597,
+          "files": [
+            {
+              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
+              "hits": 14
+            },
+            {
+              "path": "app/(dashboard)/settings/personal-info-section.tsx",
+              "hits": 14
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-modal.tsx",
+              "hits": 13
+            }
+          ]
+        },
+        {
+          "label": "text-xs",
+          "verdict": "legacy",
+          "count": 571,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 45
+            },
+            {
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 26
+            },
+            {
+              "path": "app/(dashboard)/tasks/task-cells.tsx",
+              "hits": 19
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "icons",
+      "title": "Icon stroke width",
+      "note": "CLAUDE.md mandates strokeWidth={1.5} on every Lucide icon.",
+      "entries": [
+        {
+          "label": "1.5",
+          "verdict": "token",
+          "count": 579,
+          "files": [
+            {
+              "path": "app/(dashboard)/couples/couple-profile-header.tsx",
+              "hits": 25
+            },
+            {
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 15
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-profile.tsx",
+              "hits": 13
+            }
+          ]
+        },
+        {
+          "label": "2",
+          "verdict": "legacy",
+          "count": 67,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/canvas-frame.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/contacts/contacts-header.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/couples/couple-pulse.tsx",
+              "hits": 3
+            }
+          ]
+        },
+        {
+          "label": "1.75",
+          "verdict": "legacy",
+          "count": 56,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 19
+            },
+            {
+              "path": "app/(dashboard)/branding/blocks/text-style-controls.tsx",
+              "hits": 6
+            },
+            {
+              "path": "app/(dashboard)/branding/brand-panel.tsx",
+              "hits": 6
+            }
+          ]
+        },
+        {
+          "label": "2.5",
+          "verdict": "legacy",
+          "count": 7,
+          "files": [
+            {
+              "path": "app/(dashboard)/calendar/_components/couples-calendar.tsx",
+              "hits": 2
+            },
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/branding/brand-panel.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "1.25",
+          "verdict": "legacy",
+          "count": 4,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/render.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/branding/business-section.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "3",
+          "verdict": "legacy",
+          "count": 2,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 2
+            }
+          ]
+        },
+        {
+          "label": "1",
+          "verdict": "legacy",
+          "count": 2,
+          "files": [
+            {
+              "path": "app/(dashboard)/payments/contracts-list.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/payments/invoices-list.tsx",
+              "hits": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "padding",
+      "title": "Container padding",
+      "note": "Padding on rounded containers. No canonical card padding exists.",
+      "entries": [
+        {
+          "label": "p-2",
+          "verdict": "legacy",
+          "count": 15,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 4
+            },
+            {
+              "path": "app/(dashboard)/branding/blocks/rich-text/rich-text-bubble.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/branding/brand-panel.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "p-3",
+          "verdict": "legacy",
+          "count": 35,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/block-toolbar.tsx",
+              "hits": 12
+            },
+            {
+              "path": "app/portal/[token]/payments-section.tsx",
+              "hits": 2
+            },
+            {
+              "path": "app/(dashboard)/automations/[id]/canvas-skeleton.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "p-4",
+          "verdict": "legacy",
+          "count": 20,
+          "files": [
+            {
+              "path": "app/(dashboard)/settings/payment-settings-section.tsx",
+              "hits": 3
+            },
+            {
+              "path": "components/builders/parts/contract-signature-display.tsx",
+              "hits": 2
+            },
+            {
+              "path": "app/(dashboard)/admin/sections/metric-chart-card.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "p-5",
+          "verdict": "legacy",
+          "count": 12,
+          "files": [
+            {
+              "path": "app/(dashboard)/branding/blocks/couple-portal-sample.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/admin/sections/metric-chart-card.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(dashboard)/branding/onboarding/onboarding-modal-skeleton.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "p-6",
+          "verdict": "legacy",
+          "count": 29,
+          "files": [
+            {
+              "path": "app/(dashboard)/dashboard-invoices.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(dashboard)/dashboard-tasks.tsx",
+              "hits": 3
+            },
+            {
+              "path": "app/(auth)/login/login-form.tsx",
+              "hits": 1
+            }
+          ]
+        },
+        {
+          "label": "p-8",
+          "verdict": "legacy",
+          "count": 10,
+          "files": [
+            {
+              "path": "app/branding/preview/[surface]/page.tsx",
+              "hits": 5
+            },
+            {
+              "path": "app/(auth)/login/login-form.tsx",
+              "hits": 1
+            },
+            {
+              "path": "app/(auth)/reset-password/reset-password-form.tsx",
+              "hits": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

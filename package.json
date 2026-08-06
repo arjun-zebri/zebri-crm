@@ -9,6 +9,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "lint:gate": "node scripts/lint-gate.mjs",
+    "design-system:audit": "node scripts/design-system-audit.mjs",
     "check:no-service-role": "node scripts/check-no-service-role-in-client.mjs",
     "check:public-styling": "node scripts/check-public-surface-styling.mjs",
     "format": "prettier --write .",
