@@ -31,8 +31,8 @@ export function McPortalRunsheet({ items, onApprove, isApproving }: McPortalRuns
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-        <p className="text-sm text-gray-500">No pending suggestions</p>
-        <p className="text-sm text-gray-400">
+        <p className="text-body text-text-muted">No pending suggestions</p>
+        <p className="text-body text-text-subtle">
           Couple suggestions from the portal will appear here for your review.
         </p>
       </div>
@@ -41,27 +41,27 @@ export function McPortalRunsheet({ items, onApprove, isApproving }: McPortalRuns
 
   return (
     <div className="space-y-2.5">
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-body text-text-muted mb-4">
         {items.length} suggestion{items.length !== 1 ? 's' : ''} from the couple waiting for your review.
       </p>
       {items.map((item) => (
         <div
           key={item.id}
-          className="flex items-start gap-4 border border-amber-200 bg-amber-50/40 rounded-xl px-5 py-4"
+          className="flex items-start gap-4 border border-amber-200 bg-amber-50/40 rounded-control px-5 py-4"
         >
-          <div className="text-sm text-gray-600 w-20 shrink-0 pt-0.5 tabular-nums font-medium">
+          <div className="text-body text-gray-600 w-20 shrink-0 pt-0.5 tabular-nums font-medium">
             {formatTime(item.start_time)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-base font-medium text-gray-900">{item.title}</p>
+            <p className="text-base font-medium text-text">{item.title}</p>
             {item.description && (
-              <p className="text-sm text-gray-500 mt-0.5">{item.description}</p>
+              <p className="text-body text-text-muted mt-0.5">{item.description}</p>
             )}
           </div>
           <button
             onClick={() => onApprove(item.id)}
             disabled={isApproving}
-            className="flex items-center gap-1.5 text-sm text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-lg px-3 py-2 hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50 shrink-0"
+            className="flex items-center gap-1.5 text-body text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-control px-3 py-2 hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50 shrink-0"
           >
             <Check size={14} strokeWidth={2} />
             Approve

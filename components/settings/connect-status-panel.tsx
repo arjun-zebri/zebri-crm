@@ -16,7 +16,7 @@
  */
 'use client';
 
-import { CheckCircle, Clock, OctagonAlert, RefreshCw } from 'lucide-react';
+import { CheckCircle, Clock, Loader2, OctagonAlert, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
 import type { ConnectAccountState } from '@/lib/payments/connect-account';
@@ -56,7 +56,7 @@ export function ConnectStatusPanel({
     state.requirementsPastDue.length > 0;
 
   return (
-    <div className="rounded-card border border-border bg-surface p-4 space-y-3">
+    <div className="rounded-control border border-border bg-surface p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-body text-text">
           {state.chargesEnabled ? (
@@ -67,7 +67,7 @@ export function ConnectStatusPanel({
           <span className="font-medium">
             {state.chargesEnabled ? 'Charges enabled' : 'Onboarding in progress'}
           </span>
-          <span className="text-caption text-text-subtle">· {maskedId}</span>
+          <span className="text-body text-text-subtle">· {maskedId}</span>
         </div>
         <div className="flex items-center gap-3">
           {onSync ? (
@@ -77,14 +77,16 @@ export function ConnectStatusPanel({
               disabled={syncing}
               aria-label="Refresh status from Stripe"
               title="Refresh status from Stripe"
-              className="inline-flex items-center gap-1 text-caption text-text-muted hover:text-text transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1 text-body text-text-muted hover:text-text transition-colors cursor-pointer disabled:opacity-50"
             >
+              {/* The icon carries the in-flight state; the label does
+                  not change, so the row never reflows mid-action. */}
               <RefreshCw
                 size={13}
                 strokeWidth={1.5}
                 className={syncing ? 'animate-spin' : ''}
               />
-              {syncing ? 'Refreshing…' : 'Refresh'}
+              Refresh
             </button>
           ) : null}
           {onDisconnect ? (
@@ -92,15 +94,19 @@ export function ConnectStatusPanel({
               type="button"
               onClick={onDisconnect}
               disabled={disconnecting}
-              className="text-caption text-text-muted hover:text-danger transition-colors cursor-pointer disabled:opacity-50"
+              aria-busy={disconnecting || undefined}
+              className="inline-flex items-center gap-1 text-body text-text-muted hover:text-danger transition-colors cursor-pointer disabled:opacity-50"
             >
-              {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+              {disconnecting ? (
+                <Loader2 size={13} strokeWidth={1.5} className="animate-spin" />
+              ) : null}
+              Disconnect
             </button>
           ) : null}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 text-caption">
+      <div className="grid grid-cols-2 gap-3 text-body">
         <CapabilityRow
           label="Charges"
           enabled={state.chargesEnabled}
@@ -118,7 +124,7 @@ export function ConnectStatusPanel({
             strokeWidth={1.5}
             className="text-danger shrink-0 mt-0.5"
           />
-          <div className="text-caption text-text">
+          <div className="text-body text-text">
             <p className="font-medium">Account paused by Stripe</p>
             <p className="text-text-muted">
               Reason: <span className="font-mono">{state.disabledReason}</span>.
@@ -129,7 +135,7 @@ export function ConnectStatusPanel({
       ) : null}
 
       {hasRequirements ? (
-        <div className="text-caption">
+        <div className="text-body">
           <p className="font-medium text-text mb-1">
             Stripe needs additional information
           </p>
@@ -163,7 +169,7 @@ function CapabilityRow({
   return (
     <div className="flex items-center gap-1.5">
       <span
-        className={`inline-block h-2 w-2 rounded-full ${
+        className={`inline-block h-2 w-2 rounded-pill ${
           enabled ? 'bg-success' : 'bg-text-subtle'
         }`}
       />

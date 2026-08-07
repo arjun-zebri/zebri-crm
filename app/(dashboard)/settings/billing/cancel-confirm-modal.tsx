@@ -43,14 +43,9 @@ export function CancelConfirmModal({
           <Button variant="ghost" type="button" onClick={onClose} disabled={busy}>
             Keep subscription
           </Button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={busy}
-            className="inline-flex h-9 cursor-pointer items-center justify-center rounded-control bg-danger px-4 text-body font-medium text-text-inverse transition-colors hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {busy ? 'Cancelling…' : 'Yes, cancel'}
-          </button>
+          <Button variant="danger" onClick={onConfirm} loading={busy}>
+            Yes, cancel
+          </Button>
         </div>
       }
     >
@@ -66,7 +61,7 @@ export function CancelConfirmModal({
         )}
         , then drop to the free Starter plan.
       </p>
-      <p className="mt-3 text-caption text-text-muted">
+      <p className="mt-3 text-body text-text-muted">
         You can resubscribe any time before then to undo the cancellation.
       </p>
     </Modal>

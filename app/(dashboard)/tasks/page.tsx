@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   closestCenter,
@@ -11,15 +9,45 @@ import {
   DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { useToast } from "@/components/ui/toast";
-import { useCouples } from "@/app/(dashboard)/couples/use-couples";
-import { useCoupleStatuses } from "@/app/(dashboard)/couples/use-couple-statuses";
-import { useUpdateCouple, useDeleteCouple } from "@/app/(dashboard)/couples/use-couples";
-import { CoupleProfile } from "@/app/(dashboard)/couples/couple-profile";
+import { useState, useMemo, useEffect } from "react";
+
 import { CoupleModal } from "@/app/(dashboard)/couples/couple-modal";
+import { CoupleProfile } from "@/app/(dashboard)/couples/couple-profile";
+import { useCoupleStatuses } from "@/app/(dashboard)/couples/use-couple-statuses";
+import { useCouples } from "@/app/(dashboard)/couples/use-couples";
+import { useUpdateCouple, useDeleteCouple } from "@/app/(dashboard)/couples/use-couples";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { useToast } from "@/components/ui/toast";
+import { createClient } from "@/lib/supabase/client";
 import { Couple } from '@/types/couple';
+import {
+  PRIORITY_ORDER,
+  STATUS_ORDER,
+  TaskPriority,
+  TaskStatus,
+} from '@/types/task';
+
+import {
+  bulkDeleteTasksAction,
+  bulkUpdateTasksAction,
+  createTaskAction,
+  deleteTaskAction,
+  reorderTasksAction,
+  updateTaskAction,
+} from './actions';
+import { BulkActionsBar } from "./bulk-actions-bar";
+import { FilterBar, TaskFilter, TaskSort } from "./filter-bar";
+import { GroupByToggle, GroupByMode } from "./group-by-toggle";
+import { GroupSection, UNGROUPED_ID } from "./group-section";
+import {
+  PriorityPill,
+  StatusPill,
+} from "./task-cells";
+import { TaskRow, TaskRowTask } from "./task-row";
+import { TaskSidePanel, TaskFieldUpdate } from "./task-side-panel";
 import {
   useTaskGroups,
   useCreateTaskGroup,
@@ -43,31 +71,9 @@ import {
   useUpdateTaskStatus,
   useUpdateTaskType,
 } from "./use-task-options";
-import { TaskRow, TaskRowTask } from "./task-row";
-import { TaskSidePanel, TaskFieldUpdate } from "./task-side-panel";
-import { GroupByToggle, GroupByMode } from "./group-by-toggle";
-import { GroupSection, UNGROUPED_ID } from "./group-section";
-import { BulkActionsBar } from "./bulk-actions-bar";
-import { FilterBar, TaskFilter, TaskSort } from "./filter-bar";
-import {
-  PriorityPill,
-  StatusPill,
-} from "./task-cells";
-import {
-  PRIORITY_ORDER,
-  STATUS_ORDER,
-  TaskPriority,
-  TaskStatus,
-} from '@/types/task';
 
-import {
-  bulkDeleteTasksAction,
-  bulkUpdateTasksAction,
-  createTaskAction,
-  deleteTaskAction,
-  reorderTasksAction,
-  updateTaskAction,
-} from './actions';
+
+
 
 /** Throw on `ok: false` so React Query treats it as an error. */
 function unwrap<T>(
@@ -535,7 +541,7 @@ export default function TasksPage() {
       }));
       out.push({
         droppableId: `priority:none`,
-        header: <span className="text-sm text-gray-400">No priority</span>,
+        header: <span className="text-body text-text-subtle">No priority</span>,
         tasks: filteredTasks.filter((t) => !t.priority),
         addTaskDefaults: { priority: null },
       });
@@ -558,7 +564,7 @@ export default function TasksPage() {
         if (!list) continue;
         out.push({
           droppableId: `couple:${c.id}`,
-          header: <span className="text-sm font-medium text-gray-900">{c.name}</span>,
+          header: <span className="text-body font-medium text-text">{c.name}</span>,
           tasks: list,
           addTaskDefaults: { related_couple_id: c.id },
         });
@@ -566,7 +572,7 @@ export default function TasksPage() {
       if (unassigned.length > 0) {
         out.push({
           droppableId: `couple:none`,
-          header: <span className="text-sm text-gray-400">Unassigned</span>,
+          header: <span className="text-body text-text-subtle">Unassigned</span>,
           tasks: unassigned,
           addTaskDefaults: { related_couple_id: null },
         });
@@ -589,8 +595,8 @@ export default function TasksPage() {
         group: g,
         header: (
           <span className="inline-flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${TASK_GROUP_DOT_CLASS[g.color]}`} />
-            <span className="text-sm font-medium text-gray-900">{g.name}</span>
+            <span className={`w-2 h-2 rounded-pill ${TASK_GROUP_DOT_CLASS[g.color]}`} />
+            <span className="text-body font-medium text-text">{g.name}</span>
           </span>
         ),
         tasks: map.get(g.id) ?? [],
@@ -598,7 +604,7 @@ export default function TasksPage() {
       }));
       out.push({
         droppableId: UNGROUPED_ID,
-        header: <span className="text-sm text-gray-400">Ungrouped</span>,
+        header: <span className="text-body text-text-subtle">Ungrouped</span>,
         tasks: ungrouped,
         addTaskDefaults: { group_id: null },
       });
@@ -625,24 +631,24 @@ export default function TasksPage() {
       return [
         {
           droppableId: "date:overdue",
-          header: <span className="text-sm font-medium text-red-600">Overdue</span>,
+          header: <span className="text-body font-medium text-red-600">Overdue</span>,
           tasks: overdue,
         },
         {
           droppableId: "date:today",
-          header: <span className="text-sm font-medium text-gray-900">Today</span>,
+          header: <span className="text-body font-medium text-text">Today</span>,
           tasks: todayTasks,
           addTaskDefaults: { due_date: addDaysYMD(0) },
         },
         {
           droppableId: "date:upcoming",
-          header: <span className="text-sm font-medium text-gray-900">Upcoming</span>,
+          header: <span className="text-body font-medium text-text">Upcoming</span>,
           tasks: upcoming,
           addTaskDefaults: { due_date: addDaysYMD(1) },
         },
         {
           droppableId: "date:none",
-          header: <span className="text-sm text-gray-400">No date</span>,
+          header: <span className="text-body text-text-subtle">No date</span>,
           tasks: noDate,
           addTaskDefaults: { due_date: null },
         },
@@ -652,7 +658,7 @@ export default function TasksPage() {
     return [
       {
         droppableId: "all",
-        header: <span className="text-sm font-medium text-gray-900">All tasks</span>,
+        header: <span className="text-body font-medium text-text">All tasks</span>,
         tasks: filteredTasks,
       },
     ];
@@ -692,19 +698,23 @@ export default function TasksPage() {
   const visibleIds = flatVisible;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-white">
+    <div className="flex flex-col h-full overflow-hidden bg-surface">
       {/* Page header */}
       <div className="px-6 sm:px-[3.75rem] pt-6 pb-3 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-semibold text-gray-900">Tasks</h1>
-          <button
-            onClick={() => handleCreateTask()}
-            className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
-            aria-label="New task"
-          >
-            <Plus size={16} strokeWidth={2} />
-          </button>
-        </div>
+        <PageHeader
+          title="Tasks"
+          className="mb-4"
+          actions={
+            <Button
+              onClick={() => handleCreateTask()}
+              iconOnly
+              className="sm:hidden"
+              aria-label="New task"
+            >
+              <Plus size={16} strokeWidth={1.5} />
+            </Button>
+          }
+        />
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -712,19 +722,19 @@ export default function TasksPage() {
             <Search
               size={11}
               strokeWidth={1.5}
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tasks..."
-              className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+              className="block h-8 w-full rounded-control border border-border bg-surface pl-6 pr-6 text-body text-text transition-colors placeholder:text-text-subtle focus-visible:border-brand-fg focus-visible:outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-gray-700 transition cursor-pointer p-0.5"
               >
                 <X size={10} strokeWidth={2} />
               </button>
@@ -745,13 +755,10 @@ export default function TasksPage() {
           />
           <div className="ml-auto flex items-center gap-2">
             <GroupByToggle value={groupBy} onChange={setGroupBy} />
-            <button
-              onClick={() => handleCreateTask()}
-              className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
-            >
-              <Plus size={11} strokeWidth={2} />
+            <Button onClick={() => handleCreateTask()} className="hidden sm:inline-flex">
+              <Plus size={11} strokeWidth={1.5} />
               New task
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -761,12 +768,12 @@ export default function TasksPage() {
         {isLoading ? (
           <div className="space-y-2 mt-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
+              <div key={i} className="h-9 bg-surface-emphasis rounded-control animate-pulse" />
             ))}
           </div>
         ) : isEmpty ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-gray-400 text-sm">No tasks match these filters.</p>
+            <p className="text-text-subtle text-body">No tasks match these filters.</p>
           </div>
         ) : (
           <DndContext
@@ -857,7 +864,7 @@ export default function TasksPage() {
                   const name = window.prompt("Group name");
                   if (name && name.trim()) createGroup.mutate({ name: name.trim() });
                 }}
-                className="mt-2 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 border border-dashed border-gray-200 hover:border-gray-300 rounded-xl px-3 py-1.5 transition cursor-pointer"
+                className="mt-2 inline-flex items-center gap-2 text-body text-text-muted hover:text-gray-800 border border-dashed border-border hover:border-border-strong rounded-control px-3 py-1.5 transition cursor-pointer"
               >
                 <Plus size={13} strokeWidth={1.5} />
                 New group

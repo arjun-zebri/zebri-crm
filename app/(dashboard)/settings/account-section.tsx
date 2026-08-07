@@ -94,13 +94,13 @@ function ChangePasswordCard() {
 
   return (
     <section>
-      <h2 className="mb-1 text-xl font-semibold text-text">Change password</h2>
-      <p className="mb-5 text-caption text-text-muted">Update your account password.</p>
+      <h2 className="mb-1 text-section font-semibold text-text">Change password</h2>
+      <p className="mb-5 text-body text-text-muted">Update your account password.</p>
 
       {state.error && !state.fieldErrors ? (
         <div
           role="alert"
-          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-caption text-danger"
+          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-body text-danger"
         >
           {state.error}
         </div>
@@ -142,9 +142,7 @@ function ChangePasswordCard() {
           />
         </div>
 
-        <Button type="submit" loading={pending}>
-          {pending ? 'Changing…' : 'Change password'}
-        </Button>
+        <Button type="submit" loading={pending}>Change password</Button>
       </form>
     </section>
   );
@@ -199,7 +197,7 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-text">Email preferences</h3>
+        <h3 className="text-body font-medium text-text">Email preferences</h3>
         <AutoSaveStatus state={saveState} />
       </div>
       <div className="space-y-3">
@@ -219,9 +217,9 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
                 setPrefs(next);
                 void save(next);
               }}
-              className="h-4 w-4 rounded border-border accent-brand-fg"
+              className="h-4 w-4 rounded-control border-border accent-brand-fg"
             />
-            <span className="text-sm text-text">{label}</span>
+            <span className="text-body text-text">{label}</span>
           </label>
         ))}
       </div>
@@ -251,8 +249,8 @@ function DangerZoneCard() {
 
   return (
     <section className="border-t border-border pt-8">
-      <h3 className="mb-1 text-sm font-medium text-danger">Danger zone</h3>
-      <p className="mb-4 text-caption text-text-muted">
+      <h3 className="mb-1 text-body font-medium text-danger">Danger zone</h3>
+      <p className="mb-4 text-body text-text-muted">
         Permanently delete your account and all associated data.
       </p>
       <button
@@ -288,13 +286,11 @@ function DangerZoneCard() {
               disabled={confirm !== 'DELETE'}
               loading={loading}
               onClick={doDelete}
-            >
-              {loading ? 'Deleting…' : 'Delete account'}
-            </Button>
+            >Delete account</Button>
           </div>
         }
       >
-        <p className="mb-4 text-caption text-text-muted">
+        <p className="mb-4 text-body text-text-muted">
           This action is permanent and cannot be undone. All your data will be deleted.
         </p>
         <Input

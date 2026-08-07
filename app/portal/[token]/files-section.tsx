@@ -99,7 +99,7 @@ export function FilesSection({ token, initialFiles, branding }: FilesSectionProp
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className="block rounded-card px-6 py-8 text-center cursor-pointer transition border-2 border-dashed"
+        className="block rounded-control px-6 py-8 text-center cursor-pointer transition border-2 border-dashed"
         style={{
           borderColor: dragOver ? branding.brand_color : branding.border_color,
           backgroundColor: dragOver ? `${branding.brand_color}10` : 'transparent',
@@ -164,7 +164,7 @@ export function FilesSection({ token, initialFiles, branding }: FilesSectionProp
           {files.map((file) => (
             <div
               key={file.id}
-              className="flex items-center gap-3 rounded-card px-4 py-3 transition hover:opacity-80"
+              className="flex items-center gap-3 rounded-control px-4 py-3 transition hover:opacity-80"
               style={{
                 border: `1px solid ${branding.border_color}`,
                 backgroundColor: branding.surface_color,

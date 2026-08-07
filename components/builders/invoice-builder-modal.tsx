@@ -983,10 +983,10 @@ export function InvoiceBuilderModal({
 
         {/* Card payments toggle — only when Stripe Connect is on */}
         {stripeConnectOn && canEdit ? (
-          <div className="mt-6 flex items-center justify-between rounded-card border border-border bg-surface px-3 py-2.5">
+          <div className="mt-6 flex items-center justify-between rounded-control border border-border bg-surface px-3 py-2.5">
             <div>
               <p className="text-body text-text">Accept card payments</p>
-              <p className="text-caption text-text-muted">
+              <p className="text-body text-text-muted">
                 Adds a Pay with card button on the public invoice page.
               </p>
             </div>
@@ -998,12 +998,12 @@ export function InvoiceBuilderModal({
               }}
               role="switch"
               aria-checked={stripePaymentEnabled}
-              className={`inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+              className={`inline-flex h-6 w-11 items-center rounded-pill transition-colors cursor-pointer ${
                 stripePaymentEnabled ? 'bg-success' : 'bg-surface-emphasis border border-border'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-surface shadow transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-pill bg-surface shadow transition-transform ${
                   stripePaymentEnabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />

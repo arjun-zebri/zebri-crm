@@ -67,23 +67,22 @@ export function RunRow({ run, pending, onRetry, onCancel }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <p className="text-xs text-text-muted">{formatTime(run.startedAt)}</p>
+        <p className="text-body text-text-muted">{formatTime(run.startedAt)}</p>
         <StatePill tone={STATUS_TONE[run.status]} label={RUN_STATUS_LABELS[run.status]} />
         <div className="flex-1" />
         {run.status === 'errored' && (
-          <Button variant="ghost" size="sm" loading={pending} onClick={onRetry} className="cursor-pointer">
+          <Button variant="ghost" loading={pending} onClick={onRetry} className="cursor-pointer">
             Retry
           </Button>
         )}
         {run.blockedMissingVars && (
-          <Button variant="ghost" size="sm" loading={pending} onClick={onRetry} className="cursor-pointer text-brand">
+          <Button variant="ghost" loading={pending} onClick={onRetry} className="cursor-pointer text-brand">
             Fix &amp; retry
           </Button>
         )}
         {CANCELLABLE.has(run.status) && (
           <Button
             variant="ghost"
-            size="sm"
             loading={pending}
             onClick={onCancel}
             className="cursor-pointer text-text-muted"
@@ -93,7 +92,7 @@ export function RunRow({ run, pending, onRetry, onCancel }: Props) {
         )}
       </div>
       {run.status === 'waiting' && run.wakeAt && (
-        <p className="flex items-center gap-2 text-xs text-warning">
+        <p className="flex items-center gap-2 text-body text-warning">
           <Clock size={14} strokeWidth={1.5} className="shrink-0" />
           Next step {formatTime(run.wakeAt)}
         </p>
@@ -105,7 +104,7 @@ export function RunRow({ run, pending, onRetry, onCancel }: Props) {
             return (
               <li key={line.id} className="flex items-start gap-2">
                 <Icon size={14} strokeWidth={1.5} className={`${TONE_COLOR[line.tone]} shrink-0 mt-0.5`} />
-                <span className="text-xs text-text-muted flex-1 min-w-0">{line.text}</span>
+                <span className="text-body text-text-muted flex-1 min-w-0">{line.text}</span>
               </li>
             )
           })}

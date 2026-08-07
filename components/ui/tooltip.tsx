@@ -59,13 +59,13 @@ export function Tooltip({ label, shortcut, side = 'bottom', className = '', chil
       {open && position && typeof document !== 'undefined' && createPortal(
         <span
           role="tooltip"
-          className={`pointer-events-none fixed z-[80] px-2 py-1 rounded-md bg-gray-900 text-white text-[11px] font-medium whitespace-nowrap shadow-lg ${
+          className={`pointer-events-none fixed z-[80] px-2 py-1 rounded-control bg-gray-900 text-white text-body font-medium whitespace-nowrap shadow-lg ${
             side === 'top' ? '-translate-x-1/2 -translate-y-full' : '-translate-x-1/2'
           }`}
           style={{ top: position.top, left: position.left }}
         >
           {label}
-          {shortcut && <span className="ml-1.5 text-gray-400 font-mono">{shortcut}</span>}
+          {shortcut && <span className="ml-1.5 text-text-subtle font-mono">{shortcut}</span>}
         </span>,
         document.body,
       )}

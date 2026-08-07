@@ -43,7 +43,7 @@ export function CoupleQuestionnaireAnswers({ title, coupleName, sentAt, complete
   const [draft, setDraft] = useState<Responses>(responses)
 
   if (questions.length === 0) {
-    return <p className="text-sm text-text-muted">This questionnaire has no questions.</p>
+    return <p className="text-body text-text-muted">This questionnaire has no questions.</p>
   }
 
   const meta = [sentAt ? `Sent ${fmtDate(sentAt)}` : 'Not sent yet', completedAt ? `Completed ${fmtDate(completedAt)}` : null]
@@ -67,24 +67,22 @@ export function CoupleQuestionnaireAnswers({ title, coupleName, sentAt, complete
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-text-muted">{meta}</p>
+        <p className="text-body text-text-muted">{meta}</p>
         <div className="flex items-center gap-2">
           {editing ? (
             <>
-              <Button size="sm" variant="outline" onClick={() => { setDraft(responses); setEditing(false) }} disabled={saving}>
+              <Button variant="outline" onClick={() => { setDraft(responses); setEditing(false) }} disabled={saving}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : 'Save answers'}
-              </Button>
+              <Button onClick={handleSave} disabled={saving} loading={saving}>Save answers</Button>
             </>
           ) : (
             <>
-              <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1.5">
+              <Button variant="outline" onClick={handlePrint} className="gap-1.5">
                 <Printer size={14} strokeWidth={1.5} />
                 Print / PDF
               </Button>
-              <Button size="sm" variant="outline" onClick={() => { setDraft(responses); setEditing(true) }} className="gap-1.5">
+              <Button variant="outline" onClick={() => { setDraft(responses); setEditing(true) }} className="gap-1.5">
                 <Pencil size={14} strokeWidth={1.5} />
                 Edit answers
               </Button>
@@ -96,7 +94,7 @@ export function CoupleQuestionnaireAnswers({ title, coupleName, sentAt, complete
       {questions.map((q) => {
         if (q.type === 'section') {
           return (
-            <h4 key={q.id} className="pt-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+            <h4 key={q.id} className="pt-2 text-body font-semibold uppercase tracking-wider text-text-muted">
               {q.label}
             </h4>
           )
@@ -105,7 +103,7 @@ export function CoupleQuestionnaireAnswers({ title, coupleName, sentAt, complete
         if (editing) {
           return (
             <div key={q.id}>
-              <p className="mb-1.5 text-sm font-medium text-text">{q.label}</p>
+              <p className="mb-1.5 text-body font-medium text-text">{q.label}</p>
               <QuestionField
                 question={q}
                 value={draft[q.id]}
@@ -118,11 +116,11 @@ export function CoupleQuestionnaireAnswers({ title, coupleName, sentAt, complete
         const answer = formatAnswer(responses[q.id])
         return (
           <div key={q.id}>
-            <p className="text-sm font-medium text-text">{q.label}</p>
+            <p className="text-body font-medium text-text">{q.label}</p>
             {answer ? (
-              <p className="mt-0.5 whitespace-pre-wrap text-sm text-text-muted">{answer}</p>
+              <p className="mt-0.5 whitespace-pre-wrap text-body text-text-muted">{answer}</p>
             ) : (
-              <p className="mt-0.5 text-sm italic text-text-subtle">No answer</p>
+              <p className="mt-0.5 text-body italic text-text-subtle">No answer</p>
             )}
           </div>
         )

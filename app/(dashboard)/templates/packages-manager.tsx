@@ -88,7 +88,7 @@ function PackageRow({
 
   return (
     <div
-      className={`group flex items-center gap-2 rounded-xl px-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
+      className={`group flex items-center gap-2 rounded-control px-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
     >
       <button
         type="button"
@@ -97,14 +97,14 @@ function PackageRow({
         className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-2.5 text-left ${archived ? 'opacity-60' : ''}`}
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-text">{pkg.name}</span>
-          <span className="block truncate text-xs text-text-subtle">{pkg.notes || ''}</span>
+          <span className="block truncate text-body font-medium text-text">{pkg.name}</span>
+          <span className="block truncate text-body text-text-subtle">{pkg.notes || ''}</span>
         </span>
         <span className="shrink-0 text-right">
           {(pkg.total ?? 0) > 0 ? (
-            <span className="block text-sm font-medium tabular-nums text-text">{formatCurrency(pkg.total ?? 0)}</span>
+            <span className="block text-body font-medium tabular-nums text-text">{formatCurrency(pkg.total ?? 0)}</span>
           ) : null}
-          <span className="block text-xs text-text-muted">
+          <span className="block text-body text-text-muted">
             {pkg.item_count || 0} item{(pkg.item_count || 0) !== 1 ? 's' : ''}
           </span>
         </span>
@@ -122,7 +122,7 @@ function PackageCaption({ updatedAt }: { updatedAt?: string | null }) {
   if (!updatedAt) return null
 
   return (
-    <p className="text-xs text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
+    <p className="text-body text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
   )
 }
 
@@ -453,7 +453,7 @@ export function PackagesManager() {
     return (
       <div className="space-y-3 animate-pulse">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-surface-muted rounded-xl" />
+          <div key={i} className="h-12 bg-surface-muted rounded-control" />
         ))}
       </div>
     )
@@ -483,14 +483,13 @@ export function PackagesManager() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search packages…"
-          size="sm"
           className="w-36 sm:w-48"
         />
-        <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
+        <Button variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
           <Library size={14} strokeWidth={1.5} />
           Browse starters
         </Button>
-        <Button size="sm" onClick={openCreate} className="gap-1.5">
+        <Button onClick={openCreate} className="gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           New Package
         </Button>
@@ -553,13 +552,13 @@ export function PackagesManager() {
           list={
             <>
               {visibleActive.length === 0 && visibleArchived.length === 0 ? (
-                <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+                <p className="py-8 text-center text-body text-text-subtle">No matches.</p>
               ) : showGroupHeaders ? (
                 <div className="space-y-5">
                   {groups.map((group) => (
                     <section key={group.key}>
-                      <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
-                        {group.dotClass && <span className={`h-2 w-2 rounded-full ${group.dotClass}`} />}
+                      <h3 className="flex items-center gap-1.5 px-2 text-body font-semibold uppercase tracking-wider text-text-subtle">
+                        {group.dotClass && <span className={`h-2 w-2 rounded-pill ${group.dotClass}`} />}
                         {group.label}
                       </h3>
                       <div className="mt-1 space-y-1">
@@ -593,7 +592,7 @@ export function PackagesManager() {
                   <button
                     type="button"
                     onClick={() => setShowArchived((v) => !v)}
-                    className="flex items-center gap-1 py-1 text-xs text-text-muted transition hover:text-text cursor-pointer"
+                    className="flex items-center gap-1 py-1 text-body text-text-muted transition hover:text-text cursor-pointer"
                   >
                     {showArchived ? (
                       <ChevronDown size={14} strokeWidth={1.5} />
@@ -629,7 +628,6 @@ export function PackagesManager() {
                 actions={
                   <>
                     <Button
-                      size="sm"
                       variant="outline"
                       className="gap-1.5"
                       onClick={() => {
@@ -674,7 +672,7 @@ export function PackagesManager() {
               />
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">
-                <p className="text-sm text-text-subtle">Select a package to preview.</p>
+                <p className="text-body text-text-subtle">Select a package to preview.</p>
               </div>
             )
           }

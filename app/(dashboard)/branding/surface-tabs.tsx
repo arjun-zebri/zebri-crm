@@ -33,7 +33,7 @@ export function SurfaceTabs({
   onToggleSurface,
 }: SurfaceTabsProps) {
   return (
-    <div className="flex-shrink-0 border-b border-gray-100 bg-white flex items-center">
+    <div className="flex-shrink-0 border-b border-gray-100 bg-surface flex items-center">
       <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto flex-1 min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {TABS.filter((tab) => enabledSurfaces.includes(tab.id)).map((tab) => {
           const active = surface === tab.id
@@ -43,18 +43,18 @@ export function SurfaceTabs({
               type="button"
               onClick={() => setSurface(tab.id)}
               aria-current={active ? 'page' : undefined}
-              className={`group flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-lg transition cursor-pointer shrink-0 border ${
+              className={`group flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-control transition cursor-pointer shrink-0 border ${
                 active
-                  ? 'bg-white border-gray-900 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.18)]'
-                  : 'bg-white border-gray-200 hover:border-gray-300'
+                  ? 'bg-surface border-gray-900 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.18)]'
+                  : 'bg-surface border-border hover:border-border-strong'
               }`}
             >
               <MiniThumb id={tab.id} state={state} active={active} icon={tab.icon} />
               <div className="text-left min-w-0">
-                <p className={`text-[12px] font-medium leading-tight ${active ? 'text-gray-900' : 'text-gray-700'}`}>
+                <p className={`text-[12px] font-medium leading-tight ${active ? 'text-text' : 'text-gray-700'}`}>
                   {tab.label}
                 </p>
-                <p className="text-[10px] text-gray-400 leading-tight">{tab.subtitle}</p>
+                <p className="text-[10px] text-text-subtle leading-tight">{tab.subtitle}</p>
               </div>
             </button>
           )
@@ -69,7 +69,7 @@ export function SurfaceTabs({
             type="button"
             title="Choose which documents you use"
             aria-label="Choose which documents you use"
-            className="shrink-0 mr-3 ml-1 inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 cursor-pointer transition"
+            className="shrink-0 mr-3 ml-1 inline-flex items-center justify-center h-8 w-8 rounded-control border border-border text-text-muted hover:text-text hover:border-border-strong cursor-pointer transition"
           >
             <Settings2 size={14} strokeWidth={1.75} />
           </button>
@@ -78,9 +78,9 @@ export function SurfaceTabs({
           <Popover.Content
             align="end"
             sideOffset={6}
-            className="z-[60] w-[290px] rounded-xl border border-gray-200 bg-white p-3 shadow-xl animate-modal-in"
+            className="z-[60] w-[290px] rounded-control border border-border bg-surface p-3 shadow-xl animate-modal-in"
           >
-            <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Your documents</p>
+            <p className="text-[11px] text-text-subtle uppercase tracking-[0.08em] mb-2">Your documents</p>
             <DocumentsSection enabledSurfaces={enabledSurfaces} onToggleSurface={onToggleSurface} />
           </Popover.Content>
         </Popover.Portal>
@@ -106,29 +106,29 @@ function MiniThumb({
 
   return (
     <div
-      className={`w-9 h-12 rounded-md overflow-hidden border shrink-0 relative ${
-        active ? 'border-gray-300' : 'border-gray-200'
+      className={`w-9 h-12 rounded-control overflow-hidden border shrink-0 relative ${
+        active ? 'border-border-strong' : 'border-border'
       }`}
       style={{ background: bg, fontFamily: FONT_STACKS[state.fontHeading] }}
       aria-hidden
     >
       {isPortal ? (
         <div className="flex h-full">
-          <div className="w-2.5 bg-gray-100 border-r border-gray-200" />
+          <div className="w-2.5 bg-surface-emphasis border-r border-border" />
           <div className="flex-1 flex flex-col gap-0.5 p-1">
-            <div className="h-1 rounded-sm" style={{ background: bar }} />
-            <div className="h-0.5 rounded-sm bg-gray-200" />
-            <div className="h-0.5 rounded-sm bg-gray-100 w-3/4" />
-            <div className="mt-auto h-1.5 rounded-sm" style={{ background: `${bar}33` }} />
+            <div className="h-1 rounded-control" style={{ background: bar }} />
+            <div className="h-0.5 rounded-control bg-gray-200" />
+            <div className="h-0.5 rounded-control bg-surface-emphasis w-3/4" />
+            <div className="mt-auto h-1.5 rounded-control" style={{ background: `${bar}33` }} />
           </div>
         </div>
       ) : (
         <div className="flex flex-col h-full p-1 gap-0.5">
-          <div className="h-1 rounded-sm" style={{ background: bar }} />
-          <div className="h-0.5 rounded-sm bg-gray-200 w-3/4" />
-          <div className="h-0.5 rounded-sm bg-gray-100" />
-          <div className="h-0.5 rounded-sm bg-gray-100" />
-          <div className="mt-auto h-1.5 rounded-sm" style={{ background: bar }} />
+          <div className="h-1 rounded-control" style={{ background: bar }} />
+          <div className="h-0.5 rounded-control bg-gray-200 w-3/4" />
+          <div className="h-0.5 rounded-control bg-surface-emphasis" />
+          <div className="h-0.5 rounded-control bg-surface-emphasis" />
+          <div className="mt-auto h-1.5 rounded-control" style={{ background: bar }} />
         </div>
       )}
       <span className="absolute bottom-0.5 right-0.5 text-gray-300">

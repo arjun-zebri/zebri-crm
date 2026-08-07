@@ -58,11 +58,11 @@ export function CoupleTimeBreakdown({ entries }: CoupleTimeBreakdownProps) {
         {segments.map((segment) => (
           <li
             key={segment.label}
-            className="flex items-center gap-1.5 text-caption text-text-muted"
+            className="flex items-center gap-1.5 text-body text-text-muted"
           >
             <span
               aria-hidden
-              className="size-2 shrink-0 rounded-full"
+              className="size-2 shrink-0 rounded-pill"
               style={{ background: segment.color }}
             />
             <span className="text-text">{segment.label}</span>
@@ -85,7 +85,7 @@ export function CoupleTimeBreakdown({ entries }: CoupleTimeBreakdownProps) {
 function Segment({ segment }: { segment: BreakdownSegment }) {
   return (
     <span
-      className="h-full rounded-[2px] first:rounded-l-full last:rounded-r-full"
+      className="h-full rounded-[2px] first:rounded-l-pill last:rounded-r-pill"
       style={{
         background: segment.color,
         width: `${Math.max(segment.share * 100, 1.5)}%`,

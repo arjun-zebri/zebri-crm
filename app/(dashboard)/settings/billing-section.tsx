@@ -265,7 +265,7 @@ function ActivationBanner({
 
   if (activation === 'timed_out') {
     return (
-      <div className="flex flex-col gap-3 rounded-card border border-warning/40 bg-warning/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-control border border-warning/40 bg-warning/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <AlertCircle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-warning" />
           <div>
@@ -274,21 +274,21 @@ function ActivationBanner({
                 ? "Payment successful, but we haven't received the activation event yet."
                 : "Your change went through, but we haven't received the update event yet."}
             </p>
-            <p className="mt-1 text-caption text-text-muted">
+            <p className="mt-1 text-body text-text-muted">
               This usually clears in a moment, try refreshing. If it persists, the Stripe webhook
               may not be reaching the app (local dev: ensure <code className="font-mono">stripe
               listen --forward-to localhost:3000/api/stripe/webhook</code> is running).
             </p>
           </div>
         </div>
-        <Button size="sm" variant="secondary" onClick={onRefresh} loading={refreshing}>
+        <Button variant="secondary" onClick={onRefresh} loading={refreshing}>
           Refresh
         </Button>
       </div>
     );
   }
   return (
-    <div className="flex flex-col gap-3 rounded-card border border-success/40 bg-success/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-control border border-success/40 bg-success/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
         {activation === 'polling' ? (
           <Loader2 size={16} strokeWidth={1.5} className="shrink-0 animate-spin text-success" />
@@ -297,7 +297,7 @@ function ActivationBanner({
         )}
         {headline}
       </div>
-      <Button size="sm" variant="ghost" onClick={onRefresh} loading={refreshing}>
+      <Button variant="ghost" onClick={onRefresh} loading={refreshing}>
         Refresh now
       </Button>
     </div>
@@ -314,7 +314,7 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section>
       <div className="mb-6 flex items-center gap-4">
-        <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+        <h3 className="text-body font-medium uppercase tracking-wide text-text-muted">
           {label}
         </h3>
         <div className="flex-1 border-t border-border" />

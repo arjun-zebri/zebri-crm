@@ -33,10 +33,10 @@ export function KanbanColumn({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="w-full sm:w-64 shrink-0 sm:rounded-xl px-0 py-2 sm:p-3 sm:flex sm:flex-col">
+    <div className="w-full sm:w-64 shrink-0 sm:rounded-control px-0 py-2 sm:p-3 sm:flex sm:flex-col">
       <div className="flex items-center gap-2 mb-2 shrink-0">
         <button
-          className="sm:hidden text-gray-400 transition cursor-pointer"
+          className="sm:hidden text-text-subtle transition cursor-pointer"
           onClick={() => setCollapsed((c) => !c)}
         >
           <ChevronDown
@@ -46,14 +46,14 @@ export function KanbanColumn({
           />
         </button>
         <span
-          className={`text-xs font-medium px-2 py-0.5 rounded-md ${classes.pill}`}
+          className={`text-body font-medium px-2 py-0.5 rounded-control ${classes.pill}`}
         >
           {status.name}
         </span>
-        <span className="text-xs text-gray-300 flex-1">{couples.length}</span>
+        <span className="text-body text-gray-300 flex-1">{couples.length}</span>
         <button
           onClick={() => onAddClick?.(status.slug)}
-          className="text-gray-400 hover:text-gray-600 transition cursor-pointer"
+          className="text-text-subtle hover:text-gray-600 transition cursor-pointer"
         >
           <Plus size={14} strokeWidth={1.5} />
         </button>

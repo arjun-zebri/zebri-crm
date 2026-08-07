@@ -54,7 +54,7 @@ function EditedLine({ updatedAt }: { updatedAt?: string | null }) {
   // render is impure); the relative time recomputes from props.
   const [nowMs] = useState(() => Date.now())
   if (!updatedAt) return null
-  return <p className="text-xs text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
+  return <p className="text-body text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
 }
 
 /** Per-tab wording so both tabs read naturally from one component. */
@@ -110,7 +110,7 @@ function TemplateRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 rounded-xl pr-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
+      className={`group flex items-center gap-2 rounded-control pr-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
     >
       {!disabled && (
         <button
@@ -131,14 +131,14 @@ function TemplateRow({
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-2.5 pl-1 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-text">{template.name}</span>
-          <span className="block truncate text-xs text-text-subtle">{template.notes || ''}</span>
+          <span className="block truncate text-body font-medium text-text">{template.name}</span>
+          <span className="block truncate text-body text-text-subtle">{template.notes || ''}</span>
         </span>
         <span className="shrink-0 text-right">
           {template.total > 0 ? (
-            <span className="block text-sm font-medium tabular-nums text-text">{formatAUD(template.total)}</span>
+            <span className="block text-body font-medium tabular-nums text-text">{formatAUD(template.total)}</span>
           ) : null}
-          <span className="block text-xs text-text-muted">
+          <span className="block text-body text-text-muted">
             {template.item_count} item{template.item_count !== 1 ? 's' : ''}
           </span>
         </span>
@@ -359,7 +359,7 @@ export function LineItemTemplateManager({
     return (
       <div className="space-y-3 animate-pulse">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-surface-muted rounded-xl" />
+          <div key={i} className="h-12 bg-surface-muted rounded-control" />
         ))}
       </div>
     )
@@ -379,14 +379,13 @@ export function LineItemTemplateManager({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={copy.searchPlaceholder}
-          size="sm"
           className="w-36 sm:w-48"
         />
-        <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
+        <Button variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
           <Library size={14} strokeWidth={1.5} />
           Browse starters
         </Button>
-        <Button size="sm" onClick={openCreate} className="gap-1.5">
+        <Button onClick={openCreate} className="gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           New Template
         </Button>
@@ -463,7 +462,7 @@ export function LineItemTemplateManager({
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={visible.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 {visible.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+                  <p className="py-8 text-center text-body text-text-subtle">No matches.</p>
                 ) : (
                   <div className="space-y-1">
                     {visible.map((template) => (
@@ -490,7 +489,6 @@ export function LineItemTemplateManager({
                 actions={
                   <>
                     <Button
-                      size="sm"
                       variant="outline"
                       className="gap-1.5"
                       onClick={() => {
@@ -524,7 +522,7 @@ export function LineItemTemplateManager({
               />
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">
-                <p className="text-sm text-text-subtle">Select a template to preview.</p>
+                <p className="text-body text-text-subtle">Select a template to preview.</p>
               </div>
             )
           }

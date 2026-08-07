@@ -36,10 +36,10 @@ export function CouplesListMobile({
               className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
             >
               <div className="flex-1 pr-3">
-                <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
-                <div className="h-3 bg-gray-100 rounded-md w-24" />
+                <div className="h-4 bg-surface-emphasis rounded-control w-36 mb-1.5" />
+                <div className="h-3 bg-surface-emphasis rounded-control w-24" />
               </div>
-              <div className="h-5 bg-gray-100 rounded-full w-16" />
+              <div className="h-5 bg-surface-emphasis rounded-pill w-16" />
             </div>
           ))
         : rows.map((row) => {
@@ -65,17 +65,17 @@ export function CouplesListMobile({
                 className="flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 transition"
               >
                 <div className="min-w-0 flex-1 pr-3">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-body font-medium text-text truncate">
                     {couple.name}
                   </p>
                   {secondary && (
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">
+                    <p className="text-body text-text-subtle mt-0.5 truncate">
                       {secondary}
                     </p>
                   )}
                 </div>
                 <span
-                  className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${classes.pill}`}
+                  className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-pill text-body font-medium whitespace-nowrap ${classes.pill}`}
                 >
                   {statusName}
                 </span>

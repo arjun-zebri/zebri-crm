@@ -11,7 +11,7 @@ import { HintBubble } from './hint-bubble'
 export function VarChip({ label, hint }: { label: string; hint: string }) {
   return (
     <span
-      className="relative group/vh inline-flex items-center rounded px-1 py-px text-[0.95em] font-medium align-baseline cursor-help"
+      className="relative group/vh inline-flex items-center rounded-control px-1 py-px text-[0.95em] font-medium align-baseline cursor-help"
       style={{ backgroundColor: '#D1FAE5', color: '#047857' }}
     >
       {`{{ ${label} }}`}

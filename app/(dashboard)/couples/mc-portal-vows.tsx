@@ -82,17 +82,17 @@ function HistoryPopover({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text cursor-pointer transition-colors"
+        className="inline-flex items-center gap-1 text-body text-text-muted hover:text-text cursor-pointer transition-colors"
       >
         <History size={14} strokeWidth={1.5} /> History ({history.length})
       </button>
       <div
-        className={`absolute right-0 mt-2 w-52 z-30 origin-top-right rounded-xl border border-gray-100 bg-white shadow-lg py-1 text-sm transition-all duration-150 ${
+        className={`absolute right-0 mt-2 w-52 z-30 origin-top-right rounded-control border border-gray-100 bg-surface shadow-lg py-1 text-body transition-all duration-150 ${
           open ? 'opacity-100 scale-100' : 'pointer-events-none opacity-0 scale-95'
         }`}
       >
         {history.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-gray-400">No history yet</p>
+          <p className="px-3 py-2 text-body text-text-subtle">No history yet</p>
         ) : (
           <ul className="max-h-64 overflow-y-auto">
             {history.map((r, i) => (
@@ -109,12 +109,12 @@ function HistoryPopover({
                   <span className="min-w-0">
                     <span className="block">
                       {r.author === 'couple' ? "Couple's version" : 'Your edit'}
-                      {i === 0 && <span className="text-gray-400"> · current</span>}
+                      {i === 0 && <span className="text-text-subtle"> · current</span>}
                     </span>
-                    <span className="block text-xs text-gray-400">{timeAgo(r.created_at)}</span>
+                    <span className="block text-body text-text-subtle">{timeAgo(r.created_at)}</span>
                   </span>
                   {i !== 0 && (
-                    <RotateCcw size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+                    <RotateCcw size={13} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
                   )}
                 </button>
               </li>
@@ -133,10 +133,10 @@ function VowsSkeleton() {
       {[0, 1].map((i) => (
         <div key={i} className="flex flex-col min-h-[280px]">
           <div className="flex items-center justify-between mb-2 px-3">
-            <div className="h-4 w-28 rounded bg-gray-100" />
-            <div className="h-4 w-20 rounded bg-gray-100" />
+            <div className="h-4 w-28 rounded-control bg-surface-emphasis" />
+            <div className="h-4 w-20 rounded-control bg-surface-emphasis" />
           </div>
-          <div className="flex-1 w-full rounded-md bg-gray-100" />
+          <div className="flex-1 w-full rounded-control bg-surface-emphasis" />
         </div>
       ))}
     </div>
@@ -226,10 +226,10 @@ export function McPortalVows({ coupleId, primaryName, secondaryName }: McPortalV
             return (
               <div key={vow.id} className="flex flex-col min-h-[280px]">
                 <div className="flex items-center justify-between mb-2 px-3">
-                  <span className="text-sm font-medium text-text">{label(vow.who)}</span>
+                  <span className="text-body font-medium text-text">{label(vow.who)}</span>
                   <div className="flex items-center gap-3">
                     <span
-                      className={`text-xs text-text-subtle transition-opacity duration-300 ${st ? 'opacity-100' : 'opacity-0'}`}
+                      className={`text-body text-text-subtle transition-opacity duration-300 ${st ? 'opacity-100' : 'opacity-0'}`}
                     >
                       {st === 'saving' ? 'Saving…' : 'Saved'}
                     </span>
@@ -237,7 +237,7 @@ export function McPortalVows({ coupleId, primaryName, secondaryName }: McPortalV
                   </div>
                 </div>
                 <textarea
-                  className="flex-1 w-full resize-none rounded-md border border-border bg-surface p-3 text-sm text-text transition-shadow focus:outline-none focus:ring-2 focus:ring-brand/30"
+                  className="flex-1 w-full resize-none rounded-control border border-border bg-surface p-3 text-body text-text transition-shadow focus:outline-none focus:ring-2 focus:ring-brand/30"
                   value={value}
                   placeholder="No vows written yet."
                   onChange={(e) => setDrafts((d) => ({ ...d, [vow.id]: e.target.value }))}

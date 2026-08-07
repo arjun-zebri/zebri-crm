@@ -44,9 +44,9 @@ export function CanvasScopeBar({ surface, onClearBlocks, onResetLayout }: Canvas
     <div className="mb-2">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-[11px] min-w-0">
-          <LayoutTemplate size={12} strokeWidth={1.75} className="text-gray-400 shrink-0" />
-          <span className="font-medium text-gray-500 shrink-0">{SURFACE_LABEL[surface]} layout</span>
-          <span className="text-gray-400 truncate">· blocks &amp; wording for this document only</span>
+          <LayoutTemplate size={12} strokeWidth={1.75} className="text-text-subtle shrink-0" />
+          <span className="font-medium text-text-muted shrink-0">{SURFACE_LABEL[surface]} layout</span>
+          <span className="text-text-subtle truncate">· blocks &amp; wording for this document only</span>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {onResetLayout && <ResetLayoutAction onReset={onResetLayout} />}
@@ -54,7 +54,7 @@ export function CanvasScopeBar({ surface, onClearBlocks, onResetLayout }: Canvas
             <button
               type="button"
               onClick={onClearBlocks}
-              className="text-[11px] text-gray-400 hover:text-red-500 cursor-pointer transition shrink-0"
+              className="text-[11px] text-text-subtle hover:text-red-500 cursor-pointer transition shrink-0"
             >
               Clear all blocks
             </button>
@@ -86,7 +86,7 @@ function ResetLayoutAction({ onReset }: { onReset: () => void }) {
       onBlur={() => setArmed(false)}
       title="Restore this document's default layout"
       className={`inline-flex items-center gap-1 text-[11px] cursor-pointer transition shrink-0 ${
-        armed ? 'text-red-500' : 'text-gray-400 hover:text-gray-600'
+        armed ? 'text-red-500' : 'text-text-subtle hover:text-gray-600'
       }`}
     >
       <RotateCcw size={10} strokeWidth={1.75} />

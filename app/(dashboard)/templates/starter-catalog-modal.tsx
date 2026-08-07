@@ -73,15 +73,14 @@ export function StarterCatalogModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg">
       {addable.length === 0 ? (
-        <p className="py-10 text-center text-sm text-text-subtle">
+        <p className="py-10 text-center text-body text-text-subtle">
           You&apos;ve added every starter. Anything you delete can be re-added here.
         </p>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-text-muted">{blurb}</p>
+            <p className="text-body text-text-muted">{blurb}</p>
             <Button
-              size="sm"
               variant="secondary"
               className="shrink-0"
               onClick={() => addNames(addable.map((i) => i.name), `all ${noun}s`)}
@@ -91,13 +90,12 @@ export function StarterCatalogModal({
           </div>
           <ul>
             {addable.map((item) => (
-              <li key={item.name} className="flex items-center gap-3 rounded-xl px-1 py-2.5">
+              <li key={item.name} className="flex items-center gap-3 rounded-control px-1 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-text">{item.name}</p>
-                  <p className="truncate text-xs text-text-subtle">{item.subtitle}</p>
+                  <p className="truncate text-body font-medium text-text">{item.name}</p>
+                  <p className="truncate text-body text-text-subtle">{item.subtitle}</p>
                 </div>
                 <Button
-                  size="sm"
                   variant="ghost"
                   className="shrink-0 gap-1.5"
                   onClick={() => addNames([item.name], item.name)}

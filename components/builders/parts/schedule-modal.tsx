@@ -101,7 +101,7 @@ function Segmented<T extends string>({
           disabled={o.disabled}
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`cursor-pointer px-2.5 py-1 text-caption transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+          className={`cursor-pointer px-2.5 py-1 text-body transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
             i > 0 ? 'border-l border-border' : ''
           } ${value === o.value ? 'bg-brand-fg font-medium text-text-inverse' : 'text-text-muted hover:text-text'}`}
         >
@@ -227,9 +227,9 @@ function ScheduleModalBody({
   }
 
   return (
-    <div className="space-y-4 text-sm">
+    <div className="space-y-4 text-body">
       <div className="space-y-1.5">
-        <span className="block text-caption font-medium text-text-muted">Schedule</span>
+        <span className="block text-body font-medium text-text-muted">Schedule</span>
         <ScheduleCombobox
           name={name}
           onNameChange={setName}
@@ -242,7 +242,7 @@ function ScheduleModalBody({
         />
       </div>
 
-      <p className="text-caption leading-relaxed text-text-muted">
+      <p className="text-body leading-relaxed text-text-muted">
         Split the invoice into stages the couple pays over time. Choose whether each share is a
         percent or a dollar amount, and whether timing counts forward from the issue date or back
         from the due date.
@@ -250,7 +250,7 @@ function ScheduleModalBody({
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-caption text-text-muted">Amount</span>
+          <span className="text-body text-text-muted">Amount</span>
           <Segmented
             ariaLabel="Amount unit"
             value={amountUnit === 'fixed' ? 'fixed' : 'percent'}
@@ -262,7 +262,7 @@ function ScheduleModalBody({
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-caption text-text-muted">Timing</span>
+          <span className="text-body text-text-muted">Timing</span>
           <Segmented
             ariaLabel="Timing anchor"
             value={anchor}
@@ -285,7 +285,7 @@ function ScheduleModalBody({
 
       <div>
         {draft.length > 0 && (
-          <div className={`hidden pb-2 text-caption text-text-muted ${STAGE_ROW_GRID}`}>
+          <div className={`hidden pb-2 text-body text-text-muted ${STAGE_ROW_GRID}`}>
             <span aria-hidden />
             <span>Stage</span>
             <span>Amount</span>
@@ -319,7 +319,7 @@ function ScheduleModalBody({
           <button
             type="button"
             onClick={addStage}
-            className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-caption text-text-muted transition-colors hover:text-text"
+            className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-body text-text-muted transition-colors hover:text-text"
           >
             <Plus size={14} strokeWidth={1.5} /> Add payment
           </button>
@@ -327,7 +327,7 @@ function ScheduleModalBody({
       </div>
 
       {draft.length > 0 && (
-        <div className="flex items-center justify-end text-caption tabular-nums">
+        <div className="flex items-center justify-end text-body tabular-nums">
           <span className={applyReason ? 'text-warning' : 'text-text-muted'}>
             {applyReason ?? `Stages total ${fmt(sumCents)} of ${fmt(totalCents)}`}
           </span>
@@ -337,7 +337,6 @@ function ScheduleModalBody({
       <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
         <Button
           variant="ghost"
-          size="sm"
           loading={saving}
           disabled={saveReason !== null}
           title={saveReason ?? undefined}
@@ -347,12 +346,11 @@ function ScheduleModalBody({
           Save schedule
         </Button>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button
             variant="primary"
-            size="sm"
             disabled={applyReason !== null}
             onClick={() => {
               onApply(template)

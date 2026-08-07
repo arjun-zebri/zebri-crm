@@ -118,13 +118,13 @@ export function AddressAutocomplete({
         autoComplete="off"
       />
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-50 mt-1 w-full bg-card border border-border rounded-xl shadow-lg py-1 max-h-48 overflow-y-auto">
+        <ul className="absolute z-50 mt-1 w-full bg-card border border-border rounded-control shadow-lg py-1 max-h-48 overflow-y-auto">
           {suggestions.map((s) => (
             <li key={s.placeId}>
               <button
                 type="button"
                 onMouseDown={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 text-sm text-text hover:bg-surface-muted cursor-pointer"
+                className="w-full text-left px-3 py-2 text-body text-text hover:bg-surface-muted cursor-pointer"
               >
                 {s.text}
               </button>

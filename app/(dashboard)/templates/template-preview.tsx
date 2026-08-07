@@ -90,8 +90,8 @@ export function TemplatePreview({ subject, content, ctx, mode = 'preview', overr
 
   const subjectRow = (
     <div className="border-b border-border px-4 py-3">
-      <p className="text-xs text-text-subtle">Subject</p>
-      <p className="text-sm font-medium text-text">
+      <p className="text-body text-text-subtle">Subject</p>
+      <p className="text-body font-medium text-text">
         {subjectText || <span className="text-text-subtle">No subject</span>}
       </p>
     </div>
@@ -101,7 +101,7 @@ export function TemplatePreview({ subject, content, ctx, mode = 'preview', overr
     return (
       // Fills its parent so only the iframe scrolls — a fixed iframe
       // height taller than the pane stacked two scrollbars.
-      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card">
+      <div className="flex h-full flex-col overflow-hidden rounded-control border border-border bg-card">
         <div className="shrink-0">{subjectRow}</div>
         {/* allow-same-origin (still no allow-scripts, so the content is
             inert) lets the effect above write the body without reloading
@@ -125,14 +125,14 @@ export function TemplatePreview({ subject, content, ctx, mode = 'preview', overr
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-control border border-border bg-card">
       {subjectRow}
       <div
         // `[&_p:empty]:min-h-[1.4em]` preserves the blank lines the MC
         // types — an empty <p> otherwise collapses to zero height, so
         // intentional spacing vanished from the preview. List utilities
         // restore bullet/number markers Tailwind's reset strips.
-        className="email-preview px-4 py-4 text-sm leading-relaxed text-text [&_a]:text-brand [&_p]:my-2 [&_p:empty]:min-h-[1.4em] [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+        className="email-preview px-4 py-4 text-body leading-relaxed text-text [&_a]:text-brand [&_p]:my-2 [&_p:empty]:min-h-[1.4em] [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
         // Body HTML is sanitised by renderEmailTemplate before it reaches here.
         dangerouslySetInnerHTML={{ __html: bodyHtml }}
       />

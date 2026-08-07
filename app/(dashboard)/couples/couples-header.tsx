@@ -3,6 +3,9 @@
 import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, Upload, X, Settings2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
+import { MenuItem, MenuPanel } from '@/components/ui/menu'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Couple,
   CoupleStatusRecord,
@@ -105,38 +108,39 @@ export function CouplesHeader({
 
   return (
     <div>
-      {/* Title row */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-3xl font-semibold text-gray-900">Couples</h1>
-          <span className="text-sm text-gray-400">{couples.length} total</span>
-        </div>
-        <div className="relative sm:hidden" ref={mobileAddRef}>
-          <button
+      <PageHeader
+        title="Couples"
+        count={couples.length}
+        className="mb-4"
+        actions={
+          <div className="relative sm:hidden" ref={mobileAddRef}>
+          <Button
+            iconOnly
             onClick={() => setMobileAddOpen((o) => !o)}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
             aria-label="New couple"
+            className="rounded-pill"
           >
-            <Plus size={16} strokeWidth={2} />
-          </button>
+            <Plus size={16} strokeWidth={1.5} />
+          </Button>
           {mobileAddOpen && (
-            <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-44 py-1">
-              <button
-                onClick={() => { setMobileAddOpen(false); onAddClick() }}
-                className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-              >
-                <Plus size={13} strokeWidth={1.5} /> Add manually
-              </button>
-              <button
-                onClick={() => { setMobileAddOpen(false); onImportClick() }}
-                className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-              >
-                <Upload size={13} strokeWidth={1.5} /> Import from CSV
-              </button>
+            <div className="absolute right-0 top-full z-30 mt-1">
+              <MenuPanel>
+                <MenuItem size="sm" onClick={() => { setMobileAddOpen(false); onAddClick() }}>
+                  <span className="flex items-center gap-2">
+                    <Plus size={13} strokeWidth={1.5} /> Add manually
+                  </span>
+                </MenuItem>
+                <MenuItem size="sm" onClick={() => { setMobileAddOpen(false); onImportClick() }}>
+                  <span className="flex items-center gap-2">
+                    <Upload size={13} strokeWidth={1.5} /> Import from CSV
+                  </span>
+                </MenuItem>
+              </MenuPanel>
             </div>
           )}
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -145,7 +149,7 @@ export function CouplesHeader({
           <Search
             size={11}
             strokeWidth={1.5}
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
           />
           <input
             ref={searchInputRef}
@@ -153,7 +157,10 @@ export function CouplesHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search couples..."
-            className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+            // Matches `Input size="sm"` exactly. Not the primitive itself:
+            // this field carries a leading icon and a trailing clear button,
+            // and Input has no prefix/suffix slot yet.
+            className="block h-8 w-full rounded-control border border-border bg-surface pl-6 pr-6 text-body text-text transition-colors placeholder:text-text-subtle focus-visible:border-brand-fg focus-visible:outline-none"
           />
           {search && (
             <button
@@ -161,20 +168,20 @@ export function CouplesHeader({
                 onSearchChange('')
                 searchInputRef.current?.focus()
               }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+              aria-label="Clear search"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 cursor-pointer p-0.5 text-text-subtle transition-colors hover:text-text"
             >
-              <X size={10} strokeWidth={2} />
+              <X size={10} strokeWidth={1.5} />
             </button>
           )}
         </div>
 
         {/* Filter button - desktop only; mobile uses status chips below */}
         <div className="relative hidden sm:block" ref={filtersRef}>
-          <button
+          <Button
+            variant="outline"
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className={`flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
-              hasActiveFilter ? 'text-gray-900 bg-gray-50' : 'text-gray-500'
-            }`}
+            className={`whitespace-nowrap ${hasActiveFilter ? 'bg-surface-emphasis' : ''}`}
           >
             <SlidersHorizontal size={11} strokeWidth={1.5} />
             <span>{hasActiveFilter ? activeFilterLabel : 'Filter'}</span>
@@ -184,74 +191,70 @@ export function CouplesHeader({
                   e.stopPropagation()
                   onStatusFilterChange('all')
                 }}
-                className="ml-0.5 text-gray-400 hover:text-gray-700 cursor-pointer"
+                className="ml-0.5 cursor-pointer text-text-subtle hover:text-text"
               >
                 <X size={10} strokeWidth={1.5} />
               </span>
             )}
-          </button>
+          </Button>
           {filtersOpen && (
-            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-32 py-1">
-              <button
-                onClick={() => {
-                  onStatusFilterChange('all')
-                  setFiltersOpen(false)
-                }}
-                className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
-                  statusFilter === 'all'
-                    ? 'bg-gray-50 text-gray-900 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                All ({couples.length})
-              </button>
-              {statuses.map((status) => (
-                <button
-                  key={status.slug}
+            <div className="absolute left-0 top-full z-20 mt-1">
+              <MenuPanel>
+                <MenuItem
+                  size="sm"
+                  selected={statusFilter === 'all'}
                   onClick={() => {
-                    onStatusFilterChange(status.slug)
+                    onStatusFilterChange('all')
                     setFiltersOpen(false)
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
-                    statusFilter === status.slug
-                      ? 'bg-gray-50 text-gray-900 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
                 >
-                  {status.name} ({countByStatus(status.slug)})
-                </button>
-              ))}
+                  All ({couples.length})
+                </MenuItem>
+                {statuses.map((status) => (
+                  <MenuItem
+                    key={status.slug}
+                    size="sm"
+                    selected={statusFilter === status.slug}
+                    onClick={() => {
+                      onStatusFilterChange(status.slug)
+                      setFiltersOpen(false)
+                    }}
+                  >
+                    {status.name} ({countByStatus(status.slug)})
+                  </MenuItem>
+                ))}
+              </MenuPanel>
             </div>
           )}
         </div>
 
         {/* Sort button */}
         <div className="relative" ref={sortRef}>
-          <button
+          <Button
+            variant="outline"
             onClick={() => setSortOpen(!sortOpen)}
-            className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            className="whitespace-nowrap"
           >
             <ArrowUpDown size={11} strokeWidth={1.5} />
             <span>{activeSortLabel || 'Sort'}</span>
-          </button>
+          </Button>
           {sortOpen && (
-            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-40 py-1">
-              {SORT_OPTIONS.map((option) => (
-                <button
-                  key={`${option.field}-${option.direction}`}
-                  onClick={() => {
-                    onSortChange(option.field, option.direction)
-                    setSortOpen(false)
-                  }}
-                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
-                    sortField === option.field && sortDirection === option.direction
-                      ? 'bg-gray-50 text-gray-900 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+            <div className="absolute left-0 top-full z-20 mt-1">
+              <MenuPanel>
+                {SORT_OPTIONS.map((option) => (
+                  <MenuItem
+                    key={`${option.field}-${option.direction}`}
+                    size="sm"
+                    selected={sortField === option.field && sortDirection === option.direction}
+                    onClick={() => {
+                      onSortChange(option.field, option.direction)
+                      setSortOpen(false)
+                    }}
+                  >
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </MenuPanel>
             </div>
           )}
         </div>
@@ -263,39 +266,43 @@ export function CouplesHeader({
           {/* Gear opens the status editor (rename/recolour/reorder/add/delete).
               Statuses define the kanban columns, so management lives here
               rather than under Settings. Visible in both List and Board views. */}
-          <button
+          <Button
+            variant="outline"
+            iconOnly
             onClick={onManageStatuses}
-            className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
             aria-label="Manage statuses"
             title="Manage statuses"
           >
             <Settings2 size={11} strokeWidth={1.5} />
-          </button>
+          </Button>
           {/* New couple dropdown - desktop only. Splits the primary action
               into "Add manually" and "Import from CSV" so the bulk path is
               discoverable without crowding the toolbar. */}
           <div className="hidden sm:block relative" ref={addRef}>
-            <button
-              onClick={() => setAddOpen((o) => !o)}
-              className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
-            >
-              <Plus size={11} strokeWidth={2} />
+            <Button onClick={() => setAddOpen((o) => !o)}>
+              <Plus size={11} strokeWidth={1.5} />
               New couple
-            </button>
+            </Button>
             {addOpen && (
-              <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-44 py-1">
-                <button
-                  onClick={() => { setAddOpen(false); onAddClick() }}
-                  className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                >
-                  <Plus size={13} strokeWidth={1.5} /> Add manually
-                </button>
-                <button
-                  onClick={() => { setAddOpen(false); onImportClick() }}
-                  className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                >
-                  <Upload size={13} strokeWidth={1.5} /> Import from CSV
-                </button>
+              <div className="absolute right-0 top-full z-30 mt-1">
+                <MenuPanel>
+                  <MenuItem
+                    size="sm"
+                    onClick={() => { setAddOpen(false); onAddClick() }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Plus size={13} strokeWidth={1.5} /> Add manually
+                    </span>
+                  </MenuItem>
+                  <MenuItem
+                    size="sm"
+                    onClick={() => { setAddOpen(false); onImportClick() }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Upload size={13} strokeWidth={1.5} /> Import from CSV
+                    </span>
+                  </MenuItem>
+                </MenuPanel>
               </div>
             )}
           </div>
@@ -303,23 +310,23 @@ export function CouplesHeader({
       </div>
 
       {/* View mode tabs */}
-      <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
+      <div className="flex items-center gap-6 border-b border-border mt-6">
         <button
           onClick={() => onViewModeChange('kanban')}
-          className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
+          className={`pb-2 text-body font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
             viewMode === 'kanban'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              ? 'border-gray-900 text-text'
+              : 'border-transparent text-text-subtle hover:text-gray-600'
           }`}
         >
           <LayoutGrid size={15} strokeWidth={1.5} /> Board
         </button>
         <button
           onClick={() => onViewModeChange('list')}
-          className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
+          className={`pb-2 text-body font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
             viewMode === 'list'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
+              ? 'border-gray-900 text-text'
+              : 'border-transparent text-text-subtle hover:text-gray-600'
           }`}
         >
           <List size={15} strokeWidth={1.5} /> List
@@ -330,10 +337,10 @@ export function CouplesHeader({
       <div className={`sm:hidden overflow-x-auto flex gap-2 pt-3 -mx-6 px-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${viewMode === 'kanban' ? 'hidden' : ''}`}>
         <button
           onClick={() => onStatusFilterChange('all')}
-          className={`flex-none px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+          className={`flex-none px-3 py-1.5 rounded-pill text-body font-medium whitespace-nowrap transition cursor-pointer ${
             statusFilter === 'all'
               ? 'bg-gray-900 text-white'
-              : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+              : 'bg-surface-emphasis text-gray-600 active:bg-gray-200'
           }`}
         >
           All
@@ -342,10 +349,10 @@ export function CouplesHeader({
           <button
             key={status.slug}
             onClick={() => onStatusFilterChange(status.slug)}
-            className={`flex-none px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+            className={`flex-none px-3 py-1.5 rounded-pill text-body font-medium whitespace-nowrap transition cursor-pointer ${
               statusFilter === status.slug
                 ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+                : 'bg-surface-emphasis text-gray-600 active:bg-gray-200'
             }`}
           >
             {status.name}

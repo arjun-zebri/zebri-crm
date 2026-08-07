@@ -451,7 +451,7 @@ export function InvoiceFallbackCard({
             invoice.bank_bsb ||
             invoice.bank_account_number ? (
               <div
-                className="rounded-lg p-3 space-y-1.5"
+                className="rounded-control p-3 space-y-1.5"
                 style={{
                   backgroundColor: branding.surface_color,
                 }}

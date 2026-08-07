@@ -49,7 +49,7 @@ export function TemplatesTabs({ activeTab, onTabChange, actionsRef }: TemplatesT
               type="button"
               onClick={() => onTabChange(tab.id)}
               aria-current={activeTab === tab.id ? 'page' : undefined}
-              className={`relative cursor-pointer whitespace-nowrap pb-3 text-sm transition-colors ${
+              className={`relative cursor-pointer whitespace-nowrap pb-3 text-body transition-colors ${
                 activeTab === tab.id ? 'font-medium text-text' : 'text-text-muted hover:text-text'
               }`}
             >

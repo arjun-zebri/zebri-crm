@@ -41,6 +41,7 @@ import { useTimerSurface } from '@/components/time-tracking/timer-provider';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getOpenModalDepth } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
+import { useScrollLock } from '@/components/ui/use-overlay';
 import { Couple } from '@/types/couple';
 
 
@@ -281,17 +282,20 @@ export function CoupleProfile({
   // Esc-closes-the-modal — but only when no nested modal is open
   // (the modal stack via `getOpenModalDepth()` prevents the profile
   // from closing under a confirm dialog or portal-people picker).
-  // Lock body scroll while open.
+  // Scrolling goes through the shared count in `use-overlay`, not a
+  // local `body.style.overflow` write. Two independent lockers cannot
+  // agree on who unlocks last, so a confirm dialog raised from here used
+  // to unlock the page behind the still-open profile.
+  useScrollLock(Boolean(couple));
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && getOpenModalDepth() === 0) handleCloseRef.current();
     };
     if (couple) {
       document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
       return () => {
         document.removeEventListener('keydown', handleEscape);
-        document.body.style.overflow = 'unset';
       };
     }
   }, [couple]);
@@ -311,7 +315,7 @@ export function CoupleProfile({
       >
         <div
           data-testid="couple-profile-panel"
-          className="bg-white rounded-2xl shadow-xl w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
+          className="bg-surface rounded-control shadow-xl w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
           <CoupleProfileHeader

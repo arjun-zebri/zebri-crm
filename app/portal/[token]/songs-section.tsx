@@ -4,6 +4,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import { Plus, Trash2, Music, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 
+import { BusyLabel } from '@/components/ui/busy-label'
 import { Modal } from '@/components/ui/modal'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
@@ -259,7 +260,7 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
               type="button"
               onClick={handleSubmit}
               disabled={saving || !title.trim()}
-              className="rounded-xl px-3 py-1.5 transition cursor-pointer disabled:opacity-50 hover:opacity-90"
+              className="rounded-control px-3 py-1.5 transition cursor-pointer disabled:opacity-50 hover:opacity-90"
               style={{
                 fontSize: `${bodyDefaults.fontSize}px`,
                 color: 'white',
@@ -270,7 +271,7 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
                 borderRadius: `${branding.corner_radius}px`,
               }}
             >
-              {saving ? 'Saving...' : 'Save'}
+              <BusyLabel busy={saving}>Save</BusyLabel>
             </button>
           </div>
         </div>
@@ -352,7 +353,7 @@ function CategoryGroup({ category, songs, onAdd, onEdit, branding }: CategoryGro
         <>
           {categorySongs.length === 0 ? (
             <div
-              className="border border-dashed rounded-card py-3.5 flex items-center justify-center gap-1.5"
+              className="border border-dashed rounded-control py-3.5 flex items-center justify-center gap-1.5"
               style={{
                 borderColor: isAvoidCategory ? STATUS_COLORS.error : branding.border_color,
                 backgroundColor: isAvoidCategory ? `${STATUS_COLORS.error}10` : branding.surface_color,
@@ -381,7 +382,7 @@ function CategoryGroup({ category, songs, onAdd, onEdit, branding }: CategoryGro
               {categorySongs.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center gap-3 rounded-card px-5 py-3.5 transition cursor-pointer hover:opacity-90"
+                  className="flex items-center gap-3 rounded-control px-5 py-3.5 transition cursor-pointer hover:opacity-90"
                   style={{
                     border: `1px solid ${isAvoidCategory ? STATUS_COLORS.error : branding.border_color}30`,
                     backgroundColor: isAvoidCategory ? `${STATUS_COLORS.error}10` : branding.surface_color,
@@ -426,7 +427,7 @@ function CategoryGroup({ category, songs, onAdd, onEdit, branding }: CategoryGro
           {categorySongs.length >= 0 && (
             <button
               onClick={onAdd}
-              className="w-full font-medium rounded-xl px-3 py-2 transition cursor-pointer border border-dashed hover:opacity-80"
+              className="w-full font-medium rounded-control px-3 py-2 transition cursor-pointer border border-dashed hover:opacity-80"
               style={{
                 fontSize: `${finePrintDefaults.fontSize}px`,
                 color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color,

@@ -3,6 +3,7 @@
 import { Clock, Users2, Receipt, FileSignature, Music, FileText, Heart } from 'lucide-react'
 import { useState, useRef } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -47,12 +48,12 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
       role="switch"
       aria-checked={enabled}
       onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-pill transition-colors cursor-pointer ${
         enabled ? 'bg-black' : 'bg-gray-200'
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+        className={`inline-block h-4 w-4 transform rounded-pill bg-surface shadow transition-transform ${
           enabled ? 'translate-x-[18px]' : 'translate-x-0.5'
         }`}
       />
@@ -96,24 +97,24 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
   return (
     <div className="max-w-2xl space-y-8">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-1">Couple Portal</h2>
-        <p className="text-sm text-gray-500 mb-6">Choose which sections are visible in the couple portal. Changes apply to all couples.</p>
+        <h2 className="text-section font-semibold text-text mb-1">Couple Portal</h2>
+        <p className="text-body text-text-muted mb-6">Choose which sections are visible in the couple portal. Changes apply to all couples.</p>
 
-        <div className="space-y-0 border border-gray-200 rounded-xl overflow-hidden">
+        <div className="space-y-0 border border-border rounded-control overflow-hidden">
           {SECTION_DEFS.map((section, i) => {
             const Icon = section.icon
             return (
               <div
                 key={section.id}
                 className={`flex items-center justify-between px-4 py-3.5 ${
-                  i < SECTION_DEFS.length - 1 ? 'border-b border-gray-200' : ''
+                  i < SECTION_DEFS.length - 1 ? 'border-b border-border' : ''
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon size={15} className="text-gray-400 flex-shrink-0" strokeWidth={1.5} />
+                  <Icon size={15} className="text-text-subtle flex-shrink-0" strokeWidth={1.5} />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{section.label}</p>
-                    <p className="text-xs text-gray-400">{section.description}</p>
+                    <p className="text-body font-medium text-text">{section.label}</p>
+                    <p className="text-body text-text-subtle">{section.description}</p>
                   </div>
                 </div>
                 <Toggle enabled={settings[section.id]} onChange={() => toggle(section.id)} />
@@ -124,15 +125,10 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving || !isDirty}
-          className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
-        {isDirty && <span className="text-sm text-gray-400">Unsaved changes</span>}
+        <Button onClick={handleSave} disabled={!isDirty} loading={saving}>
+          Save
+        </Button>
+        {isDirty && <span className="text-body text-text-subtle">Unsaved changes</span>}
       </div>
     </div>
   )

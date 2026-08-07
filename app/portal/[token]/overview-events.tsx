@@ -121,7 +121,7 @@ export function EventsList({ events, onAdd, onEdit, branding }: EventsListProps)
                 className="group relative w-full text-left pl-6 py-1.5 cursor-pointer"
               >
                 <span
-                  className="absolute left-0 top-2.5 w-[9px] h-[9px] rounded-full"
+                  className="absolute left-0 top-2.5 w-[9px] h-[9px] rounded-pill"
                   style={{
                     backgroundColor: branding.brand_color,
                     boxShadow: `0 0 0 2px ${branding.surface_color}`,

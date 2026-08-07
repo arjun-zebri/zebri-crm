@@ -61,7 +61,7 @@ export function ContractBodyEditor({
         // surface exactly. Previously this used `prose prose-sm`
         // which rendered noticeably tighter than what the couple
         // actually saw.
-        className="contract-content rounded-card border border-border bg-surface-muted/40 p-4 text-sm"
+        className="contract-content rounded-control border border-border bg-surface-muted/40 p-4 text-body"
         // Locked HTML is server-rendered from the TipTap JSON at
         // send time via `renderContractHtml` — sanitised on the way
         // out. Safe to dangerouslySetInnerHTML here.
@@ -78,7 +78,7 @@ export function ContractBodyEditor({
             <Popover.Trigger asChild>
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1 text-caption text-text-muted hover:bg-surface-muted hover:text-text transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1 text-body text-text-muted hover:bg-surface-muted hover:text-text transition-colors cursor-pointer"
               >
                 <FileText size={12} strokeWidth={1.5} />
                 Apply template
@@ -89,7 +89,7 @@ export function ContractBodyEditor({
               <Popover.Content
                 align="end"
                 sideOffset={4}
-                className="z-[90] w-72 rounded-card border border-border bg-surface shadow-lg p-2 animate-fade-in"
+                className="z-[90] w-72 rounded-control border border-border bg-surface shadow-lg p-2 animate-fade-in"
               >
                 <div className="max-h-64 overflow-y-auto">
                   {templates.map((t) => (
@@ -104,7 +104,7 @@ export function ContractBodyEditor({
                     >
                       <p className="text-body text-text">{t.name}</p>
                       {t.description ? (
-                        <p className="text-caption text-text-muted truncate">
+                        <p className="text-body text-text-muted truncate">
                           {t.description}
                         </p>
                       ) : null}
@@ -119,9 +119,9 @@ export function ContractBodyEditor({
 
       <RichTextEditor value={content} onChange={onChange} editable={canEdit} />
 
-      <p className="text-caption text-text-subtle">
+      <p className="text-body text-text-subtle">
         Variables like{' '}
-        <span className="font-mono bg-surface-muted px-1 py-0.5 rounded text-text-muted">
+        <span className="font-mono bg-surface-muted px-1 py-0.5 rounded-control text-text-muted">
           {'{{couple_name}}'}
         </span>{' '}
         are replaced with real data when you send the contract.

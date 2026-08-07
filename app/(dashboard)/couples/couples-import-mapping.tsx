@@ -66,7 +66,7 @@ export function CouplesImportMapping({
 
   return (
     <div className="space-y-4">
-      <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-gray-600">
+      <label className="flex w-fit cursor-pointer items-center gap-2 text-body text-gray-600">
         <input
           type="checkbox"
           checked={firstRowIsHeader}
@@ -82,14 +82,13 @@ export function CouplesImportMapping({
             key={field}
             className="grid grid-cols-1 gap-1 sm:grid-cols-2 sm:items-center sm:gap-3"
           >
-            <span className="text-sm text-gray-700">
+            <span className="text-body text-gray-700">
               {FIELD_LABELS[field]}
               {REQUIRED.includes(field) && (
                 <span className="text-red-500"> *</span>
               )}
             </span>
             <Select
-              size="sm"
               options={options}
               value={mapping[field] === null ? SKIP : String(mapping[field])}
               onValueChange={(value) => setField(field, value)}

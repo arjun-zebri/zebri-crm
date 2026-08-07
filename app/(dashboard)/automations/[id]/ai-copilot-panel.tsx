@@ -57,15 +57,15 @@ function Header({ onClose }: { onClose: () => void }) {
   return (
     <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-brand/10">
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-control bg-brand/10">
           <Sparkles size={14} strokeWidth={1.5} className="text-brand" />
         </span>
-        <span className="text-sm font-semibold">Zebri AI</span>
+        <span className="text-body font-semibold">Zebri AI</span>
       </div>
       <div className="flex items-center gap-1 text-text-muted">
         <button
           type="button"
-          className="p-1 rounded-md hover:bg-surface-muted hover:text-text cursor-pointer transition"
+          className="p-1 rounded-control hover:bg-surface-muted hover:text-text cursor-pointer transition"
           aria-label="Zebri AI settings"
         >
           <Settings2 size={14} strokeWidth={1.5} />
@@ -73,7 +73,7 @@ function Header({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          className="p-1 rounded-md hover:bg-surface-muted hover:text-text cursor-pointer transition"
+          className="p-1 rounded-control hover:bg-surface-muted hover:text-text cursor-pointer transition"
           aria-label="Close Zebri AI"
         >
           <X size={14} strokeWidth={1.5} />
@@ -98,7 +98,7 @@ function Conversation() {
 
 function AssistantBubble({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-text leading-relaxed">
+    <div className="bg-surface-muted rounded-control px-3 py-2 text-body text-text leading-relaxed">
       {children}
     </div>
   )
@@ -117,13 +117,13 @@ function Composer({
 }) {
   return (
     <div className="border-t border-border p-3">
-      <div className="rounded-lg border border-border bg-surface-muted/40 flex items-end gap-2 pr-2 pb-2">
+      <div className="rounded-control border border-border bg-surface-muted/40 flex items-end gap-2 pr-2 pb-2">
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g. When a couple accepts a quote, send a thank-you and create a contract task"
           rows={3}
-          className="flex-1 bg-transparent text-xs px-3 py-2 resize-none focus:outline-none placeholder:text-text-muted"
+          className="flex-1 bg-transparent text-body px-3 py-2 resize-none focus:outline-none placeholder:text-text-muted"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
@@ -135,7 +135,7 @@ function Composer({
           type="button"
           onClick={onSubmit}
           disabled={!value.trim()}
-          className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          className="inline-flex items-center justify-center w-7 h-7 rounded-control bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           aria-label="Send"
         >
           <ArrowUp size={13} strokeWidth={2} />

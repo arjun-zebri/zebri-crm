@@ -16,6 +16,7 @@ import { useState, useActionState } from 'react';
 
 import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
 import { emptyAuthState } from '../action-state';
@@ -26,16 +27,16 @@ export function SignupForm() {
   const [password, setPassword] = useState('');
 
   return (
-    <div className="rounded-card border border-border bg-card p-6 shadow-sm sm:p-8">
+    <Card className="shadow-sm sm:p-8">
       <div className="mb-6 flex justify-center">
         <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
       </div>
-      <h1 className="mb-6 text-center text-xl font-semibold text-text">Create account</h1>
+      <h1 className="mb-6 text-center text-section font-semibold text-text">Create account</h1>
 
       {state.error && !state.fieldErrors ? (
         <div
           role="alert"
-          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-caption text-danger"
+          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-body text-danger"
         >
           {state.error}
         </div>
@@ -90,17 +91,15 @@ export function SignupForm() {
           <PasswordStrengthMeter password={password} />
         </div>
 
-        <Button type="submit" size="lg" loading={pending} className="w-full">
-          {pending ? 'Creating account…' : 'Create account'}
-        </Button>
+        <Button type="submit" loading={pending} className="w-full">Create account</Button>
       </form>
 
-      <p className="mt-6 text-center text-caption text-text-muted">
+      <p className="mt-6 text-center text-body text-text-muted">
         Already have an account?{' '}
         <Link href="/login" className="text-text underline hover:text-text-muted">
           Sign in
         </Link>
       </p>
-    </div>
+    </Card>
   );
 }

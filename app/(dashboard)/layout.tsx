@@ -15,12 +15,15 @@ export default function DashboardLayout({
     <SidebarLayout>
       <ShadowBanner />
       <WelcomeGate />
-      {/* Deliberately NOT an async layout. Awaiting `cookies()` here made
-          this segment dynamic, and the sidebar (a client component below
-          it) then intermittently rendered without the root
-          QueryClientProvider in scope, 500ing the page. The provider
-          reads the shadow cookie on the client instead: it is set with
-          httpOnly false precisely so the browser can read it. */}
+      {/* Deliberately NOT an async layout, and nothing rendered here may
+          be an async server component either. Awaiting `cookies()` at
+          this level made the segment dynamic, which (a) intermittently
+          rendered the sidebar without the root QueryClientProvider in
+          scope, 500ing the page, and (b) killed `<Link>` prefetching for
+          every dashboard route, so sidebar clicks blocked on a round
+          trip. `<ShadowBanner>` reads the shadow cookie on the client
+          instead: it is set with httpOnly false precisely so the browser
+          can read it. */}
       <TimerProvider>
         <div className="flex-1 overflow-hidden min-h-0">
           {children}

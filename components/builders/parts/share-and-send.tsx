@@ -22,10 +22,10 @@
  */
 'use client';
 
-import { Check, CheckCheck, Copy, ExternalLink, Link2 } from 'lucide-react';
-import { useState } from 'react';
+import { Check, CheckCheck, ExternalLink, Link2, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/copy-button';
 
 export interface ShareAndSendProps {
   /** Whether anything has been edited since the last save. */
@@ -84,14 +84,6 @@ export function ShareAndSend({
   markingSent = false,
   onMarkSent,
 }: ShareAndSendProps) {
-  const [copied, setCopied] = useState(false);
-
-  function copyLink() {
-    if (!shareUrl) return;
-    navigator.clipboard.writeText(shareUrl).catch(() => undefined);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
-  }
 
   const sendLabel = lastSentAt ? 'Resend' : 'Send to couple';
   const isLive = shareEnabled && !!shareUrl;
@@ -104,14 +96,14 @@ export function ShareAndSend({
           send lands. */}
       <div
         key={isLive ? 'live' : 'draft'}
-        className="flex flex-wrap items-center gap-3 text-caption text-text-muted animate-fade-in"
+        className="flex flex-wrap items-center gap-3 text-body text-text-muted animate-fade-in"
       >
         {isLive ? (
           <>
             {lastSentAt ? (
               <span className="inline-flex items-center gap-1.5 text-text">
                 <span
-                  className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-success/10"
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-pill bg-success/10"
                   aria-hidden
                 >
                   <Check size={10} strokeWidth={2} className="text-success" />
@@ -129,24 +121,13 @@ export function ShareAndSend({
               ·
             </span>
 
-            <button
-              type="button"
-              onClick={copyLink}
-              className="inline-flex items-center gap-1 text-text-muted hover:text-text transition-colors cursor-pointer"
+            <CopyButton
+              plain
+              value={shareUrl ?? ''}
+              label="Copy link"
+              copiedLabel="Copied"
               aria-label="Copy share link"
-            >
-              {copied ? (
-                <>
-                  <Check size={12} strokeWidth={1.5} className="text-success" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy size={12} strokeWidth={1.5} />
-                  Copy link
-                </>
-              )}
-            </button>
+            />
 
             <a
               href={shareUrl ?? '#'}
@@ -172,8 +153,12 @@ export function ShareAndSend({
                   disabled={markingSent || locked}
                   className="inline-flex items-center gap-1 text-text-muted hover:text-text transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <CheckCheck size={12} strokeWidth={1.5} />
-                  {markingSent ? 'Marking…' : 'Mark as sent'}
+                  {markingSent ? (
+                    <Loader2 size={12} strokeWidth={1.5} className="animate-spin" />
+                  ) : (
+                    <CheckCheck size={12} strokeWidth={1.5} />
+                  )}
+                  Mark as sent
                 </button>
               </>
             ) : null}
@@ -188,8 +173,12 @@ export function ShareAndSend({
             disabled={markingSent || locked}
             className="inline-flex items-center gap-1 text-text-muted hover:text-text transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <CheckCheck size={12} strokeWidth={1.5} />
-            {markingSent ? 'Marking…' : 'Mark as sent'}
+            {markingSent ? (
+              <Loader2 size={12} strokeWidth={1.5} className="animate-spin" />
+            ) : (
+              <CheckCheck size={12} strokeWidth={1.5} />
+            )}
+            Mark as sent
           </button>
         ) : null}
       </div>
@@ -198,7 +187,6 @@ export function ShareAndSend({
       <div className="flex shrink-0 items-center gap-2">
         <Button
           variant="secondary"
-          size="sm"
           onClick={onSave}
           disabled={!dirty || saving || sending || locked}
           loading={saving}
@@ -207,7 +195,6 @@ export function ShareAndSend({
         </Button>
         <Button
           variant="primary"
-          size="sm"
           onClick={onSend}
           disabled={!hasCouple || sending || saving || locked}
           loading={sending}

@@ -62,13 +62,13 @@ function TemplateRow({
         type="button"
         onClick={() => onSelect(template)}
         aria-current={active ? 'true' : undefined}
-        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-control px-2 py-2 text-left transition ${
           active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
         }`}
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-text">{template.name}</span>
-          <span className="block truncate text-xs text-text-subtle">
+          <span className="block truncate text-body font-medium text-text">{template.name}</span>
+          <span className="block truncate text-body text-text-subtle">
             {template.subject || 'No subject'}
           </span>
         </span>
@@ -112,15 +112,15 @@ export function TemplatesLibrary({ templates, archived = [], isLoading, isError,
   if (isLoading || categoriesLoading) return <TemplatesSkeleton />
   if (isError) return <ErrorState title="Couldn't load templates" onRetry={onRetry} />
   if (groups.length === 0 && archived.length === 0) {
-    return <p className="py-8 text-center text-sm text-text-subtle">No templates match your search.</p>
+    return <p className="py-8 text-center text-body text-text-subtle">No templates match your search.</p>
   }
 
   return (
     <div className="space-y-5">
       {groups.map((group) => (
         <section key={group.key}>
-          <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
-            {group.dotClass && <span className={`h-2 w-2 rounded-full ${group.dotClass}`} />}
+          <h3 className="flex items-center gap-1.5 px-2 text-body font-semibold uppercase tracking-wider text-text-subtle">
+            {group.dotClass && <span className={`h-2 w-2 rounded-pill ${group.dotClass}`} />}
             {group.label}
           </h3>
           <ul className="mt-1 space-y-0.5">
@@ -136,7 +136,7 @@ export function TemplatesLibrary({ templates, archived = [], isLoading, isError,
           <button
             type="button"
             onClick={() => setShowArchived((v) => !v)}
-            className="flex cursor-pointer items-center gap-1 px-2 py-1 text-xs text-text-muted transition hover:text-text"
+            className="flex cursor-pointer items-center gap-1 px-2 py-1 text-body text-text-muted transition hover:text-text"
           >
             {showArchived ? (
               <ChevronDown size={14} strokeWidth={1.5} />

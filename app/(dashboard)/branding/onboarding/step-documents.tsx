@@ -82,8 +82,8 @@ export function StepDocuments(props: StepDocumentsProps) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-text mb-1">Which documents?</h2>
-        <p className="text-sm text-text-muted">You can change these later. At least one must be enabled.</p>
+        <h2 className="text-section font-semibold text-text mb-1">Which documents?</h2>
+        <p className="text-body text-text-muted">You can change these later. At least one must be enabled.</p>
       </div>
 
       <div className="space-y-2">
@@ -95,7 +95,7 @@ export function StepDocuments(props: StepDocumentsProps) {
           return (
             <label
               key={surface}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-control border cursor-pointer transition ${
                 enabled
                   ? 'border-border-strong bg-surface-muted'
                   : 'border-border hover:border-border-strong'
@@ -110,8 +110,8 @@ export function StepDocuments(props: StepDocumentsProps) {
                 aria-label={info.label}
               />
               <div className="flex-1 min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-                <span className="text-sm font-medium text-text shrink-0">{info.label}</span>
-                <span className="text-xs text-text-muted">{info.description}</span>
+                <span className="text-body font-medium text-text shrink-0">{info.label}</span>
+                <span className="text-body text-text-muted">{info.description}</span>
               </div>
             </label>
           )
@@ -119,7 +119,7 @@ export function StepDocuments(props: StepDocumentsProps) {
       </div>
 
       {allDisabledExceptOne && (
-        <p className="text-xs text-text-muted">Keep at least one document type enabled.</p>
+        <p className="text-body text-text-muted">Keep at least one document type enabled.</p>
       )}
     </div>
   )

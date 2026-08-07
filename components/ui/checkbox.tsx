@@ -64,14 +64,14 @@ export function Checkbox({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       style={branded ? { backgroundColor: color, borderColor: color } : undefined}
-      className={`shrink-0 w-4 h-4 rounded border transition flex items-center justify-center ${
+      className={`shrink-0 w-4 h-4 rounded-control border transition flex items-center justify-center ${
         disabled
-          ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+          ? 'border-border bg-gray-50 cursor-not-allowed'
           : checked
             ? branded
               ? 'cursor-pointer'
               : 'bg-emerald-500 border-emerald-500 cursor-pointer'
-            : 'bg-surface border-gray-300 hover:border-gray-500 cursor-pointer'
+            : 'bg-surface border-border-strong hover:border-gray-500 cursor-pointer'
       } ${label ? '' : (className ?? '')}`}
     >
       {checked && <CheckMark />}
@@ -87,7 +87,7 @@ export function Checkbox({
       } ${className ?? ''}`}
     >
       {box}
-      <span className={`text-caption ${disabled ? 'text-text-subtle' : 'text-text'}`}>
+      <span className={`text-body ${disabled ? 'text-text-subtle' : 'text-text'}`}>
         {label}
       </span>
     </label>

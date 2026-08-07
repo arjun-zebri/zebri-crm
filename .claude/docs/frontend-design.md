@@ -7,6 +7,229 @@ Goal: minimal, calm, modern SaaS design.
 
 ------------------------------------------------------------------------
 
+## The showroom: `/design-system`
+
+A dev-only route (`app/design-system/`, 404s in production) that
+renders every primitive, page pattern and feature composite from its
+real source, and flags inline where two of them disagree. Use it before
+adding a component: if a variant already exists, it is on that page.
+
+Usage counts on the page come from `app/design-system/audit-data.json`.
+Regenerate after any sweep so the page reports today's reality:
+
+```sh
+npm run design-system:audit
+```
+
+### Radius: two tokens only
+
+```
+--radius-control  6px      everything with corners
+--radius-pill     9999px   pills, chips, avatars, dots
+```
+
+That is the whole scale. The 12px card tier and the 16px overlay tier
+were removed on 2026-08-06 after the app was found rendering six radii
+against three tokens. Cards, modals, inputs and buttons all share 6px.
+Do not reintroduce a third value without a deliberate decision.
+
+Exceptions, both intentional: two arbitrary values (a 12px colour swatch
+and a 2px progress segment, where 6px would round them into blobs), and
+public branded surfaces, which set `borderRadius` inline from each MC's
+brand kit.
+
+### Typography: tokens carry their line-height
+
+Three sizes, no more:
+
+| Token | Size / line-height | Use |
+|---|---|---|
+| `text-display` | 30 / 36px | Page titles, with `font-semibold` |
+| `text-section` | 20 / 28px | Section titles, with `font-semibold` |
+| `text-body` | 14 / 20px | Everything else |
+
+Each ships a paired `--text-*--line-height`, so `text-body` and
+`text-sm` are byte-identical and `leading-*` still overrides.
+
+**There is no caption size.** `--text-caption` (12px) was removed on
+2026-08-07 and its 777 uses swept to `text-body`. Secondary text is
+distinguished by *colour* (`text-text-muted`, `text-text-subtle`), never
+by shrinking it. That includes form labels, help text, error messages
+and dense toolbar chrome.
+
+1,186 sites were swept onto tokens. `text-2xl`, `text-lg` and
+`text-base` remain because no token defines them.
+
+### Portalled panels carry their own type size
+
+Any panel rendered into `document.body` (Radix `Select`/`Popover` content,
+the `DatePicker` calendar, `Tooltip`) is outside its trigger's subtree, so
+it inherits the document's 16px rather than the control's 14px. Every one
+of them sets `text-body` on the panel root. If you add a new floating
+surface, do the same: the symptom is dropdown rows that read noticeably
+larger than the placeholder they replaced.
+
+`AudioPlayButton` has the same shape of trap for a different reason: it
+takes all its styling from `className`, so it sets `text-body` as a floor
+that callers can still override.
+
+### Controls: one height, no `size` prop
+
+`Button`, `Input`, `Select` and `DatePicker` are all **32px** (`h-8`).
+None of them takes a `size` prop.
+
+Four button sizes, two input sizes and two select sizes existed until
+2026-08-07. Roughly 80% of the 193 call sites passing a `size` passed
+the same value; the rest were an invitation to drift, and a control
+that disagreed with the one beside it was the most common visual bug in
+the app. A toolbar or form row now lines up with no effort.
+
+The corollary: never reach for `h-9`, `h-10` or `py-2` on a control to
+make it "match" something. If two controls disagree, one of them is not
+using the primitive.
+
+`DatePicker` lost its `variant` prop the same day. It had three chromes
+(`outlined`, `underline`, `meta`), so a date field looked like a
+different species depending on which form it landed in, and `meta`
+rendered at 34px against everything else's 32px. There is now one
+treatment: the `Input` chrome. Two knock-ons, both intentional:
+
+- The couple and event modals used a bespoke underline vocabulary for
+  every field. A boxed 32px date field among 37px underlined text fields
+  read as two forms spliced together, so those modals moved to the boxed
+  `Input` geometry. Their textareas use a `textareaClass` that drops the
+  `h-8`.
+- The builder meta row's couple and terms pickers were `py-1.5` (34px)
+  and are now `h-8`.
+
+`MenuItem` and `RowActionsMenu` keep a `size` prop, but it is a **row
+density** (padding and min-width), not a height or a type size. Menu
+rows do not sit in a line with page controls.
+
+### Controls never resize when you click them
+
+A control that changes size mid-action moves everything beside it. Two
+primitives cover the cases, and both are on `/design-system` under
+Foundations → "State changes never resize":
+
+- **`BusyLabel`** overlays the spinner on the label instead of adding it
+  beside, and the label itself does not change. `Button` uses it, so
+  `<Button loading={saving}>Save</Button>` is all a call site needs.
+  Reach for `BusyLabel` directly only inside a button that cannot be a
+  `Button` — the public branded surfaces (portal, questionnaire,
+  invoice, contract) style their buttons from the MC's brand kit via
+  inline `style`.
+- **`CopyButton`** stacks its idle and confirmed labels in one CSS grid
+  cell, so the button is always as wide as the longer one. It owns the
+  clipboard write and the revert timer. `plain` renders bare text for
+  meta rows that read as a sentence.
+
+**Never write `{saving ? 'Saving…' : 'Save'}` inside a button.** That
+pattern was swept out on 2026-08-07: 10 `Button` call sites moved to
+`loading`, 8 raw buttons moved to `Button`, and 8 branded-surface
+buttons moved to `BusyLabel`. Where a text-link button in a meta row
+needs an in-flight signal, swap the *icon* to a spinner (same box, no
+reflow) and leave the label alone.
+
+### Route-level loading is a skeleton, not a spinner
+
+`app/(dashboard)/loading.tsx` is the Suspense fallback every dashboard
+page inherits. It renders a skeleton in the shape of a dashboard page
+(title, toolbar, list), not a centred spinner. Until 2026-08-07 it was a
+spinner, so one sidebar click produced two layout changes: spinner, then
+the page's own skeleton, then the content.
+
+### Cursor: buttons are covered globally
+
+`globals.css` sets `cursor: pointer` on every `button` and
+`[role="button"]` that is not disabled, in `@layer base`. It has to be
+in that layer so it lands after Tailwind's preflight (which sets
+`cursor: default`) but still loses to the utilities layer, leaving a
+deliberate `cursor-not-allowed` on a call site working.
+
+So: do **not** add `cursor-pointer` to a `<button>` or to `Button`.
+Do add it to non-button clickables — table rows, cards, and anything
+whose click handler is on a `div`.
+
+### Colour: mind the Tailwind 4 palette shift
+
+Tailwind 4 changed its default grays, so the raw classes and our tokens
+are **not** the same colour:
+
+| Class | Tailwind 4 | Token | |
+|---|---|---|---|
+| `text-gray-900` | `#101828` | `--text` `#111827` | differ |
+| `text-gray-500` | `#6a7282` | `--text-muted` `#6b7280` | differ |
+| `text-gray-400` | `#99a1af` | `--text-subtle` `#9ca3af` | differ |
+| `border-gray-200` | `#e5e7eb` | `--border` `#e5e7eb` | same |
+| `bg-gray-100` | `#f3f4f6` | `--surface-emphasis` | same |
+
+Always use the token. Mixing raw grays with tokens puts two palettes on
+the same screen. 1,735 sites were swept onto tokens on 2026-08-06;
+`gray-600`, `gray-700` and `gray-50` remain because no token matches.
+
+Known divergences the showroom still reports:
+
+- **Buttons.** The CLAUDE.md "buttons are `rounded-xl`" rule contradicts
+  the `Button` primitive, which is `rounded-control` (6px). The
+  primitive is the intended look; the rule is stale.
+- **Status chips.** Four implementations coexist: `StatePill` (tokens,
+  keep), `Badge` (21 raw-palette variants), `StatBadge` inside
+  `dashboard-stats.tsx`, and the vendor badges.
+- **Missing primitives.** `SectionNav` and `DataTable` are still
+  copy-pasted markup. `PageHeader` and `Card` were extracted (see below).
+
+### Layout primitives
+
+- **`<PageHeader title count actions />`** (`components/ui/page-header.tsx`)
+  is the title row for every dashboard page. Title is `text-2xl` below
+  `sm` and `text-display` above it. `count` renders as "N total"; use
+  `meta` for anything else. Page gutters stay with the page, since a
+  full-height calendar and a scrolling list legitimately differ.
+- **`<Card padding surface borderless />`** (`components/ui/card.tsx`)
+  is the standard bordered panel: `rounded-control`, `border-border`, and
+  a padding scale of `none` / `sm` (16px) / `md` (24px, default) /
+  `lg` (32px). Do **not** use it for popovers, dropdowns or menus:
+  those carry their own z-index, shadow and entry animation and should
+  keep their own markup.
+
+  22 sites are migrated (dashboard panels, admin lists, template
+  previews, auth forms). The rest of the roughly 89 bordered containers
+  convert as each page is hardened.
+
+------------------------------------------------------------------------
+
+## Overlays and the z-index ladder
+
+`Modal`, `SidePanel` and `ConfirmDialog` all take their behaviour from
+**`components/ui/use-overlay.ts`**. Never hand-roll Escape handling or
+body-scroll locking in a new overlay; call `useOverlay({ isOpen, onClose })`
+and you get depth-aware Escape (only the topmost overlay reacts) plus a
+scroll lock that releases when the last overlay closes.
+
+`useBackdropDismiss(onClose)` covers click-to-dismiss while ignoring
+drags that began inside the panel.
+
+Stacking comes from `OVERLAY_Z`, keyed by `layer`:
+
+| Layer | Backdrop / panel | Used by |
+|---|---|---|
+| `base` | `z-50` / `z-[60]` | `Modal` (default), `SidePanel` |
+| `nested` | `z-[75]` / `z-[80]` | a modal opened from another modal |
+| (popover) | `z-[90]` | `Select` dropdown and other popovers |
+| `top` | `z-[120]` / `z-[130]` | `ConfirmDialog` |
+| (toast) | `z-[200]` | `Toast`, above everything by design |
+
+`Modal` takes `layer="nested" | "top"`. The older `nested` boolean still
+works and maps to `layer="nested"`.
+
+Known gap: roughly a hundred call sites still hard-code raw `z-[…]`
+values across fifteen tiers, including a `z-[9999]` in
+`add-status-modal.tsx`. Point those at `OVERLAY_Z` as each page is
+hardened rather than in one sweep.
+
+------------------------------------------------------------------------
+
 ## Design tokens (Phase 0.5) — source of truth
 
 Tokens live in `app/globals.css` as Tailwind 4 `@theme` CSS variables; each
@@ -43,18 +266,16 @@ tokens below are equivalent and preferred in new code:
 
 | Token | Utility | Size | Use |
 |---|---|---|---|
-| `--text-display` | `text-display` | 1.875rem | Page titles (pair with `font-semibold`) |
-| `--text-section` | `text-section` | 1.25rem | Section titles (pair with `font-semibold`) |
-| `--text-body` | `text-body` | 0.875rem | Default body / form fields |
-| `--text-caption` | `text-caption` | 0.75rem | Captions, meta, helper |
+| `--text-display` | `text-display` | 1.875rem / 2.25rem | Page titles (pair with `font-semibold`) |
+| `--text-section` | `text-section` | 1.25rem / 1.75rem | Section titles (pair with `font-semibold`) |
+| `--text-body` | `text-body` | 0.875rem / 1.25rem | Everything that is not a title |
 
 ### Radius
 
 | Token | Utility | Value | Use |
 |---|---|---|---|
-| `--radius-control` | `rounded-control` | 6px | Buttons, inputs, selects |
-| `--radius-card` | `rounded-card` | 8px | Cards, panels, modals |
-| `--radius-pill` | `rounded-pill` | 9999px | Badges, pill chips |
+| `--radius-control` | `rounded-control` | 6px | Everything with corners |
+| `--radius-pill` | `rounded-pill` | 9999px | Pills, chips, avatars, dots |
 
 Spacing uses the Tailwind default scale; no custom spacing tokens.
 

@@ -75,7 +75,7 @@ export function DocumentsSection({ enabledSurfaces, onToggleSurface }: Documents
               type="button"
               onClick={() => handleToggle(surface.id)}
               disabled={isLastEnabled}
-              className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition cursor-pointer text-left ${
+              className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-control transition cursor-pointer text-left ${
                 isLastEnabled
                   ? 'opacity-50 cursor-not-allowed'
                   : armed
@@ -94,10 +94,10 @@ export function DocumentsSection({ enabledSurfaces, onToggleSurface }: Documents
                 tabIndex={-1}
               />
               <div className="flex-1 min-w-0">
-                <p className={`text-[11px] font-medium leading-tight ${enabled ? 'text-gray-900' : 'text-gray-400'}`}>
+                <p className={`text-[11px] font-medium leading-tight ${enabled ? 'text-text' : 'text-text-subtle'}`}>
                   {surface.label}
                 </p>
-                <p className={`text-[10px] leading-tight truncate ${armed ? 'text-red-500' : 'text-gray-400'}`}>
+                <p className={`text-[10px] leading-tight truncate ${armed ? 'text-red-500' : 'text-text-subtle'}`}>
                   {armed ? 'Hide and clear this design?' : surface.description}
                 </p>
               </div>

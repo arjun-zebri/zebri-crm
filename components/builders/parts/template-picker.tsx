@@ -61,12 +61,12 @@ function EmptyStateCard({
   if (templates.length === 0) return null;
 
   return (
-    <div className="rounded-card border border-border bg-surface-muted/40 p-4 space-y-3">
+    <div className="rounded-control border border-border bg-surface-muted/40 p-4 space-y-3">
       <div className="flex items-center gap-2">
         <Layers size={14} strokeWidth={1.5} className="text-text-muted" />
         <p className="text-body font-medium text-text">Start from a package or template</p>
       </div>
-      <p className="text-caption text-text-muted">
+      <p className="text-body text-text-muted">
         Apply a saved package or quote template&apos;s items + notes to get going faster.
       </p>
       <div className="flex flex-wrap gap-2">
@@ -80,7 +80,7 @@ function EmptyStateCard({
           >
             <FileText size={14} strokeWidth={1.5} className="text-text-muted" />
             <span>{t.name}</span>
-            <span className="text-caption text-text-muted">
+            <span className="text-body text-text-muted">
               {t.itemCount} {t.itemCount === 1 ? 'item' : 'items'}
               {t.addOnCount ? ` · ${t.addOnCount} add-on${t.addOnCount === 1 ? '' : 's'}` : ''}
             </span>
@@ -108,7 +108,7 @@ function InlinePicker({
         <button
           type="button"
           disabled={!canApply}
-          className="inline-flex items-center gap-1.5 text-caption text-text-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-body text-text-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <Layers size={12} strokeWidth={1.5} />
           Apply package or template
@@ -118,9 +118,9 @@ function InlinePicker({
         <Popover.Content
           align="start"
           sideOffset={4}
-          className="z-[90] w-64 rounded-card border border-border bg-surface shadow-lg p-1 animate-fade-in"
+          className="z-[90] w-64 rounded-control border border-border bg-surface shadow-lg p-1 animate-fade-in"
         >
-          <p className="px-2 py-1 text-caption font-medium uppercase tracking-wide text-text-muted">
+          <p className="px-2 py-1 text-body font-medium uppercase tracking-wide text-text-muted">
             Packages &amp; templates
           </p>
           <div className="max-h-64 overflow-y-auto">
@@ -135,7 +135,7 @@ function InlinePicker({
                 className="flex w-full items-center justify-between rounded-control px-2 py-1.5 text-left text-body text-text transition-colors hover:bg-surface-muted cursor-pointer"
               >
                 <span className="truncate">{t.name}</span>
-                <span className="ml-2 shrink-0 text-caption text-text-muted">
+                <span className="ml-2 shrink-0 text-body text-text-muted">
                   {t.itemCount}
                 </span>
               </button>

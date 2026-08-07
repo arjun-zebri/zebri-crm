@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useCouples } from "@/app/(dashboard)/couples/use-couples";
-import { CouplesCalendar } from "./_components/couples-calendar";
+
 import { CoupleProfile } from "@/app/(dashboard)/couples/couple-profile";
+import { useCouples } from "@/app/(dashboard)/couples/use-couples";
 import {
   useUpdateCouple,
   useDeleteCouple,
 } from "@/app/(dashboard)/couples/use-couples";
+import { PageHeader } from '@/components/ui/page-header';
 import { useToast } from "@/components/ui/toast";
 import { Couple } from '@/types/couple';
+
+import { CouplesCalendar } from "./_components/couples-calendar";
 
 export default function CalendarPage() {
   const { data: couples } = useCouples();
@@ -47,7 +50,7 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-6 pt-4 pb-4 md:px-[3.75rem] md:pt-6 md:pb-6 shrink-0">
-        <h1 className="text-3xl font-semibold text-text">Calendar</h1>
+        <PageHeader title="Calendar" />
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden px-6 pb-4 md:px-[3.75rem] md:pb-6">

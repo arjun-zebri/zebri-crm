@@ -139,8 +139,17 @@ export function CoupleModal({
     setDeleteConfirm(true);
   };
 
+  // The `Input` primitive's own classes, inlined because these fields are
+  // raw `<input>` elements with bespoke labels. The underline vocabulary
+  // this modal used until 2026-08-07 was dropped when `DatePicker` lost its
+  // `underline` variant: a boxed 32px date field among 37px underlined text
+  // fields read as a different form entirely.
   const inputClass =
-    "w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition";
+    "block h-8 w-full rounded-control border border-border bg-surface px-2.5 text-body text-text placeholder:text-text-subtle transition-colors focus-visible:border-brand-fg focus-visible:outline-none";
+
+  // Same chrome, minus the fixed control height: a textarea sizes to its
+  // `rows`, so `h-8` would crush it to a single line.
+  const textareaClass = `${inputClass} h-auto py-1.5 resize-none`;
 
   const selectedStatus = statuses.find(s => s.slug === status);
   const selectedLabel = selectedStatus?.name || "Select status";
@@ -157,7 +166,7 @@ export function CoupleModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-md transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
+              className="text-body px-3 py-1.5 rounded-control transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
             >
               Delete
             </button>
@@ -166,14 +175,14 @@ export function CoupleModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-xs px-3 py-1.5 rounded-md bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-body px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || !name.trim() || !primaryName.trim()}
-              className="text-xs px-3 py-1.5 rounded-md bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+              className="text-body px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save"}
             </button>
@@ -184,7 +193,7 @@ export function CoupleModal({
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="flex flex-col gap-8">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -202,7 +211,7 @@ export function CoupleModal({
               Secondary share the same visual rhythm - Save is gated
               on `primaryName` regardless. */}
           <div>
-            <h4 className="block text-sm text-gray-600 mb-1">
+            <h4 className="block text-body text-gray-600 mb-1">
               Primary contact <span className="text-red-500">*</span>
             </h4>
             <div className="space-y-3">
@@ -236,7 +245,7 @@ export function CoupleModal({
           {/* Secondary partner - same shape. Both can be empty if
               the MC hasn't captured the partner details yet. */}
           <div>
-            <h4 className="block text-sm text-gray-600 mb-1">
+            <h4 className="block text-body text-gray-600 mb-1">
               Secondary contact
             </h4>
             <div className="space-y-3">
@@ -271,18 +280,17 @@ export function CoupleModal({
               schedule lives in the `events` table, not on the couple. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
+              <label className="block text-body text-gray-600 mb-1">
                 Wedding date
               </label>
               <DatePicker
                 value={eventDate}
                 onChange={setEventDate}
-                variant="underline"
                 placeholder="Select date"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
+              <label className="block text-body text-gray-600 mb-1">
                 Venue
               </label>
               <VenueAutocomplete
@@ -300,7 +308,7 @@ export function CoupleModal({
               from the Secondary contact block above. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Status
             </label>
             <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
@@ -311,17 +319,17 @@ export function CoupleModal({
                 >
                   <span
                     className={
-                      selectedLabel ? "text-gray-900" : "text-gray-400"
+                      selectedLabel ? "text-text" : "text-text-subtle"
                     }
                   >
                     {selectedLabel || "Select status"}
                   </span>
-                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -333,7 +341,7 @@ export function CoupleModal({
                         setStatus(s.slug);
                         setStatusOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                      className={`w-full text-left px-3 py-2 text-body transition ${
                         status === s.slug
                           ? "bg-green-50 text-green-700"
                           : "text-gray-700 hover:bg-gray-50"
@@ -348,7 +356,7 @@ export function CoupleModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Lead Source
             </label>
             <Popover.Root open={leadSourceOpen} onOpenChange={setLeadSourceOpen}>
@@ -359,17 +367,17 @@ export function CoupleModal({
                 >
                   <span
                     className={
-                      leadSource ? "text-gray-900" : "text-gray-400"
+                      leadSource ? "text-text" : "text-text-subtle"
                     }
                   >
                     {leadSource ? LEAD_SOURCE_LABELS[leadSource as LeadSource] : "Select source"}
                   </span>
-                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -379,7 +387,7 @@ export function CoupleModal({
                       setLeadSource("");
                       setLeadSourceOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm transition ${
+                    className={`w-full text-left px-3 py-2 text-body transition ${
                       !leadSource
                         ? "bg-green-50 text-green-700"
                         : "text-gray-700 hover:bg-gray-50"
@@ -395,7 +403,7 @@ export function CoupleModal({
                         setLeadSource(s);
                         setLeadSourceOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                      className={`w-full text-left px-3 py-2 text-body transition ${
                         leadSource === s
                           ? "bg-green-50 text-green-700"
                           : "text-gray-700 hover:bg-gray-50"
@@ -412,7 +420,7 @@ export function CoupleModal({
         </div>
 
         <div>
-          <label className="block text-sm text-gray-600 mb-1">
+          <label className="block text-body text-gray-600 mb-1">
             How did you hear about me?
           </label>
           <input
@@ -425,13 +433,13 @@ export function CoupleModal({
         </div>
 
         <div>
-          <label className="block text-sm text-gray-600 mb-1">
+          <label className="block text-body text-gray-600 mb-1">
             Notes
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className={`${inputClass} resize-none`}
+            className={textareaClass}
             placeholder="Any additional notes..."
             rows={8}
           />

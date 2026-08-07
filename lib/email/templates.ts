@@ -131,7 +131,7 @@ export function renderEmailTemplate(
   const raw = generateHTML(substituted, [
     StarterKit,
     Mention.configure({
-      HTMLAttributes: { class: 'inline-block rounded bg-surface-muted px-1.5 py-0.5 text-sm' },
+      HTMLAttributes: { class: 'inline-block rounded-control bg-surface-muted px-1.5 py-0.5 text-body' },
     }),
   ])
   const clean = sanitizeHtml(raw, SANITIZE_OPTS)
@@ -171,7 +171,7 @@ export function resolveTemplateContent(
 }
 
 /** Chip styling for the read-only "template shape" preview. */
-const CHIP_CLASS = 'inline-block rounded bg-blue-50 px-1.5 py-0.5 text-sm font-medium text-blue-700'
+const CHIP_CLASS = 'inline-block rounded-control bg-blue-50 px-1.5 py-0.5 text-body font-medium text-blue-700'
 
 /**
  * Render a template body as its **shape**, not a filled email: every
@@ -398,7 +398,7 @@ function applyMissingHighlights(html: string): string {
   return html.replace(
     pattern,
     (_m, label: string) =>
-      `<span class="rounded bg-amber-100 px-1 text-amber-900" data-missing-var="true">${escapeText(
+      `<span class="rounded-control bg-amber-100 px-1 text-amber-900" data-missing-var="true">${escapeText(
         label,
       )}</span>`,
   )

@@ -21,9 +21,10 @@ interface RowActionsMenuProps {
   /** Always visible (mobile / touch) - otherwise hover-only */
   alwaysVisible?: boolean
   /**
-   * Item text size. `'md'` (default, `text-sm`) matches the page-level
-   * lists; `'sm'` (`text-caption`) is for compact surfaces whose own rows
-   * are caption-sized, so the menu does not tower over them.
+   * Row density, not type size. There is one text size app-wide, so both
+   * values render `text-body`; `'sm'` only tightens the padding and the
+   * minimum width, for compact surfaces where an `'md'` menu would tower
+   * over the rows it belongs to.
    */
   size?: 'sm' | 'md'
 }
@@ -46,8 +47,8 @@ export function RowActionsMenu({
   // items can never drift apart.
   const itemClass =
     size === 'sm'
-      ? 'w-full text-left px-2.5 py-1.5 text-caption flex items-center gap-2 transition'
-      : 'w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition'
+      ? 'w-full text-left px-2.5 py-1.5 text-body flex items-center gap-2 transition'
+      : 'w-full text-left px-3 py-2 text-body flex items-center gap-2 transition'
   const contentWidth = size === 'sm' ? 'min-w-36' : 'min-w-44'
 
   return (
@@ -62,7 +63,7 @@ export function RowActionsMenu({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className={`shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer ${
+          className={`shrink-0 p-1.5 rounded-control text-text-subtle hover:text-gray-700 hover:bg-surface-emphasis transition cursor-pointer ${
             alwaysVisible ? '' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'
           }`}
           aria-label="Row actions"
@@ -72,7 +73,7 @@ export function RowActionsMenu({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className={`bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] ${contentWidth}`}
+          className={`bg-surface border border-border rounded-control shadow-lg py-1 text-body z-[80] ${contentWidth}`}
           sideOffset={4}
           align="end"
           onClick={(e) => e.stopPropagation()}
@@ -93,11 +94,11 @@ export function RowActionsMenu({
                   {sub.icon}
                   {sub.label}
                 </span>
-                <ChevronRight size={13} strokeWidth={1.5} className="text-gray-400" />
+                <ChevronRight size={13} strokeWidth={1.5} className="text-text-subtle" />
               </button>
               {submenuKey === sub.label && (
                 <div
-                  className="absolute left-full top-0 ml-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-36"
+                  className="absolute left-full top-0 ml-1 bg-surface border border-border rounded-control shadow-lg py-1 min-w-36"
                   onMouseLeave={() => setSubmenuKey(null)}
                 >
                   {sub.items.map((item, i) => (

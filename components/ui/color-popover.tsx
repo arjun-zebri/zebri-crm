@@ -34,7 +34,7 @@ export function ColorPopover({
         <Popover.Content
           align={align}
           sideOffset={6}
-          className={`bg-white border border-gray-200 rounded-xl shadow-xl p-3 ${zClassName} w-[280px] animate-modal-in`}
+          className={`bg-surface border border-border rounded-control shadow-xl p-3 ${zClassName} w-[280px] text-body animate-modal-in`}
         >
           <ColorPickerBody value={value} onChange={onChange} swatches={swatches} />
         </Popover.Content>
@@ -102,7 +102,7 @@ function ColorPickerBody({ value, onChange, swatches = [] }: BodyProps) {
             onClick={useEyedropper}
             title="Pick from screen"
             aria-label="Pick from screen"
-            className="w-8 h-8 rounded-full ring-1 ring-black/10 bg-white flex items-center justify-center text-gray-600 hover:text-gray-900 hover:ring-black/20 cursor-pointer transition shrink-0"
+            className="w-8 h-8 rounded-pill ring-1 ring-black/10 bg-surface flex items-center justify-center text-gray-600 hover:text-text hover:ring-black/20 cursor-pointer transition shrink-0"
           >
             <Pipette size={13} strokeWidth={1.75} />
           </button>
@@ -116,7 +116,7 @@ function ColorPickerBody({ value, onChange, swatches = [] }: BodyProps) {
               onClick={() => onChange(c)}
               title={c}
               aria-label={c}
-              className={`w-8 h-8 rounded-full ring-1 hover:scale-105 transition cursor-pointer shrink-0 ${
+              className={`w-8 h-8 rounded-pill ring-1 hover:scale-105 transition cursor-pointer shrink-0 ${
                 active ? 'ring-2 ring-gray-900' : 'ring-black/10'
               }`}
               style={{ background: c }}
@@ -145,7 +145,7 @@ function ColorPickerBody({ value, onChange, swatches = [] }: BodyProps) {
       {/* Hex input */}
       <div className="flex items-center gap-2 mt-3">
         <span
-          className="w-9 h-9 rounded-lg ring-1 ring-black/10 shrink-0"
+          className="w-9 h-9 rounded-control ring-1 ring-black/10 shrink-0"
           style={{ background: hex }}
           aria-hidden
         />
@@ -162,7 +162,7 @@ function ColorPickerBody({ value, onChange, swatches = [] }: BodyProps) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
           }}
-          className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
+          className="flex-1 border border-border rounded-control px-2.5 py-1.5 text-body font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-border-strong"
           placeholder="#000000"
           maxLength={7}
           spellCheck={false}
@@ -224,13 +224,13 @@ function SatValSquare({
         setDrag(true)
         setFromPoint(e.clientX, e.clientY)
       }}
-      className="relative w-full h-32 rounded-lg cursor-crosshair overflow-hidden select-none mb-2"
+      className="relative w-full h-32 rounded-control cursor-crosshair overflow-hidden select-none mb-2"
       style={{ background: hueColor }}
     >
       <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #fff, transparent)' }} />
       <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #000, transparent)' }} />
       <div
-        className="absolute w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4)] pointer-events-none"
+        className="absolute w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-pill border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4)] pointer-events-none"
         style={{ left: `${sat * 100}%`, top: `${(1 - val) * 100}%` }}
       />
     </div>
@@ -282,14 +282,14 @@ function HueStrip({
         setDrag(true)
         setFromPoint(e.clientX)
       }}
-      className="relative w-full h-3 rounded-full cursor-pointer select-none"
+      className="relative w-full h-3 rounded-pill cursor-pointer select-none"
       style={{
         background:
           'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
       }}
     >
       <div
-        className="absolute top-1/2 w-4 h-4 -ml-2 -mt-2 rounded-full bg-white border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)] pointer-events-none"
+        className="absolute top-1/2 w-4 h-4 -ml-2 -mt-2 rounded-pill bg-surface border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)] pointer-events-none"
         style={{ left: `${(hue / 360) * 100}%`, background: hsvToHex(hue, 1, 1) }}
       />
     </div>

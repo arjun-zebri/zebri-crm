@@ -120,7 +120,7 @@ export function PreviewFrame({
   return (
     <div
       ref={frameRef}
-      className="relative rounded-xl border border-border bg-surface overflow-hidden flex h-full shadow-sm"
+      className="relative rounded-control border border-border bg-surface overflow-hidden flex h-full shadow-sm"
     >
       <nav className="w-12 sm:w-44 shrink-0 border-r border-border bg-surface py-3 px-2 flex flex-col gap-0.5">
         {/* Real brand mark, not a stand-in letter. */}
@@ -137,7 +137,7 @@ export function PreviewFrame({
             <span
               key={key}
               data-cursor={`nav-${key}`}
-              className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-xs transition-colors duration-300 ${
+              className={`flex items-center gap-2.5 rounded-control px-2 py-1.5 text-body transition-colors duration-300 ${
                 on ? 'bg-surface-muted text-text font-medium' : 'text-text-subtle'
               }`}
             >
@@ -162,7 +162,7 @@ export function PreviewFrame({
         aria-hidden
         className="pointer-events-none absolute left-0 top-0 z-30 opacity-0 transition-all duration-[450ms] ease-out"
       >
-        <span ref={ringRef} className="absolute -left-1.5 -top-1.5 h-6 w-6 rounded-full bg-brand-fg/25 opacity-0" />
+        <span ref={ringRef} className="absolute -left-1.5 -top-1.5 h-6 w-6 rounded-pill bg-brand-fg/25 opacity-0" />
         <MousePointer2
           size={18}
           strokeWidth={1.5}

@@ -3,6 +3,7 @@
 import { CreditCard } from 'lucide-react'
 import { useState } from 'react'
 
+import { BusyLabel } from '@/components/ui/busy-label'
 import { getTextColor } from '@/lib/branding/contrast'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
@@ -79,7 +80,7 @@ export function PayWithCardButton({ invoiceId, shareToken, branding, actionStyle
         className="flex items-center gap-2 px-4 py-2.5 font-medium hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
       >
         <CreditCard className="w-4 h-4" strokeWidth={1.5} />
-        {loading ? 'Redirecting...' : label}
+        <BusyLabel busy={loading}>{label}</BusyLabel>
       </button>
       {error && (
         <p

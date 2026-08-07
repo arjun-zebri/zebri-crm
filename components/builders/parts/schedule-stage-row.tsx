@@ -60,13 +60,12 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
     >
       <span
         aria-hidden
-        className={`hidden h-1.5 w-1.5 justify-self-center rounded-full sm:block ${
+        className={`hidden h-1.5 w-1.5 justify-self-center rounded-pill sm:block ${
           locked ? 'bg-success' : 'border-2 border-brand-fg bg-surface'
         }`}
       />
 
       <Input
-        size="sm"
         value={stage.label}
         onChange={(e) => onChange({ label: e.target.value })}
         aria-label="Stage label"
@@ -78,15 +77,14 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
           The "rest" box matches the amount input width so it lines up with the
           numeric shares above it. */}
       <div className="flex items-center gap-1">
-        <span className="sm:hidden text-caption text-text-muted">Amount</span>
+        <span className="sm:hidden text-body text-text-muted">Amount</span>
         {isRemainder ? (
-          <span className="flex h-8 w-14 items-center justify-center rounded-control border border-dashed border-border text-caption text-text-muted">
+          <span className="flex h-8 w-14 items-center justify-center rounded-control border border-dashed border-border text-body text-text-muted">
             Rest
           </span>
         ) : (
           <>
             <Input
-              size="sm"
               type="number"
               min={0}
               value={stage.amountValue ?? ''}
@@ -97,16 +95,15 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
               className={`w-14 ${NO_SPINNER}`}
               disabled={locked}
             />
-            <span className="text-caption text-text-muted">{unit}</span>
+            <span className="text-body text-text-muted">{unit}</span>
           </>
         )}
       </div>
 
       {/* Due offset: value + unit. */}
       <div className="flex items-center gap-1.5">
-        <span className="sm:hidden text-caption text-text-muted">Due</span>
+        <span className="sm:hidden text-body text-text-muted">Due</span>
         <Input
-          size="sm"
           type="number"
           min={0}
           value={String(stage.offsetValue)}
@@ -120,7 +117,6 @@ export function ScheduleStageRow({ stage, onChange, onRemove }: ScheduleStageRow
           onValueChange={(v) => onChange({ offsetUnit: v as OffsetUnit })}
           aria-label="Offset unit"
           disabled={locked}
-          size="sm"
           className="w-[4.75rem]"
           options={[
             { value: 'day', label: 'days' },

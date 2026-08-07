@@ -19,6 +19,7 @@ import { getTriggerSpec, triggerRegistry } from '@/lib/automations/triggers'
 import { TRIGGER_CATEGORIES, type TriggerType } from '@/types/automations'
 
 import { setAutomationTriggerAction } from '../actions'
+
 import { CommandPalette, type PaletteAnchor, type PaletteItem } from './command-palette'
 import { getLucideIcon } from './lucide-lookup'
 
@@ -92,7 +93,7 @@ export function TriggerPicker({ automationId, currentTrigger, anchor, onClose, o
           <button
             type="button"
             onClick={remove}
-            className="w-full text-left px-3 py-3 flex items-center gap-3 text-sm text-red-600 hover:bg-red-50 cursor-pointer transition"
+            className="w-full text-left px-3 py-3 flex items-center gap-3 text-body text-red-600 hover:bg-red-50 cursor-pointer transition"
           >
             <Trash2 size={14} strokeWidth={1.5} className="shrink-0 text-red-500" />
             Remove trigger

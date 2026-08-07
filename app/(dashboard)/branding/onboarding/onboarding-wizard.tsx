@@ -138,7 +138,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   return (
     <div className="flex flex-col h-full">
       {props.error && (
-        <div className="mx-6 mt-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-sm text-danger">
+        <div className="mx-6 mt-4 p-3 bg-danger/10 border border-danger/20 rounded-control text-body text-danger">
           {props.error}
         </div>
       )}
@@ -150,8 +150,8 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
         {intro && (
           /* Welcome screen: the message comes before the steps. */
           <div className="flex-1 flex flex-col justify-center gap-3 pb-10">
-            <h2 className="text-xl font-semibold text-text">Welcome to your branding</h2>
-            <p className="text-sm text-text-muted leading-relaxed">
+            <h2 className="text-section font-semibold text-text">Welcome to your branding</h2>
+            <p className="text-body text-text-muted leading-relaxed">
               A few quick steps: your business, your look, and which documents
               you send. This just gets you going, you can change everything
               later in the editor.

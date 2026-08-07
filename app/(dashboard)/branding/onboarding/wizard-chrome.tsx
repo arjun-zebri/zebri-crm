@@ -38,7 +38,7 @@ export function WizardChrome(props: WizardChromeProps) {
         {!props.intro && (
           <>
             <div
-              className="h-1 w-24 sm:w-40 rounded-full bg-surface-muted overflow-hidden"
+              className="h-1 w-24 sm:w-40 rounded-pill bg-surface-muted overflow-hidden"
               role="progressbar"
               aria-valuenow={props.step}
               aria-valuemin={1}
@@ -49,7 +49,7 @@ export function WizardChrome(props: WizardChromeProps) {
                 style={{ width: `${(props.step / TOTAL_STEPS) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-text-subtle whitespace-nowrap">
+            <span className="text-body text-text-subtle whitespace-nowrap">
               {props.step} of {TOTAL_STEPS}
             </span>
           </>
@@ -59,38 +59,36 @@ export function WizardChrome(props: WizardChromeProps) {
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
-          size="sm"
           onClick={props.onSkip}
           disabled={props.loading}
-          className="text-xs text-text-muted"
+          className="text-body text-text-muted"
         >
           Skip, use defaults
         </Button>
         {props.intro ? (
-          <Button variant="primary" size="sm" onClick={props.onStart} disabled={props.loading} className="rounded-xl">
+          <Button variant="primary" onClick={props.onStart} disabled={props.loading} className="rounded-control">
             Get started
             <ChevronRight size={14} strokeWidth={1.5} />
           </Button>
         ) : (
           <>
             {props.step > 1 && (
-              <Button variant="ghost" size="sm" onClick={props.onBack} disabled={props.loading}>
+              <Button variant="ghost" onClick={props.onBack} disabled={props.loading}>
                 Back
               </Button>
             )}
             {props.step < TOTAL_STEPS ? (
-              <Button variant="primary" size="sm" onClick={props.onNext} disabled={props.loading} className="rounded-xl">
+              <Button variant="primary" onClick={props.onNext} disabled={props.loading} className="rounded-control">
                 Next
                 <ChevronRight size={14} strokeWidth={1.5} />
               </Button>
             ) : (
               <Button
                 variant="primary"
-                size="sm"
                 onClick={props.onFinish}
                 disabled={props.loading || !props.canFinish}
                 loading={props.loading}
-                className="rounded-xl"
+                className="rounded-control"
               >
                 Finish setup
               </Button>

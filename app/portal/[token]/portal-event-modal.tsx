@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { BusyLabel } from '@/components/ui/busy-label'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Modal } from '@/components/ui/modal'
 import { FONT_STACKS } from '@/lib/branding/fonts'
@@ -103,7 +104,7 @@ export function PortalEventModal({ onClose, onSave, event, saving, branding }: P
             type="button"
             onClick={() => onSave({ date, venue })}
             disabled={saving || !date}
-            className="rounded-xl px-3 py-1.5 transition cursor-pointer disabled:opacity-50 hover:opacity-90"
+            className="rounded-control px-3 py-1.5 transition cursor-pointer disabled:opacity-50 hover:opacity-90"
             style={{
               fontSize: `${bodyDefaults.fontSize}px`,
               color: 'white',
@@ -113,7 +114,7 @@ export function PortalEventModal({ onClose, onSave, event, saving, branding }: P
               lineHeight: bodyDefaults.lineHeight,
             }}
           >
-            {saving ? 'Saving...' : 'Save'}
+            <BusyLabel busy={saving}>Save</BusyLabel>
           </button>
         </div>
       </div>

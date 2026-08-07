@@ -45,9 +45,9 @@ function CardBody({ couple }: { couple: Couple }) {
         <GripVertical size={14} strokeWidth={1.5} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="font-medium text-sm text-gray-900">{couple.name}</div>
+        <div className="font-medium text-body text-text">{couple.name}</div>
         {hasDetails && (
-          <div className="mt-1 text-xs text-gray-400 space-y-0.5">
+          <div className="mt-1 text-body text-text-subtle space-y-0.5">
             {email && (
               <div className="flex items-center gap-1.5 truncate">
                 <Mail size={12} strokeWidth={1.5} className="shrink-0" />
@@ -101,14 +101,14 @@ export function KanbanCard({ couple, index, isSelected, onClick, activeDrag }: K
             data-couple-id={couple.id}
             style={getDragStyle(provided.draggableProps.style, snapshot)}
             onClick={(e) => onClick(e)}
-            className={`group flex items-start gap-1.5 cursor-pointer px-3 py-2.5 mb-2 last:mb-0 border rounded-xl select-none transition relative ${
+            className={`group flex items-start gap-1.5 cursor-pointer px-3 py-2.5 mb-2 last:mb-0 border rounded-control select-none transition relative ${
               snapshot.isDragging
-                ? "shadow-lg opacity-95 bg-white border-gray-200"
+                ? "shadow-lg opacity-95 bg-surface border-border"
                 : isMovingButGhosted
-                ? "bg-gray-50 border-gray-300 opacity-40"
+                ? "bg-gray-50 border-border-strong opacity-40"
                 : isSelected
-                ? "bg-gray-50 border-gray-300"
-                : "bg-white border-gray-200"
+                ? "bg-gray-50 border-border-strong"
+                : "bg-surface border-border"
             }`}
           >
             <CardBody couple={couple} />
@@ -118,7 +118,7 @@ export function KanbanCard({ couple, index, isSelected, onClick, activeDrag }: K
                 {otherMoving.map((c) => (
                   <div
                     key={c.id}
-                    className="flex items-start gap-1.5 px-3 py-2.5 bg-white border border-gray-200 rounded-xl shadow-lg"
+                    className="flex items-start gap-1.5 px-3 py-2.5 bg-surface border border-border rounded-control shadow-lg"
                   >
                     <CardBody couple={c} />
                   </div>

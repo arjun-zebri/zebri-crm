@@ -150,18 +150,18 @@ export function BlockRenderer({
             empty surface reads as a clean blank page rather than bare canvas. */}
         <div
           aria-hidden
-          className="absolute inset-0 border border-gray-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]"
+          className="absolute inset-0 border border-border/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]"
           style={{
             background: state.surfaceColor || '#FFFFFF',
             borderRadius: state.cornerRadius,
           }}
         />
         <div className="relative flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
-          <p className="text-xs text-gray-500 mb-4">This document is empty</p>
+          <p className="text-body text-text-muted mb-4">This document is empty</p>
           <button
             type="button"
             onClick={() => requestAddAfter(null)}
-            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-control bg-gray-900 text-white text-body font-medium hover:bg-black cursor-pointer transition shadow-sm"
           >
             <Plus size={14} strokeWidth={2} />
             Add your first block
@@ -177,7 +177,7 @@ export function BlockRenderer({
     <div className="relative min-h-[60vh]">
       <div
         aria-hidden
-        className="absolute inset-0 border border-gray-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]"
+        className="absolute inset-0 border border-border/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]"
         style={{
           background: state.surfaceColor || '#FFFFFF',
           borderRadius: state.cornerRadius,
@@ -213,7 +213,7 @@ export function BlockRenderer({
                 }}
                 aria-label="Add block above"
                 title="Add block above"
-                className="absolute left-1/2 -translate-x-1/2 -top-3 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer"
+                className="absolute left-1/2 -translate-x-1/2 -top-3 z-10 w-6 h-6 rounded-pill bg-surface border border-border shadow-sm flex items-center justify-center text-text-subtle hover:text-text hover:border-border-strong opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer"
               >
                 <Plus size={12} strokeWidth={2} />
               </button>
@@ -275,7 +275,7 @@ export function BlockRenderer({
           <DragOverlay dropAnimation={null}>
             {activeBlock ? (
               <div
-                className="opacity-90 shadow-2xl rounded-md bg-white"
+                className="opacity-90 shadow-2xl rounded-control bg-surface"
                 style={{ outline: `2px solid ${state.brandColor || '#111827'}` }}
               >
                 {renderBlock(activeBlock, state, updateBlock, {}, surface)}
@@ -334,7 +334,7 @@ function SpacerWithResize({ block, heightPx, updateBlock }: SpacerWithResizeProp
     <div className="group relative w-full" style={{ height: heightPx }}>
       {/* Height readout centred inside the spacer, hover-only. */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <span className="text-[10px] text-gray-400 font-medium opacity-0 group-hover:opacity-100 transition">
+        <span className="text-[10px] text-text-subtle font-medium opacity-0 group-hover:opacity-100 transition">
           {heightPx}px
         </span>
       </div>
@@ -346,7 +346,7 @@ function SpacerWithResize({ block, heightPx, updateBlock }: SpacerWithResizeProp
           resizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         }`}
       >
-        <div className="h-1 w-10 rounded-full bg-gray-900/50 ring-1 ring-white/80 shadow-sm" />
+        <div className="h-1 w-10 rounded-pill bg-gray-900/50 ring-1 ring-white/80 shadow-sm" />
       </div>
     </div>
   )

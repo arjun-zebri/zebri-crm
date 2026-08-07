@@ -173,15 +173,15 @@ export function TemplateEditorModal({
       title={template ? 'Edit template' : 'New template'}
       footer={
         <div className="flex items-center justify-between gap-2">
-          <Button size="sm" variant="outline" onClick={sendTest} loading={testSending} className="gap-1.5">
+          <Button variant="outline" onClick={sendTest} loading={testSending} className="gap-1.5">
             <Send size={14} strokeWidth={1.5} />
             Send test to myself
           </Button>
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={close}>
+            <Button variant="ghost" onClick={close}>
               Cancel
             </Button>
-            <Button size="sm" onClick={save} loading={saving}>
+            <Button onClick={save} loading={saving}>
               Save template
             </Button>
           </div>
@@ -197,7 +197,6 @@ export function TemplateEditorModal({
             <Input
               className="sm:col-span-2"
               label="Template name"
-              size="sm"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Quote follow-up"
@@ -206,7 +205,7 @@ export function TemplateEditorModal({
           </div>
           <SubjectField value={subject} onChange={setSubject} />
           <div>
-            <p className="mb-1 text-caption font-medium text-text">Body</p>
+            <p className="mb-1 text-body font-medium text-text">Body</p>
             <RichTextEditor
               value={content}
               onChange={setContent}
@@ -224,17 +223,17 @@ export function TemplateEditorModal({
         </div>
         <div className="flex min-h-0 flex-col overflow-y-auto lg:overflow-visible">
           <div className="mb-1 flex shrink-0 items-center justify-between">
-            <p className="text-caption font-medium text-text">Preview</p>
+            <p className="text-body font-medium text-text">Preview</p>
             <div className="flex items-center gap-1">
             <EmailAppearancePopover prefs={prefs} onChange={setPrefs} />
             {/* Same segmented device toggle as the branding editor. */}
-            <div className="flex items-center rounded-lg bg-surface-muted p-0.5">
+            <div className="flex items-center rounded-control bg-surface-muted p-0.5">
               <button
                 type="button"
                 onClick={() => setDevice('desktop')}
                 aria-label="Desktop preview"
                 title="Desktop"
-                className={`inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-md transition ${
+                className={`inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-control transition ${
                   device === 'desktop' ? 'bg-card text-text shadow-sm' : 'text-text-subtle hover:text-text'
                 }`}
               >
@@ -245,7 +244,7 @@ export function TemplateEditorModal({
                 onClick={() => setDevice('mobile')}
                 aria-label="Mobile preview"
                 title="Mobile"
-                className={`inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-md transition ${
+                className={`inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-control transition ${
                   device === 'mobile' ? 'bg-card text-text shadow-sm' : 'text-text-subtle hover:text-text'
                 }`}
               >
@@ -254,7 +253,7 @@ export function TemplateEditorModal({
             </div>
             </div>
           </div>
-          <p className="mb-2 shrink-0 text-xs text-text-subtle">Filled with example data so you can see the finished email.</p>
+          <p className="mb-2 shrink-0 text-body text-text-subtle">Filled with example data so you can see the finished email.</p>
           {/* Desktop: exactly the pane's remaining height, so the outer
               column never scrolls. Stacked mobile: a fixed height keeps
               the iframe from collapsing in the auto-height column. */}

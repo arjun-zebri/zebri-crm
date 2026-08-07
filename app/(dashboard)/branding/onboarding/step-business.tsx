@@ -31,15 +31,14 @@ export function StepBusiness(props: StepBusinessProps) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-text mb-1">Let's start with your identity</h2>
-        <p className="text-sm text-text-muted">We'll use these to brand all your documents.</p>
+        <h2 className="text-section font-semibold text-text mb-1">Let's start with your identity</h2>
+        <p className="text-body text-text-muted">We'll use these to brand all your documents.</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-text-muted mb-2">Business name</label>
+          <label className="block text-body font-medium text-text-muted mb-2">Business name</label>
           <Input
-            size="sm"
             value={props.businessName}
             onChange={(e) => props.setBusinessName(e.target.value)}
             placeholder="Your business name"
@@ -48,9 +47,8 @@ export function StepBusiness(props: StepBusinessProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-text-muted mb-2">Tagline</label>
+          <label className="block text-body font-medium text-text-muted mb-2">Tagline</label>
           <Input
-            size="sm"
             value={props.tagline}
             onChange={(e) => props.setTagline(e.target.value)}
             placeholder="A short line about you"
@@ -59,7 +57,7 @@ export function StepBusiness(props: StepBusinessProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-text-muted mb-2">Logo</label>
+          <label className="block text-body font-medium text-text-muted mb-2">Logo</label>
           <LogoUpload logoUrl={props.logoUrl} setLogoUrl={props.setLogoUrl} />
         </div>
       </div>
@@ -137,7 +135,7 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
         onDragOver={handleDragOver}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className={`relative w-full h-32 rounded-xl bg-surface border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand/50 transition ${
+        className={`relative w-full h-32 rounded-control bg-surface border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand/50 transition ${
           dragging
             ? 'border-brand bg-brand/5'
             : filled
@@ -152,13 +150,13 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt="Logo preview" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" width={128} height={128} />
         ) : uploading ? (
-          <span className="text-xs text-text-muted pointer-events-none">Uploading...</span>
+          <span className="text-body text-text-muted pointer-events-none">Uploading...</span>
         ) : (
           <ImageIcon size={24} strokeWidth={1.5} className="text-text-muted pointer-events-none opacity-50" />
         )}
         {filled && hovering && (
           <span className="absolute inset-0 bg-text/5 flex items-center justify-center pointer-events-none">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-surface/95 text-text text-xs font-medium shadow-sm">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-control bg-surface/95 text-text text-body font-medium shadow-sm">
               <Upload size={12} strokeWidth={1.5} />
               Replace
             </span>
@@ -171,7 +169,7 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
               e.stopPropagation()
               removeLogo()
             }}
-            className={`absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-md bg-surface/95 backdrop-blur-sm border border-border text-text-muted hover:text-text hover:border-border-strong shadow-sm cursor-pointer transition ${
+            className={`absolute top-2 right-2 inline-flex items-center justify-center w-6 h-6 rounded-control bg-surface/95 backdrop-blur-sm border border-border text-text-muted hover:text-text hover:border-border-strong shadow-sm cursor-pointer transition ${
               hovering ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -179,7 +177,7 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
           </button>
         )}
       </div>
-      <p className="text-xs text-text-muted">PNG, JPEG, SVG up to 2MB</p>
+      <p className="text-body text-text-muted">PNG, JPEG, SVG up to 2MB</p>
       <input
         ref={inputRef}
         type="file"

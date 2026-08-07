@@ -197,9 +197,9 @@ export function CoupleSendEmail({
         ) : (
           <>
             {missing.length > 0 && (
-              <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3">
+              <div className="flex items-start gap-2.5 rounded-control border border-red-200 bg-red-50 p-3">
                 <AlertTriangle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-red-600" />
-                <p className="text-xs text-red-700">
+                <p className="text-body text-red-700">
                   This couple is missing{' '}
                   <span className="font-medium">{missing.map(variableLabel).join(', ')}</span>. Fill{' '}
                   {missing.length === 1 ? 'the highlighted gap' : 'the highlighted gaps'} in the email below before
@@ -209,7 +209,7 @@ export function CoupleSendEmail({
             )}
             <Input label="Subject" value={editSubject} onChange={(e) => setEditSubject(e.target.value)} />
             <div>
-              <p className="mb-1.5 text-sm font-medium text-text">Email</p>
+              <p className="mb-1.5 text-body font-medium text-text">Email</p>
               {/* `signatureHtml` makes the `{{mc.signature}}` mention render
                   inline as the finished signature; select it and press
                   Delete to remove it. */}
@@ -224,7 +224,7 @@ export function CoupleSendEmail({
             </div>
             {templateFiles.length > 0 && (
               <div>
-                <p className="mb-1.5 text-sm font-medium text-text">Attachments</p>
+                <p className="mb-1.5 text-body font-medium text-text">Attachments</p>
                 <ul className="space-y-1">
                   {templateFiles.map((f) => (
                     <li key={f.id} className="flex items-center gap-2.5">
@@ -239,7 +239,7 @@ export function CoupleSendEmail({
                           })
                         }
                         label={
-                          <span className="flex items-center gap-1.5 text-sm text-text">
+                          <span className="flex items-center gap-1.5 text-body text-text">
                             <FileText size={14} strokeWidth={1.5} className="text-text-subtle" />
                             {f.file_name}
                           </span>
@@ -263,16 +263,16 @@ function ComposeSkeleton() {
   return (
     <div aria-hidden="true" className="space-y-4">
       <div>
-        <div className="mb-1.5 h-3 w-14 animate-pulse rounded bg-surface-muted" />
-        <div className="h-10 w-full animate-pulse rounded-xl bg-surface-muted" />
+        <div className="mb-1.5 h-3 w-14 animate-pulse rounded-control bg-surface-muted" />
+        <div className="h-10 w-full animate-pulse rounded-control bg-surface-muted" />
       </div>
       <div>
-        <div className="mb-1.5 h-4 w-12 animate-pulse rounded bg-surface-muted" />
-        <div className="space-y-3 rounded-xl border border-border bg-card px-4 py-4">
-          <div className="h-3.5 w-1/3 animate-pulse rounded bg-surface-muted" />
-          <div className="h-3.5 w-full animate-pulse rounded bg-surface-muted" />
-          <div className="h-3.5 w-11/12 animate-pulse rounded bg-surface-muted" />
-          <div className="h-3.5 w-4/5 animate-pulse rounded bg-surface-muted" />
+        <div className="mb-1.5 h-4 w-12 animate-pulse rounded-control bg-surface-muted" />
+        <div className="space-y-3 rounded-control border border-border bg-card px-4 py-4">
+          <div className="h-3.5 w-1/3 animate-pulse rounded-control bg-surface-muted" />
+          <div className="h-3.5 w-full animate-pulse rounded-control bg-surface-muted" />
+          <div className="h-3.5 w-11/12 animate-pulse rounded-control bg-surface-muted" />
+          <div className="h-3.5 w-4/5 animate-pulse rounded-control bg-surface-muted" />
         </div>
       </div>
     </div>

@@ -25,16 +25,16 @@ const DOC_ROWS = ['Invoice', 'Contract', 'Run sheet'] as const
 function Tab({ label, subtitle, Icon, active }: { label: string; subtitle: string; Icon: typeof FileText; active: boolean }) {
   return (
     <span
-      className={`flex items-center gap-1.5 rounded-lg border pl-1.5 pr-2 py-1 bg-white ${
-        active ? 'border-gray-900 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.18)]' : 'border-gray-200'
+      className={`flex items-center gap-1.5 rounded-control border pl-1.5 pr-2 py-1 bg-surface ${
+        active ? 'border-gray-900 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.18)]' : 'border-border'
       }`}
     >
-      <span className="w-4.5 h-4.5 rounded bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 p-1">
-        <Icon size={9} strokeWidth={1.5} className="text-gray-500" />
+      <span className="w-4.5 h-4.5 rounded-control bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 p-1">
+        <Icon size={9} strokeWidth={1.5} className="text-text-muted" />
       </span>
       <span className="text-left min-w-0">
-        <span className={`block text-[9px] font-medium leading-tight ${active ? 'text-gray-900' : 'text-gray-700'}`}>{label}</span>
-        <span className="block text-[8px] text-gray-400 leading-tight">{subtitle}</span>
+        <span className={`block text-[9px] font-medium leading-tight ${active ? 'text-text' : 'text-gray-700'}`}>{label}</span>
+        <span className="block text-[8px] text-text-subtle leading-tight">{subtitle}</span>
       </span>
     </span>
   )
@@ -54,9 +54,9 @@ export function DemoTabs({ docsOpen, runSheetOn }: DemoTabsProps) {
     <>
       {/* Topbar: kit name + Add block, like editor-topbar. */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100">
-        <span className="text-[10px] font-semibold text-gray-900">My brand</span>
-        <span className="text-[8px] text-gray-400">Saved</span>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-md border border-gray-200 px-1.5 py-0.5 text-[8px] font-medium text-gray-700">
+        <span className="text-[10px] font-semibold text-text">My brand</span>
+        <span className="text-[8px] text-text-subtle">Saved</span>
+        <span className="ml-auto inline-flex items-center gap-1 rounded-control border border-border px-1.5 py-0.5 text-[8px] font-medium text-gray-700">
           <Plus size={8} strokeWidth={2} /> Add block
         </span>
       </div>
@@ -73,26 +73,26 @@ export function DemoTabs({ docsOpen, runSheetOn }: DemoTabsProps) {
         )}
         <span
           data-cursor="doc-gear"
-          className="ml-auto inline-flex items-center justify-center h-5 w-5 rounded-md border border-gray-200 text-gray-500"
+          className="ml-auto inline-flex items-center justify-center h-5 w-5 rounded-control border border-border text-text-muted"
         >
           <Settings2 size={9} strokeWidth={1.75} />
         </span>
 
         {/* The "Choose which documents you use" popover, anchored to the gear. */}
         {docsOpen && (
-          <div className="absolute right-2 top-full mt-1 z-20 w-[110px] rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl animate-modal-in">
-            <p className="px-1 pb-1 text-[8px] font-medium text-gray-400">Your documents</p>
+          <div className="absolute right-2 top-full mt-1 z-20 w-[110px] rounded-control border border-border bg-surface p-1.5 shadow-xl animate-modal-in">
+            <p className="px-1 pb-1 text-[8px] font-medium text-text-subtle">Your documents</p>
             {DOC_ROWS.map((label) => {
               const on = label !== 'Run sheet' || runSheetOn
               return (
                 <span
                   key={label}
                   data-cursor={label === 'Run sheet' ? 'doc-run-sheet' : undefined}
-                  className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[9px] text-gray-700"
+                  className="flex items-center gap-1.5 rounded-control px-1 py-0.5 text-[9px] text-gray-700"
                 >
                   <span
-                    className={`inline-flex items-center justify-center w-3 h-3 rounded border shrink-0 transition-colors duration-300 ${
-                      on ? 'bg-gray-900 border-gray-900 text-white' : 'border-gray-300'
+                    className={`inline-flex items-center justify-center w-3 h-3 rounded-control border shrink-0 transition-colors duration-300 ${
+                      on ? 'bg-gray-900 border-gray-900 text-white' : 'border-border-strong'
                     }`}
                   >
                     {on && <Check size={8} strokeWidth={2} />}

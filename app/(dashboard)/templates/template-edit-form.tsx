@@ -126,26 +126,26 @@ export function TemplateEditForm({
       size="lg"
       title={
         <div className="min-w-0">
-          <p className="text-xl font-semibold text-text">{title}</p>
-          {subtitle ? <p className="mt-0.5 text-sm font-normal text-text-muted">{subtitle}</p> : null}
+          <p className="text-section font-semibold text-text">{title}</p>
+          {subtitle ? <p className="mt-0.5 text-body font-normal text-text-muted">{subtitle}</p> : null}
         </div>
       }
       footer={
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-body font-medium uppercase tracking-wide text-text-muted">
               Template total
             </p>
-            <p className="truncate text-xl font-semibold tabular-nums text-text">
+            <p className="truncate text-section font-semibold tabular-nums text-text">
               {formatAUD(total)}
             </p>
-            {hint ? <p className="text-xs text-danger">{hint}</p> : null}
+            {hint ? <p className="text-body text-danger">{hint}</p> : null}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button onClick={onClose} disabled={isSaving} variant="outline" size="sm">
+            <Button onClick={onClose} disabled={isSaving} variant="outline">
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving || !name.trim() || blocked} loading={isSaving} size="sm">
+            <Button onClick={handleSave} disabled={isSaving || !name.trim() || blocked} loading={isSaving}>
               Save template
             </Button>
           </div>
@@ -155,7 +155,6 @@ export function TemplateEditForm({
       <div className="space-y-5">
         <Input
           label="Template name"
-          size="sm"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={namePlaceholder}
@@ -166,7 +165,6 @@ export function TemplateEditForm({
 
         <Input
           label="Subtitle"
-          size="sm"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Shown in your template list, not to couples"
@@ -174,7 +172,7 @@ export function TemplateEditForm({
         />
 
         <div className="space-y-1">
-          <label htmlFor="template-notes" className="block text-caption font-medium text-text">
+          <label htmlFor="template-notes" className="block text-body font-medium text-text">
             Notes
           </label>
           <textarea
@@ -184,19 +182,19 @@ export function TemplateEditForm({
             placeholder="Added to the invoice notes when this template is applied."
             disabled={isSaving}
             rows={3}
-            className="block w-full resize-none rounded-control border border-border bg-surface px-2.5 py-2 text-caption text-text placeholder:text-text-subtle transition-colors focus:border-brand-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            className="block w-full resize-none rounded-control border border-border bg-surface px-2.5 py-2 text-body text-text placeholder:text-text-subtle transition-colors focus:border-brand-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
         <div>
           <div className="mb-2 flex items-center justify-between gap-3">
             <p>
-              <span className="text-sm font-medium text-text">Line items</span>
-              <span className="ml-2 text-xs text-text-muted">Applied to the document as-is</span>
+              <span className="text-body font-medium text-text">Line items</span>
+              <span className="ml-2 text-body text-text-muted">Applied to the document as-is</span>
             </p>
             {sources && sources.length > 0 ? <SourcePicker sources={sources} onPick={addFromSource} /> : null}
           </div>
-          <div className="rounded-xl border border-border px-4 pt-2 pb-1.5">
+          <div className="rounded-control border border-border px-4 pt-2 pb-1.5">
             <LineItemsEditor
               items={items}
               onChange={setItems}
@@ -226,16 +224,16 @@ function SourceGroup({
   if (items.length === 0) return null
   return (
     <>
-      <p className="px-2 pt-2 pb-1 text-xs font-medium text-text-subtle">{label}</p>
+      <p className="px-2 pt-2 pb-1 text-body font-medium text-text-subtle">{label}</p>
       {items.map((s) => (
         <button
           key={`${s.kind}-${s.id}`}
           type="button"
           onClick={() => onPick(s)}
-          className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-muted cursor-pointer"
+          className="flex w-full items-center justify-between gap-3 rounded-control px-2 py-1.5 text-left hover:bg-surface-muted cursor-pointer"
         >
-          <span className="truncate text-sm text-text">{s.name}</span>
-          <span className="shrink-0 text-xs text-text-subtle">
+          <span className="truncate text-body text-text">{s.name}</span>
+          <span className="shrink-0 text-body text-text-subtle">
             {s.items.length} item{s.items.length !== 1 ? 's' : ''}
           </span>
         </button>
@@ -259,7 +257,7 @@ function SourcePicker({ sources, onPick }: { sources: TemplateSource[]; onPick: 
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1.5 py-1 text-caption text-text-muted transition hover:text-text cursor-pointer"
+          className="flex items-center gap-1.5 py-1 text-body text-text-muted transition hover:text-text cursor-pointer"
         >
           <PackageIcon size={14} strokeWidth={1.5} />
           {triggerLabel}
@@ -270,7 +268,7 @@ function SourcePicker({ sources, onPick }: { sources: TemplateSource[]; onPick: 
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-[90] w-64 rounded-xl border border-border bg-card p-1.5 shadow-lg"
+          className="z-[90] w-64 rounded-control border border-border bg-card p-1.5 shadow-lg"
         >
           <div className="max-h-64 overflow-y-auto">
             <SourceGroup label="Packages" items={packages} onPick={pick} />

@@ -97,7 +97,7 @@ export function EmailAppearancePopover({ prefs, onChange }: EmailAppearancePopov
       <Popover.Trigger
         aria-label="Email appearance"
         title="Email appearance"
-        className="inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-md text-text-subtle transition hover:text-text"
+        className="inline-flex h-6 w-7 cursor-pointer items-center justify-center rounded-control text-text-subtle transition hover:text-text"
       >
         <Settings2 size={13} strokeWidth={1.5} />
       </Popover.Trigger>
@@ -105,7 +105,7 @@ export function EmailAppearancePopover({ prefs, onChange }: EmailAppearancePopov
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-[90] w-56 rounded-xl border border-border bg-card p-3 shadow-lg animate-fade-in"
+          className="z-[90] w-56 rounded-control border border-border bg-card p-3 shadow-lg animate-fade-in"
         >
           <div className="space-y-3">
             {/* Logo toggle + alignment share a row: the segmented
@@ -115,16 +115,16 @@ export function EmailAppearancePopover({ prefs, onChange }: EmailAppearancePopov
               <Checkbox
                 checked={prefs.showLogo}
                 onChange={(showLogo) => onChange({ ...prefs, showLogo })}
-                label={<span className="text-caption text-text">Show logo</span>}
+                label={<span className="text-body text-text">Show logo</span>}
               />
               {prefs.showLogo && (
-                <div className="flex items-center rounded-lg bg-surface-muted p-0.5">
+                <div className="flex items-center rounded-control bg-surface-muted p-0.5">
                   <button
                     type="button"
                     aria-label="Align logo left"
                     title="Align left"
                     onClick={() => onChange({ ...prefs, logoAlign: 'left' })}
-                    className={`inline-flex h-5 w-6 cursor-pointer items-center justify-center rounded-md transition ${
+                    className={`inline-flex h-5 w-6 cursor-pointer items-center justify-center rounded-control transition ${
                       prefs.logoAlign === 'left' ? 'bg-card text-text shadow-sm' : 'text-text-subtle hover:text-text'
                     }`}
                   >
@@ -135,7 +135,7 @@ export function EmailAppearancePopover({ prefs, onChange }: EmailAppearancePopov
                     aria-label="Align logo centre"
                     title="Align centre"
                     onClick={() => onChange({ ...prefs, logoAlign: 'center' })}
-                    className={`inline-flex h-5 w-6 cursor-pointer items-center justify-center rounded-md transition ${
+                    className={`inline-flex h-5 w-6 cursor-pointer items-center justify-center rounded-control transition ${
                       prefs.logoAlign === 'center' ? 'bg-card text-text shadow-sm' : 'text-text-subtle hover:text-text'
                     }`}
                   >
@@ -147,9 +147,9 @@ export function EmailAppearancePopover({ prefs, onChange }: EmailAppearancePopov
             <Checkbox
               checked={prefs.showAccent}
               onChange={(showAccent) => onChange({ ...prefs, showAccent })}
-              label={<span className="text-caption text-text">Brand colour bar</span>}
+              label={<span className="text-body text-text">Brand colour bar</span>}
             />
-            <p className="text-xs text-text-subtle">Applies to every email you send.</p>
+            <p className="text-body text-text-subtle">Applies to every email you send.</p>
           </div>
         </Popover.Content>
       </Popover.Portal>

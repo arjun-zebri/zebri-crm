@@ -167,7 +167,7 @@ export function RenderFooter({
                   // chips, with a hint pointing at where the URL comes from.
                   <span
                     key={label}
-                    className="relative group/vh inline-flex items-center rounded p-0.5 cursor-help"
+                    className="relative group/vh inline-flex items-center rounded-control p-0.5 cursor-help"
                     style={{ backgroundColor: '#D1FAE5', color: '#047857' }}
                   >
                     <Icon size={18} strokeWidth={1.5} />

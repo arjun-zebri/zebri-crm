@@ -23,8 +23,8 @@ function PickerSkeleton() {
     <div aria-hidden="true">
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="flex items-center justify-between gap-3 px-3 py-2">
-          <div className="h-3.5 flex-1 animate-pulse rounded bg-surface-muted" />
-          <div className="size-3 shrink-0 animate-pulse rounded bg-surface-muted" />
+          <div className="h-3.5 flex-1 animate-pulse rounded-control bg-surface-muted" />
+          <div className="size-3 shrink-0 animate-pulse rounded-control bg-surface-muted" />
         </div>
       ))}
     </div>
@@ -111,7 +111,7 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button variant={cfg.variant} size="sm" className="cursor-pointer gap-1.5">
+        <Button variant={cfg.variant} className="cursor-pointer gap-1.5">
           <Icon size={13} strokeWidth={1.5} /> {cfg.label}
         </Button>
       </Popover.Trigger>
@@ -119,20 +119,20 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="bg-surface border border-border rounded-xl shadow-lg z-[80] w-64 py-1.5"
+          className="bg-surface border border-border rounded-control shadow-lg z-[80] w-64 py-1.5"
         >
-          <p className="px-3 py-1.5 text-xs text-text-subtle">{cfg.hint}</p>
+          <p className="px-3 py-1.5 text-body text-text-subtle">{cfg.hint}</p>
           {isLoading ? (
             <PickerSkeleton />
           ) : (list ?? []).length === 0 ? (
-            <p className="px-3 py-2 text-sm text-text-muted">No active automations to run.</p>
+            <p className="px-3 py-2 text-body text-text-muted">No active automations to run.</p>
           ) : (
             (list ?? []).map((a) => (
               <button
                 key={a.id}
                 onClick={() => run(a.id)}
                 disabled={runningId !== null}
-                className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm text-text hover:bg-surface-muted transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-between gap-3 px-3 py-2 text-body text-text hover:bg-surface-muted transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <span className="truncate">{labelFor(a)}</span>
                 {runningId === a.id ? (
@@ -143,7 +143,7 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
               </button>
             ))
           )}
-          {error && <p className="px-3 py-2 text-xs text-danger">{error}</p>}
+          {error && <p className="px-3 py-2 text-body text-danger">{error}</p>}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

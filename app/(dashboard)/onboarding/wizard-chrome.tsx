@@ -36,7 +36,7 @@ export function WizardChrome({ step, saving, onBack, onSkip, onNext, onFinish }:
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-3 min-w-0">
         <div
-          className="h-1 w-24 sm:w-40 rounded-full bg-surface-muted overflow-hidden"
+          className="h-1 w-24 sm:w-40 rounded-pill bg-surface-muted overflow-hidden"
           role="progressbar"
           aria-valuenow={step}
           aria-valuemin={1}
@@ -47,7 +47,7 @@ export function WizardChrome({ step, saving, onBack, onSkip, onNext, onFinish }:
             style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
           />
         </div>
-        <span className="text-xs text-text-subtle whitespace-nowrap">
+        <span className="text-body text-text-subtle whitespace-nowrap">
           {step} of {TOTAL_STEPS}
         </span>
       </div>
@@ -56,22 +56,20 @@ export function WizardChrome({ step, saving, onBack, onSkip, onNext, onFinish }:
         {canSkip && (
           <Button
             variant="ghost"
-            size="sm"
             onClick={onSkip}
             disabled={saving}
-            className="text-xs text-text-muted"
+            className="text-body text-text-muted"
           >
             Skip
           </Button>
         )}
         {step > 1 && (
-          <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>
+          <Button variant="ghost" onClick={onBack} disabled={saving}>
             Back
           </Button>
         )}
         <Button
           variant="primary"
-          size="sm"
           onClick={isLast ? onFinish : onNext}
           disabled={saving}
           loading={saving}

@@ -24,14 +24,14 @@ export function StepWelcome() {
           <Image src="/wedding/wed-3.jpeg" alt="" fill sizes="100vw" className="object-cover grayscale" />
         </div>
 
-        <h2 className="text-3xl font-semibold text-text">
+        <h2 className="text-display font-semibold text-text">
           Welcome to Zebri
         </h2>
-        <p className="text-sm text-text-muted leading-relaxed">
+        <p className="text-body text-text-muted leading-relaxed">
           These photos are from my own wedding. The people who made that day
           so special are the reason Zebri exists.
         </p>
-        <p className="text-sm text-text-muted leading-relaxed">
+        <p className="text-body text-text-muted leading-relaxed">
           We built Zebri so you can spend more time doing what you do best
           and create unforgettable moments for your couples.
         </p>

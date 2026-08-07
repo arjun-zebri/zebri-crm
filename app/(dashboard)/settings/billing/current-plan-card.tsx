@@ -145,7 +145,7 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
 
       {/* Past-due notice */}
       {state === 'past_due' ? (
-        <div className="mt-6 inline-flex items-center gap-2 rounded-card border border-danger/40 bg-danger/5 px-3 py-2 text-body text-danger">
+        <div className="mt-6 inline-flex items-center gap-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2 text-body text-danger">
           <AlertCircle size={14} strokeWidth={1.5} />
           Update your payment method to restore access.
         </div>
@@ -229,7 +229,7 @@ function MetaLine({
   }
   if (userCreatedAt) parts.push(`Joined ${formatDate(userCreatedAt)}`);
   if (parts.length === 0) return null;
-  return <p className="mt-1 text-caption text-text-muted">{parts.join(' · ')}</p>;
+  return <p className="mt-1 text-body text-text-muted">{parts.join(' · ')}</p>;
 }
 
 /* ────────────────────────────────────────────────────────────── */
@@ -308,12 +308,12 @@ function StarterUsage({ onUpgrade, redirecting }: { onUpgrade: () => void; redir
 
   return (
     <div className="mt-6">
-      <h4 className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
+      <h4 className="mb-3 text-body font-medium uppercase tracking-wide text-text-muted">
         Usage
       </h4>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-4">
-          <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-border">
+          <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-pill bg-border">
             <div
               className={`h-full transition-all ${atCap ? 'bg-warning' : 'bg-text'}`}
               style={{ width: `${pct}%` }}
@@ -325,7 +325,7 @@ function StarterUsage({ onUpgrade, redirecting }: { onUpgrade: () => void; redir
           </div>
         </div>
         {atCap ? (
-          <Button size="sm" variant="secondary" onClick={onUpgrade} loading={redirecting}>
+          <Button variant="secondary" onClick={onUpgrade} loading={redirecting}>
             Upgrade to add more
           </Button>
         ) : null}

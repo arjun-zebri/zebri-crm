@@ -58,13 +58,14 @@ import {
   updateAutomationActionEdges,
   updateAutomationActionPosition,
 } from '../actions'
+
+import { ActionPicker } from './action-picker'
 import { AiCopilotPanel } from './ai-copilot-panel'
 import { autoLayout } from './auto-layout'
-import { CanvasSkeleton } from './canvas-skeleton'
 import { CanvasHeader } from './canvas-header'
 import { CanvasNode, type CanvasNodeData } from './canvas-node'
+import { CanvasSkeleton } from './canvas-skeleton'
 import { InspectorPanel } from './inspector-panel'
-import { ActionPicker } from './action-picker'
 import { RunHistoryPanel } from './runs-panel'
 import { TriggerPicker } from './trigger-picker'
 
@@ -432,7 +433,7 @@ function AutomationCanvas() {
             <button
               type="button"
               onClick={() => setCopilotOpen(true)}
-              className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-surface border border-border rounded-md hover:bg-surface-muted cursor-pointer transition shadow-sm"
+              className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-body bg-surface border border-border rounded-control hover:bg-surface-muted cursor-pointer transition shadow-sm"
               title="Open Zebri AI"
             >
               <CopilotIcon />

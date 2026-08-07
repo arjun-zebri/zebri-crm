@@ -13,6 +13,7 @@
 
 import { useState, type CSSProperties } from 'react'
 
+import { BusyLabel } from '@/components/ui/busy-label'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
@@ -130,7 +131,7 @@ export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSub
             className="cursor-pointer transition hover:opacity-90 disabled:opacity-60"
             style={{ background: buttonColor ?? brand, color: readableTextOn(buttonColor ?? brand), borderRadius: branding.corner_radius, padding: '0.625rem 1.5rem', fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
           >
-            {submitting ? 'Sending…' : confirming ? 'Send answers' : 'Submit'}
+            <BusyLabel busy={submitting}>{confirming ? 'Send answers' : 'Submit'}</BusyLabel>
           </button>
           {confirming && !submitting && (
             <button type="button" onClick={() => setConfirming(false)} style={{ color: mutedColor, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }} className="cursor-pointer">

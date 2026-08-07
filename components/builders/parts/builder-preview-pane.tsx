@@ -21,7 +21,9 @@
 import { Download, ExternalLink, FileText, Globe, Mail, Palette } from 'lucide-react';
 import { useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
+
 
 import { PreviewEmail } from './preview-email';
 import { PreviewPaymentPage } from './preview-payment-page';
@@ -69,7 +71,7 @@ export function BuilderPreviewPane({
     // separate the preview pane from the editor without a border.
     // Padding grows on lg so the inner preview card has breathing
     // room.
-    <div className="flex h-full flex-col gap-3 rounded-card bg-surface-muted/60 p-4 sm:p-5">
+    <div className="flex h-full flex-col gap-3 rounded-control bg-surface-muted/60 p-4 sm:p-5">
       {/* Header: Preview label + tabs */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <h2 className="text-section font-semibold text-text">Preview</h2>
@@ -77,18 +79,18 @@ export function BuilderPreviewPane({
         {/* Download sits before the tab group so it reads as an action
             on the document, not a fourth preview mode. */}
         {onDownloadPdf ? (
-          <button
-            type="button"
-            onClick={onDownloadPdf}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-caption font-medium text-text-muted transition-colors hover:text-text cursor-pointer"
-          >
+          <Button variant="outline" onClick={onDownloadPdf} className="ml-auto">
             <Download size={12} strokeWidth={1.5} />
             Download
-          </button>
+          </Button>
         ) : null}
 
+        {/* Segmented control. `h-8` matches `Button size="sm"`, so this
+            group and the Download button beside it share a baseline;
+            they previously differed by 4px because the group's padding
+            and its buttons' padding stacked. */}
         <div
-          className={`flex items-center gap-1 rounded-card border border-border bg-surface p-1 ${
+          className={`flex h-8 items-center gap-1 rounded-control border border-border bg-surface p-0.5 ${
             onDownloadPdf ? '' : 'ml-auto'
           }`}
         >
@@ -97,7 +99,7 @@ export function BuilderPreviewPane({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`inline-flex items-center gap-1.5 rounded-control px-2.5 py-1 text-caption font-medium transition-colors cursor-pointer ${
+              className={`inline-flex h-full items-center gap-1.5 rounded-control px-2.5 text-body font-medium transition-colors cursor-pointer ${
                 activeTab === tab.id
                   ? 'bg-surface-emphasis text-text'
                   : 'text-text-muted hover:text-text'
@@ -111,7 +113,7 @@ export function BuilderPreviewPane({
       </div>
 
       {/* Branded-as line */}
-      <div className="flex items-center justify-between gap-2 text-caption text-text-muted">
+      <div className="flex items-center justify-between gap-2 text-body text-text-muted">
         <span className="inline-flex items-center gap-1.5">
           <Palette size={12} strokeWidth={1.5} className="text-text-subtle" />
           {brandLabel ? (

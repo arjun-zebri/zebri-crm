@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import {
   applyMapping,
@@ -157,7 +158,7 @@ export function CouplesImportModal({
         <button
           onClick={() => setStep(step === 'preview' ? 'map' : 'upload')}
           disabled={importing}
-          className="cursor-pointer rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-900 transition hover:bg-gray-200 disabled:opacity-50"
+          className="cursor-pointer rounded-control bg-surface-emphasis px-3 py-1.5 text-body text-text transition hover:bg-gray-200 disabled:opacity-50"
         >
           Back
         </button>
@@ -165,7 +166,7 @@ export function CouplesImportModal({
       <button
         onClick={onClose}
         disabled={importing}
-        className="cursor-pointer rounded-md bg-gray-100 px-3 py-1.5 text-xs text-gray-900 transition hover:bg-gray-200 disabled:opacity-50"
+        className="cursor-pointer rounded-control bg-surface-emphasis px-3 py-1.5 text-body text-text transition hover:bg-gray-200 disabled:opacity-50"
       >
         Cancel
       </button>
@@ -173,21 +174,15 @@ export function CouplesImportModal({
         <button
           onClick={goToPreview}
           disabled={!canMap}
-          className="cursor-pointer rounded-md bg-black px-3 py-1.5 text-xs text-white transition hover:bg-neutral-800 disabled:opacity-50"
+          className="cursor-pointer rounded-control bg-black px-3 py-1.5 text-body text-white transition hover:bg-neutral-800 disabled:opacity-50"
         >
           Continue
         </button>
       )}
       {step === 'preview' && (
-        <button
-          onClick={handleImport}
-          disabled={importing || selectedCount === 0}
-          className="cursor-pointer rounded-md bg-black px-3 py-1.5 text-xs text-white transition hover:bg-neutral-800 disabled:opacity-50"
-        >
-          {importing
-            ? 'Importing…'
-            : `Import ${selectedCount} ${selectedCount === 1 ? 'couple' : 'couples'}`}
-        </button>
+        <Button onClick={handleImport} disabled={selectedCount === 0} loading={importing}>
+          {`Import ${selectedCount} ${selectedCount === 1 ? 'couple' : 'couples'}`}
+        </Button>
       )}
     </div>
   );
@@ -211,7 +206,7 @@ export function CouplesImportModal({
 
       {step === 'map' && mapping && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500">
+          <p className="text-body text-text-muted">
             Match each Zebri field to a column from your file.
           </p>
           <CouplesImportMapping
@@ -222,7 +217,7 @@ export function CouplesImportModal({
             onChange={setMapping}
           />
           {!canMap && (
-            <p className="text-xs text-red-600">
+            <p className="text-body text-red-600">
               Map a column to Couple name and Primary contact name to continue.
             </p>
           )}
@@ -231,7 +226,7 @@ export function CouplesImportModal({
 
       {step === 'preview' && preview && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500">
+          <p className="text-body text-text-muted">
             {selectedCount} of {preview.entries.length} rows will import
           </p>
           <CouplesImportPreview

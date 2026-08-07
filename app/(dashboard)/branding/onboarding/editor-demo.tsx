@@ -185,7 +185,7 @@ export function EditorDemo({ reducedMotion }: EditorDemoProps) {
   return (
     <div
       ref={frameRef}
-      className="relative rounded-xl border border-border bg-white overflow-hidden flex flex-col h-full shadow-sm"
+      className="relative rounded-control border border-border bg-surface overflow-hidden flex flex-col h-full shadow-sm"
     >
       <DemoTabs docsOpen={docsOpen} runSheetOn={runSheetOn} />
 
@@ -219,13 +219,13 @@ export function EditorDemo({ reducedMotion }: EditorDemoProps) {
       <div
         data-testid="demo-title-card"
         aria-hidden={!title}
-        className={`absolute inset-0 z-20 bg-white flex flex-col items-center justify-center gap-2 px-8 text-center pointer-events-none transition-opacity duration-700 motion-reduce:transition-none ${
+        className={`absolute inset-0 z-20 bg-surface flex flex-col items-center justify-center gap-2 px-8 text-center pointer-events-none transition-opacity duration-700 motion-reduce:transition-none ${
           title ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <div key={shownTitle.index} className="flex flex-col items-center gap-2">
           <p className="text-lg font-semibold text-text demo-title-in">{shownTitle.copy.heading}</p>
-          <p className="text-sm text-text-muted max-w-[380px] demo-title-in [animation-delay:180ms]">
+          <p className="text-body text-text-muted max-w-[380px] demo-title-in [animation-delay:180ms]">
             {shownTitle.copy.sub}
           </p>
         </div>
@@ -233,8 +233,8 @@ export function EditorDemo({ reducedMotion }: EditorDemoProps) {
 
       {/* Tour progress: fills linearly, one beat per step, across the run.
           Flush with the bottom edge, corner to corner — the frame's own
-          rounded-xl + overflow-hidden clip it to the container's corners. */}
-      <div className="absolute bottom-0 inset-x-0 h-1 bg-gray-100 z-40" aria-hidden>
+          rounded-control + overflow-hidden clip it to the container's corners. */}
+      <div className="absolute bottom-0 inset-x-0 h-1 bg-surface-emphasis z-40" aria-hidden>
         <div
           className="h-full bg-brand-fg transition-[width] duration-[1400ms] ease-linear motion-reduce:transition-none"
           style={{ width: `${(beat / (BEATS - 1)) * 100}%` }}
@@ -247,7 +247,7 @@ export function EditorDemo({ reducedMotion }: EditorDemoProps) {
         aria-hidden
         className="pointer-events-none absolute left-0 top-0 z-30 opacity-0 transition-all duration-[450ms] ease-out"
       >
-        <span ref={ringRef} className="absolute -left-1.5 -top-1.5 h-6 w-6 rounded-full bg-brand-fg/25 opacity-0" />
+        <span ref={ringRef} className="absolute -left-1.5 -top-1.5 h-6 w-6 rounded-pill bg-brand-fg/25 opacity-0" />
         <MousePointer2
           size={18}
           strokeWidth={1.5}

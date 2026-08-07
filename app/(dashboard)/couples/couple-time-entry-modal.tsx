@@ -135,11 +135,10 @@ export function CoupleTimeEntryModal({
       title={entry ? 'Edit time' : 'Add time'}
       footer={
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button
-            size="sm"
             disabled={instants === null}
             loading={saving}
             onClick={() => void handleSave()}
@@ -151,14 +150,13 @@ export function CoupleTimeEntryModal({
     >
       <div className="flex flex-col gap-4">
         <div>
-          <span className="mb-1 block text-caption text-text-muted">Date</span>
+          <span className="mb-1 block text-body text-text-muted">Date</span>
           {/* Matches the duration field's width: a full-width date field
               also stretches its calendar, since the day cells are square. */}
           <div className="w-56 max-w-full">
             <DatePicker
               value={date}
               onChange={setDate}
-              size="sm"
               placeholder="Select date"
             />
           </div>
@@ -167,7 +165,7 @@ export function CoupleTimeEntryModal({
         <CoupleTimeDurationField value={minutes} onChange={setMinutes} />
 
         <div>
-          <span className="mb-1 block text-caption text-text-muted">
+          <span className="mb-1 block text-body text-text-muted">
             Category
           </span>
           <TimeCategoryPicker value={categoryId} onChange={setCategoryId} />
@@ -176,7 +174,7 @@ export function CoupleTimeEntryModal({
         <div>
           <label
             htmlFor="time-entry-note"
-            className="mb-1 block text-caption text-text-muted"
+            className="mb-1 block text-body text-text-muted"
           >
             Note
           </label>
@@ -186,11 +184,11 @@ export function CoupleTimeEntryModal({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Venue walkthrough, script draft, travel"
-            className="w-full resize-none rounded-control border border-border bg-surface px-3 py-2 text-caption text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
+            className="w-full resize-none rounded-control border border-border bg-surface px-3 py-2 text-body text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
           />
         </div>
 
-        {error ? <p className="text-caption text-danger">{error}</p> : null}
+        {error ? <p className="text-body text-danger">{error}</p> : null}
       </div>
     </Modal>
   );

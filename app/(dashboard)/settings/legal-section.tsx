@@ -23,18 +23,18 @@ export interface LegalSectionProps {
 export function LegalSection({ title, lastUpdated, canonicalUrl, children }: LegalSectionProps) {
   return (
     <div>
-      <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-      <p className="mt-1 text-xs text-gray-400">Last updated: {lastUpdated}</p>
+      <h2 className="text-section font-semibold text-text">{title}</h2>
+      <p className="mt-1 text-body text-text-subtle">Last updated: {lastUpdated}</p>
       <a
         href={canonicalUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-2 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition cursor-pointer"
+        className="mt-2 inline-flex items-center gap-1.5 text-body text-text-muted hover:text-gray-700 transition cursor-pointer"
       >
         View the latest at {canonicalUrl.replace(/^https?:\/\//, '')}
         <ExternalLink size={14} strokeWidth={1.5} />
       </a>
-      <div className="mt-6 space-y-5 text-sm leading-relaxed text-gray-700 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-gray-900 [&_h3]:mt-5 [&_h3]:mb-1.5 [&_p]:text-gray-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_a]:text-gray-900 [&_a]:underline">
+      <div className="mt-6 space-y-5 text-body leading-relaxed text-gray-700 [&_h3]:text-body [&_h3]:font-semibold [&_h3]:text-text [&_h3]:mt-5 [&_h3]:mb-1.5 [&_p]:text-gray-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_a]:text-text [&_a]:underline">
         {children}
       </div>
     </div>
