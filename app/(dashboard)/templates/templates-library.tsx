@@ -68,7 +68,7 @@ function TemplateRow({
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-body font-medium text-text">{template.name}</span>
-          <span className="block truncate text-caption text-text-subtle">
+          <span className="block truncate text-body text-text-subtle">
             {template.subject || 'No subject'}
           </span>
         </span>
@@ -119,7 +119,7 @@ export function TemplatesLibrary({ templates, archived = [], isLoading, isError,
     <div className="space-y-5">
       {groups.map((group) => (
         <section key={group.key}>
-          <h3 className="flex items-center gap-1.5 px-2 text-caption font-semibold uppercase tracking-wider text-text-subtle">
+          <h3 className="flex items-center gap-1.5 px-2 text-body font-semibold uppercase tracking-wider text-text-subtle">
             {group.dotClass && <span className={`h-2 w-2 rounded-pill ${group.dotClass}`} />}
             {group.label}
           </h3>
@@ -136,7 +136,7 @@ export function TemplatesLibrary({ templates, archived = [], isLoading, isError,
           <button
             type="button"
             onClick={() => setShowArchived((v) => !v)}
-            className="flex cursor-pointer items-center gap-1 px-2 py-1 text-caption text-text-muted transition hover:text-text"
+            className="flex cursor-pointer items-center gap-1 px-2 py-1 text-body text-text-muted transition hover:text-text"
           >
             {showArchived ? (
               <ChevronDown size={14} strokeWidth={1.5} />

@@ -47,7 +47,7 @@ function CardBody({ couple }: { couple: Couple }) {
       <div className="min-w-0 flex-1">
         <div className="font-medium text-body text-text">{couple.name}</div>
         {hasDetails && (
-          <div className="mt-1 text-caption text-text-subtle space-y-0.5">
+          <div className="mt-1 text-body text-text-subtle space-y-0.5">
             {email && (
               <div className="flex items-center gap-1.5 truncate">
                 <Mail size={12} strokeWidth={1.5} className="shrink-0" />

@@ -78,7 +78,6 @@ export function CoupleAutomationsFeed({ runs, onRetry, onCancel, onPause, onResu
           {hasLive && (
             <Button
               variant="ghost"
-              size="sm"
               loading={busy === 'pause'}
               onClick={() => act('pause', onPause)}
               className="cursor-pointer gap-1.5"
@@ -89,7 +88,6 @@ export function CoupleAutomationsFeed({ runs, onRetry, onCancel, onPause, onResu
           {hasPaused && (
             <Button
               variant="secondary"
-              size="sm"
               loading={busy === 'resume'}
               onClick={() => act('resume', onResume)}
               className="cursor-pointer gap-1.5"

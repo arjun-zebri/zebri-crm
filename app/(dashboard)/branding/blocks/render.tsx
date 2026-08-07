@@ -799,7 +799,7 @@ export function RenderAction({
               secondary: 'Secondary',
             })
           }}
-          className={`absolute left-1/2 -translate-x-1/2 mt-2 px-4 border border-dashed border-text-muted rounded-control text-caption text-text-muted hover:text-text hover:border-text cursor-pointer transition ${
+          className={`absolute left-1/2 -translate-x-1/2 mt-2 px-4 border border-dashed border-text-muted rounded-control text-body text-text-muted hover:text-text hover:border-text cursor-pointer transition ${
             selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
           }`}
           title="Add secondary button"
@@ -1027,7 +1027,7 @@ export function RenderContractBody({ state, block }: { state: BrandPreviewState;
           ))}
         </div>
 
-        <p className="text-caption leading-6 mt-5 w-full" style={{ color: muted }}>
+        <p className="text-body leading-6 mt-5 w-full" style={{ color: muted }}>
           Written per couple in the contract modal under{' '}
           <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>, where you can also drop in a reusable contract template you&apos;ve saved. The signature and sign / decline form live in the separate Sign block. Drag other blocks above or below to wrap it.
         </p>
@@ -1122,7 +1122,7 @@ export function RenderContractSign({ state, block }: { state: BrandPreviewState;
 
         {/* MC countersignature — mirrors what renders on the sent contract. */}
         <div className="mt-6 pt-5 border-t" style={{ borderColor: muted + '30' }}>
-          <p className="text-caption mb-1" style={{ color: muted }}>
+          <p className="text-body mb-1" style={{ color: muted }}>
             Signed by MC
           </p>
           <p
@@ -1284,7 +1284,7 @@ export function RenderQuestionnairePreview({
                     style={{ width: '33%', background: brand }}
                   />
                 </div>
-                <p className="text-caption" style={{ color: muted }}>
+                <p className="text-body" style={{ color: muted }}>
                   Question 1 of 3
                 </p>
               </div>

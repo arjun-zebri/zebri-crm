@@ -51,7 +51,7 @@ export function ContractSignatureDisplay({
           </span>
         </div>
         {signerIp ? (
-          <p className="text-caption text-text-muted pl-6">
+          <p className="text-body text-text-muted pl-6">
             From IP <span className="font-mono">{signerIp}</span>
           </p>
         ) : null}
@@ -66,7 +66,7 @@ export function ContractSignatureDisplay({
         <span className="font-medium">Declined</span>
       </div>
       {declinedReason ? (
-        <p className="text-caption text-text-muted pl-6">
+        <p className="text-body text-text-muted pl-6">
           Reason: {declinedReason}
         </p>
       ) : null}

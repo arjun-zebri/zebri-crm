@@ -54,7 +54,7 @@ function EditedLine({ updatedAt }: { updatedAt?: string | null }) {
   // render is impure); the relative time recomputes from props.
   const [nowMs] = useState(() => Date.now())
   if (!updatedAt) return null
-  return <p className="text-caption text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
+  return <p className="text-body text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
 }
 
 /** Per-tab wording so both tabs read naturally from one component. */
@@ -132,13 +132,13 @@ function TemplateRow({
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-body font-medium text-text">{template.name}</span>
-          <span className="block truncate text-caption text-text-subtle">{template.notes || ''}</span>
+          <span className="block truncate text-body text-text-subtle">{template.notes || ''}</span>
         </span>
         <span className="shrink-0 text-right">
           {template.total > 0 ? (
             <span className="block text-body font-medium tabular-nums text-text">{formatAUD(template.total)}</span>
           ) : null}
-          <span className="block text-caption text-text-muted">
+          <span className="block text-body text-text-muted">
             {template.item_count} item{template.item_count !== 1 ? 's' : ''}
           </span>
         </span>
@@ -379,14 +379,13 @@ export function LineItemTemplateManager({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={copy.searchPlaceholder}
-          size="sm"
           className="w-36 sm:w-48"
         />
-        <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
+        <Button variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
           <Library size={14} strokeWidth={1.5} />
           Browse starters
         </Button>
-        <Button size="sm" onClick={openCreate} className="gap-1.5">
+        <Button onClick={openCreate} className="gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           New Template
         </Button>
@@ -490,7 +489,6 @@ export function LineItemTemplateManager({
                 actions={
                   <>
                     <Button
-                      size="sm"
                       variant="outline"
                       className="gap-1.5"
                       onClick={() => {

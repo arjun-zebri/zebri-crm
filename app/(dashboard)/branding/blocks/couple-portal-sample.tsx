@@ -119,27 +119,27 @@ export function CouplePortalSample({
             <p data-subtarget="body" className="mt-1" style={bodyCss}>Your details and upcoming events</p>
           </div>
           <div className="border rounded-control p-6" style={cardStyle}>
-            <p className="text-caption font-medium text-text-muted mb-4">Your details</p>
+            <p className="text-body font-medium text-text-muted mb-4">Your details</p>
             <div className="grid grid-cols-2 gap-4">
               <div><p className="text-[10px] text-text-subtle uppercase tracking-wider mb-1">Name</p><p className="text-lg font-semibold text-text" style={headingFontCss}>Alex &amp; Jordan</p></div>
               <div><p className="text-[10px] text-text-subtle uppercase tracking-wider mb-1">Email</p><p className="text-body text-gray-700">hello@example.com</p></div>
             </div>
           </div>
           <div>
-            <p className="text-caption font-medium text-text-muted mb-2">Your events</p>
+            <p className="text-body font-medium text-text-muted mb-2">Your events</p>
             <div className="border rounded-control p-5" style={cardStyle}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-base font-medium text-text">Saturday, 14 September 2026</p>
                   <p className="text-body text-text-muted mt-0.5">The Glasshouse, Sydney</p>
                 </div>
-                <span className="shrink-0 text-caption px-2.5 py-1 font-medium rounded-pill whitespace-nowrap" style={{ background: `${branding.brand_color}26`, color: pillForeground(branding.brand_color, branding.brand_color, branding.surface_color) }}>127 days away</span>
+                <span className="shrink-0 text-body px-2.5 py-1 font-medium rounded-pill whitespace-nowrap" style={{ background: `${branding.brand_color}26`, color: pillForeground(branding.brand_color, branding.brand_color, branding.surface_color) }}>127 days away</span>
               </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="border rounded-control p-5" style={cardStyle}><p className="text-[10px] text-text-subtle uppercase tracking-wider mb-2">Next payment</p><p className="text-lg font-semibold text-text" style={headingFontCss}>$1,250</p><p className="text-caption text-text-muted mt-1">Due 1 August 2026</p></div>
-            <div className="border rounded-control p-5" style={cardStyle}><p className="text-[10px] text-text-subtle uppercase tracking-wider mb-2">Contract</p><p className="text-lg font-semibold text-text" style={headingFontCss}>Signed</p><p className="text-caption text-text-muted mt-1">12 April 2026</p></div>
+            <div className="border rounded-control p-5" style={cardStyle}><p className="text-[10px] text-text-subtle uppercase tracking-wider mb-2">Next payment</p><p className="text-lg font-semibold text-text" style={headingFontCss}>$1,250</p><p className="text-body text-text-muted mt-1">Due 1 August 2026</p></div>
+            <div className="border rounded-control p-5" style={cardStyle}><p className="text-[10px] text-text-subtle uppercase tracking-wider mb-2">Contract</p><p className="text-lg font-semibold text-text" style={headingFontCss}>Signed</p><p className="text-body text-text-muted mt-1">12 April 2026</p></div>
           </div>
         </div>
       </div>

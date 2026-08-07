@@ -49,7 +49,7 @@ export function RoadmapVoting() {
                 <span className="block text-body font-medium text-text">
                   {option.name}
                 </span>
-                <span className="block truncate text-caption text-text-muted">
+                <span className="block truncate text-body text-text-muted">
                   {option.description}
                 </span>
               </span>
@@ -73,7 +73,7 @@ export function RoadmapVoting() {
           </button>
         );
       })}
-      <p className="pt-2 text-center text-caption text-text-subtle">
+      <p className="pt-2 text-center text-body text-text-subtle">
         {selectedId
           ? 'Vote counted. You can change it any time.'
           : 'Tap an option to cast your vote.'}

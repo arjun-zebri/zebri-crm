@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Loading } from '@/components/ui/loading';
 
 import { ClientOnly } from './client-only';
-import { Conflict } from './conflict';
 import { DEMO_COUPLE_ID, DEMO_EVENT_ID } from './fixtures';
 import { MockProviders } from './mock-providers';
 import { ReadOnlyPreview } from './read-only-preview';
@@ -65,6 +64,7 @@ export function CompositesBound() {
       <Spec
         name="EventTimeline"
         file="components/events/event-timeline.tsx"
+        importPath="@/components/events/event-timeline"
         description="Sortable run sheet with share controls. Seeded with five items."
       >
         <ReadOnlyPreview>
@@ -79,6 +79,7 @@ export function CompositesBound() {
       <Spec
         name="EventTasks"
         file="components/events/event-tasks.tsx"
+        importPath="@/components/events/event-tasks"
         description="Per-event task list with inline create. Seeded with two tasks."
       >
         <ReadOnlyPreview>
@@ -89,6 +90,7 @@ export function CompositesBound() {
       <Spec
         name="EventVendors"
         file="components/events/event-vendors.tsx"
+        importPath="@/components/events/event-vendors"
         description="Contacts assigned to an event. Seeded with two vendors."
       >
         <ReadOnlyPreview>
@@ -96,24 +98,13 @@ export function CompositesBound() {
         </ReadOnlyPreview>
       </Spec>
 
-      <Conflict
-        title="The three event tabs each build their own row, header and empty state"
-        recommendation={
-          <>
-            <code>EventTimeline</code>, <code>EventTasks</code> and <code>EventVendors</code> sit in
-            the same tab strip but do not share a row shell, an add affordance or an empty state, so
-            switching tabs shifts the layout. Extract a shared tab-body shell the way{' '}
-            <code>couple-tab-shell.tsx</code> already does on the couple side.
-          </>
-        }
-      />
-
       <Spec
         name="InvoiceBuilderModal"
         file="components/builders/invoice-builder-modal.tsx"
+        importPath="@/components/builders/invoice-builder-modal"
         description="1,030 lines. Line items, payment stages, branding preview and send flow."
       >
-        <Button size="sm" variant="outline" onClick={() => setInvoiceOpen(true)}>
+        <Button variant="outline" onClick={() => setInvoiceOpen(true)}>
           Open invoice builder
         </Button>
         {invoiceOpen ? (
@@ -128,7 +119,7 @@ export function CompositesBound() {
         ) : null}
         {invoiceOpen ? (
           <div className="mt-2">
-            <Button size="sm" variant="ghost" onClick={() => setInvoiceOpen(false)}>
+            <Button variant="ghost" onClick={() => setInvoiceOpen(false)}>
               Close invoice builder
             </Button>
           </div>
@@ -138,9 +129,10 @@ export function CompositesBound() {
       <Spec
         name="ContractBuilderModal"
         file="components/builders/contract-builder-modal.tsx"
+        importPath="@/components/builders/contract-builder-modal"
         description="667 lines. Template picker, signature blocks and send flow."
       >
-        <Button size="sm" variant="outline" onClick={() => setContractOpen(true)}>
+        <Button variant="outline" onClick={() => setContractOpen(true)}>
           Open contract builder
         </Button>
         {contractOpen ? (
@@ -156,24 +148,12 @@ export function CompositesBound() {
         ) : null}
         {contractOpen ? (
           <div className="mt-2">
-            <Button size="sm" variant="ghost" onClick={() => setContractOpen(false)}>
+            <Button variant="ghost" onClick={() => setContractOpen(false)}>
               Close contract builder
             </Button>
           </div>
         ) : null}
       </Spec>
-
-      <Conflict
-        title="Both builder modals exceed the 150-line component rule by an order of magnitude"
-        recommendation={
-          <>
-            <code>invoice-builder-modal.tsx</code> is 1,030 lines and{' '}
-            <code>contract-builder-modal.tsx</code> is 667, against a ~150-line guideline. They
-            already have a <code>parts/</code> directory, so the split has started. Finishing it
-            would also make them renderable here without a seeded cache.
-          </>
-        }
-      />
 
       <Spec name="Not rendered here" description="Composites that need runtime state the showroom cannot fabricate.">
         <ul className="space-y-3">
@@ -183,8 +163,8 @@ export function CompositesBound() {
                 {c.name}{' '}
                 <span className="font-normal text-text-subtle">({c.lines} lines)</span>
               </p>
-              <code className="block text-caption text-text-subtle">{c.file}</code>
-              <p className="text-caption text-text-muted">{c.why}</p>
+              <code className="block text-body text-text-subtle">{c.file}</code>
+              <p className="text-body text-text-muted">{c.why}</p>
             </li>
           ))}
         </ul>

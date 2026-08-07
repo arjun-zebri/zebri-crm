@@ -94,20 +94,39 @@
   --radius-control: 0.375rem; /* 6px — everything with corners */
   --radius-pill:    9999px;   /* pills, chips, avatars, dots */
 
-  /* Typography (semantic — anchored to CLAUDE.md typography rules).
-     Each size carries its line-height, matching the Tailwind default it
-     replaces. Without the `--line-height` half, `text-body` set only a
-     font-size and inherited its leading, so it rendered ~1px looser per
-     line than the `text-sm` it is documented as equalling. The paired
-     ratios below are exactly Tailwind's, so the two are now identical. */
+  /* Typography. Three sizes, each carrying its own line-height: without
+     the `--line-height` half a token sets only a font-size and inherits
+     its leading, which rendered ~1px looser per line than the Tailwind
+     class it replaced. The ratios below are exactly Tailwind's. */
   --text-display: 1.875rem; /* page titles  (≡ text-3xl + font-semibold) */
   --text-display--line-height: calc(2.25 / 1.875);
   --text-section: 1.25rem;  /* section titles (≡ text-xl + font-semibold) */
   --text-section--line-height: calc(1.75 / 1.25);
-  --text-body:    0.875rem; /* body / default (≡ text-sm) */
+  /* One body size. `--text-caption` (12px) was removed on 2026-08-07:
+     captions, labels, helper text and dense control chrome now render at
+     the same 14px as body copy. Secondary text is distinguished by
+     colour (`text-text-muted` / `text-text-subtle`), not by size. */
+  --text-body:    0.875rem; /* body, captions, labels, controls */
   --text-body--line-height: calc(1.25 / 0.875);
-  --text-caption: 0.75rem;  /* captions / meta (≡ text-xs) */
-  --text-caption--line-height: calc(1 / 0.75);
+}
+
+/* Every button is clickable, so every button gets the hand cursor.
+
+   Tailwind v4's preflight sets `cursor: default` on `button` and
+   `[role="button"]`, and ~370 raw `<button>` elements in the app never
+   overrode it — inconsistent enough that an identical-looking control
+   felt clickable in one place and not another.
+
+   This has to live in `@layer base` rather than unlayered: it needs to
+   come after preflight (same specificity, later in the layer wins) but
+   still lose to the `utilities` layer, so a deliberate `cursor-default`
+   or `cursor-not-allowed` on a call site keeps working. Disabled
+   buttons are excluded and keep the arrow. */
+@layer base {
+  button:not(:disabled):not([aria-disabled='true']),
+  [role='button']:not(:disabled):not([aria-disabled='true']) {
+    cursor: pointer;
+  }
 }
 
 @keyframes fade-in {

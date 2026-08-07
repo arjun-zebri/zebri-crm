@@ -355,18 +355,18 @@ export function PaymentSettingsSection({
                 and a fresh account can be created. */}
             {!connectState && !statusLoading ? (
               <div className="flex items-center justify-between rounded-control border border-border bg-surface-muted/40 p-3">
-                <p className="text-caption text-text-muted">
+                <p className="text-body text-text-muted">
                   Stuck? If the form above shows an error, the connected
                   Stripe account may be stale. Reset to start fresh.
                 </p>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={disconnectStripe}
-                  disabled={disconnecting}
-                  className="text-caption font-medium text-text-muted hover:text-danger transition-colors cursor-pointer disabled:opacity-50"
+                  loading={disconnecting}
+                  className="hover:text-danger"
                 >
-                  {disconnecting ? 'Resetting…' : 'Reset connection'}
-                </button>
+                  Reset connection
+                </Button>
               </div>
             ) : null}
           </div>
@@ -387,7 +387,7 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section>
       <div className="mb-6 flex items-center gap-4">
-        <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+        <h3 className="text-body font-medium uppercase tracking-wide text-text-muted">
           {label}
         </h3>
         <div className="flex-1 border-t border-border" />
@@ -451,7 +451,7 @@ function EmptyCardPaymentsCard({
           <p className="text-body font-medium text-text">
             Set up card payments
           </p>
-          <p className="mt-1 text-caption text-text-muted">
+          <p className="mt-1 text-body text-text-muted">
             Connect a Stripe account so couples can pay invoices by card.
             Verification happens inside Zebri, Stripe handles ID checks,
             documents, and payouts.
@@ -459,9 +459,7 @@ function EmptyCardPaymentsCard({
         </div>
       </div>
       <div className="mt-4 flex justify-end">
-        <Button onClick={onSetUp} loading={loading}>
-          {loading ? 'Setting up…' : 'Set up card payments'}
-        </Button>
+        <Button onClick={onSetUp} loading={loading}>Set up card payments</Button>
       </div>
     </div>
   );
@@ -483,7 +481,7 @@ function PublishableKeyMissingCard() {
       />
       <div className="text-body text-text">
         <p className="font-medium">Stripe publishable key missing</p>
-        <p className="mt-1 text-caption text-text-muted">
+        <p className="mt-1 text-body text-text-muted">
           The embedded Connect onboarding component needs
           <code className="font-mono px-1">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>
           in your <code className="font-mono">.env.local</code>. Set it and

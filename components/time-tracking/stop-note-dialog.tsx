@@ -92,11 +92,10 @@ function StopNoteForm({
       }
       footer={
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Skip
           </Button>
           <Button
-            size="sm"
             loading={save.isPending}
             onClick={() => save.mutate()}
           >
@@ -109,7 +108,7 @@ function StopNoteForm({
         {/* Category first: it is the one-tap decision, and the note is the
             long-form field the eye should land on last. */}
         <div>
-          <span className="mb-1 block text-caption text-text-muted">
+          <span className="mb-1 block text-body text-text-muted">
             Category
           </span>
           <TimeCategoryPicker value={categoryId} onChange={setCategoryId} />
@@ -117,7 +116,7 @@ function StopNoteForm({
         <div>
           <label
             htmlFor="stop-note"
-            className="mb-1 block text-caption text-text-muted"
+            className="mb-1 block text-body text-text-muted"
           >
             What did you work on?
           </label>
@@ -128,7 +127,7 @@ function StopNoteForm({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Venue walkthrough, script draft, travel"
-            className="w-full resize-none rounded-control border border-border bg-surface px-3 py-2 text-caption text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
+            className="w-full resize-none rounded-control border border-border bg-surface px-3 py-2 text-body text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
           />
         </div>
       </div>

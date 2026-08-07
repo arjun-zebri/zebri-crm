@@ -3,6 +3,7 @@
 import { Clock, Users2, Receipt, FileSignature, Music, FileText, Heart } from 'lucide-react'
 import { useState, useRef } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -113,7 +114,7 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
                   <Icon size={15} className="text-text-subtle flex-shrink-0" strokeWidth={1.5} />
                   <div>
                     <p className="text-body font-medium text-text">{section.label}</p>
-                    <p className="text-caption text-text-subtle">{section.description}</p>
+                    <p className="text-body text-text-subtle">{section.description}</p>
                   </div>
                 </div>
                 <Toggle enabled={settings[section.id]} onChange={() => toggle(section.id)} />
@@ -124,14 +125,9 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving || !isDirty}
-          className="bg-black text-white text-body font-medium rounded-control px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+        <Button onClick={handleSave} disabled={!isDirty} loading={saving}>
+          Save
+        </Button>
         {isDirty && <span className="text-body text-text-subtle">Unsaved changes</span>}
       </div>
     </div>

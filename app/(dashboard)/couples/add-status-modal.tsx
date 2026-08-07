@@ -14,6 +14,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { useState } from 'react';
 
 import { useCreateStatus } from '@/app/(dashboard)/couples/use-couple-statuses';
+import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { COLOR_PALETTE, getStatusClasses } from '@/types/couple';
@@ -74,13 +75,9 @@ export function AddStatusModal({ isOpen, onClose }: AddStatusModalProps) {
           >
             Cancel
           </button>
-          <button
-            onClick={handleCreate}
-            disabled={isCreating || !name.trim()}
-            className="text-body px-4 py-2 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
-          >
-            {isCreating ? 'Creating...' : 'Create'}
-          </button>
+          <Button onClick={handleCreate} disabled={!name.trim()} loading={isCreating}>
+            Create
+          </Button>
         </div>
       }
     >

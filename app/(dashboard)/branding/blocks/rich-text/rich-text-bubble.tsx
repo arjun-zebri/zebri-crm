@@ -77,7 +77,7 @@ function SizeMenu({ editor }: { editor: Editor }) {
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button type="button" title="Font size" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-caption font-medium text-gray-700 hover:bg-surface-emphasis cursor-pointer">
+        <button type="button" title="Font size" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-body font-medium text-gray-700 hover:bg-surface-emphasis cursor-pointer">
           {current ? current.replace('px', '') : 'Size'}
           <ChevronDown size={12} strokeWidth={2} className="text-text-subtle" />
         </button>
@@ -105,7 +105,7 @@ function VariableMenu({ editor, surface }: { editor: Editor; surface: SurfaceTab
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button type="button" title="Insert variable" className="flex items-center gap-1 px-2 h-7 rounded-control text-caption font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
+        <button type="button" title="Insert variable" className="flex items-center gap-1 px-2 h-7 rounded-control text-body font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer">
           <Plus size={13} strokeWidth={2} />
           Variable
         </button>

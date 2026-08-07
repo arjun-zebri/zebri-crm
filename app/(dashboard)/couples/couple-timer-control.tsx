@@ -66,7 +66,7 @@ export function CoupleTimerControl({
   return (
     <div className="flex items-center gap-1.5">
       {otherCoupleName ? (
-        <span className="flex items-center gap-1.5 rounded-control bg-surface-emphasis px-2 py-1 text-caption text-text-muted">
+        <span className="flex items-center gap-1.5 rounded-control bg-surface-emphasis px-2 py-1 text-body text-text-muted">
           <Timer size={12} strokeWidth={1.5} />
           <span className="max-w-[7rem] truncate">{otherCoupleName}</span>
           <span className="font-mono tabular-nums">{elapsed}</span>
@@ -88,7 +88,7 @@ export function CoupleTimerControl({
             <Timer size={16} strokeWidth={1.5} />
           )}
           {runningHere ? (
-            <span className="font-mono text-caption tabular-nums">{elapsed}</span>
+            <span className="font-mono text-body tabular-nums">{elapsed}</span>
           ) : null}
         </button>
       </Tooltip>

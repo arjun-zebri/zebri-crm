@@ -327,16 +327,16 @@ function ItemModal({
             </label>
             <TimePicker value={startTime} onChange={handleStartChange} />
           </div>
-          <span className="text-caption text-text-muted pb-2">to</span>
+          <span className="text-body text-text-muted pb-2">to</span>
           <div>
-            <label className="block text-caption font-medium text-text-subtle mb-1.5">
+            <label className="block text-body font-medium text-text-subtle mb-1.5">
               To
             </label>
             <TimePicker value={endTime} onChange={setEndTime} />
           </div>
         </div>
         <div>
-          <label className="block text-caption font-medium text-text-subtle mb-1.5">
+          <label className="block text-body font-medium text-text-subtle mb-1.5">
             What's happening <span className="text-text-subtle">(required)</span>
           </label>
           <input
@@ -352,7 +352,7 @@ function ItemModal({
           />
         </div>
         <div>
-          <label className="block text-caption font-medium text-text-subtle mb-1.5">
+          <label className="block text-body font-medium text-text-subtle mb-1.5">
             Notes
           </label>
           <textarea
@@ -462,7 +462,7 @@ function SortableRow({ item, onEdit, branding }: SortableRowProps) {
             </div>
             {item.pending_review && (
               <span
-                className="shrink-0 text-caption font-medium px-2 py-1 rounded-pill whitespace-nowrap"
+                className="shrink-0 text-body font-medium px-2 py-1 rounded-pill whitespace-nowrap"
                 style={PENDING_PILL}
               >
                 Pending

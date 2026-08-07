@@ -73,7 +73,7 @@ export const VariableSuggestionList = forwardRef<ListHandle, ListProps>(function
   if (items.length === 0) {
     return (
       <div className="w-56 rounded-control border border-border bg-surface p-3 shadow-lg">
-        <p className="text-caption text-text-muted">No matching variables</p>
+        <p className="text-body text-text-muted">No matching variables</p>
       </div>
     )
   }
@@ -88,7 +88,7 @@ export const VariableSuggestionList = forwardRef<ListHandle, ListProps>(function
           onMouseEnter={() => setSelected(i)}
           className={`w-full cursor-pointer rounded-control px-2 py-1 text-left ${i === active ? 'bg-gray-50' : ''}`}
         >
-          <p className="truncate text-caption text-text">{v.label}</p>
+          <p className="truncate text-body text-text">{v.label}</p>
         </button>
       ))}
     </div>

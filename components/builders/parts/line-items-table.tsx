@@ -94,7 +94,7 @@ export function LineItemsTable({
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-pill bg-surface text-text-muted">
             <Plus size={18} strokeWidth={1.5} />
           </div>
-          <p className={`mt-3 ${compact ? 'text-caption' : 'text-body'} text-text-muted`}>
+          <p className={`mt-3 ${compact ? 'text-body' : 'text-body'} text-text-muted`}>
             Add your first line item
           </p>
         </button>
@@ -106,7 +106,7 @@ export function LineItemsTable({
     return (
       <div>
         {headerAccessory}
-        <div className="grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 pb-1 text-caption text-text-subtle">
+        <div className="grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 pb-1 text-body text-text-subtle">
           <span className="hidden sm:block" />
           <span />
           <span className="text-right">Amount</span>
@@ -130,7 +130,7 @@ export function LineItemsTable({
           <button
             type="button"
             onClick={onAdd}
-            className="mt-1.5 flex cursor-pointer items-center gap-1 py-1 text-caption text-text-muted transition hover:text-text"
+            className="mt-1.5 flex cursor-pointer items-center gap-1 py-1 text-body text-text-muted transition hover:text-text"
           >
             <Plus size={13} strokeWidth={1.5} />
             Add item
@@ -145,7 +145,7 @@ export function LineItemsTable({
       {headerAccessory}
       <div className="rounded-control border border-border overflow-hidden">
         {/* Column header */}
-        <div className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 bg-surface-muted text-caption font-medium uppercase tracking-wide text-text-muted">
+        <div className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 bg-surface-muted text-body font-medium uppercase tracking-wide text-text-muted">
           <span className="hidden sm:block" />
           <span>Description</span>
           <span className="text-right">Amount</span>
@@ -207,7 +207,7 @@ function SortableRow({ item, canEdit, compact = false, onUpdate, onRemove }: Sor
   const rowClass = compact
     ? 'grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 border-b border-border'
     : 'grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 border-t border-border items-center bg-surface';
-  const textClass = compact ? 'text-caption' : 'text-body';
+  const textClass = compact ? 'text-body' : 'text-body';
   const fieldPad = compact ? 'py-1.5' : '';
 
   return (

@@ -128,7 +128,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div
                 key={d}
-                className="h-7 flex items-center justify-between text-caption text-text-subtle font-medium"
+                className="h-7 flex items-center justify-between text-body text-text-subtle font-medium"
               >
                 {d}
               </div>
@@ -146,7 +146,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
               return (
                 <div key={i} className="h-7 flex items-center justify-between">
                   <div
-                    className={`h-6 w-6 flex items-center justify-center rounded-pill text-caption relative ${
+                    className={`h-6 w-6 flex items-center justify-center rounded-pill text-body relative ${
                       todayHighlight ? "bg-black text-white" : "text-gray-700"
                     }`}
                   >
@@ -181,7 +181,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
                           event.couple?.status
                         )}`}
                       />
-                      <span className="text-caption font-medium text-text-muted shrink-0">
+                      <span className="text-body font-medium text-text-muted shrink-0">
                         {dayNum} {monthShort}
                       </span>
                       <span className="text-text truncate flex-1">
@@ -192,7 +192,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
                 })}
               </div>
             ) : (
-              <p className="text-text-subtle text-caption text-center py-4">
+              <p className="text-text-subtle text-body text-center py-4">
                 No events this month
               </p>
             )}

@@ -80,7 +80,7 @@ export function ShadowBanner() {
       <form action={exitShadow}>
         <button
           type="submit"
-          className="text-caption font-medium text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-200 px-2.5 py-1 rounded-control transition cursor-pointer"
+          className="text-body font-medium text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-200 px-2.5 py-1 rounded-control transition cursor-pointer"
         >
           Exit
         </button>

@@ -36,7 +36,7 @@ export function Select<V extends string>({
 }: SelectProps<V>) {
   const [open, setOpen] = useState(false)
   const selected = options.find(o => o.value === value)
-  const triggerSize = size === 'xs' ? 'px-2.5 h-8 text-caption' : size === 'sm' ? 'px-2.5 py-1.5 text-body' : 'px-3 py-2 text-body'
+  const triggerSize = size === 'xs' ? 'px-2.5 h-8 text-body' : size === 'sm' ? 'px-2.5 py-1.5 text-body' : 'px-3 py-2 text-body'
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>

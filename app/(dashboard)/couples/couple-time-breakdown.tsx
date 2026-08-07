@@ -58,7 +58,7 @@ export function CoupleTimeBreakdown({ entries }: CoupleTimeBreakdownProps) {
         {segments.map((segment) => (
           <li
             key={segment.label}
-            className="flex items-center gap-1.5 text-caption text-text-muted"
+            className="flex items-center gap-1.5 text-body text-text-muted"
           >
             <span
               aria-hidden

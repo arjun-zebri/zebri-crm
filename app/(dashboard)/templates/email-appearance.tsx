@@ -115,7 +115,7 @@ export function EmailAppearancePopover({ prefs, onChange }: EmailAppearancePopov
               <Checkbox
                 checked={prefs.showLogo}
                 onChange={(showLogo) => onChange({ ...prefs, showLogo })}
-                label={<span className="text-caption text-text">Show logo</span>}
+                label={<span className="text-body text-text">Show logo</span>}
               />
               {prefs.showLogo && (
                 <div className="flex items-center rounded-control bg-surface-muted p-0.5">
@@ -147,9 +147,9 @@ export function EmailAppearancePopover({ prefs, onChange }: EmailAppearancePopov
             <Checkbox
               checked={prefs.showAccent}
               onChange={(showAccent) => onChange({ ...prefs, showAccent })}
-              label={<span className="text-caption text-text">Brand colour bar</span>}
+              label={<span className="text-body text-text">Brand colour bar</span>}
             />
-            <p className="text-caption text-text-subtle">Applies to every email you send.</p>
+            <p className="text-body text-text-subtle">Applies to every email you send.</p>
           </div>
         </Popover.Content>
       </Popover.Portal>

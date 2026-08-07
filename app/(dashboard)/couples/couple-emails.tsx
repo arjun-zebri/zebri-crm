@@ -112,7 +112,7 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
                 {/* Lead with the template name (falling back to the subject for
                     inline sends); the subject sits underneath. */}
                 <p className="truncate text-body font-medium text-text">{email.template_name ?? email.subject}</p>
-                <p className="mt-0.5 truncate text-caption text-text-muted">
+                <p className="mt-0.5 truncate text-body text-text-muted">
                   {email.template_name ? `${email.subject} · ` : ''}to {email.to_email}
                 </p>
               </div>
@@ -122,7 +122,7 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
                   label={email.status === 'sent' ? 'Sent' : email.status}
                   dot="filled"
                 />
-                <span className="text-caption text-text-subtle">{formatRelativeTime(email.sent_at, nowMs) || '—'}</span>
+                <span className="text-body text-text-subtle">{formatRelativeTime(email.sent_at, nowMs) || '—'}</span>
               </div>
             </div>
           ))}

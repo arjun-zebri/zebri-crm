@@ -12,13 +12,13 @@
 export const NAV_ITEMS = [
   { id: 'foundations', label: 'Foundations' },
   { id: 'layout', label: 'Layout' },
-  { id: 'forms', label: 'Form controls' },
+  { id: 'controls', label: 'Form controls' },
   { id: 'feedback', label: 'Feedback' },
   { id: 'overlays', label: 'Overlays' },
   { id: 'editors', label: 'Editors and pickers' },
+  { id: 'forms', label: 'Forms' },
   { id: 'patterns', label: 'Page patterns' },
   { id: 'composites', label: 'Feature composites' },
-  { id: 'audit', label: 'Audit summary' },
 ];
 
 /** The left rail. Hidden below `lg`, where the page reads as one column. */

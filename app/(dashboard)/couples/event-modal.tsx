@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, Globe, Phone, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
@@ -60,12 +61,17 @@ function nextSaturday(from: Date = new Date()): string {
   return `${y}-${m}-${day}`
 }
 
-// Underline input style - matches the couple modal vocabulary
-// (`border-b border-border`, transparent background, calm focus
-// state). The event modal opens alongside the couple modal so the
-// two should look like one product, not two visually distinct forms.
+// The `Input` primitive's own classes, inlined because these fields are
+// raw `<input>` elements with bespoke labels. The underline vocabulary
+// this modal used until 2026-08-07 was dropped when `DatePicker` lost its
+// `underline` variant: a boxed 32px date field among 37px underlined
+// text fields read as a different form entirely.
 const inputClass =
-  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition'
+  'block h-8 w-full rounded-control border border-border bg-surface px-2.5 text-body text-text placeholder:text-text-subtle transition-colors focus-visible:border-brand-fg focus-visible:outline-none'
+
+// Same chrome, minus the fixed control height: a textarea sizes to its
+// `rows`, so `h-8` would crush it to a single line.
+const textareaClass = `${inputClass} h-auto py-1.5 resize-none`
 
 const labelClass = 'block text-body text-gray-600 mb-1'
 
@@ -279,17 +285,13 @@ export function EventModal({
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="text-caption px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+                className="text-body px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
-              <button
-                onClick={handleSubmit}
-                disabled={loading || !date.trim()}
-                className="text-caption px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {loading ? 'Saving...' : 'Save'}
-              </button>
+              <Button onClick={handleSubmit} disabled={!date.trim()} loading={loading}>
+                Save
+              </Button>
             </div>
           </div>
         }
@@ -322,11 +324,10 @@ export function EventModal({
                   setDateError(null)
                 }}
                 placeholder="Select date"
-                variant="underline"
                 defaultViewDate={defaultDate ?? nextSaturday()}
               />
               {dateError && (
-                <p className="text-caption text-red-500 mt-1">{dateError}</p>
+                <p className="text-body text-red-500 mt-1">{dateError}</p>
               )}
             </div>
 
@@ -395,7 +396,7 @@ export function EventModal({
                     >
                       <p className="text-body font-medium text-text">{s.mainText}</p>
                       {s.secondaryText && (
-                        <p className="text-caption text-text-muted">{s.secondaryText}</p>
+                        <p className="text-body text-text-muted">{s.secondaryText}</p>
                       )}
                     </button>
                   ))}
@@ -407,7 +408,7 @@ export function EventModal({
                 {venuePhone && (
                   <div className="flex items-center gap-2">
                     <Phone size={11} strokeWidth={1.5} className="text-text-subtle shrink-0" />
-                    <span className="text-caption text-gray-600">{venuePhone}</span>
+                    <span className="text-body text-gray-600">{venuePhone}</span>
                   </div>
                 )}
                 {venueWebsite && (
@@ -417,7 +418,7 @@ export function EventModal({
                       href={venueWebsite}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-caption text-gray-600 hover:text-text underline truncate"
+                      className="text-body text-gray-600 hover:text-text underline truncate"
                     >
                       {venueWebsite.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                     </a>
@@ -463,7 +464,7 @@ export function EventModal({
                     className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-surface-emphasis rounded-control text-body text-gray-700"
                   >
                     <span className="truncate max-w-[12rem]">{v.name}</span>
-                    <span className="text-caption text-text-subtle">
+                    <span className="text-body text-text-subtle">
                       {CATEGORY_LABELS[v.category as keyof typeof CATEGORY_LABELS] || v.category}
                     </span>
                     <button
@@ -489,7 +490,7 @@ export function EventModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Timeline, ceremony details, vendor notes..."
               rows={8}
-              className={`${inputClass} resize-none`}
+              className={textareaClass}
             />
           </div>
         </form>
@@ -513,13 +514,9 @@ export function EventModal({
                   >
                     Cancel
                   </button>
-                  <button
-                    onClick={handleConfirmDelete}
-                    disabled={loading}
-                    className="flex-1 px-4 py-2 text-body bg-red-600 text-white rounded-control hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
-                  >
-                    {loading ? 'Deleting...' : 'Delete'}
-                  </button>
+                  <Button variant="danger" onClick={handleConfirmDelete} loading={loading} className="flex-1">
+                    Delete
+                  </Button>
                 </div>
               </div>
             </div>

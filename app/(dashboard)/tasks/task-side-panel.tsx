@@ -311,7 +311,7 @@ function TaskSidePanelInner({
                           {selectedGroup.name}
                         </span>
                       ) : (
-                        <span className="text-caption text-gray-300">Empty</span>
+                        <span className="text-body text-gray-300">Empty</span>
                       )}
                     </button>
                   </Popover.Trigger>
@@ -328,7 +328,7 @@ function TaskSidePanelInner({
                           setGroupOpen(false)
                           patch({ group_id: null })
                         }}
-                        className={`w-full text-left px-3 py-1.5 text-caption transition ${
+                        className={`w-full text-left px-3 py-1.5 text-body transition ${
                           !groupId ? 'bg-gray-50 text-text' : 'text-text-muted hover:bg-gray-50'
                         }`}
                       >
@@ -343,7 +343,7 @@ function TaskSidePanelInner({
                             setGroupOpen(false)
                             patch({ group_id: g.id })
                           }}
-                          className={`w-full text-left px-3 py-1.5 text-caption transition flex items-center gap-2 ${
+                          className={`w-full text-left px-3 py-1.5 text-body transition flex items-center gap-2 ${
                             groupId === g.id
                               ? 'bg-gray-50 text-text'
                               : 'text-gray-700 hover:bg-gray-50'
@@ -372,7 +372,7 @@ function TaskSidePanelInner({
                           {selectedCouple.name}
                         </span>
                       ) : (
-                        <span className="text-caption text-gray-300">Empty</span>
+                        <span className="text-body text-gray-300">Empty</span>
                       )}
                     </button>
                   </Popover.Trigger>
@@ -389,7 +389,7 @@ function TaskSidePanelInner({
                           setCoupleOpen(false)
                           patch({ related_couple_id: null })
                         }}
-                        className={`w-full text-left px-3 py-1.5 text-caption transition ${
+                        className={`w-full text-left px-3 py-1.5 text-body transition ${
                           !coupleId ? 'bg-gray-50 text-text' : 'text-text-muted hover:bg-gray-50'
                         }`}
                       >
@@ -404,7 +404,7 @@ function TaskSidePanelInner({
                             setCoupleOpen(false)
                             patch({ related_couple_id: c.id })
                           }}
-                          className={`w-full text-left px-3 py-1.5 text-caption truncate transition ${
+                          className={`w-full text-left px-3 py-1.5 text-body truncate transition ${
                             coupleId === c.id
                               ? 'bg-gray-50 text-text'
                               : 'text-gray-700 hover:bg-gray-50'

@@ -101,7 +101,7 @@ export function BillingHistory() {
                 </span>
                 <span className="w-20 shrink-0 font-medium text-text">{fmtAmount(inv.amount)}</span>
                 <span className="shrink-0 text-text-muted">{statusLabel(inv.status)}</span>
-                <span className="flex shrink-0 items-center gap-4 text-caption text-text-muted">
+                <span className="flex shrink-0 items-center gap-4 text-body text-text-muted">
                   {inv.hostedUrl ? (
                     <a
                       href={inv.hostedUrl}
@@ -130,7 +130,7 @@ export function BillingHistory() {
       ) : null}
 
       {upcoming ? (
-        <p className="mt-4 text-caption text-text-muted">
+        <p className="mt-4 text-body text-text-muted">
           Next charge: <span className="text-text">{fmtAmount(upcoming.amount)}</span>
           {upcoming.nextChargeAt > 0 ? (
             <>

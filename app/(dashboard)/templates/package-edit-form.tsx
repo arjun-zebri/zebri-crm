@@ -76,7 +76,7 @@ function SectionLabel({ label, hint }: { label: string; hint: string }) {
   return (
     <p className="mb-2">
       <span className="text-body font-medium text-text">{label}</span>
-      <span className="ml-2 text-caption text-text-muted">{hint}</span>
+      <span className="ml-2 text-body text-text-muted">{hint}</span>
     </p>
   )
 }
@@ -130,23 +130,23 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
       footer={
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-caption font-medium uppercase tracking-wide text-text-muted">
+            <p className="text-body font-medium uppercase tracking-wide text-text-muted">
               Package total
             </p>
             <p className="truncate text-section font-semibold tabular-nums text-text">
               {formatAUD(totals.base)}
               {totals.addOns > 0 && (
-                <span className="ml-2 text-caption font-normal tabular-nums text-text-muted">
+                <span className="ml-2 text-body font-normal tabular-nums text-text-muted">
                   {formatAUD(totals.full)} with all add-ons
                 </span>
               )}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button onClick={onClose} disabled={isSaving} variant="outline" size="sm">
+            <Button onClick={onClose} disabled={isSaving} variant="outline">
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving || !name.trim()} loading={isSaving} size="sm">
+            <Button onClick={handleSave} disabled={isSaving || !name.trim()} loading={isSaving}>
               Save package
             </Button>
           </div>
@@ -156,7 +156,6 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
       <div className="space-y-5">
         <Input
           label="Package name"
-          size="sm"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g., Gold Package"
@@ -168,7 +167,6 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             label="Subtitle"
-            size="sm"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Short description shown on the list"
@@ -178,7 +176,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="package-description" className="block text-caption font-medium text-text">
+          <label htmlFor="package-description" className="block text-body font-medium text-text">
             Description
           </label>
           <textarea
@@ -188,7 +186,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
             placeholder="The details couples read before the prices."
             disabled={isSaving}
             rows={3}
-            className="block w-full resize-none rounded-control border border-border bg-surface px-2.5 py-2 text-caption text-text placeholder:text-text-subtle transition-colors focus:border-brand-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            className="block w-full resize-none rounded-control border border-border bg-surface px-2.5 py-2 text-body text-text placeholder:text-text-subtle transition-colors focus:border-brand-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
@@ -274,7 +272,7 @@ function PercentField({
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-caption font-medium text-text">{label}</label>
+      <label className="block text-body font-medium text-text">{label}</label>
       <div className="flex h-8 items-center rounded-control border border-border bg-surface px-2.5 transition-colors focus-within:border-brand-fg">
         <input
           type="number"
@@ -285,10 +283,10 @@ function PercentField({
           max="100"
           step="1"
           aria-label={`${label} percent`}
-          className={`w-full bg-transparent text-caption tabular-nums text-text placeholder:text-text-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${noArrowsClass}`}
+          className={`w-full bg-transparent text-body tabular-nums text-text placeholder:text-text-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${noArrowsClass}`}
           disabled={disabled}
         />
-        <span className="pl-1 text-caption text-text-muted">%</span>
+        <span className="pl-1 text-body text-text-muted">%</span>
       </div>
     </div>
   )

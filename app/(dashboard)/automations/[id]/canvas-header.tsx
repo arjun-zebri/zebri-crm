@@ -8,7 +8,7 @@
  *     enter); we deliberately don't go larger because the canvas
  *     is a tool not a content page, and a 3xl title would crowd
  *     the workspace
- *   - text-caption primary buttons (matches the "New automation"
+ *   - text-body primary buttons (matches the "New automation"
  *     button on the list page)
  *   - subtle StatePill for active / paused state
  *
@@ -68,7 +68,7 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
           type="button"
           onClick={onShowRuns}
           title="See recent runs and any errors"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-caption border border-border rounded-control text-text hover:bg-surface-muted cursor-pointer transition"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body border border-border rounded-control text-text hover:bg-surface-muted cursor-pointer transition"
         >
           <History size={12} strokeWidth={1.5} />
           Runs
@@ -77,7 +77,7 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
           type="button"
           disabled
           title="Run a test against a real couple (coming soon)"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-caption border border-border rounded-control text-text-muted disabled:opacity-50 cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body border border-border rounded-control text-text-muted disabled:opacity-50 cursor-not-allowed"
         >
           <Play size={12} strokeWidth={1.5} />
           Test Flow
@@ -85,7 +85,7 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
         <button
           type="button"
           onClick={onToggleActive}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-caption rounded-control cursor-pointer transition ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-body rounded-control cursor-pointer transition ${
             isActive
               ? 'border border-border text-text hover:bg-surface-muted'
               : 'bg-gray-900 text-white hover:bg-gray-700'
@@ -116,7 +116,7 @@ function SavedIndicator({ at }: { at: Date }) {
     const t = setInterval(() => force((n) => n + 1), 5000)
     return () => clearInterval(t)
   }, [])
-  return <span className="text-caption text-text-muted">Saved · {relative(at)}</span>
+  return <span className="text-body text-text-muted">Saved · {relative(at)}</span>
 }
 
 function relative(at: Date): string {

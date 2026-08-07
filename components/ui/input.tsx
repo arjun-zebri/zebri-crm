@@ -25,8 +25,6 @@ import type { InputHTMLAttributes, Ref } from 'react';
  * @module components/ui/input
  */
 
-export type InputSize = 'sm' | 'md';
-
 export interface InputProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /** Visible label rendered above the input. Strongly preferred over placeholder-as-label. */
@@ -35,16 +33,12 @@ export interface InputProps
   help?: string;
   /** Error message rendered in place of `help`. Role=alert. */
   error?: string;
-  /** Size. Defaults to `'md'`. */
-  size?: InputSize;
   /** Optional ref to the underlying `<input>`. */
   ref?: Ref<HTMLInputElement>;
 }
 
-const SIZE_CLASSES: Record<InputSize, string> = {
-  sm: 'h-8 px-2.5 text-caption',
-  md: 'h-9 px-3 text-body',
-};
+/** One height, 32px, matching Button and Select. See button.tsx. */
+const SIZE_CLASSES = 'h-8 px-2.5 text-body';
 
 // Focus = the 1px border simply darkens to brand-fg. We deliberately
 // do NOT add a ring: a ring of the same colour stacks on top of the
@@ -64,7 +58,6 @@ export function Input({
   label,
   help,
   error,
-  size = 'md',
   className,
   ref,
   ...rest
@@ -83,7 +76,7 @@ export function Input({
   return (
     <div className={`space-y-1${className ? ` ${className}` : ''}`}>
       {label ? (
-        <label htmlFor={inputId} className="block text-caption font-medium text-text">
+        <label htmlFor={inputId} className="block text-body font-medium text-text">
           {label}
         </label>
       ) : null}
@@ -92,15 +85,15 @@ export function Input({
         ref={ref}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`${BASE_CLASSES} ${SIZE_CLASSES[size]} ${borderClass}`}
+        className={`${BASE_CLASSES} ${SIZE_CLASSES} ${borderClass}`}
         {...rest}
       />
       {error ? (
-        <p id={errorId} role="alert" className="text-caption text-danger">
+        <p id={errorId} role="alert" className="text-body text-danger">
           {error}
         </p>
       ) : help ? (
-        <p id={helpId} className="text-caption text-text-muted">
+        <p id={helpId} className="text-body text-text-muted">
           {help}
         </p>
       ) : null}

@@ -94,7 +94,7 @@ export function TaxControl({
           type="button"
           disabled={!canEdit}
           aria-label={applied || gstInclusive ? 'Edit tax settings' : 'Add tax'}
-          className={`inline-flex items-center rounded-control px-2.5 py-1 text-caption font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+          className={`inline-flex items-center rounded-control px-2.5 py-1 text-body font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
             applied || gstInclusive
               ? 'bg-success/10 text-success hover:bg-success/15'
               : 'bg-surface-muted text-text-muted hover:bg-surface-emphasis hover:text-text'
@@ -119,12 +119,12 @@ export function TaxControl({
           sideOffset={6}
           className="z-[90] w-64 rounded-control border border-border bg-surface shadow-lg p-3 animate-fade-in"
         >
-          <p className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
+          <p className="mb-3 text-body font-medium uppercase tracking-wide text-text-muted">
             Tax
           </p>
 
           <label className="mb-3 block">
-            <span className="mb-1 block text-caption text-text-muted">Rate</span>
+            <span className="mb-1 block text-body text-text-muted">Rate</span>
             <div className="relative">
               <input
                 type="number"
@@ -145,7 +145,7 @@ export function TaxControl({
                 %
               </span>
             </div>
-            <span className="mt-1.5 block text-caption text-text-subtle">
+            <span className="mt-1.5 block text-body text-text-subtle">
               Australian GST is 10%. Leave blank for none.
             </span>
           </label>
@@ -157,7 +157,7 @@ export function TaxControl({
                 onChange={onGstInclusiveChange}
                 label="Prices include GST"
               />
-              <span className="mt-1.5 block text-caption text-text-subtle">
+              <span className="mt-1.5 block text-body text-text-subtle">
                 Tells the couple the price already covers GST. Any rate set
                 above is still added on top.
               </span>
@@ -172,14 +172,14 @@ export function TaxControl({
                   onChange(null);
                   setOpen(false);
                 }}
-                className="text-caption text-text-muted hover:text-danger transition-colors cursor-pointer"
+                className="text-body text-text-muted hover:text-danger transition-colors cursor-pointer"
               >
                 Remove
               </button>
             ) : (
               <span />
             )}
-            <Button size="sm" onClick={commitDraft}>
+            <Button onClick={commitDraft}>
               Done
             </Button>
           </div>

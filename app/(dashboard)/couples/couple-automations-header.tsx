@@ -31,7 +31,7 @@ function Stat({ n, label, kind }: { n: number; label: string; kind: ChipKind }) 
     <span className="inline-flex items-center gap-2 rounded-control bg-surface-muted px-3 py-1.5">
       <span className={`h-1.5 w-1.5 rounded-pill ${DOT[kind]}`} />
       <span className="text-body font-semibold text-text tabular-nums">{n}</span>
-      <span className="text-caption text-text-muted">{label}</span>
+      <span className="text-body text-text-muted">{label}</span>
     </span>
   )
 }
@@ -57,7 +57,7 @@ export function CoupleAutomationsHeader({ summary, hasLive, pausing, onPauseAll,
       <div className="flex items-center gap-2">
         {actions}
         {hasLive && (
-          <Button variant="ghost" size="sm" loading={pausing} onClick={onPauseAll} className="cursor-pointer">
+          <Button variant="ghost" loading={pausing} onClick={onPauseAll} className="cursor-pointer">
             Pause all
           </Button>
         )}

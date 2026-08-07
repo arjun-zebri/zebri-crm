@@ -157,7 +157,7 @@ export function BlockRenderer({
           }}
         />
         <div className="relative flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
-          <p className="text-caption text-text-muted mb-4">This document is empty</p>
+          <p className="text-body text-text-muted mb-4">This document is empty</p>
           <button
             type="button"
             onClick={() => requestAddAfter(null)}

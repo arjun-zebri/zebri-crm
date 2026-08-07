@@ -67,7 +67,6 @@ export function QuestionnaireQuestionRow({ question, issue = null, onChange, onD
               value={question.label}
               onChange={(e) => onChange({ label: e.target.value })}
               placeholder={isSection ? 'Section heading' : 'Question text'}
-              size="sm"
               className="flex-1"
             />
             <Select
@@ -83,7 +82,6 @@ export function QuestionnaireQuestionRow({ question, issue = null, onChange, onD
               value={question.help_text ?? ''}
               onChange={(e) => onChange({ help_text: e.target.value })}
               placeholder="Help text (optional)"
-              size="sm"
             />
           )}
 
@@ -91,13 +89,13 @@ export function QuestionnaireQuestionRow({ question, issue = null, onChange, onD
             <div className="space-y-1.5">
               {(question.options ?? []).map((opt, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Input value={opt} onChange={(e) => setOption(i, e.target.value)} placeholder={`Option ${i + 1}`} size="sm" className="flex-1" />
+                  <Input value={opt} onChange={(e) => setOption(i, e.target.value)} placeholder={`Option ${i + 1}`} className="flex-1" />
                   <button type="button" aria-label="Remove option" onClick={() => removeOption(i)} className="cursor-pointer text-text-subtle hover:text-text">
                     <X size={15} strokeWidth={1.5} />
                   </button>
                 </div>
               ))}
-              <Button type="button" variant="ghost" size="sm" onClick={addOption} className="gap-1.5">
+              <Button type="button" variant="ghost" onClick={addOption} className="gap-1.5">
                 <Plus size={13} strokeWidth={1.5} />
                 Add option
               </Button>
@@ -108,7 +106,7 @@ export function QuestionnaireQuestionRow({ question, issue = null, onChange, onD
             <Checkbox checked={question.required} onChange={(v) => onChange({ required: v })} label="Required" />
           )}
 
-          {issue && <p className="text-caption text-red-600">{issue}</p>}
+          {issue && <p className="text-body text-red-600">{issue}</p>}
         </div>
 
         <div className="mt-2 flex flex-col gap-2">

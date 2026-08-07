@@ -65,7 +65,6 @@ export function TimeCategoryRow({
       <div className="flex items-center gap-1 px-1.5 py-0.5">
         <Input
           autoFocus
-          size="sm"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -111,7 +110,7 @@ export function TimeCategoryRow({
       <button
         type="button"
         onClick={onSelect}
-        className={`min-w-0 flex-1 cursor-pointer truncate py-1.5 text-left text-caption transition ${
+        className={`min-w-0 flex-1 cursor-pointer truncate py-1.5 text-left text-body transition ${
           selected ? 'font-medium text-text' : 'text-text-muted'
         }`}
       >

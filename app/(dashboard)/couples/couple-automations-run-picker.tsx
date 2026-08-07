@@ -111,7 +111,7 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button variant={cfg.variant} size="sm" className="cursor-pointer gap-1.5">
+        <Button variant={cfg.variant} className="cursor-pointer gap-1.5">
           <Icon size={13} strokeWidth={1.5} /> {cfg.label}
         </Button>
       </Popover.Trigger>
@@ -121,7 +121,7 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
           sideOffset={6}
           className="bg-surface border border-border rounded-control shadow-lg z-[80] w-64 py-1.5"
         >
-          <p className="px-3 py-1.5 text-caption text-text-subtle">{cfg.hint}</p>
+          <p className="px-3 py-1.5 text-body text-text-subtle">{cfg.hint}</p>
           {isLoading ? (
             <PickerSkeleton />
           ) : (list ?? []).length === 0 ? (
@@ -143,7 +143,7 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
               </button>
             ))
           )}
-          {error && <p className="px-3 py-2 text-caption text-danger">{error}</p>}
+          {error && <p className="px-3 py-2 text-body text-danger">{error}</p>}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

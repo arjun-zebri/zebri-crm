@@ -99,14 +99,14 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <label className="text-caption font-medium text-text" htmlFor="template-subject">
+        <label className="text-body font-medium text-text" htmlFor="template-subject">
           Subject
         </label>
         <Popover.Root open={open} onOpenChange={setOpen}>
           <Popover.Trigger asChild>
             <button
               type="button"
-              className="flex cursor-pointer items-center gap-1.5 rounded-control border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700 transition hover:bg-emerald-100"
+              className="flex cursor-pointer items-center gap-1.5 rounded-control border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-body font-medium text-emerald-700 transition hover:bg-emerald-100"
             >
               <AtSign size={13} strokeWidth={1.5} />
               Insert variable
@@ -126,7 +126,7 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
                     onClick={() => insertAtEnd(v.id)}
                     className="w-full cursor-pointer rounded-control px-2 py-1 text-left hover:bg-surface-muted"
                   >
-                    <p className="truncate text-caption text-text">{v.label}</p>
+                    <p className="truncate text-body text-text">{v.label}</p>
                   </button>
                 ))}
               </div>
@@ -139,7 +139,6 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
         <Input
           id="template-subject"
           ref={inputRef}
-          size="sm"
           value={value}
           onChange={(e) => {
             onChange(e.target.value)

@@ -233,7 +233,7 @@ function ContractBodySurface({
         className={`${cardSectionPad} border-t`}
         style={{ borderColor: muted + '30' }}
       >
-        <p className="text-caption font-medium mb-1" style={{ color: muted }}>
+        <p className="text-body font-medium mb-1" style={{ color: muted }}>
           Signed by MC
         </p>
         <p
@@ -246,7 +246,7 @@ function ContractBodySurface({
           {doc.mcSignatureName || doc.businessName || 'Your MC'}
         </p>
         {doc.businessName ? (
-          <p className="text-caption mt-1" style={{ color: muted }}>
+          <p className="text-body mt-1" style={{ color: muted }}>
             {doc.businessName}
           </p>
         ) : null}
@@ -257,11 +257,11 @@ function ContractBodySurface({
         className={`${cardSectionPad} border-t space-y-4`}
         style={{ borderColor: muted + '30' }}
       >
-        <p className="text-caption font-medium" style={{ color: muted }}>
+        <p className="text-body font-medium" style={{ color: muted }}>
           Sign to accept
         </p>
         <div>
-          <label className="block text-caption font-medium mb-1.5" style={{ color: muted }}>
+          <label className="block text-body font-medium mb-1.5" style={{ color: muted }}>
             Your full legal name
           </label>
           <input

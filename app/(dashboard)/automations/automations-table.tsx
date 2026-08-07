@@ -2,7 +2,7 @@
  * Table-style list of automations - matches the couples-list aesthetic.
  *
  * Real HTML `<table>` (no card-bordered wrapper around it), sticky
- * `<thead>` with icon-prefixed column labels (`text-caption font-normal
+ * `<thead>` with icon-prefixed column labels (`text-body font-normal
  * text-text-subtle`), rows separated by `border-b border-gray-100`,
  * subtle `hover:bg-gray-50/60` row highlight.
  *
@@ -139,7 +139,7 @@ function Th({
 }) {
   return (
     <th
-      className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
+      className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
       style={{ width: COL_WIDTHS[id] }}
     >
       <span className="flex items-center gap-1.5">
@@ -221,13 +221,13 @@ function Row({
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
-        <span className="text-caption text-text-muted">
+        <span className="text-body text-text-muted">
           {a.lastFiredAt ? relativePast(a.lastFiredAt) : '-'}
         </span>
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
-        <span className="text-caption text-text-muted">
+        <span className="text-body text-text-muted">
           {a.nextWakeAt ? relativeFuture(a.nextWakeAt) : '-'}
         </span>
       </td>
@@ -252,7 +252,7 @@ function Row({
             <button
               type="button"
               onClick={remove}
-              className="w-full text-left text-caption px-3 py-1.5 text-red-600 hover:bg-gray-50 cursor-pointer"
+              className="w-full text-left text-body px-3 py-1.5 text-red-600 hover:bg-gray-50 cursor-pointer"
             >
               Delete
             </button>
@@ -286,7 +286,7 @@ function MobileRow({
       className="w-full text-left border-b border-gray-100 px-1 py-3 hover:bg-gray-50/60 cursor-pointer transition"
     >
       <div className="text-body text-text truncate">{a.name}</div>
-      <div className="text-caption text-text-muted mt-0.5 truncate">
+      <div className="text-body text-text-muted mt-0.5 truncate">
         {a.triggerLabel} · {a.runCount} runs
         {a.lastFiredAt && ` · last ${relativePast(a.lastFiredAt)}`}
       </div>

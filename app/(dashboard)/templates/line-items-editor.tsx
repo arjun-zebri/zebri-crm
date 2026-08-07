@@ -84,7 +84,7 @@ export function LineItemsEditor({
   return (
     <div>
       {items.length > 0 && (
-        <div className={`${gridClass} pb-1 text-caption text-text-subtle`}>
+        <div className={`${gridClass} pb-1 text-body text-text-subtle`}>
           <span />
           <span />
           {showQuantity && <span className="text-right">Qty</span>}
@@ -115,7 +115,7 @@ export function LineItemsEditor({
         type="button"
         onClick={addItem}
         disabled={disabled}
-        className={`mt-2 flex items-center gap-1 py-1 ${compact ? 'text-caption' : 'text-body'} text-text-muted transition hover:text-text cursor-pointer disabled:opacity-50`}
+        className={`mt-2 flex items-center gap-1 py-1 ${compact ? 'text-body' : 'text-body'} text-text-muted transition hover:text-text cursor-pointer disabled:opacity-50`}
       >
         <Plus size={14} strokeWidth={1.5} />
         {addLabel}
@@ -154,7 +154,7 @@ function ItemRow({
     opacity: isDragging ? 0.5 : 1,
   } as React.CSSProperties
 
-  const cellInput = `bg-transparent ${compact ? 'py-1.5 text-caption' : 'py-2 text-body'} text-text placeholder:text-text-subtle focus:outline-none`
+  const cellInput = `bg-transparent ${compact ? 'py-1.5 text-body' : 'py-2 text-body'} text-text placeholder:text-text-subtle focus:outline-none`
 
   return (
     <div ref={setNodeRef} style={style} className={`${gridClass} border-b border-border`}>
@@ -193,7 +193,7 @@ function ItemRow({
       )}
 
       <div className="relative">
-        <span className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 ${compact ? 'text-caption' : 'text-body'} text-text-muted`}>$</span>
+        <span className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 ${compact ? 'text-body' : 'text-body'} text-text-muted`}>$</span>
         <input
           type="number"
           value={item.amount || ''}

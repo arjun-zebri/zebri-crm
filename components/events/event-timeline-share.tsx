@@ -1,7 +1,9 @@
 'use client'
 
-import { RotateCw, Copy, Check } from 'lucide-react'
+import { RotateCw } from 'lucide-react'
 import { useState } from 'react'
+
+import { CopyButton } from '@/components/ui/copy-button'
 
 interface EventTimelineShareProps {
   shareToken: string | null | undefined
@@ -18,16 +20,7 @@ export function EventTimelineShare({
   onRegenerate,
   loading,
 }: EventTimelineShareProps) {
-  const [copied, setCopied] = useState(false)
   const [regenConfirm, setRegenConfirm] = useState(false)
-
-  const handleCopy = () => {
-    if (!shareToken) return
-    const url = `${window.location.origin}/timeline/${shareToken}`
-    navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
 
   const handleRegen = () => {
     if (!regenConfirm) {
@@ -58,7 +51,7 @@ export function EventTimelineShare({
         </button>
       </div>
 
-      <p className="text-caption text-text-subtle mb-3">
+      <p className="text-body text-text-subtle mb-3">
         {shareEnabled
           ? 'Anyone with this link can view the timeline.'
           : 'Enable to share with vendors and couples.'}
@@ -66,31 +59,25 @@ export function EventTimelineShare({
 
       {shareEnabled && shareToken ? (
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1.5 text-body px-3 py-1.5 border border-border rounded-control hover:bg-gray-50 transition cursor-pointer"
-          >
-            {copied ? (
-              <Check size={14} strokeWidth={1.5} className="text-emerald-500" />
-            ) : (
-              <Copy size={14} strokeWidth={1.5} />
-            )}
-            {copied ? 'Copied!' : 'Copy link'}
-          </button>
+          <CopyButton
+            value={() => `${window.location.origin}/timeline/${shareToken}`}
+            label="Copy link"
+            copiedLabel="Copied"
+          />
 
           {regenConfirm ? (
             <div className="flex items-center gap-1.5">
-              <span className="text-caption text-text-muted">Break existing link?</span>
+              <span className="text-body text-text-muted">Break existing link?</span>
               <button
                 onClick={handleRegen}
                 disabled={loading}
-                className="text-caption text-red-600 hover:underline cursor-pointer disabled:opacity-50"
+                className="text-body text-red-600 hover:underline cursor-pointer disabled:opacity-50"
               >
                 Confirm
               </button>
               <button
                 onClick={() => setRegenConfirm(false)}
-                className="text-caption text-text-subtle hover:underline cursor-pointer"
+                className="text-body text-text-subtle hover:underline cursor-pointer"
               >
                 Cancel
               </button>

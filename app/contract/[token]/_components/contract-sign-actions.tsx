@@ -19,8 +19,10 @@
 import { Check, Loader2 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
+
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import type { ContractSignBlock } from '@/app/(dashboard)/branding/blocks/types';
+import { BusyLabel } from '@/components/ui/busy-label';
 import { getRgb, getTextColor } from '@/lib/branding/contrast';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import type { PublicBranding } from '@/lib/branding/public-branding';
@@ -219,7 +221,7 @@ export function ContractSignActions({
           ) : (
             <Check size={14} strokeWidth={2} />
           )}
-          {actionLoading ? 'Signing…' : primaryLabel}
+          <BusyLabel busy={actionLoading}>{primaryLabel}</BusyLabel>
         </button>
         <button
           onClick={onDecline}

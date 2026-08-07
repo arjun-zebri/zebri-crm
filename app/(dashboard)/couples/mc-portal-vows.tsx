@@ -82,7 +82,7 @@ function HistoryPopover({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1 text-caption text-text-muted hover:text-text cursor-pointer transition-colors"
+        className="inline-flex items-center gap-1 text-body text-text-muted hover:text-text cursor-pointer transition-colors"
       >
         <History size={14} strokeWidth={1.5} /> History ({history.length})
       </button>
@@ -92,7 +92,7 @@ function HistoryPopover({
         }`}
       >
         {history.length === 0 ? (
-          <p className="px-3 py-2 text-caption text-text-subtle">No history yet</p>
+          <p className="px-3 py-2 text-body text-text-subtle">No history yet</p>
         ) : (
           <ul className="max-h-64 overflow-y-auto">
             {history.map((r, i) => (
@@ -111,7 +111,7 @@ function HistoryPopover({
                       {r.author === 'couple' ? "Couple's version" : 'Your edit'}
                       {i === 0 && <span className="text-text-subtle"> · current</span>}
                     </span>
-                    <span className="block text-caption text-text-subtle">{timeAgo(r.created_at)}</span>
+                    <span className="block text-body text-text-subtle">{timeAgo(r.created_at)}</span>
                   </span>
                   {i !== 0 && (
                     <RotateCcw size={13} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
@@ -229,7 +229,7 @@ export function McPortalVows({ coupleId, primaryName, secondaryName }: McPortalV
                   <span className="text-body font-medium text-text">{label(vow.who)}</span>
                   <div className="flex items-center gap-3">
                     <span
-                      className={`text-caption text-text-subtle transition-opacity duration-300 ${st ? 'opacity-100' : 'opacity-0'}`}
+                      className={`text-body text-text-subtle transition-opacity duration-300 ${st ? 'opacity-100' : 'opacity-0'}`}
                     >
                       {st === 'saving' ? 'Saving…' : 'Saved'}
                     </span>

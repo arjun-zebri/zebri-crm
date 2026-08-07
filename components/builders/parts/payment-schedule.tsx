@@ -113,7 +113,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+        <h4 className="text-body font-medium uppercase tracking-wide text-text-muted">
           Payment schedule
         </h4>
         {canEdit && stages.length > 0 && (
@@ -131,7 +131,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
         <div className="space-y-3">
           <p className="text-body text-text-muted">The couple pays this invoice in one payment.</p>
           {canEdit && (
-            <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
+            <Button variant="primary" onClick={() => setModalOpen(true)}>
               Add schedule
             </Button>
           )}

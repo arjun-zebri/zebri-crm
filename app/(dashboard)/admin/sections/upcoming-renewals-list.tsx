@@ -35,7 +35,7 @@ export function UpcomingRenewalsList({
           {formatAUD(renewals.next30dValue)} · 30d
         </span>
       </div>
-      <p className="text-caption text-text-muted mb-4">
+      <p className="text-body text-text-muted mb-4">
         Next 7 days · {renewals.next7d.length}
       </p>
       {renewals.next7d.length === 0 ? (
@@ -54,7 +54,7 @@ export function UpcomingRenewalsList({
                 <p className="text-body text-text truncate">
                   {row.business_name || row.email}
                 </p>
-                <p className="text-caption text-text-muted truncate">
+                <p className="text-body text-text-muted truncate">
                   <span className="capitalize">{row.plan ?? 'starter'}</span>
                   {' · '}
                   {formatAUD(row.amount)}

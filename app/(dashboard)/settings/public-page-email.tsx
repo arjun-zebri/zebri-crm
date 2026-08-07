@@ -84,7 +84,7 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
   return (
     <div>
       <h3 className="text-body font-medium text-gray-700 mb-1">Email</h3>
-      <p className="text-caption text-text-subtle mb-3">Where the emails you send to couples come from.</p>
+      <p className="text-body text-text-subtle mb-3">Where the emails you send to couples come from.</p>
 
       <div className="space-y-2 max-w-xl">
         <EmailOption
@@ -112,7 +112,7 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
               type="button"
               onClick={disconnect}
               disabled={busy}
-              className="shrink-0 text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
+              className="shrink-0 text-body text-text-subtle hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
             >
               Disconnect
             </button>
@@ -138,7 +138,7 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
               Connect Outlook
             </button>
           </div>
-          <p className="text-caption text-text-subtle">
+          <p className="text-body text-text-subtle">
             You&rsquo;ll be sent to Google or Microsoft to approve access, then brought back here.
           </p>
         </div>
@@ -167,7 +167,7 @@ function EmailOption({ selected, onSelect, title, description }: EmailOptionProp
       </span>
       <span>
         <span className="block text-body text-text">{title}</span>
-        <span className="block text-caption text-text-subtle">{description}</span>
+        <span className="block text-body text-text-subtle">{description}</span>
       </span>
     </button>
   );

@@ -320,11 +320,10 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-[90] w-72 bg-surface border border-border rounded-control shadow-lg p-2 animate-fade-in"
+          className="z-[90] w-72 bg-surface border border-border rounded-control shadow-lg p-2 text-body animate-fade-in"
         >
           <div className="flex items-center gap-1.5">
             <Input
-              size="sm"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => {
@@ -337,11 +336,11 @@ function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEdito
               aria-label="Link URL"
               autoFocus
             />
-            <Button size="sm" variant="secondary" onClick={apply}>
+            <Button variant="secondary" onClick={apply}>
               Set
             </Button>
             {active && (
-              <Button size="sm" variant="ghost" onClick={remove}>
+              <Button variant="ghost" onClick={remove}>
                 Remove
               </Button>
             )}
@@ -431,7 +430,7 @@ function ToolbarRow({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1.5 text-caption font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition rounded-control px-2.5 py-1 cursor-pointer"
+            className="flex items-center gap-1.5 text-body font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 transition rounded-control px-2.5 py-1 cursor-pointer"
           >
             <AtSign size={13} strokeWidth={1.5} />
             Insert variable
@@ -441,7 +440,7 @@ function ToolbarRow({
           <Popover.Content
             align="end"
             sideOffset={6}
-            className="z-[90] w-56 bg-surface border border-border rounded-control shadow-lg p-1 animate-fade-in"
+            className="z-[90] w-56 bg-surface border border-border rounded-control shadow-lg p-1 text-body animate-fade-in"
           >
             <div className="max-h-72 overflow-y-auto">
               {variables.map((v) => (
@@ -454,7 +453,7 @@ function ToolbarRow({
                   }}
                   className="w-full text-left px-2 py-1 rounded-control hover:bg-gray-50 cursor-pointer"
                 >
-                  <p className="truncate text-caption text-text">{v.label}</p>
+                  <p className="truncate text-body text-text">{v.label}</p>
                 </button>
               ))}
             </div>

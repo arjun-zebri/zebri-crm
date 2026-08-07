@@ -94,9 +94,8 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <p className="text-caption font-medium text-text">Attachments</p>
+        <p className="text-body font-medium text-text">Attachments</p>
         <Button
-          size="sm"
           variant="ghost"
           className="gap-1.5"
           loading={upload.isPending}
@@ -118,7 +117,7 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
         }}
       />
       {files.length === 0 ? (
-        <p className="text-caption text-text-subtle">
+        <p className="text-body text-text-subtle">
           Files attached here are included every time this template is sent.
         </p>
       ) : (
@@ -138,7 +137,7 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
                 <FileText size={14} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
                 <span className="min-w-0 flex-1 truncate text-body text-text hover:underline">{f.file_name}</span>
               </button>
-              <span className="shrink-0 text-caption text-text-subtle">{formatFileSize(f.file_size)}</span>
+              <span className="shrink-0 text-body text-text-subtle">{formatFileSize(f.file_size)}</span>
               <button
                 type="button"
                 aria-label={`Remove ${f.file_name}`}

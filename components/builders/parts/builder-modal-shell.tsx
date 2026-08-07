@@ -121,7 +121,6 @@ export function BuilderModalShell({
         <div className="flex items-center gap-2">
           {primaryAction ? (
             <Button
-              size="sm"
               variant={primaryAction.variant ?? 'primary'}
               onClick={primaryAction.onClick}
               {...(primaryAction.loading ? { loading: true } : {})}

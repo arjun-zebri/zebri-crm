@@ -14,6 +14,7 @@
 import { FileSignature, Plus, Receipt, Search, X } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 
 import type { PaymentsTab } from './use-payments-shortcut';
@@ -42,23 +43,16 @@ export function PaymentsHeader({
   const newLabel = activeTab === 'invoices' ? 'invoice' : 'contract';
 
   const mobileNewButton = (
-    <button
-      onClick={onNew}
-      className="sm:hidden flex items-center justify-center w-8 h-8 rounded-pill bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
-      aria-label={`New ${newLabel}`}
-    >
-      <Plus size={16} strokeWidth={2} />
-    </button>
+    <Button onClick={onNew} iconOnly className="sm:hidden" aria-label={`New ${newLabel}`}>
+      <Plus size={16} strokeWidth={1.5} />
+    </Button>
   );
 
   const desktopNewButton = (
-    <button
-      onClick={onNew}
-      className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
-    >
-      <Plus size={11} strokeWidth={2} />
+    <Button onClick={onNew} className="hidden sm:inline-flex">
+      <Plus size={11} strokeWidth={1.5} />
       New {newLabel}
-    </button>
+    </Button>
   );
 
   return (
@@ -79,7 +73,7 @@ export function PaymentsHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={`Search ${activeTab}...`}
-            className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+            className="block h-8 w-full rounded-control border border-border bg-surface pl-6 pr-6 text-body text-text transition-colors placeholder:text-text-subtle focus-visible:border-brand-fg focus-visible:outline-none"
           />
           {search && (
             <button

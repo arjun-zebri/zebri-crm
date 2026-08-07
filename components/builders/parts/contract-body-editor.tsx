@@ -78,7 +78,7 @@ export function ContractBodyEditor({
             <Popover.Trigger asChild>
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1 text-caption text-text-muted hover:bg-surface-muted hover:text-text transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1 text-body text-text-muted hover:bg-surface-muted hover:text-text transition-colors cursor-pointer"
               >
                 <FileText size={12} strokeWidth={1.5} />
                 Apply template
@@ -104,7 +104,7 @@ export function ContractBodyEditor({
                     >
                       <p className="text-body text-text">{t.name}</p>
                       {t.description ? (
-                        <p className="text-caption text-text-muted truncate">
+                        <p className="text-body text-text-muted truncate">
                           {t.description}
                         </p>
                       ) : null}
@@ -119,7 +119,7 @@ export function ContractBodyEditor({
 
       <RichTextEditor value={content} onChange={onChange} editable={canEdit} />
 
-      <p className="text-caption text-text-subtle">
+      <p className="text-body text-text-subtle">
         Variables like{' '}
         <span className="font-mono bg-surface-muted px-1 py-0.5 rounded-control text-text-muted">
           {'{{couple_name}}'}

@@ -86,7 +86,7 @@ export function ContactProfile({
                 <h2 className="text-lg font-semibold text-text truncate">
                   {vendor.name}
                 </h2>
-                <span className="shrink-0 px-2 py-0.5 rounded-pill text-caption font-medium bg-surface-emphasis text-gray-600">
+                <span className="shrink-0 px-2 py-0.5 rounded-pill text-body font-medium bg-surface-emphasis text-gray-600">
                   {CATEGORY_LABELS[vendor.category]}
                 </span>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -97,7 +97,7 @@ export function ContactProfile({
                         : "bg-gray-300"
                     }`}
                   />
-                  <span className="text-caption text-text-subtle">
+                  <span className="text-body text-text-subtle">
                     {STATUS_LABELS[vendor.status]}
                   </span>
                 </div>

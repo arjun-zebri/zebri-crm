@@ -38,6 +38,7 @@ import {
   useDeleteStatus,
   useReorderStatuses,
 } from '@/app/(dashboard)/couples/use-couple-statuses';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { CoupleStatusRecord } from '@/types/couple';
 
@@ -172,20 +173,12 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
       </DndContext>
 
       <div className="border-t border-border pt-6 flex items-center justify-between gap-3">
-        <button
-          onClick={() => setIsAddOpen(true)}
-          className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
-        >
-          <Plus size={11} strokeWidth={2} />
+        <Button onClick={() => setIsAddOpen(true)}>
+          <Plus size={11} strokeWidth={1.5} />
           Add status
-        </button>
+        </Button>
         {hasChanges && (
-          <button
-            onClick={handleSaveChanges}
-            className="inline-flex items-center px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
-          >
-            Save changes
-          </button>
+          <Button onClick={handleSaveChanges}>Save changes</Button>
         )}
       </div>
 

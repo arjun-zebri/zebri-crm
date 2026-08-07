@@ -98,13 +98,13 @@ function PackageRow({
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-body font-medium text-text">{pkg.name}</span>
-          <span className="block truncate text-caption text-text-subtle">{pkg.notes || ''}</span>
+          <span className="block truncate text-body text-text-subtle">{pkg.notes || ''}</span>
         </span>
         <span className="shrink-0 text-right">
           {(pkg.total ?? 0) > 0 ? (
             <span className="block text-body font-medium tabular-nums text-text">{formatCurrency(pkg.total ?? 0)}</span>
           ) : null}
-          <span className="block text-caption text-text-muted">
+          <span className="block text-body text-text-muted">
             {pkg.item_count || 0} item{(pkg.item_count || 0) !== 1 ? 's' : ''}
           </span>
         </span>
@@ -122,7 +122,7 @@ function PackageCaption({ updatedAt }: { updatedAt?: string | null }) {
   if (!updatedAt) return null
 
   return (
-    <p className="text-caption text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
+    <p className="text-body text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
   )
 }
 
@@ -483,14 +483,13 @@ export function PackagesManager() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search packages…"
-          size="sm"
           className="w-36 sm:w-48"
         />
-        <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
+        <Button variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
           <Library size={14} strokeWidth={1.5} />
           Browse starters
         </Button>
-        <Button size="sm" onClick={openCreate} className="gap-1.5">
+        <Button onClick={openCreate} className="gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           New Package
         </Button>
@@ -558,7 +557,7 @@ export function PackagesManager() {
                 <div className="space-y-5">
                   {groups.map((group) => (
                     <section key={group.key}>
-                      <h3 className="flex items-center gap-1.5 px-2 text-caption font-semibold uppercase tracking-wider text-text-subtle">
+                      <h3 className="flex items-center gap-1.5 px-2 text-body font-semibold uppercase tracking-wider text-text-subtle">
                         {group.dotClass && <span className={`h-2 w-2 rounded-pill ${group.dotClass}`} />}
                         {group.label}
                       </h3>
@@ -593,7 +592,7 @@ export function PackagesManager() {
                   <button
                     type="button"
                     onClick={() => setShowArchived((v) => !v)}
-                    className="flex items-center gap-1 py-1 text-caption text-text-muted transition hover:text-text cursor-pointer"
+                    className="flex items-center gap-1 py-1 text-body text-text-muted transition hover:text-text cursor-pointer"
                   >
                     {showArchived ? (
                       <ChevronDown size={14} strokeWidth={1.5} />
@@ -629,7 +628,6 @@ export function PackagesManager() {
                 actions={
                   <>
                     <Button
-                      size="sm"
                       variant="outline"
                       className="gap-1.5"
                       onClick={() => {

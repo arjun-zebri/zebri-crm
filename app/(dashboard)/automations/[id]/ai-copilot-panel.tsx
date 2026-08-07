@@ -98,7 +98,7 @@ function Conversation() {
 
 function AssistantBubble({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-surface-muted rounded-control px-3 py-2 text-caption text-text leading-relaxed">
+    <div className="bg-surface-muted rounded-control px-3 py-2 text-body text-text leading-relaxed">
       {children}
     </div>
   )
@@ -123,7 +123,7 @@ function Composer({
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g. When a couple accepts a quote, send a thank-you and create a contract task"
           rows={3}
-          className="flex-1 bg-transparent text-caption px-3 py-2 resize-none focus:outline-none placeholder:text-text-muted"
+          className="flex-1 bg-transparent text-body px-3 py-2 resize-none focus:outline-none placeholder:text-text-muted"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()

@@ -107,7 +107,7 @@ export function TextStyleControls({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="inline-flex items-center gap-1 px-2 h-8 rounded-control text-caption hover:bg-surface-emphasis cursor-pointer text-gray-700 border border-border"
+            className="inline-flex items-center gap-1 px-2 h-8 rounded-control text-body hover:bg-surface-emphasis cursor-pointer text-gray-700 border border-border"
             title="Weight"
           >
             <Type size={12} strokeWidth={1.75} />
@@ -126,7 +126,7 @@ export function TextStyleControls({
                 <button
                   type="button"
                   onClick={() => onChange({ fontWeight: w })}
-                  className={`px-2.5 py-1 text-caption rounded-control cursor-pointer ${
+                  className={`px-2.5 py-1 text-body rounded-control cursor-pointer ${
                     eff.fontWeight === w ? 'bg-gray-900 text-white' : 'hover:bg-surface-emphasis text-gray-700'
                   }`}
                   style={{ fontWeight: w }}
@@ -235,7 +235,7 @@ export function TextStyleControls({
                   type="button"
                   onClick={() => onChange({ textTransform: t.id })}
                   aria-label={t.tooltip}
-                  className={`px-2 py-1 text-caption transition cursor-pointer ${
+                  className={`px-2 py-1 text-body transition cursor-pointer ${
                     eff.textTransform === t.id
                       ? 'bg-surface text-text shadow-sm rounded-control m-0.5 font-medium'
                       : 'text-text-muted hover:text-text'
@@ -301,7 +301,7 @@ function NumberStepper({
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - step))}
-        className="w-5 h-full text-text-muted hover:text-text hover:bg-gray-50 transition cursor-pointer text-caption"
+        className="w-5 h-full text-text-muted hover:text-text hover:bg-gray-50 transition cursor-pointer text-body"
         aria-label="Decrease"
       >
         −
@@ -317,12 +317,12 @@ function NumberStepper({
           if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)))
         }}
         aria-label={ariaLabel}
-        className="w-8 h-full text-caption text-center bg-transparent text-text outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-8 h-full text-body text-center bg-transparent text-text outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + step))}
-        className="w-5 h-full text-text-muted hover:text-text hover:bg-gray-50 transition cursor-pointer text-caption"
+        className="w-5 h-full text-text-muted hover:text-text hover:bg-gray-50 transition cursor-pointer text-body"
         aria-label="Increase"
       >
         +
@@ -353,7 +353,7 @@ function SliderPopover({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-caption hover:bg-surface-emphasis cursor-pointer text-gray-700 border border-border"
+          className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-body hover:bg-surface-emphasis cursor-pointer text-gray-700 border border-border"
           title={label}
         >
           <span className="text-[10px] text-text-subtle">{label}</span>
@@ -366,7 +366,7 @@ function SliderPopover({
           sideOffset={6}
           className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[220px] animate-modal-in"
         >
-          <div className="flex items-center justify-between mb-2 text-caption">
+          <div className="flex items-center justify-between mb-2 text-body">
             <span className="text-gray-600">{label}</span>
             <span className="font-mono text-text">{format(value)}</span>
           </div>

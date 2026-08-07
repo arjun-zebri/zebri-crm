@@ -97,10 +97,10 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
           {showIssues && issues.length > 0 && (
             <p className="text-body text-red-600">Fix the highlighted question{issues.length === 1 ? '' : 's'} to save.</p>
           )}
-          <Button onClick={onCancel} variant="outline" size="sm">
+          <Button onClick={onCancel} variant="outline">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || !name.trim()} size="sm">
+          <Button onClick={handleSave} disabled={saving || !name.trim()}>
             {saving ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : null}
             Save questionnaire
           </Button>
@@ -113,7 +113,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
           <div className="space-y-3">
             <div>
               <label className="mb-1.5 block text-body font-medium text-text">Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} size="sm" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div>
               <label className="mb-1.5 block text-body font-medium text-text">Description (optional)</label>
@@ -121,7 +121,6 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Shown in the template picker"
-                size="sm"
               />
             </div>
             <div>
@@ -132,7 +131,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
                     key={m.value}
                     type="button"
                     onClick={() => setDisplayMode(m.value)}
-                    className={`cursor-pointer px-2.5 py-1 text-caption font-medium transition-colors ${i > 0 ? 'border-l border-border' : ''} ${
+                    className={`cursor-pointer px-2.5 py-1 text-body font-medium transition-colors ${i > 0 ? 'border-l border-border' : ''} ${
                       displayMode === m.value ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'
                     }`}
                   >
@@ -160,7 +159,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
                 </div>
               </SortableContext>
             </DndContext>
-            <Button type="button" variant="outline" size="sm" onClick={handleAdd} className="w-full gap-1.5">
+            <Button type="button" variant="outline" onClick={handleAdd} className="w-full gap-1.5">
               <Plus size={14} strokeWidth={1.5} />
               Add question
             </Button>
@@ -172,7 +171,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
             (flex-1 + min-h-0 lets the inner preview scroll rather than the
             panel growing past the modal). */}
         <div className="hidden rounded-control bg-surface-muted p-4 lg:flex lg:flex-1 lg:min-w-0 lg:flex-col">
-          <p className="mb-3 px-2 text-caption uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
+          <p className="mb-3 px-2 text-body uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
           <div className="min-h-0 lg:flex-1">
             <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} heightClass="h-full min-h-[600px]" />
           </div>

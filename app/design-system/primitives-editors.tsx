@@ -9,7 +9,6 @@ import { ColorPopover } from '@/components/ui/color-popover';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { SignatureEditor } from '@/components/ui/signature-editor';
 
-import { Conflict } from './conflict';
 import { Demo, DemoGrid, Spec } from './showroom';
 
 /**
@@ -52,7 +51,8 @@ export function PrimitivesEditors() {
 
   return (
     <>
-      <Spec name="RichTextEditor" file="components/ui/rich-text-editor.tsx" description="TipTap-backed. Optional variable mentions, signature block and dense mode.">
+      <Spec name="RichTextEditor" file="components/ui/rich-text-editor.tsx"
+        importPath="@/components/ui/rich-text-editor" description="TipTap-backed. Optional variable mentions, signature block and dense mode.">
         <DemoGrid cols={2}>
           <Demo label="Default, with variable inserter">
             <RichTextEditor
@@ -69,22 +69,13 @@ export function PrimitivesEditors() {
         </DemoGrid>
       </Spec>
 
-      <Spec name="SignatureEditor" file="components/ui/signature-editor.tsx" description="A constrained RichTextEditor for email sign-offs.">
+      <Spec name="SignatureEditor" file="components/ui/signature-editor.tsx"
+        importPath="@/components/ui/signature-editor" description="A constrained RichTextEditor for email sign-offs.">
         <SignatureEditor value={sig} onChange={setSig} />
       </Spec>
 
-      <Conflict
-        title="Two rich-text surfaces with separate toolbars"
-        recommendation={
-          <>
-            <code>rich-text-editor.tsx</code> and <code>signature-toolbar.tsx</code> each build
-            their own toolbar button, so the same bold control exists twice with different padding
-            and hover states. Extract one shared toolbar button and have both import it.
-          </>
-        }
-      />
-
-      <Spec name="ColorPopover" file="components/ui/color-popover.tsx" description="Saturation/value field, hue slider and swatch row behind a caller-supplied trigger.">
+      <Spec name="ColorPopover" file="components/ui/color-popover.tsx"
+        importPath="@/components/ui/color-popover" description="Saturation/value field, hue slider and swatch row behind a caller-supplied trigger.">
         <div className="flex items-center gap-3">
           <ColorPopover
             value={colour}
@@ -98,32 +89,12 @@ export function PrimitivesEditors() {
               />
             }
           />
-          <code className="text-caption text-text-muted">{colour}</code>
+          <code className="text-body text-text-muted">{colour}</code>
         </div>
       </Spec>
 
-      <Conflict
-        title="ColorPopover takes a caller-supplied trigger, so every call site styles its own swatch"
-        recommendation={
-          <>
-            The <code>trigger</code> prop is a raw <code>ReactNode</code> with no default, which is
-            why swatch triggers in Branding, the time-category rows and the questionnaire editor all
-            differ in size and radius. Ship a default trigger and let callers override only when
-            they need to.
-          </>
-        }
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="h-8 w-8 rounded-control border border-border" style={{ backgroundColor: colour }} />
-          <span className="h-6 w-6 rounded-full border border-border" style={{ backgroundColor: colour }} />
-          <span className="h-5 w-5 rounded border border-border" style={{ backgroundColor: colour }} />
-          <span className="text-caption text-text-subtle">
-            three trigger shapes found across call sites
-          </span>
-        </div>
-      </Conflict>
-
-      <Spec name="AddressAutocomplete" file="components/ui/address-autocomplete.tsx" description="Google Places lookup returning text plus lat/lng. Suggestions appear after typing.">
+      <Spec name="AddressAutocomplete" file="components/ui/address-autocomplete.tsx"
+        importPath="@/components/ui/address-autocomplete" description="Google Places lookup returning text plus lat/lng. Suggestions appear after typing.">
         <AddressAutocomplete
           label="Venue address"
           placeholder="Start typing a venue"
@@ -132,10 +103,11 @@ export function PrimitivesEditors() {
         />
       </Spec>
 
-      <Spec name="AudioPlayButton" file="components/ui/audio-play-button.tsx" description="Play/pause toggle for pronunciation clips. Idle and playing classes are caller-supplied.">
+      <Spec name="AudioPlayButton" file="components/ui/audio-play-button.tsx"
+        importPath="@/components/ui/audio-play-button" description="Play/pause toggle for pronunciation clips. Idle and playing classes are caller-supplied.">
         <div className="flex items-center gap-3">
           <AudioPlayButton src={SILENT_WAV} label="Play name" playingLabel="Playing" />
-          <span className="text-caption text-text-subtle">
+          <span className="text-body text-text-subtle">
             wired to a silent clip, so the toggle runs without audio
           </span>
         </div>

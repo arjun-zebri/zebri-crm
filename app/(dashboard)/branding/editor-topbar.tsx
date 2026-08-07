@@ -121,7 +121,7 @@ export function EditorTopbar({
         <button
           type="button"
           onClick={onPreview}
-          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-control bg-gray-900 text-white text-caption font-medium hover:bg-black cursor-pointer transition"
+          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-control bg-gray-900 text-white text-body font-medium hover:bg-black cursor-pointer transition"
         >
           <Eye size={12} strokeWidth={2} />
           Preview
@@ -243,7 +243,7 @@ function KitPicker({
                         className="flex-1 min-w-0 text-left cursor-pointer"
                         title={`Apply ${kit.name}`}
                       >
-                        <p className="text-caption font-medium text-text truncate">{kit.name}</p>
+                        <p className="text-body font-medium text-text truncate">{kit.name}</p>
                       </button>
                     </Popover.Close>
                     {active && <Check size={11} strokeWidth={2.5} className="text-text shrink-0" />}
@@ -268,7 +268,7 @@ function KitPicker({
               <button
                 type="button"
                 onClick={onCreateNewKit}
-                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-control text-caption text-gray-700 hover:bg-gray-50 cursor-pointer"
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-control text-body text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 <Plus size={11} strokeWidth={1.75} className="text-text-subtle" />
                 Create new kit

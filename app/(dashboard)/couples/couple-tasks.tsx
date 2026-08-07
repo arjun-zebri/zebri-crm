@@ -264,7 +264,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
       title="Tasks"
       stats={all.length > 0 ? stats : undefined}
       actions={
-        <Button size="sm" onClick={addTask} className="cursor-pointer gap-1.5">
+        <Button onClick={addTask} className="cursor-pointer gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           New task
         </Button>

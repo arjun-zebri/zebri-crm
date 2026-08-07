@@ -68,16 +68,16 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
               className="flex items-center gap-2 py-2 transition cursor-pointer group"
             >
               <div className="flex-1 min-w-0">
-                <span className="truncate block text-caption sm:text-body text-text transition-opacity group-hover:opacity-80">
+                <span className="truncate block text-body sm:text-body text-text transition-opacity group-hover:opacity-80">
                   {task.title}
                 </span>
                 {task.couple && (
-                  <span className="text-text-subtle text-caption truncate block">{task.couple.name}</span>
+                  <span className="text-text-subtle text-body truncate block">{task.couple.name}</span>
                 )}
               </div>
               {task.due_date && (
                 <span
-                  className={`text-caption shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-text-muted'}`}
+                  className={`text-body shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-text-muted'}`}
                 >
                   {formatRelativeDate(task.due_date)}
                 </span>

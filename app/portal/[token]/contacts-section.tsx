@@ -5,6 +5,7 @@ import { Plus, Mail, Phone, Mic, Trash2, Loader2, Pencil, ChevronDown } from 'lu
 import { useState, useRef, useCallback, useEffect } from 'react'
 
 import { AudioPlayButton } from '@/components/ui/audio-play-button'
+import { BusyLabel } from '@/components/ui/busy-label'
 import { Modal } from '@/components/ui/modal'
 import { getRgb, getTextColor } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
@@ -245,7 +246,7 @@ function AudioRecorder({
             <AudioPlayButton
               src={audioUrl}
               label="Play"
-              className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1 transition cursor-pointer hover:opacity-80"
+              className="flex items-center gap-1 text-body border rounded-control px-2.5 py-1 transition cursor-pointer hover:opacity-80"
               style={PLAY_BUTTON_STYLE}
             />
           </div>
@@ -566,7 +567,7 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
                 color: getTextColor(branding.brand_color),
               }}
             >
-              {saving ? 'Saving...' : 'Save'}
+              <BusyLabel busy={saving}>Save</BusyLabel>
             </button>
           </div>
         </div>
@@ -597,7 +598,7 @@ function PersonRow({
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-body font-medium text-text">{person.full_name || 'Unnamed'}</p>
           {person.role && (
-            <span className="text-caption text-text-muted bg-surface-muted rounded-pill px-2.5 py-0.5">
+            <span className="text-body text-text-muted bg-surface-muted rounded-pill px-2.5 py-0.5">
               {person.role}
             </span>
           )}
@@ -608,7 +609,7 @@ function PersonRow({
           <AudioPlayButton
             src={person.audio_url}
             label="Play"
-            className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1.5 transition cursor-pointer hover:opacity-80"
+            className="flex items-center gap-1 text-body border rounded-control px-2.5 py-1.5 transition cursor-pointer hover:opacity-80"
             style={PLAY_BUTTON_STYLE}
           />
         </div>
@@ -642,10 +643,10 @@ function PeopleGroup({ label, addLabel, people, onAdd, onEdit, branding }: Peopl
       </div>
       {people.length === 0 && (
         <div className="border border-dashed border-border rounded-control p-4 text-center bg-surface-muted/50">
-          <p className="text-caption text-text-subtle mb-2.5">No {label.toLowerCase()} yet</p>
+          <p className="text-body text-text-subtle mb-2.5">No {label.toLowerCase()} yet</p>
           <button
             onClick={onAdd}
-            className="text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
+            className="text-body font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
           >
             Add {addLabel}
           </button>
@@ -660,7 +661,7 @@ function PeopleGroup({ label, addLabel, people, onAdd, onEdit, branding }: Peopl
           </div>
           <button
             onClick={onAdd}
-            className="w-full flex items-center justify-center gap-1.5 text-caption font-medium text-text-muted border border-dashed border-border rounded-control py-2.5 hover:bg-surface-muted transition cursor-pointer"
+            className="w-full flex items-center justify-center gap-1.5 text-body font-medium text-text-muted border border-dashed border-border rounded-control py-2.5 hover:bg-surface-muted transition cursor-pointer"
           >
             <Plus size={14} strokeWidth={1.5} />
             Add {addLabel}
@@ -835,7 +836,6 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
         addLabel="partner"
         people={partners}
         roleOptions={PARTNER_ROLES}
-
         onAdd={() => openAdd('partner', PARTNER_ROLES)}
         onEdit={(p) => openEdit(p, PARTNER_ROLES)}
         branding={branding}
@@ -847,7 +847,6 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
         addLabel="bridal party member"
         people={bridalParty}
         roleOptions={BRIDAL_ROLES}
-
         onAdd={() => openAdd('bridal_party', BRIDAL_ROLES)}
         onEdit={(p) => openEdit(p, BRIDAL_ROLES)}
         branding={branding}
@@ -859,7 +858,6 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
         addLabel="family member"
         people={family}
         roleOptions={FAMILY_ROLES}
-
         onAdd={() => openAdd('family', FAMILY_ROLES)}
         onEdit={(p) => openEdit(p, FAMILY_ROLES)}
         branding={branding}
@@ -871,7 +869,6 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
         addLabel="other contact"
         people={other}
         roleOptions={OTHER_ROLES}
-
         onAdd={() => openAdd('other', OTHER_ROLES)}
         onEdit={(p) => openEdit(p, OTHER_ROLES)}
         branding={branding}
@@ -1249,7 +1246,7 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
                 cursor: vendorLoading ? 'not-allowed' : 'pointer',
               }}
             >
-              {vendorLoading ? 'Adding...' : 'Add'}
+              <BusyLabel busy={vendorLoading}>Add</BusyLabel>
             </button>
           </div>
         </div>

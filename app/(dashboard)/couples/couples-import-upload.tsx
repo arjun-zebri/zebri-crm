@@ -19,7 +19,7 @@ interface CouplesImportUploadProps {
 function Step({ n, children }: { n: number; children: ReactNode }) {
   return (
     <li className="flex gap-3">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-surface-emphasis text-caption font-medium text-gray-600">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-surface-emphasis text-body font-medium text-gray-600">
         {n}
       </span>
       <span className="text-body text-gray-600">{children}</span>
@@ -83,12 +83,12 @@ export function CouplesImportUpload({
         <span className="text-body text-text">
           {fileName || 'Click to choose a CSV file'}
         </span>
-        <span className="text-caption text-text-subtle">CSV files only</span>
+        <span className="text-body text-text-subtle">CSV files only</span>
       </button>
 
       {fileError && <p className="text-body text-red-600">{fileError}</p>}
 
-      <p className="flex items-start gap-1.5 text-caption text-text-subtle">
+      <p className="flex items-start gap-1.5 text-body text-text-subtle">
         <FileSpreadsheet
           size={13}
           strokeWidth={1.5}

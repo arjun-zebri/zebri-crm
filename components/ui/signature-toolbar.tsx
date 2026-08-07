@@ -102,7 +102,7 @@ export function SignatureToolbar({ editor }: { editor: Editor }) {
           </button>
         }
       />
-      <IconToggle onClick={() => editor.chain().focus().unsetHighlight().run()} title="Remove highlight"><span className="text-caption font-medium line-through">H</span></IconToggle>
+      <IconToggle onClick={() => editor.chain().focus().unsetHighlight().run()} title="Remove highlight"><span className="text-body font-medium line-through">H</span></IconToggle>
       <Divider />
       <LinkControl editor={editor} />
       <ImageControl editor={editor} />
@@ -158,7 +158,7 @@ function ToolbarPopover({ title, trigger, children }: {
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="start" sideOffset={6} className="z-[70] bg-surface border border-border rounded-control shadow-lg py-1 min-w-[9rem]">
+        <Popover.Content align="start" sideOffset={6} className="z-[70] bg-surface border border-border rounded-control shadow-lg py-1 min-w-[9rem] text-body">
           {children(() => setOpen(false))}
         </Popover.Content>
       </Popover.Portal>
@@ -243,7 +243,7 @@ function LinkControl({ editor }: { editor: Editor }) {
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="start" sideOffset={6} className="z-[70] bg-surface border border-border rounded-control shadow-lg p-3 w-64">
+        <Popover.Content align="start" sideOffset={6} className="z-[70] bg-surface border border-border rounded-control shadow-lg p-3 w-64 text-body">
           <input
             type="text"
             value={url}

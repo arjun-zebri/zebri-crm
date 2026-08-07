@@ -69,7 +69,6 @@ export function UsersTableView({
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by email, business, or display name"
           className="pl-9"
-          size="sm"
         />
       </div>
 
@@ -103,7 +102,7 @@ export function UsersTableView({
                     <td className="px-4 py-3 font-medium text-text">
                       {user.display_name || ' - '}
                       {user.account_type === 'admin' && (
-                        <span className="ml-2 text-caption bg-surface-emphasis text-text-muted px-1.5 py-0.5 rounded-control">
+                        <span className="ml-2 text-body bg-surface-emphasis text-text-muted px-1.5 py-0.5 rounded-control">
                           admin
                         </span>
                       )}
@@ -118,7 +117,7 @@ export function UsersTableView({
                           {user.subscription_status.replace('_', ' ')}
                         </Badge>
                       ) : (
-                        <span className="text-text-subtle text-caption"> - </span>
+                        <span className="text-text-subtle text-body"> - </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-text-muted">{planLabel(user)}</td>
@@ -133,7 +132,7 @@ export function UsersTableView({
         </div>
       </div>
 
-      <p className="text-caption text-text-subtle">
+      <p className="text-body text-text-subtle">
         {filtered.length} {filtered.length === 1 ? 'user' : 'users'}
         {query && ` · filtered from ${users.length}`}
       </p>

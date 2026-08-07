@@ -4,6 +4,8 @@ import * as Popover from '@radix-ui/react-popover'
 import { ArrowDown, ArrowUp, Filter as FilterIcon, X } from 'lucide-react'
 import { useState } from 'react'
 
+import { Button } from '@/components/ui/button'
+import { MenuItem, MenuPanel } from '@/components/ui/menu'
 import {
   STATUS_ORDER,
   TaskOption,
@@ -109,10 +111,9 @@ export function FilterBar({
         />
       ))}
       {sorts.map((s, i) => (
-        <button
+        <Button
           key={`sort-${i}`}
-          type="button"
-          className="inline-flex items-center gap-1 text-caption px-2 py-1 rounded-control bg-surface-emphasis hover:bg-gray-200 transition cursor-pointer text-gray-700"
+          variant="secondary"
           title="Toggle direction"
           onClick={() => toggleSortDir(i)}
         >
@@ -127,75 +128,63 @@ export function FilterBar({
               e.stopPropagation()
               removeSort(i)
             }}
-            className="ml-1 text-text-subtle hover:text-gray-700"
+            className="ml-1 cursor-pointer text-text-subtle hover:text-text"
           >
             <X size={10} strokeWidth={1.5} />
           </span>
-        </button>
+        </Button>
       ))}
 
       <Popover.Root open={addOpen} onOpenChange={setAddOpen}>
         <Popover.Trigger asChild>
-          <button
-            type="button"
-            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
-          >
+          <Button variant="outline" className="whitespace-nowrap">
             <FilterIcon size={11} strokeWidth={1.5} />
             <span>Filter</span>
-          </button>
+          </Button>
         </Popover.Trigger>
         <Popover.Portal>
-          <Popover.Content
-            sideOffset={4}
-            align="start"
-            className="bg-surface border border-border rounded-control shadow-lg py-1 z-[80] min-w-32"
-          >
-            {(['status', 'priority', 'task_type', 'couple'] as FilterProperty[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  setFilters([...filters, { property: p, value: '' }])
-                  setAddOpen(false)
-                }}
-                className="w-full text-left px-2.5 py-1.5 text-caption text-gray-700 hover:bg-gray-50 transition"
-              >
-                {PROPERTY_LABEL[p]}
-              </button>
-            ))}
+          <Popover.Content sideOffset={4} align="start" className="z-[80]">
+            <MenuPanel>
+              {(['status', 'priority', 'task_type', 'couple'] as FilterProperty[]).map((p) => (
+                <MenuItem
+                  key={p}
+                  size="sm"
+                  onClick={() => {
+                    setFilters([...filters, { property: p, value: '' }])
+                    setAddOpen(false)
+                  }}
+                >
+                  {PROPERTY_LABEL[p]}
+                </MenuItem>
+              ))}
+            </MenuPanel>
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
 
       <Popover.Root open={addSortOpen} onOpenChange={setAddSortOpen}>
         <Popover.Trigger asChild>
-          <button
-            type="button"
-            className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
-          >
+          <Button variant="outline" className="whitespace-nowrap">
             <ArrowUp size={11} strokeWidth={1.5} />
             <span>Sort</span>
-          </button>
+          </Button>
         </Popover.Trigger>
         <Popover.Portal>
-          <Popover.Content
-            sideOffset={4}
-            align="start"
-            className="bg-surface border border-border rounded-control shadow-lg py-1 z-[80] min-w-32"
-          >
-            {(['due_date', 'status', 'priority', 'title'] as SortProperty[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  setSorts([...sorts, { property: p, direction: 'asc' }])
-                  setAddSortOpen(false)
-                }}
-                className="w-full text-left px-2.5 py-1.5 text-caption text-gray-700 hover:bg-gray-50 transition"
-              >
-                {SORT_LABEL[p]}
-              </button>
-            ))}
+          <Popover.Content sideOffset={4} align="start" className="z-[80]">
+            <MenuPanel>
+              {(['due_date', 'status', 'priority', 'title'] as SortProperty[]).map((p) => (
+                <MenuItem
+                  key={p}
+                  size="sm"
+                  onClick={() => {
+                    setSorts([...sorts, { property: p, direction: 'asc' }])
+                    setAddSortOpen(false)
+                  }}
+                >
+                  {SORT_LABEL[p]}
+                </MenuItem>
+              ))}
+            </MenuPanel>
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
@@ -246,10 +235,7 @@ function FilterChip({
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-caption px-1.5 py-1 rounded-control bg-surface-emphasis hover:bg-gray-200 transition cursor-pointer text-gray-700"
-        >
+        <Button variant="secondary">
           <span className="text-text-muted">{PROPERTY_LABEL[filter.property]}</span>
           <span className="text-gray-300">:</span>
           <span>{valueLabel}</span>
@@ -258,86 +244,83 @@ function FilterChip({
               e.stopPropagation()
               onRemove()
             }}
-            className="ml-0.5 text-text-subtle hover:text-gray-700 cursor-pointer"
+            className="ml-0.5 cursor-pointer text-text-subtle hover:text-text"
           >
             <X size={10} strokeWidth={1.5} />
           </span>
-        </button>
+        </Button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content
-          sideOffset={4}
-          align="start"
-          className="bg-surface border border-border rounded-control shadow-lg py-1 z-[80] min-w-32 max-h-72 overflow-y-auto"
-        >
-          {filter.property === 'status' &&
-            statusList.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => {
-                  onChange(s)
-                  setOpen(false)
-                }}
-                className="w-full text-left px-2 py-1 hover:bg-gray-50 transition flex items-center"
-              >
-                <StatusPill value={s} options={statusOptions} />
-              </button>
-            ))}
-          {filter.property === 'priority' &&
-            priorityList.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  onChange(p)
-                  setOpen(false)
-                }}
-                className="w-full text-left px-2 py-1 hover:bg-gray-50 transition flex items-center"
-              >
-                <PriorityPill value={p} options={priorityOptions} />
-              </button>
-            ))}
-          {filter.property === 'task_type' && (
-            <>
-              {knownTypes.length === 0 && (
-                <p className="px-2 py-1.5 text-caption text-text-subtle">No types yet</p>
-              )}
-              {knownTypes.map((t) => (
-                <button
-                  key={t}
-                  type="button"
+        {/* Width lives on MenuPanel, not here. Radix positions this box
+            but leaves it auto-width, and the `w-full` rows inside used to
+            blow it out to the full viewport. */}
+        <Popover.Content sideOffset={4} align="start" className="z-[80]">
+          <MenuPanel className="max-h-72 overflow-y-auto">
+            {filter.property === 'status' &&
+              statusList.map((s) => (
+                <MenuItem
+                  key={s}
+                  size="sm"
                   onClick={() => {
-                    onChange(t)
+                    onChange(s)
                     setOpen(false)
                   }}
-                  className="w-full text-left px-2 py-1 hover:bg-gray-50 transition flex items-center"
                 >
-                  <TaskTypePill value={t} options={typeOptions} />
-                </button>
+                  <StatusPill value={s} options={statusOptions} />
+                </MenuItem>
               ))}
-            </>
-          )}
-          {filter.property === 'couple' && (
-            <>
-              {couples.length === 0 && (
-                <p className="px-2 py-1.5 text-caption text-text-subtle">No couples</p>
-              )}
-              {couples.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
+            {filter.property === 'priority' &&
+              priorityList.map((p) => (
+                <MenuItem
+                  key={p}
+                  size="sm"
                   onClick={() => {
-                    onChange(c.id)
+                    onChange(p)
                     setOpen(false)
                   }}
-                  className="w-full text-left px-2.5 py-1.5 text-caption text-gray-700 hover:bg-gray-50 transition truncate"
                 >
-                  {c.name}
-                </button>
+                  <PriorityPill value={p} options={priorityOptions} />
+                </MenuItem>
               ))}
-            </>
-          )}
+            {filter.property === 'task_type' && (
+              <>
+                {knownTypes.length === 0 && (
+                  <p className="px-2 py-1.5 text-body text-text-subtle">No types yet</p>
+                )}
+                {knownTypes.map((t) => (
+                  <MenuItem
+                    key={t}
+                    size="sm"
+                    onClick={() => {
+                      onChange(t)
+                      setOpen(false)
+                    }}
+                  >
+                    <TaskTypePill value={t} options={typeOptions} />
+                  </MenuItem>
+                ))}
+              </>
+            )}
+            {filter.property === 'couple' && (
+              <>
+                {couples.length === 0 && (
+                  <p className="px-2 py-1.5 text-body text-text-subtle">No couples</p>
+                )}
+                {couples.map((c) => (
+                  <MenuItem
+                    key={c.id}
+                    size="sm"
+                    onClick={() => {
+                      onChange(c.id)
+                      setOpen(false)
+                    }}
+                  >
+                    {c.name}
+                  </MenuItem>
+                ))}
+              </>
+            )}
+          </MenuPanel>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

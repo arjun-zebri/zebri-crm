@@ -45,7 +45,7 @@ function isDropped(entry: PreviewEntry, header: CsvHeader): boolean {
 function KindBadge({ entry }: { entry: PreviewEntry }) {
   if (entry.kind === 'invalid') {
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap text-caption text-red-600">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap text-body text-red-600">
         <AlertCircle size={12} strokeWidth={1.5} />
         {entry.reason ?? 'Invalid row'}
       </span>
@@ -53,14 +53,14 @@ function KindBadge({ entry }: { entry: PreviewEntry }) {
   }
   if (entry.kind === 'duplicate') {
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-control bg-amber-50 px-2 py-0.5 text-caption text-amber-600">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-control bg-amber-50 px-2 py-0.5 text-body text-amber-600">
         <CopyCheck size={12} strokeWidth={1.5} />
         Possible duplicate
       </span>
     );
   }
   return (
-    <span className="whitespace-nowrap rounded-control bg-green-50 px-2 py-0.5 text-caption text-green-600">
+    <span className="whitespace-nowrap rounded-control bg-green-50 px-2 py-0.5 text-body text-green-600">
       Ready
     </span>
   );
@@ -112,7 +112,7 @@ export function CouplesImportPreview({
     onChange(allSelected ? new Set() : new Set(selectablePositions));
   }
 
-  const th = 'whitespace-nowrap px-2 py-2 text-caption font-normal text-text-subtle';
+  const th = 'whitespace-nowrap px-2 py-2 text-body font-normal text-text-subtle';
 
   return (
     <div className="max-h-[55vh] overflow-auto">
@@ -153,7 +153,7 @@ export function CouplesImportPreview({
                     className="h-4 w-4 accent-gray-900 disabled:opacity-40"
                   />
                 </td>
-                <td className="px-2 py-2 text-caption text-text-subtle">
+                <td className="px-2 py-2 text-body text-text-subtle">
                   {entry.rowNumber}
                 </td>
                 <td className="px-2 py-2">

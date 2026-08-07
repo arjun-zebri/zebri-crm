@@ -88,7 +88,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
           // control radius, 2.5 padding — so the trigger reads as a
           // sibling of the date and duration fields it sits between
           // rather than a rounder, taller control of its own.
-          className="flex h-8 w-56 max-w-full cursor-pointer items-center justify-between gap-2 rounded-control border border-border bg-surface px-2.5 text-left text-caption transition hover:bg-surface-muted"
+          className="flex h-8 w-56 max-w-full cursor-pointer items-center justify-between gap-2 rounded-control border border-border bg-surface px-2.5 text-left text-body transition hover:bg-surface-muted"
         >
           <span className="flex min-w-0 items-center gap-1.5">
             {selected?.color ? (
@@ -124,7 +124,6 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
           <div className="px-2 pb-1 pt-1">
             <Input
               autoFocus
-              size="sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               // The field both filters and creates, so the placeholder
@@ -153,7 +152,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               />
             ))}
             {filtered.length === 0 && !canCreate ? (
-              <p className="px-3.5 py-2 text-caption text-text-subtle">
+              <p className="px-3.5 py-2 text-body text-text-subtle">
                 No categories yet.
               </p>
             ) : null}
@@ -164,7 +163,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               <button
                 type="button"
                 onClick={handleCreate}
-                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-left text-caption text-text-muted transition hover:bg-surface-emphasis hover:text-text"
+                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-left text-body text-text-muted transition hover:bg-surface-emphasis hover:text-text"
               >
                 <Plus size={13} strokeWidth={1.5} />
                 <span className="truncate">Create &quot;{trimmed}&quot;</span>
@@ -177,7 +176,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               <button
                 type="button"
                 onClick={() => select(null)}
-                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-left text-caption text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
+                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-left text-body text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
               >
                 <X size={13} strokeWidth={1.5} />
                 Clear

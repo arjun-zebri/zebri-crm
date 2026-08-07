@@ -1,4 +1,3 @@
-import { Conflict, TOP_PALETTE } from './conflict';
 import { Spec } from './showroom';
 
 /**
@@ -31,25 +30,25 @@ const SEMANTIC = [
   { cls: 'bg-info', name: 'info', hex: '#2563eb', use: 'Informational' },
 ];
 
-/** Colour token swatches plus the raw-palette conflict. */
+/** Colour token swatches. */
 export function FoundationsColour() {
   return (
     <>
       <Spec
         name="Colour"
         file="app/globals.css"
-        description="Semantic tokens. The hex shown is the current resolved value."
+        description="Never use a raw Tailwind colour. Tailwind 4 shifted its grays, so text-gray-900 and text-text are not the same value."
       >
         <div className="space-y-6">
           <SwatchRow title="Surfaces" items={SURFACES} bordered />
           <SwatchRow title="Semantic" items={SEMANTIC} />
           <div className="space-y-2">
-            <p className="text-caption font-medium text-text-subtle">Text</p>
+            <p className="text-body font-medium text-text-subtle">Text</p>
             <div className="flex flex-wrap gap-6">
               {TEXTS.map((t) => (
                 <div key={t.name}>
                   <p className={`text-body font-medium ${t.cls}`}>The quick brown fox</p>
-                  <p className="text-caption text-text-subtle">
+                  <p className="text-body text-text-subtle">
                     {t.name} · {t.hex}
                   </p>
                 </div>
@@ -59,37 +58,6 @@ export function FoundationsColour() {
         </div>
       </Spec>
 
-      <Conflict
-        title="Mostly resolved: the four bulk aliases are swept"
-        group="colour"
-        recommendation={
-          <>
-            1,735 sites moved onto tokens: <code>text-gray-900</code>, <code>text-gray-500</code>,{' '}
-            <code>text-gray-400</code>, <code>border-gray-200</code>, <code>border-gray-300</code>,{' '}
-            <code>bg-white</code> and <code>bg-gray-100</code>. Worth knowing: Tailwind 4 shifted its
-            gray palette, so <code>text-gray-900</code> was rendering <code>#101828</code> while the
-            token is <code>#111827</code>. The app had two gray palettes side by side; the sweep
-            removes that. The three text swaps shift by 1 to 3 of 255, which is imperceptible but not
-            literally identical.
-            <br />
-            What is left has no exact token: <code>gray-600</code>, <code>gray-700</code>,{' '}
-            <code>gray-50</code> and the semantic hues used by <code>Badge</code>. Public branded
-            surfaces are excluded by design.
-          </>
-        }
-      >
-        <div className="flex flex-wrap gap-1.5">
-          {TOP_PALETTE.map((p) => (
-            <span
-              key={p.label}
-              className="rounded-pill border border-border bg-surface px-2 py-0.5 text-caption text-text-muted"
-            >
-              <code>{p.label}</code>{' '}
-              <span className="tabular-nums text-text-subtle">{p.count}</span>
-            </span>
-          ))}
-        </div>
-      </Conflict>
     </>
   );
 }
@@ -106,16 +74,16 @@ function SwatchRow({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-caption font-medium text-text-subtle">{title}</p>
+      <p className="text-body font-medium text-text-subtle">{title}</p>
       <div className="flex flex-wrap gap-4">
         {items.map((s) => (
           <div key={s.name} className="w-40">
             <div
               className={`h-12 rounded-control ${s.cls} ${bordered ? 'border border-border' : ''}`}
             />
-            <p className="mt-1 text-caption font-medium text-text">{s.name}</p>
-            <p className="text-caption text-text-subtle">{s.hex}</p>
-            <p className="text-caption text-text-subtle">{s.use}</p>
+            <p className="mt-1 text-body font-medium text-text">{s.name}</p>
+            <p className="text-body text-text-subtle">{s.hex}</p>
+            <p className="text-body text-text-subtle">{s.use}</p>
           </div>
         ))}
       </div>

@@ -37,7 +37,7 @@ export function TimerPill({ hidden }: TimerPillProps) {
     >
       <Timer size={14} strokeWidth={1.5} className="shrink-0 text-text-muted" />
       <div className="min-w-0">
-        <p className="max-w-[7.5rem] truncate text-caption text-text sm:max-w-[10rem]">
+        <p className="max-w-[7.5rem] truncate text-body text-text sm:max-w-[10rem]">
           {running.couple_name}
         </p>
         <p className="font-mono text-body tabular-nums text-text">
@@ -45,7 +45,6 @@ export function TimerPill({ hidden }: TimerPillProps) {
         </p>
       </div>
       <Button
-        size="sm"
         variant="secondary"
         onClick={stop}
         aria-label="Stop timing"

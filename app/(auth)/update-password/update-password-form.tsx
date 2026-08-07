@@ -29,14 +29,14 @@ export function UpdatePasswordForm() {
         <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
       </div>
       <h1 className="mb-2 text-center text-section font-semibold text-text">Set new password</h1>
-      <p className="mb-6 text-center text-caption text-text-muted">
+      <p className="mb-6 text-center text-body text-text-muted">
         Choose a new password for your account.
       </p>
 
       {state.error && !state.fieldErrors ? (
         <div
           role="alert"
-          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-caption text-danger"
+          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-body text-danger"
         >
           {state.error}
         </div>
@@ -67,9 +67,7 @@ export function UpdatePasswordForm() {
           {...(state.fieldErrors?.confirmPassword ? { error: state.fieldErrors.confirmPassword } : {})}
         />
 
-        <Button type="submit" size="lg" loading={pending} className="w-full">
-          {pending ? 'Updating…' : 'Update password'}
-        </Button>
+        <Button type="submit" loading={pending} className="w-full">Update password</Button>
       </form>
     </Card>
   );

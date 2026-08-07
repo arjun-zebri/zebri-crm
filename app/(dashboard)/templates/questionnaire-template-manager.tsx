@@ -188,14 +188,13 @@ export function QuestionnaireTemplateManager() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search questionnaires…"
-          size="sm"
           className="w-36 sm:w-48"
         />
-        <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
+        <Button variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
           <Library size={14} strokeWidth={1.5} />
           Browse starters
         </Button>
-        <Button size="sm" onClick={() => createTemplate.mutate()} disabled={createTemplate.isPending} className="gap-1.5">
+        <Button onClick={() => createTemplate.mutate()} disabled={createTemplate.isPending} className="gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           New questionnaire
         </Button>
@@ -240,7 +239,7 @@ export function QuestionnaireTemplateManager() {
                       <ClipboardList size={16} strokeWidth={1.5} className="shrink-0 text-text-muted" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-body font-medium text-text">{t.name}</span>
-                        <span className="block truncate text-caption text-text-subtle">
+                        <span className="block truncate text-body text-text-subtle">
                           {t.description || `${t.questions.length} question${t.questions.length === 1 ? '' : 's'}`}
                         </span>
                       </span>
@@ -304,10 +303,10 @@ export function QuestionnaireTemplateManager() {
           <div className="space-y-4">
             <p className="text-body text-text-muted">This can&apos;t be undone.</p>
             <div className="flex justify-end gap-3">
-              <Button onClick={() => setConfirmDelete(null)} variant="outline" size="sm">
+              <Button onClick={() => setConfirmDelete(null)} variant="outline">
                 Cancel
               </Button>
-              <Button onClick={() => deleteTemplate.mutate(confirmDelete)} disabled={deleteTemplate.isPending} variant="danger" size="sm">
+              <Button onClick={() => deleteTemplate.mutate(confirmDelete)} disabled={deleteTemplate.isPending} variant="danger">
                 Delete
               </Button>
             </div>

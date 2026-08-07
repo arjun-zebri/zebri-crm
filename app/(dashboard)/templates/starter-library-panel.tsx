@@ -67,7 +67,6 @@ export function StarterLibraryPanel({ isOpen, onClose, existingNames }: StarterL
               Add the templates you want, including the celebrant-specific ones. Nothing is added unless you choose it.
             </p>
             <Button
-              size="sm"
               variant="secondary"
               className="shrink-0"
               loading={add.isPending}
@@ -79,7 +78,7 @@ export function StarterLibraryPanel({ isOpen, onClose, existingNames }: StarterL
 
           {groups.map((group) => (
             <section key={group.stage}>
-              <h3 className="px-1 text-caption font-semibold uppercase tracking-wider text-text-subtle">{group.label}</h3>
+              <h3 className="px-1 text-body font-semibold uppercase tracking-wider text-text-subtle">{group.label}</h3>
               <ul className="mt-1">
                 {group.items.map((t) => (
                   <StarterRow key={t.name} template={t} pending={add.isPending} onAdd={() => addNames([t.name], t.name)} />
@@ -106,9 +105,9 @@ function StarterRow({
     <li className="flex items-center gap-3 rounded-control px-1 py-2.5">
       <div className="min-w-0 flex-1">
         <p className="truncate text-body font-medium text-text">{template.name}</p>
-        <p className="truncate text-caption text-text-subtle">{template.subject || template.description}</p>
+        <p className="truncate text-body text-text-subtle">{template.subject || template.description}</p>
       </div>
-      <Button size="sm" variant="ghost" className="shrink-0 gap-1.5" disabled={pending} onClick={onAdd} aria-label={`Add ${template.name}`}>
+      <Button variant="ghost" className="shrink-0 gap-1.5" disabled={pending} onClick={onAdd} aria-label={`Add ${template.name}`}>
         <Plus size={14} strokeWidth={1.5} />
         Add
       </Button>

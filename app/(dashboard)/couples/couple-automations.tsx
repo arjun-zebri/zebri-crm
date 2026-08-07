@@ -92,7 +92,6 @@ export function CoupleAutomations({ coupleId }: Props) {
       actions={
         <>
           <Button
-            size="sm"
             variant="secondary"
             disabled={pausing || runs.length === 0}
             onClick={pauseAll}

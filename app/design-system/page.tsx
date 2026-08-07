@@ -1,25 +1,21 @@
-import { SCANNED_FILES } from './conflict';
 import { DesignSystemNav } from './design-system-nav';
-import { SectionAudit } from './section-audit';
 import { SectionComposites } from './section-composites';
+import { SectionForms } from './section-forms';
 import { SectionFoundations } from './section-foundations';
 import { SectionPatterns } from './section-patterns';
 import { SectionPrimitives } from './section-primitives';
 
 /**
- * The internal component showroom.
+ * The Zebri design system.
  *
- * Renders every design-system surface in the app and flags, inline, the
- * places where two of them disagree. Nothing here is production UI: the
- * route 404s outside development (see `layout.tsx`).
+ * The reference for building anything in this app. Every token,
+ * primitive, form pattern and page pattern is rendered here from its
+ * real source, with the code that produced it.
  *
- * Counts shown throughout come from `audit-data.json`. Refresh them with:
+ * Build from this page. If what you need is not here, add it here first
+ * and then use it, rather than hand-rolling markup in a feature file.
  *
- * ```sh
- * node scripts/design-system-audit.mjs
- * ```
- *
- * This page is an orchestrator. Each section lives in its own module.
+ * Dev-only: the route 404s in production (see `layout.tsx`).
  *
  * @module app/design-system/page
  */
@@ -28,24 +24,28 @@ export default function DesignSystemPage() {
     <div className="mx-auto flex max-w-7xl gap-10 px-6 py-10">
       <DesignSystemNav />
       <main className="min-w-0 flex-1 space-y-14">
-        <header className="space-y-2">
+        <header className="space-y-3">
           <h1 className="text-display font-semibold text-text">Zebri Design System</h1>
           <p className="max-w-2xl text-body text-text-muted">
-            Every component in the app, rendered from its real source. Amber blocks mark places
-            where two things that should agree do not, with live specimens of each variant and the
-            usage counts behind them.
+            Every token, component and pattern in the app, rendered from its real source with the
+            code that produced it. This is the reference: build from it rather than hand-rolling
+            markup.
           </p>
-          <p className="text-caption text-text-subtle">
-            Audit covers {SCANNED_FILES} .tsx files across app/ and components/. The showroom&apos;s
-            own source is excluded from every count. Development only.
-          </p>
+          <div className="max-w-2xl rounded-control border border-border bg-surface-muted p-4">
+            <p className="text-body font-medium text-text">The rule</p>
+            <p className="mt-1 text-body text-text-muted">
+              If a primitive exists for what you are building, use it. If one nearly fits, extend
+              it here and then use it. Hand-written markup for something on this page is how the
+              app drifts, and it is not accepted in review.
+            </p>
+          </div>
         </header>
 
         <SectionFoundations />
         <SectionPrimitives />
+        <SectionForms />
         <SectionPatterns />
         <SectionComposites />
-        <SectionAudit />
       </main>
     </div>
   );

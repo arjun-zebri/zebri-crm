@@ -229,7 +229,7 @@ function MetaLine({
   }
   if (userCreatedAt) parts.push(`Joined ${formatDate(userCreatedAt)}`);
   if (parts.length === 0) return null;
-  return <p className="mt-1 text-caption text-text-muted">{parts.join(' · ')}</p>;
+  return <p className="mt-1 text-body text-text-muted">{parts.join(' · ')}</p>;
 }
 
 /* ────────────────────────────────────────────────────────────── */
@@ -308,7 +308,7 @@ function StarterUsage({ onUpgrade, redirecting }: { onUpgrade: () => void; redir
 
   return (
     <div className="mt-6">
-      <h4 className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
+      <h4 className="mb-3 text-body font-medium uppercase tracking-wide text-text-muted">
         Usage
       </h4>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -325,7 +325,7 @@ function StarterUsage({ onUpgrade, redirecting }: { onUpgrade: () => void; redir
           </div>
         </div>
         {atCap ? (
-          <Button size="sm" variant="secondary" onClick={onUpgrade} loading={redirecting}>
+          <Button variant="secondary" onClick={onUpgrade} loading={redirecting}>
             Upgrade to add more
           </Button>
         ) : null}

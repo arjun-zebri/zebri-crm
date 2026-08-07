@@ -170,7 +170,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-body font-medium text-text">{blockLabel(type, surface)}</span>
-                        <span className="block text-caption text-text-muted truncate">{BLOCK_DESCRIPTIONS[type]}</span>
+                        <span className="block text-body text-text-muted truncate">{BLOCK_DESCRIPTIONS[type]}</span>
                       </span>
                     </button>
                   </div>

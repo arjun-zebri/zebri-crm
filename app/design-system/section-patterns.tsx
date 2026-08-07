@@ -5,9 +5,8 @@ import { Section } from './showroom';
 /**
  * Page-patterns section.
  *
- * These recur on every page but exist only as copy-pasted markup, so
- * they have drifted further than the primitives. Each specimen is
- * reproduced from real page source.
+ * Compositions you assemble from the primitives. These are not
+ * importable components; copy the markup and adapt it.
  *
  * @module app/design-system/section-patterns
  */

@@ -54,7 +54,7 @@ function CategorySection({
         onClick={() => onAddPerson(category, roles)}
         className="group flex items-center gap-1.5 cursor-pointer"
       >
-        <h3 className="text-caption font-semibold uppercase tracking-wider text-text group-hover:text-gray-600 transition">{label}</h3>
+        <h3 className="text-body font-semibold uppercase tracking-wider text-text group-hover:text-gray-600 transition">{label}</h3>
         <Plus size={12} strokeWidth={2} className="text-text group-hover:text-gray-600 transition" />
       </button>
       <div className="mt-4 space-y-2.5">
@@ -84,7 +84,7 @@ function CategorySection({
                   <AudioPlayButton
                     src={person.audio_url}
                     label="Listen"
-                    className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1.5 transition cursor-pointer"
+                    className="flex items-center gap-1 text-body border rounded-control px-2.5 py-1.5 transition cursor-pointer"
                     idleClassName="text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
                     playingClassName="text-emerald-700 border-emerald-300 bg-emerald-100 hover:bg-emerald-200"
                   />

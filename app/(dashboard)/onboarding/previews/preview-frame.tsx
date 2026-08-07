@@ -137,7 +137,7 @@ export function PreviewFrame({
             <span
               key={key}
               data-cursor={`nav-${key}`}
-              className={`flex items-center gap-2.5 rounded-control px-2 py-1.5 text-caption transition-colors duration-300 ${
+              className={`flex items-center gap-2.5 rounded-control px-2 py-1.5 text-body transition-colors duration-300 ${
                 on ? 'bg-surface-muted text-text font-medium' : 'text-text-subtle'
               }`}
             >

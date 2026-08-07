@@ -124,7 +124,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-caption font-medium text-text-subtle shrink-0">{r.number}</span>
+                      <span className="text-body font-medium text-text-subtle shrink-0">{r.number}</span>
                       {r.mobileStatus}
                     </div>
                     <div className="flex items-center gap-1 min-w-0">
@@ -146,37 +146,37 @@ export function PaymentsTable<T extends PaymentsTableItem>({
           <thead className="sticky top-0 bg-surface z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
             <tr>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.number }}
               >
                 <HeaderLabel icon={<Hash size={12} strokeWidth={1.5} />} label="Number" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.title }}
               >
                 <HeaderLabel textOnly="Aa" label="Title" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.couple }}
               >
                 <HeaderLabel icon={<Users size={12} strokeWidth={1.5} />} label="Couple" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.status }}
               >
                 <HeaderLabel icon={<ListChecks size={12} strokeWidth={1.5} />} label="Status" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.value }}
               >
                 <HeaderLabel icon={valueColIcon} label={valueColLabel} />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-caption font-normal text-text-subtle"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.last }}
               >
                 <HeaderLabel icon={lastColIcon} label={lastColLabel} />

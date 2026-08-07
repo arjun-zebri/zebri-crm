@@ -84,7 +84,7 @@ function TriggerNodeCard({
             <Plus size={18} strokeWidth={1.5} />
             <span className="text-body font-medium">Add trigger</span>
           </div>
-          <span className="text-caption text-text-subtle leading-tight text-center">
+          <span className="text-body text-text-subtle leading-tight text-center">
             Choose what starts this automation
           </span>
         </div>
@@ -141,7 +141,7 @@ function TriggerRow({
       <Icon size={18} strokeWidth={1.5} className="text-text-muted shrink-0 mt-0.5" />
       <div className="min-w-0 flex-1">
         <div className="text-body font-medium truncate">{title}</div>
-        {subtitle && <div className="text-caption text-text-muted line-clamp-2">{subtitle}</div>}
+        {subtitle && <div className="text-body text-text-muted line-clamp-2">{subtitle}</div>}
       </div>
     </div>
   )
@@ -297,7 +297,7 @@ function NodeRow({
       <Icon size={16} strokeWidth={1.5} className="text-text-muted shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="text-body font-medium truncate">{title}</div>
-        {subtitle && <div className="text-caption text-text-muted truncate">{subtitle}</div>}
+        {subtitle && <div className="text-body text-text-muted truncate">{subtitle}</div>}
       </div>
     </div>
   )

@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import type { AutomationsHomePayload, EnrichedAutomationRow } from '@/types/automations'
 
 import { type StatusFilter } from './automations-filter'
@@ -144,7 +145,7 @@ function Tabs({
           >
             <Icon size={13} strokeWidth={1.5} />
             <span>{t.label}</span>
-            {!loading && <span className="text-caption text-text-subtle">{count}</span>}
+            {!loading && <span className="text-body text-text-subtle">{count}</span>}
           </button>
         )
       })}
@@ -174,7 +175,7 @@ function Toolbar({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search automations..."
-          className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+          className="block h-8 w-full rounded-control border border-border bg-surface pl-6 pr-6 text-body text-text transition-colors placeholder:text-text-subtle focus-visible:border-brand-fg focus-visible:outline-none"
         />
         {query && (
           <button
@@ -186,22 +187,14 @@ function Toolbar({
           </button>
         )}
       </div>
-      <button
-        type="button"
-        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
-        title="Filter (coming soon)"
-      >
+      <Button variant="outline" className="whitespace-nowrap" title="Filter (coming soon)">
         <FilterIcon size={11} strokeWidth={1.5} />
         <span>Filter</span>
-      </button>
-      <button
-        type="button"
-        className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
-        title="Sort (coming soon)"
-      >
+      </Button>
+      <Button variant="outline" className="whitespace-nowrap" title="Sort (coming soon)">
         <ArrowUp size={11} strokeWidth={1.5} />
         <span>Sort</span>
-      </button>
+      </Button>
     </div>
   )
 }

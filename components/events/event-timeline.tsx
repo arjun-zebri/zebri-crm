@@ -111,7 +111,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
           {/* Time + duration row */}
           <div className="flex items-center justify-between mb-1">
             <span
-              className={`text-caption tabular-nums font-medium ${
+              className={`text-body tabular-nums font-medium ${
                 hasTimed ? 'text-emerald-600' : 'text-gray-300'
               }`}
             >
@@ -119,12 +119,12 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
             </span>
             <div className="flex items-center gap-2">
               {isPending && (
-                <span className="text-caption bg-amber-50 text-amber-600 border border-amber-100 rounded-pill px-2 py-0.5">
+                <span className="text-body bg-amber-50 text-amber-600 border border-amber-100 rounded-pill px-2 py-0.5">
                   Pending
                 </span>
               )}
               {item.duration_min && (
-                <span className="text-caption text-text-subtle tabular-nums">{item.duration_min} min</span>
+                <span className="text-body text-text-subtle tabular-nums">{item.duration_min} min</span>
               )}
             </div>
           </div>
@@ -134,7 +134,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
 
           {/* Contact */}
           {item.contact && (
-            <p className="text-caption text-text-muted mt-0.5">
+            <p className="text-body text-text-muted mt-0.5">
               {item.contact.name}
               {categoryLabel ? ` · ${categoryLabel}` : ''}
             </p>
@@ -142,7 +142,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
 
           {/* Notes preview */}
           {item.description && (
-            <p className="text-caption text-text-subtle mt-1 truncate">{item.description}</p>
+            <p className="text-body text-text-subtle mt-1 truncate">{item.description}</p>
           )}
         </div>
       </div>
@@ -151,7 +151,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
       {isPending && onApprove && (
         <button
           onClick={(e) => { e.stopPropagation(); onApprove(item.id) }}
-          className="flex items-center gap-1 text-caption text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-control px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
+          className="flex items-center gap-1 text-body text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-control px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
           title="Approve"
         >
           <Check size={12} strokeWidth={2} />
@@ -380,7 +380,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
           <p className="text-body font-medium text-text">Timeline</p>
           <button
             onClick={handleOpenAdd}
-            className="text-caption text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+            className="text-body text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add item
           </button>

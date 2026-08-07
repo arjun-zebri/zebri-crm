@@ -115,7 +115,7 @@ function KitPreviewCard({ state }: { state: BrandPreviewState }) {
           Aa
         </p>
         <p
-          className="text-caption mt-1.5 truncate"
+          className="text-body mt-1.5 truncate"
           style={{
             fontFamily: FONT_STACKS[state.fontBody],
             color: state.textColor,

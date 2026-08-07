@@ -55,7 +55,7 @@ export function EmailTemplatePreview({ subject, content }: EmailTemplatePreviewP
   return (
     <div className="overflow-hidden rounded-control border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
-        <p className="text-caption text-text-subtle">Subject</p>
+        <p className="text-body text-text-subtle">Subject</p>
         <p className="text-body font-medium text-text">
           <SubjectChips subject={subject} />
         </p>

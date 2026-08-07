@@ -37,9 +37,8 @@ export function StepBusiness(props: StepBusinessProps) {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-caption font-medium text-text-muted mb-2">Business name</label>
+          <label className="block text-body font-medium text-text-muted mb-2">Business name</label>
           <Input
-            size="sm"
             value={props.businessName}
             onChange={(e) => props.setBusinessName(e.target.value)}
             placeholder="Your business name"
@@ -48,9 +47,8 @@ export function StepBusiness(props: StepBusinessProps) {
         </div>
 
         <div>
-          <label className="block text-caption font-medium text-text-muted mb-2">Tagline</label>
+          <label className="block text-body font-medium text-text-muted mb-2">Tagline</label>
           <Input
-            size="sm"
             value={props.tagline}
             onChange={(e) => props.setTagline(e.target.value)}
             placeholder="A short line about you"
@@ -59,7 +57,7 @@ export function StepBusiness(props: StepBusinessProps) {
         </div>
 
         <div>
-          <label className="block text-caption font-medium text-text-muted mb-2">Logo</label>
+          <label className="block text-body font-medium text-text-muted mb-2">Logo</label>
           <LogoUpload logoUrl={props.logoUrl} setLogoUrl={props.setLogoUrl} />
         </div>
       </div>
@@ -152,13 +150,13 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt="Logo preview" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" width={128} height={128} />
         ) : uploading ? (
-          <span className="text-caption text-text-muted pointer-events-none">Uploading...</span>
+          <span className="text-body text-text-muted pointer-events-none">Uploading...</span>
         ) : (
           <ImageIcon size={24} strokeWidth={1.5} className="text-text-muted pointer-events-none opacity-50" />
         )}
         {filled && hovering && (
           <span className="absolute inset-0 bg-text/5 flex items-center justify-center pointer-events-none">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-control bg-surface/95 text-text text-caption font-medium shadow-sm">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-control bg-surface/95 text-text text-body font-medium shadow-sm">
               <Upload size={12} strokeWidth={1.5} />
               Replace
             </span>
@@ -179,7 +177,7 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
           </button>
         )}
       </div>
-      <p className="text-caption text-text-muted">PNG, JPEG, SVG up to 2MB</p>
+      <p className="text-body text-text-muted">PNG, JPEG, SVG up to 2MB</p>
       <input
         ref={inputRef}
         type="file"

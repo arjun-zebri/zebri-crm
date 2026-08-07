@@ -87,7 +87,7 @@ export function Checkbox({
       } ${className ?? ''}`}
     >
       {box}
-      <span className={`text-caption ${disabled ? 'text-text-subtle' : 'text-text'}`}>
+      <span className={`text-body ${disabled ? 'text-text-subtle' : 'text-text'}`}>
         {label}
       </span>
     </label>

@@ -28,7 +28,7 @@ export function LabelledInput({ label, icon: Icon, tooltip, ...rest }: LabelledI
     <div>
       <div className="flex items-center gap-1.5 mb-1.5">
         {Icon && <Icon size={13} strokeWidth={1.5} className="text-text-subtle" aria-hidden />}
-        <label htmlFor={id} className="text-caption font-medium text-text">
+        <label htmlFor={id} className="text-body font-medium text-text">
           {label}
         </label>
         {tooltip && (

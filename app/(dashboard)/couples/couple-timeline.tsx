@@ -295,7 +295,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
                 <div className="w-full sm:w-[260px] flex-shrink-0 flex flex-col gap-8 overflow-y-auto pt-1 pb-6 sm:pb-2">
                   {/* Unscheduled */}
                   <div>
-                    <h3 className="text-caption font-semibold uppercase tracking-wider text-text mb-4">Unscheduled</h3>
+                    <h3 className="text-body font-semibold uppercase tracking-wider text-text mb-4">Unscheduled</h3>
                     <DroppableSection id="drop-unscheduled" isUnscheduled>
                       {unscheduledItems.length === 0 ? (
                         <p className="text-body text-gray-300 px-1 py-2">Drag here to unschedule</p>
@@ -308,9 +308,9 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
                               className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-border rounded-control hover:border-border-strong hover:bg-gray-50 transition"
                               onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
                             >
-                              <p className="text-caption font-medium text-gray-700 truncate">{item.title}</p>
-                              {item.contact && <p className="text-caption text-text-subtle truncate">{item.contact.name}</p>}
-                              {item.description && <p className="text-caption text-text-subtle mt-0.5 line-clamp-2">{item.description}</p>}
+                              <p className="text-body font-medium text-gray-700 truncate">{item.title}</p>
+                              {item.contact && <p className="text-body text-text-subtle truncate">{item.contact.name}</p>}
+                              {item.description && <p className="text-body text-text-subtle mt-0.5 line-clamp-2">{item.description}</p>}
                             </DraggableSidebarCard>
                           ))}
                         </div>
@@ -320,7 +320,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
 
                   {/* To Review */}
                   <div>
-                    <h3 className="text-caption font-semibold uppercase tracking-wider text-text mb-4">To Review</h3>
+                    <h3 className="text-body font-semibold uppercase tracking-wider text-text mb-4">To Review</h3>
                     <DroppableSection id="drop-review">
                       {reviewItems.length === 0 ? (
                         <p className="text-body text-gray-300 px-1 py-2">Drag here to review</p>
@@ -333,9 +333,9 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
                               className="flex flex-col gap-0.5 px-3 py-2.5 border border-amber-200 border-l-2 border-l-amber-400 rounded-control hover:bg-amber-50/50 transition"
                               onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
                             >
-                              <p className="text-caption font-medium text-gray-700 truncate">{item.title}</p>
-                              {item.start_time && <p className="text-caption text-text-subtle mt-0.5">{formatTime(item.start_time)}</p>}
-                              {item.description && <p className="text-caption text-text-subtle mt-0.5 line-clamp-2">{item.description}</p>}
+                              <p className="text-body font-medium text-gray-700 truncate">{item.title}</p>
+                              {item.start_time && <p className="text-body text-text-subtle mt-0.5">{formatTime(item.start_time)}</p>}
+                              {item.description && <p className="text-body text-text-subtle mt-0.5 line-clamp-2">{item.description}</p>}
                             </DraggableSidebarCard>
                           ))}
                         </div>
@@ -347,7 +347,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
 
               <DragOverlay>
                 {activeId ? (
-                  <div className="w-52 px-3 py-2.5 bg-surface border border-border-strong rounded-control shadow-lg text-caption font-medium text-gray-700 cursor-grabbing truncate">
+                  <div className="w-52 px-3 py-2.5 bg-surface border border-border-strong rounded-control shadow-lg text-body font-medium text-gray-700 cursor-grabbing truncate">
                     {items.find((i) => i.id === activeId)?.title ?? ''}
                   </div>
                 ) : null}

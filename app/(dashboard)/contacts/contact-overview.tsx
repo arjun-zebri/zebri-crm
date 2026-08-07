@@ -55,7 +55,7 @@ export function ContactOverview({ vendor, onSave, onClose }: ContactOverviewProp
     <div className="flex flex-col gap-10">
       {/* Section 1: General */}
       <div>
-        <h3 className="text-caption font-semibold uppercase tracking-wider text-text mb-4">
+        <h3 className="text-body font-semibold uppercase tracking-wider text-text mb-4">
           General
         </h3>
 

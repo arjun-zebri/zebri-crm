@@ -175,7 +175,7 @@ export function CoupleProfileNav({
             <button
               key={item.key}
               onClick={() => onSectionChange(item.key)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-control text-caption whitespace-nowrap transition cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-control text-body whitespace-nowrap transition cursor-pointer ${
                 activeSection === item.key
                   ? 'bg-surface-emphasis text-text font-medium'
                   : 'text-text-muted'

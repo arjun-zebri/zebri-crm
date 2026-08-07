@@ -61,7 +61,7 @@ export function deriveInvoices(invoices: Invoice[]): InvoiceWithDerived[] {
 }
 
 function pill(status: string, opts?: { wrap?: boolean }): ReactNode {
-  const className = `inline-flex items-center px-2 py-0.5 rounded-pill text-caption font-medium${opts?.wrap === false ? ' whitespace-nowrap' : ''} ${INVOICE_STATUS_STYLES[status] || INVOICE_STATUS_STYLES.draft}`;
+  const className = `inline-flex items-center px-2 py-0.5 rounded-pill text-body font-medium${opts?.wrap === false ? ' whitespace-nowrap' : ''} ${INVOICE_STATUS_STYLES[status] || INVOICE_STATUS_STYLES.draft}`;
   return <span className={className}>{INVOICE_STATUS_LABELS[status] || status}</span>;
 }
 
@@ -121,7 +121,7 @@ export function InvoicesList({ loading, invoices, searching, onOpen }: InvoicesL
           <>
             <span className="text-gray-300 shrink-0">·</span>
             <span
-              className={`text-caption shrink-0 ${
+              className={`text-body shrink-0 ${
                 invoice.isOverdue ? 'text-red-500 font-medium' : 'text-text-subtle'
               }`}
             >

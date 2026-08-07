@@ -119,7 +119,7 @@ export function GroupSection({
           header
         )}
 
-        <span className="text-caption text-text-subtle tabular-nums">{count}</span>
+        <span className="text-body text-text-subtle tabular-nums">{count}</span>
 
         <div className="ml-1 flex items-center gap-0.5">
           {group && onRecolor && (
@@ -253,7 +253,7 @@ export function GroupSection({
             <div>{children}</div>
           </SortableContext>
           {count === 0 && (
-            <div className="px-3 py-2 text-caption text-gray-300 italic border-b border-gray-100">
+            <div className="px-3 py-2 text-body text-gray-300 italic border-b border-gray-100">
               No tasks
             </div>
           )}
@@ -320,7 +320,7 @@ export function ColumnHeader({
   ].join(' ')
   return (
     <div
-      className="hidden sm:grid items-center gap-2 px-2 py-1.5 border-b border-border text-caption text-text-subtle"
+      className="hidden sm:grid items-center gap-2 px-2 py-1.5 border-b border-border text-body text-text-subtle"
       style={{ gridTemplateColumns: template }}
     >
       {!hideGutter && <span />}

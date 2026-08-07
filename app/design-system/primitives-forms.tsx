@@ -1,27 +1,27 @@
 'use client';
 
+import { X } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { CopyButton } from '@/components/ui/copy-button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 
-import { Conflict } from './conflict';
-import { Demo, DemoGrid, DemoRow, Spec } from './showroom';
+import { Demo, DemoGrid, DemoRow, Rule, Spec } from './showroom';
 
 /**
  * Form primitives: Button, Input, Select, Checkbox, DatePicker.
  *
- * Every variant and size is rendered, so a missing or off-pattern
+ * Every variant and state is rendered, so a missing or off-pattern
  * combination is visible rather than inferred from the type signature.
  *
  * @module app/design-system/primitives-forms
  */
 
 const VARIANTS = ['primary', 'secondary', 'outline', 'ghost', 'danger', 'success'] as const;
-const SIZES = ['sm', 'md', 'lg'] as const;
 
 const STATUS_OPTIONS = [
   { value: 'new', label: 'New' },
@@ -38,9 +38,17 @@ export function PrimitivesForms() {
 
   return (
     <>
-      <Spec name="Button" file="components/ui/button.tsx" description="Six variants, three sizes, plus loading and disabled states.">
+      <Spec name="Button" file="components/ui/button.tsx"
+        importPath="@/components/ui/button" description="Six variants, one height, icon-only mode, plus loading and disabled states.">
+        <Rule>
+          There is no <code>size</code> prop. Every control in the app is 32px tall, so a button
+          never disagrees with the input or select beside it. Four sizes existed until 2026-08-07
+          and mismatched heights were the most common visual bug in the app. Nothing sets
+          <code> cursor-pointer</code> either: a base rule in <code>globals.css</code> gives every{' '}
+          <code>button</code> the hand cursor, including raw ones this primitive does not own.
+        </Rule>
         <div className="space-y-6">
-          <Demo label="Variants (size md)">
+          <Demo label="Variants">
             <DemoRow>
               {VARIANTS.map((v) => (
                 <Button key={v} variant={v}>
@@ -49,11 +57,11 @@ export function PrimitivesForms() {
               ))}
             </DemoRow>
           </Demo>
-          <Demo label="Sizes">
+          <Demo label="Icon-only (square, width locked to height)">
             <DemoRow>
-              {SIZES.map((s) => (
-                <Button key={s} size={s}>
-                  Size {s}
+              {VARIANTS.map((v) => (
+                <Button key={v} variant={v} iconOnly aria-label={`Close ${v}`}>
+                  <X width={14} height={14} strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               ))}
             </DemoRow>
@@ -70,51 +78,11 @@ export function PrimitivesForms() {
         </div>
       </Spec>
 
-      <Conflict
-        title="CLAUDE.md says buttons are rounded-xl. The Button primitive is rounded-control (6px)."
-        group="controls"
-        recommendation={
-          <>
-            The primitive is right and the rule is stale: 6px matches the Input and Select triggers,
-            and a 12px button next to a 6px input looks mismatched. Fix the CLAUDE.md line rather
-            than the component. The 663 native <code>&lt;button&gt;</code> elements are the real
-            problem, since each carries its own hand-written radius.
-          </>
-        }
-      >
-        <DemoRow>
-          <div className="space-y-1 text-center">
-            <Button>Button primitive</Button>
-            <code className="block text-caption text-text-subtle">rounded-control · 6px</code>
-          </div>
-          <div className="space-y-1 text-center">
-            <button
-              type="button"
-              className="inline-flex h-9 cursor-pointer items-center rounded-xl bg-brand-fg px-4 text-body font-medium text-text-inverse"
-            >
-              Per CLAUDE.md
-            </button>
-            <code className="block text-caption text-text-subtle">rounded-xl · 12px</code>
-          </div>
-          <div className="space-y-1 text-center">
-            <button
-              type="button"
-              className="inline-flex h-9 cursor-pointer items-center rounded-full bg-brand-fg px-4 text-body font-medium text-text-inverse"
-            >
-              Found in app
-            </button>
-            <code className="block text-caption text-text-subtle">rounded-full · banned</code>
-          </div>
-        </DemoRow>
-      </Conflict>
-
-      <Spec name="Input" file="components/ui/input.tsx" description="Two sizes. Label, help text and error are wired with aria-describedby.">
+      <Spec name="Input" file="components/ui/input.tsx"
+        importPath="@/components/ui/input" description="One height. Label, help text and error are wired with aria-describedby.">
         <DemoGrid cols={3}>
-          <Demo label="Default (md)">
+          <Demo label="Default">
             <Input label="Couple name" placeholder="Alex and Sam" />
-          </Demo>
-          <Demo label="Small">
-            <Input size="sm" label="Couple name" placeholder="Alex and Sam" />
           </Demo>
           <Demo label="With help text">
             <Input label="Email" type="email" help="We send the quote copy here." />
@@ -131,40 +99,17 @@ export function PrimitivesForms() {
         </DemoGrid>
       </Spec>
 
-      <Conflict
-        title="119 native inputs bypass the Input primitive"
-        recommendation={
-          <>
-            The primitive gives a label, help slot, error slot and correct{' '}
-            <code>aria-describedby</code> linkage. Native inputs in the app have none of that, so
-            each one is an accessibility gap as well as a styling gap. Compare the focus ring and
-            label spacing below.
-          </>
-        }
-      >
-        <DemoGrid cols={2}>
-          <Demo label="Input primitive">
-            <Input label="Venue" placeholder="Click to focus" />
-          </Demo>
-          <Demo label="Native input as found in the app">
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-900">Venue</label>
-              <input
-                placeholder="Click to focus"
-                className="block h-9 w-full rounded-lg border border-gray-200 px-3 text-sm focus:border-gray-900 focus:outline-none"
-              />
-            </div>
-          </Demo>
-        </DemoGrid>
-      </Conflict>
-
-      <Spec name="Select" file="components/ui/select.tsx" description="Radix-backed. Trigger size drives the dropdown item size.">
+      <Spec name="Select" file="components/ui/select.tsx"
+        importPath="@/components/ui/select" description="Radix-backed. Same 32px trigger as Input and Button.">
+        <Rule>
+          The dropdown is portalled to <code>document.body</code>, so it does <em>not</em> inherit
+          the trigger&apos;s type size. Any floating panel needs <code>text-body</code> on the panel
+          itself, or its rows render at the document&apos;s 16px and read larger than the control
+          that opened them.
+        </Rule>
         <DemoGrid cols={3}>
-          <Demo label="Default (md)">
+          <Demo label="Default">
             <Select label="Status" options={STATUS_OPTIONS} value={status} onValueChange={setStatus} />
-          </Demo>
-          <Demo label="Small">
-            <Select size="sm" label="Status" options={STATUS_OPTIONS} value={status} onValueChange={setStatus} />
           </Demo>
           <Demo label="Placeholder">
             <Select label="Status" options={STATUS_OPTIONS} placeholder="Choose one" />
@@ -185,7 +130,30 @@ export function PrimitivesForms() {
         </DemoGrid>
       </Spec>
 
-      <Spec name="Checkbox" file="components/ui/checkbox.tsx" description="A button with role=checkbox, not a native input, so it can carry tokens.">
+      <Spec name="CopyButton" file="components/ui/copy-button.tsx"
+        importPath="@/components/ui/copy-button" description="Copy to clipboard, with a confirmed state that does not resize the button.">
+        <Rule>
+          Never hand-roll <code>{'{'}copied ? &apos;Copied!&apos; : &apos;Copy link&apos;{'}'}</code>{' '}
+          &mdash; the label change resizes the control mid-click. This stacks both labels in one
+          grid cell, so the button is always as wide as the longer one. It owns the clipboard
+          write and the revert timer too. Pass a function as <code>value</code> when the string
+          needs <code>window</code>. <code>plain</code> renders bare text for meta rows.
+        </Rule>
+        <DemoGrid cols={3}>
+          <Demo label="Default">
+            <CopyButton value="https://zebri.app/example" label="Copy link" />
+          </Demo>
+          <Demo label="Custom labels">
+            <CopyButton value="ZEB-0041" label="Copy ref" copiedLabel="Copied ref" />
+          </Demo>
+          <Demo label="plain (meta rows)">
+            <CopyButton plain value="https://zebri.app/example" label="Copy link" />
+          </Demo>
+        </DemoGrid>
+      </Spec>
+
+      <Spec name="Checkbox" file="components/ui/checkbox.tsx"
+        importPath="@/components/ui/checkbox" description="A button with role=checkbox, not a native input, so it can carry tokens.">
         <DemoRow>
           <Checkbox checked={checked} onChange={setChecked} label="BCC yourself" />
           <Checkbox checked={false} onChange={() => {}} label="Unchecked" />
@@ -195,60 +163,31 @@ export function PrimitivesForms() {
         </DemoRow>
       </Spec>
 
-      <Conflict
-        title="Checkbox is the only primitive still built on raw palette colours"
-        recommendation={
-          <>
-            Its checked fill is <code>bg-emerald-500</code> and its borders are{' '}
-            <code>gray-200</code> / <code>gray-300</code> / <code>gray-500</code>, while{' '}
-            <code>StatePill</code> and <code>Button</code> use <code>bg-success</code> and{' '}
-            <code>border-border</code>. Note the two greens below are genuinely different:
-            emerald-500 is <code>#10b981</code>, the success token is <code>#059669</code>.
-          </>
-        }
-      >
-        <DemoRow>
-          <div className="space-y-1 text-center">
-            <span className="mx-auto flex h-4 w-4 items-center justify-center rounded border border-emerald-500 bg-emerald-500" />
-            <code className="block text-caption text-text-subtle">emerald-500 · #10b981</code>
-          </div>
-          <div className="space-y-1 text-center">
-            <span className="mx-auto flex h-4 w-4 items-center justify-center rounded-control border border-success bg-success" />
-            <code className="block text-caption text-text-subtle">success token · #059669</code>
-          </div>
-        </DemoRow>
-      </Conflict>
-
-      <Spec name="DatePicker" file="components/ui/date-picker.tsx" description="Three trigger variants, two sizes, plus an inline calendar mode.">
+      <Spec name="DatePicker" file="components/ui/date-picker.tsx"
+        importPath="@/components/ui/date-picker" description="One trigger, the Input geometry. Icon on either side, plus an inline calendar mode.">
+        <Rule>
+          There is no <code>variant</code> prop. A date field is a text field that opens a
+          calendar, so it wears the <code>Input</code> chrome: 32px, control radius, border darkens
+          on focus. The <code>underline</code> and <code>meta</code> treatments were removed on
+          2026-08-07 &mdash; three chromes for one control meant a date field looked like a
+          different species depending on which form it landed in.
+        </Rule>
         <DemoGrid cols={3}>
-          <Demo label="outlined (default)">
+          <Demo label="Default (icon right)">
             <DatePicker value={date} onChange={setDate} placeholder="Pick a date" />
           </Demo>
-          <Demo label="underline">
-            <DatePicker value={date} onChange={setDate} variant="underline" placeholder="Pick a date" />
+          <Demo label="Icon left">
+            <DatePicker value={date} onChange={setDate} iconPosition="left" placeholder="Pick a date" />
           </Demo>
-          <Demo label="meta">
-            <DatePicker value={date} onChange={setDate} variant="meta" placeholder="Pick a date" />
+          <Demo label="With a display prefix">
+            <DatePicker value={date} onChange={setDate} displayPrefix="Expires" placeholder="Set due date" />
+          </Demo>
+          <Demo label="Disabled">
+            <DatePicker value={date} onChange={setDate} disabled placeholder="Pick a date" />
           </Demo>
         </DemoGrid>
       </Spec>
 
-      <Conflict
-        title="DatePicker has three trigger variants; Input and Select have one"
-        recommendation={
-          <>
-            <code>underline</code> and <code>meta</code> exist only on DatePicker, so a date field
-            and a text field sitting in the same form can look like they belong to different apps.
-            Either add the same variants to Input and Select, or retire the extra two and let
-            context handle it.
-          </>
-        }
-      >
-        <DemoRow>
-          <Input size="sm" placeholder="Text field" />
-          <DatePicker value={date} onChange={setDate} size="sm" variant="underline" placeholder="Date field" />
-        </DemoRow>
-      </Conflict>
     </>
   );
 }

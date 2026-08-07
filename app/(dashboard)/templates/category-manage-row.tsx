@@ -66,7 +66,6 @@ export function CategoryManageRow({ category, onSave, onDelete }: CategoryManage
       {editing ? (
         <div className="space-y-2 rounded-control bg-surface-muted p-2">
           <Input
-            size="sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
@@ -84,7 +83,7 @@ export function CategoryManageRow({ category, onSave, onDelete }: CategoryManage
           <button
             type="button"
             onClick={save}
-            className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-control py-1 text-caption font-medium text-text transition hover:bg-surface"
+            className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-control py-1 text-body font-medium text-text transition hover:bg-surface"
           >
             <Check size={12} strokeWidth={1.5} />
             Save
@@ -102,7 +101,7 @@ export function CategoryManageRow({ category, onSave, onDelete }: CategoryManage
             <GripVertical size={14} strokeWidth={1.5} />
           </button>
           <span className={`h-2 w-2 shrink-0 rounded-pill ${categoryColorClasses(category.color).dot}`} />
-          <span className="min-w-0 flex-1 truncate text-caption text-text">{category.name}</span>
+          <span className="min-w-0 flex-1 truncate text-body text-text">{category.name}</span>
           <button
             type="button"
             aria-label={`Rename ${category.name}`}

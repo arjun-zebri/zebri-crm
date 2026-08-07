@@ -28,7 +28,7 @@ export function NotesField({
 }: NotesFieldProps) {
   return (
     <div className="space-y-2">
-      <h4 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+      <h4 className="text-body font-medium uppercase tracking-wide text-text-muted">
         {label}
       </h4>
       <textarea

@@ -47,7 +47,7 @@ export function WizardChrome({ step, saving, onBack, onSkip, onNext, onFinish }:
             style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
           />
         </div>
-        <span className="text-caption text-text-subtle whitespace-nowrap">
+        <span className="text-body text-text-subtle whitespace-nowrap">
           {step} of {TOTAL_STEPS}
         </span>
       </div>
@@ -56,22 +56,20 @@ export function WizardChrome({ step, saving, onBack, onSkip, onNext, onFinish }:
         {canSkip && (
           <Button
             variant="ghost"
-            size="sm"
             onClick={onSkip}
             disabled={saving}
-            className="text-caption text-text-muted"
+            className="text-body text-text-muted"
           >
             Skip
           </Button>
         )}
         {step > 1 && (
-          <Button variant="ghost" size="sm" onClick={onBack} disabled={saving}>
+          <Button variant="ghost" onClick={onBack} disabled={saving}>
             Back
           </Button>
         )}
         <Button
           variant="primary"
-          size="sm"
           onClick={isLast ? onFinish : onNext}
           disabled={saving}
           loading={saving}

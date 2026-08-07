@@ -64,7 +64,7 @@ export function DiscountControl({
           onClick={handleTriggerClick}
           disabled={!canEdit}
           aria-label={applied ? 'Edit discount' : 'Add discount'}
-          className={`inline-flex items-center rounded-control px-2.5 py-1 text-caption font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+          className={`inline-flex items-center rounded-control px-2.5 py-1 text-body font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
             applied
               ? 'bg-success/10 text-success hover:bg-success/15'
               : 'bg-surface-muted text-text-muted hover:bg-surface-emphasis hover:text-text'
@@ -86,7 +86,7 @@ export function DiscountControl({
           sideOffset={6}
           className="z-[90] w-64 rounded-control border border-border bg-surface shadow-lg p-3 animate-fade-in"
         >
-          <p className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
+          <p className="mb-3 text-body font-medium uppercase tracking-wide text-text-muted">
             Discount
           </p>
 
@@ -95,7 +95,7 @@ export function DiscountControl({
             <button
               type="button"
               onClick={() => onTypeChange('percentage')}
-              className={`flex-1 px-2.5 py-1.5 text-caption font-medium transition-colors ${
+              className={`flex-1 px-2.5 py-1.5 text-body font-medium transition-colors ${
                 type === 'percentage' || type === null
                   ? 'bg-surface-emphasis text-text'
                   : 'text-text-muted hover:text-text'
@@ -106,7 +106,7 @@ export function DiscountControl({
             <button
               type="button"
               onClick={() => onTypeChange('fixed')}
-              className={`flex-1 px-2.5 py-1.5 text-caption font-medium border-l border-border transition-colors ${
+              className={`flex-1 px-2.5 py-1.5 text-body font-medium border-l border-border transition-colors ${
                 type === 'fixed'
                   ? 'bg-surface-emphasis text-text'
                   : 'text-text-muted hover:text-text'
@@ -118,7 +118,7 @@ export function DiscountControl({
 
           {/* Value input */}
           <label className="mb-3 block">
-            <span className="mb-1 block text-caption text-text-muted">Amount</span>
+            <span className="mb-1 block text-body text-text-muted">Amount</span>
             <div className="relative">
               {type === 'fixed' ? (
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-body text-text-subtle">
@@ -153,14 +153,14 @@ export function DiscountControl({
                   onRemove();
                   setOpen(false);
                 }}
-                className="text-caption text-text-muted hover:text-danger transition-colors cursor-pointer"
+                className="text-body text-text-muted hover:text-danger transition-colors cursor-pointer"
               >
                 Remove
               </button>
             ) : (
               <span />
             )}
-            <Button size="sm" onClick={() => setOpen(false)}>
+            <Button onClick={() => setOpen(false)}>
               Done
             </Button>
           </div>

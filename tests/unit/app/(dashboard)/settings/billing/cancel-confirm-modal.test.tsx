@@ -67,9 +67,15 @@ describe('CancelConfirmModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('busy=true disables both buttons + flips confirm label', () => {
+  it('busy=true disables both buttons and keeps the confirm label put', () => {
+    // The label deliberately does NOT flip to "Cancelling…": a longer
+    // in-flight label resizes the button mid-click. `Button loading`
+    // lays a spinner over the label instead.
     setup({ busy: true });
-    expect(screen.getByRole('button', { name: /Cancelling/i })).toBeDisabled();
+
+    const confirm = screen.getByRole('button', { name: /Yes, cancel/i });
+    expect(confirm).toBeDisabled();
+    expect(confirm).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('button', { name: /Keep subscription/i })).toBeDisabled();
   });
 });

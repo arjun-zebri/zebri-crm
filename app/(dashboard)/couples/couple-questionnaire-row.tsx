@@ -64,7 +64,7 @@ export function CoupleQuestionnaireRow({ questionnaire: q, onOpen, onCopyLink, o
         <ClipboardList size={15} strokeWidth={1.5} className="shrink-0 text-text-muted" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-body text-text">{q.title}</span>
-          <span className="block text-caption text-text-subtle">
+          <span className="block text-body text-text-subtle">
             {state.detail}
             {linkOff && ' · link off'}
           </span>

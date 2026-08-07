@@ -73,7 +73,7 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button variant={cfg.variant} size="sm" className="cursor-pointer gap-1.5">
+        <Button variant={cfg.variant} className="cursor-pointer gap-1.5">
           <Icon size={14} strokeWidth={1.5} /> {cfg.label}
         </Button>
       </Popover.Trigger>
@@ -83,11 +83,11 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
           sideOffset={6}
           className="z-[80] w-72 rounded-control border border-border bg-surface py-1.5 shadow-lg"
         >
-          <p className="px-3 py-1.5 text-caption text-text-subtle">{cfg.hint}</p>
+          <p className="px-3 py-1.5 text-body text-text-subtle">{cfg.hint}</p>
           {isLoading ? (
             <PickerSkeleton />
           ) : (templates ?? []).length === 0 ? (
-            <p className="px-3 py-1.5 text-caption text-text-muted">No templates yet. Add some on the Templates page.</p>
+            <p className="px-3 py-1.5 text-body text-text-muted">No templates yet. Add some on the Templates page.</p>
           ) : (
             <div className="max-h-72 overflow-y-auto">
               {(templates ?? []).map((t) => (
@@ -102,7 +102,7 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
                 >
                   <span className="truncate">{t.name}</span>
                   {t.category && (
-                    <span className="shrink-0 text-caption text-text-subtle">{t.category.name}</span>
+                    <span className="shrink-0 text-body text-text-subtle">{t.category.name}</span>
                   )}
                 </button>
               ))}

@@ -117,7 +117,7 @@ export function SubscriptionActionsSection({
 
   return (
     <section>
-      <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted mb-3">
+      <h3 className="text-body font-medium uppercase tracking-wide text-text-muted mb-3">
         Subscription
       </h3>
 
@@ -135,10 +135,10 @@ export function SubscriptionActionsSection({
         <Property label="Plan">
           <span className="capitalize text-text">{user.subscription_plan ?? 'Starter'}</span>
           {user.is_comped && (
-            <span className="ml-2 text-caption text-text-muted">(comped)</span>
+            <span className="ml-2 text-body text-text-muted">(comped)</span>
           )}
           {user.is_beta_user && (
-            <span className="ml-2 text-caption text-text-muted">(beta)</span>
+            <span className="ml-2 text-body text-text-muted">(beta)</span>
           )}
         </Property>
         <Property label={user.cancel_at_period_end ? 'Access ends' : 'Renews'}>
@@ -170,29 +170,27 @@ export function SubscriptionActionsSection({
           <Select
             value={compPlan}
             onValueChange={(v) => setCompPlan(v as 'pro' | 'max')}
-            size="sm"
             options={[
               { value: 'pro', label: 'Pro' },
               { value: 'max', label: 'Max' },
             ]}
             className="w-24"
           />
-          <Button onClick={handleComp} size="sm">
+          <Button onClick={handleComp}>
             Comp user
           </Button>
           <Button
             onClick={() => setConfirmCancel(true)}
             disabled={!user.stripe_subscription_id}
             variant="secondary"
-            size="sm"
           >
             Cancel at period end
           </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-caption text-text-muted">Refund last invoice</span>
-          <span className="text-caption text-text-muted">$</span>
+          <span className="text-body text-text-muted">Refund last invoice</span>
+          <span className="text-body text-text-muted">$</span>
           <Input
             type="number"
             step="0.01"
@@ -201,13 +199,11 @@ export function SubscriptionActionsSection({
             onChange={(e) => setRefundAmount(e.target.value)}
             placeholder="0.00"
             className="w-24"
-            size="sm"
           />
           <Button
             onClick={handleRefund}
             disabled={!user.stripe_customer_id}
             variant="secondary"
-            size="sm"
           >
             Refund
           </Button>
@@ -218,7 +214,7 @@ export function SubscriptionActionsSection({
           <button
             type="button"
             onClick={() => setShowLinkStripe(true)}
-            className="text-caption text-text-muted hover:text-text underline cursor-pointer"
+            className="text-body text-text-muted hover:text-text underline cursor-pointer"
           >
             Link Stripe customer
           </button>
@@ -230,9 +226,8 @@ export function SubscriptionActionsSection({
               onChange={(e) => setLinkCustomerId(e.target.value)}
               placeholder="cus_..."
               className="w-44 font-mono"
-              size="sm"
             />
-            <Button onClick={handleLinkStripe} size="sm">
+            <Button onClick={handleLinkStripe}>
               Link
             </Button>
             <button
@@ -241,7 +236,7 @@ export function SubscriptionActionsSection({
                 setShowLinkStripe(false);
                 setLinkCustomerId('');
               }}
-              className="text-caption text-text-muted hover:text-text cursor-pointer"
+              className="text-body text-text-muted hover:text-text cursor-pointer"
             >
               Cancel
             </button>
@@ -265,7 +260,7 @@ export function SubscriptionActionsSection({
 function Property({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-caption text-text-muted mb-0.5">{label}</dt>
+      <dt className="text-body text-text-muted mb-0.5">{label}</dt>
       <dd className="text-text">{children}</dd>
     </div>
   );

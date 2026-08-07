@@ -13,6 +13,7 @@ import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
 import type { AutomationsHomePayload } from '@/types/automations'
 
@@ -77,22 +78,19 @@ export default function AutomationsPage() {
           actions={
             !isEmptyState && (
             <>
-              <button
-                onClick={handleCreate}
-                disabled={pending}
-                className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
-              >
-                <Plus size={11} strokeWidth={2} />
+              <Button onClick={handleCreate} disabled={pending} className="hidden sm:inline-flex">
+                <Plus size={11} strokeWidth={1.5} />
                 New automation
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleCreate}
                 disabled={pending}
-                className="sm:hidden flex items-center justify-center w-8 h-8 rounded-pill bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+                iconOnly
+                className="sm:hidden"
                 aria-label="New automation"
               >
-                <Plus size={14} strokeWidth={2} />
-              </button>
+                <Plus size={14} strokeWidth={1.5} />
+              </Button>
             </>
             )
           }

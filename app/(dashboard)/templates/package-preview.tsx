@@ -50,7 +50,7 @@ function formatAUD(amount: number) {
 
 /** Uppercase section label used on the table header bands. */
 function BandLabel({ children }: { children: ReactNode }) {
-  return <span className="text-caption font-medium uppercase tracking-wide text-text-subtle">{children}</span>
+  return <span className="text-body font-medium uppercase tracking-wide text-text-subtle">{children}</span>
 }
 
 export function PackagePreview({
@@ -76,7 +76,7 @@ export function PackagePreview({
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-caption font-medium uppercase tracking-wide text-brand">Package</p>
+          <p className="text-body font-medium uppercase tracking-wide text-brand">Package</p>
           <div className="mt-1 flex items-center gap-2">
             <h3 className="min-w-0 truncate text-2xl font-semibold text-text">
               {name || 'Untitled'}
@@ -89,7 +89,7 @@ export function PackagePreview({
               </span>
             )}
             {archived && (
-              <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-caption text-text-muted">
+              <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-body text-text-muted">
                 Archived
               </span>
             )}
@@ -107,7 +107,7 @@ export function PackagePreview({
       <div className="mt-5 overflow-hidden rounded-control border border-border">
         <div className="flex items-center justify-between bg-surface-muted px-4 py-2.5">
           <BandLabel>Line items</BandLabel>
-          <span className="text-caption text-text-muted">
+          <span className="text-body text-text-muted">
             {baseItems.length} item{baseItems.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -169,7 +169,7 @@ export function PackagePreview({
         </div>
       )}
 
-      <p className="mt-4 text-caption text-text-muted first-letter:uppercase">{terms.join(' · ')}</p>
+      <p className="mt-4 text-body text-text-muted first-letter:uppercase">{terms.join(' · ')}</p>
     </Card>
   )
 }

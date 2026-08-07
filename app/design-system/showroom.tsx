@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 
 /**
- * Layout scaffolding shared by every showroom section.
+ * Layout scaffolding for the design system reference.
  *
- * These are presentation-only wrappers for the /design-system page. They
- * are deliberately not in `components/ui/` because nothing outside the
- * showroom should ever use them.
+ * These are presentation-only wrappers for the /design-system page.
+ * They live here rather than in `components/ui/` because nothing outside
+ * the reference should use them.
  *
  * @module app/design-system/showroom
  */
 
-/** A top-level showroom section. `id` is the left-rail anchor target. */
+/** A top-level section. `id` is the left-rail anchor target. */
 export function Section({
   id,
   title,
@@ -34,18 +34,20 @@ export function Section({
 }
 
 /**
- * One component entry: its name, source path, and rendered demos.
- *
- * `file` is shown verbatim so it can be pasted straight into an editor.
+ * One component entry: its name, where it lives, how to import it, and
+ * its examples.
  */
 export function Spec({
   name,
   file,
+  importPath,
   description,
   children,
 }: {
   name: string;
   file?: string;
+  /** Module to import from. Rendered as a copyable import line. */
+  importPath?: string;
   description?: ReactNode;
   children: ReactNode;
 }) {
@@ -54,33 +56,62 @@ export function Spec({
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h3 className="text-body font-semibold text-text">{name}</h3>
         {file ? (
-          <code className="rounded-control bg-surface-muted px-1.5 py-0.5 text-caption text-text-subtle">
+          <code className="rounded-control bg-surface-muted px-1.5 py-0.5 text-body text-text-subtle">
             {file}
           </code>
         ) : null}
       </header>
-      {description ? <p className="text-caption text-text-muted">{description}</p> : null}
-      <div className="rounded-control border border-border bg-surface p-5">{children}</div>
+      {description ? <p className="text-body text-text-muted">{description}</p> : null}
+      {importPath ? <CodeBlock code={`import { ${name.split(' ')[0]} } from '${importPath}'`} /> : null}
+      <div className="space-y-6 rounded-control border border-border bg-surface p-5">{children}</div>
     </article>
   );
 }
 
+/** A fenced, monospaced code sample. */
+export function CodeBlock({ code }: { code: string }) {
+  return (
+    <pre className="overflow-x-auto rounded-control border border-border bg-surface-muted px-3 py-2 text-body leading-relaxed text-text-muted">
+      <code>{code}</code>
+    </pre>
+  );
+}
+
 /**
- * A labelled demo cell inside a {@link Spec}.
- *
- * The label sits above the specimen so a row of variants reads as a
- * comparison rather than a pile of controls.
+ * A labelled example: the live component above, the JSX that produced
+ * it below. The code is the point of the page, so it is always visible
+ * rather than hidden behind a toggle.
  */
+export function Example({
+  label,
+  code,
+  children,
+}: {
+  label?: ReactNode;
+  /** The JSX that renders `children`. Keep it copy-pasteable. */
+  code?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      {label ? <p className="text-body font-medium text-text-subtle">{label}</p> : null}
+      <div>{children}</div>
+      {code ? <CodeBlock code={code} /> : null}
+    </div>
+  );
+}
+
+/** A labelled demo cell with no code block, for dense variant matrices. */
 export function Demo({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div className="space-y-2">
-      <p className="text-caption font-medium text-text-subtle">{label}</p>
+      <p className="text-body font-medium text-text-subtle">{label}</p>
       <div>{children}</div>
     </div>
   );
 }
 
-/** A responsive grid of {@link Demo} cells. */
+/** A responsive grid of cells. */
 export function DemoGrid({ cols = 3, children }: { cols?: 2 | 3 | 4; children: ReactNode }) {
   // Explicit class strings, not interpolation: Tailwind only emits
   // classes it can see as complete literals at build time.
@@ -93,22 +124,27 @@ export function DemoGrid({ cols = 3, children }: { cols?: 2 | 3 | 4; children: R
   return <div className={`grid grid-cols-1 gap-6 ${colClass}`}>{children}</div>;
 }
 
-/** A horizontal strip of specimens that should sit on one baseline. */
+/** A horizontal strip of specimens sharing one baseline. */
 export function DemoRow({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap items-center gap-3">{children}</div>;
 }
 
 /**
- * A dashed frame marking content that is a hand-built representative
- * sample rather than an importable component.
- *
- * Used by the page-patterns section, where the "component" only exists
- * as copy-pasted markup across many pages.
+ * A dashed frame marking a composed pattern rather than an importable
+ * component, so it is obvious which examples you can `import` and which
+ * you assemble yourself.
  */
 export function SampleFrame({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-control border border-dashed border-border-strong bg-surface-muted p-4">
       {children}
     </div>
+  );
+}
+
+/** A rule stated once, in the component's own entry. */
+export function Rule({ children }: { children: ReactNode }) {
+  return (
+    <p className="border-l-2 border-border-strong pl-3 text-body text-text-muted">{children}</p>
   );
 }

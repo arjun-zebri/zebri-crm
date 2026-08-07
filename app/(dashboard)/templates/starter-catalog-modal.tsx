@@ -81,7 +81,6 @@ export function StarterCatalogModal({
           <div className="flex items-center justify-between gap-4">
             <p className="text-body text-text-muted">{blurb}</p>
             <Button
-              size="sm"
               variant="secondary"
               className="shrink-0"
               onClick={() => addNames(addable.map((i) => i.name), `all ${noun}s`)}
@@ -94,10 +93,9 @@ export function StarterCatalogModal({
               <li key={item.name} className="flex items-center gap-3 rounded-control px-1 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-body font-medium text-text">{item.name}</p>
-                  <p className="truncate text-caption text-text-subtle">{item.subtitle}</p>
+                  <p className="truncate text-body text-text-subtle">{item.subtitle}</p>
                 </div>
                 <Button
-                  size="sm"
                   variant="ghost"
                   className="shrink-0 gap-1.5"
                   onClick={() => addNames([item.name], item.name)}

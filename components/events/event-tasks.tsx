@@ -219,7 +219,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
           <p className="text-body text-text-subtle mb-3">No tasks yet.</p>
           <button
             onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
-            className="text-caption text-text-muted border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+            className="text-body text-text-muted border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add task
           </button>

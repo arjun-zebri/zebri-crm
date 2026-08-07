@@ -134,7 +134,7 @@ export function InspectorPanel({ selection, automationId, onClose, onSaved, onCh
           <div className="text-[10px] uppercase tracking-wide text-text-subtle">{meta.kindLabel}</div>
           <div className="text-body font-semibold truncate">{meta.title}</div>
           {meta.description && (
-            <div className="text-caption text-text-muted mt-0.5 line-clamp-2">{meta.description}</div>
+            <div className="text-body text-text-muted mt-0.5 line-clamp-2">{meta.description}</div>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -494,7 +494,7 @@ function TriggerConfigForm({
       )}
 
       {NO_CONFIG_HINT_TRIGGERS.has(triggerType) && (
-        <div className="text-caption text-text-muted">
+        <div className="text-body text-text-muted">
           This trigger fires whenever the event happens. No extra
           parameters needed. Add steps below to define what runs.
         </div>
@@ -954,7 +954,7 @@ function BranchFields({ config, setConfig }: FieldProps) {
               onChange={(v) => setConfig({ ...config, predicate: { ...predicate, days: v } })}
             />
           </div>
-          <div className="text-caption text-text-muted mt-1">days away from today.</div>
+          <div className="text-body text-text-muted mt-1">days away from today.</div>
         </div>
       )}
       {predicate.kind === 'couple_field' && (
@@ -1251,7 +1251,7 @@ function SendEmailForm({
         onChange={(id) => updateConfig({ templateId: id || undefined })}
       />
       {templateId ? (
-        <p className="text-caption text-text-muted">
+        <p className="text-body text-text-muted">
           This email uses a saved template — edit its subject and body in Templates. If a variable
           can&apos;t be filled for a couple, the run pauses and you&apos;ll be alerted to fix &amp;
           retry.
@@ -1546,7 +1546,7 @@ function UpdateCustomFieldsForm({ config, updateConfig }: ConfigProps) {
             <button
               type="button"
               onClick={() => setFields(fields.filter((_, idx) => idx !== i))}
-              className="h-8 px-2 text-caption text-text-muted hover:text-danger cursor-pointer"
+              className="h-8 px-2 text-body text-text-muted hover:text-danger cursor-pointer"
               aria-label="Remove field"
             >
               <Trash2 size={14} strokeWidth={1.5} />
@@ -1556,7 +1556,7 @@ function UpdateCustomFieldsForm({ config, updateConfig }: ConfigProps) {
         <button
           type="button"
           onClick={() => setFields([...fields, { key: '', value: '' }])}
-          className="text-caption text-text-muted hover:text-text cursor-pointer"
+          className="text-body text-text-muted hover:text-text cursor-pointer"
         >
           + Add field
         </button>
@@ -1777,7 +1777,7 @@ function InlineVariableHint() {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-1.5 text-caption text-text-muted cursor-pointer select-none transition-colors hover:text-text"
+        className="flex w-full items-center gap-1.5 text-body text-text-muted cursor-pointer select-none transition-colors hover:text-text"
       >
         <ChevronRight
           className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
@@ -1796,7 +1796,7 @@ function InlineVariableHint() {
               <div key={group.group}>
                 <div className="text-[10px] uppercase tracking-wide text-text-subtle mt-1">{group.group}</div>
                 {group.variables.map((v) => (
-                  <div key={v.token} className="text-caption font-mono text-text-muted">{v.token}</div>
+                  <div key={v.token} className="text-body font-mono text-text-muted">{v.token}</div>
                 ))}
               </div>
             ))}
@@ -1809,7 +1809,7 @@ function InlineVariableHint() {
 
 function Hint({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-control border border-border bg-surface-muted px-3 py-2 text-caption text-text-muted">
+    <div className="rounded-control border border-border bg-surface-muted px-3 py-2 text-body text-text-muted">
       {children}
     </div>
   )
@@ -1824,12 +1824,12 @@ interface FieldProps {
 
 /**
  * Standalone form label. Matches the design-system `Input`'s own
- * label rendering (text-caption font-medium text-text) so labels
+ * label rendering (text-body font-medium text-text) so labels
  * on composite fields like `NumericComparisonFields` line up with
  * labels rendered by the Input / Select primitives.
  */
 function Label({ children }: { children: React.ReactNode }) {
-  return <label className="block text-caption font-medium text-text mb-1">{children}</label>
+  return <label className="block text-body font-medium text-text mb-1">{children}</label>
 }
 
 function TextInput({
@@ -1846,7 +1846,6 @@ function TextInput({
   return (
     <Input
       label={label}
-      size="sm"
       type="text"
       value={value}
       placeholder={placeholder}
@@ -1895,7 +1894,6 @@ function NumberInput({
   return (
     <Input
       label={label}
-      size="sm"
       type="number"
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
@@ -1920,7 +1918,7 @@ function TextArea({ label, value, onChange, rows }: { label: string; value: stri
         rows={rows}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="block w-full rounded-control bg-surface text-text placeholder:text-text-subtle border border-border px-2.5 py-2 text-caption transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-fg focus-visible:border-brand-fg"
+        className="block w-full rounded-control bg-surface text-text placeholder:text-text-subtle border border-border px-2.5 py-2 text-body transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-fg focus-visible:border-brand-fg"
       />
     </div>
   )
@@ -1957,7 +1955,6 @@ function SelectInput({
   return (
     <Select
       label={label}
-      size="sm"
       value={radixValue}
       onValueChange={handle}
       options={radixOptions}

@@ -124,11 +124,11 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-caption font-semibold uppercase tracking-wider text-text">
+        <h3 className="text-body font-semibold uppercase tracking-wider text-text">
           Used by
         </h3>
         {couples.length > 0 && (
-          <span className="text-caption text-text-subtle">
+          <span className="text-body text-text-subtle">
             {couples.length} {couples.length === 1 ? "couple" : "couples"}
             {totalEvents > 0 && ` · ${totalEvents} ${totalEvents === 1 ? "event" : "events"}`}
           </span>
@@ -139,7 +139,7 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
         <div className="border border-dashed border-border rounded-control px-4 py-8 text-center">
           <Users size={20} strokeWidth={1.5} className="text-gray-300 mx-auto mb-2" />
           <p className="text-body text-text-muted">Not linked to any couples yet.</p>
-          <p className="text-caption text-text-subtle mt-1">
+          <p className="text-body text-text-subtle mt-1">
             Add this contact from a couple&apos;s profile to see them here.
           </p>
         </div>
@@ -158,7 +158,7 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
                     {couple.name}
                   </div>
                   {next && (next.date || next.venue) ? (
-                    <div className="text-caption text-text-subtle truncate flex items-center gap-1.5 mt-0.5">
+                    <div className="text-body text-text-subtle truncate flex items-center gap-1.5 mt-0.5">
                       <Calendar size={11} strokeWidth={1.5} />
                       <span>
                         {next.date ? formatDate(next.date) : "Date TBC"}
@@ -167,7 +167,7 @@ export function ContactUsedBy({ contactId, onClose }: ContactUsedByProps) {
                       </span>
                     </div>
                   ) : (
-                    <div className="text-caption text-text-subtle mt-0.5">
+                    <div className="text-body text-text-subtle mt-0.5">
                       {couple.source === "couple" ? "No event yet" : ""}
                     </div>
                   )}

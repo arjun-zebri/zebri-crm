@@ -69,13 +69,13 @@ export function CouplesListMobile({
                     {couple.name}
                   </p>
                   {secondary && (
-                    <p className="text-caption text-text-subtle mt-0.5 truncate">
+                    <p className="text-body text-text-subtle mt-0.5 truncate">
                       {secondary}
                     </p>
                   )}
                 </div>
                 <span
-                  className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-pill text-caption font-medium whitespace-nowrap ${classes.pill}`}
+                  className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-pill text-body font-medium whitespace-nowrap ${classes.pill}`}
                 >
                   {statusName}
                 </span>

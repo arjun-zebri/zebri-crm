@@ -40,7 +40,7 @@ export function CoupleTimeRow({ entry, onEdit, onDelete }: CoupleTimeRowProps) {
   return (
     <div className="group flex items-start gap-3 border-b border-border py-2.5 last:border-b-0">
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-body">
           <span className="text-text">{dayLabel(entry.started_at)}</span>
           {/* Only a live session shows a clock time. A finished row is
               day plus duration: manual entries are logged as "an hour
@@ -72,13 +72,13 @@ export function CoupleTimeRow({ entry, onEdit, onDelete }: CoupleTimeRowProps) {
           ) : null}
         </div>
         {entry.note ? (
-          <p className="mt-0.5 truncate text-caption text-text-muted">
+          <p className="mt-0.5 truncate text-body text-text-muted">
             {entry.note}
           </p>
         ) : null}
       </div>
 
-      <span className="shrink-0 pt-0.5 text-caption tabular-nums text-text">
+      <span className="shrink-0 pt-0.5 text-body tabular-nums text-text">
         {entry.ended_at
           ? formatDuration(entryDurationMs(entry, Date.parse(entry.ended_at)))
           : 'Running'}

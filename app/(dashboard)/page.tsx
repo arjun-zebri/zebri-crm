@@ -106,7 +106,7 @@ export default function DashboardPage() {
           <div className="relative" ref={periodRef}>
             <button
               onClick={() => setPeriodOpen(!periodOpen)}
-              className="flex items-center gap-1 text-caption font-medium text-gray-600 bg-surface-emphasis hover:bg-gray-200 px-2.5 py-1.5 rounded-control transition cursor-pointer"
+              className="flex items-center gap-1 text-body font-medium text-gray-600 bg-surface-emphasis hover:bg-gray-200 px-2.5 py-1.5 rounded-control transition cursor-pointer"
             >
               {periodOptions.find((o) => o.value === period)?.label}
               <ChevronDown className="w-3.5 h-3.5 text-text-subtle" strokeWidth={1.5} />

@@ -181,7 +181,7 @@ const TaskRowContent = memo(function TaskRowContent({
         hideGutter={hideGutter}
         mobileSub={
           task.due_date ? (
-            <span className={`block text-caption mt-0.5 px-1.5 ${overdue ? 'text-red-400' : 'text-text-subtle'}`}>
+            <span className={`block text-body mt-0.5 px-1.5 ${overdue ? 'text-red-400' : 'text-text-subtle'}`}>
               {formatRelativeDate(task.due_date)}
             </span>
           ) : undefined
@@ -233,7 +233,7 @@ const TaskRowContent = memo(function TaskRowContent({
                   e.stopPropagation()
                   onCoupleClick?.(task.couple!.id)
                 }}
-                className="text-caption bg-surface-emphasis text-text-muted rounded-pill px-2 py-0.5 hover:bg-gray-200 hover:text-gray-700 transition cursor-pointer whitespace-nowrap shrink-0"
+                className="text-body bg-surface-emphasis text-text-muted rounded-pill px-2 py-0.5 hover:bg-gray-200 hover:text-gray-700 transition cursor-pointer whitespace-nowrap shrink-0"
               >
                 {task.couple.name}
               </button>
@@ -245,7 +245,7 @@ const TaskRowContent = memo(function TaskRowContent({
                   e.stopPropagation()
                   onOpen()
                 }}
-                className="shrink-0 text-caption text-text-muted hover:text-text px-1.5 py-0.5 rounded-control border border-border hover:border-border-strong bg-surface shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition flex items-center gap-1 cursor-pointer"
+                className="shrink-0 text-body text-text-muted hover:text-text px-1.5 py-0.5 rounded-control border border-border hover:border-border-strong bg-surface shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition flex items-center gap-1 cursor-pointer"
                 title="Open"
                 aria-label="Open task"
               >

@@ -114,14 +114,13 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search templates…"
-        size="sm"
         className="w-36 sm:w-48"
       />
-      <Button size="sm" variant="outline" onClick={() => setLibraryOpen(true)} className="gap-1.5">
+      <Button variant="outline" onClick={() => setLibraryOpen(true)} className="gap-1.5">
         <Library size={14} strokeWidth={1.5} />
         Browse starters
       </Button>
-      <Button size="sm" onClick={openNew} className="gap-1.5">
+      <Button onClick={openNew} className="gap-1.5">
         <Plus size={14} strokeWidth={1.5} />
         New template
       </Button>
@@ -212,7 +211,7 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
                     <>
                       {category ? <CategoryChip category={category} /> : null}
                       {selected.archived_at ? (
-                        <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-caption text-text-muted">
+                        <span className="shrink-0 rounded-pill border border-border px-2 py-0.5 text-body text-text-muted">
                           Archived
                         </span>
                       ) : null}

@@ -143,7 +143,7 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
           statusSlug.charAt(0).toUpperCase() + statusSlug.slice(1);
         return (
           <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-pill text-caption font-medium ${classes.pill}`}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-pill text-body font-medium ${classes.pill}`}
           >
             {statusName}
           </span>

@@ -8,10 +8,9 @@
  */
 'use client';
 
-import { Check, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/copy-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import {
@@ -53,35 +52,19 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 }
 
 function CopyField({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
   return (
     <div>
       {/* The label is rendered here rather than passed to `Input` so the
           monospace treatment applies to the snippet only, not the label. */}
-      <p className="mb-1 text-caption font-medium text-text">{label}</p>
+      <p className="mb-1 text-body font-medium text-text">{label}</p>
       <div className="flex items-center gap-2">
         <Input
           aria-label={label}
           readOnly
           value={value}
-          size="sm"
           className="min-w-0 flex-1 font-mono"
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={copy}
-          aria-label={`Copy ${label}`}
-          className="shrink-0 cursor-pointer"
-        >
-          {copied ? <Check size={14} strokeWidth={1.5} /> : <Copy size={14} strokeWidth={1.5} />}
-          <span>{copied ? 'Copied' : 'Copy'}</span>
-        </Button>
+        <CopyButton value={value} aria-label={`Copy ${label}`} className="shrink-0" />
       </div>
     </div>
   );
@@ -142,7 +125,7 @@ export function LeadCaptureSection() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-body font-medium text-gray-700">Form enabled</p>
-              <p className="text-caption text-text-subtle">Turn off to stop accepting new enquiries.</p>
+              <p className="text-body text-text-subtle">Turn off to stop accepting new enquiries.</p>
             </div>
             <Toggle
               enabled={enabled}
@@ -158,7 +141,6 @@ export function LeadCaptureSection() {
           <Select
             label="New leads land in"
             value={targetSlug}
-            size="sm"
             onValueChange={(v) => {
               setTargetSlug(v);
               persist({ enabled, targetSlug: v });

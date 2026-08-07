@@ -59,7 +59,7 @@ export function StepLook(props: StepLookProps) {
             <ColorField label="Primary button" value={props.primaryButtonColor} onChange={props.setPrimaryButtonColor} />
             <ColorField label="Secondary button" value={props.secondaryButtonColor} onChange={props.setSecondaryButtonColor} />
           </div>
-          <p className="mt-2 text-caption text-text-muted leading-snug">
+          <p className="mt-2 text-body text-text-muted leading-snug">
             Primary colours your main buttons like Accept and Pay. Secondary
             colours supporting buttons like Decline.
           </p>
@@ -68,7 +68,7 @@ export function StepLook(props: StepLookProps) {
         {/* Fonts */}
         <div className="flex gap-3">
           <div className="flex-1 min-w-0">
-            <label className="block text-caption font-medium text-text-muted mb-2">Heading font</label>
+            <label className="block text-body font-medium text-text-muted mb-2">Heading font</label>
             <Select
               value={props.fontHeading}
               options={HEADING_OPTIONS}
@@ -78,7 +78,7 @@ export function StepLook(props: StepLookProps) {
             />
           </div>
           <div className="flex-1 min-w-0">
-            <label className="block text-caption font-medium text-text-muted mb-2">Body font</label>
+            <label className="block text-body font-medium text-text-muted mb-2">Body font</label>
             <Select
               value={props.fontBody}
               options={BODY_OPTIONS}

@@ -75,13 +75,13 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
                 <span className="truncate block text-text transition-opacity group-hover:opacity-80">
                   {invoice.couple?.name ?? invoice.title}
                 </span>
-                <span className="text-caption text-text-subtle">{invoice.invoice_number}</span>
+                <span className="text-body text-text-subtle">{invoice.invoice_number}</span>
               </div>
               <span className="text-body font-medium text-text tabular-nums shrink-0">
                 {formatCurrency(invoice.subtotal)}
               </span>
               {invoice.due_date && (
-                <span className={`text-caption shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-text-muted'}`}>
+                <span className={`text-body shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-text-muted'}`}>
                   {formatDueDate(invoice.due_date)}
                 </span>
               )}

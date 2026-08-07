@@ -90,7 +90,7 @@ export function TemplatePreview({ subject, content, ctx, mode = 'preview', overr
 
   const subjectRow = (
     <div className="border-b border-border px-4 py-3">
-      <p className="text-caption text-text-subtle">Subject</p>
+      <p className="text-body text-text-subtle">Subject</p>
       <p className="text-body font-medium text-text">
         {subjectText || <span className="text-text-subtle">No subject</span>}
       </p>

@@ -50,12 +50,12 @@ export function ConnectIssuesList({
                 </div>
               </div>
               {row.disabled_reason && (
-                <p className="text-caption text-danger mt-0.5 truncate">
+                <p className="text-body text-danger mt-0.5 truncate">
                   {row.disabled_reason}
                 </p>
               )}
               {row.requirements_past_due.length > 0 && (
-                <p className="text-caption text-text-muted mt-0.5 truncate">
+                <p className="text-body text-text-muted mt-0.5 truncate">
                   past due · {row.requirements_past_due.join(', ')}
                 </p>
               )}

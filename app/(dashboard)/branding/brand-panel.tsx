@@ -380,7 +380,7 @@ function ColorRow({
       <div className="flex-1 min-w-0">
         <p className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">{label}</p>
         <p className="text-[11px] text-text-muted">{description}</p>
-        <p className="text-caption font-mono text-gray-700 truncate">{value}</p>
+        <p className="text-body font-mono text-gray-700 truncate">{value}</p>
       </div>
     </div>
   )

@@ -151,7 +151,7 @@ export function VenueAutocomplete({
               >
                 <p className="text-body font-medium text-text">{s.mainText}</p>
                 {s.secondaryText && (
-                  <p className="text-caption text-text-muted">{s.secondaryText}</p>
+                  <p className="text-body text-text-muted">{s.secondaryText}</p>
                 )}
               </button>
             ))}
@@ -163,7 +163,7 @@ export function VenueAutocomplete({
           {value.venue_phone && (
             <div className="flex items-center gap-2">
               <Phone size={11} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
-              <span className="text-caption text-gray-600">{value.venue_phone}</span>
+              <span className="text-body text-gray-600">{value.venue_phone}</span>
             </div>
           )}
           {value.venue_website && (
@@ -173,7 +173,7 @@ export function VenueAutocomplete({
                 href={value.venue_website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="truncate text-caption text-gray-600 underline hover:text-text"
+                className="truncate text-body text-gray-600 underline hover:text-text"
               >
                 {value.venue_website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
               </a>

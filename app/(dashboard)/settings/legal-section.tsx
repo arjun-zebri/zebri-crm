@@ -24,7 +24,7 @@ export function LegalSection({ title, lastUpdated, canonicalUrl, children }: Leg
   return (
     <div>
       <h2 className="text-section font-semibold text-text">{title}</h2>
-      <p className="mt-1 text-caption text-text-subtle">Last updated: {lastUpdated}</p>
+      <p className="mt-1 text-body text-text-subtle">Last updated: {lastUpdated}</p>
       <a
         href={canonicalUrl}
         target="_blank"

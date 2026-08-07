@@ -34,7 +34,7 @@ export function ColorPopover({
         <Popover.Content
           align={align}
           sideOffset={6}
-          className={`bg-surface border border-border rounded-control shadow-xl p-3 ${zClassName} w-[280px] animate-modal-in`}
+          className={`bg-surface border border-border rounded-control shadow-xl p-3 ${zClassName} w-[280px] text-body animate-modal-in`}
         >
           <ColorPickerBody value={value} onChange={onChange} swatches={swatches} />
         </Popover.Content>

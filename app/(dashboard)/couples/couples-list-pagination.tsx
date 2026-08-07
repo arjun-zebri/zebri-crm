@@ -123,7 +123,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                     <button
                       key={pageNum}
                       onClick={() => table.setPageIndex(pageNum)}
-                      className={`px-2.5 py-1 text-caption font-medium rounded-control transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-body font-medium rounded-control transition cursor-pointer ${
                         table.getState().pagination.pageIndex === pageNum
                           ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:bg-surface-emphasis'
@@ -144,11 +144,11 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                     return (
                       <>
                         {!adjacent && (
-                          <span className="px-1 text-caption text-text-subtle">…</span>
+                          <span className="px-1 text-body text-text-subtle">…</span>
                         )}
                         <button
                           onClick={() => table.setPageIndex(lastPage)}
-                          className={`px-2.5 py-1 text-caption font-medium rounded-control transition cursor-pointer ${
+                          className={`px-2.5 py-1 text-body font-medium rounded-control transition cursor-pointer ${
                             table.getState().pagination.pageIndex === lastPage
                               ? 'bg-gray-900 text-white'
                               : 'text-gray-600 hover:bg-surface-emphasis'

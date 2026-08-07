@@ -52,7 +52,7 @@ export function UserAnalyticsSection({ userId }: { userId: string }) {
 
   return (
     <section>
-      <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted mb-3">
+      <h3 className="text-body font-medium uppercase tracking-wide text-text-muted mb-3">
         Activity
       </h3>
       <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2 text-body">
@@ -61,7 +61,7 @@ export function UserAnalyticsSection({ userId }: { userId: string }) {
         <Stat label="Invoices" value={loading ? '…' : analytics?.invoices ?? 0} />
         <Stat label="Contracts" value={loading ? '…' : analytics?.contracts ?? 0} />
       </div>
-      <p className="mt-3 text-caption text-text-muted">
+      <p className="mt-3 text-body text-text-muted">
         Last sign-in: {loading ? '…' : formatRelative(analytics?.lastSignInAt ?? null)}
       </p>
     </section>
@@ -72,7 +72,7 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="flex items-baseline gap-1.5">
       <span className="text-base font-semibold text-text">{value}</span>
-      <span className="text-caption text-text-muted">{label}</span>
+      <span className="text-body text-text-muted">{label}</span>
     </div>
   );
 }

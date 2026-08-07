@@ -18,6 +18,7 @@ import { CoupleProfile } from "@/app/(dashboard)/couples/couple-profile";
 import { useCoupleStatuses } from "@/app/(dashboard)/couples/use-couple-statuses";
 import { useCouples } from "@/app/(dashboard)/couples/use-couples";
 import { useUpdateCouple, useDeleteCouple } from "@/app/(dashboard)/couples/use-couples";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
@@ -704,13 +705,14 @@ export default function TasksPage() {
           title="Tasks"
           className="mb-4"
           actions={
-            <button
+            <Button
               onClick={() => handleCreateTask()}
-              className="sm:hidden flex items-center justify-center w-8 h-8 rounded-pill bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
+              iconOnly
+              className="sm:hidden"
               aria-label="New task"
             >
-              <Plus size={16} strokeWidth={2} />
-            </button>
+              <Plus size={16} strokeWidth={1.5} />
+            </Button>
           }
         />
 
@@ -727,7 +729,7 @@ export default function TasksPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tasks..."
-              className="w-full border border-border rounded-control pl-6 pr-6 py-2 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+              className="block h-8 w-full rounded-control border border-border bg-surface pl-6 pr-6 text-body text-text transition-colors placeholder:text-text-subtle focus-visible:border-brand-fg focus-visible:outline-none"
             />
             {searchQuery && (
               <button
@@ -753,13 +755,10 @@ export default function TasksPage() {
           />
           <div className="ml-auto flex items-center gap-2">
             <GroupByToggle value={groupBy} onChange={setGroupBy} />
-            <button
-              onClick={() => handleCreateTask()}
-              className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-caption rounded-control hover:bg-gray-700 transition cursor-pointer"
-            >
-              <Plus size={11} strokeWidth={2} />
+            <Button onClick={() => handleCreateTask()} className="hidden sm:inline-flex">
+              <Plus size={11} strokeWidth={1.5} />
               New task
-            </button>
+            </Button>
           </div>
         </div>
       </div>

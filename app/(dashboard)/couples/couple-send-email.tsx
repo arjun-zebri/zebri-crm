@@ -199,7 +199,7 @@ export function CoupleSendEmail({
             {missing.length > 0 && (
               <div className="flex items-start gap-2.5 rounded-control border border-red-200 bg-red-50 p-3">
                 <AlertTriangle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-red-600" />
-                <p className="text-caption text-red-700">
+                <p className="text-body text-red-700">
                   This couple is missing{' '}
                   <span className="font-medium">{missing.map(variableLabel).join(', ')}</span>. Fill{' '}
                   {missing.length === 1 ? 'the highlighted gap' : 'the highlighted gaps'} in the email below before

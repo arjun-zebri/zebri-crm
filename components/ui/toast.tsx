@@ -61,7 +61,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={t.action.onClick}
-                className="ml-auto pl-2 text-caption font-medium text-text-muted hover:text-text cursor-pointer rounded-control hover:bg-surface-muted px-2 py-1 transition"
+                className="ml-auto pl-2 text-body font-medium text-text-muted hover:text-text cursor-pointer rounded-control hover:bg-surface-muted px-2 py-1 transition"
               >
                 {t.action.label}
               </button>

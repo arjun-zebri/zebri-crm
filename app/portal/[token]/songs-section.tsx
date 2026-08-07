@@ -4,6 +4,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import { Plus, Trash2, Music, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 
+import { BusyLabel } from '@/components/ui/busy-label'
 import { Modal } from '@/components/ui/modal'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
@@ -270,7 +271,7 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
                 borderRadius: `${branding.corner_radius}px`,
               }}
             >
-              {saving ? 'Saving...' : 'Save'}
+              <BusyLabel busy={saving}>Save</BusyLabel>
             </button>
           </div>
         </div>

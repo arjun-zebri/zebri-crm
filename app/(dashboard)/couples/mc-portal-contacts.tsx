@@ -276,7 +276,7 @@ export function McPortalContacts({
       }}
     >
       <Popover.Trigger asChild>
-        <Button size="sm" className="cursor-pointer gap-1.5">
+        <Button className="cursor-pointer gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           Add contact
         </Button>
@@ -292,7 +292,7 @@ export function McPortalContacts({
         >
           {addMode === 'type' && (
             <>
-              <p className="px-3 pt-2 pb-1 text-caption text-text-subtle">Wedding party</p>
+              <p className="px-3 pt-2 pb-1 text-body text-text-subtle">Wedding party</p>
               {MENU_CATEGORIES.map(({ label, category, roles }) => (
                 <button
                   key={category}
@@ -363,7 +363,7 @@ export function McPortalContacts({
           {hasCouplePartners && (
             <div className="mb-1">
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-caption font-semibold uppercase tracking-wider text-text-subtle">
+                <h3 className="text-body font-semibold uppercase tracking-wider text-text-subtle">
                   Couple
                 </h3>
                 <CountBadge count={couplePartners.length} />
@@ -374,7 +374,7 @@ export function McPortalContacts({
                     key={p.role}
                     className="flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-control"
                   >
-                    <div className="w-8 h-8 rounded-pill flex items-center justify-center text-caption font-medium shrink-0 select-none bg-emerald-50 text-emerald-600">
+                    <div className="w-8 h-8 rounded-pill flex items-center justify-center text-body font-medium shrink-0 select-none bg-emerald-50 text-emerald-600">
                       {p.name ? initials(p.name) : '?'}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -382,7 +382,7 @@ export function McPortalContacts({
                         {p.name || `${p.role} (unnamed)`}
                       </p>
                       {(p.email || p.phone) && (
-                        <p className="text-caption text-text-subtle mt-0.5 truncate">
+                        <p className="text-body text-text-subtle mt-0.5 truncate">
                           {[p.email, p.phone].filter(Boolean).join(' · ')}
                         </p>
                       )}
@@ -399,7 +399,7 @@ export function McPortalContacts({
             return (
               <div key={category} className={renderIdx > 0 || hasCouplePartners ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-caption font-semibold uppercase tracking-wider text-text-subtle">{label}</h3>
+                  <h3 className="text-body font-semibold uppercase tracking-wider text-text-subtle">{label}</h3>
                   <CountBadge count={items.length} />
                 </div>
                 <div className="space-y-0.5">
@@ -409,13 +409,13 @@ export function McPortalContacts({
                       className="flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-control hover:bg-gray-50 transition cursor-pointer group"
                       onClick={() => onEditPerson(person, roles)}
                     >
-                      <div className={`w-8 h-8 rounded-pill flex items-center justify-center text-caption font-medium shrink-0 select-none ${avatarColor}`}>
+                      <div className={`w-8 h-8 rounded-pill flex items-center justify-center text-body font-medium shrink-0 select-none ${avatarColor}`}>
                         {person.full_name ? initials(person.full_name) : '?'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-body text-text">{person.full_name || 'Unnamed'}</p>
                         {(person.role || person.phonetic) && (
-                          <p className="text-caption text-text-subtle mt-0.5 truncate">
+                          <p className="text-body text-text-subtle mt-0.5 truncate">
                             {person.role}
                             {person.role && person.phonetic ? ' · ' : ''}
                             {person.phonetic}
@@ -444,7 +444,7 @@ export function McPortalContacts({
           {hasVendors && (
             <div className={hasPeople || hasCouplePartners ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-caption font-semibold uppercase tracking-wider text-text-subtle">Vendors</h3>
+                <h3 className="text-body font-semibold uppercase tracking-wider text-text-subtle">Vendors</h3>
                 <CountBadge count={vendors!.length} />
               </div>
               <div className="space-y-0.5">
@@ -456,7 +456,7 @@ export function McPortalContacts({
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-body text-text">{link.vendor.name}</p>
-                      <p className="text-caption text-text-subtle mt-0.5">
+                      <p className="text-body text-text-subtle mt-0.5">
                         {CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}
                       </p>
                     </div>
@@ -531,7 +531,7 @@ function VendorPickerBody({
       </div>
       <div className="max-h-64 overflow-y-auto py-1">
         {filtered.length === 0 ? (
-          <p className="text-caption text-text-subtle text-center py-4">
+          <p className="text-body text-text-subtle text-center py-4">
             {contacts.length === 0 ? 'No contacts yet' : 'No matches'}
           </p>
         ) : (
@@ -543,7 +543,7 @@ function VendorPickerBody({
               className="w-full text-left px-3 py-2 hover:bg-gray-50 transition cursor-pointer flex items-center justify-between gap-2"
             >
               <span className="text-body text-text truncate">{c.name}</span>
-              <span className="text-caption text-text-subtle shrink-0">
+              <span className="text-body text-text-subtle shrink-0">
                 {CATEGORY_LABELS[c.category as keyof typeof CATEGORY_LABELS] || c.category}
               </span>
             </button>

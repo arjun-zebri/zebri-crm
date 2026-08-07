@@ -139,8 +139,17 @@ export function CoupleModal({
     setDeleteConfirm(true);
   };
 
+  // The `Input` primitive's own classes, inlined because these fields are
+  // raw `<input>` elements with bespoke labels. The underline vocabulary
+  // this modal used until 2026-08-07 was dropped when `DatePicker` lost its
+  // `underline` variant: a boxed 32px date field among 37px underlined text
+  // fields read as a different form entirely.
   const inputClass =
-    "w-full border-0 border-b border-border bg-transparent px-0 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-gray-400 transition";
+    "block h-8 w-full rounded-control border border-border bg-surface px-2.5 text-body text-text placeholder:text-text-subtle transition-colors focus-visible:border-brand-fg focus-visible:outline-none";
+
+  // Same chrome, minus the fixed control height: a textarea sizes to its
+  // `rows`, so `h-8` would crush it to a single line.
+  const textareaClass = `${inputClass} h-auto py-1.5 resize-none`;
 
   const selectedStatus = statuses.find(s => s.slug === status);
   const selectedLabel = selectedStatus?.name || "Select status";
@@ -157,7 +166,7 @@ export function CoupleModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className="text-caption px-3 py-1.5 rounded-control transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
+              className="text-body px-3 py-1.5 rounded-control transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
             >
               Delete
             </button>
@@ -166,14 +175,14 @@ export function CoupleModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-caption px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-body px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || !name.trim() || !primaryName.trim()}
-              className="text-caption px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+              className="text-body px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save"}
             </button>
@@ -277,7 +286,6 @@ export function CoupleModal({
               <DatePicker
                 value={eventDate}
                 onChange={setEventDate}
-                variant="underline"
                 placeholder="Select date"
               />
             </div>
@@ -431,7 +439,7 @@ export function CoupleModal({
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className={`${inputClass} resize-none`}
+            className={textareaClass}
             placeholder="Any additional notes..."
             rows={8}
           />

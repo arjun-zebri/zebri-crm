@@ -162,11 +162,11 @@ export function ContactPopover({
             </div>
             <div className="max-h-64 overflow-y-auto py-1">
               {isLoading ? (
-                <p className="text-caption text-text-subtle text-center py-4">
+                <p className="text-body text-text-subtle text-center py-4">
                   Loading...
                 </p>
               ) : filtered.length === 0 ? (
-                <p className="text-caption text-text-subtle text-center py-4">
+                <p className="text-body text-text-subtle text-center py-4">
                   {(contacts?.length ?? 0) === 0
                     ? 'No contacts yet'
                     : 'No matches'}
@@ -186,7 +186,7 @@ export function ContactPopover({
                     <span className="text-body text-text truncate">
                       {c.name}
                     </span>
-                    <span className="text-caption text-text-subtle shrink-0">
+                    <span className="text-body text-text-subtle shrink-0">
                       {CATEGORY_LABELS[
                         c.category as keyof typeof CATEGORY_LABELS
                       ] || c.category}

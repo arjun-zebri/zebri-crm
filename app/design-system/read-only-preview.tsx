@@ -27,7 +27,7 @@ export function ReadOnlyPreview({
     <div className="relative overflow-hidden rounded-control border border-border">
       <div className="flex items-center gap-1.5 border-b border-border bg-surface-muted px-3 py-1.5">
         <Lock className="text-text-subtle" width={12} height={12} strokeWidth={1.5} aria-hidden="true" />
-        <span className="text-caption text-text-muted">
+        <span className="text-body text-text-muted">
           Read-only preview{note ? `. ${note}` : '. Writes are live, so interaction is disabled.'}
         </span>
       </div>

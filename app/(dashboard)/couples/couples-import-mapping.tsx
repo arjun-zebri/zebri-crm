@@ -89,7 +89,6 @@ export function CouplesImportMapping({
               )}
             </span>
             <Select
-              size="sm"
               options={options}
               value={mapping[field] === null ? SKIP : String(mapping[field])}
               onValueChange={(value) => setField(field, value)}

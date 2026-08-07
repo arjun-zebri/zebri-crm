@@ -105,7 +105,7 @@ export function PaginationBar({
                     <button
                       key={p}
                       onClick={() => onPageChange(p)}
-                      className={`px-2.5 py-1 text-caption font-medium rounded-control transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-body font-medium rounded-control transition cursor-pointer ${
                         safePageIndex === p
                           ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:bg-surface-emphasis'
@@ -114,11 +114,11 @@ export function PaginationBar({
                       {p + 1}
                     </button>
                   ))}
-                  {showEllipsis && <span className="px-1 text-caption text-text-subtle">…</span>}
+                  {showEllipsis && <span className="px-1 text-body text-text-subtle">…</span>}
                   {showLastJump && (
                     <button
                       onClick={() => onPageChange(lastPage)}
-                      className={`px-2.5 py-1 text-caption font-medium rounded-control transition cursor-pointer ${
+                      className={`px-2.5 py-1 text-body font-medium rounded-control transition cursor-pointer ${
                         safePageIndex === lastPage
                           ? 'bg-gray-900 text-white'
                           : 'text-gray-600 hover:bg-surface-emphasis'

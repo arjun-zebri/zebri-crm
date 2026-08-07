@@ -90,7 +90,7 @@ export function PublicPageSection({ seedName, initial }: PublicPageSectionProps)
       <div>
         <div className="flex items-center gap-2 mb-1">
           <h2 className="text-section font-semibold text-text">Public page</h2>
-          <span className="inline-flex items-center rounded-pill bg-surface-emphasis px-2 py-0.5 text-caption font-medium text-text-muted">
+          <span className="inline-flex items-center rounded-pill bg-surface-emphasis px-2 py-0.5 text-body font-medium text-text-muted">
             Coming soon
           </span>
         </div>
@@ -121,7 +121,7 @@ export function PublicPageSection({ seedName, initial }: PublicPageSectionProps)
           </span>
         </div>
         <div className="mt-1 flex items-center justify-between gap-3 h-5">
-          <p className="text-caption text-text-subtle">
+          <p className="text-body text-text-subtle">
             {subdomainError ?? 'Letters, numbers and hyphens only.'}
           </p>
           <AutoSaveStatus state={saveState} />
@@ -136,7 +136,7 @@ export function PublicPageSection({ seedName, initial }: PublicPageSectionProps)
               <div key={surface.id} className="flex items-center gap-3 py-3">
                 <Icon size={18} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
                 <span className="text-body text-gray-700 w-28 shrink-0">{surface.label}</span>
-                <span className="min-w-0 flex-1 break-all font-mono text-caption text-text-muted">
+                <span className="min-w-0 flex-1 break-all font-mono text-body text-text-muted">
                   {surface.build(host)}
                 </span>
               </div>

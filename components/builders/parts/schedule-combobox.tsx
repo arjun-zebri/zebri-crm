@@ -51,7 +51,6 @@ export function ScheduleCombobox({
       <Popover.Anchor asChild>
         <div className="relative">
           <Input
-            size="sm"
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
             aria-label="Schedule"
@@ -76,11 +75,11 @@ export function ScheduleCombobox({
           className="z-[95] w-[var(--radix-popover-trigger-width)] rounded-control border border-border bg-card p-1 shadow-lg animate-fade-in"
         >
           {loading ? (
-            <p className="px-2 py-2 text-caption text-text-subtle">Loading schedules...</p>
+            <p className="px-2 py-2 text-body text-text-subtle">Loading schedules...</p>
           ) : error ? (
-            <p className="px-2 py-2 text-caption text-danger">{error}</p>
+            <p className="px-2 py-2 text-body text-danger">{error}</p>
           ) : schedules.length === 0 ? (
-            <p className="px-2 py-2 text-caption text-text-subtle">No saved schedules yet.</p>
+            <p className="px-2 py-2 text-body text-text-subtle">No saved schedules yet.</p>
           ) : (
             <div className="max-h-56 overflow-y-auto">
               {schedules.map((s) => (
@@ -96,7 +95,7 @@ export function ScheduleCombobox({
                     }}
                     className="flex min-w-0 flex-1 cursor-pointer flex-col items-start px-1 py-1.5 text-left"
                   >
-                    <span className="flex items-center gap-1 truncate text-caption text-text">
+                    <span className="flex items-center gap-1 truncate text-body text-text">
                       {s.name}
                       {s.isDefault && (
                         <Star size={11} strokeWidth={1.5} className="shrink-0 text-brand-fg" aria-label="Default" />

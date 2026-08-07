@@ -6,12 +6,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
+import { MenuItem, MenuLabel, MenuPanel, MenuSeparator } from '@/components/ui/menu';
 import { Modal } from '@/components/ui/modal';
 import { RowActionsMenu } from '@/components/ui/row-actions-menu';
 import { SidePanel } from '@/components/ui/side-panel';
 
-import { Conflict } from './conflict';
-import { Demo, DemoGrid, DemoRow, Spec } from './showroom';
+import { Demo, DemoGrid, DemoRow, Rule, Spec } from './showroom';
 
 /**
  * Overlay primitives: Modal, SidePanel, ConfirmDialog, RowActionsMenu.
@@ -25,13 +25,13 @@ import { Demo, DemoGrid, DemoRow, Spec } from './showroom';
 const MODAL_SIZES = ['sm', 'md', 'lg', 'xl', '2xl', 'fullscreen'] as const;
 type ModalSize = (typeof MODAL_SIZES)[number];
 
-/** The overlay ladder, now declared once in `OVERLAY_Z`. */
+/** The stacking ladder, declared once in `OVERLAY_Z`. */
 const Z_LADDER = [
-  { z: 'z-50 / z-[60]', owner: "layer='base' — Modal, SidePanel", file: 'use-overlay.ts' },
-  { z: 'z-[75] / z-[80]', owner: "layer='nested' — a modal opened from a modal", file: 'use-overlay.ts' },
-  { z: 'z-[90]', owner: 'Popover tier — Select dropdown and friends', file: 'select.tsx' },
-  { z: 'z-[120] / z-[130]', owner: "layer='top' — ConfirmDialog", file: 'use-overlay.ts' },
-  { z: 'z-[200]', owner: 'Toasts, deliberately above everything', file: 'toast.tsx' },
+  { layer: "layer='base'", z: 'z-50 / z-[60]', owner: 'Modal (default), SidePanel' },
+  { layer: "layer='nested'", z: 'z-[75] / z-[80]', owner: 'A modal opened from another modal' },
+  { layer: '(popover)', z: 'z-[90]', owner: 'Select dropdown, popovers' },
+  { layer: "layer='top'", z: 'z-[120] / z-[130]', owner: 'ConfirmDialog' },
+  { layer: '(toast)', z: 'z-[200]', owner: 'Toast, above everything by design' },
 ];
 
 /** All overlay primitives, each openable for comparison. */
@@ -42,10 +42,11 @@ export function PrimitivesOverlays() {
 
   return (
     <>
-      <Spec name="Modal" file="components/ui/modal.tsx" description="Six sizes, plus nested, flushBottom and floatingClose modes. Escape closes only the topmost instance.">
+      <Spec name="Modal" file="components/ui/modal.tsx"
+        importPath="@/components/ui/modal" description="Six sizes, plus nested, flushBottom and floatingClose modes. Escape closes only the topmost instance.">
         <DemoRow>
           {MODAL_SIZES.map((s) => (
-            <Button key={s} size="sm" variant="outline" onClick={() => setModalSize(s)}>
+            <Button key={s} variant="outline" onClick={() => setModalSize(s)}>
               {s}
             </Button>
           ))}
@@ -55,7 +56,7 @@ export function PrimitivesOverlays() {
           onClose={() => setModalSize(null)}
           title={`Modal · size="${modalSize ?? ''}"`}
           size={modalSize ?? 'md'}
-          headerActions={<Button size="sm" variant="ghost">Action</Button>}
+          headerActions={<Button variant="ghost">Action</Button>}
           footer={
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setModalSize(null)}>Cancel</Button>
@@ -72,8 +73,9 @@ export function PrimitivesOverlays() {
         </Modal>
       </Spec>
 
-      <Spec name="SidePanel" file="components/ui/side-panel.tsx" description="Right-hand drawer. One fixed width ladder, no size prop.">
-        <Button size="sm" variant="outline" onClick={() => setPanelOpen(true)}>
+      <Spec name="SidePanel" file="components/ui/side-panel.tsx"
+        importPath="@/components/ui/side-panel" description="Right-hand drawer. One fixed width ladder, no size prop.">
+        <Button variant="outline" onClick={() => setPanelOpen(true)}>
           Open side panel
         </Button>
         <SidePanel
@@ -93,8 +95,9 @@ export function PrimitivesOverlays() {
         </SidePanel>
       </Spec>
 
-      <Spec name="ConfirmDialog" file="components/ui/confirm-dialog.tsx" description="Destructive confirmation. Self-contained, not built on Modal.">
-        <Button size="sm" variant="danger" onClick={() => setConfirmOpen(true)}>
+      <Spec name="ConfirmDialog" file="components/ui/confirm-dialog.tsx"
+        importPath="@/components/ui/confirm-dialog" description="Destructive confirmation. Self-contained, not built on Modal.">
+        <Button variant="danger" onClick={() => setConfirmOpen(true)}>
           Open confirm dialog
         </Button>
         <ConfirmDialog
@@ -106,78 +109,64 @@ export function PrimitivesOverlays() {
         />
       </Spec>
 
-      <Conflict
-        title="Behaviour is shared now; the surfaces still are not"
-        recommendation={
-          <>
-            All three take Escape, body-scroll locking and backdrop dismissal from{' '}
-            <code>useOverlay()</code>, so they cannot drift apart again. What is left is cosmetic:
-            Modal and SidePanel still use <code>bg-white</code> and <code>border-gray-200</code>{' '}
-            rather than tokens. Radius is settled: all three are now <code>rounded-control</code>.
-          </>
-        }
+      <Spec
+        name="MenuPanel / MenuItem"
+        file="components/ui/menu.tsx"
+        importPath="@/components/ui/menu"
+        description="The dropdown surface and its rows. Positioning stays with the caller; this owns chrome and row density only."
       >
+        <DemoGrid cols={2}>
+          <Demo label="md rows">
+            <MenuPanel className="w-56">
+              <MenuLabel>Group by</MenuLabel>
+              <MenuItem selected>Status</MenuItem>
+              <MenuItem>Due date</MenuItem>
+              <MenuItem trailing={<span className="text-body text-text-subtle">12</span>}>
+                Couple
+              </MenuItem>
+              <MenuSeparator />
+              <MenuItem destructive>Delete group</MenuItem>
+            </MenuPanel>
+          </Demo>
+          <Demo label="sm rows (tighter padding, same type size)">
+            <MenuPanel className="w-56">
+              <MenuItem size="sm" selected>Status</MenuItem>
+              <MenuItem size="sm">Priority</MenuItem>
+              <MenuItem size="sm" disabled>Archived</MenuItem>
+            </MenuPanel>
+          </Demo>
+        </DemoGrid>
+      </Spec>
+
+      <Spec name="Stacking order" file="components/ui/use-overlay.ts" description="Which layer an overlay sits on. Set it with the `layer` prop; never hand-write a z-index.">
+        <Rule>
+          Overlays take their z-index from <code>OVERLAY_Z</code>, not from a literal. If you need
+          a new tier, add it there so the ladder stays in one place.
+        </Rule>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[40rem] text-caption">
+          <table className="w-full min-w-[32rem] text-body">
             <thead>
               <tr className="text-left text-text-subtle">
-                <th className="pb-1 font-medium">Behaviour</th>
-                <th className="pb-1 font-medium">Modal</th>
-                <th className="pb-1 font-medium">SidePanel</th>
-                <th className="pb-1 font-medium">ConfirmDialog</th>
+                <th className="pb-1 font-medium">Layer</th>
+                <th className="pb-1 font-medium">Backdrop / panel</th>
+                <th className="pb-1 font-medium">Used by</th>
               </tr>
             </thead>
             <tbody className="text-text-muted">
-              {[
-                ['Closes on Escape', 'Depth-aware', 'Depth-aware', 'Depth-aware'],
-                ['Locks body scroll', 'Yes', 'Yes', 'Yes'],
-                ['aria-modal', 'Yes', 'Yes', 'Yes'],
-                ['role="dialog"', 'On panel', 'On panel', 'On panel'],
-                ['Corner radius', 'rounded-control (6px)', 'None', 'rounded-control (6px)'],
-                ['Surface colour', 'bg-white', 'bg-white', 'bg-surface'],
-                ['Border colour', 'border-gray-200', 'border-gray-200', 'border-border'],
-                ['Action buttons', 'Caller supplies', 'Caller supplies', 'Button primitive'],
-                ['Size options', 'Six', 'One', 'One (max-w-sm)'],
-              ].map(([k, ...cells]) => (
-                <tr key={k} className="border-t border-border/60">
-                  <td className="py-1 pr-3 font-medium text-text whitespace-nowrap">{k}</td>
-                  {cells.map((c, i) => (
-                    <td key={i} className="py-1 pr-3">{c}</td>
-                  ))}
+              {Z_LADDER.map((r) => (
+                <tr key={r.z} className="border-t border-border/60">
+                  <td className="py-1 pr-3 whitespace-nowrap font-medium text-text">{r.layer}</td>
+                  <td className="py-1 pr-3 whitespace-nowrap"><code>{r.z}</code></td>
+                  <td className="py-1">{r.owner}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </Conflict>
+      </Spec>
 
-
-      <Conflict
-        title="The primitives share one ladder; call sites still hard-code theirs"
-        recommendation={
-          <>
-            The overlap is gone: <code>z-[80]</code> used to be claimed by both the nested Modal
-            panel and the ConfirmDialog panel, so a confirm raised from a nested modal stacked by
-            DOM order rather than intent. ConfirmDialog now owns the <code>top</code> tier. The
-            ladder below lives in <code>OVERLAY_Z</code> (<code>use-overlay.ts</code>), but roughly
-            a hundred call sites still write raw <code>z-[…]</code> values across fifteen tiers,
-            including a <code>z-[9999]</code> in <code>add-status-modal.tsx</code>. Point those at{' '}
-            <code>OVERLAY_Z</code> as each page gets hardened.
-          </>
-        }
-      >
-        <ul className="space-y-1 text-caption text-text-muted">
-          {Z_LADDER.map((r) => (
-            <li key={r.z} className="flex flex-wrap gap-x-2">
-              <code className="w-16 shrink-0 text-text">{r.z}</code>
-              <span className="flex-1">{r.owner}</span>
-              <code className="text-text-subtle">{r.file}</code>
-            </li>
-          ))}
-        </ul>
-      </Conflict>
-
-      <Spec name="RowActionsMenu" file="components/ui/row-actions-menu.tsx" description="Popover kebab menu. Two sizes, optional submenus, destructive items.">
+      <Spec name="RowActionsMenu" file="components/ui/row-actions-menu.tsx"
+        importPath="@/components/ui/row-actions-menu" description="Popover kebab menu. Two row densities, optional submenus, destructive items.">
         <DemoGrid cols={2}>
           <Demo label="md (default)">
             <RowActionsMenu

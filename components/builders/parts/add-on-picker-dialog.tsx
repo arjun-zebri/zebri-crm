@@ -89,10 +89,10 @@ function AddOnPickerContent({
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={onCancel}>
+              <Button variant="outline" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={() => onApply(addOns.filter((_, i) => checked[i]))}>
+              <Button onClick={() => onApply(addOns.filter((_, i) => checked[i]))}>
                 {chosenCount > 0
                   ? `Apply with ${String(chosenCount)} add-on${chosenCount === 1 ? '' : 's'}`
                   : 'Apply without add-ons'}

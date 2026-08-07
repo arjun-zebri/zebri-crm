@@ -119,7 +119,7 @@ export function EventVendors({ eventId }: EventVendorsProps) {
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-body font-medium text-text">{link.vendor.name}</p>
-                  <p className="text-caption text-text-muted">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
+                  <p className="text-body text-text-muted">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
                 </div>
                 <button
                   onClick={() => removeVendor.mutate(link.contact_id)}

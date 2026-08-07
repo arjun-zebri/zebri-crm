@@ -38,8 +38,6 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-export type SelectSize = 'sm' | 'md';
-
 export interface SelectProps {
   /** Visible label rendered above the trigger. */
   label?: string;
@@ -61,8 +59,6 @@ export interface SelectProps {
   disabled?: boolean;
   /** Marks the control required for assistive tech. */
   required?: boolean;
-  /** Trigger size. Defaults to `'md'`. */
-  size?: SelectSize;
   /** Extra classes on the wrapper. */
   className?: string;
   /** Classes for the portalled dropdown panel — owns its `z-index`.
@@ -73,21 +69,8 @@ export interface SelectProps {
   name?: string;
 }
 
-const SIZE_CLASSES: Record<SelectSize, string> = {
-  sm: 'h-8 px-2.5 text-caption gap-1.5',
-  md: 'h-9 px-3 text-body gap-2',
-};
-
-/**
- * Item text size kept in sync with the trigger so the dropdown
- * panel doesn't render at a different size than what the user
- * just clicked. Without this, a small trigger would open a list
- * of 14px items — visually jarring.
- */
-const ITEM_TEXT: Record<SelectSize, string> = {
-  sm: 'text-caption',
-  md: 'text-body',
-};
+/** One height, 32px, matching Button and Input. See button.tsx. */
+const SIZE_CLASSES = 'h-8 px-2.5 text-body gap-1.5';
 
 // Focus darkens the 1px border to brand-fg with no ring — a ring of the
 // same colour stacks on the border and renders an uneven doubled edge at
@@ -110,7 +93,6 @@ export function Select({
   placeholder,
   disabled,
   required,
-  size = 'md',
   className,
   contentClassName = 'z-[90]',
   name,
@@ -127,7 +109,7 @@ export function Select({
   return (
     <div className={`space-y-1${className ? ` ${className}` : ''}`}>
       {label ? (
-        <label htmlFor={autoId} className="block text-caption font-medium text-text">
+        <label htmlFor={autoId} className="block text-body font-medium text-text">
           {label}
         </label>
       ) : null}
@@ -146,7 +128,7 @@ export function Select({
           id={autoId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={`${TRIGGER_BASE} ${SIZE_CLASSES[size]} ${borderClass}`}
+          className={`${TRIGGER_BASE} ${SIZE_CLASSES} ${borderClass}`}
         >
           <RadixSelect.Value placeholder={placeholder} />
           <RadixSelect.Icon>
@@ -163,7 +145,7 @@ export function Select({
             // (z-[80]); at z-50 it opened *behind* any modal it was used in.
             // Callers may override. Height is capped to the space below the
             // trigger so long lists scroll instead of running off-screen.
-            className={`${contentClassName} max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-control border border-border bg-surface text-text shadow-lg animate-fade-in`}
+            className={`${contentClassName} max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-control border border-border bg-surface text-body text-text shadow-lg animate-fade-in`}
           >
             <RadixSelect.Viewport className="max-h-(--radix-select-content-available-height) overflow-y-auto p-1">
               {options.map((opt) => (
@@ -171,7 +153,7 @@ export function Select({
                   key={opt.value}
                   value={opt.value}
                   {...(opt.disabled !== undefined && { disabled: opt.disabled })}
-                  className={`relative flex cursor-pointer items-center rounded-control px-2 py-1.5 pr-8 text-text outline-none data-[highlighted]:bg-surface-emphasis data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${ITEM_TEXT[size]}`}
+                  className={`relative flex cursor-pointer items-center rounded-control px-2 py-1.5 pr-8 text-text outline-none data-[highlighted]:bg-surface-emphasis data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50`}
                 >
                   <RadixSelect.ItemText>{opt.label}</RadixSelect.ItemText>
                   <RadixSelect.ItemIndicator className="absolute right-2 inline-flex items-center">
@@ -185,11 +167,11 @@ export function Select({
       </RadixSelect.Root>
 
       {error ? (
-        <p id={errorId} role="alert" className="text-caption text-danger">
+        <p id={errorId} role="alert" className="text-body text-danger">
           {error}
         </p>
       ) : help ? (
-        <p id={helpId} className="text-caption text-text-muted">
+        <p id={helpId} className="text-body text-text-muted">
           {help}
         </p>
       ) : null}

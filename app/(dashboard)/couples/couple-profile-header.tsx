@@ -199,7 +199,7 @@ export function CoupleProfileHeader({
           <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
             <Popover.Trigger asChild>
               <button
-                className={`shrink-0 px-2 py-0.5 rounded-pill text-caption font-medium cursor-pointer transition hover:opacity-80 ${statusClasses.pill}`}
+                className={`shrink-0 px-2 py-0.5 rounded-pill text-body font-medium cursor-pointer transition hover:opacity-80 ${statusClasses.pill}`}
               >
                 {statusName}
               </button>

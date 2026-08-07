@@ -141,11 +141,9 @@ export function ContractTemplateManager() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search contract templates…"
-          size="sm"
           className="w-36 sm:w-48"
         />
         <Button
-          size="sm"
           variant="outline"
           onClick={() => setShowStarters(true)}
           disabled={createTemplate.isPending}
@@ -155,7 +153,6 @@ export function ContractTemplateManager() {
           Browse starters
         </Button>
         <Button
-          size="sm"
           onClick={() => createTemplate.mutate()}
           disabled={createTemplate.isPending}
           className="gap-1.5"
@@ -204,7 +201,7 @@ export function ContractTemplateManager() {
                       <FileSignature size={16} strokeWidth={1.5} className="shrink-0 text-text-muted" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-body font-medium text-text">{t.name}</span>
-                        {t.description && <span className="block truncate text-caption text-text-subtle">{t.description}</span>}
+                        {t.description && <span className="block truncate text-body text-text-subtle">{t.description}</span>}
                       </span>
                     </button>
                   )
@@ -257,14 +254,13 @@ export function ContractTemplateManager() {
           <div className="space-y-4">
             <p className="text-body text-text-muted">This can't be undone.</p>
             <div className="flex gap-3 justify-end">
-              <Button onClick={() => setConfirmDelete(null)} variant="outline" size="sm">
+              <Button onClick={() => setConfirmDelete(null)} variant="outline">
                 Cancel
               </Button>
               <Button
                 onClick={() => deleteTemplate.mutate(confirmDelete)}
                 disabled={deleteTemplate.isPending}
                 variant="danger"
-                size="sm"
               >
                 Delete
               </Button>
@@ -297,7 +293,6 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            size="sm"
           />
         </div>
         <div>
@@ -307,7 +302,6 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Short description shown in the template picker"
-            size="sm"
           />
         </div>
         <div>
@@ -315,13 +309,12 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
           <RichTextEditor value={content} onChange={setContent} />
         </div>
         <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-          <Button onClick={onCancel} variant="outline" size="sm">
+          <Button onClick={onCancel} variant="outline">
             Cancel
           </Button>
           <Button
             onClick={() => onSave({ ...template, name, description: description || null, content })}
             disabled={saving || !name.trim()}
-            size="sm"
           >
             {saving ? <Loader2 size={13} className="animate-spin mr-1.5" /> : null}
             Save template

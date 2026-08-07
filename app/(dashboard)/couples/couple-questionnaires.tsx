@@ -243,7 +243,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         title="Questionnaires"
         stats={all.length > 0 ? stats : undefined}
         actions={sendPopover(
-          <Button size="sm" className="cursor-pointer gap-1.5">
+          <Button className="cursor-pointer gap-1.5">
             <Send size={14} strokeWidth={1.5} />
             Send questionnaire
           </Button>,
@@ -282,12 +282,10 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         nested
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPreview(null)}>
+            <Button variant="outline" onClick={() => setPreview(null)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={() => preview && send.mutate(preview.id)} disabled={send.isPending}>
-              {send.isPending ? 'Sending…' : 'Send'}
-            </Button>
+            <Button onClick={() => preview && send.mutate(preview.id)} disabled={send.isPending} loading={send.isPending}>Send</Button>
           </div>
         }
       >

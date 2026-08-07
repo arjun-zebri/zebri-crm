@@ -50,7 +50,7 @@ export function LineItemPreview({ eyebrow, name, subtitle, meta, actions, items,
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-caption font-medium uppercase tracking-wide text-brand">{eyebrow}</p>
+          <p className="text-body font-medium uppercase tracking-wide text-brand">{eyebrow}</p>
           <h3 className="mt-1 min-w-0 truncate text-2xl font-semibold text-text">
             {name.trim() || 'Untitled'}
           </h3>
@@ -62,10 +62,10 @@ export function LineItemPreview({ eyebrow, name, subtitle, meta, actions, items,
 
       <div className="mt-5 overflow-hidden rounded-control border border-border">
         <div className="flex items-center justify-between bg-surface-muted px-4 py-2.5">
-          <span className="text-caption font-medium uppercase tracking-wide text-text-subtle">
+          <span className="text-body font-medium uppercase tracking-wide text-text-subtle">
             Line items
           </span>
-          <span className="text-caption text-text-muted">
+          <span className="text-body text-text-muted">
             {items.length} item{items.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -99,7 +99,7 @@ export function LineItemPreview({ eyebrow, name, subtitle, meta, actions, items,
 
       {notes ? (
         <div className="mt-4">
-          <p className="text-caption font-medium uppercase tracking-wide text-text-subtle">
+          <p className="text-body font-medium uppercase tracking-wide text-text-subtle">
             Added to the notes when applied
           </p>
           <p className="mt-1.5 whitespace-pre-wrap text-body text-text-muted">{notes}</p>

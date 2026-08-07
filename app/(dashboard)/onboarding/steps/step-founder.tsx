@@ -58,7 +58,7 @@ export function StepFounder() {
           />
         </div>
         <span className="text-body font-medium text-text">Arjun Punekar</span>
-        <span className="text-caption text-text-subtle">Founder, Zebri</span>
+        <span className="text-body text-text-subtle">Founder, Zebri</span>
       </div>
     </div>
   )

@@ -71,7 +71,7 @@ export function PasswordStrengthMeter({ password, id }: PasswordStrengthMeterPro
               className={`h-full rounded-pill transition-all ${cfg.widthClass} ${cfg.barClass}`}
             />
           </div>
-          <p className={`mt-1 text-caption ${cfg.textClass}`}>{cfg.label} password</p>
+          <p className={`mt-1 text-body ${cfg.textClass}`}>{cfg.label} password</p>
         </>
       ) : null}
     </div>

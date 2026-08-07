@@ -104,10 +104,10 @@ function CategorySection({
             onChange={(e) => setRenameValue(e.target.value)}
             onBlur={handleRenameCommit}
             onKeyDown={handleRenameKeyDown}
-            className="text-caption font-semibold uppercase tracking-wider bg-transparent border-b border-gray-400 outline-none text-text w-48"
+            className="text-body font-semibold uppercase tracking-wider bg-transparent border-b border-gray-400 outline-none text-text w-48"
           />
         ) : (
-          <h3 className="text-caption font-semibold uppercase tracking-wider text-text">{category.label}</h3>
+          <h3 className="text-body font-semibold uppercase tracking-wider text-text">{category.label}</h3>
         )}
 
         {!renaming && (
@@ -138,9 +138,9 @@ function CategorySection({
 
         {confirmDelete && (
           <div className="flex items-center gap-2 ml-1">
-            <span className="text-caption text-text-subtle">Remove category?</span>
-            <button onClick={() => onDelete(category.id)} className="text-caption text-red-500 hover:text-red-600 transition cursor-pointer">Yes</button>
-            <button onClick={() => setConfirmDelete(false)} className="text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer">No</button>
+            <span className="text-body text-text-subtle">Remove category?</span>
+            <button onClick={() => onDelete(category.id)} className="text-body text-red-500 hover:text-red-600 transition cursor-pointer">Yes</button>
+            <button onClick={() => setConfirmDelete(false)} className="text-body text-text-subtle hover:text-gray-600 transition cursor-pointer">No</button>
           </div>
         )}
       </div>
@@ -158,7 +158,7 @@ function CategorySection({
             >
               <div className="min-w-0 flex-1">
                 <p className="text-body font-medium text-text truncate">{song.title}</p>
-                {song.artist && <p className="text-caption text-text-subtle truncate">{song.artist}</p>}
+                {song.artist && <p className="text-body text-text-subtle truncate">{song.artist}</p>}
               </div>
               <Pencil size={12} strokeWidth={1.5} className="text-text-subtle shrink-0 opacity-0 group-hover/song:opacity-60 transition" />
             </div>
@@ -265,7 +265,6 @@ export function McPortalSongs({ coupleId, onEditSong, onAddSong }: McPortalSongs
 
   const actions = (
     <Button
-      size="sm"
       onClick={() => setShowAddCategory(true)}
       className="cursor-pointer gap-1.5"
     >
@@ -322,13 +321,13 @@ export function McPortalSongs({ coupleId, onEditSong, onAddSong }: McPortalSongs
               <button
                 onClick={() => { if (newCategoryLabel.trim()) addCategory.mutate(newCategoryLabel.trim()) }}
                 disabled={!newCategoryLabel.trim() || addCategory.isPending}
-                className="text-caption text-text-muted hover:text-gray-700 transition cursor-pointer disabled:opacity-40"
+                className="text-body text-text-muted hover:text-gray-700 transition cursor-pointer disabled:opacity-40"
               >
                 Add
               </button>
               <button
                 onClick={() => { setShowAddCategory(false); setNewCategoryLabel('') }}
-                className="text-caption text-text-subtle hover:text-gray-600 transition cursor-pointer"
+                className="text-body text-text-subtle hover:text-gray-600 transition cursor-pointer"
               >
                 Cancel
               </button>

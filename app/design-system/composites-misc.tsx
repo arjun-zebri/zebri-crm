@@ -12,7 +12,6 @@ import { TimeCategoryRow } from '@/components/time-tracking/time-category-row';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { Conflict } from './conflict';
 import { DEMO_EVENT, FIXTURES } from './fixtures';
 import { ReadOnlyPreview } from './read-only-preview';
 import { Demo, DemoGrid, Spec } from './showroom';
@@ -60,6 +59,7 @@ export function CompositesMisc() {
       <Spec
         name="PasswordStrengthMeter"
         file="components/auth/password-strength-meter.tsx"
+        importPath="@/components/auth/password-strength-meter"
         description="Renders nothing for an empty password. Type to see it move."
       >
         <div className="max-w-sm space-y-2">
@@ -76,6 +76,7 @@ export function CompositesMisc() {
       <Spec
         name="EventOverview"
         file="components/events/event-overview.tsx"
+        importPath="@/components/events/event-overview"
         description="Read-only summary of an event's date, venue and status."
       >
         <EventOverview event={DEMO_EVENT} />
@@ -84,9 +85,10 @@ export function CompositesMisc() {
       <Spec
         name="EventTimelineModal"
         file="components/events/event-timeline-modal.tsx"
+        importPath="@/components/events/event-timeline-modal"
         description="Add or edit a run-sheet item. Includes the bespoke TimePicker."
       >
-        <Button size="sm" variant="outline" onClick={() => setTimelineOpen(true)}>
+        <Button variant="outline" onClick={() => setTimelineOpen(true)}>
           Open timeline item modal
         </Button>
         <EventTimelineModal
@@ -98,22 +100,10 @@ export function CompositesMisc() {
         />
       </Spec>
 
-      <Conflict
-        title="TimePicker is a fourth bespoke picker, exported from a modal file"
-        recommendation={
-          <>
-            <code>TimePicker</code> lives inside{' '}
-            <code>components/events/event-timeline-modal.tsx</code> yet is exported and reused
-            elsewhere, alongside <code>DatePicker</code> in <code>components/ui/</code>. Move it to{' '}
-            <code>components/ui/time-picker.tsx</code> so the two pickers sit together and can be
-            kept visually consistent.
-          </>
-        }
-      />
-
       <Spec
         name="EventTimelineShare"
         file="components/events/event-timeline-share.tsx"
+        importPath="@/components/events/event-timeline-share"
         description="Public run-sheet link toggle and regenerate control."
       >
         <EventTimelineShare
@@ -128,6 +118,7 @@ export function CompositesMisc() {
       <Spec
         name="ConnectStatusPanel"
         file="components/settings/connect-status-panel.tsx"
+        importPath="@/components/settings/connect-status-panel"
         description="Stripe Connect onboarding state. Both branches shown."
       >
         <DemoGrid cols={2}>
@@ -143,6 +134,7 @@ export function CompositesMisc() {
       <Spec
         name="TimeCategoryPicker"
         file="components/time-tracking/time-category-picker.tsx"
+        importPath="@/components/time-tracking/time-category-picker"
         description="Searchable category picker with inline create, rename, recolour and delete."
       >
         <ReadOnlyPreview note="Create and delete write straight to your categories table.">
@@ -153,6 +145,7 @@ export function CompositesMisc() {
       <Spec
         name="TimeCategoryRow"
         file="components/time-tracking/time-category-row.tsx"
+        importPath="@/components/time-tracking/time-category-row"
         description="One row inside the picker. Selected and unselected states."
       >
         <div className="max-w-sm rounded-control border border-border">

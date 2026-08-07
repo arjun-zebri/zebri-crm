@@ -3,6 +3,7 @@
 import { ChevronDown } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { TimelineItem } from '@/types/event'
 
@@ -250,7 +251,7 @@ export function EventTimelineModal({
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className={`text-caption px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 ${
+                className={`text-body px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 ${
                   deleteConfirm
                     ? 'bg-red-600 text-white hover:bg-red-700'
                     : 'bg-red-50 text-red-600 hover:bg-red-100'
@@ -264,17 +265,13 @@ export function EventTimelineModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-caption px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-body px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
-            <button
-              onClick={handleSave}
-              disabled={loading || !title.trim()}
-              className="text-caption px-3 py-1.5 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
+            <Button onClick={handleSave} disabled={!title.trim()} loading={loading}>
+              Save
+            </Button>
           </div>
         </div>
       }
@@ -289,7 +286,7 @@ export function EventTimelineModal({
                   key={s}
                   type="button"
                   onClick={() => handleStatusChange(s)}
-                  className={`flex-1 text-caption py-2 transition cursor-pointer ${
+                  className={`flex-1 text-body py-2 transition cursor-pointer ${
                     statusSelection === s
                       ? s === 'review'
                         ? 'bg-amber-500 text-white'

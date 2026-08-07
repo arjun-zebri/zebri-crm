@@ -986,7 +986,7 @@ export function InvoiceBuilderModal({
           <div className="mt-6 flex items-center justify-between rounded-control border border-border bg-surface px-3 py-2.5">
             <div>
               <p className="text-body text-text">Accept card payments</p>
-              <p className="text-caption text-text-muted">
+              <p className="text-body text-text-muted">
                 Adds a Pay with card button on the public invoice page.
               </p>
             </div>

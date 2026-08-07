@@ -19,15 +19,15 @@ export function SectionPrimitives() {
       <Section
         id="layout"
         title="Primitives · Layout"
-        description="PageHeader and Card, extracted from markup that every page used to hand-write."
+        description="The page title row and the standard content panel."
       >
         <PrimitivesLayout />
       </Section>
 
       <Section
-        id="forms"
+        id="controls"
         title="Primitives · Form controls"
-        description="Button, Input, Select, Checkbox and DatePicker, with every variant and size rendered."
+        description="Button, Input, Select, Checkbox and DatePicker, with every variant and state rendered."
       >
         <PrimitivesForms />
       </Section>

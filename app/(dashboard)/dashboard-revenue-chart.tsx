@@ -104,7 +104,7 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
             </span>
             {data.percentChange !== 0 && (
               <span
-                className={`inline-flex items-center text-caption font-medium px-1.5 py-0.5 rounded-control ${
+                className={`inline-flex items-center text-body font-medium px-1.5 py-0.5 rounded-control ${
                   data.percentChange > 0
                     ? 'bg-emerald-50 text-emerald-600'
                     : 'bg-red-50 text-red-600'
@@ -113,7 +113,7 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
                 {data.percentChange > 0 ? '+' : ''}{data.percentChange}%
               </span>
             )}
-            <span className="text-caption text-text-muted whitespace-nowrap">vs {previousPeriodLabels[period]}</span>
+            <span className="text-body text-text-muted whitespace-nowrap">vs {previousPeriodLabels[period]}</span>
           </div>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">

@@ -37,7 +37,7 @@ export function PastDueList({
                 <p className="text-body text-text truncate">
                   {row.business_name || row.email}
                 </p>
-                <p className="text-caption text-text-muted truncate">
+                <p className="text-body text-text-muted truncate">
                   {row.email} · <span className="capitalize">{row.subscription_plan ?? 'starter'}</span>
                 </p>
               </div>
@@ -47,7 +47,7 @@ export function PastDueList({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 text-caption text-text-muted hover:text-text shrink-0"
+                  className="inline-flex items-center gap-1 text-body text-text-muted hover:text-text shrink-0"
                 >
                   Stripe
                   <ExternalLink size={12} strokeWidth={1.5} />

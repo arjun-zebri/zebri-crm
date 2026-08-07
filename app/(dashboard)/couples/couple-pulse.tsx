@@ -82,7 +82,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
     <div className="space-y-8">
       {/* Coming soon banner */}
       <div className="flex items-center gap-3 px-4 py-3 rounded-control bg-gray-50 ring-1 ring-gray-200">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-pill bg-gray-900 text-white text-caption font-medium tracking-wide shrink-0">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-pill bg-gray-900 text-white text-body font-medium tracking-wide shrink-0">
           Coming soon
         </span>
         <p className="text-body text-text-muted">
@@ -105,24 +105,24 @@ export function CouplePulse({ couple }: CouplePulseProps) {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-display sm:text-4xl font-light text-text leading-none tabular-nums">{SAMPLE.score}</span>
-              <span className={`text-caption font-medium mt-1.5 ${desc.color}`}>{desc.text}</span>
+              <span className={`text-body font-medium mt-1.5 ${desc.color}`}>{desc.text}</span>
             </div>
           </div>
 
           {/* Metadata */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-caption font-semibold uppercase tracking-wider text-text">
+            <h3 className="text-body font-semibold uppercase tracking-wider text-text">
               Opportunity Score
             </h3>
             <p className="text-body text-text-subtle mt-1 mb-3">Overall assessment of booking likelihood</p>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-caption font-medium ring-1 ring-gray-200 text-gray-600">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-body font-medium ring-1 ring-gray-200 text-gray-600">
                 {SAMPLE.bookingProbability}% booking probability
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-caption font-medium ring-1 ring-emerald-200 text-emerald-700 bg-emerald-50">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-body font-medium ring-1 ring-emerald-200 text-emerald-700 bg-emerald-50">
                 <ArrowUpRight size={11} strokeWidth={2} />+{SAMPLE.trend} this week
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-caption font-medium ring-1 ring-amber-200 text-amber-700 bg-amber-50">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-body font-medium ring-1 ring-amber-200 text-amber-700 bg-amber-50">
                 {SAMPLE.urgency} urgency
               </span>
             </div>
@@ -137,7 +137,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
               <div key={s.label} className="relative ring-1 ring-gray-200 rounded-control p-3 sm:p-4">
                 <div className="absolute top-2.5 left-2.5 group">
                   <Info size={13} strokeWidth={1.75} className="text-gray-300 cursor-default" />
-                  <div className="pointer-events-none absolute top-0 left-full ml-2 w-56 rounded-control border border-black bg-surface px-3 py-2.5 text-caption text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10 shadow-sm leading-relaxed">
+                  <div className="pointer-events-none absolute top-0 left-full ml-2 w-56 rounded-control border border-black bg-surface px-3 py-2.5 text-body text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10 shadow-sm leading-relaxed">
                     {s.description}
                   </div>
                 </div>
@@ -158,12 +158,12 @@ export function CouplePulse({ couple }: CouplePulseProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10 items-start">
         <div className="space-y-8">
           <div>
-            <h3 className="text-caption font-semibold uppercase tracking-wider text-text mb-4">Conversation Summary</h3>
+            <h3 className="text-body font-semibold uppercase tracking-wider text-text mb-4">Conversation Summary</h3>
             <p className="text-body text-gray-700 leading-relaxed">{SAMPLE.summary}</p>
           </div>
 
           <div>
-            <h3 className="text-caption font-semibold uppercase tracking-wider text-text mb-4">Key Intelligence</h3>
+            <h3 className="text-body font-semibold uppercase tracking-wider text-text mb-4">Key Intelligence</h3>
             <div className="space-y-2.5">
               {SAMPLE.positiveSignals.map((s) => (
                 <div key={s} className="flex items-start gap-2.5">
@@ -175,7 +175,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
           </div>
 
           <div>
-            <h3 className="text-caption font-semibold uppercase tracking-wider text-text mb-4">Risk factors</h3>
+            <h3 className="text-body font-semibold uppercase tracking-wider text-text mb-4">Risk factors</h3>
             <div className="space-y-2.5">
               {SAMPLE.riskFactors.map((s) => (
                 <div key={s} className="flex items-start gap-2.5">
@@ -189,14 +189,14 @@ export function CouplePulse({ couple }: CouplePulseProps) {
 
         {/* Recommended Action */}
         <div className="ring-1 ring-gray-200 rounded-control p-5">
-          <span className="inline-block px-2 py-0.5 bg-gray-900 text-white text-caption font-medium rounded-pill mb-3">Recommended</span>
+          <span className="inline-block px-2 py-0.5 bg-gray-900 text-white text-body font-medium rounded-pill mb-3">Recommended</span>
           <h4 className="text-body font-semibold text-text mb-1.5 flex items-center gap-2">
             <Lightbulb size={14} strokeWidth={1.5} />
             {SAMPLE.recommendation.action}
           </h4>
           <p className="text-body text-text-muted leading-relaxed mb-3">{SAMPLE.recommendation.rationale}</p>
           <div className="bg-emerald-50 ring-1 ring-emerald-100 rounded-control px-3 py-2 mb-4">
-            <p className="text-caption text-emerald-700 flex items-center gap-1.5">
+            <p className="text-body text-emerald-700 flex items-center gap-1.5">
               <ArrowUpRight size={12} strokeWidth={2} />
               {SAMPLE.recommendation.impact}
             </p>
@@ -219,7 +219,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
         {SAMPLE.activity.map((a) => (
           <div key={a.label}>
             <p className="text-section font-light text-text tabular-nums leading-none">{a.value}</p>
-            <p className="text-caption text-text-subtle mt-1.5 leading-none">{a.label}</p>
+            <p className="text-body text-text-subtle mt-1.5 leading-none">{a.label}</p>
           </div>
         ))}
       </div>

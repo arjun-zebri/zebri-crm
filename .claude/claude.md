@@ -95,33 +95,72 @@ imports (`../../`). No React in `lib/` (ratcheted lint warning).
 ## Component rules
 
 - ~150 lines max per file — split when larger.
-- Use the primitives in `components/ui/` — no native `<button>`,
-  `<select>`, `<input>`. ESLint warns on raw HTML form controls.
 - Tailwind only — no inline `style={{}}`, no CSS modules.
-- Lucide icons: `strokeWidth={1.5}` always.
-- Buttons: `rounded-xl`, never `rounded-full`.
-- Interactive elements need `cursor-pointer`.
+- Non-button interactive elements (clickable rows, cards, `role="link"`
+  wrappers) need `cursor-pointer`. Real `<button>` elements do not: a
+  base rule in `globals.css` covers every one of them.
+
+## THE DESIGN SYSTEM IS MANDATORY
+
+**`/design-system` is the source of truth for every visual decision.**
+Run the dev server and open it before writing any UI. It renders every
+token, primitive, form pattern and page pattern from its real source,
+with the code that produced each one.
+
+**The rule, in order:**
+
+1. **Use the primitive.** If `components/ui/` has it, import it. Never
+   hand-write a `<button>`, `<input>`, `<select>`, dropdown, menu,
+   modal, card or page title.
+2. **Extend the primitive.** If one nearly fits, add the variant or prop
+   to the primitive itself, add it to `/design-system`, then use it. A
+   one-off `className` override on a call site is drift.
+3. **Add a new primitive.** If nothing fits, build it in
+   `components/ui/`, give it TSDoc + unit tests, and add an entry to
+   `/design-system` **in the same PR**. Only then use it.
+
+**Never** reach for a raw Tailwind value when a token exists. No
+`text-sm`, `text-xs`, `rounded-lg`, `rounded-xl`, `text-gray-500`,
+`bg-white`, `border-gray-200`. These were swept out of the codebase;
+reintroducing them puts two systems on screen at once.
+
+A PR that hand-rolls markup for something already in `/design-system`
+is not accepted. If you cannot find what you need there, that is a gap
+in the design system to be filled, not a licence to improvise.
 
 ## Design tokens (Tailwind 4 `@theme inline`)
 
-Use semantic tokens, not raw hex. The full table is in
-`.claude/docs/frontend-design.md`. The ESLint rule
-`zebri/no-off-token-color` warns when an arbitrary-value colour
-utility (`bg-[#…]`, `text-[#…]`) appears.
+Declared in `app/globals.css`; the full tables live in
+`.claude/docs/frontend-design.md` and every one is rendered on
+`/design-system`. The ESLint rule `zebri/no-off-token-color` warns when
+an arbitrary-value colour utility (`bg-[#…]`, `text-[#…]`) appears.
 
-- Surfaces: `bg-surface`, `bg-surface-muted`, `bg-card`.
-- Text: `text-text`, `text-text-muted`, `text-text-subtle`.
-- Borders: `border-border`, `border-border-strong`.
-- Brand / accents: `bg-brand`, `text-brand`, etc.
+- **Surfaces:** `bg-surface`, `bg-surface-muted`, `bg-surface-emphasis`,
+  `bg-card`
+- **Text:** `text-text`, `text-text-muted`, `text-text-subtle`,
+  `text-text-inverse`
+- **Borders:** `border-border`, `border-border-strong`
+- **Brand:** `bg-brand-fg`, `text-brand-fg`, `bg-brand-bg`
+- **Semantic:** `success`, `danger`, `warning`, `info`
+- **Radius:** `rounded-control` (6px, everything with corners) and
+  `rounded-pill` (round things). There is no third radius.
+- **Type:** `text-display`, `text-section`, `text-body`. Three sizes,
+  each carrying its own line-height. There is no caption size:
+  secondary text is `text-text-muted` / `text-text-subtle`, not smaller.
+- **Icons:** Lucide, `strokeWidth={1.5}`, always.
+- **Elevation:** `shadow-sm` resting, `shadow-lg` floating,
+  `shadow-xl` modal.
+- **Busy / copied states:** a control never changes size when clicked.
+  `<Button loading>` overlays the spinner on the label; `CopyButton`
+  reserves the wider label. Never write
+  `{saving ? 'Saving…' : 'Save'}` inside a button.
+- **Control height:** one, 32px (`h-8`). `Button`, `Input`, `Select` and
+  `DatePicker` have no `size` prop — they are all the same height so a
+  toolbar or form row lines up with no effort. Never hand-set `h-9`,
+  `h-10` or `py-2` on a control to make it "match".
 
-The token utilities resolve to the right value via CSS variables,
-so brand changes propagate without per-call overrides.
-
-## Typography
-
-- Page titles: `text-3xl font-semibold`
-- Section titles: `text-xl font-semibold`
-- Everything else: `text-sm`
+Tailwind 4 shifted its default grays, so `text-gray-900` and
+`text-text` are **not** the same colour. Always use the token.
 
 ## Auth model (post-§7.4 / Phase 0.8b)
 
@@ -257,7 +296,7 @@ in `.claude/docs/` **in the same PR**:
 
 | Change area               | File to update                                   |
 |---------------------------|--------------------------------------------------|
-| UI / design system        | `frontend-design.md` or `component-library.md`   |
+| UI / design system        | `frontend-design.md` **and** add/extend the entry on `/design-system` |
 | Database schema           | `database-schema.md`                             |
 | Page behaviour            | `page-specs.md`                                  |
 | Auth / entitlements model | `authentication.md`                              |

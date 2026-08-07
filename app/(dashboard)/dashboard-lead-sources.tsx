@@ -56,7 +56,7 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
 
               return (
                 <div key={source} className="flex items-center gap-3">
-                  <span className="text-caption sm:text-body text-gray-700 w-28 shrink-0">
+                  <span className="text-body sm:text-body text-gray-700 w-28 shrink-0">
                     {allLabels[source]}
                   </span>
                   <div className="flex-1 h-2 bg-surface-emphasis rounded-pill overflow-hidden">
@@ -65,10 +65,10 @@ export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <span className="text-caption sm:text-body font-medium text-text w-6 text-right shrink-0">
+                  <span className="text-body sm:text-body font-medium text-text w-6 text-right shrink-0">
                     {count}
                   </span>
-                  <span className="text-caption text-text-subtle w-10 text-right shrink-0">
+                  <span className="text-body text-text-subtle w-10 text-right shrink-0">
                     {pct}%
                   </span>
                 </div>

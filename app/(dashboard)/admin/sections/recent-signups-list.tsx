@@ -47,9 +47,9 @@ export function RecentSignupsList({
                 <p className="text-body text-text truncate">
                   {row.business_name || row.display_name || row.email}
                 </p>
-                <p className="text-caption text-text-muted truncate">{row.email}</p>
+                <p className="text-body text-text-muted truncate">{row.email}</p>
               </div>
-              <span className="text-caption text-text-subtle shrink-0">
+              <span className="text-body text-text-subtle shrink-0">
                 {formatRelative(row.created_at)}
               </span>
             </li>

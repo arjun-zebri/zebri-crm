@@ -534,7 +534,7 @@ export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps
     <>
       <div className="space-y-3">
         {/* Section label — the add action lives in the Overview header (top right). */}
-        <h3 className="mb-3 text-caption font-semibold uppercase tracking-wider text-text">Events</h3>
+        <h3 className="mb-3 text-body font-semibold uppercase tracking-wider text-text">Events</h3>
 
         {isLoading ? (
           <div className="space-y-2">
@@ -552,7 +552,7 @@ export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps
               return acc
             }, []).map((group) => (
               <div key={`${group[0].date}-${group[0].id}`}>
-                <p className="text-caption text-text-subtle mb-2">{formatGroupDate(group[0].date)}</p>
+                <p className="text-body text-text-subtle mb-2">{formatGroupDate(group[0].date)}</p>
                 <div className="relative">
                   <div className="absolute left-[4px] top-2 bottom-2 w-px bg-gray-200" aria-hidden />
                   {group.map((event, idx) => {
@@ -583,13 +583,13 @@ export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps
                           <Pencil size={11} strokeWidth={1.5} className="text-text-subtle opacity-0 group-hover:opacity-60 shrink-0 ml-2" />
                         </div>
                         {calculatingDriveTime ? (
-                          <p className="text-caption text-gray-300 mt-0.5">Calculating...</p>
+                          <p className="text-body text-gray-300 mt-0.5">Calculating...</p>
                         ) : meta ? (
-                          <p className="text-caption text-text-subtle mt-0.5">{meta}</p>
+                          <p className="text-body text-text-subtle mt-0.5">{meta}</p>
                         ) : null}
                       </div>
                       {event.drive_time_to_next_event_seconds != null && idx < group.length - 1 && (
-                        <p className="text-caption text-text-subtle pl-6 py-1.5">
+                        <p className="text-body text-text-subtle pl-6 py-1.5">
                           → {formatDriveTime(event.drive_time_to_next_event_seconds)}
                           {event.drive_distance_to_next_event_meters != null ? ` · ${formatDriveDistance(event.drive_distance_to_next_event_meters)}` : ''} drive
                         </p>

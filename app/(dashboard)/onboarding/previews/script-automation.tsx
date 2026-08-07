@@ -55,7 +55,7 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
         {show(1) && (
           <div className="flex items-center gap-2 pb-2 border-b border-border animate-fade-in">
             <ArrowLeft size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
-            <span className="text-caption font-semibold text-text truncate">Enquiry auto-reply</span>
+            <span className="text-body font-semibold text-text truncate">Enquiry auto-reply</span>
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded-pill font-medium ${
                 on ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-600'
@@ -111,7 +111,7 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
                     <div className="px-3 py-2 flex items-start gap-2">
                       <Mail size={15} strokeWidth={1.5} className="text-text-muted shrink-0 mt-0.5" />
                       <div className="min-w-0">
-                        <p className="text-caption font-medium text-text truncate">Send email</p>
+                        <p className="text-body font-medium text-text truncate">Send email</p>
                         <p className="text-[10px] text-text-muted truncate">Send an email to the couple</p>
                       </div>
                     </div>
@@ -159,7 +159,7 @@ function NodeCard({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: st
     <div className="w-48 rounded-control border border-border bg-surface px-3 py-2 flex items-start gap-2 animate-fade-in">
       <Icon size={15} strokeWidth={1.5} className="text-text-muted shrink-0 mt-0.5" />
       <div className="min-w-0">
-        <p className="text-caption font-medium text-text truncate">{title}</p>
+        <p className="text-body font-medium text-text truncate">{title}</p>
         <p className="text-[10px] text-text-muted truncate">{subtitle}</p>
       </div>
     </div>
@@ -185,7 +185,7 @@ function Placeholder({
     >
       <div className="flex items-center gap-1.5">
         <Icon size={14} strokeWidth={1.5} />
-        <span className="text-caption font-medium">{title}</span>
+        <span className="text-body font-medium">{title}</span>
       </div>
       {subtitle && <span className="text-[10px] text-text-subtle">{subtitle}</span>}
     </div>

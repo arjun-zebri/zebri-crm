@@ -74,11 +74,11 @@ export function TemplatePreviewHeader({
           {meta}
         </div>
         {subtitle ? <p className="mt-1 truncate text-body text-text-muted">{subtitle}</p> : null}
-        {edited ? <p className="mt-0.5 text-caption text-text-muted">Edited {edited}</p> : null}
+        {edited ? <p className="mt-0.5 text-body text-text-muted">Edited {edited}</p> : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <Button size="sm" variant="outline" className="hidden gap-1.5 sm:inline-flex" onClick={onEdit}>
+        <Button variant="outline" className="hidden gap-1.5 sm:inline-flex" onClick={onEdit}>
           <Pencil size={14} strokeWidth={1.5} />
           Edit
         </Button>

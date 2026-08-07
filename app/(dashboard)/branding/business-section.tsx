@@ -58,7 +58,6 @@ function TextField({ label, value, onChange, placeholder }: { label: string; val
     <div className="block">
       <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em] mb-1 block">{label}</span>
       <Input
-        size="sm"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

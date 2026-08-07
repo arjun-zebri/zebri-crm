@@ -12,6 +12,7 @@
  */
 'use client'
 
+import { Button } from '@/components/ui/button'
 import { StatePill } from '@/components/ui/state-pill'
 import type { InvoiceStage } from '@/types/payment-schedule'
 
@@ -59,7 +60,7 @@ export function PaymentStageRow({
           {' · '}
           {formatCurrency(stage.amountCents)}
         </span>
-        <span className="text-caption text-text-muted">
+        <span className="text-body text-text-muted">
           {paid
             ? `Paid ${formatDateShort(stage.paidAt) ?? ''}`
             : `Due ${formatDateShort(stage.dueDate) ?? '—'}`}
@@ -71,14 +72,9 @@ export function PaymentStageRow({
             dot={paid ? 'filled' : 'hollow'}
           />
           {canRecord && !paid && isNextUnpaid && (
-            <button
-              type="button"
-              onClick={onMarkPaid}
-              disabled={markPending}
-              className="inline-flex h-7 cursor-pointer items-center rounded-control bg-success px-2.5 text-caption font-medium text-text-inverse transition-colors hover:opacity-90 disabled:opacity-50"
-            >
-              {markPending ? 'Saving...' : 'Record payment'}
-            </button>
+            <Button variant="success" onClick={onMarkPaid} loading={markPending}>
+              Record payment
+            </Button>
           )}
         </span>
       </div>

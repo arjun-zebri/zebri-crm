@@ -391,12 +391,12 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               className={inputClass}
               placeholder="Your full legal name"
             />
-            <p className="text-caption text-text-subtle mt-1.5">
+            <p className="text-body text-text-subtle mt-1.5">
               Used as your typed signature on contracts you send.
             </p>
             {mcSignatureName && (
               <div className="mt-2 border border-gray-100 bg-gray-50 rounded-control p-3">
-                <p className="text-caption text-text-muted mb-1">Preview</p>
+                <p className="text-body text-text-muted mb-1">Preview</p>
                 <p className="text-2xl text-text" style={{ fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
                   {mcSignatureName}
                 </p>

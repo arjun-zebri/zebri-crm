@@ -111,7 +111,7 @@ export function StepDocuments(props: StepDocumentsProps) {
               />
               <div className="flex-1 min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
                 <span className="text-body font-medium text-text shrink-0">{info.label}</span>
-                <span className="text-caption text-text-muted">{info.description}</span>
+                <span className="text-body text-text-muted">{info.description}</span>
               </div>
             </label>
           )
@@ -119,7 +119,7 @@ export function StepDocuments(props: StepDocumentsProps) {
       </div>
 
       {allDisabledExceptOne && (
-        <p className="text-caption text-text-muted">Keep at least one document type enabled.</p>
+        <p className="text-body text-text-muted">Keep at least one document type enabled.</p>
       )}
     </div>
   )

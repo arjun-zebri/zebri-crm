@@ -221,20 +221,20 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize, hasOverlay }: 
         className="pl-3.5 pr-2 py-1.5 overflow-hidden"
         style={{ height: heightPx - 12 }}
       >
-        <p className="text-caption font-semibold text-text leading-tight truncate">
+        <p className="text-body font-semibold text-text leading-tight truncate">
           {item.title}
         </p>
         {heightPx > 50 && item.contact && (
-          <p className="text-caption text-text-muted mt-0.5 truncate">
+          <p className="text-body text-text-muted mt-0.5 truncate">
             {item.contact.name}
             {categoryLabel ? ` · ${categoryLabel}` : ""}
           </p>
         )}
         {heightPx > 65 && (
-          <p className="text-caption text-text-subtle mt-0.5">{liveDuration} min</p>
+          <p className="text-body text-text-subtle mt-0.5">{liveDuration} min</p>
         )}
         {heightPx > 85 && item.description && (
-          <p className="text-caption text-text-subtle mt-0.5 line-clamp-2">{item.description}</p>
+          <p className="text-body text-text-subtle mt-0.5 line-clamp-2">{item.description}</p>
         )}
       </div>
 
@@ -641,14 +641,14 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
       <div className="flex flex-col flex-1 min-h-0 gap-4">
         {/* + Add item */}
         <div className="flex items-center justify-between">
-          <p className="text-caption text-text-subtle">
+          <p className="text-body text-text-subtle">
             Click anywhere on the grid to add an item, or drag to reschedule.
           </p>
           <div className="flex items-center gap-2 ml-4 flex-shrink-0">
             {items.length > 0 && (
               <button
                 onClick={exportCsv}
-                className="text-caption text-text-muted border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
+                className="text-body text-text-muted border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
               >
                 <Download size={12} strokeWidth={1.5} />
                 Export
@@ -660,7 +660,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                 setClickTime("");
                 setShowModal(true);
               }}
-              className="text-caption text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+              className="text-body text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add item
             </button>
@@ -716,7 +716,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                         className="absolute right-3"
                         style={{ top: idx * 60 * MIN_PX - 9 }}
                       >
-                        <span className="text-caption text-text-subtle font-medium whitespace-nowrap">
+                        <span className="text-body text-text-subtle font-medium whitespace-nowrap">
                           {formatHourLabel(hour)}
                         </span>
                       </div>
@@ -779,7 +779,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
           {/* Unscheduled items - right column */}
           {!hideUnscheduled && untimedItems.length > 0 && (
             <div className="w-44 flex-shrink-0 overflow-y-auto min-h-0">
-              <p className="text-caption font-medium text-text-subtle uppercase tracking-wide mb-2">
+              <p className="text-body font-medium text-text-subtle uppercase tracking-wide mb-2">
                 Unscheduled
               </p>
               <div className="space-y-2">
@@ -799,11 +799,11 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
                       }}
                       className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-border rounded-control hover:border-border-strong hover:bg-gray-50 transition cursor-pointer"
                     >
-                      <p className="text-caption font-medium text-gray-700 truncate">
+                      <p className="text-body font-medium text-gray-700 truncate">
                         {item.title}
                       </p>
                       {item.contact && (
-                        <p className="text-caption text-text-subtle truncate">
+                        <p className="text-body text-text-subtle truncate">
                           {item.contact.name}
                           {catLabel ? ` · ${catLabel}` : ""}
                         </p>

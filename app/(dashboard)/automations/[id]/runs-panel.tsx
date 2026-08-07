@@ -114,9 +114,9 @@ export function RunHistoryPanel({ automationId, actions, open, onClose }: Props)
 
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {isLoading ? (
-          <p className="text-caption text-text-muted">Loading runs…</p>
+          <p className="text-body text-text-muted">Loading runs…</p>
         ) : !runs || runs.length === 0 ? (
-          <p className="text-caption text-text-muted">
+          <p className="text-body text-text-muted">
             No runs yet. This automation hasn’t fired for any couple — once
             it does, every run shows here with its outcome.
           </p>
@@ -133,17 +133,17 @@ export function RunHistoryPanel({ automationId, actions, open, onClose }: Props)
                     label={RUN_STATUS_LABELS[run.status]}
                     dot="filled"
                   />
-                  <span className="text-caption text-text-muted">
+                  <span className="text-body text-text-muted">
                     {relativePast(run.started_at)}
                   </span>
                 </div>
 
-                <p className="mt-1.5 text-caption text-text-muted">
+                <p className="mt-1.5 text-body text-text-muted">
                   {coupleNameOf(run.couples) ?? 'No couple linked'}
                 </p>
 
                 {run.status === 'errored' ? (
-                  <div className="mt-2 rounded-control bg-danger/10 px-2.5 py-2 text-caption text-danger">
+                  <div className="mt-2 rounded-control bg-danger/10 px-2.5 py-2 text-body text-danger">
                     <div className="flex items-center gap-1.5 font-medium">
                       <AlertTriangle size={12} strokeWidth={1.5} />
                       {stepLabel(run.current_action_id)

@@ -4,6 +4,9 @@ import * as Popover from '@radix-ui/react-popover'
 import { ChevronDown, Check } from 'lucide-react'
 import { useState } from 'react'
 
+import { Button } from '@/components/ui/button'
+import { MenuItem, MenuPanel } from '@/components/ui/menu'
+
 export type GroupByMode = 'status' | 'date' | 'couple' | 'priority' | 'custom' | 'none'
 
 const LABELS: Record<GroupByMode, string> = {
@@ -27,34 +30,35 @@ export function GroupByToggle({ value, onChange }: GroupByToggleProps) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button className="flex items-center gap-1 border border-border rounded-control px-2 py-2 text-caption text-text-muted hover:bg-gray-50 transition whitespace-nowrap cursor-pointer">
+        <Button variant="outline" className="whitespace-nowrap">
           <span className="text-text-subtle">Group by</span>
-          <span className="text-gray-700">{LABELS[value]}</span>
-          <ChevronDown size={10} strokeWidth={1.5} className="text-text-subtle shrink-0" />
-        </button>
+          <span>{LABELS[value]}</span>
+          <ChevronDown size={10} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
+        </Button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content
-          className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] min-w-32"
-          sideOffset={4}
-          align="end"
-        >
-          {ORDER.map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => {
-                onChange(mode)
-                setOpen(false)
-              }}
-              className={`w-full text-left px-2.5 py-1.5 text-caption flex items-center justify-between transition ${
-                value === mode ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {LABELS[mode]}
-              {value === mode && <Check size={12} strokeWidth={2} className="text-green-600" />}
-            </button>
-          ))}
+        {/* Positioning stays here; the panel's own chrome comes from MenuPanel. */}
+        <Popover.Content className="z-[70]" sideOffset={4} align="end">
+          <MenuPanel>
+            {ORDER.map((mode) => (
+              <MenuItem
+                key={mode}
+                size="sm"
+                selected={value === mode}
+                onClick={() => {
+                  onChange(mode)
+                  setOpen(false)
+                }}
+                trailing={
+                  value === mode ? (
+                    <Check size={12} strokeWidth={1.5} className="text-text" />
+                  ) : null
+                }
+              >
+                {LABELS[mode]}
+              </MenuItem>
+            ))}
+          </MenuPanel>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

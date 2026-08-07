@@ -12,6 +12,7 @@
 
 import { useMemo, useState, type CSSProperties } from 'react'
 
+import { BusyLabel } from '@/components/ui/busy-label'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
@@ -171,7 +172,7 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
             className="cursor-pointer transition hover:opacity-90 disabled:opacity-60"
             style={{ background: buttonColor ?? brand, color: readableTextOn(buttonColor ?? brand), borderRadius: branding.corner_radius, padding: '0.625rem 1.5rem', fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
           >
-            {submitting ? 'Sending…' : atConfirm ? 'Send answers' : 'Next'}
+            <BusyLabel busy={submitting}>{atConfirm ? 'Send answers' : 'Next'}</BusyLabel>
           </button>
         </div>
       </div>

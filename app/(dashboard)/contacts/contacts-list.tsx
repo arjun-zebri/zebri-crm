@@ -30,7 +30,7 @@ function ColumnHeaderRow() {
   return (
     <tr>
       <th
-        className="px-0 py-1.5 text-left text-caption font-normal text-text-subtle border-b border-border"
+        className="px-0 py-1.5 text-left text-body font-normal text-text-subtle border-b border-border"
         style={{ width: COL_WIDTHS.name }}
       >
         <span className="flex items-center gap-1.5">
@@ -39,7 +39,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-caption font-normal text-text-subtle border-b border-border"
+        className="px-0 py-1.5 text-left text-body font-normal text-text-subtle border-b border-border"
         style={{ width: COL_WIDTHS.contact }}
       >
         <span className="flex items-center gap-1.5">
@@ -48,7 +48,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-caption font-normal text-text-subtle border-b border-border hidden md:table-cell"
+        className="px-0 py-1.5 text-left text-body font-normal text-text-subtle border-b border-border hidden md:table-cell"
         style={{ width: COL_WIDTHS.email }}
       >
         <span className="flex items-center gap-1.5">
@@ -57,7 +57,7 @@ function ColumnHeaderRow() {
         </span>
       </th>
       <th
-        className="px-0 py-1.5 text-left text-caption font-normal text-text-subtle border-b border-border hidden lg:table-cell"
+        className="px-0 py-1.5 text-left text-body font-normal text-text-subtle border-b border-border hidden lg:table-cell"
         style={{ width: COL_WIDTHS.phone }}
       >
         <span className="flex items-center gap-1.5">
@@ -139,7 +139,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                       <h3 className="text-body font-semibold text-text">
                         {group.label}
                       </h3>
-                      <span className="text-caption text-text-subtle">
+                      <span className="text-body text-text-subtle">
                         {group.contacts.length}
                       </span>
                       <ChevronRight
@@ -173,7 +173,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                                 {contact.name}
                               </p>
                               {secondary && (
-                                <p className="text-caption text-text-subtle mt-0.5 truncate">
+                                <p className="text-body text-text-subtle mt-0.5 truncate">
                                   {secondary}
                                 </p>
                               )}
@@ -216,7 +216,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                             <h3 className="text-body font-semibold text-text">
                               {group.label}
                             </h3>
-                            <span className="text-caption text-text-subtle">
+                            <span className="text-body text-text-subtle">
                               {group.contacts.length}
                             </span>
                             <ChevronRight

@@ -37,7 +37,7 @@ export function LoginForm({ next }: LoginFormProps) {
       {state.error && !state.fieldErrors ? (
         <div
           role="alert"
-          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-caption text-danger"
+          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-body text-danger"
         >
           {state.error}
         </div>
@@ -70,18 +70,16 @@ export function LoginForm({ next }: LoginFormProps) {
         <div className="pt-1">
           <Link
             href="/reset-password"
-            className="text-caption text-text-muted underline hover:text-text"
+            className="text-body text-text-muted underline hover:text-text"
           >
             Forgot your password?
           </Link>
         </div>
 
-        <Button type="submit" size="lg" loading={pending} className="w-full">
-          {pending ? 'Signing in…' : 'Sign in'}
-        </Button>
+        <Button type="submit" loading={pending} className="w-full">Sign in</Button>
       </form>
 
-      <p className="mt-6 text-center text-caption text-text-muted">
+      <p className="mt-6 text-center text-body text-text-muted">
         Don&apos;t have an account?{' '}
         <Link href="/signup" className="text-text underline hover:text-text-muted">
           Sign up

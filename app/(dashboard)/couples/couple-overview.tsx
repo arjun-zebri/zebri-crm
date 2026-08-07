@@ -89,7 +89,6 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       title="Overview"
       actions={
         <Button
-          size="sm"
           onClick={() => eventsRef.current?.openAdd()}
           className="cursor-pointer gap-1.5"
         >
@@ -123,7 +122,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       {/* Column 1: General Info */}
       <div className="flex flex-col">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-caption font-semibold uppercase tracking-wider text-text">General</h3>
+          <h3 className="text-body font-semibold uppercase tracking-wider text-text">General</h3>
         </div>
 
         {/* Primary + Secondary partner contacts. Six inline-editable
@@ -326,7 +325,7 @@ function PartnerBlock({
 }: PartnerBlockProps) {
   return (
     <div className="mt-2 first:mt-0">
-      <h4 className="text-caption uppercase tracking-wider text-text-subtle mt-3 mb-1">
+      <h4 className="text-body uppercase tracking-wider text-text-subtle mt-3 mb-1">
         {label}
       </h4>
       <EditableRow
