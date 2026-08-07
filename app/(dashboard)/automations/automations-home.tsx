@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import type { AutomationsHomePayload, EnrichedAutomationRow } from '@/types/automations'
 
 import { type StatusFilter } from './automations-filter'
@@ -104,7 +105,7 @@ export function AutomationsHome({
           onChange={onChange}
         />
       ) : (
-        <div className="text-sm text-text-muted px-1 py-12 text-center border border-border rounded-xl bg-surface">
+        <div className="text-body text-text-muted px-1 py-12 text-center border border-border rounded-control bg-surface">
           No automations match.
         </div>
       )}
@@ -126,7 +127,7 @@ function Tabs({
   loading: boolean
 }) {
   return (
-    <div className="flex items-center gap-6 border-b border-gray-200">
+    <div className="flex items-center gap-6 border-b border-border">
       {TABS.map((t) => {
         const active = status === t.value
         const Icon = t.icon
@@ -136,15 +137,15 @@ function Tabs({
             key={t.value}
             type="button"
             onClick={() => onChange(t.value)}
-            className={`flex items-center gap-1.5 pb-2.5 -mb-px text-sm transition cursor-pointer ${
+            className={`flex items-center gap-1.5 pb-2.5 -mb-px text-body transition cursor-pointer ${
               active
-                ? 'text-gray-900 font-medium border-b-2 border-gray-900'
-                : 'text-gray-500 hover:text-gray-900'
+                ? 'text-text font-medium border-b-2 border-gray-900'
+                : 'text-text-muted hover:text-text'
             }`}
           >
             <Icon size={13} strokeWidth={1.5} />
             <span>{t.label}</span>
-            {!loading && <span className="text-xs text-gray-400">{count}</span>}
+            {!loading && <span className="text-body text-text-subtle">{count}</span>}
           </button>
         )
       })}
@@ -167,41 +168,33 @@ function Toolbar({
         <Search
           size={11}
           strokeWidth={1.5}
-          className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
         />
         <input
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search automations..."
-          className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+          className="block h-8 w-full rounded-control border border-border bg-surface pl-6 pr-6 text-body text-text transition-colors placeholder:text-text-subtle focus-visible:border-brand-fg focus-visible:outline-none"
         />
         {query && (
           <button
             onClick={() => onQueryChange('')}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-gray-700 transition cursor-pointer p-0.5"
             aria-label="Clear search"
           >
             <X size={10} strokeWidth={2} />
           </button>
         )}
       </div>
-      <button
-        type="button"
-        className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
-        title="Filter (coming soon)"
-      >
+      <Button variant="outline" className="whitespace-nowrap" title="Filter (coming soon)">
         <FilterIcon size={11} strokeWidth={1.5} />
         <span>Filter</span>
-      </button>
-      <button
-        type="button"
-        className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
-        title="Sort (coming soon)"
-      >
+      </Button>
+      <Button variant="outline" className="whitespace-nowrap" title="Sort (coming soon)">
         <ArrowUp size={11} strokeWidth={1.5} />
         <span>Sort</span>
-      </button>
+      </Button>
     </div>
   )
 }
@@ -214,12 +207,12 @@ function StatsCardsSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
-          className="border border-border rounded-xl bg-surface px-4 py-3 flex items-center gap-3 animate-pulse"
+          className="border border-border rounded-control bg-surface px-4 py-3 flex items-center gap-3 animate-pulse"
         >
-          <div className="w-9 h-9 rounded-lg bg-gray-100 shrink-0" />
+          <div className="w-9 h-9 rounded-control bg-surface-emphasis shrink-0" />
           <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="h-2.5 w-20 bg-gray-100 rounded" />
-            <div className="h-5 w-10 bg-gray-100 rounded" />
+            <div className="h-2.5 w-20 bg-surface-emphasis rounded-control" />
+            <div className="h-5 w-10 bg-surface-emphasis rounded-control" />
           </div>
         </div>
       ))}
@@ -240,13 +233,13 @@ function EmptyState({ onCreate, pending }: { onCreate: () => void; pending: bool
     <div className="flex-1 flex flex-col items-center justify-center text-center pb-[88px]">
       <Sparkles size={32} strokeWidth={1.5} className="text-text-subtle mb-3" />
       <h2 className="text-base font-medium mb-1">No automations yet</h2>
-      <p className="text-sm text-text-muted mb-6 max-w-sm">
+      <p className="text-body text-text-muted mb-6 max-w-sm">
         Set up the work that happens for every couple, without you lifting a finger.
       </p>
       <button
         onClick={onCreate}
         disabled={pending}
-        className="px-4 py-2 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+        className="px-4 py-2 bg-gray-900 text-white text-body rounded-control hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
       >
         New automation
       </button>

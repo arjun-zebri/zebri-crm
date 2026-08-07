@@ -44,22 +44,22 @@ export default function GlobalError({
 
   return (
     <html lang="en">
-      <body className="antialiased bg-white text-gray-900">
+      <body className="antialiased bg-surface text-text">
         <div className="flex items-center justify-center min-h-screen">
-          <div className="max-w-md w-full bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <div className="max-w-md w-full bg-surface border border-border rounded-control shadow-sm p-6">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-red-50 mb-4">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-control bg-red-50 mb-4">
                 <span className="text-2xl">💀</span>
               </div>
-              <h1 className="text-xl font-semibold text-gray-900 mb-2">
+              <h1 className="text-section font-semibold text-text mb-2">
                 Something went wrong
               </h1>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-body text-gray-600 mb-6">
                 A critical error occurred. Please try again.
               </p>
               <button
                 onClick={() => reset()}
-                className="w-full bg-black text-white rounded-xl px-4 py-2 text-sm font-medium hover:bg-neutral-800 transition"
+                className="w-full bg-black text-white rounded-control px-4 py-2 text-body font-medium hover:bg-neutral-800 transition"
               >
                 Try again
               </button>

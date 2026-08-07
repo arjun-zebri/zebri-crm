@@ -49,10 +49,10 @@ export interface PreviewModalProps {
 export function PreviewModal({ title, badge, footer, wide, children }: PreviewModalProps) {
   return (
     <div
-      className={`w-full ${wide ? 'max-w-[440px]' : 'max-w-[400px]'} rounded-xl border border-border bg-card shadow-xl overflow-hidden animate-modal-in`}
+      className={`w-full ${wide ? 'max-w-[440px]' : 'max-w-[400px]'} rounded-control border border-border bg-card shadow-xl overflow-hidden animate-modal-in`}
     >
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-        <p className="text-xs font-semibold text-text">{title}</p>
+        <p className="text-body font-semibold text-text">{title}</p>
         {badge}
         <X size={13} strokeWidth={1.5} className="ml-auto text-text-subtle" />
       </div>
@@ -87,7 +87,7 @@ export function EditorToolbar({ insertVariable }: { insertVariable?: boolean }) 
 export function InsertVariableChip({ className }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-0.5 rounded bg-green-50 px-1.5 py-0.5 text-[9px] font-medium text-green-700 ${className ?? ''}`}
+      className={`inline-flex items-center gap-0.5 rounded-control bg-green-50 px-1.5 py-0.5 text-[9px] font-medium text-green-700 ${className ?? ''}`}
     >
       <AtSign size={9} strokeWidth={1.5} /> Insert variable
     </span>

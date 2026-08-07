@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useDashboardStats, useDashboardTasks, DashboardPeriod } from "./use-dashboard";
-import { DashboardStats } from "./dashboard-stats";
-import { DashboardRevenueChart } from "./dashboard-revenue-chart";
-import { DashboardCalendar } from "./dashboard-calendar";
-import { DashboardLeads } from "./dashboard-leads";
-import { DashboardLeadSources } from "./dashboard-lead-sources";
-import { DashboardTasks } from "./dashboard-tasks";
-import { DashboardInvoices } from "./dashboard-invoices";
-import { CoupleProfile } from "./couples/couple-profile";
-import { Couple } from '@/types/couple';
 import { ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+
+import { PageHeader } from "@/components/ui/page-header";
+import { Couple } from '@/types/couple';
+
+import { CoupleProfile } from "./couples/couple-profile";
+import { DashboardCalendar } from "./dashboard-calendar";
+import { DashboardInvoices } from "./dashboard-invoices";
+import { DashboardLeadSources } from "./dashboard-lead-sources";
+import { DashboardLeads } from "./dashboard-leads";
+import { DashboardRevenueChart } from "./dashboard-revenue-chart";
+import { DashboardStats } from "./dashboard-stats";
+import { DashboardTasks } from "./dashboard-tasks";
+import { useDashboardStats, useDashboardTasks, DashboardPeriod } from "./use-dashboard";
+
 
 const periodOptions: { value: DashboardPeriod; label: string }[] = [
   { value: "week", label: "Weekly" },
@@ -96,24 +100,25 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-6 md:px-[3.75rem] pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Dashboard</h1>
+        <PageHeader
+          title="Dashboard"
+          actions={
           <div className="relative" ref={periodRef}>
             <button
               onClick={() => setPeriodOpen(!periodOpen)}
-              className="flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+              className="flex items-center gap-1 text-body font-medium text-gray-600 bg-surface-emphasis hover:bg-gray-200 px-2.5 py-1.5 rounded-control transition cursor-pointer"
             >
               {periodOptions.find((o) => o.value === period)?.label}
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400" strokeWidth={1.5} />
+              <ChevronDown className="w-3.5 h-3.5 text-text-subtle" strokeWidth={1.5} />
             </button>
             {periodOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[110px]">
+              <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-control shadow-lg z-10 min-w-[110px]">
                 {periodOptions.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => { setPeriod(opt.value); setPeriodOpen(false); }}
-                    className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition first:rounded-t-lg last:rounded-b-lg ${
-                      period === opt.value ? "font-medium text-gray-900" : "text-gray-600"
+                    className={`block w-full text-left px-3 py-2 text-body cursor-pointer hover:bg-gray-50 transition first:rounded-t-control last:rounded-b-control ${
+                      period === opt.value ? "font-medium text-text" : "text-gray-600"
                     }`}
                   >
                     {opt.label}
@@ -122,7 +127,8 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </div>
+          }
+        />
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hover">

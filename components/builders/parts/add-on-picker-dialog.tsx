@@ -63,11 +63,11 @@ function AddOnPickerContent({
         <div
           role="dialog"
           aria-label={`Add-ons for ${packageName}`}
-          className="pointer-events-auto w-full max-w-sm rounded-2xl border border-border bg-card shadow-xl"
+          className="pointer-events-auto w-full max-w-sm rounded-control border border-border bg-card shadow-xl"
         >
           <div className="px-5 py-5">
             <h3 className="text-base font-semibold text-text">Include add-ons?</h3>
-            <p className="mt-1 text-sm text-text-muted">
+            <p className="mt-1 text-body text-text-muted">
               {packageName} offers optional extras. Tick the ones this couple wants.
             </p>
 
@@ -81,7 +81,7 @@ function AddOnPickerContent({
                     }
                     label={addOn.description}
                   />
-                  <span className="shrink-0 text-sm tabular-nums text-text-muted">
+                  <span className="shrink-0 text-body tabular-nums text-text-muted">
                     + {formatAUD(addOn.amount)}
                   </span>
                 </div>
@@ -89,10 +89,10 @@ function AddOnPickerContent({
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={onCancel}>
+              <Button variant="outline" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={() => onApply(addOns.filter((_, i) => checked[i]))}>
+              <Button onClick={() => onApply(addOns.filter((_, i) => checked[i]))}>
                 {chosenCount > 0
                   ? `Apply with ${String(chosenCount)} add-on${chosenCount === 1 ? '' : 's'}`
                   : 'Apply without add-ons'}

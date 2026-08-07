@@ -94,9 +94,8 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <p className="text-caption font-medium text-text">Attachments</p>
+        <p className="text-body font-medium text-text">Attachments</p>
         <Button
-          size="sm"
           variant="ghost"
           className="gap-1.5"
           loading={upload.isPending}
@@ -118,7 +117,7 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
         }}
       />
       {files.length === 0 ? (
-        <p className="text-xs text-text-subtle">
+        <p className="text-body text-text-subtle">
           Files attached here are included every time this template is sent.
         </p>
       ) : (
@@ -126,7 +125,7 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
           {files.map((f) => (
             <li
               key={f.id}
-              className="flex items-center gap-2.5 rounded-xl border border-border px-3 py-2"
+              className="flex items-center gap-2.5 rounded-control border border-border px-3 py-2"
             >
               {/* Name is a button: click to open the file in a new tab. */}
               <button
@@ -136,13 +135,13 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
                 className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left"
               >
                 <FileText size={14} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
-                <span className="min-w-0 flex-1 truncate text-sm text-text hover:underline">{f.file_name}</span>
+                <span className="min-w-0 flex-1 truncate text-body text-text hover:underline">{f.file_name}</span>
               </button>
-              <span className="shrink-0 text-xs text-text-subtle">{formatFileSize(f.file_size)}</span>
+              <span className="shrink-0 text-body text-text-subtle">{formatFileSize(f.file_size)}</span>
               <button
                 type="button"
                 aria-label={`Remove ${f.file_name}`}
-                className="shrink-0 cursor-pointer rounded p-1 text-text-subtle transition hover:text-text"
+                className="shrink-0 cursor-pointer rounded-control p-1 text-text-subtle transition hover:text-text"
                 onClick={() => void onRemove(f)}
               >
                 <X size={14} strokeWidth={1.5} />

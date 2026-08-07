@@ -22,7 +22,7 @@ export function ContractTemplatePreview({ content }: { content: JSONContent }) {
     <div
       // Sanitised by renderTemplateChips. Heading/list utilities give the
       // document calm structure without an editor chrome.
-      className="rounded-xl border border-border bg-card px-5 py-5 text-sm leading-relaxed text-text [&_a]:text-brand [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:font-semibold [&_p]:my-2 [&_p:empty]:min-h-[1.4em] [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+      className="rounded-control border border-border bg-card px-5 py-5 text-body leading-relaxed text-text [&_a]:text-brand [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:font-semibold [&_p]:my-2 [&_p:empty]:min-h-[1.4em] [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )

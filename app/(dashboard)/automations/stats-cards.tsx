@@ -47,13 +47,13 @@ export function StatsCards({ payload }: Props) {
 function StatsCard({ card }: { card: Card }) {
   const Icon = card.icon
   return (
-    <div className="border border-border rounded-xl bg-surface px-4 py-3 flex items-center gap-3">
-      <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-surface-muted shrink-0">
+    <div className="border border-border rounded-control bg-surface px-4 py-3 flex items-center gap-3">
+      <span className="inline-flex items-center justify-center w-9 h-9 rounded-control bg-surface-muted shrink-0">
         <Icon size={16} strokeWidth={1.5} className="text-text-muted" />
       </span>
       <div className="min-w-0">
-        <div className="text-xs text-text-muted truncate">{card.label}</div>
-        <div className="text-xl font-semibold text-text leading-tight">{card.value}</div>
+        <div className="text-body text-text-muted truncate">{card.label}</div>
+        <div className="text-section font-semibold text-text leading-tight">{card.value}</div>
       </div>
     </div>
   )

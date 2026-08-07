@@ -14,6 +14,9 @@
 import { FileSignature, Plus, Receipt, Search, X } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
+
 import type { PaymentsTab } from './use-payments-shortcut';
 
 export interface PaymentsHeaderProps {
@@ -40,35 +43,21 @@ export function PaymentsHeader({
   const newLabel = activeTab === 'invoices' ? 'invoice' : 'contract';
 
   const mobileNewButton = (
-    <button
-      onClick={onNew}
-      className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
-      aria-label={`New ${newLabel}`}
-    >
-      <Plus size={16} strokeWidth={2} />
-    </button>
+    <Button onClick={onNew} iconOnly className="sm:hidden" aria-label={`New ${newLabel}`}>
+      <Plus size={16} strokeWidth={1.5} />
+    </Button>
   );
 
   const desktopNewButton = (
-    <button
-      onClick={onNew}
-      className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
-    >
-      <Plus size={11} strokeWidth={2} />
+    <Button onClick={onNew} className="hidden sm:inline-flex">
+      <Plus size={11} strokeWidth={1.5} />
       New {newLabel}
-    </button>
+    </Button>
   );
 
   return (
     <div className="px-6 sm:px-[3.75rem] pt-6 pb-2 flex-shrink-0">
-      {/* Title row */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-3xl font-semibold text-gray-900">Payments</h1>
-          <span className="text-sm text-gray-400">{count} total</span>
-        </div>
-        {mobileNewButton}
-      </div>
+      <PageHeader title="Payments" count={count} className="mb-4" actions={mobileNewButton} />
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -76,7 +65,7 @@ export function PaymentsHeader({
           <Search
             size={11}
             strokeWidth={1.5}
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none"
           />
           <input
             ref={searchInputRef}
@@ -84,7 +73,7 @@ export function PaymentsHeader({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={`Search ${activeTab}...`}
-            className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
+            className="block h-8 w-full rounded-control border border-border bg-surface pl-6 pr-6 text-body text-text transition-colors placeholder:text-text-subtle focus-visible:border-brand-fg focus-visible:outline-none"
           />
           {search && (
             <button
@@ -92,7 +81,7 @@ export function PaymentsHeader({
                 onSearchChange('');
                 searchInputRef.current?.focus();
               }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-gray-700 transition cursor-pointer p-0.5"
             >
               <X size={10} strokeWidth={2} />
             </button>
@@ -103,7 +92,7 @@ export function PaymentsHeader({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
+      <div className="flex items-center gap-6 border-b border-border mt-6">
         <TabButton
           active={activeTab === 'invoices'}
           onClick={() => onTabChange('invoices')}
@@ -135,10 +124,10 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
+      className={`pb-2 text-body font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
         active
-          ? 'border-gray-900 text-gray-900'
-          : 'border-transparent text-gray-400 hover:text-gray-600'
+          ? 'border-gray-900 text-text'
+          : 'border-transparent text-text-subtle hover:text-gray-600'
       }`}
     >
       {icon} {label}

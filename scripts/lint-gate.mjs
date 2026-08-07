@@ -202,7 +202,11 @@ const ERROR_BUDGET = 54;
 // threaded through the fill renderers and both preview surfaces. Deleting the
 // toggle + "fixed" preview note and tightening imports netted out three
 // warnings (256 -> 253). Locking in.
-const WARNING_BUDGET = 253;
+// PageHeader + Card extraction (2026-08-06): ten page titles and 22 bordered
+// panels moved onto the new primitives. Running eslint --fix over the ~35
+// touched files cleared a large backlog of import-order warnings that had
+// accumulated in those pages (250 -> 199). Locking in.
+const WARNING_BUDGET = 115;
 
 function runEslintJson() {
   try {

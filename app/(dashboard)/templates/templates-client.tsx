@@ -13,6 +13,7 @@
 import type { JSONContent } from '@tiptap/react'
 import { useState } from 'react'
 
+import { PageHeader } from '@/components/ui/page-header'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
 import { ContractTemplateManager } from './contract-template-manager'
@@ -42,7 +43,7 @@ export function TemplatesClient({ businessName, contactName, email, emailSignatu
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex-shrink-0 px-6 pt-6 sm:px-[3.75rem]">
-        <h1 className="text-3xl font-semibold text-text">Templates</h1>
+        <PageHeader title="Templates" />
         <div className="mt-5">
           <TemplatesTabs activeTab={activeTab} onTabChange={setActiveTab} actionsRef={setActionsSlot} />
         </div>

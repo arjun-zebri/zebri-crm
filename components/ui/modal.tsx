@@ -1,17 +1,25 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
 
-// Tracks how many Modal instances are currently open so only the topmost
-// one responds to Escape - prevents nested modals from closing their parent.
-let _openModalDepth = 0;
+import {
+  getOpenOverlayDepth,
+  OVERLAY_Z,
+  useBackdropDismiss,
+  useOverlay,
+  type OverlayLayer,
+} from './use-overlay';
 
-/** Returns the number of Modal instances currently open. Use this in custom
- *  overlays that manage their own Escape handler to skip closing when a nested
- *  Modal is on top. */
-export function getOpenModalDepth() {
-  return _openModalDepth;
+/**
+ * How many overlays are open right now.
+ *
+ * @deprecated Prefer {@link getOpenOverlayDepth} from
+ * `components/ui/use-overlay`. Re-exported here because the count now
+ * spans every overlay surface, not just Modal, and callers that guard
+ * their own Escape handler want the broader number anyway.
+ */
+export function getOpenModalDepth(): number {
+  return getOpenOverlayDepth();
 }
 
 interface ModalProps {
@@ -24,6 +32,13 @@ interface ModalProps {
   footer?: React.ReactNode;
   headerActions?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'fullscreen';
+  /** Stacking tier. `'nested'` for a modal opened from another modal;
+   *  `'top'` for a surface that must clear everything, which is what
+   *  ConfirmDialog uses. Defaults to `'base'`, or `'nested'` when the
+   *  legacy `nested` prop is set. */
+  layer?: OverlayLayer;
+  /** @deprecated Pass `layer="nested"` instead. Kept so existing call
+   *  sites keep working unchanged. */
   nested?: boolean;
   /** Drop the body's default bottom padding so children can bleed
    *  to the modal's rounded bottom edge. Used by full-bleed tables
@@ -58,38 +73,16 @@ export function Modal({
   footer,
   headerActions,
   size = 'md',
+  layer,
   nested = false,
   flushBottom = false,
   floatingClose = false,
 }: ModalProps) {
-  useEffect(() => {
-    if (!isOpen) return;
-    _openModalDepth++;
-    const myDepth = _openModalDepth;
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && _openModalDepth === myDepth) onClose();
-    };
-    document.addEventListener('keydown', handleEscape);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      _openModalDepth--;
-      if (_openModalDepth === 0) document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
+  // `nested` predates `layer`; honour it when `layer` is not given.
+  const z = OVERLAY_Z[layer ?? (nested ? 'nested' : 'base')];
 
-  // Only close on a backdrop click whose press ALSO started on the
-  // backdrop. Without this, dragging to select text inside an input and
-  // releasing outside it makes the browser fire `click` on the nearest
-  // common ancestor (this wrapper), which would otherwise close the modal.
-  const pressedOnBackdrop = useRef(false);
-  const handleBackdropMouseDown = (e: React.MouseEvent) => {
-    pressedOnBackdrop.current = e.target === e.currentTarget;
-  };
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && pressedOnBackdrop.current) onClose();
-    pressedOnBackdrop.current = false;
-  };
+  useOverlay({ isOpen, onClose });
+  const backdropHandlers = useBackdropDismiss(onClose);
 
   if (!isOpen) return null;
 
@@ -102,19 +95,17 @@ export function Modal({
           (notably the bottom edge of the compare-plans modal —
           regression caught during Phase 2B UI verification). */}
       <div
-        className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
-        onMouseDown={handleBackdropMouseDown}
-        onClick={handleBackdropClick}
+        className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${z.backdrop}`}
+        {...backdropHandlers}
       />
       <div
         role="dialog"
         aria-modal="true"
-        className={`fixed inset-0 flex items-center justify-center p-4 ${nested ? 'z-[80]' : 'z-[60]'}`}
-        onMouseDown={handleBackdropMouseDown}
-        onClick={handleBackdropClick}
+        className={`fixed inset-0 flex items-center justify-center p-4 ${z.panel}`}
+        {...backdropHandlers}
       >
         <div
-          className={`bg-white rounded-2xl border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
+          className={`bg-surface rounded-control border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
             // Fullscreen modals lock to 90vh so the size doesn't
             // shrink while content is loading. Matches the couple-
             // profile overlay's vertical sizing. Other sizes keep
@@ -129,23 +120,23 @@ export function Modal({
             // the very top instead of below an otherwise-empty header band.
             <button
               onClick={onClose}
-              className="absolute top-3 right-3 z-10 p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              className="absolute top-3 right-3 z-10 p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
             >
               <X size={18} strokeWidth={1.5} />
             </button>
           ) : (
-            /* Header — height ≈ 4rem (py-4 + text-xl content). The
+            /* Header — height ≈ 4rem (py-4 + text-section content). The
                `flushBottom` body below subtracts that from 85vh to
                cap its scroll height. If you change the header
                padding or content size, update the calc() in the
                body's maxHeight to match. */
             <div
-              className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}
+              className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-border' : ''}`}
             >
               {title && (
                 // A real heading: screen readers announce the dialog name
                 // and e2e selectors can target `h2:has-text(...)`.
-                <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                <h2 className="flex items-center gap-2 text-section font-semibold text-text">
                   {title}
                 </h2>
               )}
@@ -158,7 +149,7 @@ export function Modal({
                 )}
                 <button
                   onClick={onClose}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                  className="p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
                 >
                   <X size={18} strokeWidth={1.5} />
                 </button>
@@ -178,7 +169,7 @@ export function Modal({
           </div>
 
           {footer && (
-            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-2xl">
+            <div className="border-t border-border px-6 py-4 bg-gray-50 rounded-b-control">
               {footer}
             </div>
           )}

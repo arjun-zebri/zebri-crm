@@ -53,7 +53,7 @@ export interface CoupleProfileNavProps {
 
 /** Shared row classes — identical for the live nav and the settings rows. */
 const ROW =
-  'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition';
+  'w-full flex items-center gap-3 px-3 py-2.5 rounded-control text-body transition';
 
 /** Snappy drop: collapse the drop animation so the row lands instantly. */
 function dragStyle(
@@ -105,7 +105,7 @@ export function CoupleProfileNav({
             <div
               ref={dropProvided.innerRef}
               {...dropProvided.droppableProps}
-              className="shrink-0 overflow-y-auto border-b border-gray-200 px-3 py-2 space-y-0.5 animate-fade-in sm:w-[200px] sm:border-b-0 sm:border-r sm:py-4"
+              className="shrink-0 overflow-y-auto border-b border-border px-3 py-2 space-y-0.5 animate-fade-in sm:w-[200px] sm:border-b-0 sm:border-r sm:py-4"
             >
               {settingsItems.map((item, index) => {
                 const isHidden = hidden.has(item.key);
@@ -119,8 +119,8 @@ export function CoupleProfileNav({
                         {...dragProvided.dragHandleProps}
                         style={dragStyle(dragProvided.draggableProps.style, snapshot)}
                         className={`${ROW} cursor-grab select-none active:cursor-grabbing ${
-                          snapshot.isDragging ? 'bg-white shadow-lg' : 'hover:bg-gray-100'
-                        } ${isHidden ? 'text-gray-400' : 'text-gray-900'}`}
+                          snapshot.isDragging ? 'bg-surface shadow-lg' : 'hover:bg-surface-emphasis'
+                        } ${isHidden ? 'text-text-subtle' : 'text-text'}`}
                       >
                         <GripVertical
                           size={16}
@@ -141,10 +141,10 @@ export function CoupleProfileNav({
                                 ? 'Show tab'
                                 : 'Hide tab'
                           }
-                          className={`-mr-1 shrink-0 rounded-lg p-0.5 transition ${
+                          className={`-mr-1 shrink-0 rounded-control p-0.5 transition ${
                             locked
                               ? 'cursor-not-allowed text-gray-300'
-                              : 'cursor-pointer text-gray-400 hover:text-gray-700'
+                              : 'cursor-pointer text-text-subtle hover:text-gray-700'
                           }`}
                         >
                           {isHidden ? (
@@ -169,16 +169,16 @@ export function CoupleProfileNav({
   return (
     <>
       {/* Mobile: horizontal scrollable tab bar */}
-      <div className="sm:hidden shrink-0 border-b border-gray-200 overflow-x-auto">
+      <div className="sm:hidden shrink-0 border-b border-border overflow-x-auto">
         <div className="flex px-2 py-2 gap-1 min-w-max">
           {navItems.map((item) => (
             <button
               key={item.key}
               onClick={() => onSectionChange(item.key)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs whitespace-nowrap transition cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-control text-body whitespace-nowrap transition cursor-pointer ${
                 activeSection === item.key
-                  ? 'bg-gray-100 text-gray-900 font-medium'
-                  : 'text-gray-500'
+                  ? 'bg-surface-emphasis text-text font-medium'
+                  : 'text-text-muted'
               }`}
             >
               {item.icon}
@@ -189,15 +189,15 @@ export function CoupleProfileNav({
       </div>
 
       {/* Desktop: vertical sidebar */}
-      <nav className="hidden sm:block w-[200px] shrink-0 border-r border-gray-200 overflow-y-auto px-3 py-4 space-y-0.5">
+      <nav className="hidden sm:block w-[200px] shrink-0 border-r border-border overflow-y-auto px-3 py-4 space-y-0.5">
         {navItems.map((item) => (
           <button
             key={item.key}
             onClick={() => onSectionChange(item.key)}
             className={`${ROW} cursor-pointer ${
               activeSection === item.key
-                ? 'bg-gray-100 text-gray-900 font-medium'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                ? 'bg-surface-emphasis text-text font-medium'
+                : 'text-text-muted hover:text-gray-700 hover:bg-surface-emphasis'
             }`}
           >
             {item.icon}

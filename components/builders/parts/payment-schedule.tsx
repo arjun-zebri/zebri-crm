@@ -113,14 +113,14 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+        <h4 className="text-body font-medium uppercase tracking-wide text-text-muted">
           Payment schedule
         </h4>
         {canEdit && stages.length > 0 && (
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="cursor-pointer text-sm text-text-muted transition-colors hover:text-text"
+            className="cursor-pointer text-body text-text-muted transition-colors hover:text-text"
           >
             Change
           </button>
@@ -129,9 +129,9 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
 
       {stages.length === 0 ? (
         <div className="space-y-3">
-          <p className="text-sm text-text-muted">The couple pays this invoice in one payment.</p>
+          <p className="text-body text-text-muted">The couple pays this invoice in one payment.</p>
           {canEdit && (
-            <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
+            <Button variant="primary" onClick={() => setModalOpen(true)}>
               Add schedule
             </Button>
           )}
@@ -159,13 +159,13 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
 
       {stages.length > 0 && (
         <div className="flex items-center justify-end">
-          <span className={`text-sm tabular-nums ${totalMatches ? 'text-text-muted' : 'text-warning'}`}>
+          <span className={`text-body tabular-nums ${totalMatches ? 'text-text-muted' : 'text-warning'}`}>
             Stages total {formatCurrency(stageSumCents)} of {formatCurrency(totalCents)}
           </span>
         </div>
       )}
 
-      {validationError && <p className="text-sm text-danger">{validationError}</p>}
+      {validationError && <p className="text-body text-danger">{validationError}</p>}
 
       {canEdit && (
         <ScheduleModal

@@ -99,7 +99,7 @@ export function PlanComparisonDialog({
           and the table. Body is now content-sized (flushBottom on
           Modal drops flex-1) so the inner wrapper's height equals
           the table height equals the body height, the abs tint at
-          inset-y-0 reaches the modal's rounded bottom edge. */}
+          inset-y-0 reaches the modal's rounded-control bottom edge. */}
       <div className="overflow-x-auto">
         <div className="relative min-w-[36rem]">
           {currentPlan ? (
@@ -119,14 +119,14 @@ export function PlanComparisonDialog({
             </colgroup>
             <thead>
               <tr className="border-b border-border">
-                <th className="px-2 py-3 text-left text-caption font-medium uppercase tracking-wide text-text-muted">
+                <th className="px-2 py-3 text-left text-body font-medium uppercase tracking-wide text-text-muted">
                   Feature
                 </th>
                 {PLANS.map((plan) => (
                   <th key={plan.id} className="px-4 py-3 text-left font-medium">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-text">{plan.name}</span>
-                      <span className="text-caption font-normal text-text-muted">
+                      <span className="text-body font-normal text-text-muted">
                         {plan.price ? `${plan.price}${plan.period}` : 'Free'}
                       </span>
                     </div>
@@ -161,7 +161,7 @@ export function PlanComparisonDialog({
                   if (isCurrent) {
                     return (
                       <td key={plan.id} className="px-4 pb-6 pt-4">
-                        <span className="inline-flex h-8 w-full items-center justify-center text-caption font-medium text-text">
+                        <span className="inline-flex h-8 w-full items-center justify-center text-body font-medium text-text">
                           Current
                         </span>
                       </td>
@@ -172,7 +172,6 @@ export function PlanComparisonDialog({
                       {plan.id === 'starter' ? (
                         <Button
                           variant="secondary"
-                          size="sm"
                           onClick={handleStarter}
                           className="w-full whitespace-nowrap"
                         >
@@ -181,7 +180,6 @@ export function PlanComparisonDialog({
                       ) : (
                         <Button
                           variant="secondary"
-                          size="sm"
                           onClick={() => switchTo(plan.id as 'pro' | 'max')}
                           loading={busy === plan.id}
                           className="w-full whitespace-nowrap"

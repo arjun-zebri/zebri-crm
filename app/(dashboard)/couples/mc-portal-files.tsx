@@ -46,30 +46,30 @@ function FileCard({ file, onDelete }: { file: PortalFile; onDelete: (id: string)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
-    <div className="inline-flex flex-col w-[200px] border border-gray-200 rounded-xl px-4 py-2.5 hover:border-gray-300 hover:bg-gray-50/50 transition group/file">
+    <div className="inline-flex flex-col w-[200px] border border-border rounded-control px-4 py-2.5 hover:border-border-strong hover:bg-gray-50/50 transition group/file">
       <div className="flex items-start gap-2.5 min-w-0">
-        <FileText size={14} strokeWidth={1.5} className="text-gray-400 shrink-0 mt-0.5" />
+        <FileText size={14} strokeWidth={1.5} className="text-text-subtle shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-          {file.file_size && <p className="text-xs text-gray-400">{formatSize(file.file_size)}</p>}
+          <p className="text-body font-medium text-text truncate">{file.name}</p>
+          {file.file_size && <p className="text-body text-text-subtle">{formatSize(file.file_size)}</p>}
         </div>
       </div>
 
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
         {confirmDelete ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">Remove?</span>
+            <span className="text-body text-text-subtle">Remove?</span>
             <button
               type="button"
               onClick={() => onDelete(file.id)}
-              className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer"
+              className="text-body text-red-500 hover:text-red-600 transition cursor-pointer"
             >
               Yes
             </button>
             <button
               type="button"
               onClick={() => setConfirmDelete(false)}
-              className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              className="text-body text-text-subtle hover:text-gray-600 transition cursor-pointer"
             >
               No
             </button>
@@ -79,7 +79,7 @@ function FileCard({ file, onDelete }: { file: PortalFile; onDelete: (id: string)
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="opacity-0 group-hover/file:opacity-60 hover:!opacity-100 transition cursor-pointer text-gray-400 hover:text-red-400"
+              className="opacity-0 group-hover/file:opacity-60 hover:!opacity-100 transition cursor-pointer text-text-subtle hover:text-red-400"
               title="Remove"
             >
               <Trash2 size={12} strokeWidth={1.5} />
@@ -89,7 +89,7 @@ function FileCard({ file, onDelete }: { file: PortalFile; onDelete: (id: string)
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              className="text-text-subtle hover:text-gray-600 transition cursor-pointer"
               title="Download"
             >
               <Download size={12} strokeWidth={1.5} />
@@ -178,7 +178,7 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
       title="Files"
       stats={files.length > 0 ? [{ label: `${files.length} total` }] : undefined}
       actions={
-        <Button size="sm" onClick={() => inputRef.current?.click()} disabled={uploading} className="cursor-pointer gap-1.5">
+        <Button onClick={() => inputRef.current?.click()} disabled={uploading} className="cursor-pointer gap-1.5">
           {uploading ? (
             <><Loader2 size={14} strokeWidth={1.5} className="animate-spin" />Uploading…</>
           ) : (
@@ -189,7 +189,7 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
     >
       {isLoading ? (
         <div className="flex flex-wrap gap-2" aria-hidden="true">
-          {[1, 2].map((i) => <div key={i} className="h-[80px] w-[200px] bg-gray-100 rounded-xl animate-pulse" />)}
+          {[1, 2].map((i) => <div key={i} className="h-[80px] w-[200px] bg-surface-emphasis rounded-control animate-pulse" />)}
         </div>
       ) : files.length === 0 ? (
         <CoupleTabEmpty

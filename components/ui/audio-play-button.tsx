@@ -99,7 +99,10 @@ export function AudioPlayButton({
         onClick={toggle}
         title={title ?? (playing ? 'Stop' : 'Play')}
         aria-label={label ? undefined : (title ?? 'Play pronunciation')}
-        className={`${className} ${playing ? playingClassName : idleClassName}`}
+        // `text-body` first so it is the floor, not the ceiling: every
+        // caller styles this button entirely through `className`, and one
+        // that forgot a type size inherited the document's 16px.
+        className={`text-body ${className} ${playing ? playingClassName : idleClassName}`}
         {...(style ? { style } : {})}
       >
         {playing ? (

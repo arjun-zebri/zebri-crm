@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 
 import type {
   AdminDashboard,
@@ -9,12 +9,12 @@ import type {
 } from '@/lib/admin/admin-analytics';
 
 import { UserDetailPanel } from './components/user-detail-panel';
-import { MetricCards } from './sections/metric-cards';
-import { UpcomingRenewalsList } from './sections/upcoming-renewals-list';
-import { PastDueList } from './sections/past-due-list';
 import { ConnectIssuesList } from './sections/connect-issues-list';
 import { DormantList } from './sections/dormant-list';
+import { MetricCards } from './sections/metric-cards';
+import { PastDueList } from './sections/past-due-list';
 import { RecentSignupsList } from './sections/recent-signups-list';
+import { UpcomingRenewalsList } from './sections/upcoming-renewals-list';
 import { UsersTableView } from './sections/users-table-view';
 
 type TabId = 'dashboard' | 'users';
@@ -60,7 +60,7 @@ export function AdminDashboardView({
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
-                className={`pb-3 text-sm whitespace-nowrap transition-colors relative cursor-pointer ${
+                className={`pb-3 text-body whitespace-nowrap transition-colors relative cursor-pointer ${
                   activeTab === tab.id
                     ? 'text-text font-medium'
                     : 'text-text-muted hover:text-text'

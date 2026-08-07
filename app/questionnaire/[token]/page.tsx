@@ -97,7 +97,7 @@ export default function PublicQuestionnairePage() {
             {theme.logoUrl ? (
               // User-uploaded brand asset — no next/image.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+              <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-pill object-cover" />
             ) : null}
             <span style={{ fontSize: `${theme.bodyFontSize}px`, fontWeight: 500, color: theme.mutedColor }}>
               {theme.businessName}
@@ -112,9 +112,9 @@ export default function PublicQuestionnairePage() {
         <div className={`flex flex-1 flex-col ${pageState === 'active' ? '' : 'justify-center'}`}>
           {pageState === 'loading' && (
             <div className="space-y-4">
-              <div className="h-1 w-full animate-pulse rounded-full" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
-              <div className="h-8 w-2/3 animate-pulse rounded" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
-              <div className="h-12 w-full animate-pulse rounded" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
+              <div className="h-1 w-full animate-pulse rounded-pill" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
+              <div className="h-8 w-2/3 animate-pulse rounded-control" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
+              <div className="h-12 w-full animate-pulse rounded-control" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
             </div>
           )}
 
@@ -146,7 +146,7 @@ export default function PublicQuestionnairePage() {
           {pageState === 'completed' && (
             <>
               <div className="text-center">
-                <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full" style={{ background: `${theme.brand}33` }}>
+                <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-pill" style={{ background: `${theme.brand}33` }}>
                   <span style={{ fontSize: `${theme.headingFontSize}px` }}>✓</span>
                 </div>
                 <h1 className="mb-2 font-semibold" style={{ fontSize: `${theme.headingFontSize}px`, color: theme.headingColor, fontFamily: theme.headingStack }}>

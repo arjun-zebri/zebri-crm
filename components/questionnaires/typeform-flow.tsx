@@ -12,6 +12,7 @@
 
 import { useMemo, useState, type CSSProperties } from 'react'
 
+import { BusyLabel } from '@/components/ui/busy-label'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
@@ -108,8 +109,8 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
         }
       }}
     >
-      <div className="mb-2 h-1 w-full shrink-0 overflow-hidden rounded-full" style={{ background: `${textColor}14` }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: brand }} />
+      <div className="mb-2 h-1 w-full shrink-0 overflow-hidden rounded-pill" style={{ background: `${textColor}14` }}>
+        <div className="h-full rounded-pill transition-all" style={{ width: `${progress}%`, background: brand }} />
       </div>
       <p className="mb-6 min-h-4 shrink-0 text-right" style={{ color: saveState === 'error' ? STATUS_COLORS.error : mutedColor, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, lineHeight: bodyStyles.lineHeight }}>{saveLabel}</p>
 
@@ -171,7 +172,7 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
             className="cursor-pointer transition hover:opacity-90 disabled:opacity-60"
             style={{ background: buttonColor ?? brand, color: readableTextOn(buttonColor ?? brand), borderRadius: branding.corner_radius, padding: '0.625rem 1.5rem', fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
           >
-            {submitting ? 'Sending…' : atConfirm ? 'Send answers' : 'Next'}
+            <BusyLabel busy={submitting}>{atConfirm ? 'Send answers' : 'Next'}</BusyLabel>
           </button>
         </div>
       </div>

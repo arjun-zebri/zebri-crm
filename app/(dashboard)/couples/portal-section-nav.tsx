@@ -38,12 +38,12 @@ export function PortalSectionNav({ sections, activeSection, onSectionChange }: P
             <span className="shrink-0 [&>svg]:size-[16px] [&>svg]:stroke-[1.5]">{section.icon}</span>
             <span className="flex-1 truncate">{section.label}</span>
             {section.badge && (
-              <span className="text-caption text-warning bg-warning/10 border border-warning/30 rounded-pill px-2 py-0.5 shrink-0">
+              <span className="text-body text-warning bg-warning/10 border border-warning/30 rounded-pill px-2 py-0.5 shrink-0">
                 {section.badge}
               </span>
             )}
             {!section.badge && section.count !== undefined && section.count > 0 && (
-              <span className="text-caption font-medium text-text-subtle shrink-0">{section.count}</span>
+              <span className="text-body font-medium text-text-subtle shrink-0">{section.count}</span>
             )}
           </button>
         ))}
@@ -64,7 +64,7 @@ export function PortalSectionNav({ sections, activeSection, onSectionChange }: P
             <span className="[&>svg]:size-[14px] [&>svg]:stroke-[1.5]">{section.icon}</span>
             <span>{section.label}</span>
             {section.badge && (
-              <span className={`text-caption rounded-pill px-1.5 py-0.5 ${
+              <span className={`text-body rounded-pill px-1.5 py-0.5 ${
                 activeSection === section.id
                   ? 'bg-text-inverse/20 text-text-inverse'
                   : 'bg-warning/10 text-warning'

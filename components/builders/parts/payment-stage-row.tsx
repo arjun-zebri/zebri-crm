@@ -12,6 +12,7 @@
  */
 'use client'
 
+import { Button } from '@/components/ui/button'
 import { StatePill } from '@/components/ui/state-pill'
 import type { InvoiceStage } from '@/types/payment-schedule'
 
@@ -48,18 +49,18 @@ export function PaymentStageRow({
     <div className="relative">
       <span
         aria-hidden
-        className={`absolute -left-7 top-1 inline-flex h-3 w-3 rounded-full ${
+        className={`absolute -left-7 top-1 inline-flex h-3 w-3 rounded-pill ${
           paid ? 'bg-success' : 'border-2 border-warning bg-surface'
         }`}
       />
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-sm font-medium text-text">{stage.label}</span>
-        <span className="text-sm text-text-muted tabular-nums">
+        <span className="text-body font-medium text-text">{stage.label}</span>
+        <span className="text-body text-text-muted tabular-nums">
           {stage.amountType === 'remainder' ? 'remainder' : `${String(stage.amountValue ?? 0)}${unit}`}
           {' · '}
           {formatCurrency(stage.amountCents)}
         </span>
-        <span className="text-caption text-text-muted">
+        <span className="text-body text-text-muted">
           {paid
             ? `Paid ${formatDateShort(stage.paidAt) ?? ''}`
             : `Due ${formatDateShort(stage.dueDate) ?? '—'}`}
@@ -71,14 +72,9 @@ export function PaymentStageRow({
             dot={paid ? 'filled' : 'hollow'}
           />
           {canRecord && !paid && isNextUnpaid && (
-            <button
-              type="button"
-              onClick={onMarkPaid}
-              disabled={markPending}
-              className="inline-flex h-7 cursor-pointer items-center rounded-lg bg-success px-2.5 text-caption font-medium text-text-inverse transition-colors hover:opacity-90 disabled:opacity-50"
-            >
-              {markPending ? 'Saving...' : 'Record payment'}
-            </button>
+            <Button variant="success" onClick={onMarkPaid} loading={markPending}>
+              Record payment
+            </Button>
           )}
         </span>
       </div>

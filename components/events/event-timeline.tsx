@@ -1,7 +1,5 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
   closestCenter,
@@ -17,7 +15,10 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { GripVertical, Check } from 'lucide-react'
+import { useState } from 'react'
+
 import { useToast } from '@/components/ui/toast'
 import {
   createTimelineItemAction,
@@ -86,7 +87,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
       <button
         {...attributes}
         {...listeners}
-        className="hidden sm:flex items-center text-gray-200 hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none transition-colors opacity-0 group-hover:opacity-100 px-0.5"
+        className="hidden sm:flex items-center text-gray-200 hover:text-text-subtle cursor-grab active:cursor-grabbing touch-none transition-colors opacity-0 group-hover:opacity-100 px-0.5"
         tabIndex={-1}
       >
         <GripVertical size={15} strokeWidth={1.5} />
@@ -95,8 +96,8 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
       {/* Calendar-style event card */}
       <div
         onClick={() => onEdit(item)}
-        className={`flex-1 relative overflow-hidden rounded-xl border bg-white hover:shadow-sm transition-all cursor-pointer ${
-          isPending ? 'border-amber-200 hover:border-amber-300' : 'border-gray-200 hover:border-gray-300'
+        className={`flex-1 relative overflow-hidden rounded-control border bg-surface hover:shadow-sm transition-all cursor-pointer ${
+          isPending ? 'border-amber-200 hover:border-amber-300' : 'border-border hover:border-border-strong'
         }`}
       >
         {/* Left accent strip */}
@@ -110,7 +111,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
           {/* Time + duration row */}
           <div className="flex items-center justify-between mb-1">
             <span
-              className={`text-xs tabular-nums font-medium ${
+              className={`text-body tabular-nums font-medium ${
                 hasTimed ? 'text-emerald-600' : 'text-gray-300'
               }`}
             >
@@ -118,22 +119,22 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
             </span>
             <div className="flex items-center gap-2">
               {isPending && (
-                <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 rounded-full px-2 py-0.5">
+                <span className="text-body bg-amber-50 text-amber-600 border border-amber-100 rounded-pill px-2 py-0.5">
                   Pending
                 </span>
               )}
               {item.duration_min && (
-                <span className="text-xs text-gray-400 tabular-nums">{item.duration_min} min</span>
+                <span className="text-body text-text-subtle tabular-nums">{item.duration_min} min</span>
               )}
             </div>
           </div>
 
           {/* Title */}
-          <p className="text-sm font-semibold text-gray-900 leading-snug">{item.title}</p>
+          <p className="text-body font-semibold text-text leading-snug">{item.title}</p>
 
           {/* Contact */}
           {item.contact && (
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-body text-text-muted mt-0.5">
               {item.contact.name}
               {categoryLabel ? ` · ${categoryLabel}` : ''}
             </p>
@@ -141,7 +142,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
 
           {/* Notes preview */}
           {item.description && (
-            <p className="text-xs text-gray-400 mt-1 truncate">{item.description}</p>
+            <p className="text-body text-text-subtle mt-1 truncate">{item.description}</p>
           )}
         </div>
       </div>
@@ -150,7 +151,7 @@ function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
       {isPending && onApprove && (
         <button
           onClick={(e) => { e.stopPropagation(); onApprove(item.id) }}
-          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-xl px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
+          className="flex items-center gap-1 text-body text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-control px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
           title="Approve"
         >
           <Check size={12} strokeWidth={2} />
@@ -365,7 +366,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+          <div key={i} className="h-12 bg-surface-emphasis rounded-control animate-pulse" />
         ))}
       </div>
     )
@@ -376,10 +377,10 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
       <div className="space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-gray-900">Timeline</p>
+          <p className="text-body font-medium text-text">Timeline</p>
           <button
             onClick={handleOpenAdd}
-            className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+            className="text-body text-gray-700 border border-border rounded-control px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add item
           </button>
@@ -388,10 +389,10 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
         {/* Items */}
         {items.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm text-gray-500 mb-3">No items yet.</p>
+            <p className="text-body text-text-muted mb-3">No items yet.</p>
             <button
               onClick={handleOpenAdd}
-              className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+              className="text-body text-gray-700 border border-border rounded-control px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add first item
             </button>

@@ -141,11 +141,9 @@ export function ContractTemplateManager() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search contract templates…"
-          size="sm"
           className="w-36 sm:w-48"
         />
         <Button
-          size="sm"
           variant="outline"
           onClick={() => setShowStarters(true)}
           disabled={createTemplate.isPending}
@@ -155,7 +153,6 @@ export function ContractTemplateManager() {
           Browse starters
         </Button>
         <Button
-          size="sm"
           onClick={() => createTemplate.mutate()}
           disabled={createTemplate.isPending}
           className="gap-1.5"
@@ -168,7 +165,7 @@ export function ContractTemplateManager() {
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-14 bg-surface-muted rounded-xl animate-pulse" />
+            <div key={i} className="h-14 bg-surface-muted rounded-control animate-pulse" />
           ))}
         </div>
       ) : (templates?.length ?? 0) === 0 ? (
@@ -186,7 +183,7 @@ export function ContractTemplateManager() {
           onBack={() => setSelectedId(null)}
           list={
             visible.length === 0 ? (
-              <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+              <p className="py-8 text-center text-body text-text-subtle">No matches.</p>
             ) : (
               <div className="space-y-0.5">
                 {visible.map((t) => {
@@ -197,14 +194,14 @@ export function ContractTemplateManager() {
                       type="button"
                       onClick={() => setSelectedId(t.id)}
                       aria-current={active ? 'true' : undefined}
-                      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-control px-2 py-2 text-left transition ${
                         active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
                       }`}
                     >
                       <FileSignature size={16} strokeWidth={1.5} className="shrink-0 text-text-muted" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-text">{t.name}</span>
-                        {t.description && <span className="block truncate text-xs text-text-subtle">{t.description}</span>}
+                        <span className="block truncate text-body font-medium text-text">{t.name}</span>
+                        {t.description && <span className="block truncate text-body text-text-subtle">{t.description}</span>}
                       </span>
                     </button>
                   )
@@ -225,7 +222,7 @@ export function ContractTemplateManager() {
               </div>
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">
-                <p className="text-sm text-text-subtle">Select a template to preview.</p>
+                <p className="text-body text-text-subtle">Select a template to preview.</p>
               </div>
             )
           }
@@ -255,16 +252,15 @@ export function ContractTemplateManager() {
       {confirmDelete && (
         <Modal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete template?">
           <div className="space-y-4">
-            <p className="text-sm text-text-muted">This can't be undone.</p>
+            <p className="text-body text-text-muted">This can't be undone.</p>
             <div className="flex gap-3 justify-end">
-              <Button onClick={() => setConfirmDelete(null)} variant="outline" size="sm">
+              <Button onClick={() => setConfirmDelete(null)} variant="outline">
                 Cancel
               </Button>
               <Button
                 onClick={() => deleteTemplate.mutate(confirmDelete)}
                 disabled={deleteTemplate.isPending}
                 variant="danger"
-                size="sm"
               >
                 Delete
               </Button>
@@ -292,36 +288,33 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
     <Modal isOpen={true} onClose={onCancel} title="Edit contract template" size="lg">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-text mb-2">Name</label>
+          <label className="block text-body font-medium text-text mb-2">Name</label>
           <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            size="sm"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-text mb-2">Description (optional)</label>
+          <label className="block text-body font-medium text-text mb-2">Description (optional)</label>
           <Input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Short description shown in the template picker"
-            size="sm"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-text mb-2">Content</label>
+          <label className="block text-body font-medium text-text mb-2">Content</label>
           <RichTextEditor value={content} onChange={setContent} />
         </div>
         <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-          <Button onClick={onCancel} variant="outline" size="sm">
+          <Button onClick={onCancel} variant="outline">
             Cancel
           </Button>
           <Button
             onClick={() => onSave({ ...template, name, description: description || null, content })}
             disabled={saving || !name.trim()}
-            size="sm"
           >
             {saving ? <Loader2 size={13} className="animate-spin mr-1.5" /> : null}
             Save template

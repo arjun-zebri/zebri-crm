@@ -27,7 +27,7 @@ export function ColorSwatches({ value, onChange }: { value: string; onChange: (c
           type="button"
           aria-label={`Colour ${key}`}
           onClick={() => onChange(key)}
-          className={`h-4 w-4 cursor-pointer rounded-full ${categoryColorClasses(key).dot} ${
+          className={`h-4 w-4 cursor-pointer rounded-pill ${categoryColorClasses(key).dot} ${
             value === key ? 'ring-2 ring-text ring-offset-1' : ''
           }`}
         />
@@ -61,12 +61,11 @@ export function CategoryManageRow({ category, onSave, onDelete }: CategoryManage
       ref={setNodeRef}
       // dnd-kit transform positioning — dynamic values, so not Tailwind.
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`rounded-lg ${isDragging ? 'z-10 bg-surface-muted' : ''}`}
+      className={`rounded-control ${isDragging ? 'z-10 bg-surface-muted' : ''}`}
     >
       {editing ? (
-        <div className="space-y-2 rounded-lg bg-surface-muted p-2">
+        <div className="space-y-2 rounded-control bg-surface-muted p-2">
           <Input
-            size="sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
@@ -84,14 +83,14 @@ export function CategoryManageRow({ category, onSave, onDelete }: CategoryManage
           <button
             type="button"
             onClick={save}
-            className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-1 text-caption font-medium text-text transition hover:bg-surface"
+            className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-control py-1 text-body font-medium text-text transition hover:bg-surface"
           >
             <Check size={12} strokeWidth={1.5} />
             Save
           </button>
         </div>
       ) : (
-        <div className="group flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-surface-muted">
+        <div className="group flex items-center gap-2 rounded-control px-1 py-1 hover:bg-surface-muted">
           <button
             type="button"
             aria-label={`Reorder ${category.name}`}
@@ -101,8 +100,8 @@ export function CategoryManageRow({ category, onSave, onDelete }: CategoryManage
           >
             <GripVertical size={14} strokeWidth={1.5} />
           </button>
-          <span className={`h-2 w-2 shrink-0 rounded-full ${categoryColorClasses(category.color).dot}`} />
-          <span className="min-w-0 flex-1 truncate text-caption text-text">{category.name}</span>
+          <span className={`h-2 w-2 shrink-0 rounded-pill ${categoryColorClasses(category.color).dot}`} />
+          <span className="min-w-0 flex-1 truncate text-body text-text">{category.name}</span>
           <button
             type="button"
             aria-label={`Rename ${category.name}`}
@@ -111,7 +110,7 @@ export function CategoryManageRow({ category, onSave, onDelete }: CategoryManage
               setColor(category.color)
               setEditing(true)
             }}
-            className="cursor-pointer rounded p-1 text-text-subtle opacity-0 transition hover:text-text group-hover:opacity-100"
+            className="cursor-pointer rounded-control p-1 text-text-subtle opacity-0 transition hover:text-text group-hover:opacity-100"
           >
             <Pencil size={13} strokeWidth={1.5} />
           </button>
@@ -119,7 +118,7 @@ export function CategoryManageRow({ category, onSave, onDelete }: CategoryManage
             type="button"
             aria-label={`Delete ${category.name}`}
             onClick={() => onDelete(category.id)}
-            className="cursor-pointer rounded p-1 text-text-subtle opacity-0 transition hover:text-red-600 group-hover:opacity-100"
+            className="cursor-pointer rounded-control p-1 text-text-subtle opacity-0 transition hover:text-red-600 group-hover:opacity-100"
           >
             <Trash2 size={13} strokeWidth={1.5} />
           </button>

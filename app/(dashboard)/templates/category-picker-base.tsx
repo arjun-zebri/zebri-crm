@@ -92,7 +92,7 @@ export function CategoryPickerBase({
     // label, sm-size rounded-control bg-surface field) so this sits flush
     // beside the labelled name Input in the host modal's shared row.
     <div className="space-y-1">
-      <p className="block text-caption font-medium text-text">Category</p>
+      <p className="block text-body font-medium text-text">Category</p>
       <Popover.Root
         open={open}
         onOpenChange={(next) => {
@@ -105,10 +105,10 @@ export function CategoryPickerBase({
       >
         <Popover.Trigger
           aria-label="Category"
-          className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-left text-caption text-text transition-colors hover:border-border-strong focus:border-brand-fg focus:outline-none data-[state=open]:border-brand-fg"
+          className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-control border border-border bg-surface px-2.5 text-left text-body text-text transition-colors hover:border-border-strong focus:border-brand-fg focus:outline-none data-[state=open]:border-brand-fg"
         >
           {selected && (
-            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${categoryColorClasses(selected.color).dot}`} />
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-pill ${categoryColorClasses(selected.color).dot}`} />
           )}
           <span className={`min-w-0 flex-1 truncate ${selected ? '' : 'text-text-subtle'}`}>
             {selected ? selected.name : 'No category'}
@@ -121,12 +121,12 @@ export function CategoryPickerBase({
             sideOffset={6}
             // Radix exposes the trigger's width as a CSS var, so the
             // popover matches the control exactly — like a native Select.
-            className="z-[90] w-[var(--radix-popover-trigger-width)] rounded-xl border border-border bg-card p-1 shadow-lg animate-fade-in"
+            className="z-[90] w-[var(--radix-popover-trigger-width)] rounded-control border border-border bg-card p-1 shadow-lg animate-fade-in"
           >
             {managing ? (
               <>
                 {categories.length === 0 && (
-                  <p className="px-2 py-3 text-xs text-text-subtle">
+                  <p className="px-2 py-3 text-body text-text-subtle">
                     No categories yet. Create one first.
                   </p>
                 )}
@@ -148,7 +148,7 @@ export function CategoryPickerBase({
                   </SortableContext>
                 </DndContext>
                 <div className="mt-1 border-t border-border pt-1">
-                  <Button size="sm" variant="ghost" className="h-7 w-full text-caption" onClick={() => setManaging(false)}>
+                  <Button variant="ghost" className="h-7 w-full text-body" onClick={() => setManaging(false)}>
                     Done
                   </Button>
                 </div>
@@ -181,7 +181,6 @@ export function CategoryPickerBase({
                 {creating ? (
                   <div className="mt-1 space-y-2 border-t border-border p-2">
                     <Input
-                      size="sm"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       onKeyDown={(e) => {
@@ -198,9 +197,8 @@ export function CategoryPickerBase({
                         row at trigger width, so Add gets its own line. */}
                     <ColorSwatches value={newColor} onChange={setNewColor} />
                     <Button
-                      size="sm"
                       variant="secondary"
-                      className="h-7 w-full text-caption"
+                      className="h-7 w-full text-body"
                       loading={createPending}
                       onClick={addCategory}
                     >
@@ -209,12 +207,12 @@ export function CategoryPickerBase({
                   </div>
                 ) : (
                   <div className="mt-1 flex items-center gap-1 border-t border-border pt-1">
-                    <Button size="sm" variant="ghost" className="h-7 min-w-0 flex-1 justify-start gap-1.5 px-2 text-caption" onClick={() => setCreating(true)}>
+                    <Button variant="ghost" className="h-7 min-w-0 flex-1 justify-start gap-1.5 px-2 text-body" onClick={() => setCreating(true)}>
                       <Plus size={13} strokeWidth={1.5} />
                       New
                     </Button>
                     {categories.length > 0 && (
-                      <Button size="sm" variant="ghost" className="h-7 gap-1.5 px-2 text-caption" onClick={() => setManaging(true)}>
+                      <Button variant="ghost" className="h-7 gap-1.5 px-2 text-body" onClick={() => setManaging(true)}>
                         <Pencil size={12} strokeWidth={1.5} />
                         Edit
                       </Button>
@@ -246,14 +244,14 @@ function CategoryOption({
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-surface-muted"
+      className="flex w-full cursor-pointer items-center gap-2 rounded-control px-2 py-1 text-left transition hover:bg-surface-muted"
     >
       {dotClass ? (
-        <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
+        <span className={`h-2 w-2 shrink-0 rounded-pill ${dotClass}`} />
       ) : (
-        <span className="h-2 w-2 shrink-0 rounded-full border border-border" />
+        <span className="h-2 w-2 shrink-0 rounded-pill border border-border" />
       )}
-      <span className="min-w-0 flex-1 truncate text-caption text-text">{label}</span>
+      <span className="min-w-0 flex-1 truncate text-body text-text">{label}</span>
       {selected && <Check size={12} strokeWidth={1.5} className="shrink-0 text-text" />}
     </button>
   )

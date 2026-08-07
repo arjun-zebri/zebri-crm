@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+
+import { Card } from '@/components/ui/card'
+
 import { useRevenueChart, useLeadsChart, DashboardPeriod } from './use-dashboard'
 
 type ChartMode = 'revenue' | 'leads'
@@ -53,28 +56,28 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
   const label = mode === 'revenue' ? 'Revenue' : 'Leads'
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 h-[260px] sm:h-[340px] lg:h-full flex flex-col">
+    <Card className="h-[260px] sm:h-[340px] lg:h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         {/* Mode dropdown */}
         <div className="relative" ref={modeRef}>
           <button
             onClick={() => { setModeOpen(!modeOpen) }}
-            className="flex items-center gap-1 text-base sm:text-xl font-semibold text-gray-900 cursor-pointer hover:text-gray-700 transition"
+            className="flex items-center gap-1 text-base sm:text-section font-semibold text-text cursor-pointer hover:text-gray-700 transition"
           >
             {label}
-            <ChevronDown className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
+            <ChevronDown className="w-4 h-4 text-text-subtle" strokeWidth={1.5} />
           </button>
           {modeOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+            <div className="absolute top-full left-0 mt-1 bg-surface border border-border rounded-control shadow-lg z-10 min-w-[120px]">
               <button
                 onClick={() => { setMode('revenue'); setModeOpen(false) }}
-                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-t-lg ${mode === 'revenue' ? 'font-medium text-gray-900' : 'text-gray-600'}`}
+                className={`block w-full text-left px-3 py-2 text-body cursor-pointer hover:bg-gray-50 transition rounded-t-control ${mode === 'revenue' ? 'font-medium text-text' : 'text-gray-600'}`}
               >
                 Revenue
               </button>
               <button
                 onClick={() => { setMode('leads'); setModeOpen(false) }}
-                className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition rounded-b-lg ${mode === 'leads' ? 'font-medium text-gray-900' : 'text-gray-600'}`}
+                className={`block w-full text-left px-3 py-2 text-body cursor-pointer hover:bg-gray-50 transition rounded-b-control ${mode === 'leads' ? 'font-medium text-text' : 'text-gray-600'}`}
               >
                 Leads
               </button>
@@ -86,22 +89,22 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
 
       {isLoading ? (
         <div className="animate-pulse flex flex-col flex-1 min-h-0">
-          <div className="h-8 w-32 bg-gray-100 rounded-md mb-4" />
-          <div className="flex-1 min-h-0 bg-gray-100 rounded-lg" />
+          <div className="h-8 w-32 bg-surface-emphasis rounded-control mb-4" />
+          <div className="flex-1 min-h-0 bg-surface-emphasis rounded-control" />
         </div>
       ) : !data || data.chartData.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-gray-500 text-sm">No {label.toLowerCase()} data yet.</p>
+          <p className="text-text-muted text-body">No {label.toLowerCase()} data yet.</p>
         </div>
       ) : (
         <>
           <div className="flex flex-wrap items-baseline gap-2 mb-4">
-            <span className="text-2xl sm:text-3xl font-semibold text-gray-900">
+            <span className="text-2xl sm:text-display font-semibold text-text">
               {mode === 'revenue' ? formatAUD(data.total) : data.total}
             </span>
             {data.percentChange !== 0 && (
               <span
-                className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-md ${
+                className={`inline-flex items-center text-body font-medium px-1.5 py-0.5 rounded-control ${
                   data.percentChange > 0
                     ? 'bg-emerald-50 text-emerald-600'
                     : 'bg-red-50 text-red-600'
@@ -110,7 +113,7 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
                 {data.percentChange > 0 ? '+' : ''}{data.percentChange}%
               </span>
             )}
-            <span className="text-xs text-gray-500 whitespace-nowrap">vs {previousPeriodLabels[period]}</span>
+            <span className="text-body text-text-muted whitespace-nowrap">vs {previousPeriodLabels[period]}</span>
           </div>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -166,6 +169,6 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
           </div>
         </>
       )}
-    </div>
+    </Card>
   )
 }

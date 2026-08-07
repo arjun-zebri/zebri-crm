@@ -28,12 +28,12 @@ interface Invoice {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600',
+  draft: 'bg-surface-emphasis text-gray-600',
   sent: 'bg-blue-50 text-blue-600',
   deposit_paid: 'bg-amber-50 text-amber-600',
   paid: 'bg-emerald-50 text-emerald-600',
   overdue: 'bg-red-50 text-red-600',
-  cancelled: 'bg-gray-100 text-gray-400',
+  cancelled: 'bg-surface-emphasis text-text-subtle',
 }
 
 /** Human-readable label for a stored invoice status (no raw `deposit_paid`). */
@@ -130,7 +130,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
 
   const actions = (
     <Button
-      size="sm"
       className="cursor-pointer gap-1.5"
       onClick={() => createInvoice.mutate()}
       disabled={createInvoice.isPending}
@@ -153,7 +152,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           {isInvoicesLoading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (
-                <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                <div key={i} className="h-10 bg-surface-emphasis rounded-control animate-pulse" />
               ))}
             </div>
           ) : (
@@ -181,12 +180,12 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                   <button
                     key={invoice.id}
                     onClick={() => setActiveInvoiceId(invoice.id)}
-                    className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
+                    className="w-full flex items-center gap-3 px-2 py-2 rounded-control hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
                   >
-                    <Receipt size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                    <Receipt size={13} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 truncate">{invoice.title}</p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-body text-text truncate">{invoice.title}</p>
+                      <p className="text-body text-text-subtle">
                         {invoice.invoice_number}
                         {showProgress && (
                           <span className="text-emerald-600">
@@ -197,18 +196,18 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                       </p>
                     </div>
                     <span
-                      className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                      className={`shrink-0 text-body font-medium px-1.5 py-0.5 rounded-pill ${
                         STATUS_STYLES[invoice.status] || STATUS_STYLES.draft
                       }`}
                     >
                       {STATUS_LABELS[invoice.status] ?? invoice.status}
                     </span>
                     <span
-                      className={`hidden sm:inline shrink-0 text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}
+                      className={`hidden sm:inline shrink-0 text-body ${isOverdue ? 'text-red-500 font-medium' : 'text-text-subtle'}`}
                     >
                       {dueDateFormatted}
                     </span>
-                    <span className="shrink-0 text-sm text-gray-700 font-medium tabular-nums">
+                    <span className="shrink-0 text-body text-gray-700 font-medium tabular-nums">
                       {formatCurrency(invoice.subtotal)}
                     </span>
                   </button>
@@ -219,11 +218,11 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
 
           {/* Totals row */}
           <div className="mt-auto px-2 pt-6 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-gray-400">Invoiced</span>
+            <span className="text-body text-text-subtle">Invoiced</span>
             {isInvoicesLoading ? (
-              <div className="h-4 w-16 bg-gray-100 rounded animate-pulse" />
+              <div className="h-4 w-16 bg-surface-emphasis rounded-control animate-pulse" />
             ) : (
-              <span className="text-sm font-semibold text-gray-900 tabular-nums">
+              <span className="text-body font-semibold text-text tabular-nums">
                 {formatCurrency(invoicesTotal)}
               </span>
             )}

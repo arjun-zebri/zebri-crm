@@ -19,10 +19,10 @@ interface CouplesImportUploadProps {
 function Step({ n, children }: { n: number; children: ReactNode }) {
   return (
     <li className="flex gap-3">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-surface-emphasis text-body font-medium text-gray-600">
         {n}
       </span>
-      <span className="text-sm text-gray-600">{children}</span>
+      <span className="text-body text-gray-600">{children}</span>
     </li>
   );
 }
@@ -51,7 +51,7 @@ export function CouplesImportUpload({
                 filename: 'couples-template',
               })
             }
-            className="cursor-pointer font-medium text-gray-900 underline-offset-2 hover:underline"
+            className="cursor-pointer font-medium text-text underline-offset-2 hover:underline"
           >
             <Download
               size={13}
@@ -61,12 +61,12 @@ export function CouplesImportUpload({
             Download the template
           </button>
           , or use your own spreadsheet saved as a{' '}
-          <span className="text-gray-900">.csv</span>.
+          <span className="text-text">.csv</span>.
         </Step>
         <Step n={2}>
           Add one couple per row.{' '}
-          <span className="text-gray-900">couple_name</span> and{' '}
-          <span className="text-gray-900">primary_name</span> are required;
+          <span className="text-text">couple_name</span> and{' '}
+          <span className="text-text">primary_name</span> are required;
           every other column is optional.
         </Step>
         <Step n={3}>
@@ -77,18 +77,18 @@ export function CouplesImportUpload({
 
       <button
         onClick={onChoose}
-        className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-300 px-6 py-8 text-center transition hover:border-gray-400 hover:bg-gray-50"
+        className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-control border border-dashed border-border-strong px-6 py-8 text-center transition hover:border-gray-400 hover:bg-gray-50"
       >
-        <Upload size={22} strokeWidth={1.5} className="text-gray-400" />
-        <span className="text-sm text-gray-900">
+        <Upload size={22} strokeWidth={1.5} className="text-text-subtle" />
+        <span className="text-body text-text">
           {fileName || 'Click to choose a CSV file'}
         </span>
-        <span className="text-xs text-gray-400">CSV files only</span>
+        <span className="text-body text-text-subtle">CSV files only</span>
       </button>
 
-      {fileError && <p className="text-sm text-red-600">{fileError}</p>}
+      {fileError && <p className="text-body text-red-600">{fileError}</p>}
 
-      <p className="flex items-start gap-1.5 text-xs text-gray-400">
+      <p className="flex items-start gap-1.5 text-body text-text-subtle">
         <FileSpreadsheet
           size={13}
           strokeWidth={1.5}

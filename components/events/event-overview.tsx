@@ -1,8 +1,8 @@
 'use client'
 
-import { Event, STATUS_LABELS } from '@/types/event'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
+import { Event, STATUS_LABELS } from '@/types/event'
 
 interface EventOverviewProps {
   event: Event
@@ -13,26 +13,26 @@ export function EventOverview({ event }: EventOverviewProps) {
     <div className="space-y-6">
       {/* Details */}
       <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-4">Details</h3>
+        <h3 className="text-body font-medium text-text mb-4">Details</h3>
         <div className="space-y-3">
           {event.couple && (
             <div className="flex items-start justify-between">
-              <span className="text-sm text-gray-500">Couple</span>
-              <span className="text-sm text-gray-900">{event.couple.name}</span>
+              <span className="text-body text-text-muted">Couple</span>
+              <span className="text-body text-text">{event.couple.name}</span>
             </div>
           )}
           <div className="flex items-start justify-between">
-            <span className="text-sm text-gray-500">Date</span>
-            <span className="text-sm text-gray-900">{formatDate(event.date)}</span>
+            <span className="text-body text-text-muted">Date</span>
+            <span className="text-body text-text">{formatDate(event.date)}</span>
           </div>
           {event.venue && (
             <div className="flex items-start justify-between">
-              <span className="text-sm text-gray-500">Venue</span>
-              <span className="text-sm text-gray-900">{event.venue}</span>
+              <span className="text-body text-text-muted">Venue</span>
+              <span className="text-body text-text">{event.venue}</span>
             </div>
           )}
           <div className="flex items-start justify-between">
-            <span className="text-sm text-gray-500">Status</span>
+            <span className="text-body text-text-muted">Status</span>
             <Badge variant={event.status as any}>
               {STATUS_LABELS[event.status]}
             </Badge>
@@ -43,8 +43,8 @@ export function EventOverview({ event }: EventOverviewProps) {
       {/* Timeline Notes */}
       {event.timeline_notes && (
         <div>
-          <h3 className="text-sm font-medium text-gray-900 mb-4">Timeline Notes</h3>
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{event.timeline_notes}</p>
+          <h3 className="text-body font-medium text-text mb-4">Timeline Notes</h3>
+          <p className="text-body text-gray-700 whitespace-pre-wrap">{event.timeline_notes}</p>
         </div>
       )}
     </div>

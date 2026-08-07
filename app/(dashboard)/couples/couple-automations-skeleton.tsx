@@ -12,20 +12,20 @@
 
 /** A single pulsing placeholder bar. */
 function Bar({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-md bg-surface-muted ${className}`} />
+  return <div className={`animate-pulse rounded-control bg-surface-muted ${className}`} />
 }
 
 /** One placeholder automation card, matching the real card's frame. */
 function CardSkeleton() {
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className="rounded-control border border-border bg-card">
       <div className="flex items-start gap-3 px-4 py-3.5">
-        <div className="size-8 shrink-0 animate-pulse rounded-lg bg-surface-muted" />
+        <div className="size-8 shrink-0 animate-pulse rounded-control bg-surface-muted" />
         <div className="flex-1 min-w-0 space-y-2">
           <Bar className="h-3.5 w-32" />
           <Bar className="h-3 w-48" />
         </div>
-        <Bar className="h-5 w-20 shrink-0 rounded-full" />
+        <Bar className="h-5 w-20 shrink-0 rounded-pill" />
       </div>
       <div className="px-4 pb-3.5">
         <div className="grid grid-cols-2 gap-4 border-t border-border pt-3">
@@ -49,12 +49,12 @@ export function CoupleAutomationsSkeleton() {
     <div aria-hidden="true">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <Bar className="h-8 w-24 rounded-lg" />
-          <Bar className="h-8 w-24 rounded-lg" />
+          <Bar className="h-8 w-24 rounded-control" />
+          <Bar className="h-8 w-24 rounded-control" />
         </div>
         <div className="flex items-center gap-2">
-          <Bar className="h-8 w-20 rounded-xl" />
-          <Bar className="h-8 w-28 rounded-xl" />
+          <Bar className="h-8 w-20 rounded-control" />
+          <Bar className="h-8 w-28 rounded-control" />
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">

@@ -130,7 +130,7 @@ function DaySelector({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm transition cursor-pointer focus:outline-none hover:opacity-75"
+        className="flex items-center justify-between gap-2 rounded-control px-3 py-2 text-sm transition cursor-pointer focus:outline-none hover:opacity-75"
         style={{
           borderColor: border,
           borderWidth: 1,
@@ -146,7 +146,7 @@ function DaySelector({
 
       {open && (
         <div
-          className="absolute z-50 mt-1 min-w-full rounded-xl shadow-lg overflow-hidden py-1"
+          className="absolute z-50 mt-1 min-w-full rounded-control shadow-lg overflow-hidden py-1"
           style={{
             borderColor: border,
             borderWidth: 1,
@@ -338,7 +338,7 @@ export function VendorTimeline({ events, items, branding, styles }: VendorTimeli
           dayItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-start gap-4 rounded-xl px-4 py-3"
+              className="flex items-start gap-4 rounded-control px-4 py-3"
               style={{
                 borderWidth: 1,
                 borderColor: item.pending_review ? PROVISIONAL.border : softBorder,
@@ -392,7 +392,7 @@ export function VendorTimeline({ events, items, branding, styles }: VendorTimeli
               </div>
               {item.pending_review && (
                 <span
-                  className="border rounded-full px-2 py-0.5 shrink-0"
+                  className="border rounded-pill px-2 py-0.5 shrink-0"
                   style={{
                     fontSize: `${finePrintDefaults.fontSize}px`,
                     fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],

@@ -57,13 +57,12 @@ export function CoupleTimeDurationField({
 
   return (
     <div>
-      <span id={labelId} className="mb-1 block text-caption text-text-muted">
+      <span id={labelId} className="mb-1 block text-body text-text-muted">
         Duration
       </span>
       <div className="flex w-56 max-w-full items-center gap-1.5">
         <Button
           variant="outline"
-          size="sm"
           className="w-8 shrink-0 cursor-pointer px-0"
           aria-label={`Less by ${DURATION_STEP_MINUTES} minutes`}
           onClick={() => step(-1)}
@@ -72,7 +71,6 @@ export function CoupleTimeDurationField({
         </Button>
 
         <Input
-          size="sm"
           className="min-w-0 flex-1"
           inputMode="text"
           aria-labelledby={labelId}
@@ -90,7 +88,6 @@ export function CoupleTimeDurationField({
 
         <Button
           variant="outline"
-          size="sm"
           className="w-8 shrink-0 cursor-pointer px-0"
           aria-label={`More by ${DURATION_STEP_MINUTES} minutes`}
           onClick={() => step(1)}
@@ -103,7 +100,7 @@ export function CoupleTimeDurationField({
           centred on the field, and Save is already disabled, so this is
           the explanation rather than the alarm. */}
       <p
-        className={`mt-1 text-caption ${invalid ? 'text-danger' : 'text-text-subtle'}`}
+        className={`mt-1 text-body ${invalid ? 'text-danger' : 'text-text-subtle'}`}
         {...(invalid ? { role: 'alert' } : {})}
       >
         {invalid ? 'Try 90, 1h 30m or 1:30.' : 'Steps by 15 minutes.'}

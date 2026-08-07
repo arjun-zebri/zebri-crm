@@ -188,14 +188,13 @@ export function QuestionnaireTemplateManager() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search questionnaires…"
-          size="sm"
           className="w-36 sm:w-48"
         />
-        <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
+        <Button variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
           <Library size={14} strokeWidth={1.5} />
           Browse starters
         </Button>
-        <Button size="sm" onClick={() => createTemplate.mutate()} disabled={createTemplate.isPending} className="gap-1.5">
+        <Button onClick={() => createTemplate.mutate()} disabled={createTemplate.isPending} className="gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           New questionnaire
         </Button>
@@ -204,7 +203,7 @@ export function QuestionnaireTemplateManager() {
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl bg-surface-muted" />
+            <div key={i} className="h-14 animate-pulse rounded-control bg-surface-muted" />
           ))}
         </div>
       ) : (templates?.length ?? 0) === 0 ? (
@@ -222,7 +221,7 @@ export function QuestionnaireTemplateManager() {
           onBack={() => setSelectedId(null)}
           list={
             visible.length === 0 ? (
-              <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+              <p className="py-8 text-center text-body text-text-subtle">No matches.</p>
             ) : (
               <div className="space-y-0.5">
                 {visible.map((t) => {
@@ -233,14 +232,14 @@ export function QuestionnaireTemplateManager() {
                       type="button"
                       onClick={() => setSelectedId(t.id)}
                       aria-current={active ? 'true' : undefined}
-                      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-control px-2 py-2 text-left transition ${
                         active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
                       }`}
                     >
                       <ClipboardList size={16} strokeWidth={1.5} className="shrink-0 text-text-muted" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-text">{t.name}</span>
-                        <span className="block truncate text-xs text-text-subtle">
+                        <span className="block truncate text-body font-medium text-text">{t.name}</span>
+                        <span className="block truncate text-body text-text-subtle">
                           {t.description || `${t.questions.length} question${t.questions.length === 1 ? '' : 's'}`}
                         </span>
                       </span>
@@ -272,7 +271,7 @@ export function QuestionnaireTemplateManager() {
               </div>
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">
-                <p className="text-sm text-text-subtle">Select a questionnaire to preview.</p>
+                <p className="text-body text-text-subtle">Select a questionnaire to preview.</p>
               </div>
             )
           }
@@ -302,12 +301,12 @@ export function QuestionnaireTemplateManager() {
       {confirmDelete && (
         <Modal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete questionnaire?">
           <div className="space-y-4">
-            <p className="text-sm text-text-muted">This can&apos;t be undone.</p>
+            <p className="text-body text-text-muted">This can&apos;t be undone.</p>
             <div className="flex justify-end gap-3">
-              <Button onClick={() => setConfirmDelete(null)} variant="outline" size="sm">
+              <Button onClick={() => setConfirmDelete(null)} variant="outline">
                 Cancel
               </Button>
-              <Button onClick={() => deleteTemplate.mutate(confirmDelete)} disabled={deleteTemplate.isPending} variant="danger" size="sm">
+              <Button onClick={() => deleteTemplate.mutate(confirmDelete)} disabled={deleteTemplate.isPending} variant="danger">
                 Delete
               </Button>
             </div>

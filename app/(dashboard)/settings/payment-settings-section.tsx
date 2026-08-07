@@ -315,14 +315,14 @@ export function PaymentSettingsSection({
                 onSync={syncFromStripe}
               />
             ) : statusLoading ? (
-              <div className="rounded-card border border-border bg-surface p-4 text-body text-text-muted">
+              <div className="rounded-control border border-border bg-surface p-4 text-body text-text-muted">
                 Loading account status…
               </div>
             ) : null}
 
             {connectInstance ? (
               <ConnectComponentsProvider connectInstance={connectInstance}>
-                <div className="rounded-card border border-border bg-surface p-4 space-y-3">
+                <div className="rounded-control border border-border bg-surface p-4 space-y-3">
                   <ConnectNotificationBanner />
                   {chargesLive ? (
                     <ConnectAccountManagement />
@@ -354,19 +354,19 @@ export function PaymentSettingsSection({
                 so the section flips back to the empty-state CTA
                 and a fresh account can be created. */}
             {!connectState && !statusLoading ? (
-              <div className="flex items-center justify-between rounded-card border border-border bg-surface-muted/40 p-3">
-                <p className="text-caption text-text-muted">
+              <div className="flex items-center justify-between rounded-control border border-border bg-surface-muted/40 p-3">
+                <p className="text-body text-text-muted">
                   Stuck? If the form above shows an error, the connected
                   Stripe account may be stale. Reset to start fresh.
                 </p>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={disconnectStripe}
-                  disabled={disconnecting}
-                  className="text-caption font-medium text-text-muted hover:text-danger transition-colors cursor-pointer disabled:opacity-50"
+                  loading={disconnecting}
+                  className="hover:text-danger"
                 >
-                  {disconnecting ? 'Resetting…' : 'Reset connection'}
-                </button>
+                  Reset connection
+                </Button>
               </div>
             ) : null}
           </div>
@@ -387,7 +387,7 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section>
       <div className="mb-6 flex items-center gap-4">
-        <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+        <h3 className="text-body font-medium uppercase tracking-wide text-text-muted">
           {label}
         </h3>
         <div className="flex-1 border-t border-border" />
@@ -419,7 +419,7 @@ function BankField({
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         placeholder={placeholder}
-        className="w-full border border-border rounded-xl px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+        className="w-full border border-border rounded-control px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
       />
     </div>
   );
@@ -438,7 +438,7 @@ function EmptyCardPaymentsCard({
   loading: boolean;
 }) {
   return (
-    <div className="rounded-card border border-border bg-surface p-5">
+    <div className="rounded-control border border-border bg-surface p-5">
       <div className="flex items-start gap-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-muted">
           <CreditCard
@@ -451,7 +451,7 @@ function EmptyCardPaymentsCard({
           <p className="text-body font-medium text-text">
             Set up card payments
           </p>
-          <p className="mt-1 text-caption text-text-muted">
+          <p className="mt-1 text-body text-text-muted">
             Connect a Stripe account so couples can pay invoices by card.
             Verification happens inside Zebri, Stripe handles ID checks,
             documents, and payouts.
@@ -459,9 +459,7 @@ function EmptyCardPaymentsCard({
         </div>
       </div>
       <div className="mt-4 flex justify-end">
-        <Button onClick={onSetUp} loading={loading}>
-          {loading ? 'Setting up…' : 'Set up card payments'}
-        </Button>
+        <Button onClick={onSetUp} loading={loading}>Set up card payments</Button>
       </div>
     </div>
   );
@@ -475,7 +473,7 @@ function EmptyCardPaymentsCard({
  */
 function PublishableKeyMissingCard() {
   return (
-    <div className="flex items-start gap-3 rounded-card border border-warning/40 bg-warning/5 p-4">
+    <div className="flex items-start gap-3 rounded-control border border-warning/40 bg-warning/5 p-4">
       <AlertTriangle
         size={18}
         strokeWidth={1.5}
@@ -483,7 +481,7 @@ function PublishableKeyMissingCard() {
       />
       <div className="text-body text-text">
         <p className="font-medium">Stripe publishable key missing</p>
-        <p className="mt-1 text-caption text-text-muted">
+        <p className="mt-1 text-body text-text-muted">
           The embedded Connect onboarding component needs
           <code className="font-mono px-1">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>
           in your <code className="font-mono">.env.local</code>. Set it and

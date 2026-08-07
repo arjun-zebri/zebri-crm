@@ -264,7 +264,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
       title="Tasks"
       stats={all.length > 0 ? stats : undefined}
       actions={
-        <Button size="sm" onClick={addTask} className="cursor-pointer gap-1.5">
+        <Button onClick={addTask} className="cursor-pointer gap-1.5">
           <Plus size={14} strokeWidth={1.5} />
           New task
         </Button>
@@ -273,7 +273,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
       {isLoading ? (
         <div className="space-y-2" aria-hidden="true">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
+            <div key={i} className="h-9 bg-surface-emphasis rounded-control animate-pulse" />
           ))}
         </div>
       ) : all.length === 0 ? (
@@ -338,7 +338,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
           ))}
           <button
             onClick={addTask}
-            className="w-full flex items-center gap-2 pl-3.5 pr-2 py-2 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
+            className="w-full flex items-center gap-2 pl-3.5 pr-2 py-2 text-body text-text-subtle hover:text-gray-600 transition cursor-pointer"
           >
             <Plus size={13} strokeWidth={1.5} />
             New task

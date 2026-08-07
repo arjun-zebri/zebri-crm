@@ -28,7 +28,7 @@ export function VariableChip({ node, selected }: NodeViewProps) {
     <NodeViewWrapper
       as="span"
       data-variable={id}
-      className={`relative group/vh inline-flex items-center rounded px-1 py-px mx-px align-baseline text-[0.95em] font-medium cursor-help transition ${
+      className={`relative group/vh inline-flex items-center rounded-control px-1 py-px mx-px align-baseline text-[0.95em] font-medium cursor-help transition ${
         selected ? 'ring-2 ring-emerald-400' : ''
       }`}
       style={{ backgroundColor: '#D1FAE5', color: '#047857' }}

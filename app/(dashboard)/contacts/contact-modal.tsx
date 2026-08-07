@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChevronDown, Phone, Mail, Trash2 } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
-import { Modal } from "@/components/ui/modal";
+import { ChevronDown, Phone, Mail, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal } from "@/components/ui/modal";
 import {
   Contact,
   ContactCategory,
@@ -98,14 +99,14 @@ export function ContactModal({
   };
 
   const inputClass =
-    "w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 transition";
+    "w-full border-0 border-b border-border bg-transparent px-0 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-green-300 transition";
 
   const headerActions = vendor ? (
     <>
       {vendor.phone && (
         <a
           href={`tel:${vendor.phone}`}
-          className="p-1.5 text-gray-400 hover:text-gray-700 transition"
+          className="p-1.5 text-text-subtle hover:text-gray-700 transition"
           title={vendor.phone}
         >
           <Phone size={16} strokeWidth={1.5} />
@@ -114,7 +115,7 @@ export function ContactModal({
       {vendor.email && (
         <a
           href={`mailto:${vendor.email}`}
-          className="p-1.5 text-gray-400 hover:text-gray-700 transition"
+          className="p-1.5 text-text-subtle hover:text-gray-700 transition"
           title={vendor.email}
         >
           <Mail size={16} strokeWidth={1.5} />
@@ -124,7 +125,7 @@ export function ContactModal({
       <button
         onClick={handleDelete}
         disabled={loading}
-        className="p-1.5 text-gray-400 hover:text-red-500 transition disabled:opacity-50 cursor-pointer"
+        className="p-1.5 text-text-subtle hover:text-red-500 transition disabled:opacity-50 cursor-pointer"
         title="Delete contact"
       >
         <Trash2 size={16} strokeWidth={1.5} />
@@ -145,14 +146,14 @@ export function ContactModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+            className="text-body px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading || !name.trim()}
-            className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+            className="text-body px-4 py-2 rounded-control bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Saving..." : "Save"}
           </button>
@@ -163,7 +164,7 @@ export function ContactModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Contact / Business Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -177,8 +178,8 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Email <span className="text-gray-400 font-normal">(optional)</span>
+            <label className="block text-body text-gray-600 mb-1">
+              Email <span className="text-text-subtle font-normal">(optional)</span>
             </label>
             <input
               type="email"
@@ -190,8 +191,8 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Phone <span className="text-gray-400 font-normal">(optional)</span>
+            <label className="block text-body text-gray-600 mb-1">
+              Phone <span className="text-text-subtle font-normal">(optional)</span>
             </label>
             <input
               type="tel"
@@ -206,7 +207,7 @@ export function ContactModal({
               picklists and the modal feels too tall when stacked. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Category
             </label>
             <Popover.Root open={categoryOpen} onOpenChange={setCategoryOpen}>
@@ -216,7 +217,7 @@ export function ContactModal({
                   className={`${inputClass} flex items-center justify-between text-left`}
                 >
                   {CATEGORY_LABELS[category]}
-                  <ChevronDown size={14} className="text-gray-400 shrink-0" strokeWidth={1.5} />
+                  <ChevronDown size={14} className="text-text-subtle shrink-0" strokeWidth={1.5} />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
@@ -224,7 +225,7 @@ export function ContactModal({
                   // z-[90] sits above the nested ContactModal content
                   // (z-[80]); the previous z-[70] sat *under* it, which
                   // is why the popover items were unclickable.
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -236,7 +237,7 @@ export function ContactModal({
                         setCategory(cat);
                         setCategoryOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                      className={`w-full text-left px-3 py-2 text-body transition ${
                         category === cat
                           ? "bg-green-50 text-green-700"
                           : "text-gray-700 hover:bg-gray-50"
@@ -252,7 +253,7 @@ export function ContactModal({
 
           {/* Status */}
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-body text-gray-600 mb-1">
               Status
             </label>
             <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
@@ -262,12 +263,12 @@ export function ContactModal({
                   className={`${inputClass} flex items-center justify-between text-left`}
                 >
                   {STATUS_LABELS[status]}
-                  <ChevronDown size={14} className="text-gray-400 shrink-0" strokeWidth={1.5} />
+                  <ChevronDown size={14} className="text-text-subtle shrink-0" strokeWidth={1.5} />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -279,7 +280,7 @@ export function ContactModal({
                         setStatus(stat);
                         setStatusOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                      className={`w-full text-left px-3 py-2 text-body transition ${
                         status === stat
                           ? "bg-green-50 text-green-700"
                           : "text-gray-700 hover:bg-gray-50"
@@ -295,8 +296,8 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Contact Person <span className="text-gray-400 font-normal">(optional)</span>
+            <label className="block text-body text-gray-600 mb-1">
+              Contact Person <span className="text-text-subtle font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -309,8 +310,8 @@ export function ContactModal({
         </div>
 
         <div>
-          <label className="block text-sm text-gray-600 mb-1">
-            Notes <span className="text-gray-400 font-normal">(optional)</span>
+          <label className="block text-body text-gray-600 mb-1">
+            Notes <span className="text-text-subtle font-normal">(optional)</span>
           </label>
           <textarea
             value={notes}

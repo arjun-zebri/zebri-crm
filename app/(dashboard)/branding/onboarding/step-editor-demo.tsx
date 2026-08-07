@@ -29,8 +29,8 @@ export function StepEditorDemo({ reducedMotion }: StepEditorDemoProps) {
   return (
     <div className="flex flex-col gap-4 h-full">
       <div>
-        <h2 className="text-xl font-semibold text-text mb-1">See how the editor works</h2>
-        <p className="text-sm text-text-muted">
+        <h2 className="text-section font-semibold text-text mb-1">See how the editor works</h2>
+        <p className="text-body text-text-muted">
           A quick tour. You can change everything later in the editor.
         </p>
       </div>

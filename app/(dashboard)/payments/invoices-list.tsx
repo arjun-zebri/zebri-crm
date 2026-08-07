@@ -19,12 +19,12 @@ import { formatCurrency, PaymentsTable, PaymentsTableIcons } from './payments-ta
 import type { Invoice } from './use-payments-data';
 
 const INVOICE_STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600',
+  draft: 'bg-surface-emphasis text-gray-600',
   sent: 'bg-blue-50 text-blue-600',
   deposit_paid: 'bg-amber-50 text-amber-600',
   paid: 'bg-emerald-50 text-emerald-600',
   overdue: 'bg-red-50 text-red-600',
-  cancelled: 'bg-gray-100 text-gray-400',
+  cancelled: 'bg-surface-emphasis text-text-subtle',
 };
 
 const INVOICE_STATUS_LABELS: Record<string, string> = {
@@ -61,7 +61,7 @@ export function deriveInvoices(invoices: Invoice[]): InvoiceWithDerived[] {
 }
 
 function pill(status: string, opts?: { wrap?: boolean }): ReactNode {
-  const className = `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium${opts?.wrap === false ? ' whitespace-nowrap' : ''} ${INVOICE_STATUS_STYLES[status] || INVOICE_STATUS_STYLES.draft}`;
+  const className = `inline-flex items-center px-2 py-0.5 rounded-pill text-body font-medium${opts?.wrap === false ? ' whitespace-nowrap' : ''} ${INVOICE_STATUS_STYLES[status] || INVOICE_STATUS_STYLES.draft}`;
   return <span className={className}>{INVOICE_STATUS_LABELS[status] || status}</span>;
 }
 
@@ -93,14 +93,14 @@ export function InvoicesList({ loading, invoices, searching, onOpen }: InvoicesL
         coupleName: invoice.couple.name,
         statusPill: pill(invoice.effectiveStatus, { wrap: false }),
         valueCell: (
-          <span className="text-sm text-gray-500 group-hover:text-gray-900 tabular-nums">
+          <span className="text-body text-text-muted group-hover:text-text tabular-nums">
             {formatCurrency(invoice.subtotal)}
           </span>
         ),
         lastCell: (
           <span
-            className={`text-sm ${
-              invoice.isOverdue ? 'text-red-500 font-medium' : 'text-gray-500 group-hover:text-gray-900'
+            className={`text-body ${
+              invoice.isOverdue ? 'text-red-500 font-medium' : 'text-text-muted group-hover:text-text'
             }`}
           >
             {invoice.due_date
@@ -112,7 +112,7 @@ export function InvoicesList({ loading, invoices, searching, onOpen }: InvoicesL
           </span>
         ),
         mobileValueRight: (
-          <span className="text-sm font-medium text-gray-900 tabular-nums shrink-0">
+          <span className="text-body font-medium text-text tabular-nums shrink-0">
             {formatCurrency(invoice.subtotal)}
           </span>
         ),
@@ -121,8 +121,8 @@ export function InvoicesList({ loading, invoices, searching, onOpen }: InvoicesL
           <>
             <span className="text-gray-300 shrink-0">·</span>
             <span
-              className={`text-xs shrink-0 ${
-                invoice.isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'
+              className={`text-body shrink-0 ${
+                invoice.isOverdue ? 'text-red-500 font-medium' : 'text-text-subtle'
               }`}
             >
               {new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-AU', {

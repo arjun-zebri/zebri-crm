@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, Globe, Phone, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
@@ -60,14 +61,19 @@ function nextSaturday(from: Date = new Date()): string {
   return `${y}-${m}-${day}`
 }
 
-// Underline input style - matches the couple modal vocabulary
-// (`border-b border-gray-200`, transparent background, calm focus
-// state). The event modal opens alongside the couple modal so the
-// two should look like one product, not two visually distinct forms.
+// The `Input` primitive's own classes, inlined because these fields are
+// raw `<input>` elements with bespoke labels. The underline vocabulary
+// this modal used until 2026-08-07 was dropped when `DatePicker` lost its
+// `underline` variant: a boxed 32px date field among 37px underlined
+// text fields read as a different form entirely.
 const inputClass =
-  'w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition'
+  'block h-8 w-full rounded-control border border-border bg-surface px-2.5 text-body text-text placeholder:text-text-subtle transition-colors focus-visible:border-brand-fg focus-visible:outline-none'
 
-const labelClass = 'block text-sm text-gray-600 mb-1'
+// Same chrome, minus the fixed control height: a textarea sizes to its
+// `rows`, so `h-8` would crush it to a single line.
+const textareaClass = `${inputClass} h-auto py-1.5 resize-none`
+
+const labelClass = 'block text-body text-gray-600 mb-1'
 
 export function EventModal({
   isOpen,
@@ -270,7 +276,7 @@ export function EventModal({
               <button
                 onClick={() => setShowDeleteModal(true)}
                 disabled={loading}
-                className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+                className="text-body px-4 py-2 rounded-control bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
               >
                 Delete
               </button>
@@ -279,17 +285,13 @@ export function EventModal({
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="text-xs px-3 py-1.5 rounded-md bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+                className="text-body px-3 py-1.5 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
-              <button
-                onClick={handleSubmit}
-                disabled={loading || !date.trim()}
-                className="text-xs px-3 py-1.5 rounded-md bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {loading ? 'Saving...' : 'Save'}
-              </button>
+              <Button onClick={handleSubmit} disabled={!date.trim()} loading={loading}>
+                Save
+              </Button>
             </div>
           </div>
         }
@@ -322,11 +324,10 @@ export function EventModal({
                   setDateError(null)
                 }}
                 placeholder="Select date"
-                variant="underline"
                 defaultViewDate={defaultDate ?? nextSaturday()}
               />
               {dateError && (
-                <p className="text-xs text-red-500 mt-1">{dateError}</p>
+                <p className="text-body text-red-500 mt-1">{dateError}</p>
               )}
             </div>
 
@@ -338,13 +339,13 @@ export function EventModal({
                     type="button"
                     className={`${inputClass} flex items-center justify-between text-left`}
                   >
-                    <span className="text-gray-900">{STATUS_LABELS[status]}</span>
-                    <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                    <span className="text-text">{STATUS_LABELS[status]}</span>
+                    <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                   </button>
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content
-                    className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                    className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                     sideOffset={4}
                     align="start"
                   >
@@ -356,9 +357,9 @@ export function EventModal({
                           setStatus(s)
                           setStatusOpen(false)
                         }}
-                        className={`w-full text-left px-3 py-2 text-sm transition ${
+                        className={`w-full text-left px-3 py-2 text-body transition ${
                           status === s
-                            ? 'bg-gray-100 text-gray-900 font-medium'
+                            ? 'bg-surface-emphasis text-text font-medium'
                             : 'text-gray-700 hover:bg-gray-50'
                         }`}
                       >
@@ -385,7 +386,7 @@ export function EventModal({
                 autoComplete="off"
               />
               {venueDropdownOpen && venueSuggestions.length > 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                <div className="absolute top-full mt-1 left-0 right-0 bg-surface border border-border rounded-control shadow-lg z-50 max-h-48 overflow-y-auto">
                   {venueSuggestions.map((s) => (
                     <button
                       key={s.placeId}
@@ -393,9 +394,9 @@ export function EventModal({
                       onMouseDown={() => handleVenueSelect(s)}
                       className="w-full text-left px-3 py-2 hover:bg-gray-50 transition"
                     >
-                      <p className="text-sm font-medium text-gray-900">{s.mainText}</p>
+                      <p className="text-body font-medium text-text">{s.mainText}</p>
                       {s.secondaryText && (
-                        <p className="text-xs text-gray-500">{s.secondaryText}</p>
+                        <p className="text-body text-text-muted">{s.secondaryText}</p>
                       )}
                     </button>
                   ))}
@@ -406,18 +407,18 @@ export function EventModal({
               <div className="mt-2 flex flex-col gap-1.5">
                 {venuePhone && (
                   <div className="flex items-center gap-2">
-                    <Phone size={11} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-                    <span className="text-xs text-gray-600">{venuePhone}</span>
+                    <Phone size={11} strokeWidth={1.5} className="text-text-subtle shrink-0" />
+                    <span className="text-body text-gray-600">{venuePhone}</span>
                   </div>
                 )}
                 {venueWebsite && (
                   <div className="flex items-center gap-2 min-w-0">
-                    <Globe size={11} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                    <Globe size={11} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                     <a
                       href={venueWebsite}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gray-600 hover:text-gray-900 underline truncate"
+                      className="text-body text-gray-600 hover:text-text underline truncate"
                     >
                       {venueWebsite.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                     </a>
@@ -443,27 +444,27 @@ export function EventModal({
                 type="button"
                 className="group flex items-center gap-1.5 mb-2 cursor-pointer"
               >
-                <span className="text-sm text-gray-600 group-hover:text-gray-900 transition">
+                <span className="text-body text-gray-600 group-hover:text-text transition">
                   Vendor Contacts
                 </span>
                 <Plus
                   size={12}
                   strokeWidth={2}
-                  className="text-gray-600 group-hover:text-gray-900 transition"
+                  className="text-gray-600 group-hover:text-text transition"
                 />
               </button>
             </ContactPopover>
             {selectedVendors.length === 0 ? (
-              <p className="text-sm text-gray-400">No contacts added</p>
+              <p className="text-body text-text-subtle">No contacts added</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {selectedVendors.map((v) => (
                   <span
                     key={v.id}
-                    className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-gray-100 rounded-xl text-sm text-gray-700"
+                    className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-surface-emphasis rounded-control text-body text-gray-700"
                   >
                     <span className="truncate max-w-[12rem]">{v.name}</span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-body text-text-subtle">
                       {CATEGORY_LABELS[v.category as keyof typeof CATEGORY_LABELS] || v.category}
                     </span>
                     <button
@@ -471,7 +472,7 @@ export function EventModal({
                       onClick={() =>
                         setSelectedVendorIds((ids) => ids.filter((id) => id !== v.id))
                       }
-                      className="text-gray-400 hover:text-gray-600 transition cursor-pointer ml-0.5"
+                      className="text-text-subtle hover:text-gray-600 transition cursor-pointer ml-0.5"
                       aria-label={`Remove ${v.name}`}
                     >
                       <X size={12} strokeWidth={1.5} />
@@ -489,7 +490,7 @@ export function EventModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Timeline, ceremony details, vendor notes..."
               rows={8}
-              className={`${inputClass} resize-none`}
+              className={textareaClass}
             />
           </div>
         </form>
@@ -499,27 +500,23 @@ export function EventModal({
         <>
           <div className="fixed inset-0 bg-black/20 z-[70]" onClick={() => setShowDeleteModal(false)} />
           <div className="fixed inset-0 z-[80] flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
+            <div className="bg-surface rounded-control shadow-xl max-w-sm w-full mx-4">
               <div className="px-6 py-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Event</h3>
-                <p className="text-sm text-gray-600 mb-6">
+                <h3 className="text-lg font-semibold text-text mb-2">Delete Event</h3>
+                <p className="text-body text-gray-600 mb-6">
                   Are you sure you want to delete this event? This action cannot be undone.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDeleteModal(false)}
                     disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                    className="flex-1 px-4 py-2 text-body border border-border rounded-control hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
                   >
                     Cancel
                   </button>
-                  <button
-                    onClick={handleConfirmDelete}
-                    disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
-                  >
-                    {loading ? 'Deleting...' : 'Delete'}
-                  </button>
+                  <Button variant="danger" onClick={handleConfirmDelete} loading={loading} className="flex-1">
+                    Delete
+                  </Button>
                 </div>
               </div>
             </div>

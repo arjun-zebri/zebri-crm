@@ -74,18 +74,18 @@ export function StatePill({
 }: StatePillProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-pill px-2 py-0.5 text-caption font-medium ${TONE_CLASSES[tone]}${
+      className={`inline-flex items-center gap-1.5 rounded-pill px-2 py-0.5 text-body font-medium ${TONE_CLASSES[tone]}${
         className ? ` ${className}` : ''
       }`}
     >
       {dot === 'filled' ? (
         <span
-          className={`h-1.5 w-1.5 rounded-full ${DOT_BG_BY_TONE[tone]}`}
+          className={`h-1.5 w-1.5 rounded-pill ${DOT_BG_BY_TONE[tone]}`}
           aria-hidden
         />
       ) : dot === 'hollow' ? (
         <span
-          className={`h-1.5 w-1.5 rounded-full border ${dotBorderForTone(tone)}`}
+          className={`h-1.5 w-1.5 rounded-pill border ${dotBorderForTone(tone)}`}
           aria-hidden
         />
       ) : null}

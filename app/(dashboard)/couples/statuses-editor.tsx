@@ -38,6 +38,7 @@ import {
   useDeleteStatus,
   useReorderStatuses,
 } from '@/app/(dashboard)/couples/use-couple-statuses';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { CoupleStatusRecord } from '@/types/couple';
 
@@ -141,7 +142,7 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
     return (
       <div className="space-y-3 animate-pulse">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-gray-100 rounded-xl" />
+          <div key={i} className="h-12 bg-surface-emphasis rounded-control" />
         ))}
       </div>
     );
@@ -149,7 +150,7 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-gray-600">
+      <p className="text-body text-gray-600">
         Customise the statuses that appear in your couples kanban board.
       </p>
 
@@ -171,21 +172,13 @@ export function StatusesEditor({ onClose }: StatusesEditorProps) {
         </SortableContext>
       </DndContext>
 
-      <div className="border-t border-gray-200 pt-6 flex items-center justify-between gap-3">
-        <button
-          onClick={() => setIsAddOpen(true)}
-          className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
-        >
-          <Plus size={11} strokeWidth={2} />
+      <div className="border-t border-border pt-6 flex items-center justify-between gap-3">
+        <Button onClick={() => setIsAddOpen(true)}>
+          <Plus size={11} strokeWidth={1.5} />
           Add status
-        </button>
+        </Button>
         {hasChanges && (
-          <button
-            onClick={handleSaveChanges}
-            className="inline-flex items-center px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
-          >
-            Save changes
-          </button>
+          <Button onClick={handleSaveChanges}>Save changes</Button>
         )}
       </div>
 

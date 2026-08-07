@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import type { UpcomingRenewals } from '@/lib/admin/admin-analytics';
 
 const formatAUD = (value: number) =>
@@ -25,20 +26,20 @@ export function UpcomingRenewalsList({
   onOpenUser: (userId: string) => void;
 }) {
   return (
-    <div className="bg-surface rounded-xl border border-border p-6 flex flex-col max-h-80">
+    <Card className="flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-base sm:text-xl font-semibold text-text">
+        <h2 className="text-base sm:text-section font-semibold text-text">
           Upcoming renewals
         </h2>
-        <span className="text-sm text-text-muted">
+        <span className="text-body text-text-muted">
           {formatAUD(renewals.next30dValue)} · 30d
         </span>
       </div>
-      <p className="text-xs text-text-muted mb-4">
+      <p className="text-body text-text-muted mb-4">
         Next 7 days · {renewals.next7d.length}
       </p>
       {renewals.next7d.length === 0 ? (
-        <p className="text-sm text-text-subtle py-4">
+        <p className="text-body text-text-subtle py-4">
           No renewals in the next week.
         </p>
       ) : (
@@ -47,13 +48,13 @@ export function UpcomingRenewalsList({
             <li
               key={row.userId}
               onClick={() => onOpenUser(row.userId)}
-              className="flex items-center justify-between gap-3 px-2 py-1.5 rounded-md hover:bg-surface-emphasis cursor-pointer"
+              className="flex items-center justify-between gap-3 px-2 py-1.5 rounded-control hover:bg-surface-emphasis cursor-pointer"
             >
               <div className="min-w-0">
-                <p className="text-sm text-text truncate">
+                <p className="text-body text-text truncate">
                   {row.business_name || row.email}
                 </p>
-                <p className="text-xs text-text-muted truncate">
+                <p className="text-body text-text-muted truncate">
                   <span className="capitalize">{row.plan ?? 'starter'}</span>
                   {' · '}
                   {formatAUD(row.amount)}
@@ -74,6 +75,6 @@ export function UpcomingRenewalsList({
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

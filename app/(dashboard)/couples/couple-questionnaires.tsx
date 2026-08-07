@@ -202,10 +202,10 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         <Popover.Content
           align={align}
           sideOffset={6}
-          className="min-w-64 rounded-xl border border-border bg-card py-1 shadow-xl animate-modal-in"
+          className="min-w-64 rounded-control border border-border bg-card py-1 shadow-xl animate-modal-in"
         >
           {(templates?.length ?? 0) === 0 ? (
-            <p className="px-3 py-2 text-sm text-text-muted">
+            <p className="px-3 py-2 text-body text-text-muted">
               No questionnaire templates yet. Create one under Templates → Questionnaires.
             </p>
           ) : (
@@ -217,7 +217,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
                   setSendOpen(false)
                   setPreview(t)
                 }}
-                className="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-sm text-text transition hover:bg-surface-muted"
+                className="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-body text-text transition hover:bg-surface-muted"
               >
                 <span className="truncate">{t.name}</span>
                 <Send size={14} strokeWidth={1.5} className="shrink-0 text-text-muted" />
@@ -243,7 +243,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         title="Questionnaires"
         stats={all.length > 0 ? stats : undefined}
         actions={sendPopover(
-          <Button size="sm" className="cursor-pointer gap-1.5">
+          <Button className="cursor-pointer gap-1.5">
             <Send size={14} strokeWidth={1.5} />
             Send questionnaire
           </Button>,
@@ -251,7 +251,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         )}
       >
         {isLoading ? (
-          <div className="space-y-2">{[1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-surface-muted" />)}</div>
+          <div className="space-y-2">{[1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-control bg-surface-muted" />)}</div>
         ) : all.length === 0 ? (
           <CoupleTabEmpty
             icon={ClipboardList}
@@ -282,12 +282,10 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         nested
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPreview(null)}>
+            <Button variant="outline" onClick={() => setPreview(null)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={() => preview && send.mutate(preview.id)} disabled={send.isPending}>
-              {send.isPending ? 'Sending…' : 'Send'}
-            </Button>
+            <Button onClick={() => preview && send.mutate(preview.id)} disabled={send.isPending} loading={send.isPending}>Send</Button>
           </div>
         }
       >

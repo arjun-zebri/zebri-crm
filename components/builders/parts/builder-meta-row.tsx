@@ -103,15 +103,14 @@ export function BuilderMetaRow({
         />
       ) : null}
 
-      {/* Date — `meta` variant + left icon so the trigger reads as a
-          sibling of the couple picker / terms picker. */}
+      {/* Date — left icon so the trigger reads as a sibling of the
+          couple picker / terms picker beside it. */}
       <DatePicker
         value={dateValue ?? ''}
         onChange={(next) => onDateChange(next || null)}
         placeholder={dateLabel}
         disabled={!canEdit}
         iconPosition="left"
-        variant="meta"
         {...(datePrefix ? { displayPrefix: datePrefix } : {})}
       />
     </div>
@@ -148,7 +147,7 @@ function CouplePicker({
           disabled={!canEdit}
           // Fixed width so swapping couples doesn't reflow the row.
           // Matches the popover width below for visual continuity.
-          className="inline-flex w-56 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-body text-text hover:bg-surface-muted transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+          className="inline-flex h-8 w-56 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 text-body text-text hover:bg-surface-muted transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
         >
           <User size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
           <span className="flex-1 truncate text-left">
@@ -165,7 +164,7 @@ function CouplePicker({
           sideOffset={4}
           // `w-56` matches the trigger so the popover doesn't "jump"
           // wider than the button.
-          className="z-[90] w-56 rounded-card border border-border bg-surface shadow-lg p-2 animate-fade-in"
+          className="z-[90] w-56 rounded-control border border-border bg-surface shadow-lg p-2 animate-fade-in"
         >
           <div className="relative mb-2">
             <Search
@@ -179,12 +178,12 @@ function CouplePicker({
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Search couples…"
-              className="w-full rounded-control border border-border bg-surface pl-6 pr-2 py-1.5 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong"
+              className="w-full rounded-control border border-border bg-surface pl-6 pr-2 py-1.5 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong"
             />
           </div>
           <div className="max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="px-2 py-3 text-center text-caption text-text-subtle">
+              <p className="px-2 py-3 text-center text-body text-text-subtle">
                 No couples match.
               </p>
             ) : (
@@ -232,7 +231,7 @@ function TermsPicker({
         <button
           type="button"
           disabled={!canEdit}
-          className="inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-body text-text hover:bg-surface-muted transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+          className="inline-flex h-8 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 text-body text-text hover:bg-surface-muted transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
         >
           {current?.label ?? 'Terms'}
           <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle" />
@@ -242,7 +241,7 @@ function TermsPicker({
         <Popover.Content
           align="start"
           sideOffset={4}
-          className="z-[90] w-44 rounded-card border border-border bg-surface shadow-lg p-1 animate-fade-in"
+          className="z-[90] w-44 rounded-control border border-border bg-surface shadow-lg p-1 animate-fade-in"
         >
           {PAYMENT_TERMS_OPTIONS.map((o) => (
             <button

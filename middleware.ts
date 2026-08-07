@@ -25,6 +25,10 @@ const PUBLIC_ROUTES = [
   // token-gated (share_token is the capability), no session expected.
   "/questionnaire",
   "/api/questionnaire",
+  // Internal component showroom. The route itself 404s in production
+  // (see app/design-system/layout.tsx); this entry only keeps the
+  // dev-server middleware from bouncing it to /login.
+  "/design-system",
 ];
 
 function withCookies(source: NextResponse, target: NextResponse): NextResponse {

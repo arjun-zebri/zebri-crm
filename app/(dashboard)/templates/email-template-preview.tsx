@@ -21,7 +21,7 @@ const TOKEN_RE = /\{\{\s*([^}]+?)\s*\}\}/g
 
 function VarChip({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-block rounded bg-blue-50 px-1.5 py-0.5 text-sm font-medium text-blue-700">
+    <span className="inline-block rounded-control bg-blue-50 px-1.5 py-0.5 text-body font-medium text-blue-700">
       {children}
     </span>
   )
@@ -53,17 +53,17 @@ export function EmailTemplatePreview({ subject, content }: EmailTemplatePreviewP
   const bodyHtml = useMemo(() => renderTemplateChips(content), [content])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-control border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
-        <p className="text-xs text-text-subtle">Subject</p>
-        <p className="text-sm font-medium text-text">
+        <p className="text-body text-text-subtle">Subject</p>
+        <p className="text-body font-medium text-text">
           <SubjectChips subject={subject} />
         </p>
       </div>
       <div
         // Sanitised by renderTemplateChips. List/empty-paragraph utilities
         // mirror the editor's live preview so spacing + bullets survive.
-        className="email-preview px-4 py-4 text-sm leading-relaxed text-text [&_a]:text-brand [&_p]:my-2 [&_p:empty]:min-h-[1.4em] [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+        className="email-preview px-4 py-4 text-body leading-relaxed text-text [&_a]:text-brand [&_p]:my-2 [&_p:empty]:min-h-[1.4em] [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
         dangerouslySetInnerHTML={{ __html: bodyHtml }}
       />
     </div>

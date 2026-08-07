@@ -69,12 +69,12 @@ type Cfg = Record<string, unknown>
 type SetCfg = (c: Cfg) => void
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <label className="block text-caption font-medium text-text mb-1">{children}</label>
+  return <label className="block text-body font-medium text-text mb-1">{children}</label>
 }
 
 function Hint({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-control border border-border bg-surface-muted px-3 py-2 text-caption text-text-muted">
+    <div className="rounded-control border border-border bg-surface-muted px-3 py-2 text-body text-text-muted">
       {children}
     </div>
   )
@@ -88,7 +88,6 @@ function TextField({
   return (
     <Input
       label={label}
-      size="sm"
       type="text"
       value={value}
       placeholder={placeholder}
@@ -105,7 +104,6 @@ function NumField({
   return (
     <Input
       label={label}
-      size="sm"
       type="number"
       value={value}
       placeholder={placeholder}
@@ -174,7 +172,7 @@ function TextAreaField({
         rows={rows}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="block w-full rounded-control bg-surface text-text placeholder:text-text-subtle border border-border px-2.5 py-2 text-caption transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-fg focus-visible:border-brand-fg"
+        className="block w-full rounded-control bg-surface text-text placeholder:text-text-subtle border border-border px-2.5 py-2 text-body transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-fg focus-visible:border-brand-fg"
       />
     </div>
   )
@@ -198,7 +196,6 @@ function SelectField({
   return (
     <Select
       label={label}
-      size="sm"
       value={value === '' ? ANY_SENTINEL : value}
       onValueChange={(v) => onChange(v === ANY_SENTINEL ? '' : v)}
       options={radixOptions}
@@ -861,7 +858,6 @@ function CreateConsultationForm({ config, updateConfig }: FormProps) {
             <div key={i} className="flex items-center gap-2">
               <Input
                 label=""
-                size="sm"
                 type="datetime-local"
                 value={slot}
                 onChange={(e) => updateConfig({ proposedSlots: slots.map((s, idx) => idx === i ? e.target.value : s) })}
@@ -871,7 +867,7 @@ function CreateConsultationForm({ config, updateConfig }: FormProps) {
               </button>
             </div>
           ))}
-          <button type="button" onClick={() => updateConfig({ proposedSlots: [...slots, ''] })} className="text-caption text-text-muted hover:text-text cursor-pointer">+ Add slot</button>
+          <button type="button" onClick={() => updateConfig({ proposedSlots: [...slots, ''] })} className="text-body text-text-muted hover:text-text cursor-pointer">+ Add slot</button>
         </div>
       </div>
       <Check label="Send the couple a booking link" checked={config['sendCoupleBookingLink'] === true} onChange={(v) => updateConfig({ sendCoupleBookingLink: v })} />
@@ -892,8 +888,8 @@ function CancelConsultationForm({ config, updateConfig }: FormProps) {
 function BlockSlotForm({ config, updateConfig }: FormProps) {
   return (
     <>
-      <Input label="Start" size="sm" type="datetime-local" value={(config['startDateTime'] as string) ?? ''} onChange={(e) => updateConfig({ startDateTime: e.target.value })} />
-      <Input label="End" size="sm" type="datetime-local" value={(config['endDateTime'] as string) ?? ''} onChange={(e) => updateConfig({ endDateTime: e.target.value })} />
+      <Input label="Start" type="datetime-local" value={(config['startDateTime'] as string) ?? ''} onChange={(e) => updateConfig({ startDateTime: e.target.value })} />
+      <Input label="End" type="datetime-local" value={(config['endDateTime'] as string) ?? ''} onChange={(e) => updateConfig({ endDateTime: e.target.value })} />
       <TextField label="Reason (optional)" value={(config['reason'] as string) ?? ''} onChange={(v) => updateConfig({ reason: v || undefined })} placeholder="e.g. travel" />
     </>
   )
@@ -977,7 +973,7 @@ function NewsletterEnqueueForm({ config, updateConfig }: FormProps) {
   return (
     <>
       <TextField label="Newsletter ID" value={(config['newsletterId'] as string) ?? ''} onChange={(v) => updateConfig({ newsletterId: v })} />
-      <Input label="Send at (optional)" size="sm" type="datetime-local" value={(config['sendAt'] as string) ?? ''} onChange={(e) => updateConfig({ sendAt: e.target.value || undefined })} />
+      <Input label="Send at (optional)" type="datetime-local" value={(config['sendAt'] as string) ?? ''} onChange={(e) => updateConfig({ sendAt: e.target.value || undefined })} />
     </>
   )
 }
@@ -1107,7 +1103,6 @@ function RequestVendorConfirmationForm({ config, updateConfig }: FormProps) {
             <div key={i} className="flex items-center gap-2">
               <Input
                 label=""
-                size="sm"
                 type="text"
                 value={id}
                 placeholder="UUID"
@@ -1118,7 +1113,7 @@ function RequestVendorConfirmationForm({ config, updateConfig }: FormProps) {
               </button>
             </div>
           ))}
-          <button type="button" onClick={() => updateConfig({ vendorContactIds: [...ids, ''] })} className="text-caption text-text-muted hover:text-text cursor-pointer">+ Add vendor</button>
+          <button type="button" onClick={() => updateConfig({ vendorContactIds: [...ids, ''] })} className="text-body text-text-muted hover:text-text cursor-pointer">+ Add vendor</button>
         </div>
       </div>
       <TextAreaField label="Message (optional)" value={(config['message'] as string) ?? ''} onChange={(v) => updateConfig({ message: v || undefined })} />
@@ -1147,13 +1142,13 @@ function MarkLostForm({ config, updateConfig }: FormProps) {
         <div className="space-y-2">
           {tags.map((tag, i) => (
             <div key={i} className="flex items-center gap-2">
-              <Input label="" size="sm" type="text" value={tag} onChange={(e) => updateConfig({ tagWith: tags.map((t, idx) => idx === i ? e.target.value : t) })} />
+              <Input label="" type="text" value={tag} onChange={(e) => updateConfig({ tagWith: tags.map((t, idx) => idx === i ? e.target.value : t) })} />
               <button type="button" onClick={() => updateConfig({ tagWith: tags.filter((_, idx) => idx !== i) })} className="text-text-muted hover:text-danger cursor-pointer p-1" aria-label="Remove tag">
                 <Trash2 size={14} strokeWidth={1.5} />
               </button>
             </div>
           ))}
-          <button type="button" onClick={() => updateConfig({ tagWith: [...tags, ''] })} className="text-caption text-text-muted hover:text-text cursor-pointer">+ Add tag</button>
+          <button type="button" onClick={() => updateConfig({ tagWith: [...tags, ''] })} className="text-body text-text-muted hover:text-text cursor-pointer">+ Add tag</button>
         </div>
       </div>
     </>

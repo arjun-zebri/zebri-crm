@@ -28,7 +28,7 @@ export function NotesField({
 }: NotesFieldProps) {
   return (
     <div className="space-y-2">
-      <h4 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+      <h4 className="text-body font-medium uppercase tracking-wide text-text-muted">
         {label}
       </h4>
       <textarea
@@ -38,7 +38,7 @@ export function NotesField({
         rows={10}
         readOnly={!canEdit}
         disabled={!canEdit}
-        className="w-full resize-none rounded-card border border-border bg-surface px-3 py-2.5 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong disabled:opacity-70"
+        className="w-full resize-none rounded-control border border-border bg-surface px-3 py-2.5 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong disabled:opacity-70"
       />
     </div>
   );

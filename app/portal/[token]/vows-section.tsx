@@ -107,7 +107,7 @@ export function VowsSection({
       </p>
 
       <div
-        className="rounded-xl p-5"
+        className="rounded-control p-5"
         style={{
           border: `1px solid ${branding.border_color}`,
           backgroundColor: branding.surface_color,
@@ -131,7 +131,7 @@ export function VowsSection({
         </div>
         <textarea
           id="vows-own"
-          className="w-full min-h-[420px] resize-none rounded-lg p-3 focus:outline-none"
+          className="w-full min-h-[420px] resize-none rounded-control p-3 focus:outline-none"
           placeholder="Write your vows here..."
           value={content}
           onChange={(e) => onChange(e.target.value)}
@@ -148,7 +148,7 @@ export function VowsSection({
       </div>
 
       <div
-        className="flex items-center gap-2 rounded-xl px-4 py-3"
+        className="flex items-center gap-2 rounded-control px-4 py-3"
         style={{
           border: `1px dashed ${branding.border_color}`,
           backgroundColor: branding.surface_color,

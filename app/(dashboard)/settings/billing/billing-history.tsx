@@ -101,7 +101,7 @@ export function BillingHistory() {
                 </span>
                 <span className="w-20 shrink-0 font-medium text-text">{fmtAmount(inv.amount)}</span>
                 <span className="shrink-0 text-text-muted">{statusLabel(inv.status)}</span>
-                <span className="flex shrink-0 items-center gap-4 text-caption text-text-muted">
+                <span className="flex shrink-0 items-center gap-4 text-body text-text-muted">
                   {inv.hostedUrl ? (
                     <a
                       href={inv.hostedUrl}
@@ -130,7 +130,7 @@ export function BillingHistory() {
       ) : null}
 
       {upcoming ? (
-        <p className="mt-4 text-caption text-text-muted">
+        <p className="mt-4 text-body text-text-muted">
           Next charge: <span className="text-text">{fmtAmount(upcoming.amount)}</span>
           {upcoming.nextChargeAt > 0 ? (
             <>
@@ -156,17 +156,17 @@ function BillingHistorySkeleton() {
       <ul className="divide-y divide-border/60">
         {[0, 1, 2].map((i) => (
           <li key={i} className="flex items-center gap-4 py-3">
-            <span className="h-3 w-24 shrink-0 rounded bg-surface-muted" />
-            <span className="h-3 w-16 shrink-0 rounded bg-surface-muted" />
-            <span className="h-3 flex-1 max-w-[6rem] rounded bg-surface-muted" />
+            <span className="h-3 w-24 shrink-0 rounded-control bg-surface-muted" />
+            <span className="h-3 w-16 shrink-0 rounded-control bg-surface-muted" />
+            <span className="h-3 flex-1 max-w-[6rem] rounded-control bg-surface-muted" />
             <span className="flex shrink-0 items-center gap-4">
-              <span className="h-3 w-10 rounded bg-surface-muted" />
-              <span className="h-3 w-8 rounded bg-surface-muted" />
+              <span className="h-3 w-10 rounded-control bg-surface-muted" />
+              <span className="h-3 w-8 rounded-control bg-surface-muted" />
             </span>
           </li>
         ))}
       </ul>
-      <p className="mt-4 h-3 w-64 rounded bg-surface-muted" />
+      <p className="mt-4 h-3 w-64 rounded-control bg-surface-muted" />
     </div>
   );
 }

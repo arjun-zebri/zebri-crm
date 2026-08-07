@@ -45,8 +45,8 @@ function PickerSkeleton() {
     <div aria-hidden="true">
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="flex items-center justify-between gap-3 px-3 py-2">
-          <div className="h-3.5 flex-1 animate-pulse rounded bg-surface-muted" />
-          <div className="h-3 w-12 shrink-0 animate-pulse rounded bg-surface-muted" />
+          <div className="h-3.5 flex-1 animate-pulse rounded-control bg-surface-muted" />
+          <div className="h-3 w-12 shrink-0 animate-pulse rounded-control bg-surface-muted" />
         </div>
       ))}
     </div>
@@ -73,7 +73,7 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button variant={cfg.variant} size="sm" className="cursor-pointer gap-1.5">
+        <Button variant={cfg.variant} className="cursor-pointer gap-1.5">
           <Icon size={14} strokeWidth={1.5} /> {cfg.label}
         </Button>
       </Popover.Trigger>
@@ -81,13 +81,13 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-[80] w-72 rounded-xl border border-border bg-surface py-1.5 shadow-lg"
+          className="z-[80] w-72 rounded-control border border-border bg-surface py-1.5 shadow-lg"
         >
-          <p className="px-3 py-1.5 text-xs text-text-subtle">{cfg.hint}</p>
+          <p className="px-3 py-1.5 text-body text-text-subtle">{cfg.hint}</p>
           {isLoading ? (
             <PickerSkeleton />
           ) : (templates ?? []).length === 0 ? (
-            <p className="px-3 py-1.5 text-xs text-text-muted">No templates yet. Add some on the Templates page.</p>
+            <p className="px-3 py-1.5 text-body text-text-muted">No templates yet. Add some on the Templates page.</p>
           ) : (
             <div className="max-h-72 overflow-y-auto">
               {(templates ?? []).map((t) => (
@@ -98,11 +98,11 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
                     setOpen(false)
                     onPick(t.id)
                   }}
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-text transition hover:bg-surface-muted cursor-pointer"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-body text-text transition hover:bg-surface-muted cursor-pointer"
                 >
                   <span className="truncate">{t.name}</span>
                   {t.category && (
-                    <span className="shrink-0 text-xs text-text-subtle">{t.category.name}</span>
+                    <span className="shrink-0 text-body text-text-subtle">{t.category.name}</span>
                   )}
                 </button>
               ))}

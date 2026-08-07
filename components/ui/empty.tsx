@@ -62,7 +62,7 @@ export function Empty({
       <div className="space-y-1">
         <p className={`text-text ${sm ? 'text-body font-medium' : 'text-section font-semibold'}`}>{title}</p>
         {description ? (
-          <p className={`max-w-prose text-text-muted ${sm ? 'text-caption' : 'text-body'}`}>{description}</p>
+          <p className={`max-w-prose text-text-muted ${sm ? 'text-body' : 'text-body'}`}>{description}</p>
         ) : null}
       </div>
       {action ? <div className="pt-2">{action}</div> : null}

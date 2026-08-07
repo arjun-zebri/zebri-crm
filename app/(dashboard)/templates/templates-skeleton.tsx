@@ -11,18 +11,18 @@
 
 /** A single pulsing placeholder bar. */
 function Bar({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-md bg-surface-muted ${className}`} />
+  return <div className={`animate-pulse rounded-control bg-surface-muted ${className}`} />
 }
 
 /** One placeholder row, matching the real row's padding + two-line body. */
 function RowSkeleton() {
   return (
-    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-control px-3 py-2.5">
       <div className="min-w-0 flex-1 space-y-1.5">
         <Bar className="h-3.5 w-44 max-w-full" />
         <Bar className="h-3 w-60 max-w-full" />
       </div>
-      <Bar className="size-6 shrink-0 rounded-lg" />
+      <Bar className="size-6 shrink-0 rounded-control" />
     </div>
   )
 }

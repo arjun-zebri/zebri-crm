@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useActionState, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
 import { emptyAuthState } from '../action-state';
@@ -35,12 +36,12 @@ export function ResetPasswordForm() {
   }, [pending, submitted, state.error]);
 
   return (
-    <div className="rounded-card border border-border bg-card p-6 shadow-sm sm:p-8">
+    <Card className="shadow-sm sm:p-8">
       <div className="mb-6 flex justify-center">
         <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
       </div>
-      <h1 className="mb-2 text-center text-xl font-semibold text-text">Reset password</h1>
-      <p className="mb-6 text-center text-caption text-text-muted">
+      <h1 className="mb-2 text-center text-section font-semibold text-text">Reset password</h1>
+      <p className="mb-6 text-center text-body text-text-muted">
         Enter the email address associated with your account, and we&apos;ll send you a link to reset
         your password.
       </p>
@@ -48,14 +49,14 @@ export function ResetPasswordForm() {
       {state.error ? (
         <div
           role="alert"
-          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-caption text-danger"
+          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-body text-danger"
         >
           {state.error}
         </div>
       ) : submitted && !pending ? (
         <div
           role="status"
-          className="mb-4 rounded-control border border-success/40 bg-success/10 p-3 text-caption text-success"
+          className="mb-4 rounded-control border border-success/40 bg-success/10 p-3 text-body text-success"
         >
           If an account exists for that email, a reset link is on its way.
         </div>
@@ -72,16 +73,14 @@ export function ResetPasswordForm() {
           {...(state.fieldErrors?.email ? { error: state.fieldErrors.email } : {})}
         />
 
-        <Button type="submit" size="lg" loading={pending} className="w-full">
-          {pending ? 'Sending…' : 'Send reset link'}
-        </Button>
+        <Button type="submit" loading={pending} className="w-full">Send reset link</Button>
       </form>
 
-      <p className="mt-6 text-center text-caption text-text-muted">
+      <p className="mt-6 text-center text-body text-text-muted">
         <Link href="/login" className="text-text underline hover:text-text-muted">
           Back to sign in
         </Link>
       </p>
-    </div>
+    </Card>
   );
 }

@@ -314,7 +314,7 @@ export default async function PortalPage({
                 <img
                   src={branding.logo_url}
                   alt={branding.business_name || 'Logo'}
-                  className="object-contain rounded-lg shrink-0"
+                  className="object-contain rounded-control shrink-0"
                   style={{
                     width: 48,
                     height: 48,

@@ -82,7 +82,7 @@ export function WelcomeWizard({ initial, email, onSaveProfile, onExit }: Welcome
       {/* Pinned above the footer so the fill steps' overflow-hidden frame
           can never clip it. */}
       {saveError && (
-        <p className="px-1 pt-2 text-sm text-text-muted">
+        <p className="px-1 pt-2 text-body text-text-muted">
           We could not save your details just now ({saveError}). You can add
           them any time in Settings.
         </p>

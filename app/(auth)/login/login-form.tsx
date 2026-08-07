@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useActionState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
 import { emptyAuthState } from '../action-state';
@@ -27,16 +28,16 @@ export interface LoginFormProps {
 export function LoginForm({ next }: LoginFormProps) {
   const [state, formAction, pending] = useActionState(loginAction, emptyAuthState);
   return (
-    <div className="rounded-card border border-border bg-card p-6 shadow-sm sm:p-8">
+    <Card className="shadow-sm sm:p-8">
       <div className="mb-6 flex justify-center">
         <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
       </div>
-      <h1 className="mb-6 text-center text-xl font-semibold text-text">Sign in</h1>
+      <h1 className="mb-6 text-center text-section font-semibold text-text">Sign in</h1>
 
       {state.error && !state.fieldErrors ? (
         <div
           role="alert"
-          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-caption text-danger"
+          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-body text-danger"
         >
           {state.error}
         </div>
@@ -69,23 +70,21 @@ export function LoginForm({ next }: LoginFormProps) {
         <div className="pt-1">
           <Link
             href="/reset-password"
-            className="text-caption text-text-muted underline hover:text-text"
+            className="text-body text-text-muted underline hover:text-text"
           >
             Forgot your password?
           </Link>
         </div>
 
-        <Button type="submit" size="lg" loading={pending} className="w-full">
-          {pending ? 'Signing in…' : 'Sign in'}
-        </Button>
+        <Button type="submit" loading={pending} className="w-full">Sign in</Button>
       </form>
 
-      <p className="mt-6 text-center text-caption text-text-muted">
+      <p className="mt-6 text-center text-body text-text-muted">
         Don&apos;t have an account?{' '}
         <Link href="/signup" className="text-text underline hover:text-text-muted">
           Sign up
         </Link>
       </p>
-    </div>
+    </Card>
   );
 }

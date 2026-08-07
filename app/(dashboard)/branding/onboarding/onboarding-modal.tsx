@@ -120,7 +120,7 @@ export function OnboardingModal({
         <div
           ref={initialFocusRef}
           tabIndex={-1}
-          className="w-full max-w-3xl bg-surface rounded-xl shadow-lg outline-none animate-modal-in onboarding-modal-card h-[780px] max-h-[94vh] flex flex-col overflow-hidden"
+          className="w-full max-w-3xl bg-surface rounded-control shadow-lg outline-none animate-modal-in onboarding-modal-card h-[780px] max-h-[94vh] flex flex-col overflow-hidden"
         >
           {loading ? <OnboardingModalSkeleton /> : <OnboardingWizard {...wizardProps} />}
         </div>

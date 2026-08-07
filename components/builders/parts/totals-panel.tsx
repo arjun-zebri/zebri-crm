@@ -68,7 +68,7 @@ export function TotalsPanel({
           </span>
         </div>
         {note ? (
-          <p key="note" className="text-caption text-text-muted">
+          <p key="note" className="text-body text-text-muted">
             {note}
           </p>
         ) : null}

@@ -47,7 +47,7 @@ export function TemplatesTwoPane({ list, detail, selected, onBack }: TemplatesTw
         <button
           type="button"
           onClick={onBack}
-          className="-ml-1 mb-2 flex cursor-pointer items-center gap-1.5 self-start text-sm text-text-muted transition hover:text-text lg:hidden"
+          className="-ml-1 mb-2 flex cursor-pointer items-center gap-1.5 self-start text-body text-text-muted transition hover:text-text lg:hidden"
         >
           <ArrowLeft size={16} strokeWidth={1.5} />
           Back

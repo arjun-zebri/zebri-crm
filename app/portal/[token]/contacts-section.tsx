@@ -5,6 +5,7 @@ import { Plus, Mail, Phone, Mic, Trash2, Loader2, Pencil, ChevronDown } from 'lu
 import { useState, useRef, useCallback, useEffect } from 'react'
 
 import { AudioPlayButton } from '@/components/ui/audio-play-button'
+import { BusyLabel } from '@/components/ui/busy-label'
 import { Modal } from '@/components/ui/modal'
 import { getRgb, getTextColor } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
@@ -204,7 +205,7 @@ function AudioRecorder({
         onPointerCancel={endHold}
         onContextMenu={(e) => e.preventDefault()}
         aria-label="Hold to record pronunciation (up to 10 seconds)"
-        className="relative h-14 w-14 shrink-0 rounded-full cursor-pointer select-none touch-none disabled:opacity-50"
+        className="relative h-14 w-14 shrink-0 rounded-pill cursor-pointer select-none touch-none disabled:opacity-50"
       >
         <svg viewBox="0 0 56 56" className="absolute inset-0 -rotate-90">
           <circle
@@ -220,7 +221,7 @@ function AudioRecorder({
           />
         </svg>
         <span
-          className="absolute inset-[5px] rounded-full flex items-center justify-center transition"
+          className="absolute inset-[5px] rounded-pill flex items-center justify-center transition"
           // Recording is a status, not a brand state, so it uses the fixed
           // error colour with a soft tint composited from the same value.
           style={recording ? { color: STATUS_COLORS.error, backgroundColor: RECORDING_TINT } : { backgroundColor: branding.surface_color, color: finePrintDefaults.color }}
@@ -245,7 +246,7 @@ function AudioRecorder({
             <AudioPlayButton
               src={audioUrl}
               label="Play"
-              className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1 transition cursor-pointer hover:opacity-80"
+              className="flex items-center gap-1 text-body border rounded-control px-2.5 py-1 transition cursor-pointer hover:opacity-80"
               style={PLAY_BUTTON_STYLE}
             />
           </div>
@@ -348,7 +349,7 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content
-                    className="rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
+                    className="rounded-control shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
                     style={{
                       width: 'var(--radix-popover-trigger-width)',
                       backgroundColor: branding.surface_color,
@@ -544,7 +545,7 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
             <button
               type="button"
               onClick={onClose}
-              className="border rounded-xl px-3 py-1.5 transition cursor-pointer hover:opacity-70"
+              className="border rounded-control px-3 py-1.5 transition cursor-pointer hover:opacity-70"
               style={{
                 fontSize: `${bodyDefaults.fontSize}px`,
                 fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
@@ -558,7 +559,7 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
               type="button"
               onClick={() => onSave({ full_name: fullName, role: role || null, audio_url: audioUrl, notes: notes || null, email: email || null, phone: phone || null })}
               disabled={saving || !fullName.trim()}
-              className="rounded-xl px-3 py-1.5 transition cursor-pointer hover:opacity-90 disabled:opacity-50"
+              className="rounded-control px-3 py-1.5 transition cursor-pointer hover:opacity-90 disabled:opacity-50"
               style={{
                 fontSize: `${bodyDefaults.fontSize}px`,
                 fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
@@ -566,7 +567,7 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
                 color: getTextColor(branding.brand_color),
               }}
             >
-              {saving ? 'Saving...' : 'Save'}
+              <BusyLabel busy={saving}>Save</BusyLabel>
             </button>
           </div>
         </div>
@@ -590,14 +591,14 @@ function PersonRow({
 
   return (
     <div
-      className="flex items-center gap-3 border border-border rounded-card px-4 py-3 bg-surface hover:border-border-strong hover:bg-surface-muted transition cursor-pointer"
+      className="flex items-center gap-3 border border-border rounded-control px-4 py-3 bg-surface hover:border-border-strong hover:bg-surface-muted transition cursor-pointer"
       onClick={onEdit}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-body font-medium text-text">{person.full_name || 'Unnamed'}</p>
           {person.role && (
-            <span className="text-caption text-text-muted bg-surface-muted rounded-pill px-2.5 py-0.5">
+            <span className="text-body text-text-muted bg-surface-muted rounded-pill px-2.5 py-0.5">
               {person.role}
             </span>
           )}
@@ -608,7 +609,7 @@ function PersonRow({
           <AudioPlayButton
             src={person.audio_url}
             label="Play"
-            className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1.5 transition cursor-pointer hover:opacity-80"
+            className="flex items-center gap-1 text-body border rounded-control px-2.5 py-1.5 transition cursor-pointer hover:opacity-80"
             style={PLAY_BUTTON_STYLE}
           />
         </div>
@@ -641,11 +642,11 @@ function PeopleGroup({ label, addLabel, people, onAdd, onEdit, branding }: Peopl
         <p style={{ fontSize: `${bodyDefaults.fontSize}px`, fontWeight: 500, color: bodyDefaults.color, fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never] }}>{label} <span style={{ fontSize: `${finePrintDefaults.fontSize}px`, fontWeight: 'normal', color: finePrintDefaults.color }}>({people.length})</span></p>
       </div>
       {people.length === 0 && (
-        <div className="border border-dashed border-border rounded-card p-4 text-center bg-surface-muted/50">
-          <p className="text-caption text-text-subtle mb-2.5">No {label.toLowerCase()} yet</p>
+        <div className="border border-dashed border-border rounded-control p-4 text-center bg-surface-muted/50">
+          <p className="text-body text-text-subtle mb-2.5">No {label.toLowerCase()} yet</p>
           <button
             onClick={onAdd}
-            className="text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
+            className="text-body font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
           >
             Add {addLabel}
           </button>
@@ -660,7 +661,7 @@ function PeopleGroup({ label, addLabel, people, onAdd, onEdit, branding }: Peopl
           </div>
           <button
             onClick={onAdd}
-            className="w-full flex items-center justify-center gap-1.5 text-caption font-medium text-text-muted border border-dashed border-border rounded-card py-2.5 hover:bg-surface-muted transition cursor-pointer"
+            className="w-full flex items-center justify-center gap-1.5 text-body font-medium text-text-muted border border-dashed border-border rounded-control py-2.5 hover:bg-surface-muted transition cursor-pointer"
           >
             <Plus size={14} strokeWidth={1.5} />
             Add {addLabel}
@@ -835,7 +836,6 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
         addLabel="partner"
         people={partners}
         roleOptions={PARTNER_ROLES}
-
         onAdd={() => openAdd('partner', PARTNER_ROLES)}
         onEdit={(p) => openEdit(p, PARTNER_ROLES)}
         branding={branding}
@@ -847,7 +847,6 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
         addLabel="bridal party member"
         people={bridalParty}
         roleOptions={BRIDAL_ROLES}
-
         onAdd={() => openAdd('bridal_party', BRIDAL_ROLES)}
         onEdit={(p) => openEdit(p, BRIDAL_ROLES)}
         branding={branding}
@@ -859,7 +858,6 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
         addLabel="family member"
         people={family}
         roleOptions={FAMILY_ROLES}
-
         onAdd={() => openAdd('family', FAMILY_ROLES)}
         onEdit={(p) => openEdit(p, FAMILY_ROLES)}
         branding={branding}
@@ -871,7 +869,6 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
         addLabel="other contact"
         people={other}
         roleOptions={OTHER_ROLES}
-
         onAdd={() => openAdd('other', OTHER_ROLES)}
         onEdit={(p) => openEdit(p, OTHER_ROLES)}
         branding={branding}
@@ -1132,7 +1129,7 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
+                  className="rounded-control shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
                   style={{
                     width: 'var(--radix-popover-trigger-width)',
                     backgroundColor: branding.surface_color,
@@ -1249,7 +1246,7 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
                 cursor: vendorLoading ? 'not-allowed' : 'pointer',
               }}
             >
-              {vendorLoading ? 'Adding...' : 'Add'}
+              <BusyLabel busy={vendorLoading}>Add</BusyLabel>
             </button>
           </div>
         </div>

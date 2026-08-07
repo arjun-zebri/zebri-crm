@@ -55,9 +55,9 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
         {show(1) && (
           <div className="flex items-center gap-2 pb-2 border-b border-border animate-fade-in">
             <ArrowLeft size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
-            <span className="text-xs font-semibold text-text truncate">Enquiry auto-reply</span>
+            <span className="text-body font-semibold text-text truncate">Enquiry auto-reply</span>
             <span
-              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+              className={`text-[10px] px-1.5 py-0.5 rounded-pill font-medium ${
                 on ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-600'
               }`}
             >
@@ -67,7 +67,7 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
             <button
               type="button"
               data-cursor="activate"
-              className={`ml-auto sm:ml-0 inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-md border transition-colors duration-300 ${
+              className={`ml-auto sm:ml-0 inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-control border transition-colors duration-300 ${
                 on ? 'border-border text-text' : 'bg-brand-fg border-brand-fg text-text-inverse'
               }`}
             >
@@ -107,17 +107,17 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
             {show(4) && (
               <div className="relative">
                 {show(7) ? (
-                  <div className="w-48 rounded-xl border border-border bg-surface animate-fade-in">
+                  <div className="w-48 rounded-control border border-border bg-surface animate-fade-in">
                     <div className="px-3 py-2 flex items-start gap-2">
                       <Mail size={15} strokeWidth={1.5} className="text-text-muted shrink-0 mt-0.5" />
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-text truncate">Send email</p>
+                        <p className="text-body font-medium text-text truncate">Send email</p>
                         <p className="text-[10px] text-text-muted truncate">Send an email to the couple</p>
                       </div>
                     </div>
                     <div className="border-t border-border px-3 py-1.5 flex items-center justify-between">
                       <span className="text-[10px] text-text-subtle">Template</span>
-                      <span className="text-[10px] font-medium text-text rounded bg-surface-muted px-1.5 py-0.5">
+                      <span className="text-[10px] font-medium text-text rounded-control bg-surface-muted px-1.5 py-0.5">
                         Enquiry reply
                       </span>
                     </div>
@@ -156,10 +156,10 @@ function Connector({ shown }: { shown: boolean }) {
 /** A set trigger/action node, mirroring the canvas node card. */
 function NodeCard({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: string; subtitle: string }) {
   return (
-    <div className="w-48 rounded-xl border border-border bg-surface px-3 py-2 flex items-start gap-2 animate-fade-in">
+    <div className="w-48 rounded-control border border-border bg-surface px-3 py-2 flex items-start gap-2 animate-fade-in">
       <Icon size={15} strokeWidth={1.5} className="text-text-muted shrink-0 mt-0.5" />
       <div className="min-w-0">
-        <p className="text-xs font-medium text-text truncate">{title}</p>
+        <p className="text-body font-medium text-text truncate">{title}</p>
         <p className="text-[10px] text-text-muted truncate">{subtitle}</p>
       </div>
     </div>
@@ -181,11 +181,11 @@ function Placeholder({
   return (
     <div
       data-cursor={target}
-      className="w-48 rounded-xl border border-dashed border-border bg-surface px-3 py-2.5 flex flex-col items-center gap-0.5 text-text-muted"
+      className="w-48 rounded-control border border-dashed border-border bg-surface px-3 py-2.5 flex flex-col items-center gap-0.5 text-text-muted"
     >
       <div className="flex items-center gap-1.5">
         <Icon size={14} strokeWidth={1.5} />
-        <span className="text-xs font-medium">{title}</span>
+        <span className="text-body font-medium">{title}</span>
       </div>
       {subtitle && <span className="text-[10px] text-text-subtle">{subtitle}</span>}
     </div>
@@ -212,7 +212,7 @@ function Picker({
 }) {
   return (
     <div
-      className={`absolute left-1/2 -translate-x-1/2 z-20 w-52 rounded-xl border border-border bg-card shadow-xl overflow-hidden animate-fade-in ${className}`}
+      className={`absolute left-1/2 -translate-x-1/2 z-20 w-52 rounded-control border border-border bg-card shadow-xl overflow-hidden animate-fade-in ${className}`}
     >
       <div className="px-2.5 py-1.5 border-b border-border flex items-center gap-2">
         <Search size={12} strokeWidth={1.5} className="text-text-subtle shrink-0" />

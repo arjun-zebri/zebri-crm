@@ -188,20 +188,20 @@ export default function BrandingPage() {
     return (
       <div className="flex flex-col h-full bg-surface">
         <div className="h-12 border-b border-border px-3 flex items-center gap-2">
-          <div className="h-4 w-32 bg-surface-emphasis rounded animate-pulse" />
+          <div className="h-4 w-32 bg-surface-emphasis rounded-control animate-pulse" />
         </div>
         <div className="h-12 border-b border-border px-3 flex items-center gap-2">
-          <div className="h-7 w-24 bg-surface-emphasis rounded animate-pulse" />
-          <div className="h-7 w-24 bg-surface-emphasis rounded animate-pulse" />
+          <div className="h-7 w-24 bg-surface-emphasis rounded-control animate-pulse" />
+          <div className="h-7 w-24 bg-surface-emphasis rounded-control animate-pulse" />
         </div>
         <div className="flex flex-1 min-h-0">
           <div className="w-[320px] border-r border-border p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-20 bg-surface-emphasis rounded-xl animate-pulse" />
+              <div key={i} className="h-20 bg-surface-emphasis rounded-control animate-pulse" />
             ))}
           </div>
           <div className="flex-1 p-10 bg-surface-muted">
-            <div className="max-w-2xl mx-auto h-[640px] bg-surface border border-border rounded-xl animate-pulse" />
+            <div className="max-w-2xl mx-auto h-[640px] bg-surface border border-border rounded-control animate-pulse" />
           </div>
         </div>
       </div>

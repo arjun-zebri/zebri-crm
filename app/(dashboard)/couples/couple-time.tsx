@@ -61,7 +61,7 @@ export function CoupleTime({ coupleId }: CoupleTimeProps) {
       title="Time"
       stats={stats}
       actions={
-        <Button size="sm" onClick={openAdd}>
+        <Button onClick={openAdd}>
           Add time
         </Button>
       }

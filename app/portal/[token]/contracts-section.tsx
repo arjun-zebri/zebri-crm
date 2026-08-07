@@ -45,7 +45,7 @@ export function ContractsSection({ contracts, branding }: ContractsSectionProps)
   if (contracts.length === 0) {
     return (
       <div
-        className="rounded-card p-6 text-center"
+        className="rounded-control p-6 text-center"
         style={{
           border: `1px solid ${branding.border_color}`,
           backgroundColor: branding.surface_color,
@@ -76,7 +76,7 @@ export function ContractsSection({ contracts, branding }: ContractsSectionProps)
         return (
           <div
             key={c.id}
-            className="rounded-card p-4 flex flex-col"
+            className="rounded-control p-4 flex flex-col"
             style={{
               border: `1px solid ${isSigned ? STATUS_COLORS.success : branding.border_color}30`,
               backgroundColor: isSigned ? `${STATUS_COLORS.success}10` : branding.surface_color,
@@ -151,7 +151,7 @@ export function ContractsSection({ contracts, branding }: ContractsSectionProps)
             {c.share_token_enabled && c.share_token ? (
               <a
                 href={`/contract/${c.share_token}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 font-medium rounded-xl px-3 py-2 transition cursor-pointer hover:opacity-90"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 font-medium rounded-control px-3 py-2 transition cursor-pointer hover:opacity-90"
                 style={{
                   fontSize: `${finePrintDefaults.fontSize}px`,
                   color: isSigned ? branding.brand_color : 'white',

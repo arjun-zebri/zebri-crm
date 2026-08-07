@@ -91,7 +91,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
     return (
       <div className="py-16 text-center">
         {emptyIcon}
-        <p className="text-sm text-gray-400">{emptyMessage}</p>
+        <p className="text-body text-text-subtle">{emptyMessage}</p>
       </div>
     );
   }
@@ -110,10 +110,10 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                   className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
                 >
                   <div className="flex-1 pr-3">
-                    <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
-                    <div className="h-3 bg-gray-100 rounded-md w-24" />
+                    <div className="h-4 bg-surface-emphasis rounded-control w-36 mb-1.5" />
+                    <div className="h-3 bg-surface-emphasis rounded-control w-24" />
                   </div>
-                  <div className="h-5 bg-gray-100 rounded-full w-16" />
+                  <div className="h-5 bg-surface-emphasis rounded-pill w-16" />
                 </div>
               ))
             : mapped.map((r) => (
@@ -124,13 +124,13 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-medium text-gray-400 shrink-0">{r.number}</span>
+                      <span className="text-body font-medium text-text-subtle shrink-0">{r.number}</span>
                       {r.mobileStatus}
                     </div>
                     <div className="flex items-center gap-1 min-w-0">
-                      <span className="text-sm text-gray-900 truncate">{r.title}</span>
+                      <span className="text-body text-text truncate">{r.title}</span>
                       <span className="text-gray-300 shrink-0">·</span>
-                      <span className="text-sm text-gray-500 truncate shrink-0 max-w-[140px]">
+                      <span className="text-body text-text-muted truncate shrink-0 max-w-[140px]">
                         {r.coupleName}
                       </span>
                       {r.mobileSecondary}
@@ -143,40 +143,40 @@ export function PaymentsTable<T extends PaymentsTableItem>({
 
         {/* Desktop table */}
         <table className="hidden sm:table w-full table-fixed border-separate border-spacing-0 min-w-[600px] md:max-w-[1800px]">
-          <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
+          <thead className="sticky top-0 bg-surface z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
             <tr>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.number }}
               >
                 <HeaderLabel icon={<Hash size={12} strokeWidth={1.5} />} label="Number" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.title }}
               >
                 <HeaderLabel textOnly="Aa" label="Title" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.couple }}
               >
                 <HeaderLabel icon={<Users size={12} strokeWidth={1.5} />} label="Couple" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.status }}
               >
                 <HeaderLabel icon={<ListChecks size={12} strokeWidth={1.5} />} label="Status" />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.value }}
               >
                 <HeaderLabel icon={valueColIcon} label={valueColLabel} />
               </th>
               <th
-                className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400"
+                className="pl-0 pr-2 py-1.5 text-left text-body font-normal text-text-subtle"
                 style={{ width: COL_WIDTHS.last }}
               >
                 <HeaderLabel icon={lastColIcon} label={lastColLabel} />
@@ -189,7 +189,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                   <tr key={i} className="animate-pulse">
                     {[0, 1, 2, 3, 4, 5].map((j) => (
                       <td key={j} className="pl-0 pr-2 py-2 border-b border-gray-100">
-                        <div className="h-4 bg-gray-100 rounded-md w-24" />
+                        <div className="h-4 bg-surface-emphasis rounded-control w-24" />
                       </td>
                     ))}
                   </tr>
@@ -204,43 +204,43 @@ export function PaymentsTable<T extends PaymentsTableItem>({
                       className="cursor-pointer transition group hover:bg-gray-50/60"
                     >
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.number }}
                       >
-                        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+                        <span className="text-body text-text-muted group-hover:text-text truncate block">
                           {r.number}
                         </span>
                       </td>
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.title }}
                       >
-                        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+                        <span className="text-body text-text-muted group-hover:text-text truncate block">
                           {r.title}
                         </span>
                       </td>
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.couple }}
                       >
-                        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+                        <span className="text-body text-text-muted group-hover:text-text truncate block">
                           {r.coupleName}
                         </span>
                       </td>
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body ${borderClass}`}
                         style={{ width: COL_WIDTHS.status }}
                       >
                         {r.statusPill}
                       </td>
                       <td
-                        className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-2 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.value }}
                       >
                         {r.valueCell}
                       </td>
                       <td
-                        className={`pl-0 pr-3 py-2 text-sm overflow-hidden ${borderClass}`}
+                        className={`pl-0 pr-3 py-2 text-body overflow-hidden ${borderClass}`}
                         style={{ width: COL_WIDTHS.last }}
                       >
                         {r.lastCell}

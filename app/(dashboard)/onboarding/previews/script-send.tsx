@@ -80,10 +80,10 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
       <Backdrop>
         {/* The couple profile overlay, scaled down: header, vertical tab
             nav on the left, tab body on the right. */}
-        <div className="w-[96%] h-[94%] rounded-xl border border-border bg-card shadow-xl overflow-hidden flex flex-col animate-modal-in">
+        <div className="w-[96%] h-[94%] rounded-control border border-border bg-card shadow-xl overflow-hidden flex flex-col animate-modal-in">
           <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border">
-            <span className="text-sm font-semibold text-text">Ellie &amp; Tom</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 font-medium">New</span>
+            <span className="text-body font-semibold text-text">Ellie &amp; Tom</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-pill bg-amber-50 text-amber-600 font-medium">New</span>
             <X size={13} strokeWidth={1.5} className="ml-auto text-text-subtle" />
           </div>
           <div className="flex flex-1 min-h-0">
@@ -94,7 +94,7 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
                   <span
                     key={key}
                     data-cursor={key === 'emails' ? 'pnav-emails' : undefined}
-                    className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[10px] transition-colors duration-300 ${
+                    className={`flex items-center gap-1.5 rounded-control px-1.5 py-1 text-[10px] transition-colors duration-300 ${
                       on ? 'bg-surface-muted text-text font-medium' : 'text-text-subtle'
                     }`}
                   >
@@ -108,22 +108,22 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
             <div className="flex-1 min-w-0 p-2.5 relative flex flex-col">
               {!emailsTab ? (
                 <div className="space-y-2 pt-1" aria-hidden>
-                  <p className="text-xs font-semibold text-text">Overview</p>
-                  <div className="h-1.5 w-1/2 rounded bg-surface-muted" />
-                  <div className="h-1.5 w-2/3 rounded bg-surface-muted" />
-                  <div className="h-1.5 w-1/3 rounded bg-surface-muted" />
+                  <p className="text-body font-semibold text-text">Overview</p>
+                  <div className="h-1.5 w-1/2 rounded-control bg-surface-muted" />
+                  <div className="h-1.5 w-2/3 rounded-control bg-surface-muted" />
+                  <div className="h-1.5 w-1/3 rounded-control bg-surface-muted" />
                 </div>
               ) : (
                 <div className="animate-fade-in flex flex-col flex-1 min-h-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-semibold text-text">Emails</p>
+                    <p className="text-body font-semibold text-text">Emails</p>
                     <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] border border-border text-text">
+                      <span className="inline-flex items-center gap-1 rounded-control px-2 py-1 text-[10px] border border-border text-text">
                         <FlaskConical size={10} strokeWidth={1.5} /> Test
                       </span>
                       <span
                         data-cursor="send-email"
-                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] border border-brand-fg bg-brand-fg text-text-inverse"
+                        className="inline-flex items-center gap-1 rounded-control px-2 py-1 text-[10px] border border-brand-fg bg-brand-fg text-text-inverse"
                       >
                         <Mail size={10} strokeWidth={1.5} /> Send email
                       </span>
@@ -141,11 +141,11 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
                   {/* Template picker — opens the moment Send email is
                       clicked, anchored right under the button. */}
                   {show(2) && !show(4) && (
-                    <div className="absolute right-1 top-8 z-10 w-44 rounded-xl border border-border bg-card shadow-lg py-1 animate-fade-in">
+                    <div className="absolute right-1 top-8 z-10 w-44 rounded-control border border-border bg-card shadow-lg py-1 animate-fade-in">
                       <p className="px-2.5 py-1 text-[9px] text-text-subtle">Pick a template to send this couple</p>
                       <p
                         data-cursor="pick-template"
-                        className={`mx-1 px-1.5 py-1.5 rounded text-[11px] text-text transition-colors duration-300 ${
+                        className={`mx-1 px-1.5 py-1.5 rounded-control text-[11px] text-text transition-colors duration-300 ${
                           show(3) ? 'bg-surface-muted font-medium' : ''
                         }`}
                       >
@@ -168,12 +168,12 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
             title="Email Ellie & Tom"
             footer={
               <>
-                <span className="text-xs px-3 py-1 rounded-md text-text-muted">Cancel</span>
+                <span className="text-body px-3 py-1 rounded-control text-text-muted">Cancel</span>
                 {/* Black from the moment it appears — never greyed. The only
                     change is the flip to a green Sent once the send lands. */}
                 <span
                   data-cursor="send"
-                  className={`inline-flex items-center justify-center gap-1 rounded-md px-3 py-1 text-xs border min-w-[92px] transition-colors duration-300 ${
+                  className={`inline-flex items-center justify-center gap-1 rounded-control px-3 py-1 text-body border min-w-[92px] transition-colors duration-300 ${
                     sent
                       ? 'bg-success border-transparent text-text-inverse'
                       : 'bg-brand-fg border-brand-fg text-text-inverse'
@@ -195,7 +195,7 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
             <Boxed label="Subject">Thanks for reaching out, Ellie</Boxed>
             <div>
               <p className="text-[10px] text-text-subtle font-medium mb-1">Email</p>
-              <div className="rounded-lg border border-border overflow-hidden">
+              <div className="rounded-control border border-border overflow-hidden">
                 <EditorToolbar />
                 <div className="px-2.5 py-2 space-y-1.5 text-[11px] text-text leading-relaxed">
                   <p>Hi Ellie,</p>
@@ -209,7 +209,7 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
               </div>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-text">
-              <span className="h-3 w-3 rounded-sm border border-border bg-brand-fg flex items-center justify-center">
+              <span className="h-3 w-3 rounded-control border border-border bg-brand-fg flex items-center justify-center">
                 <Check size={9} strokeWidth={2.5} className="text-text-inverse" />
               </span>
               <FileText size={12} strokeWidth={1.5} className="text-text-subtle" />
@@ -242,7 +242,7 @@ function Boxed({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <p className="text-[10px] text-text-subtle font-medium mb-1">{label}</p>
-      <div className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] text-text">{children}</div>
+      <div className="rounded-control border border-border bg-surface px-2.5 py-1.5 text-[11px] text-text">{children}</div>
     </div>
   )
 }
