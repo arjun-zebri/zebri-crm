@@ -62,7 +62,21 @@ export function ConfirmDialog({
   loadingLabel = 'Deleting...',
 }: ConfirmDialogProps) {
   useOverlay({ isOpen: open, onClose: onCancel });
-  const backdropHandlers = useBackdropDismiss(onCancel);
+  const dismiss = useBackdropDismiss(onCancel);
+
+  // The dialog is fixed-position but still a DOM descendant of whatever
+  // opened it, so its clicks bubble into that ancestor. Opened from a
+  // clickable table row, confirming a delete also fired the row's
+  // onClick and navigated to the record that had just been deleted.
+  // Stopping on the bubble (never capture) leaves the dialog's own
+  // buttons working and only blocks the leak upward.
+  const surfaceHandlers = {
+    onMouseDown: dismiss.onMouseDown,
+    onClick: (e: React.MouseEvent) => {
+      dismiss.onClick(e);
+      e.stopPropagation();
+    },
+  };
 
   if (!open) return null;
 
@@ -75,7 +89,7 @@ export function ConfirmDialog({
     <>
       <div
         className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${OVERLAY_Z.top.backdrop}`}
-        {...backdropHandlers}
+        {...surfaceHandlers}
       />
       <div
         role="dialog"
@@ -83,7 +97,7 @@ export function ConfirmDialog({
         aria-labelledby={titleId}
         aria-describedby={descId}
         className={`fixed inset-0 flex items-center justify-center p-4 ${OVERLAY_Z.top.panel}`}
-        {...backdropHandlers}
+        {...surfaceHandlers}
       >
         <div className="w-full max-w-sm rounded-control border border-border bg-surface shadow-xl animate-modal-in">
           <div className="px-6 py-6">

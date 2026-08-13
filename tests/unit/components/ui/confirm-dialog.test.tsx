@@ -103,6 +103,58 @@ describe('<ConfirmDialog />', () => {
     expect(closeModal).not.toHaveBeenCalled();
   });
 
+  // The dialog renders inline (fixed-position, not portalled), so it is
+  // a DOM descendant of whatever opened it. In the automations table it
+  // sits inside a clickable <tr>: confirming a delete also fired the
+  // row's onClick, navigating to the automation that had just been
+  // deleted. A modal must never leak clicks to its ancestors.
+  describe('click containment', () => {
+    it('does not fire an ancestor onClick when confirming', async () => {
+      const onConfirm = vi.fn();
+      const rowClick = vi.fn();
+      render(
+        <div onClick={rowClick}>
+          <ConfirmDialog {...base} open onConfirm={onConfirm} />
+        </div>,
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      expect(rowClick).not.toHaveBeenCalled();
+    });
+
+    it('does not fire an ancestor onClick when cancelling', async () => {
+      const onCancel = vi.fn();
+      const rowClick = vi.fn();
+      render(
+        <div onClick={rowClick}>
+          <ConfirmDialog {...base} open onCancel={onCancel} />
+        </div>,
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(rowClick).not.toHaveBeenCalled();
+    });
+
+    it('does not fire an ancestor onClick when dismissing via the backdrop', async () => {
+      const onCancel = vi.fn();
+      const rowClick = vi.fn();
+      render(
+        <div onClick={rowClick}>
+          <ConfirmDialog {...base} open onCancel={onCancel} />
+        </div>,
+      );
+
+      await userEvent.click(screen.getByRole('dialog'));
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(rowClick).not.toHaveBeenCalled();
+    });
+  });
+
   it('keeps the scroll lock when only the topmost overlay closes', () => {
     const { rerender } = render(
       <>

@@ -53,13 +53,14 @@ describe('time_before_event trigger match()', () => {
     expect(spec!.match(makeEvent(0), { amount: 7, unit: 'days' })).toBe(false)
   })
 
-  it('narrows by eventType when configured', () => {
-    expect(
-      spec!.match(makeEvent(7, 'rehearsal'), { amount: 7, unit: 'days', eventType: 'rehearsal' }),
-    ).toBe(true)
+  it('ignores a legacy eventType in match()', () => {
+    // The field left the schema in the trigger sweep: the app never
+    // writes events.event_type, so every row holds the column default
+    // and the filter could only match everything or nothing. Saved
+    // configs still parse via passthrough and now simply fire.
     expect(
       spec!.match(makeEvent(7, 'ceremony'), { amount: 7, unit: 'days', eventType: 'rehearsal' }),
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('ignores eventType when not configured (fires for any event type)', () => {

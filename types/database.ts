@@ -61,6 +61,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_copilot_usage: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          message_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day?: string
+          id?: string
+          message_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          message_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       automation_actions: {
         Row: {
           automation_id: string
@@ -1353,8 +1380,8 @@ export type Database = {
           amount_type: string
           amount_value?: number | null
           due_date?: string | null
-          due_offset_unit?: string | null
           due_offset_anchor?: string | null
+          due_offset_unit?: string | null
           due_offset_value?: number | null
           id?: string
           invoice_id: string
@@ -1369,8 +1396,8 @@ export type Database = {
           amount_type?: string
           amount_value?: number | null
           due_date?: string | null
-          due_offset_unit?: string | null
           due_offset_anchor?: string | null
+          due_offset_unit?: string | null
           due_offset_value?: number | null
           id?: string
           invoice_id?: string
@@ -1721,9 +1748,9 @@ export type Database = {
         Row: {
           amount_type: string
           amount_value: number | null
+          due_offset_anchor: string
           due_offset_days: number
           due_offset_unit: string
-          due_offset_anchor: string
           due_offset_value: number
           id: string
           label: string
@@ -1734,9 +1761,9 @@ export type Database = {
         Insert: {
           amount_type: string
           amount_value?: number | null
+          due_offset_anchor?: string
           due_offset_days?: number
           due_offset_unit?: string
-          due_offset_anchor?: string
           due_offset_value?: number
           id?: string
           label: string
@@ -1747,9 +1774,9 @@ export type Database = {
         Update: {
           amount_type?: string
           amount_value?: number | null
+          due_offset_anchor?: string
           due_offset_days?: number
           due_offset_unit?: string
-          due_offset_anchor?: string
           due_offset_value?: number
           id?: string
           label?: string
@@ -2320,74 +2347,6 @@ export type Database = {
           },
         ]
       }
-      timeline_template_items: {
-        Row: {
-          created_at: string
-          description: string | null
-          duration_min: number | null
-          id: string
-          position: number
-          start_time: string | null
-          template_id: string
-          title: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          duration_min?: number | null
-          id?: string
-          position?: number
-          start_time?: string | null
-          template_id: string
-          title: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          duration_min?: number | null
-          id?: string
-          position?: number
-          start_time?: string | null
-          template_id?: string
-          title?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "timeline_template_items_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "timeline_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      timeline_templates: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          position: number
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          position?: number
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          position?: number
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_branding: {
         Row: {
           brand_kits: Json
@@ -2652,6 +2611,7 @@ export type Database = {
       get_public_questionnaire: { Args: { token: string }; Returns: Json }
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }
+      increment_ai_copilot_usage: { Args: never; Returns: number }
       is_own_couple: { Args: { couple_id_value: string }; Returns: boolean }
       is_valid_portal_token: { Args: { token_value: string }; Returns: boolean }
       mark_contract_reminder_sent: {

@@ -38,7 +38,6 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   // Lead / pipeline
   'new_enquiry',
   'couple_stage_changed',
-  'booking_cancelled',
   // Invoices / payments
   'invoice_created',
   'invoice_sent',
@@ -69,8 +68,11 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   'time_after_event', // T2
   'anniversary_of_event', // T3
   // Portal (DB-trigger emitted)
-  'couple_uploaded_file', // P1
-  'couple_added_song_to_playlist', // P2
+  // `couple_uploaded_file` (P1) and `couple_added_song_to_playlist`
+  // (P2) are deliberately absent: they fire on the same inserts as
+  // `section_completed` ("Portal item added") and existed only to
+  // carry a file-size / playlist-slot filter, which now lives there.
+  // Their specs and emitters stay, so saved automations keep firing.
   'couple_completed_vows', // P3
   'questionnaire_completed', // P4 — emitted by tg_couple_questionnaires_emit_completed
 ])
@@ -101,15 +103,20 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'send_contract',
   'send_invoice',
   'send_couple_questionnaire',
-  'trigger_payment_reminder',
+  // `trigger_payment_reminder` is deliberately absent: its handler
+  // delegates verbatim to send_invoice (and never filtered to unpaid,
+  // despite its old description), so it was the same action twice.
   'create_timeline_event',
+  // "Send run sheet". Absorbs `send_final_run_sheet` (same handler
+  // with the MC's message silently replaced) and
+  // `generate_run_sheet_pdf` (same link, sent to the MC / couple) via
+  // its recipient checkboxes. All three specs stay in the registry so
+  // saved automations keep running.
   'send_timeline_to_vendors',
-  'send_final_run_sheet',
   'send_pre_event_checklist',
   'send_thank_you_message',
   'request_review',
   'send_referral_request',
-  'generate_run_sheet_pdf', // AC1 (run-sheet link)
 ])
 
 /** True when the trigger should appear in the builder's trigger picker. */

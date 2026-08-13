@@ -76,7 +76,10 @@ that callers can still override.
 ### Controls: one height, no `size` prop
 
 `Button`, `Input`, `Select` and `DatePicker` are all **32px** (`h-8`).
-None of them takes a `size` prop.
+None of them takes a `size` prop. Content never grows a control
+either: `Select` truncates a too-long selected label inside the 32px
+trigger (added 2026-08-07 after long email-template names wrapped and
+overflowed the automation inspector).
 
 Four button sizes, two input sizes and two select sizes existed until
 2026-08-07. Roughly 80% of the 193 call sites passing a `size` passed

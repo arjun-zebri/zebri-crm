@@ -22,6 +22,21 @@ describe('<Select />', () => {
     expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('Booked');
   });
 
+  it('truncates a long selected label instead of wrapping past the 32px control', () => {
+    const long = [
+      { value: 't1', label: 'Enquiry acknowledgement - Test · Booking and more words' },
+    ];
+    render(<Select label="Email template" value="t1" options={long} />);
+    const trigger = screen.getByRole('combobox', { name: 'Email template' });
+    // The value is wrapped in a shrinkable, truncating, left-aligned
+    // span — without it, long labels wrap centered and overflow the
+    // fixed-height trigger (seen live in the automation inspector).
+    const valueWrap = trigger.querySelector('.truncate');
+    expect(valueWrap).not.toBeNull();
+    expect(valueWrap!.className).toContain('min-w-0');
+    expect(valueWrap!).toHaveTextContent('Enquiry acknowledgement');
+  });
+
   it('sizes the portalled panel, since it does not inherit the trigger', async () => {
     // The dropdown renders into document.body, outside the trigger's
     // subtree, so it inherits the body's 16px unless the panel says so

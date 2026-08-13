@@ -145,7 +145,7 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
     "trigger_payment_reminder": {
       "category": "payments",
       "label": "Send payment reminder",
-      "description": "Re-send the most recent unpaid invoice",
+      "description": "Re-send the couple's most recent invoice",
       "icon": "AlertTriangle"
     },
     "generate_run_sheet_pdf": {
@@ -168,8 +168,8 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
     },
     "send_timeline_to_vendors": {
       "category": "couple",
-      "label": "Send timeline to vendors",
-      "description": "Email a shareable timeline link to every vendor contact",
+      "label": "Send run sheet",
+      "description": "Email the run sheet (timeline) link to vendors, the couple, or yourself",
       "icon": "Send"
     },
     "send_final_run_sheet": {

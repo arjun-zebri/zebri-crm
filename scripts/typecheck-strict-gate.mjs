@@ -65,7 +65,12 @@ import { execSync } from 'node:child_process';
 // at 278.
 // Feature removal (2026-07-31): deleting the retired offer-document surface,
 // builders, and email cleared five strict-error sites (278 -> 273). Locking in.
-const STRICT_BUDGET = 273;
+// Retiring the booking_cancelled trigger removed its Zod spec, and with
+// it one exactOptionalPropertyTypes site (273 -> 272). The full trigger
+// sweep then replaced seven more hand-written spec config types with
+// z.infer-derived ones (272 -> 265), and the action-picker
+// condensation cleared one more (265 -> 264). Locking in.
+const STRICT_BUDGET = 264;
 
 function runTscStrict() {
   try {

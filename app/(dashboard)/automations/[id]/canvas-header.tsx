@@ -4,12 +4,13 @@
  * Matches the rest of the app's header conventions:
  *
  *   - `px-6` padding (same as page headers)
- *   - text-body font-semibold name input (inline rename on blur /
- *     enter); we deliberately don't go larger because the canvas
- *     is a tool not a content page, and a 3xl title would crowd
- *     the workspace
- *   - text-body primary buttons (matches the "New automation"
- *     button on the list page)
+ *   - `text-body` font-semibold name input (inline rename on blur /
+ *     enter). Deliberately not a title token: the canvas is chrome
+ *     around a workspace, not a content page, and both `text-section`
+ *     and `text-display` read as oversized against the controls
+ *     sitting beside them in the same row.
+ *   - every control is the `Button` primitive, so the row is one
+ *     32px height and one text size with no hand-set padding
  *   - subtle StatePill for active / paused state
  *
  * @module app/(dashboard)/automations/[id]/canvas-header
@@ -19,6 +20,7 @@
 import { ArrowLeft, History, Play, Power } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { StatePill } from '@/components/ui/state-pill'
 import type { AutomationStatus } from '@/types/automations'
 
@@ -40,14 +42,15 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
 
   return (
     <header className="flex items-center gap-3 px-6 py-3 border-b border-border bg-surface">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        iconOnly
         onClick={onBack}
-        className="text-text-muted hover:text-text cursor-pointer p-1 -ml-1"
+        className="-ml-2 shrink-0"
         aria-label="Back to automations"
       >
-        <ArrowLeft size={18} strokeWidth={1.5} />
-      </button>
+        <ArrowLeft size={16} strokeWidth={1.5} />
+      </Button>
 
       <input
         type="text"
@@ -57,43 +60,39 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
         }}
-        className="flex-1 min-w-0 max-w-sm text-body font-semibold bg-transparent outline-none border-none px-1.5 py-0.5"
+        className="flex-1 min-w-0 max-w-sm text-body font-semibold text-text bg-transparent outline-none border-none px-1.5 py-0.5"
         placeholder="Untitled automation"
       />
 
       <div className="ml-auto flex items-center gap-3">
         <StatusPill status={status} />
         <SavedIndicator at={savedAt} />
-        <button
-          type="button"
+        <Button
+          variant="outline"
           onClick={onShowRuns}
           title="See recent runs and any errors"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body border border-border rounded-control text-text hover:bg-surface-muted cursor-pointer transition"
+          className="gap-1.5"
         >
-          <History size={12} strokeWidth={1.5} />
+          <History size={14} strokeWidth={1.5} />
           Runs
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="outline"
           disabled
           title="Run a test against a real couple (coming soon)"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-body border border-border rounded-control text-text-muted disabled:opacity-50 cursor-not-allowed"
+          className="gap-1.5"
         >
-          <Play size={12} strokeWidth={1.5} />
+          <Play size={14} strokeWidth={1.5} />
           Test Flow
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant={isActive ? 'outline' : 'primary'}
           onClick={onToggleActive}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-body rounded-control cursor-pointer transition ${
-            isActive
-              ? 'border border-border text-text hover:bg-surface-muted'
-              : 'bg-gray-900 text-white hover:bg-gray-700'
-          }`}
+          className="gap-1.5"
         >
-          <Power size={12} strokeWidth={1.5} />
+          <Power size={14} strokeWidth={1.5} />
           {isActive ? 'Pause' : 'Activate'}
-        </button>
+        </Button>
       </div>
     </header>
   )

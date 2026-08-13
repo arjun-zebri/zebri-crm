@@ -15,40 +15,40 @@
 
 | # | Trigger | What it fires on | Inputs | Status | Recommendation |
 |---|---|---|---|---|---|
-| 1 | `new_enquiry` | A couple is added | `leadSource`; ⚠️`daysUntilEvent`, `hasEventDate`, `hasVenue`, `dayOfWeek`, `eventMonth`, `season`, `budgetTier`, `referralByContactId` | ✅ | **SIMPLIFY** — keep `leadSource` only, drop 8 dead inputs |
-| 4 | `couple_stage_changed` | Couple moves pipeline stage | `toStatus`, `fromStatus`, `daysUntilEvent`; ⚠️`timeInPreviousStage`, `triggeredBy` | ✅ | **KEEP** — core. Drop the 2 dead inputs |
-| 5 | `booking_cancelled` | Couple cancels | `daysUntilEvent`; ⚠️`cancellationReason`, `depositAlreadyPaid`, `daysSinceBooked` | ✅ | **KEEP** — simplify to no filters |
-| 8 | `quote_created` | Quote drafted | `amountOp`+`amountValue`; ⚠️ 8 unwired fields: `tier`, `hasAddOns`, `discountApplied`, `versionNumber`, `isDeposit`, `isFinalBalance`, `isPartial`, `paymentMethod` | ✅ | **SIMPLIFY** — keep amount filter, drop 8 |
-| 9 | `quote_sent` | Quote share link goes live | as above | ✅ | **KEEP** — simplify inputs |
-| 10 | `quote_accepted` | Couple accepts a quote | as above | ✅ | **KEEP** — simplify inputs |
-| 11 | `quote_declined` | Couple declines a quote | as above | ✅ | **KEEP** — simplify inputs |
-| 12 | `quote_due` | Quote reaches expiry | `days`; ⚠️`notificationCount`, `respectQuietHours` | ⏳ | **KEEP** |
-| 13 | `quote_overdue` | Quote past expiry, unaccepted | `daysOverdueMin/Max`; ⚠️`couplePreviouslyViewed` | ⏳ | **KEEP** |
-| 15 | `invoice_created` | Invoice drafted | amount filter (as quote) | ✅ | **SIMPLIFY** |
-| 16 | `invoice_sent` | Invoice share link goes live | amount filter | ✅ | **KEEP** — simplify |
-| 17 | `payment_received` | Couple makes a payment | amount filter | ✅ | **KEEP** — simplify |
-| 18 | `invoice_due` | Invoice reaches due date | `days`; ⚠️`notificationCount`, `respectQuietHours`, `isFinalBalance` | ⏳ | **KEEP** |
-| 19 | `invoice_overdue` | Invoice past due, unpaid | `daysOverdueMin/Max`; ⚠️`isFinalBalance`, `daysUntilEvent` | ⏳ | **KEEP** |
-| 23 | `contract_created` | Contract drafted | ⚠️ all 4 (`daysUntilEvent`, `templateUsed`, `versionNumber`, `signerRole`) | ✅ | **SIMPLIFY** — drop all filters |
-| 24 | `contract_sent` | Contract emailed | ⚠️ as above | ✅ | **KEEP** — no filters |
-| 25 | `contract_signed` | Couple signs | ⚠️ above + `timeToSign`, `signedByBoth` | ✅ | **KEEP** — no filters |
-| 26 | `contract_declined` | Couple declines | ⚠️ as above | ✅ | **KEEP** — no filters |
-| 28 | `contract_expired` | Contract expires unsigned | ⚠️ as above | ✅ | **KEEP** — no filters |
-| 30 | `event_created` | Ceremony/reception added | `eventType`, `dayOfWeek`; ⚠️`month`, `season`, `daysUntilEvent`, `hasVenue`, `isDestination`, `guestCount` | ✅ | **KEEP** — keep `eventType`, drop 6 |
-| 31 | `event_updated` | Event date/venue/details change | event filter + `changed` | ✅ | **KEEP** — keep `changed` (date/venue) only |
-| 33 | `time_before_event` | X time before the wedding | `amount`+`unit`, `eventType`, `timeOfDay`, `dayOfWeek`, `skipIfPaused`, `eventStatus`, `respectPublicHolidays`, `onlyIfNoReviewPosted`, `onlyIfNotReferred` | ⛔ | **PROMOTE** — backbone of MC flows. Keep `amount`+`unit`+`eventType`, drop the rest |
-| 34 | `time_after_event` | X time after the wedding | same as #33 | ⛔ | **PROMOTE** — thank-you / review. Same trim |
-| 36 | `anniversary_of_event` | N years after the wedding | `years`, `maxYears`, `onlyIfMarriedByMe`, `onlyIfHadGoodOutcome` | ⛔ | **KEEP** — nice-to-have, defer |
-| 38 | `section_completed` | Couple submits a portal section | `section`, `category` | ✅ | **KEEP** |
-| 40 | `timeline_edited` | Timeline added to / changed | ⚠️`editedBy`, `itemsAdded/Removed` | ✅ | **KEEP** — no filters |
-| 41 | `couple_uploaded_file` | Couple adds a file | `fileType`, `section`, `sizeBytes` | ⛔ | **KEEP** |
-| 42 | `couple_added_song_to_playlist` | Couple adds a song | `playlistKey`, `songCount` | ⛔ | **KEEP** |
-| 43 | `couple_completed_vows` | Vow drafts submitted | `who` | ⛔ | **KEEP** |
-| 44 | `task_created` | A task is added | ⚠️`taskCategory`, `taskPriority`, `dueWithinDays` | ✅ | **KEEP** — no filters (no category/priority cols) |
-| 45 | `task_completed` | A task is marked done | ⚠️ as above | ✅ | **KEEP** — no filters |
-| 46 | `task_overdue` | Task past due date | `daysOverdueMin/Max`; ⚠️`assignedTo` + shared | ⏳ | **KEEP** |
-| 47 | `contact_created` | Vendor/family added | `category`, `hasEmail`; ⚠️`hasPhone`, `isPrimaryVendor`, `region` | ✅ | **KEEP** — keep `category`, drop 3 |
-| 49 | `contact_linked_to_couple` | Contact attached to a couple | as above | ✅ | **KEEP** — vendor coordination |
+| 1 | `new_enquiry` | A couple is added | `leadSource`, `daysUntilEvent`, `hasEventDate`, `dayOfWeek`, `eventMonth`, `season`, `initialStatus` | ✅ | **DONE (2026-08-12)** — every input above is now enforced in `match()`; `hasVenue`, `budgetTier`, `referralByContactId` deleted (no backing data). Filters render via the add-filter list, not as always-on selects |
+| 4 | `couple_stage_changed` | Couple moves pipeline stage | `toStatus`, `fromStatus`, `leadSource`, `daysUntilEvent`, `hasEventDate`, `dayOfWeek`, `eventMonth`, `season` | ✅ | **DONE (2026-08-13)** — chip UI, every input enforced in `match()`; `timeInPreviousStage` + `triggeredBy` deleted (no backing data); `lead_source` added to the emit payload |
+| 5 | ~~`booking_cancelled`~~ | Couple cancels | — | ❌ | **RETIRED (2026-08-13)** — never fired: its emit block tested `status in ('cancelled','lost')`, slugs absent from the seeded `couple_statuses` set. Folded into `couple_stage_changed` ("moved into <stage>"), which uses the MC's real stage names |
+| 8 | ~~`quote_created`~~ | Quote drafted | — | ❌ | **GONE** — the quotes feature was dropped 2026-07-11; specs + catalogue entries removed with it |
+| 9 | ~~`quote_sent`~~ | — | — | ❌ | **GONE** (quotes dropped) |
+| 10 | ~~`quote_accepted`~~ | — | — | ❌ | **GONE** (quotes dropped) |
+| 11 | ~~`quote_declined`~~ | — | — | ❌ | **GONE** (quotes dropped) |
+| 12 | ~~`quote_due`~~ | — | — | ❌ | **GONE** (quotes dropped) |
+| 13 | ~~`quote_overdue`~~ | — | — | ❌ | **GONE** (quotes dropped) |
+| 15 | `invoice_created` | Invoice drafted | `amount` (on the **total**), `hasDiscount`, `hasDueDate`, `dueInDays`, + the wedding-date family | ✅ | **DONE (2026-08-13)** — chip UI, every input enforced. Amount now compares the computed total, not the raw subtotal. The 8 speculative fields on the shared amount schema deleted; `discountApplied` rebuilt as `hasDiscount` with real data |
+| 16 | `invoice_sent` | Invoice share link goes live | same set as `invoice_created` | ✅ | **DONE (2026-08-13)** — chip UI sharing the invoice_created matcher. Its old amount filter compared a field the payload never carried, so a configured filter matched nothing; payload enriched (`20260813030000`) |
+| 17 | `payment_received` | Couple makes a payment | `amount` (total) + wedding-date family | ✅ | **DONE (2026-08-13)** — chip UI; payload gains `total` + `event_date` |
+| 18 | `invoice_due` | Invoice reaches due date | `days` (required chip), `isFinalBalance` | ✅ | **DONE (2026-08-13)** — chip UI; `notificationCount` + `respectQuietHours` deleted (nothing read them; quiet hours live on `wait` steps) |
+| 19 | `invoice_overdue` | Invoice past due, unpaid | `daysOverdueMin` (required chip), `isFinalBalance` | ✅ | **DONE (2026-08-13)** — chip UI; `daysOverdueMax` deleted (exact-depth match made it redundant or unsatisfiable), `daysUntilEvent` deleted (no payload field) |
+| 23 | `contract_created` | Contract drafted | wedding-date family | ✅ | **DONE (2026-08-13)** — chip UI; all 4 scaffolding filters deleted, `event_date` joined into the payload (`20260813040000`) |
+| 24 | `contract_sent` | Contract emailed | wedding-date family | ✅ | **DONE (2026-08-13)** — as #23 |
+| 25 | `contract_signed` | Couple signs | wedding-date family | ✅ | **DONE (2026-08-13)** — as #23; `timeToSign` + `signedByBoth` deleted (single-signer flow) |
+| 26 | `contract_declined` | Couple declines | wedding-date family | ✅ | **DONE (2026-08-13)** — as #23 |
+| 28 | `contract_expired` | Contract expires unsigned | wedding-date family | ✅ | **DONE (2026-08-13)** — as #23 |
+| 30 | `event_created` | Ceremony/reception added | date family (on `events.date`), `hasVenue` | ✅ | **DONE (2026-08-13)** — chip UI. `eventType` deleted everywhere: the app never writes it, every row holds the `'ceremony'` default. `isDestination` + `guestCount` deleted (no columns) |
+| 31 | `event_updated` | Event date/venue/details change | `changed` (any/date/venue) + created set | ✅ | **DONE (2026-08-13)** — chip UI |
+| 33 | `time_before_event` | X days before the event | `amount` (required chip) + day/month/season buckets | ✅ | **DONE (2026-08-13)** — chip UI; `eventType` + the 7 scheduling extras deleted (nothing read them) |
+| 34 | `time_after_event` | X days after the event | as #33 | ✅ | **DONE (2026-08-13)** — as #33 |
+| 36 | `anniversary_of_event` | N years after the event | `years` (required chip), `maxYears` | ✅ | **DONE (2026-08-13)** — chip UI; `onlyIf*` deleted (no data) |
+| 38 | `section_completed` | Couple adds a person / song / file to the portal | `section` + per-section: `personType` (people), `songCategory` (songs), `sizeBytes` (files) | ✅ | **DONE (2026-08-13)** — chip UI, relabelled **"Portal item added"** (it is an AFTER INSERT emitter: seven songs = seven fires, so the old "section completed" label promised a signal it never sent). **#41 and #42 folded in here**, retiring two picker entries that fired on the same INSERTs. Type string unchanged so saved automations resolve |
+| 40 | `timeline_edited` | Timeline added to / changed | `change` (any/added/changed) | ✅ | **DONE (2026-08-13)** — chip UI backed by the payload's `op`; `editedBy` + item counts deleted |
+| 41 | ~~`couple_uploaded_file`~~ | Couple adds a file | — | 🔕 | **FOLDED INTO #38 (2026-08-13)** — fired on the same `portal_files` INSERT as `section_completed`, so one upload lit up two picker entries and emitted two events. Existed only to carry a size filter, which now lives on "Portal item added" under section = Files. Spec + emitter retained, hidden from the picker, so saved automations keep firing |
+| 42 | ~~`couple_added_song_to_playlist`~~ | Couple adds a song | — | 🔕 | **FOLDED INTO #38 (2026-08-13)** — as #41, for the playlist-slot filter under section = Songs |
+| 43 | `couple_completed_vows` | Vow drafts submitted | `who` | ✅ | **DONE (2026-08-13)** — chip UI (already enforced) |
+| 44 | `task_created` | A task is added | `taskPriority`, `taskType` (MC's own option names), `hasDueDate`, `dueInDays` | ✅ | **DONE (2026-08-13)** — chip UI; payload gains priority/type (`20260813050000`). The invented enums deleted |
+| 45 | `task_completed` | A task is marked done | `taskPriority`, `taskType` | ✅ | **DONE (2026-08-13)** — as #44 |
+| 46 | `task_overdue` | Task past due date | `daysOverdueMin` (required chip), `taskPriority`, `taskType` | ✅ | **DONE (2026-08-13)** — chip UI; priority/type now enforced, `daysOverdueMax` + `assignedTo` deleted |
+| 47 | `contact_created` | Vendor/family added | `category`, `hasEmail`, `hasPhone` | ✅ | **DONE (2026-08-13)** — chip UI; all three enforced, `isPrimaryVendor` + `region` deleted |
+| 49 | `contact_linked_to_couple` | Contact attached to a couple | `category` | ✅ | **DONE (2026-08-13)** — chip UI (the linked payload carries category only) |
 
 ## ACTIONS
 
@@ -56,27 +56,27 @@
 |---|---|---|---|---|---|
 | 1 | `send_email` | Custom email with variables | `recipients`, `subject`, `body`, `wrap`, `replyToOverride`, `ccVendors`, `bccSelf`; ⚠️ attach/track/sendAt fields | ✅ | **KEEP** — the workhorse |
 | 2 | `send_sms` | Text message | `recipients`, `body`, `senderId`, `truncateAt`… | ⛔ | **KEEP** (keep 1 greyed "coming soon" if desired) |
-| 4 | `update_couple_stage` | Move pipeline status | `toStatus`, `onlyIfCurrentStatus`, `addNote` | ✅ | **KEEP** |
-| 5 | `add_note` | Append a note to the couple | `text`, `category`; ⚠️`pinned`, `visibleToCouple` | ✅ | **KEEP** |
-| 7 | `send_portal_link` | Share the portal link | `message`, `subject`; ⚠️`expiresInDays`, `restrictToSection`, `magicLinkRecipient` | ✅ | **KEEP** |
-| 8 | `request_information` | Ask couple to fill a section | `section`, `message`; ⚠️`dueDate`, `reminderCadence`, `escalateAfterDays` | ✅ | **KEEP** |
-| 9 | `create_couple` | Add a new couple | `name`, `email`, `phone`, `eventDate`, `leadSource`; ⚠️ 6 more | ✅ | **KEEP** (for webhook/manual intake) |
-| 10 | `pause_couple_automations` | Halt this couple's other flows | ⚠️`pauseForDays`, `pauseReason`, `pauseCategory` | ✅ | **KEEP** — simplify |
-| 11 | `create_task` | Add a task for the MC | `title`, `description`, `dueDate`, `relativeToEvent`; ⚠️ category/priority/assign/linkedDoc/reminder | ✅ | **KEEP** — drop dead inputs |
+| 4 | `update_couple_stage` | Move pipeline status | `toStatus` | ✅ | **DONE (2026-08-13)** — `onlyIfCurrentStatus` + `addNote` deleted from the schema (never read) |
+| 5 | `add_note` | Append a note to the couple | `text` | ✅ | **DONE (2026-08-13)** — `category` / `pinned` / `visibleToCouple` deleted (notes are one shared column) |
+| 7 | `send_portal_link` | Share the portal link | `message` | ✅ | **DONE (2026-08-13)** — subject / expiry / section / recipient fields deleted (never read) |
+| 8 | `request_information` | Ask couple to fill a section | `section`, `message` | ✅ | **DONE (2026-08-13)** — dueDate / reminderCadence / escalateAfterDays deleted (no machinery) |
+| 9 | `create_couple` | Add a new couple | `name`, `email`, `phone`, `eventDate`, `leadSource` | ✅ | **DONE (2026-08-13)** — the 6 unread extras deleted |
+| 10 | `pause_couple_automations` | Halt this couple's other flows | — | ✅ | **DONE (2026-08-13)** — the handler reads no config; scaffolding fields deleted |
+| 11 | `create_task` | Add a task for the MC | `title`, `description`, `dueDate`, `relativeToEvent` | ✅ | **DONE (2026-08-13)** — category/priority/assign/linkedDoc deleted (invented enums, no columns) |
 | 12 | `update_task` | Update a task | `taskId`, `status`, `title`, `description`, `dueDate`; ⚠️ append/reassign/push | ✅ | **KEEP** — simplify |
-| 15 | `send_quote` | Email the couple a quote | `quoteId`; ⚠️`templateId`, `expiryDays`, `customMessage`, `attach`, `cc` | ✅ | **KEEP** |
+| 15 | ~~`send_quote`~~ | — | — | ❌ | **GONE** (quotes dropped) |
 | 16 | `send_contract` | Email a contract to sign | `contractId`; ⚠️`templateId`, `signersRequired`, `expiryDays`, `customMessage` | ✅ | **KEEP** |
-| 17 | `send_invoice` | Email an invoice | `invoiceId`; ⚠️`paymentMethods`, `dueInDays`, `latePaymentFee`, `customMessage` | ✅ | **KEEP** |
-| 18 | `trigger_payment_reminder` | Re-send unpaid invoice (routes to #17) | invoice fields; ⚠️`tone`, `escalationLevel`, `attachLateFee` | ✅* | **KEEP** |
-| 19 | `generate_run_sheet_pdf` | Produce a run-sheet PDF | `eventId`, `format`, `includeContacts`, `includeTimings`, `saveToFiles`, `emailToSelf` | ⛔ | **KEEP** (or PROMOTE — returns ok but makes nothing) |
-| 20 | `create_timeline_event` | Add a timeline item | `eventId`, `title`, `description`, `startTime`, `durationMin`; ⚠️ category/vendor/cue/buffer | ✅ | **KEEP** — simplify |
-| 22 | `send_timeline_to_vendors` | Email vendors the timeline link | `eventId`, `message`; ⚠️ filter/format/cc/attach/confirm | ✅ | **KEEP** — vendor coordination |
-| 23 | `send_final_run_sheet` | Send final run sheet (routes to #22) | same as #22 | ✅* | **KEEP** |
+| 17 | `send_invoice` | Email an invoice | `invoiceId` | ✅ | **DONE (2026-08-13)** — paymentMethods / dueInDays / lateFee / customMessage deleted (the invoice is sent as saved) |
+| 18 | ~~`trigger_payment_reminder`~~ | — | — | 🔕 | **FOLDED INTO #17 (2026-08-13)** — its handler delegated verbatim to send_invoice, and it never filtered to unpaid despite its label. Registry entry retained, hidden from the picker |
+| 19 | ~~`generate_run_sheet_pdf`~~ | — | — | 🔕 | **FOLDED INTO #22 (2026-08-13)** — same run-sheet link, sent to the MC (+ optionally couple); now the sendToMe / sendToCouple checkboxes on "Send run sheet". Registry entry retained |
+| 20 | `create_timeline_event` | Add a timeline item | `eventId`, `title`, `description`, `startTime`, `durationMin` | ✅ | **DONE (2026-08-13)** — category/vendor/cue/buffer deleted (no columns) |
+| 22 | `send_timeline_to_vendors` | Email the run sheet link | `message`, `sendToVendors` / `sendToCouple` / `sendToMe` | ✅ | **DONE (2026-08-13)** — relabelled **"Send run sheet"**; absorbs #23 and #19/AC1 via recipient checkboxes. Pre-merge configs default to vendors-only, so nothing saved changes behaviour. The old RecipientsField here was a dead input (handler hardcoded vendors) |
+| 23 | ~~`send_final_run_sheet`~~ | — | — | 🔕 | **FOLDED INTO #22 (2026-08-13)** — same handler with the MC's typed message silently replaced by canned copy, and it claimed "couple + vendors" while sending vendors only. Registry entry retained |
 | 25 | `send_pre_event_checklist` | Countdown checklist email | `subject`, `body` | ✅ | **KEEP** |
 | 26 | `send_thank_you_message` | Post-event thank-you | `subject`, `body` | ✅ | **KEEP** |
-| 27 | `request_review` | Ask for a Google/vendor review | `subject`, `body`; ⚠️`platforms`, `incentive`, `followUpIfIgnored` | ✅ | **KEEP** |
-| 28 | `send_referral_request` | Ask for referrals | `subject`, `body`; ⚠️`referralBonus`, `trackingLink` | ✅ | **KEEP** |
-| 47 | `create_invoice_from_quote` | Draft invoice from quote | `quoteId`, `paymentSchedule`, `dueDate` | ⛔ | **PROMOTE** — high value, real workflow |
+| 27 | `request_review` | Ask for a Google/vendor review | `subject`, `body` | ✅ | **DONE (2026-08-13)** — platforms / incentive / followUp deleted |
+| 28 | `send_referral_request` | Ask for referrals | `subject`, `body` | ✅ | **DONE (2026-08-13)** — referralBonus / trackingLink deleted |
+| 47 | ~~`create_invoice_from_quote`~~ | — | — | ❌ | **GONE** (quotes dropped) |
 
 ## FLOW CONTROL (runner-evaluated)
 

@@ -161,7 +161,10 @@ describe('time_after_event time-emitter', () => {
     expect(await eventsFor(eventId)).toHaveLength(1)
   })
 
-  it('dispatcher opens a run only for the matching event type', async () => {
+  it('opens a run per event on the lag day, whatever its type', async () => {
+    // Mirror of the time_before_event case: `eventType` narrowing was
+    // removed in the 2026-08-13 sweep because nothing in the app
+    // writes `events.event_type`.
     const coupleId = await seedCouple(user)
     const automationId = await seedAutomation(user, 7, { eventType: 'reception' })
     await seedEvent(user, coupleId, isoDateOffset(-7), { eventType: 'reception' })
@@ -174,7 +177,7 @@ describe('time_after_event time-emitter', () => {
       .from('automation_runs' as never)
       .select('id, automation_id')
       .eq('automation_id', automationId)
-    expect(runs ?? []).toHaveLength(1)
+    expect(runs ?? []).toHaveLength(2)
   })
 
   it('respects tenant isolation', async () => {

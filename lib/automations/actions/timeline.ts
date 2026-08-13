@@ -47,14 +47,9 @@ const createTimelineEventSchema = z.object({
   description: z.string().optional(),
   startTime: z.string().optional(),
   durationMin: z.number().int().min(0).optional(),
-  /** Bucket — prep / ceremony / formalities / reception / etc. */
-  category: z.enum(['prep', 'ceremony', 'formalities', 'reception', 'send_off', 'other']).optional(),
-  /** Contact id of the vendor responsible for this cue. */
-  responsibleVendor: z.string().uuid().optional(),
-  /** Cue type — music / mic / lighting / video / av. */
-  cue: z.enum(['none', 'music', 'mic', 'lighting', 'video', 'av']).optional(),
-  /** Minutes of slack to leave after this item. */
-  bufferAfterMin: z.number().int().min(0).optional(),
+  // The old category / responsibleVendor / cue / bufferAfterMin
+  // fields were declared but never read — timeline_items has no such
+  // columns. Passthrough keeps configs saved against them parsing.
 }).passthrough()
 
 const createTimelineEvent: ActionSpec<z.infer<typeof createTimelineEventSchema>> = {
@@ -123,22 +118,30 @@ const updateTimelineEvent: ActionSpec<z.infer<typeof updateTimelineEventSchema>>
 // send_timeline_to_vendors
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Config for the merged "Send run sheet" action.
+ *
+ * The recipient flags absorb two other picker entries that shared this
+ * handler's behaviour: `send_final_run_sheet` (vendors, with the MC's
+ * message silently replaced by canned copy) and
+ * `generate_run_sheet_pdf` (the MC + optionally the couple). One
+ * action, three checkboxes. Vendors default on so a config saved
+ * before the merge — which has no flags — keeps doing exactly what it
+ * did.
+ */
 const sendTimelineToVendorsSchema = z.object({
   eventId: z.string().uuid().optional(),
   message: z
     .string()
     .min(1)
     .default('Here is the latest timeline for {{couple.name}} on {{event.date | friendly}}. Please review and let me know if anything looks off.'),
-  /** Send only to a subset of vendor categories. */
-  vendorFilter: z.array(z.string()).optional(),
-  /** Vendor-friendly format — full timeline vs only their cues. */
-  format: z.enum(['full', 'their_cues_only']).optional(),
-  /** CC the couple primary email. */
-  ccCouple: z.boolean().optional(),
-  /** Attach the run-sheet PDF. */
-  attachRunSheet: z.boolean().optional(),
-  /** Require each vendor to click a confirm link. */
-  requireConfirmation: z.boolean().optional(),
+  sendToVendors: z.boolean().default(true),
+  sendToCouple: z.boolean().default(false),
+  sendToMe: z.boolean().default(false),
+  // The old vendorFilter / format / ccCouple / attachRunSheet /
+  // requireConfirmation fields were declared but never read — the
+  // handler emails every vendor contact the same link. Passthrough
+  // keeps configs saved against them parsing.
 }).passthrough()
 
 const sendTimelineToVendors: ActionSpec<z.infer<typeof sendTimelineToVendorsSchema>> = {
@@ -159,24 +162,31 @@ const sendTimelineToVendors: ActionSpec<z.infer<typeof sendTimelineToVendorsSche
       await supabase.from('events').update({ share_token_enabled: true } as never).eq('id', eventId)
     }
     const url = `${APP_URL}/timeline/${event.share_token}`
-    const recipients = await resolveRecipients(supabase, ctx.couple, { roles: ['vendor'], fallback: 'skip' })
-    if (recipients.length === 0) return { kind: 'ok', output: { skipped: 'no vendor contacts' } }
+
+    const emails = new Set<string>()
+    if (config.sendToVendors) {
+      const vendors = await resolveRecipients(supabase, ctx.couple, { roles: ['vendor'], fallback: 'skip' })
+      for (const v of vendors) if (v.email) emails.add(v.email)
+    }
+    if (config.sendToCouple && ctx.couple.email) emails.add(ctx.couple.email)
+    if (config.sendToMe && ctx.mc.email) emails.add(ctx.mc.email)
+    if (emails.size === 0) return { kind: 'ok', output: { skipped: 'no recipients' } }
+
     const body = renderTemplate(config.message, ctx) + `\n\n${url}`
     let sent = 0
-    for (const r of recipients) {
-      if (!r.email) continue
+    for (const to of emails) {
       await resend().emails.send({
         from: FROM,
-        to: r.email,
-        subject: `Timeline for ${ctx.couple.name} - ${ctx.mc.businessName}`,
+        to,
+        subject: `Run sheet for ${ctx.couple.name} - ${ctx.mc.businessName}`,
         html: wrapAutomationHtml(body, ctx),
         replyTo: ctx.mc.email,
       })
       sent += 1
     }
-    return { kind: 'ok', output: { sent } }
+    return { kind: 'ok', output: { sent, run_sheet_link: url } }
   },
-  ui: { category: 'couple', label: 'Send timeline to vendors', description: 'Email a shareable timeline link to every vendor contact', icon: 'Send' },
+  ui: { category: 'couple', label: 'Send run sheet', description: 'Email the run sheet (timeline) link to vendors, the couple, or yourself', icon: 'Send' },
 }
 
 // ────────────────────────────────────────────────────────────────
