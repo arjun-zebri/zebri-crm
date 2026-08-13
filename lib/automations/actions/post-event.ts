@@ -32,19 +32,13 @@ function resend(): Resend {
 
 const FROM = 'Zebri <noreply@app.zebri.com.au>'
 
+// Subject + body are the whole config: these actions send exactly
+// what the MC wrote. The old templateId / attachAssets / tone /
+// recipientRole / trackEngagement fields were declared but never
+// read. Passthrough keeps configs saved against them parsing.
 const baseSchema = z.object({
   subject: z.string().min(1),
   body: z.string().min(1),
-  /** Pick a saved template instead of providing inline subject/body. */
-  templateId: z.string().optional(),
-  /** Attach assets (welcome PDF, testimonial gallery, brochure). */
-  attachAssets: z.array(z.string()).optional(),
-  /** Override the tone (formal / warm / casual). */
-  tone: z.enum(['formal', 'warm', 'casual']).optional(),
-  /** Recipient role: primary / spouse / both. */
-  recipientRole: z.enum(['primary', 'spouse', 'both']).optional(),
-  /** Enable Resend open/click tracking. */
-  trackEngagement: z.boolean().optional(),
 }).passthrough()
 
 async function sendPreComposed(

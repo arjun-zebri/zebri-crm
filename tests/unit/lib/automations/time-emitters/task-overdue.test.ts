@@ -6,9 +6,8 @@
  * `tests/integration/automations/task-overdue-emitter.test.ts`. These
  * tests pin down the pure logic: which emitted `days_overdue` value a
  * given automation config should fire for, including the "min of 0
- * still means at least 1 day past due" rule and the `daysOverdueMax`
- * window guard. Mirrors the A2 `quote_overdue` / A4 `invoice_overdue`
- * specs.
+ * still means at least 1 day past due" rule. Mirrors the A4
+ * `invoice_overdue` spec.
  */
 
 import { describe, expect, it } from 'vitest'
@@ -73,17 +72,12 @@ describe('task_overdue trigger match()', () => {
     expect(spec!.match(makeEvent(7), {})).toBe(false)
   })
 
-  it('rejects when daysOverdueMax excludes the threshold', () => {
-    // A window like min=5/max=3 can never fire; better to silently
-    // no-op than fire outside the user's stated bound.
+  it('ignores a legacy daysOverdueMax in match()', () => {
+    // The field left the schema in the trigger sweep (an exact-depth
+    // match makes a max either redundant or unsatisfiable). The
+    // emitter keeps its own guard for the never-fire window.
     expect(
       spec!.match(makeEvent(5), { daysOverdueMin: 5, daysOverdueMax: 3 }),
-    ).toBe(false)
-  })
-
-  it('accepts when daysOverdueMax admits the threshold', () => {
-    expect(
-      spec!.match(makeEvent(2), { daysOverdueMin: 2, daysOverdueMax: 10 }),
     ).toBe(true)
   })
 

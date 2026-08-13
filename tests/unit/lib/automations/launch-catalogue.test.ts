@@ -23,14 +23,53 @@ import {
 import { triggerRegistry } from '@/lib/automations/triggers'
 
 describe('launch catalogue — triggers', () => {
-  it('lists exactly the 29 triggers that fire today', () => {
+  it('lists exactly the 26 triggers that fire today', () => {
     // 28 from the launch review + questionnaire_completed (P4 — emitted by
-    // the couple_questionnaires completion DB trigger).
-    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(29)
+    // the couple_questionnaires completion DB trigger), minus
+    // booking_cancelled (retired in the trigger sweep, see below) and
+    // the two portal duplicates folded into "Portal item added".
+    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(26)
+  })
+
+  it('hides the portal triggers folded into "Portal item added"', () => {
+    // They fire on the same INSERTs as section_completed and existed
+    // only to carry a sub-filter, which now lives on that trigger —
+    // so adding one file no longer lights up two picker entries.
+    // Specs and emitters stay, so saved automations keep firing.
+    for (const type of ['couple_uploaded_file', 'couple_added_song_to_playlist'] as const) {
+      expect(isTriggerLaunchVisible(type)).toBe(false)
+      expect(triggerRegistry[type], `${type} must stay in the registry`).toBeDefined()
+    }
+  })
+
+  it('hides the actions folded into their duplicates', () => {
+    // trigger_payment_reminder delegates verbatim to send_invoice;
+    // send_final_run_sheet and generate_run_sheet_pdf shared the
+    // run-sheet link now sent by "Send run sheet" with recipient
+    // checkboxes. Registry entries stay so saved automations resolve.
+    for (const type of [
+      'trigger_payment_reminder',
+      'send_final_run_sheet',
+      'generate_run_sheet_pdf',
+    ] as const) {
+      expect(isActionLaunchVisible(type)).toBe(false)
+      expect(actionRegistry[type], `${type} must stay in the registry`).toBeDefined()
+    }
+    expect(isActionLaunchVisible('send_timeline_to_vendors')).toBe(true)
   })
 
   it('questionnaire_completed is launch-visible (it emits today)', () => {
     expect(isTriggerLaunchVisible('questionnaire_completed')).toBe(true)
+  })
+
+  it('booking_cancelled is gone entirely, not merely hidden', () => {
+    // It tested `status in ('cancelled','lost')`, but those slugs are
+    // not in the seeded couple_statuses set, so it never fired for
+    // anyone. `couple_stage_changed` covers the case properly, with
+    // the MC's own stage names. Retired rather than left in the
+    // picker looking functional.
+    expect(isTriggerLaunchVisible('booking_cancelled' as never)).toBe(false)
+    expect(triggerRegistry['booking_cancelled' as never]).toBeUndefined()
   })
 
   it('every visible trigger is a real registry entry', () => {
@@ -74,7 +113,7 @@ describe('launch catalogue — actions', () => {
   it('lists exactly the 22 actions offered today', () => {
     // 21 from the launch review + send_couple_questionnaire (the
     // couple-questionnaires feature added it to the catalogue).
-    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(22)
+    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(19)
   })
 
   it('every visible action is a real registry entry', () => {

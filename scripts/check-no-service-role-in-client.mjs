@@ -18,10 +18,12 @@ import { extname, join } from 'node:path';
 const ROOTS = ['app', 'components', 'lib'];
 const EXTS = new Set(['.ts', '.tsx', '.mts', '.mjs', '.js']);
 
-// Banned references that indicate the service-role secret on the client.
+// Banned references that indicate a server-only secret on the client.
 const BANNED = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'sb_secret_', // new-style Supabase secret-key prefix
+  'ANTHROPIC_API_KEY', // AI copilot key — server routes only
+  'sk-ant-', // Anthropic key literal prefix
 ];
 
 function walk(dir, out = []) {

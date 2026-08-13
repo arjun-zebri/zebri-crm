@@ -12,7 +12,6 @@
  */
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 
 import { Checkbox } from '@/components/ui/checkbox'
@@ -27,7 +26,7 @@ import {
   APPROVAL_EXPIRY_BEHAVIOUR_LABELS,
   CALENDAR_EVENT_CATEGORIES,
   CALENDAR_EVENT_CATEGORY_LABELS,
-  COMPARISON_OPS,
+  OFFERED_COMPARISON_OPS,
   COMPARISON_OP_LABELS,
   CONSULTATION_LOCATIONS,
   CONSULTATION_LOCATION_LABELS,
@@ -39,8 +38,6 @@ import {
   CONTACT_CATEGORY_LABELS,
   EMAIL_ENGAGEMENT_KINDS,
   EMAIL_ENGAGEMENT_KIND_LABELS,
-  EVENT_CHANGE_FIELDS,
-  EVENT_CHANGE_FIELD_LABELS,
   EVENT_TYPES,
   EVENT_TYPE_LABELS,
   FIELD_MERGE_MODES,
@@ -49,8 +46,6 @@ import {
   PAYMENT_FAILURE_REASON_LABELS,
   PORTAL_COMPLETION_RANGES,
   PORTAL_COMPLETION_RANGE_LABELS,
-  PORTAL_SECTIONS,
-  PORTAL_SECTION_LABELS,
   SIGNER_REQUIREMENTS,
   SIGNER_REQUIREMENT_LABELS,
   SLACK_MENTION_ROLES,
@@ -60,8 +55,9 @@ import {
   WEBHOOK_SOURCES,
   WEBHOOK_SOURCE_LABELS,
 } from '@/lib/automations/trigger-constants'
-import { createClient } from '@/lib/supabase/client'
 import type { ActionType, TriggerType } from '@/types/automations'
+
+import { QuestionnaireChips } from './action-chips'
 
 /* ─── Field primitives (small wrappers around the design system) ─ */
 
@@ -218,7 +214,7 @@ function NumericComparison({
           onChange={(v) => setConfig({ ...config, [opField]: v || undefined })}
           options={[
             { value: '', label: 'Any value' },
-            ...COMPARISON_OPS.map((o) => ({ value: o, label: COMPARISON_OP_LABELS[o] })),
+            ...OFFERED_COMPARISON_OPS.map((o) => ({ value: o, label: COMPARISON_OP_LABELS[o] })),
           ]}
         />
         <NumField
@@ -251,58 +247,19 @@ export function ExtendedTriggerFields({
   triggerType: TriggerType; config: Cfg; setConfig: SetCfg
 }) {
   switch (triggerType) {
-    case 'new_enquiry':
-      return <NewEnquiryExtra config={config} setConfig={setConfig} />
+    // `new_enquiry` has no extras: its full filter set is rendered by
+    // the inspector's TriggerFilterList (see new-enquiry-filters.tsx).
     case 'lead_inactive':
       return <LeadInactiveExtra config={config} setConfig={setConfig} />
     case 'custom_field_changed':
       return <CustomFieldChangedExtra config={config} setConfig={setConfig} />
-    case 'couple_stage_changed':
-      return <CoupleStageChangedExtra config={config} setConfig={setConfig} />
-    case 'booking_cancelled':
-      return <BookingCancelledExtra config={config} setConfig={setConfig} />
-    case 'invoice_created':
-    case 'invoice_sent':
-    case 'payment_received':
-      return <PaymentDocFiltersExtra config={config} setConfig={setConfig} forPayment={triggerType === 'payment_received'} />
-    case 'invoice_due':
-      return <DueExtra config={config} setConfig={setConfig} isInvoice={triggerType === 'invoice_due'} />
-    case 'invoice_overdue':
-      return <OverdueExtra config={config} setConfig={setConfig} isInvoice={triggerType === 'invoice_overdue'} />
     case 'payment_failed':
       return <PaymentFailedExtra config={config} setConfig={setConfig} />
-    case 'contract_created':
-    case 'contract_sent':
-    case 'contract_signed':
-    case 'contract_declined':
-    case 'contract_revoked':
-    case 'contract_expired':
-    case 'document_signed':
-      return <ContractFiltersExtra triggerType={triggerType} config={config} setConfig={setConfig} />
-    case 'event_created':
-    case 'event_updated':
-    case 'event_deleted':
-      return <EventExtra triggerType={triggerType} config={config} setConfig={setConfig} />
-    case 'time_before_event':
-    case 'time_after_event':
-      return <CalendarExtra config={config} setConfig={setConfig} isAfter={triggerType === 'time_after_event'} />
     case 'specific_date_reached':
       return <SpecificDateExtra config={config} setConfig={setConfig} />
-    case 'anniversary_of_event':
-      return <AnniversaryExtra config={config} setConfig={setConfig} />
-    case 'section_completed':
-      return <SectionCompletedExtra config={config} setConfig={setConfig} />
     case 'portal_section_started_not_finished':
       return <PortalAbandonExtra config={config} setConfig={setConfig} />
-    case 'timeline_edited':
-      return <TimelineEditedExtra config={config} setConfig={setConfig} />
-    case 'task_created':
-    case 'task_completed':
-    case 'task_overdue':
-      return <TaskFiltersExtra triggerType={triggerType} config={config} setConfig={setConfig} />
-    case 'contact_created':
     case 'contact_updated':
-    case 'contact_linked_to_couple':
       return <ContactExtra config={config} setConfig={setConfig} />
     case 'manual_fire':
       return <ManualFireExtra config={config} setConfig={setConfig} />
@@ -333,14 +290,6 @@ export function ExtendedTriggerFields({
       return <Hint>This trigger fires whenever the event happens — no extra parameters needed.</Hint>
     case 'vendor_contact_assigned':
       return <VendorAssignedExtra config={config} setConfig={setConfig} />
-    case 'couple_uploaded_file':
-      return <FileUploadExtra config={config} setConfig={setConfig} />
-    case 'couple_added_song_to_playlist':
-      return <SongPlaylistExtra config={config} setConfig={setConfig} />
-    case 'couple_completed_vows':
-      return <VowsExtra config={config} setConfig={setConfig} />
-    case 'questionnaire_completed':
-      return <QuestionnaireCompletedExtra config={config} setConfig={setConfig} />
     case 'subscription_status_changed':
       return <SubscriptionStatusExtra config={config} setConfig={setConfig} />
     case 'subscription_trial_ending':
@@ -366,8 +315,6 @@ export function ExtendedTriggerFields({
 }
 
 /* ── Per-trigger field bundles ── */
-
-const NewEnquiryExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
 function LeadInactiveExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
@@ -409,40 +356,6 @@ function CustomFieldChangedExtra({ config, setConfig }: { config: Cfg; setConfig
   )
 }
 
-const CoupleStageChangedExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
-
-const BookingCancelledExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
-
-const PaymentDocFiltersExtra: (p: { config: Cfg; setConfig: SetCfg; forPayment: boolean }) => null = () => null
-
-function DueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) {
-  if (!isInvoice) return null
-  return (
-    <>
-      <Check
-        label="Only the final payment"
-        checked={(config['isFinalBalance'] as boolean) ?? false}
-        onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })}
-      />
-      <Hint>Skip the earlier stages and only chase the last one.</Hint>
-    </>
-  )
-}
-
-function OverdueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) {
-  if (!isInvoice) return null
-  return (
-    <>
-      <Check
-        label="Only the final payment"
-        checked={(config['isFinalBalance'] as boolean) ?? false}
-        onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })}
-      />
-      <Hint>Skip the earlier stages and only chase the last one.</Hint>
-    </>
-  )
-}
-
 function PaymentFailedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
     <>
@@ -457,36 +370,6 @@ function PaymentFailedExtra({ config, setConfig }: { config: Cfg; setConfig: Set
   )
 }
 
-const ContractFiltersExtra: (p: { triggerType: TriggerType; config: Cfg; setConfig: SetCfg }) => React.JSX.Element = () => (
-  <Hint>This trigger fires whenever the event happens — no extra parameters needed.</Hint>
-)
-
-function EventExtra({
-  triggerType, config, setConfig,
-}: { triggerType: TriggerType; config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      {triggerType === 'event_updated' && (
-        <SelectField
-          label="Only when this field changed (optional)"
-          value={(config['changed'] as string) ?? 'any'}
-          onChange={(v) => setConfig({ ...config, changed: v === 'any' ? undefined : v })}
-          options={enumOptions(EVENT_CHANGE_FIELDS, EVENT_CHANGE_FIELD_LABELS)}
-        />
-      )}
-      {triggerType === 'event_deleted' && (
-        <NumField label="Within N days of event (optional)" value={(config['withinDaysOfEvent'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, withinDaysOfEvent: v || undefined })} />
-      )}
-    </>
-  )
-}
-
-// time_before_event / time_after_event keep only `amount` (days) +
-// `eventType`, both rendered by the base inspector. The Phase-14a extra
-// filters (day-of-week, skip-if-paused, public-holidays, review/referral
-// gates) were dropped per the catalogue review — no extra panel.
-const CalendarExtra: (p: { config: Cfg; setConfig: SetCfg; isAfter: boolean }) => null = () => null
-
 function SpecificDateExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
     <>
@@ -498,10 +381,6 @@ function SpecificDateExtra({ config, setConfig }: { config: Cfg; setConfig: SetC
 
 // anniversary_of_event keeps only `years` + `maxYears` (rendered by the
 // base inspector). The `onlyIf*` gates were dropped — no data backs them.
-const AnniversaryExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
-
-const SectionCompletedExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
-
 function PortalAbandonExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
     <>
@@ -513,23 +392,6 @@ function PortalAbandonExtra({ config, setConfig }: { config: Cfg; setConfig: Set
       />
       <NumField label="Last activity within (days, optional)" value={(config['lastActivityWithinDays'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, lastActivityWithinDays: v || undefined })} />
     </>
-  )
-}
-
-const TimelineEditedExtra: (p: { config: Cfg; setConfig: SetCfg }) => React.JSX.Element = () => (
-  <Hint>This trigger fires whenever the event happens — no extra parameters needed.</Hint>
-)
-
-function TaskFiltersExtra({
-  triggerType, config, setConfig,
-}: { triggerType: TriggerType; config: Cfg; setConfig: SetCfg }) {
-  if (triggerType === 'task_overdue') {
-    return (
-      <NumField label="Maximum days overdue (optional)" value={(config['daysOverdueMax'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, daysOverdueMax: v || undefined })} />
-    )
-  }
-  return (
-    <Hint>This trigger fires whenever the event happens — no extra parameters needed.</Hint>
   )
 }
 
@@ -623,51 +485,6 @@ function VendorAssignedExtra({ config, setConfig }: { config: Cfg; setConfig: Se
 
 // couple_uploaded_file (P1) fires on every file upload — the
 // file_type / section / size filters were dropped (no backing data).
-const FileUploadExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
-
-// couple_added_song_to_playlist (P2) fires on every song added — the
-// playlistKey / songCount filters were dropped (no backing columns).
-const SongPlaylistExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
-
-function QuestionnaireCompletedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  const supabase = createClient()
-  const { data: templates } = useQuery({
-    queryKey: ['questionnaire-templates'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('questionnaire_templates').select('id, name').order('position')
-      if (error) throw error
-      return data ?? []
-    },
-  })
-  return (
-    <SelectField
-      label="Questionnaire (optional)"
-      value={(config['questionnaireTemplateId'] as string) ?? 'any'}
-      onChange={(v) => setConfig({ ...config, questionnaireTemplateId: v === 'any' ? undefined : v })}
-      options={[
-        { value: 'any', label: 'Any questionnaire' },
-        ...(templates ?? []).map((t) => ({ value: t.id, label: t.name })),
-      ]}
-    />
-  )
-}
-
-function VowsExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <SelectField
-      label="Who submitted (optional)"
-      value={(config['who'] as string) ?? 'either'}
-      onChange={(v) => setConfig({ ...config, who: v === 'either' ? undefined : v })}
-      options={[
-        { value: 'either', label: 'Either partner' },
-        { value: 'primary', label: 'Primary only' },
-        { value: 'spouse', label: 'Spouse only' },
-        { value: 'both', label: 'Both partners' },
-      ]}
-    />
-  )
-}
-
 function SubscriptionStatusExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
     <>
@@ -979,25 +796,11 @@ function NewsletterEnqueueForm({ config, updateConfig }: FormProps) {
 }
 
 function SendQuestionnaireForm({ config, updateConfig }: FormProps) {
-  const supabase = createClient()
-  const { data: templates } = useQuery({
-    queryKey: ['questionnaire-templates'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('questionnaire_templates').select('id, name').order('position')
-      if (error) throw error
-      return data ?? []
-    },
-  })
   return (
     <>
-      <SelectField
-        label="Questionnaire"
-        value={(config['questionnaireTemplateId'] as string) ?? ''}
-        onChange={(v) => updateConfig({ questionnaireTemplateId: v || undefined })}
-        options={(templates ?? []).map((t) => ({ value: t.id, label: t.name }))}
-      />
+      <QuestionnaireChips config={config} setConfig={(c) => updateConfig(c)} />
       <TextField
-        label="Title (optional)"
+        label="Title override (optional)"
         value={(config['title'] as string) ?? ''}
         onChange={(v) => updateConfig({ title: v || undefined })}
         placeholder="Defaults to the template name"
@@ -1363,8 +1166,6 @@ export function UpdateTimelineEventExtraFields({ config, updateConfig }: FormPro
 }
 
 /** Extra fields for `send_timeline_to_vendors` / `send_final_run_sheet`. */
-export const SendTimelineExtraFields: (p: FormProps) => null = () => null
-
 /** Extra fields for the post-event email actions (baseSchema-based). */
 export const PostEventExtraFields: (p: FormProps & { isReview?: boolean; isReferral?: boolean }) => null = () => null
 
@@ -1402,17 +1203,6 @@ export function SubFlowExtraFields({ config, setConfig }: { config: Cfg; setConf
       <SelectField label="Pass context" value={(config['passContext'] as string) ?? 'inherit_all'} onChange={(v) => setConfig({ ...config, passContext: v })} options={enumOptions(SUB_FLOW_CONTEXT_MODES, SUB_FLOW_CONTEXT_MODE_LABELS)} />
       <Check label="Wait for the sub-flow to complete before continuing" checked={config['waitForCompletion'] === true} onChange={(v) => setConfig({ ...config, waitForCompletion: v })} />
       <SelectField label="If the sub-flow errors" value={(config['errorBehavior'] as string) ?? 'stop'} onChange={(v) => setConfig({ ...config, errorBehavior: v })} options={[{ value: 'stop', label: 'Stop this run' }, { value: 'continue', label: 'Continue regardless' }]} />
-    </>
-  )
-}
-
-/** Extra fields for `stop`. */
-export function StopExtraFields({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <TextField label="Mark couple status (optional)" value={(config['markCoupleStatus'] as string) ?? ''} onChange={(v) => setConfig({ ...config, markCoupleStatus: v || undefined })} placeholder="e.g. lost" />
-      <TextField label="Apply tag (optional)" value={(config['tagCouple'] as string) ?? ''} onChange={(v) => setConfig({ ...config, tagCouple: v || undefined })} />
-      <Check label="Notify the MC by email" checked={config['notifyMc'] === true} onChange={(v) => setConfig({ ...config, notifyMc: v })} />
     </>
   )
 }

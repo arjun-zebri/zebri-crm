@@ -27,8 +27,6 @@ import { z } from 'zod'
 import type { AutomationEventRow, TriggerType } from '@/types/automations'
 
 import {
-  BOOKING_TIERS,
-  CANCELLATION_REASONS,
   COMPARISON_OPS,
   CONSULTATION_LOCATIONS,
   CONSULTATION_OUTCOMES,
@@ -38,20 +36,17 @@ import {
   EMAIL_ENGAGEMENT_KINDS,
   EVENT_CHANGE_FIELDS,
   EVENT_TYPES,
-  LEAD_SOURCES,
   MONTHS,
   PAYMENT_FAILURE_REASONS,
-  PAYMENT_METHODS,
   PORTAL_COMPLETION_RANGES,
   PORTAL_SECTIONS,
   SEASONS,
-  SIGNER_REQUIREMENTS,
-  TASK_CATEGORIES,
-  TASK_PRIORITIES,
   TIME_UNITS,
   WEBHOOK_SOURCES,
   compareNumber,
   dateMatchesDayOfWeek,
+  monthOfDate,
+  seasonOfDate,
   type ComparisonOp,
   type DayOfWeekBucket,
 } from './trigger-constants'
@@ -92,31 +87,6 @@ function p(event: AutomationEventRow): Record<string, unknown> {
 
 const empty = z.object({}).passthrough()
 
-/** Common Zod shape for the amount-comparison filter (subtotal etc.). */
-const amountFilter = z
-  .object({
-    amountOp: z.enum(COMPARISON_OPS).optional(),
-    amountValue: z.number().nonnegative().optional(),
-    // ── Extended UI fields (Phase 14a — not yet matched) ──────────
-    /** Saved package/tier slug the quote was built from. */
-    tier: z.enum(BOOKING_TIERS).optional(),
-    /** True when one or more add-on line items are on the document. */
-    hasAddOns: z.boolean().optional(),
-    /** True when a discount was applied. */
-    discountApplied: z.boolean().optional(),
-    /** Which revision of the document this is (1 = first send). */
-    versionNumber: z.number().int().min(1).optional(),
-    /** True when the doc is a deposit invoice/quote. */
-    isDeposit: z.boolean().optional(),
-    /** True when the doc is the final balance invoice. */
-    isFinalBalance: z.boolean().optional(),
-    /** True when this is a partial payment (not full amount). */
-    isPartial: z.boolean().optional(),
-    /** Method used (relevant for payment_received). */
-    paymentMethod: z.enum(PAYMENT_METHODS).optional(),
-  })
-  .passthrough()
-
 /**
  * Apply an amount filter to a payload field. Returns true when no
  * threshold is configured (filter absent = match all).
@@ -134,19 +104,103 @@ function amountMatches(
   return compareNumber(num, op, value)
 }
 
-/** Days-until-event filter (anchored on an ISO date in payload). */
+/**
+ * Compare "days from now until `date`" against a threshold. A past
+ * date gives a negative count, so "at most 7 days" matches something
+ * already overdue, which is what an MC expects from that phrasing.
+ *
+ * Returns false for an absent or unparseable date: a filter on how
+ * far away something is cannot be satisfied by something with no date.
+ */
+function daysFromNowMatches(
+  date: string | null,
+  op: ComparisonOp,
+  value: number,
+): boolean {
+  if (!date) return false
+  const ts = new Date(date).getTime()
+  if (Number.isNaN(ts)) return false
+  const days = Math.floor((ts - Date.now()) / (1000 * 60 * 60 * 24))
+  return compareNumber(days, op, value)
+}
+
+/**
+ * Days-until-event filter, anchored on an ISO date in the payload.
+ * Couple-shaped payloads carry the wedding under `event_date`; event
+ * rows carry their own date under `date`, hence the field parameter.
+ */
 function daysUntilEventMatches(
   payload: Record<string, unknown>,
   op: ComparisonOp | undefined,
   value: number | undefined,
+  field: string = 'event_date',
 ): boolean {
   if (op === undefined || value === undefined) return true
-  const raw = payload['event_date']
-  if (!raw) return false
-  const eventTs = new Date(String(raw)).getTime()
-  if (Number.isNaN(eventTs)) return false
-  const days = Math.floor((eventTs - Date.now()) / (1000 * 60 * 60 * 24))
-  return compareNumber(days, op, value)
+  const raw = payload[field]
+  return daysFromNowMatches(raw ? String(raw) : null, op, value)
+}
+
+/**
+ * The wedding-date filter family, shared by every trigger whose
+ * payload carries an `event_date`.
+ *
+ * Optionals are spelled `?: T | undefined` so a caller passing a
+ * `z.infer`-derived config still satisfies this under
+ * `exactOptionalPropertyTypes`; Zod always emits the `| undefined`.
+ */
+interface EventDateConfig {
+  hasEventDate?: boolean | undefined
+  dayOfWeek?: DayOfWeekBucket | undefined
+  eventMonth?: string | undefined
+  season?: string | undefined
+}
+
+/**
+ * Apply the has-a-date / day / month / season filters to a payload
+ * carrying `event_date`. Absent filters match everything.
+ *
+ * The date-derived three are strict about a missing date: a couple
+ * with no wedding date yet hasn't got a December wedding, so it must
+ * not match one.
+ */
+function eventDateMatches(
+  payload: Record<string, unknown>,
+  config: EventDateConfig,
+  field: string = 'event_date',
+): boolean {
+  const eventDate = payload[field] ? String(payload[field]) : null
+
+  if (config.hasEventDate !== undefined && config.hasEventDate !== Boolean(eventDate)) {
+    return false
+  }
+  if (config.dayOfWeek && config.dayOfWeek !== 'any') {
+    if (!eventDate) return false
+    if (!dateMatchesDayOfWeek(eventDate, config.dayOfWeek)) return false
+  }
+  if (config.eventMonth && monthOfDate(eventDate) !== config.eventMonth) return false
+  if (config.season && config.season !== 'any' && seasonOfDate(eventDate) !== config.season) {
+    return false
+  }
+  return true
+}
+
+/**
+ * Zod fragments for the shared filter families. Spread these into a
+ * spec's `z.object({...})` rather than redeclaring the fields, so
+ * every trigger agrees on the config keys the chip UI writes.
+ */
+const eventDateConfigShape = {
+  hasEventDate: z.boolean().optional(),
+  dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
+  // `''` is the inspector's "added but nothing chosen yet" value;
+  // MONTHS has no neutral member the way the other enums have 'any'.
+  eventMonth: z.union([z.enum(MONTHS), z.literal('')]).optional(),
+  season: z.enum(SEASONS).optional(),
+}
+
+const daysUntilEventShape = {
+  daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
+  daysUntilEventValue: z.number().int().optional(),
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -158,31 +212,41 @@ const newEnquiry: TriggerSpec<{
   daysUntilEventOp?: ComparisonOp
   daysUntilEventValue?: number
   hasEventDate?: boolean
-  hasVenue?: boolean
   dayOfWeek?: DayOfWeekBucket
   eventMonth?: string
   season?: string
-  budgetTier?: string
-  referralByContactId?: string
+  initialStatus?: string
 }> = {
   type: 'new_enquiry',
   configSchema: z.object({
-    leadSource: z.enum(LEAD_SOURCES).optional(),
+    // Deliberately a free string rather than `z.enum(LEAD_SOURCES)`:
+    // `couples.lead_source` is a plain text column, and an automation
+    // saved against a source that later disappears from the list must
+    // keep loading (it simply stops matching) instead of failing
+    // validation and blocking every save on the automation.
+    leadSource: z.string().optional(),
     daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
     daysUntilEventValue: z.number().int().optional(),
     hasEventDate: z.boolean().optional(),
-    hasVenue: z.boolean().optional(),
     dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
-    eventMonth: z.enum(MONTHS).optional(),
+    // `''` is the inspector's "added but nothing chosen yet" value, and
+    // MONTHS has no neutral member of its own the way DAY_OF_WEEK_BUCKETS
+    // and SEASONS have `'any'`. The matcher reads it as no narrowing.
+    eventMonth: z.union([z.enum(MONTHS), z.literal('')]).optional(),
     season: z.enum(SEASONS).optional(),
-    budgetTier: z.enum(BOOKING_TIERS).optional(),
-    referralByContactId: z.string().uuid().optional(),
+    initialStatus: z.string().optional(),
   }).passthrough(),
+  // Every filter below is enforced against the `new_enquiry` payload
+  // emitted by `tg_couples_emit_new_enquiry` (couple_id, couple_name,
+  // lead_source, status, event_date). Filters with no backing data
+  // (budget tier, referring contact, venue) were removed rather than
+  // left inert: a filter that can never match reads as a broken app.
   match(event, config) {
     const payload = p(event)
     if (config.leadSource && payload.lead_source !== config.leadSource) return false
+    if (config.initialStatus && payload.status !== config.initialStatus) return false
     if (!daysUntilEventMatches(payload, config.daysUntilEventOp, config.daysUntilEventValue)) return false
-    return true
+    return eventDateMatches(payload, config)
   },
   ui: {
     category: 'lead',
@@ -262,28 +326,48 @@ const customFieldChanged: TriggerSpec<{
 const coupleStageChanged: TriggerSpec<{
   toStatus?: string
   fromStatus?: string
+  leadSource?: string
   daysUntilEventOp?: ComparisonOp
   daysUntilEventValue?: number
-  timeInPreviousStageOp?: ComparisonOp
-  timeInPreviousStageDays?: number
-  triggeredBy?: 'any' | 'mc' | 'automation' | 'payment' | 'portal'
+  hasEventDate?: boolean
+  dayOfWeek?: DayOfWeekBucket
+  eventMonth?: string
+  season?: string
 }> = {
   type: 'couple_stage_changed',
   configSchema: z.object({
+    // Statuses and lead source are free strings, not enums: both are
+    // user-owned values (`couple_statuses` rows, `couples.lead_source`
+    // text), and an automation saved against one that later disappears
+    // has to keep parsing in the dispatcher. It simply stops matching
+    // rather than failing validation and disabling the automation.
     toStatus: z.string().optional(),
     fromStatus: z.string().optional(),
+    leadSource: z.string().optional(),
     daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
     daysUntilEventValue: z.number().int().optional(),
-    timeInPreviousStageOp: z.enum(COMPARISON_OPS).optional(),
-    timeInPreviousStageDays: z.number().int().optional(),
-    triggeredBy: z.enum(['any', 'mc', 'automation', 'payment', 'portal']).optional(),
+    hasEventDate: z.boolean().optional(),
+    dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
+    // `''` is the inspector's "added but nothing chosen yet" value, and
+    // MONTHS has no neutral member of its own the way DAY_OF_WEEK_BUCKETS
+    // and SEASONS have `'any'`. The matcher reads it as no narrowing.
+    eventMonth: z.union([z.enum(MONTHS), z.literal('')]).optional(),
+    season: z.enum(SEASONS).optional(),
   }).passthrough(),
+  // Every filter below is enforced against the payload emitted by
+  // `tg_couples_emit_stage_changed` (couple_id, couple_name,
+  // from_status, to_status, lead_source, event_date). `timeInPreviousStage*`
+  // and `triggeredBy` were removed rather than left inert: nothing
+  // records when a couple entered its previous stage, and the DB
+  // trigger cannot see whether an MC, an automation or the portal
+  // made the change.
   match(event, config) {
     const payload = p(event)
     if (config.toStatus && payload.to_status !== config.toStatus) return false
     if (config.fromStatus && payload.from_status !== config.fromStatus) return false
+    if (config.leadSource && payload.lead_source !== config.leadSource) return false
     if (!daysUntilEventMatches(payload, config.daysUntilEventOp, config.daysUntilEventValue)) return false
-    return true
+    return eventDateMatches(payload, config)
   },
   ui: {
     category: 'pipeline',
@@ -293,75 +377,120 @@ const coupleStageChanged: TriggerSpec<{
   },
 }
 
-const bookingCancelled: TriggerSpec<{
-  daysUntilEventOp?: ComparisonOp
-  daysUntilEventValue?: number
-  cancellationReason?: string
-  depositAlreadyPaid?: boolean
-  daysSinceBookedOp?: ComparisonOp
-  daysSinceBookedValue?: number
-}> = {
-  type: 'booking_cancelled',
-  configSchema: z.object({
-    daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
-    daysUntilEventValue: z.number().int().optional(),
-    cancellationReason: z.enum(CANCELLATION_REASONS).optional(),
-    depositAlreadyPaid: z.boolean().optional(),
-    daysSinceBookedOp: z.enum(COMPARISON_OPS).optional(),
-    daysSinceBookedValue: z.number().int().optional(),
-  }).passthrough(),
-  match(event, config) {
-    return daysUntilEventMatches(p(event), config.daysUntilEventOp, config.daysUntilEventValue)
-  },
-  ui: {
-    category: 'pipeline',
-    label: 'Booking cancelled',
-    description: 'When a couple cancels their booking',
-    icon: 'XCircle',
-  },
-}
-
 // ────────────────────────────────────────────────────────────────
 // Quotes / invoices / payments
 // ────────────────────────────────────────────────────────────────
 
-type AmountConfig = { amountOp?: ComparisonOp; amountValue?: number }
+/**
+ * Config shape for {@link invoiceCreated}, declared as a schema first
+ * so the spec's type parameter is `z.infer` of it rather than a
+ * hand-written twin. The two drift under
+ * `exactOptionalPropertyTypes` otherwise: Zod emits `?: T | undefined`
+ * for an optional field and a hand-written `?: T` is not assignable
+ * to it.
+ */
+const invoiceCreatedConfig = z.object({
+  amountOp: z.enum(COMPARISON_OPS).optional(),
+  amountValue: z.number().nonnegative().optional(),
+  hasDiscount: z.boolean().optional(),
+  hasDueDate: z.boolean().optional(),
+  dueInDaysOp: z.enum(COMPARISON_OPS).optional(),
+  dueInDaysValue: z.number().int().optional(),
+  hasEventDate: z.boolean().optional(),
+  dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
+  // `''` is the inspector's "added but nothing chosen yet" value, and
+  // MONTHS has no neutral member of its own the way DAY_OF_WEEK_BUCKETS
+  // and SEASONS have `'any'`. The matcher reads it as no narrowing.
+  eventMonth: z.union([z.enum(MONTHS), z.literal('')]).optional(),
+  season: z.enum(SEASONS).optional(),
+}).passthrough()
 
-function amountSpec<T extends string>(
-  type: T,
-  ui: TriggerUi,
-  payloadField: string = 'subtotal',
-): TriggerSpec<AmountConfig> {
-  return {
-    type: type as TriggerType,
-    configSchema: amountFilter as z.ZodSchema<AmountConfig>,
-    match(event, config) {
-      return amountMatches(p(event), payloadField, config.amountOp, config.amountValue)
-    },
-    ui,
-  }
+const invoiceCreated: TriggerSpec<z.infer<typeof invoiceCreatedConfig>> = {
+  type: 'invoice_created',
+  configSchema: invoiceCreatedConfig,
+  match: invoiceDocMatch,
+  ui: {
+    category: 'payment',
+    label: 'Invoice created',
+    description: 'When an invoice is created as a draft',
+    icon: 'FilePlus2',
+  },
 }
 
-const invoiceCreated = amountSpec('invoice_created', {
-  category: 'payment',
-  label: 'Invoice created',
-  description: 'When an invoice is created as a draft',
-  icon: 'FilePlus2',
-})
+/**
+ * Shared matcher for the invoice document triggers (`invoice_created`
+ * and `invoice_sent`): both payloads carry the same fields after the
+ * 20260813030000 enrichment, so they narrow identically.
+ */
+function invoiceDocMatch(
+  event: AutomationEventRow,
+  config: z.infer<typeof invoiceCreatedConfig>,
+): boolean {
+  const payload = p(event)
+  // `total`, not `subtotal`: the filter compares the number the couple
+  // is shown, net of discount and inclusive of tax. The emit site
+  // computes it; `subtotal` stays in the payload for variables.
+  if (!amountMatches(payload, 'total', config.amountOp, config.amountValue)) return false
 
-const invoiceSent = amountSpec('invoice_sent', {
-  category: 'payment',
-  label: 'Invoice sent',
-  description: 'When an invoice share link goes live',
-  icon: 'Send',
-})
+  if (config.hasDiscount !== undefined) {
+    const type = payload['discount_type']
+    const value = payload['discount_value']
+    // A discount row with a zero value is not a discount. Same test
+    // the public totals block applies before rendering a discount line.
+    const has = Boolean(type) && typeof value === 'number' && value > 0
+    if (has !== config.hasDiscount) return false
+  }
 
-const paymentReceived = amountSpec('payment_received', {
-  category: 'payment',
-  label: 'Payment received',
-  description: 'When a couple makes a payment',
-  icon: 'CreditCard',
-})
+  const dueDate = payload['due_date'] ? String(payload['due_date']) : null
+  if (config.hasDueDate !== undefined && config.hasDueDate !== Boolean(dueDate)) return false
+  if (config.dueInDaysOp !== undefined && config.dueInDaysValue !== undefined) {
+    if (!dueDate) return false
+    if (!daysFromNowMatches(dueDate, config.dueInDaysOp, config.dueInDaysValue)) return false
+  }
+
+  return eventDateMatches(payload, config)
+}
+
+const invoiceSent: TriggerSpec<z.infer<typeof invoiceCreatedConfig>> = {
+  type: 'invoice_sent',
+  configSchema: invoiceCreatedConfig,
+  match: invoiceDocMatch,
+  ui: {
+    category: 'payment',
+    label: 'Invoice sent',
+    description: 'When an invoice share link goes live',
+    icon: 'Send',
+  },
+}
+
+/**
+ * Config for {@link paymentReceived}. Narrower than the invoice-doc
+ * set: at payment time the due date and discount are history, so the
+ * questions left are "how big" and "how close to the wedding".
+ */
+const paymentReceivedConfig = z.object({
+  amountOp: z.enum(COMPARISON_OPS).optional(),
+  amountValue: z.number().nonnegative().optional(),
+  ...daysUntilEventShape,
+  ...eventDateConfigShape,
+}).passthrough()
+
+const paymentReceived: TriggerSpec<z.infer<typeof paymentReceivedConfig>> = {
+  type: 'payment_received',
+  configSchema: paymentReceivedConfig,
+  match(event, config) {
+    const payload = p(event)
+    if (!amountMatches(payload, 'total', config.amountOp, config.amountValue)) return false
+    if (!daysUntilEventMatches(payload, config.daysUntilEventOp, config.daysUntilEventValue)) return false
+    return eventDateMatches(payload, config)
+  },
+  ui: {
+    category: 'payment',
+    label: 'Payment received',
+    description: 'When a couple makes a payment',
+    icon: 'CreditCard',
+  },
+}
 
 /**
  * Does this event's stage satisfy an `isFinalBalance` filter?
@@ -384,19 +513,21 @@ function matchesFinalBalance(payload: Record<string, unknown>, isFinalBalance?: 
   return Boolean(isFinal)
 }
 
-const invoiceDue: TriggerSpec<{
-  days: number
-  notificationCount?: number
-  respectQuietHours?: boolean
-  isFinalBalance?: boolean
-}> = {
+/**
+ * Config for {@link invoiceDue}. `days` is the trigger's required
+ * parameter, not a filter: it names which lead-time event this
+ * automation answers. The old `notificationCount` and
+ * `respectQuietHours` fields are gone; nothing read the first, and
+ * quiet hours are a property of `wait` steps, not triggers.
+ */
+const invoiceDueConfig = z.object({
+  days: z.number().int().min(0).max(180).default(0),
+  isFinalBalance: z.boolean().optional(),
+}).passthrough()
+
+const invoiceDue: TriggerSpec<z.infer<typeof invoiceDueConfig>> = {
   type: 'invoice_due',
-  configSchema: z.object({
-    days: z.number().int().min(0).max(180).default(0),
-    notificationCount: z.number().int().min(1).max(5).optional(),
-    respectQuietHours: z.boolean().optional(),
-    isFinalBalance: z.boolean().optional(),
-  }).passthrough(),
+  configSchema: invoiceDueConfig,
   // The `invoice_due` event is emitted by the time-emitter once per
   // (invoice, lead-time, day) — see `lib/automations/time-emitters/
   // invoice-due.ts`. The emitter stamps the matching lead-time in
@@ -431,21 +562,21 @@ export function invoiceOverdueThresholdDays(config: {
   return Math.max(1, config.daysOverdueMin ?? 1)
 }
 
-const invoiceOverdue: TriggerSpec<{
-  daysOverdueMin?: number
-  daysOverdueMax?: number
-  isFinalBalance?: boolean
-  daysUntilEventOp?: ComparisonOp
-  daysUntilEventValue?: number
-}> = {
+/**
+ * Config for {@link invoiceOverdue}. `daysOverdueMax` is gone: the
+ * matcher requires the emitted depth to equal the threshold exactly,
+ * so a max either repeated the min or made the automation
+ * unsatisfiable. `daysUntilEvent*` is gone too — the overdue payload
+ * carries no event date to compare against.
+ */
+const invoiceOverdueConfig = z.object({
+  daysOverdueMin: z.number().int().min(0).max(365).optional(),
+  isFinalBalance: z.boolean().optional(),
+}).passthrough()
+
+const invoiceOverdue: TriggerSpec<z.infer<typeof invoiceOverdueConfig>> = {
   type: 'invoice_overdue',
-  configSchema: z.object({
-    daysOverdueMin: z.number().int().min(0).max(365).optional(),
-    daysOverdueMax: z.number().int().min(0).max(365).optional(),
-    isFinalBalance: z.boolean().optional(),
-    daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
-    daysUntilEventValue: z.number().int().optional(),
-  }).passthrough(),
+  configSchema: invoiceOverdueConfig,
   // The `invoice_overdue` event is emitted by the time-emitter once
   // per (invoice, threshold, day) — see `lib/automations/
   // time-emitters/invoice-overdue.ts`. The emitter stamps the overdue
@@ -460,9 +591,6 @@ const invoiceOverdue: TriggerSpec<{
     if (!Number.isFinite(emitted)) return false
     const threshold = invoiceOverdueThresholdDays(config)
     if (emitted !== threshold) return false
-    if (config.daysOverdueMax !== undefined && emitted > config.daysOverdueMax) {
-      return false
-    }
     if (!matchesFinalBalance(payload, config.isFinalBalance)) return false
     return true
   },
@@ -487,75 +615,76 @@ const paymentFailed: TriggerSpec<{
 // ────────────────────────────────────────────────────────────────
 
 /**
- * Shared schema for contract-lifecycle triggers — all of them gained
- * the same set of optional filters in Phase 14a UI scaffolding so
- * the picker can offer template / days-until-event / signer
- * narrowing on every contract step.
+ * Shared schema for the contract-lifecycle triggers: the wedding-date
+ * family, joined into every contract payload from the couple.
+ *
+ * The Phase 14a scaffolding fields are gone. `templateUsed` and
+ * `versionNumber` had no column behind them (`contracts` stores its
+ * content inline, not a template reference), and `signerRole` assumed
+ * a two-signer model the e-sign flow doesn't have — whoever opens the
+ * link signs. `.passthrough()` keeps configs saved against them
+ * parsing; they were never rendered or enforced.
  */
 const contractFilterSchema = z.object({
-  daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
-  daysUntilEventValue: z.number().int().optional(),
-  templateUsed: z.string().optional(),
-  versionNumber: z.number().int().min(1).optional(),
-  signerRole: z.enum(SIGNER_REQUIREMENTS).optional(),
+  ...daysUntilEventShape,
+  ...eventDateConfigShape,
 }).passthrough()
 
 type ContractFilterConfig = z.infer<typeof contractFilterSchema>
 
+/** Shared matcher: every contract trigger narrows on the wedding date. */
+function contractMatch(event: AutomationEventRow, config: ContractFilterConfig): boolean {
+  const payload = p(event)
+  if (!daysUntilEventMatches(payload, config.daysUntilEventOp, config.daysUntilEventValue)) return false
+  return eventDateMatches(payload, config)
+}
+
 const contractCreated: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_created',
   configSchema: contractFilterSchema,
-  match: () => true,
+  match: contractMatch,
   ui: { category: 'contract', label: 'Contract created', description: 'When a contract is created as a draft', icon: 'FilePlus2' },
 }
 
 const contractSent: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_sent',
   configSchema: contractFilterSchema,
-  match: () => true,
+  match: contractMatch,
   ui: { category: 'contract', label: 'Contract sent', description: 'When a contract is emailed to the couple', icon: 'Send' },
 }
 
-const contractSigned: TriggerSpec<ContractFilterConfig & {
-  timeToSignHoursOp?: ComparisonOp
-  timeToSignHoursValue?: number
-  signedByBoth?: boolean
-}> = {
+const contractSigned: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_signed',
-  configSchema: contractFilterSchema.extend({
-    timeToSignHoursOp: z.enum(COMPARISON_OPS).optional(),
-    timeToSignHoursValue: z.number().int().min(0).optional(),
-    signedByBoth: z.boolean().optional(),
-  }),
-  match: () => true,
+  configSchema: contractFilterSchema,
+  match: contractMatch,
   ui: { category: 'contract', label: 'Contract signed', description: 'When a couple signs a contract', icon: 'FileSignature' },
 }
 
 const contractDeclined: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_declined',
   configSchema: contractFilterSchema,
-  match: () => true,
+  match: contractMatch,
   ui: { category: 'contract', label: 'Contract declined', description: 'When a couple declines a contract', icon: 'XCircle' },
 }
 
 const contractRevoked: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_revoked',
   configSchema: contractFilterSchema,
-  match: () => true,
+  match: contractMatch,
   ui: { category: 'contract', label: 'Contract revoked', description: 'When you revoke a sent contract', icon: 'Undo2' },
 }
 
 const contractExpired: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_expired',
   configSchema: contractFilterSchema,
-  match: () => true,
+  match: contractMatch,
   ui: { category: 'contract', label: 'Contract expired', description: 'When a contract passes its expiry without being signed', icon: 'CalendarX' },
 }
 
 const documentSigned: TriggerSpec<ContractFilterConfig> = {
   type: 'document_signed',
   configSchema: contractFilterSchema,
-  match: () => true,
+  match: contractMatch,
   ui: { category: 'contract', label: 'Document signed', description: 'Alias of contract signed', icon: 'PenTool' },
 }
 
@@ -563,27 +692,33 @@ const documentSigned: TriggerSpec<ContractFilterConfig> = {
 // Events (couple-owned ceremony / rehearsal / reception rows)
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Filters over an event row itself. The row's own `date` is
+ * non-nullable, so the family here skips the has-a-date question the
+ * couple triggers carry (`hasEventDate` in the shape is simply never
+ * written by the event chip set).
+ *
+ * Deliberately absent, deleted in the trigger sweep:
+ * - `eventType` — the app never writes it; every row holds the column
+ *   default `'ceremony'`, so the filter could only match everything
+ *   or nothing.
+ * - `guestCount*`, `isDestination` — no columns back them.
+ */
 const eventFilter = z.object({
-  eventType: z.enum(EVENT_TYPES).optional(),
-  dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
-  month: z.enum(MONTHS).optional(),
-  season: z.enum(SEASONS).optional(),
-  daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
-  daysUntilEventValue: z.number().int().optional(),
+  ...daysUntilEventShape,
+  ...eventDateConfigShape,
   hasVenue: z.boolean().optional(),
-  isDestination: z.boolean().optional(),
-  guestCountOp: z.enum(COMPARISON_OPS).optional(),
-  guestCountValue: z.number().int().min(0).optional(),
 }).passthrough()
 
 type EventFilterConfig = z.infer<typeof eventFilter>
 
 function eventTriggerMatch(event: AutomationEventRow, config: EventFilterConfig): boolean {
   const payload = p(event)
-  if (config.eventType && payload.event_type !== config.eventType) return false
-  if (config.dayOfWeek && config.dayOfWeek !== 'any') {
-    const dateStr = (payload.date as string | undefined) ?? null
-    if (!dateMatchesDayOfWeek(dateStr, config.dayOfWeek as DayOfWeekBucket)) return false
+  if (!daysUntilEventMatches(payload, config.daysUntilEventOp, config.daysUntilEventValue, 'date')) return false
+  if (!eventDateMatches(payload, config, 'date')) return false
+  if (config.hasVenue !== undefined) {
+    const venue = typeof payload.venue === 'string' ? payload.venue.trim() : ''
+    if (config.hasVenue !== (venue.length > 0)) return false
   }
   return true
 }
@@ -605,6 +740,9 @@ const eventUpdated: TriggerSpec<EventFilterConfig & { changed?: string }> = {
   configSchema: eventFilter.extend({
     changed: z.enum(EVENT_CHANGE_FIELDS).optional(),
   }),
+  // `changed` narrows to date / venue moves — the two fields whose
+  // previous value is in the payload. The legacy enum members
+  // (guest_count etc.) parse but match everything, as they always did.
   match(event, config) {
     if (!eventTriggerMatch(event, config)) return false
     if (config.changed && config.changed !== 'any') {
@@ -640,28 +778,27 @@ const eventDeleted: TriggerSpec<EventFilterConfig & { withinDaysOfEvent?: number
 // Calendar (tick-emitted, anchored to event_date)
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Config for the tick-emitted day-offset triggers.
+ *
+ * `amount` is the trigger's required parameter (which lead/lag event
+ * this automation answers); `unit` stays day-grain (locked
+ * 2026-06-14 — the daily cron can't serve sub-day offsets) and is
+ * kept in the schema because the emitter checks it. The wedding-date
+ * family narrows on the event's own date. The seven Phase 14a
+ * extras (time of day, public holidays, review / referral state,
+ * pause and status checks) are gone — nothing read any of them, and
+ * pause handling is the runner's job, not per-trigger config.
+ */
 const calendarConfig = z.object({
-  amount: z.number().int().min(0),
-  // Day-grain only (locked 2026-06-14 — see automations-wiring.md). The
-  // daily cron can't serve sub-day offsets without Vercel Pro, so the
-  // emitter only acts on `unit: 'days'` and the inspector offers no unit
-  // picker. Default to days so a config saved without a unit still fires.
+  // Defaulted so a config holding only an optional filter still
+  // parses: the chip UI shows 7 before the MC edits it, and the
+  // dispatcher must agree with what's on screen.
+  amount: z.number().int().min(0).default(7),
   unit: z.enum(TIME_UNITS).default('days'),
-  eventType: z.enum(EVENT_TYPES).optional(),
-  /** Time of day (HH:MM, 24h) the reminder should fire. */
-  timeOfDay: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  /** Only fire when the resolved trigger time falls on this day-of-week bucket. */
   dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
-  /** Skip couples whose automations are currently paused. */
-  skipIfPaused: z.boolean().optional(),
-  /** Only fire when couple status matches. */
-  eventStatus: z.string().optional(),
-  /** Skip the fire if today is an Australian public holiday. */
-  respectPublicHolidays: z.boolean().optional(),
-  /** Skip if the couple has already left a post-event review. */
-  onlyIfNoReviewPosted: z.boolean().optional(),
-  /** Skip if the couple has already referred someone. */
-  onlyIfNotReferred: z.boolean().optional(),
+  eventMonth: z.union([z.enum(MONTHS), z.literal('')]).optional(),
+  season: z.enum(SEASONS).optional(),
 }).passthrough()
 
 type CalendarConfig = z.infer<typeof calendarConfig>
@@ -677,8 +814,7 @@ const timeBeforeEvent: TriggerSpec<CalendarConfig> = {
     const payload = p(event)
     const emitted = Number(payload.days_before)
     if (!Number.isFinite(emitted) || emitted !== config.amount) return false
-    if (config.eventType && payload.event_type !== config.eventType) return false
-    return true
+    return eventDateMatches(payload, config, 'date')
   },
   ui: {
     category: 'calendar',
@@ -697,8 +833,7 @@ const timeAfterEvent: TriggerSpec<CalendarConfig> = {
     const payload = p(event)
     const emitted = Number(payload.days_after)
     if (!Number.isFinite(emitted) || emitted !== config.amount) return false
-    if (config.eventType && payload.event_type !== config.eventType) return false
-    return true
+    return eventDateMatches(payload, config, 'date')
   },
   ui: {
     category: 'calendar',
@@ -732,20 +867,16 @@ const specificDateReached: TriggerSpec<{
 
 const anniversaryOfEvent: TriggerSpec<{
   years: number
-  maxYears?: number
-  onlyIfMarriedByMe?: boolean
-  onlyIfHadGoodOutcome?: boolean
+  maxYears?: number | undefined
 }> = {
   type: 'anniversary_of_event',
   configSchema: z.object({
     years: z.number().int().min(1).max(50).default(1),
     maxYears: z.number().int().min(1).max(50).optional(),
-    onlyIfMarriedByMe: z.boolean().optional(),
-    onlyIfHadGoodOutcome: z.boolean().optional(),
   }).passthrough(),
   // The emitter publishes one event per (event, years-since) on the
   // anniversary day; narrow to this automation's year (or year..maxYears
-  // range). `onlyIf*` filters are dropped — no data backs them.
+  // range). The `onlyIf*` fields are deleted — no data ever backed them.
   match: (event, config) => {
     const payload = p(event)
     const yearsSince = Number(payload.years_since)
@@ -767,32 +898,90 @@ const anniversaryOfEvent: TriggerSpec<{
 // Client portal
 // ────────────────────────────────────────────────────────────────
 
-const sectionCompleted: TriggerSpec<{
-  section?: string
-  category?: string
-  completedWithinDaysOfEvent?: number
-  completionDurationHoursOp?: ComparisonOp
-  completionDurationHoursValue?: number
-}> = {
+/**
+ * Config for {@link sectionCompleted}. Only `section` remains: the
+ * emitters fire on people / songs / files inserts and stamp which one,
+ * so that is the whole narrowing the data supports. The old
+ * `category`, duration and days-of-event fields had nothing behind
+ * them (`category` meant different things per section and the portal
+ * records no completion timing).
+ */
+/**
+ * Config for {@link sectionCompleted}.
+ *
+ * `section` picks which portal list the item landed in; the rest are
+ * the sub-filters that used to justify a whole separate trigger each.
+ * They are scoped to one section by the chip UI (`personType` only
+ * offers itself when section is People, and so on) and by the matcher
+ * below, which reads each against the payload key that section stamps.
+ */
+const sectionCompletedConfig = z.object({
+  // `''` is the chip's "added but nothing chosen yet" value, same
+  // convention as eventMonth. The matcher reads it as no narrowing.
+  section: z.union([z.enum(PORTAL_SECTIONS), z.literal('')]).optional(),
+  /** People: partner / bridal_party / family. */
+  personType: z.string().optional(),
+  /** Songs: the portal slot key (first_dance, avoid, …). */
+  songCategory: z.string().optional(),
+  /** Files: size in bytes, compared against `file_size`. */
+  sizeBytesOp: z.enum(COMPARISON_OPS).optional(),
+  sizeBytesValue: z.number().int().min(0).optional(),
+}).passthrough()
+
+/**
+ * Fires once per item the couple adds to their portal — a person, a
+ * song, a file.
+ *
+ * The type string is still `section_completed` (renaming it would
+ * orphan every saved automation), but the label is not: the emitters
+ * are AFTER INSERT triggers on `portal_people` / `portal_songs` /
+ * `portal_files`, so a couple filling seven song slots fires this
+ * seven times. It never meant "completed", and "Portal section
+ * completed" promised an MC something it could not deliver — an
+ * automation reading the old label would have emailed them per song.
+ *
+ * It is now the only portal-item trigger in the picker.
+ * `couple_uploaded_file` and `couple_added_song_to_playlist` fired on
+ * these same two inserts and existed only to carry a sub-filter this
+ * one lacked — so adding a file lit up two triggers and emitted two
+ * events. Those sub-filters moved here; the two specs stay in the
+ * registry (and keep their emitters) so saved automations still fire,
+ * but they are gone from the picker.
+ */
+const sectionCompleted: TriggerSpec<z.infer<typeof sectionCompletedConfig>> = {
   type: 'section_completed',
-  configSchema: z.object({
-    section: z.enum(PORTAL_SECTIONS).optional(),
-    category: z.string().optional(),
-    completedWithinDaysOfEvent: z.number().int().min(0).max(365).optional(),
-    completionDurationHoursOp: z.enum(COMPARISON_OPS).optional(),
-    completionDurationHoursValue: z.number().int().min(0).optional(),
-  }).passthrough(),
+  configSchema: sectionCompletedConfig,
+  // Each sub-filter is scoped to the section that owns it, and is
+  // ignored otherwise. Switching the section chip hides the old
+  // section's sub-filter but leaves its keys in the saved config;
+  // enforcing a leftover file-size rule against a songs event — which
+  // carries no `file_size` — would fail every time and leave the MC
+  // with an automation that never runs and nothing on screen to
+  // explain why. It also matters that people and songs both stamp
+  // `category`: unscoped, a song-slot filter would read a person's
+  // type as a match.
   match(event, config) {
     const payload = p(event)
     if (config.section && payload.section !== config.section) return false
-    if (config.category && payload.category !== config.category) return false
-    return true
+
+    switch (config.section) {
+      case 'people':
+        return !config.personType || payload.category === config.personType
+      case 'songs':
+        return !config.songCategory || payload.category === config.songCategory
+      case 'files':
+        return amountMatches(payload, 'file_size', config.sizeBytesOp, config.sizeBytesValue)
+      default:
+        // No section chosen: the sub-filters are unreachable in the UI,
+        // so anything present is leftover and does not narrow.
+        return true
+    }
   },
   ui: {
     category: 'portal',
-    label: 'Portal section completed',
-    description: 'When the couple submits people, songs, files or timeline',
-    icon: 'CheckSquare',
+    label: 'Portal item added',
+    description: 'When the couple adds a person, song or file to their portal',
+    icon: 'FilePlus2',
   },
 }
 
@@ -813,22 +1002,25 @@ const portalSectionStartedNotFinished: TriggerSpec<{
   ui: { category: 'portal', label: 'Portal section started but not finished', description: 'Abandonment recovery', icon: 'CornerDownLeft' },
 }
 
-const timelineEdited: TriggerSpec<{
-  editedBy?: 'any' | 'mc' | 'couple' | 'vendor'
-  itemsAddedOp?: ComparisonOp
-  itemsAddedValue?: number
-  itemsRemovedOp?: ComparisonOp
-  itemsRemovedValue?: number
-}> = {
+/**
+ * Config for {@link timelineEdited}. The DB trigger stamps `op`
+ * (INSERT vs UPDATE) on each emitted row, which backs an added /
+ * changed distinction. The old `editedBy` and item-count fields are
+ * gone: the trigger cannot see who made the edit, and it fires per
+ * row, so there is no batch to count.
+ */
+const timelineEditedConfig = z.object({
+  change: z.enum(['any', 'added', 'changed']).optional(),
+}).passthrough()
+
+const timelineEdited: TriggerSpec<z.infer<typeof timelineEditedConfig>> = {
   type: 'timeline_edited',
-  configSchema: z.object({
-    editedBy: z.enum(['any', 'mc', 'couple', 'vendor']).optional(),
-    itemsAddedOp: z.enum(COMPARISON_OPS).optional(),
-    itemsAddedValue: z.number().int().min(0).optional(),
-    itemsRemovedOp: z.enum(COMPARISON_OPS).optional(),
-    itemsRemovedValue: z.number().int().min(0).optional(),
-  }).passthrough(),
-  match: () => true,
+  configSchema: timelineEditedConfig,
+  match(event, config) {
+    if (!config.change || config.change === 'any') return true
+    const op = p(event).op
+    return config.change === 'added' ? op === 'INSERT' : op === 'UPDATE'
+  },
   ui: {
     category: 'portal',
     label: 'Timeline edited',
@@ -841,19 +1033,48 @@ const timelineEdited: TriggerSpec<{
 // Task
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Shared shape for the task triggers. Priority and type are the MC's
+ * own `task_priorities` / `task_types` option names — free strings,
+ * because the lists are user-editable and a saved config must keep
+ * parsing after a rename (it simply stops matching). The old
+ * `taskCategory` enum (admin / ceremony / …) and hardcoded
+ * low–urgent priority list matched nothing the app writes.
+ */
 const taskFilterSchema = z.object({
-  taskCategory: z.enum(TASK_CATEGORIES).optional(),
-  taskPriority: z.enum(TASK_PRIORITIES).optional(),
-  dueWithinDaysOp: z.enum(COMPARISON_OPS).optional(),
-  dueWithinDaysValue: z.number().int().optional(),
+  taskPriority: z.string().optional(),
+  taskType: z.string().optional(),
 }).passthrough()
 
 type TaskFilterConfig = z.infer<typeof taskFilterSchema>
 
-const taskCreated: TriggerSpec<TaskFilterConfig> = {
+/** Priority / type narrowing shared by all three task triggers. */
+function taskOptionsMatch(payload: Record<string, unknown>, config: TaskFilterConfig): boolean {
+  if (config.taskPriority && payload.priority !== config.taskPriority) return false
+  if (config.taskType && payload.task_type !== config.taskType) return false
+  return true
+}
+
+const taskCreatedConfig = taskFilterSchema.extend({
+  hasDueDate: z.boolean().optional(),
+  dueInDaysOp: z.enum(COMPARISON_OPS).optional(),
+  dueInDaysValue: z.number().int().optional(),
+})
+
+const taskCreated: TriggerSpec<z.infer<typeof taskCreatedConfig>> = {
   type: 'task_created',
-  configSchema: taskFilterSchema,
-  match: () => true,
+  configSchema: taskCreatedConfig,
+  match(event, config) {
+    const payload = p(event)
+    if (!taskOptionsMatch(payload, config)) return false
+    const dueDate = payload['due_date'] ? String(payload['due_date']) : null
+    if (config.hasDueDate !== undefined && config.hasDueDate !== Boolean(dueDate)) return false
+    if (config.dueInDaysOp !== undefined && config.dueInDaysValue !== undefined) {
+      if (!dueDate) return false
+      if (!daysFromNowMatches(dueDate, config.dueInDaysOp, config.dueInDaysValue)) return false
+    }
+    return true
+  },
   ui: {
     category: 'task',
     label: 'Task created',
@@ -865,7 +1086,7 @@ const taskCreated: TriggerSpec<TaskFilterConfig> = {
 const taskCompleted: TriggerSpec<TaskFilterConfig> = {
   type: 'task_completed',
   configSchema: taskFilterSchema,
-  match: () => true,
+  match: (event, config) => taskOptionsMatch(p(event), config),
   ui: {
     category: 'task',
     label: 'Task completed',
@@ -891,36 +1112,28 @@ export function taskOverdueThresholdDays(config: {
 }
 
 const taskOverdue: TriggerSpec<TaskFilterConfig & {
-  daysOverdueMin?: number
-  daysOverdueMax?: number
-  assignedTo?: 'any' | 'self' | 'delegated'
+  daysOverdueMin?: number | undefined
 }> = {
   type: 'task_overdue',
   configSchema: taskFilterSchema.extend({
     daysOverdueMin: z.number().int().min(0).max(365).optional(),
-    daysOverdueMax: z.number().int().min(0).max(365).optional(),
-    assignedTo: z.enum(['any', 'self', 'delegated']).optional(),
   }),
   // The `task_overdue` event is emitted by the time-emitter once per
   // (task, threshold, day) — see `lib/automations/time-emitters/
   // task-overdue.ts`. The emitter stamps the overdue depth in
   // `payload.days_overdue`; narrowing here means an automation with
-  // min=7 only fires for the day-7 event, not the day-1 one. Mirrors
-  // `quote_overdue` / `invoice_overdue`. The `taskCategory`,
-  // `taskPriority`, `assignedTo` and `dueWithinDays*` filters are
-  // accepted but not enforced — `task_type` is a free-form per-user
-  // tag (not the `taskCategory` enum), there's no assignee column, and
-  // a "due within N days" filter is meaningless for an overdue task.
+  // min=7 only fires for the day-7 event, not the day-1 one. Priority
+  // and type narrow against the payload (the emitter carries both).
+  // `assignedTo` is deleted — there is no assignee column — and
+  // `daysOverdueMax` with an exact-depth match was either redundant
+  // or unsatisfiable.
   match: (event, config) => {
     const payload = p(event)
     const emitted = Number(payload.days_overdue)
     if (!Number.isFinite(emitted)) return false
     const threshold = taskOverdueThresholdDays(config)
     if (emitted !== threshold) return false
-    if (config.daysOverdueMax !== undefined && emitted > config.daysOverdueMax) {
-      return false
-    }
-    return true
+    return taskOptionsMatch(payload, config)
   },
   ui: {
     category: 'task',
@@ -934,12 +1147,16 @@ const taskOverdue: TriggerSpec<TaskFilterConfig & {
 // Contacts (vendors / family / bridal party / other people)
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Filters over a contact row. `category` matches the fixed vendor
+ * list the contact modal writes (`''` is the chip's nothing-chosen
+ * value). `isPrimaryVendorForCouple` and `region` are deleted — no
+ * columns back them.
+ */
 const contactFilter = z.object({
-  category: z.enum(CONTACT_CATEGORIES).optional(),
+  category: z.union([z.enum(CONTACT_CATEGORIES), z.literal('')]).optional(),
   hasEmail: z.boolean().optional(),
   hasPhone: z.boolean().optional(),
-  isPrimaryVendorForCouple: z.boolean().optional(),
-  region: z.string().optional(),
 }).passthrough()
 
 type ContactFilterConfig = z.infer<typeof contactFilter>
@@ -947,9 +1164,19 @@ type ContactFilterConfig = z.infer<typeof contactFilter>
 function contactTriggerMatch(event: AutomationEventRow, config: ContactFilterConfig): boolean {
   const payload = p(event)
   if (config.category && payload.category !== config.category) return false
-  if (config.hasEmail === true && !payload.email) return false
+  if (config.hasEmail !== undefined && config.hasEmail !== Boolean(payload.email)) return false
+  if (config.hasPhone !== undefined && config.hasPhone !== Boolean(payload.phone)) return false
   return true
 }
+
+/**
+ * The linked payload carries only category + name (it comes off the
+ * join row, not the contact), so the linked trigger narrows on
+ * category alone.
+ */
+const contactLinkedConfig = z.object({
+  category: z.union([z.enum(CONTACT_CATEGORIES), z.literal('')]).optional(),
+}).passthrough()
 
 const contactCreated: TriggerSpec<ContactFilterConfig> = {
   type: 'contact_created',
@@ -975,10 +1202,13 @@ const contactUpdated: TriggerSpec<ContactFilterConfig> = {
   },
 }
 
-const contactLinkedToCouple: TriggerSpec<ContactFilterConfig> = {
+const contactLinkedToCouple: TriggerSpec<z.infer<typeof contactLinkedConfig>> = {
   type: 'contact_linked_to_couple',
-  configSchema: contactFilter,
-  match: contactTriggerMatch,
+  configSchema: contactLinkedConfig,
+  match(event, config) {
+    if (!config.category) return true
+    return p(event).category === config.category
+  },
   ui: {
     category: 'contact',
     label: 'Contact linked to a couple',
@@ -1204,35 +1434,44 @@ const vendorContactAssigned: TriggerSpec<{
 
 // ── Portal interactions ────────────────────────────────────────
 
-const coupleUploadedFile: TriggerSpec<{
-  fileType?: string
-  section?: string
-  sizeBytesOp?: ComparisonOp
-  sizeBytesValue?: number
-}> = {
+/**
+ * Config for {@link coupleUploadedFile}. Size is the one field the
+ * payload backs (`portal_files` stores no type or section column, so
+ * those filters are gone). The UI takes megabytes and writes bytes.
+ */
+const coupleUploadedFileConfig = z.object({
+  sizeBytesOp: z.enum(COMPARISON_OPS).optional(),
+  sizeBytesValue: z.number().int().min(0).optional(),
+}).passthrough()
+
+const coupleUploadedFile: TriggerSpec<z.infer<typeof coupleUploadedFileConfig>> = {
   type: 'couple_uploaded_file',
-  configSchema: z.object({
-    fileType: z.string().optional(),
-    section: z.enum(PORTAL_SECTIONS).optional(),
-    sizeBytesOp: z.enum(COMPARISON_OPS).optional(),
-    sizeBytesValue: z.number().int().min(0).optional(),
-  }).passthrough(),
-  match: () => true,
+  configSchema: coupleUploadedFileConfig,
+  match(event, config) {
+    return amountMatches(p(event), 'file_size', config.sizeBytesOp, config.sizeBytesValue)
+  },
   ui: { category: 'portal', label: 'Couple uploaded a file', description: 'Couple added a file to the portal', icon: 'Upload' },
 }
 
-const coupleAddedSongToPlaylist: TriggerSpec<{
-  playlistKey?: 'entrance' | 'exit' | 'first_dance' | 'ceremony' | 'reception' | 'other'
-  songCountOp?: ComparisonOp
-  songCountValue?: number
-}> = {
+/**
+ * Config for {@link coupleAddedSongToPlaylist}. `category` matches the
+ * payload's portal slot key (entry_partner1 … avoid). A free string,
+ * not an enum: MCs can define per-couple custom categories, and a
+ * saved config must keep parsing whatever key it was saved with. The
+ * old `playlistKey` values (entrance, exit…) never matched anything —
+ * they were invented names, not the portal's real slot keys.
+ */
+const coupleAddedSongConfig = z.object({
+  category: z.string().optional(),
+}).passthrough()
+
+const coupleAddedSongToPlaylist: TriggerSpec<z.infer<typeof coupleAddedSongConfig>> = {
   type: 'couple_added_song_to_playlist',
-  configSchema: z.object({
-    playlistKey: z.enum(['entrance', 'exit', 'first_dance', 'ceremony', 'reception', 'other']).optional(),
-    songCountOp: z.enum(COMPARISON_OPS).optional(),
-    songCountValue: z.number().int().min(0).optional(),
-  }).passthrough(),
-  match: () => true,
+  configSchema: coupleAddedSongConfig,
+  match(event, config) {
+    if (!config.category) return true
+    return p(event).category === config.category
+  },
   ui: { category: 'portal', label: 'Song added to playlist', description: 'Couple added a song — useful for DJ coordination', icon: 'Music' },
 }
 
@@ -1258,8 +1497,9 @@ const questionnaireCompleted: TriggerSpec<{
 }> = {
   type: 'questionnaire_completed',
   configSchema: z.object({
-    /** Optional narrowing to questionnaires sent from one template. */
-    questionnaireTemplateId: z.string().uuid().optional(),
+    /** Optional narrowing to questionnaires sent from one template.
+     * `''` is the chip's "added but nothing chosen yet" value. */
+    questionnaireTemplateId: z.union([z.uuid(), z.literal('')]).optional(),
   }).passthrough(),
   // The DB trigger on couple_questionnaires emits on the status flip to
   // 'completed' with the snapshot's template_id in the payload (null when the
@@ -1426,7 +1666,6 @@ export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   custom_field_changed: customFieldChanged,
   // Pipeline
   couple_stage_changed: coupleStageChanged,
-  booking_cancelled: bookingCancelled,
   // Quotes / invoices / payments
   // Invoices / payments
   invoice_created: invoiceCreated,

@@ -73,8 +73,10 @@ const sendEmailConfigSchema = z.object({
   body: z.string().min(1).optional(),
   /** Wrap the body in the standard Zebri-branded HTML shell. */
   wrap: z.boolean().default(true),
-  /** Override the Reply-To header (defaults to the MC's email). */
-  replyToOverride: z.string().email().optional(),
+  /** Override the Reply-To header (defaults to the MC's email).
+   * `''` is the chip's "added but nothing typed yet" value and means
+   * unset — rejecting it would fail the whole run at send time. */
+  replyToOverride: z.union([z.string().email(), z.literal('')]).optional(),
   /** CC every vendor contact attached to the couple. */
   ccVendors: z.boolean().optional(),
   /** BCC the MC so they retain a paper trail. */
@@ -215,7 +217,7 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
 
     const messageIds: string[] = []
     let lastError: string | null = null
-    const replyTo = config.replyToOverride ?? ctx.mc.email
+    const replyTo = config.replyToOverride || ctx.mc.email
     for (const r of addressable) {
       const res = await dispatchEmail(sender, {
         to: r.email!,
