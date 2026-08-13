@@ -73,6 +73,7 @@ default emoji and routing.
 | `auth_rate_limit_hit` | warn | Per-action rate limit hit (login/signup/reset/update/change password) | `app/(auth)/actions.ts` + `app/(dashboard)/settings/account/actions.ts` (Phase 1) |
 | `rls_denied_spike` | warn | Cluster of RLS denials in a window | logs aggregator (Phase 0.8) |
 | `lead_blocked_plan_limit` | warn | A website lead-capture submission was blocked by the MC's Starter couple cap; the MC is emailed to upgrade so the lead is not lost | `app/api/lead/submit/route.ts` (ZEB-2) |
+| `lead_new_enquiry` | info | A new website-form enquiry was received and a couple created; a Slack heads-up alongside the MC email so the team channel sees inbound leads | `app/api/lead/submit/route.ts` (Website form) |
 | `app_error` | error | Catch-all / uncaught errors | global error boundaries |
 
 Wiring each row to its source happens during that surface's hardening

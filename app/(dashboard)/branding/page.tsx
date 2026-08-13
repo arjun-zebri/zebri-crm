@@ -69,7 +69,7 @@ interface UserMetadata {
   section_spacing?: number
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
-  branding_blocks?: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] }
+  branding_blocks?: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[]; lead?: Block[] }
   brand_kits?: BrandKit[]
   portal_sections?: {
     timeline?: boolean
@@ -83,7 +83,7 @@ interface UserMetadata {
 }
 
 interface UserBrandingRow {
-  branding_blocks: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] } | null
+  branding_blocks: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[]; lead?: Block[] } | null
   brand_kits: BrandKit[] | null
   portal_sections: {
     timeline?: boolean
@@ -342,6 +342,7 @@ export default function BrandingPage() {
   const migratedPortal   = blocksSrc.portal   !== undefined ? repairBlocks('portal', migrateBlocks(blocksSrc.portal, 'portal'))   : null
   const migratedVendorTimeline = blocksSrc.vendorTimeline !== undefined ? repairBlocks('vendorTimeline', migrateBlocks(blocksSrc.vendorTimeline, 'vendorTimeline')) : null
   const migratedQuestionnaire = blocksSrc.questionnaire !== undefined ? repairBlocks('questionnaire', migrateBlocks(blocksSrc.questionnaire, 'questionnaire')) : null
+  const migratedLead = blocksSrc.lead !== undefined ? repairBlocks('lead', migrateBlocks(blocksSrc.lead, 'lead')) : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
@@ -403,6 +404,7 @@ export default function BrandingPage() {
               portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
               vendorTimeline: migratedVendorTimeline !== null ? migratedVendorTimeline : defaultBlocksFor('vendorTimeline'),
               questionnaire: migratedQuestionnaire !== null ? migratedQuestionnaire : defaultBlocksFor('questionnaire'),
+              lead: migratedLead !== null ? migratedLead : defaultBlocksFor('lead'),
             },
             businessName: metadata?.business_name || '',
             phone: metadata?.phone || '',

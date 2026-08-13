@@ -69,7 +69,7 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
+    blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] }
     businessName: string
     phone: string
     website: string
@@ -135,7 +135,7 @@ export interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] }
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
@@ -620,7 +620,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     updateBlock<ImageBlock>(blockId, { url: undefined })
   }
 
-  const docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' = surface
+  const docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead' = surface
 
   /** Normalise a kit's per-surface block trees, filling any missing
    *  surface with its default layout so applying a kit keeps the MC's
@@ -635,6 +635,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       portal: blocks.portal ?? defaultBlocksFor('portal'),
       vendorTimeline: blocks.vendorTimeline ?? defaultBlocksFor('vendorTimeline'),
       questionnaire: blocks.questionnaire ?? defaultBlocksFor('questionnaire'),
+      lead: blocks.lead ?? defaultBlocksFor('lead'),
     }
   }
 
@@ -797,6 +798,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       portal: defaultBlocksFor('portal'),
       vendorTimeline: defaultBlocksFor('vendorTimeline'),
       questionnaire: defaultBlocksFor('questionnaire'),
+      lead: defaultBlocksFor('lead'),
     }
     const kit: BrandKit = {
       id: `kit-${Date.now().toString(36)}`,
@@ -1286,8 +1288,8 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] },
-  docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire',
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] },
+  docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead',
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return

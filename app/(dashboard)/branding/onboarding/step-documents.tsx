@@ -44,6 +44,10 @@ const SURFACES: Record<SurfaceTab, SurfaceDescription> = {
     label: 'Questionnaires',
     description: 'Forms that collect details from your couples',
   },
+  lead: {
+    label: 'Website form',
+    description: 'A public enquiry form you embed on your own website',
+  },
 }
 
 /**

@@ -481,6 +481,7 @@ DELETE (sampled clean across the migrations).
 | `time_categories` | ✅ | `user_id` | ✅ `tests/integration/couples/time-actions.test.ts` (case-insensitive uniqueness plus cross-tenant denial) | Couples & Events |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `lead_capture_forms` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/rpc.test.ts` (10 tests — RLS isolation + `get_lead_form`/`submit_lead` token gating, cross-tenant ingest, status resolution, plan-limit) | Lead capture (ZEB-2) |
+| `form_submissions` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/form-submissions.test.ts` (3 tests — cross-tenant read denial, submission↔couple link, custom-field folding + `get_lead_form` block tree) | Website form (block-based) |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |

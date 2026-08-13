@@ -1080,6 +1080,21 @@ honeypot, and a render timestamp. Submits to `POST /api/lead/submit`
 the MC is emailed on success). `?embed=1` strips the page chrome for
 iframe embedding. Works on desktop + mobile.
 
+**Website form branding surface (block-based, 2026-08).** The form is
+also a `lead` branding surface ("Website form" tab) in the branding
+editor, designed from blocks like every other surface. General blocks
+(business name, text, image, divider, spacer, tagline, footer) plus two
+document-specific blocks: `formField` (a configurable input, one per
+field, with a `role` + `inputType` + required flag; `role='select'`
+carries options) and `formSubmit` (the singleton submit button, with
+button label + success message). Readiness (`NotReadyPanel`) nags when
+the form has no field, no submit, or no Name field. `get_lead_form`
+returns the saved `lead` block tree; the public page renders it, mapping
+each `formField` answer to a couple column by `role` and folding
+`role='custom'` answers into the couple notes. Every submission is also
+stored in `form_submissions`. When the MC has not customised the form,
+the public page falls back to the fixed enquiry field set above.
+
 ### Signature (`?tab=signature`)
 
 Listed **below Public Page** in the nav. A single reusable **email

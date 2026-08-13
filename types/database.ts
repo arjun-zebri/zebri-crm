@@ -1287,6 +1287,38 @@ export type Database = {
           },
         ]
       }
+      form_submissions: {
+        Row: {
+          couple_id: string | null
+          created_at: string
+          id: string
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          couple_id?: string | null
+          created_at?: string
+          id?: string
+          payload: Json
+          user_id: string
+        }
+        Update: {
+          couple_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_items: {
         Row: {
           amount: number
@@ -1353,8 +1385,8 @@ export type Database = {
           amount_type: string
           amount_value?: number | null
           due_date?: string | null
-          due_offset_unit?: string | null
           due_offset_anchor?: string | null
+          due_offset_unit?: string | null
           due_offset_value?: number | null
           id?: string
           invoice_id: string
@@ -1369,8 +1401,8 @@ export type Database = {
           amount_type?: string
           amount_value?: number | null
           due_date?: string | null
-          due_offset_unit?: string | null
           due_offset_anchor?: string | null
+          due_offset_unit?: string | null
           due_offset_value?: number | null
           id?: string
           invoice_id?: string
@@ -1721,9 +1753,9 @@ export type Database = {
         Row: {
           amount_type: string
           amount_value: number | null
+          due_offset_anchor: string
           due_offset_days: number
           due_offset_unit: string
-          due_offset_anchor: string
           due_offset_value: number
           id: string
           label: string
@@ -1734,9 +1766,9 @@ export type Database = {
         Insert: {
           amount_type: string
           amount_value?: number | null
+          due_offset_anchor?: string
           due_offset_days?: number
           due_offset_unit?: string
-          due_offset_anchor?: string
           due_offset_value?: number
           id?: string
           label: string
@@ -1747,9 +1779,9 @@ export type Database = {
         Update: {
           amount_type?: string
           amount_value?: number | null
+          due_offset_anchor?: string
           due_offset_days?: number
           due_offset_unit?: string
-          due_offset_anchor?: string
           due_offset_value?: number
           id?: string
           label?: string
@@ -2319,74 +2351,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      timeline_template_items: {
-        Row: {
-          created_at: string
-          description: string | null
-          duration_min: number | null
-          id: string
-          position: number
-          start_time: string | null
-          template_id: string
-          title: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          duration_min?: number | null
-          id?: string
-          position?: number
-          start_time?: string | null
-          template_id: string
-          title: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          duration_min?: number | null
-          id?: string
-          position?: number
-          start_time?: string | null
-          template_id?: string
-          title?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "timeline_template_items_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "timeline_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      timeline_templates: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          position: number
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          position?: number
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          position?: number
-          user_id?: string
-        }
-        Relationships: []
       }
       user_branding: {
         Row: {

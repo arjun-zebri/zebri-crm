@@ -47,6 +47,8 @@ export type BlockType =
   | 'questionnaireAllOnePage'
   | 'image'
   | 'spacer'
+  | 'formField'
+  | 'formSubmit'
 
 export interface BaseBlock {
   id: string
@@ -304,6 +306,59 @@ export interface SpacerBlock extends BaseBlock {
 }
 
 /**
+ * Semantic role of a website-form field. Drives the mapping into couple columns
+ * when a lead is submitted (see the `submit_lead` RPC). A `custom` field maps to
+ * no column: its answer is stored on the submission and copied into couple notes.
+ */
+export type FormFieldRole =
+  | 'name'
+  | 'partnerName'
+  | 'email'
+  | 'phone'
+  | 'weddingDate'
+  | 'venue'
+  | 'message'
+  | 'referral'
+  | 'custom'
+
+/** The input control a website-form field renders as. */
+export type FormFieldInputType = 'text' | 'email' | 'tel' | 'date' | 'textarea' | 'select'
+
+/**
+ * Form-field block — one configurable input on the Website form (`lead`) surface.
+ * Repeatable: the MC adds one per field they want to collect. The `role` decides
+ * how the answer maps to a couple on submit; `inputType` decides the control.
+ */
+export interface FormFieldBlock extends BaseBlock {
+  type: 'formField'
+  /** How the answer maps to a couple column (or `custom` for notes-only). */
+  role: FormFieldRole
+  /** The rendered control. `select` uses {@link options}. */
+  inputType: FormFieldInputType
+  /** The visible field label. */
+  label: string
+  /** Optional placeholder text. */
+  placeholder?: string
+  /** Whether the visitor must fill this field to submit. */
+  required: boolean
+  /** Choices for a `select` field; ignored for other input types. */
+  options?: string[]
+}
+
+/**
+ * Submit block — the Website form's submit button. Singleton marker per the
+ * exactly-one policy (see policy.EXACTLY_ONE_BY_SURFACE): the live button is
+ * injected on the public page at this marker's position.
+ */
+export interface FormSubmitBlock extends BaseBlock {
+  type: 'formSubmit'
+  /** Button label, e.g. "Send enquiry". */
+  label: string
+  /** Message shown after a successful submit. */
+  successMessage: string
+}
+
+/**
  * Marker block — the position where the couple-facing portal (hero + section
  * nav) renders on the public portal page. The MC can drag chrome blocks above
  * and below it in the branding editor; the portal's structure is never editable
@@ -529,8 +584,10 @@ export type Block =
   | QuestionnaireAllOnePageBlock
   | ImageBlock
   | SpacerBlock
+  | FormFieldBlock
+  | FormSubmitBlock
 
-export type BlocksByDoc = Record<'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire', Block[]>
+export type BlocksByDoc = Record<'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead', Block[]>
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',
@@ -553,6 +610,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   questionnaireAllOnePage: 'All on one page',
   image: 'Image',
   spacer: 'Spacer',
+  formField: 'Form field',
+  formSubmit: 'Submit button',
 }
 
 /**
@@ -596,4 +655,6 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   questionnaireAllOnePage: 'All questions on one page',
   image: 'An uploaded image',
   spacer: 'Adjustable vertical gap',
+  formField: 'A labelled input field',
+  formSubmit: 'The submit button',
 }

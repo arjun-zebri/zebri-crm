@@ -14,6 +14,7 @@ import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 import { Slider } from '../components/slider'
 import { publicBrandingFromEditorState } from '../editor-branding'
 
+import { FormFieldControls, FormSubmitControls } from './form-field-controls'
 import { isDataBound, isDeletable, isMarker, isRequired, stylesWrapMarker } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
@@ -227,6 +228,10 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
     case 'questionnaireOneAtATime':
     case 'questionnaireAllOnePage':
       return <QuestionnaireControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
+    case 'formField':
+      return <FormFieldControls block={block} updateBlock={updateBlock} />
+    case 'formSubmit':
+      return <FormSubmitControls block={block} updateBlock={updateBlock} />
   }
 }
 

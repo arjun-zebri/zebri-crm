@@ -27,7 +27,7 @@ import type { Block, BlockType } from '@/app/(dashboard)/branding/blocks/types'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
- * Type for a blocks-by-surface object containing trees for all five surfaces.
+ * Type for a blocks-by-surface object containing trees for all six surfaces.
  */
 export interface BlocksByDoc {
   invoice: Block[]
@@ -35,6 +35,7 @@ export interface BlocksByDoc {
   portal: Block[]
   vendorTimeline: Block[]
   questionnaire: Block[]
+  lead: Block[]
 }
 
 /**
@@ -60,7 +61,7 @@ export interface BlocksByDoc {
  */
 export function repairAllSurfaces(blocks: Partial<BlocksByDoc>): BlocksByDoc {
   // Initialize all six surfaces. Missing keys become empty arrays.
-  const surfaces: SurfaceTab[] = ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire']
+  const surfaces: SurfaceTab[] = ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire', 'lead']
 
   const result: BlocksByDoc = {
     invoice: [],
@@ -68,6 +69,7 @@ export function repairAllSurfaces(blocks: Partial<BlocksByDoc>): BlocksByDoc {
     portal: [],
     vendorTimeline: [],
     questionnaire: [],
+    lead: [],
   }
 
   for (const surface of surfaces) {

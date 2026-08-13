@@ -35,8 +35,8 @@ export interface AccountReadiness {
 
 /** A single readiness issue blocking editing or sending. */
 export interface ReadinessIssue {
-  /** Category of issue: missing required block, at-least-one constraint, exactly-one constraint, or account prerequisite. */
-  kind: 'missing-required' | 'need-at-least-one' | 'need-exactly-one' | 'account'
+  /** Category of issue: missing required block, at-least-one constraint, exactly-one constraint, a required Name field on the website form, or account prerequisite. */
+  kind: 'missing-required' | 'need-at-least-one' | 'need-exactly-one' | 'need-name-field' | 'account'
   /** Plain-language message (no block type codes, only human labels from blockLabel). */
   message: string
 }
@@ -120,6 +120,20 @@ export function evaluateSurface(
         kind: 'need-exactly-one',
         message: `Pick one form style: remove ${present.map((t) => blockLabel(t, surface)).join(' or ')} so only one remains`,
       })
+    }
+  }
+
+  // Layer A: the website form must have a Name field, since a couple cannot be
+  // created without a name. This is a prop-level rule (the `role` on a formField
+  // block), so it sits outside the type-level required/at-least-one/exactly-one
+  // machinery above.
+  if (surface === 'lead') {
+    const hasNameField = blocks.some(
+      (b) => b.type === 'formField' && b.role === 'name',
+    )
+    if (!hasNameField) {
+      layerAReady = false
+      issues.push({ kind: 'need-name-field', message: 'A Name field so enquiries have a name' })
     }
   }
 

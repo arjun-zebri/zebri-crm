@@ -29,6 +29,7 @@ describe('branding repair sweep', () => {
       ],
       vendorTimeline: [],
       questionnaire: [],
+      lead: [],
     }
 
     const userId = 'test-user-id'

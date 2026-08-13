@@ -90,6 +90,22 @@ function sampleQuestionnaireDoc(): PublicDocData {
 }
 
 /**
+ * Sample document data for the Website form surface. The form has no
+ * document-data fields (it collects visitor input), so this is an empty shell
+ * mirroring the questionnaire.
+ */
+function sampleLeadDoc(): PublicDocData {
+  return {
+    title: 'Website form',
+    refNumber: '',
+    expiresAt: null,
+    items: [],
+    subtotal: 0,
+    taxRate: 0,
+  }
+}
+
+/**
  * Map of surface tabs to their sample document data.
  */
 export const SAMPLE_DOC_BY_SURFACE: Record<SurfaceTab, PublicDocData> = {
@@ -98,4 +114,5 @@ export const SAMPLE_DOC_BY_SURFACE: Record<SurfaceTab, PublicDocData> = {
   portal: samplePortalDoc(),
   vendorTimeline: sampleVendorTimelineDoc(),
   questionnaire: sampleQuestionnaireDoc(),
+  lead: sampleLeadDoc(),
 }

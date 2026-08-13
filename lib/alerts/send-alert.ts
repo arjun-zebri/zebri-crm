@@ -116,6 +116,10 @@ function describe(event: AlertEvent): string {
       return `pending events=${event.pendingEvents}`;
     case 'lead_blocked_plan_limit':
       return `user=${event.userId} · ${event.email} — website lead blocked by plan limit`;
+    case 'lead_new_enquiry':
+      return `user=${event.userId} · ${event.email}${
+        event.businessName ? ` · ${event.businessName}` : ''
+      } — new website enquiry`;
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }

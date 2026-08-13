@@ -51,7 +51,7 @@ import { buildPublicBranding, type PublicBranding, type UserMetadata } from './p
 export { buildPublicBranding } from './public-branding';
 export type { UserMetadata } from './public-branding';
 
-export type BuilderSurface = 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire';
+export type BuilderSurface = 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead';
 
 export interface UseCurrentBrandingResult {
   branding: PublicBranding | null;
@@ -68,6 +68,7 @@ interface UserBrandingRow {
     portal?: Block[];
     vendorTimeline?: Block[];
     questionnaire?: Block[];
+    lead?: Block[];
   } | null;
 }
 

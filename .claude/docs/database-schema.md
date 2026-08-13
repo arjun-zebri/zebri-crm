@@ -168,10 +168,46 @@ target_status_slug (text, nullable) — couple_statuses.slug the lead lands in; 
 
 created_at (timestamp) updated_at (timestamp)
 
-Ingest (submit_lead): validates the token, resolves the landing status,
-and inserts a couple owned by the token issuer with lead_source='website'
-and referral_source from the "how did you hear" field. A Starter
-couple-cap block returns {error:'plan_limit'} rather than raising.
+Website form (block-based, 2026-08): the form is now a `lead` branding
+surface designed from blocks. get_lead_form additionally returns
+`blocks` = user_branding.branding_blocks->'lead' (the saved form design,
+or JSON null when uncustomised); the public /lead/[token] page renders
+that block tree. Fields are `formField` blocks whose `role` maps each
+answer to a couple column (name/partnerName/email/phone/weddingDate/
+venue/message/referral) or, for `role='custom'`, into the couple notes.
+
+Ingest (submit_lead): validates the token, stores a form_submissions row
+FIRST (so a lead is never lost), resolves the landing status, and inserts
+a couple owned by the token issuer with lead_source='website' and
+referral_source from the "how did you hear" field. Custom answers +
+message fold into couple notes as "Label: value" lines; the new couple id
+is linked back onto the submission. A Starter couple-cap block returns
+{error:'plan_limit'} and keeps the stored submission (couple_id null).
+
+------------------------------------------------------------------------
+
+# form_submissions (Website form)
+
+Durable record of every website-form submission, including custom-field
+answers that map to no couple column. Written only inside the
+security-definer submit_lead RPC (no anon grant); the anon client never
+touches the table directly.
+
+RLS: single owner-isolation policy (auth.uid() = user_id).
+
+Columns:
+
+id (uuid) user_id (uuid, not null, FK auth.users on delete cascade)
+
+couple_id (uuid, nullable, FK couples on delete set null) — the couple
+created from this submission; null when the plan cap blocked creation
+
+payload (jsonb, not null) — the full submitted payload (canonical fields
++ custom array)
+
+created_at (timestamp)
+
+Indexes: user_id; created_at desc.
 
 ------------------------------------------------------------------------
 

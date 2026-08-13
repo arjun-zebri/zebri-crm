@@ -22,6 +22,7 @@ export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
   questionnaire: ['questionnaireOneAtATime', 'questionnaireAllOnePage'],
+  lead: ['formField', 'formSubmit'],
 }
 
 export interface PaletteGroup {

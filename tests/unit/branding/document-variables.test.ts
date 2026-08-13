@@ -8,12 +8,22 @@ import {
 } from '@/lib/branding/document-variables'
 
 describe('document variable registry', () => {
-  it('offers couple + business variables on every surface', () => {
-    for (const vars of Object.values(VARIABLES_BY_SURFACE)) {
+  it('offers business variables on every surface, and couple variables on every couple-facing surface', () => {
+    for (const [surface, vars] of Object.entries(VARIABLES_BY_SURFACE)) {
       const ids = vars.map((v) => v.id)
-      expect(ids).toContain('couple_name')
       expect(ids).toContain('business_name')
+      // The website form (`lead`) is filled by a visitor before any couple
+      // exists, so it offers only business variables, not couple ones.
+      if (surface !== 'lead') {
+        expect(ids).toContain('couple_name')
+      }
     }
+  })
+
+  it('offers business but not couple variables on the website form surface', () => {
+    const ids = VARIABLES_BY_SURFACE.lead.map((v) => v.id)
+    expect(ids).toContain('business_name')
+    expect(ids).not.toContain('couple_name')
   })
 
   it('offers invoice-specific amounts only on the invoice surface', () => {

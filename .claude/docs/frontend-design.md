@@ -670,6 +670,10 @@ Each block type offers additional controls audited per surface:
 - **Totals:** heading/label/value text controls, show/hide rows
 - **Payment details:** heading/label/value text controls
 - **Footer:** note + contact text controls, show/hide contact lines
+- **Form field** (Website form surface): role (Name / Partner / Email / Phone / Wedding date / Venue / Message / Referral / Custom), input type (text / email / phone / date / long text / dropdown), label, placeholder, required toggle, and options list (dropdown only)
+- **Submit button** (Website form surface): button label + post-submit success message
+
+The **Website form** (`lead`) is a full branding surface with its own tab, edited exactly like the invoice/contract/questionnaire surfaces. Its palette is the General blocks plus the two form blocks above; the public `/lead/[token]` page renders the block tree. See `page-specs.md` (Lead Capture) for the public + ingest behaviour.
 
 ------------------------------------------------------------------------
 

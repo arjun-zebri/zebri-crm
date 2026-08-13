@@ -9,6 +9,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 import { Demo, DemoGrid, DemoRow, Rule, Spec } from './showroom';
 
@@ -95,6 +96,27 @@ export function PrimitivesForms() {
           </Demo>
           <Demo label="Read only">
             <Input label="Reference" readOnly defaultValue="ZEB-0041" />
+          </Demo>
+        </DemoGrid>
+      </Spec>
+
+      <Spec name="Textarea" file="components/ui/textarea.tsx"
+        importPath="@/components/ui/textarea" description="The multi-line Input. Same chrome, but it grows with rows and resizes vertically.">
+        <Rule>
+          Not 32px tall. A paragraph field is inherently multi-line, so it is the one control that
+          breaks the single-height rule, keeping only the border, radius, padding and focus
+          treatment of <code>Input</code>. Reach for it whenever a free-text paragraph is collected
+          instead of a bare <code>textarea</code>.
+        </Rule>
+        <DemoGrid cols={3}>
+          <Demo label="Default">
+            <Textarea label="Message" placeholder="Tell us about your day" />
+          </Demo>
+          <Demo label="With help text">
+            <Textarea label="Notes" help="Only you can see these." rows={3} />
+          </Demo>
+          <Demo label="Error">
+            <Textarea label="Message" error="Please add a short message." />
           </Demo>
         </DemoGrid>
       </Spec>

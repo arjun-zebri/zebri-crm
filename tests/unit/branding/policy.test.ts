@@ -19,11 +19,11 @@ describe('policy', () => {
     expect(MARKER_TYPES.has('contractSign')).toBe(true)
   })
 
-  it('clearable markers include the contract/run-sheet/portal bodies + both questionnaire form blocks', () => {
+  it('clearable markers include the contract/run-sheet/portal bodies + both questionnaire form blocks + the website form submit', () => {
     expect([...CLEARABLE_MARKERS].sort()).toEqual(
       [
         'contractBody', 'contractSign', 'vendorTimelineBody', 'couplePortal',
-        'questionnaireOneAtATime', 'questionnaireAllOnePage',
+        'questionnaireOneAtATime', 'questionnaireAllOnePage', 'formSubmit',
       ].sort(),
     )
     // Every clearable marker is also a marker.

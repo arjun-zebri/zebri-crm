@@ -4,6 +4,10 @@ import { ImageIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, type SelectOption } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { getTextColor } from '@/lib/branding/contrast'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
@@ -47,6 +51,8 @@ import type {
   ContractSignBlock,
   CouplePortalBlock,
   VendorTimelineBodyBlock,
+  FormFieldBlock,
+  FormSubmitBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -1291,6 +1297,66 @@ export function RenderQuestionnairePreview({
               {sampleButton('Next')}
             </div>
           )}
+      </div>
+    </div>
+  )
+}
+
+// ── Website form field ──────────────────────────────────────────────────────────
+
+/**
+ * Editor preview for a {@link FormFieldBlock} on the Website form (`lead`)
+ * surface. Renders a static, non-interactive labelled control matching the
+ * field's `inputType` using the design-system primitives (Input for text /
+ * email / tel / date / textarea, Select for a dropdown). It is preview-only:
+ * every control is read-only or disabled, so the MC configures the field
+ * through the toolbar controls rather than by typing here. A danger-coloured
+ * marker appears when the field is required.
+ */
+export function RenderFormField({ block, state }: RenderProps<FormFieldBlock>) {
+  const pad = PAD(state)
+  const placeholder = block.placeholder || undefined
+  return (
+    <div className={pad.blockY}>
+      <label className="block text-body font-medium text-text mb-1">
+        {block.label || 'Field label'}
+        {block.required && (
+          <span className="text-danger ml-0.5" aria-hidden>
+            *
+          </span>
+        )}
+      </label>
+      {block.inputType === 'select' ? (
+        <Select
+          options={(block.options ?? []).map((o): SelectOption => ({ value: o, label: o }))}
+          placeholder={block.placeholder || 'Select an option'}
+          disabled
+        />
+      ) : block.inputType === 'textarea' ? (
+        <Textarea {...(placeholder ? { placeholder } : {})} readOnly tabIndex={-1} />
+      ) : (
+        <Input type={block.inputType} {...(placeholder ? { placeholder } : {})} readOnly tabIndex={-1} />
+      )}
+    </div>
+  )
+}
+
+// ── Website form submit ─────────────────────────────────────────────────────────
+
+/**
+ * Editor preview for the {@link FormSubmitBlock}: a static design-system button
+ * showing the block's label. Preview-only — wrapped so it never receives
+ * pointer or keyboard focus in the editor. On the public page the live submit
+ * button is injected at this marker's position.
+ */
+export function RenderFormSubmit({ block, state }: RenderProps<FormSubmitBlock>) {
+  const pad = PAD(state)
+  return (
+    <div className={pad.blockY}>
+      <div className="pointer-events-none select-none">
+        <Button type="button" tabIndex={-1} aria-hidden>
+          {block.label || 'Send enquiry'}
+        </Button>
       </div>
     </div>
   )
