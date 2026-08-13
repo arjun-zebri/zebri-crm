@@ -6,7 +6,9 @@
  * so nothing renders at (0, 0) stacked on top of each other.
  *
  * Algorithm: layered top-down from the trigger node. Each action's
- * y is its depth × ROW_GAP. x is its branch column × COL_GAP,
+ * y is its depth × ROW_GAP. The gap leaves room for a node that has
+ * been opened to show its config, which grows it well past the ~72px
+ * a collapsed card occupies. x is its branch column × COL_GAP,
  * offset to center under its parent. Branch yes/no paths split
  * left/right.
  *
@@ -21,8 +23,18 @@ import type { AutomationActionRow } from '@/types/automations'
 
 const TRIGGER_X = 0
 const TRIGGER_Y = 0
-const ROW_GAP = 140
-const COL_GAP = 260
+/**
+ * Vertical distance between two layers of the flow.
+ *
+ * Sized for a node that has been opened to show its config, which is
+ * a good deal taller than the ~72px a collapsed card occupies.
+ * Exported so callers and tests describe spacing in terms of it
+ * rather than repeating the number.
+ */
+export const ROW_GAP = 200
+
+/** Horizontal distance between a branch's yes and no columns. */
+export const COL_GAP = 260
 
 export interface PlacedAction {
   id: string
@@ -40,6 +52,13 @@ export interface PlacedAction {
 export function autoLayout(actions: AutomationActionRow[]): {
   trigger: { x: number; y: number }
   actions: Record<string, PlacedAction>
+  /**
+   * y for the "+ Add action" tail ghost: below EVERY placed node
+   * (branch children included), not just the last top-level action.
+   * Placing it at `last top-level y + 160` stacked it on top of
+   * branch children.
+   */
+  tailY: number
 } {
   const placed: Record<string, PlacedAction> = {}
 
@@ -50,9 +69,11 @@ export function autoLayout(actions: AutomationActionRow[]): {
   // Layered walk from trigger downward.
   layOutSequence(topLevel, actions, 0, TRIGGER_X, 1, placed)
 
+  const maxY = Object.values(placed).reduce((max, p) => Math.max(max, p.y), TRIGGER_Y)
   return {
     trigger: { x: TRIGGER_X, y: TRIGGER_Y },
     actions: placed,
+    tailY: maxY + 160,
   }
 }
 
@@ -84,15 +105,13 @@ function layOutSequence(
         .sort((a, b) => a.position - b.position)
 
       const branchDepth = depth + 1
-      layOutSequence(yes, allActions, -COL_GAP / 2, x, branchDepth, out)
-      layOutSequence(no, allActions, COL_GAP / 2, x, branchDepth, out)
-
-      const maxBranchDepth = Math.max(
-        depth + yes.length + 1,
-        depth + no.length + 1,
-        branchDepth,
-      )
-      depth = maxBranchDepth + 1
+      // The recursive calls return the depth BELOW each arm's whole
+      // subtree (nested branches included). Counting only direct
+      // children (yes.length) made anything after the branch collide
+      // with nested chains.
+      const yesEnd = layOutSequence(yes, allActions, -COL_GAP / 2, x, branchDepth, out)
+      const noEnd = layOutSequence(no, allActions, COL_GAP / 2, x, branchDepth, out)
+      depth = Math.max(yesEnd, noEnd, branchDepth) + 1
     } else {
       depth += 1
     }

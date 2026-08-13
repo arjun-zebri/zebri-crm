@@ -46,13 +46,14 @@ describe('time_after_event trigger match()', () => {
     expect(spec!.match(makeEvent(1), { amount: 7, unit: 'days' })).toBe(false)
   })
 
-  it('narrows by eventType when configured', () => {
+  it('ignores a legacy eventType in match()', () => {
+    // The field left the schema in the trigger sweep: the app never
+    // writes events.event_type, so every row holds the column default
+    // and the filter could only match everything or nothing. Saved
+    // configs still parse via passthrough and now simply fire.
     expect(
-      spec!.match(makeEvent(7, 'reception'), { amount: 7, unit: 'days', eventType: 'reception' }),
+      spec!.match(makeEvent(7, 'ceremony'), { amount: 7, unit: 'days', eventType: 'rehearsal' }),
     ).toBe(true)
-    expect(
-      spec!.match(makeEvent(7, 'ceremony'), { amount: 7, unit: 'days', eventType: 'reception' }),
-    ).toBe(false)
   })
 
   it('rejects when payload lacks days_after or it is non-numeric', () => {

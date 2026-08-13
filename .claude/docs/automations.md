@@ -217,11 +217,11 @@ see their migrations.
 | Category | Triggers |
 | --- | --- |
 | Lead & enquiry | `new_enquiry` |
-| Pipeline | `couple_stage_changed` · `booking_cancelled` |
+| Pipeline | `couple_stage_changed` |
 | Quotes, invoices & payments | `quote_created` · `quote_sent` · `quote_accepted` · `quote_declined` · `quote_due` · `quote_overdue` · `invoice_created` · `invoice_sent` · `payment_received` · `invoice_due` · `invoice_overdue` |
 | Contracts | `contract_created` · `contract_sent` · `contract_signed` · `contract_declined` · `contract_expired` |
 | Calendar & events | `event_created` · `event_updated` · `time_before_event` · `time_after_event` · `anniversary_of_event` |
-| Client portal | `section_completed` · `timeline_edited` · `couple_uploaded_file` · `couple_added_song_to_playlist` · `couple_completed_vows` |
+| Client portal | `section_completed` (Portal item added — absorbs file / song adds) · `timeline_edited` · `couple_completed_vows` · `questionnaire_completed` |
 | Tasks | `task_created` · `task_completed` · `task_overdue` |
 | Contacts | `contact_created` · `contact_linked_to_couple` |
 
@@ -263,11 +263,29 @@ config to the MC use-case without inventing per-use-case slugs:
   `events.event_type` (free-form text - `ceremony`, `rehearsal`,
   `reception`, `send_off`, `engagement`, `other` are the
   defaults).
-- `section_completed` narrows by section (`people` / `songs` /
-  `files` / `timeline`) and - when section = `people` - by
-  category (`partner` / `family` / `bridal_party`). That covers
-  "couple finalised their music", "bridal party submitted",
-  "files uploaded" without separate triggers.
+- `section_completed` (labelled **Portal item added**) fires once
+  per item the couple adds, narrowed by section (`people` / `songs`
+  / `files`) and then by a sub-filter belonging to that section:
+  person type, playlist slot, or file size. It is an AFTER INSERT
+  emitter on each portal table, not a completion signal — a couple
+  filling seven song slots fires it seven times. `timeline` never
+  appears; timeline edits emit `timeline_edited` instead. The type
+  string keeps its original name so saved automations still resolve.
+
+  `couple_uploaded_file` and `couple_added_song_to_playlist` fired on
+  these same two INSERTs and existed only to carry the size / slot
+  filter, so one upload lit up two picker entries. Both are now
+  hidden from the picker with their sub-filters folded in here; their
+  specs and emitters stay, so automations already saved on them keep
+  firing.
+
+  Sub-filters are **scoped to their section** in `match()`. Switching
+  the section chip clears the previous section's values, but a saved
+  config can still carry one — enforcing a stale file-size rule
+  against a people event (no `file_size`) would fail every time and
+  leave an automation that silently never runs. Scoping also stops a
+  song-slot filter reading a person's type: both sections stamp
+  `category`.
 - `contact_*` narrow by `category` (the same enum the contacts
   table enforces: `venue` / `celebrant` / `photographer` / etc.),
   so "photographer attached to a couple" or "celebrant updated"

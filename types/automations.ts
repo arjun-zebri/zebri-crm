@@ -49,7 +49,6 @@ export type TriggerType =
   | 'custom_field_changed'
   // Pipeline (couples)
   | 'couple_stage_changed'
-  | 'booking_cancelled'
   // Invoices / payments
   | 'invoice_created'
   | 'invoice_sent'

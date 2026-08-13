@@ -38,19 +38,10 @@ const createTaskSchema = z.object({
       unit: z.enum(['days', 'weeks']),
     })
     .optional(),
-  /** Bucket for filtering on dashboards / ops view. */
-  category: z.enum(['admin', 'ceremony', 'coordination', 'followup', 'compliance', 'travel', 'other']).optional(),
-  /** Priority tier. */
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  /** Assignee — self / assistant / specific email. */
-  assignTo: z.string().optional(),
-  /** Link the task to a related document for context. */
-  linkedDocument: z.object({
-    kind: z.enum(['quote', 'contract', 'invoice', 'run_sheet']),
-    id: z.string().optional(),
-  }).optional(),
-  /** Fire a reminder N days before the due date. */
-  reminderBeforeDays: z.number().int().min(0).max(60).optional(),
+  // The old category / priority / assignTo / linkedDocument fields
+  // were declared but never read (the invented enums didn't even
+  // match the user-defined task option tables). Passthrough keeps
+  // configs saved against them parsing.
 }).passthrough()
 
 const createTask: ActionSpec<z.infer<typeof createTaskSchema>> = {
@@ -83,22 +74,16 @@ const createTask: ActionSpec<z.infer<typeof createTaskSchema>> = {
 // update_task
 // ────────────────────────────────────────────────────────────────
 
+// The old appendNote / reassignTo / pushDueDateBy fields are gone:
+// the handler patches status / title / description / dueDate and
+// nothing else. Passthrough keeps configs saved against them parsing.
 const updateTaskSchema = z.object({
-  taskId: z.string().uuid().optional(),
   /** When unset, reads the most recent create_task output from the run. */
+  taskId: z.string().uuid().optional(),
   status: z.enum(['todo', 'in_progress', 'done']).optional(),
   title: z.string().optional(),
   description: z.string().optional(),
   dueDate: z.string().optional(),
-  /** Append text to the task description rather than replace. */
-  appendNote: z.string().optional(),
-  /** Reassign the task. */
-  reassignTo: z.string().optional(),
-  /** Snooze: push the due date by N days/weeks. */
-  pushDueDateBy: z.object({
-    amount: z.number().int().min(0),
-    unit: z.enum(['days', 'weeks']),
-  }).optional(),
 }).passthrough()
 
 const updateTask: ActionSpec<z.infer<typeof updateTaskSchema>> = {

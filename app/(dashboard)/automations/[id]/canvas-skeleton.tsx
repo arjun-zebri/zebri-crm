@@ -31,8 +31,8 @@ export function CanvasSkeleton() {
 function HeaderSkeleton() {
   return (
     <header className="flex items-center gap-3 px-6 py-3 border-b border-border bg-surface">
-      <div className="text-text-muted p-1 -ml-1">
-        <ArrowLeft size={18} strokeWidth={1.5} />
+      <div className="text-text-muted h-8 w-8 -ml-2 flex items-center justify-center">
+        <ArrowLeft size={16} strokeWidth={1.5} />
       </div>
       <div className="h-5 w-40 bg-surface-emphasis rounded-control animate-pulse" />
       <div className="ml-auto flex items-center gap-3">

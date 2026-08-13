@@ -130,9 +130,15 @@ export function Select({
           aria-describedby={describedBy}
           className={`${TRIGGER_BASE} ${SIZE_CLASSES} ${borderClass}`}
         >
-          <RadixSelect.Value placeholder={placeholder} />
+          {/* Shrinkable + truncating wrapper: without it a long
+              selected label wraps centered and overflows the fixed
+              32px trigger (control heights never grow — see
+              CLAUDE.md control-height rule). */}
+          <span className="min-w-0 flex-1 truncate text-left">
+            <RadixSelect.Value placeholder={placeholder} />
+          </span>
           <RadixSelect.Icon>
-            <ChevronDown className="text-text-muted" width={16} height={16} aria-hidden="true" />
+            <ChevronDown className="text-text-muted shrink-0" width={16} height={16} aria-hidden="true" />
           </RadixSelect.Icon>
         </RadixSelect.Trigger>
 
