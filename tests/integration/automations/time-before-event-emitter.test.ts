@@ -224,7 +224,13 @@ describe('time_before_event time-emitter', () => {
     expect(await eventsFor(eventId)).toHaveLength(1)
   })
 
-  it('dispatcher opens a run only for the matching event type', async () => {
+  it('opens a run per event on the lead-time day, whatever its type', async () => {
+    // `eventType` narrowing was removed in the 2026-08-13 trigger
+    // sweep: nothing in the app writes `events.event_type`, so every
+    // row carries the column default and the filter could only match
+    // all events or none. Seeding it directly here (as this test does)
+    // is not a path a user can reach. A saved config still parses via
+    // passthrough — it just no longer narrows.
     const coupleId = await seedCouple(user)
     const automationId = await seedAutomation(user, 7, { eventType: 'rehearsal' })
     await seedEvent(user, coupleId, isoDateOffset(7), { eventType: 'rehearsal' })
@@ -237,8 +243,7 @@ describe('time_before_event time-emitter', () => {
       .from('automation_runs' as never)
       .select('id, automation_id')
       .eq('automation_id', automationId)
-    // Only the rehearsal event matches the eventType filter → one run.
-    expect(runs ?? []).toHaveLength(1)
+    expect(runs ?? []).toHaveLength(2)
   })
 
   it('respects tenant isolation — events are RLS-scoped to their owner', async () => {
