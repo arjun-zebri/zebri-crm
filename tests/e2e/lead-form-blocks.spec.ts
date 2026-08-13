@@ -6,7 +6,7 @@
  * form renders, submits to a branded success state, and the lead lands in the
  * MC's pipeline; `?embed=1` renders chromeless).
  *
- * Requires the running app AND the `20260813000000_lead_form_blocks` migration
+ * Requires the running app AND the `20260814000000_lead_form_blocks` migration
  * on the target database, plus a resettable state — so, like the other branding
  * e2e, this is guarded to the isolated local-Supabase stack and deferred: it is
  * not executed in the authoring session (the migration ships via CI). Against a
