@@ -17,6 +17,7 @@ import { ChevronRight, Repeat2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { EmailTemplatePicker } from '@/app/(dashboard)/templates/email-template-picker'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -60,6 +61,7 @@ import {
   TASK_STATUS_CHIP,
   taskDueChip,
 } from './action-chips'
+import { EmailComposerModal } from './email-composer-modal'
 import {
   AddNoteExtraFields,
   ApprovalExtraFields,
@@ -1000,6 +1002,57 @@ interface RecipientConfig {
   fallback: 'primary_only' | 'skip' | 'error'
 }
 
+/**
+ * The card's stand-in for the email body: a one-line précis of what is
+ * written, and the button that opens the composer.
+ */
+function EmailContentSummary({ config, updateConfig }: ConfigProps) {
+  const [open, setOpen] = useState(false)
+  const subject = (config['subject'] as string) ?? ''
+  const attachments = Array.isArray(config['attachFiles'])
+    ? (config['attachFiles'] as string[]).length
+    : 0
+  const hasBody = Boolean(config['content']) || Boolean(config['body'])
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3 rounded-control border border-border px-3 py-2">
+        <div className="min-w-0">
+          <p className="truncate text-body text-text">
+            {subject || <span className="text-text-subtle">No subject yet</span>}
+          </p>
+          <p className="text-body text-text-subtle">
+            {hasBody ? 'Body written' : 'No body yet'}
+            {attachments > 0
+              ? ` · ${attachments} attachment${attachments === 1 ? '' : 's'}`
+              : ''}
+          </p>
+        </div>
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          {hasBody || subject ? 'Edit email' : 'Write email'}
+        </Button>
+      </div>
+
+      <EmailComposerModal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        config={config}
+        onSave={(draft) =>
+          updateConfig({
+            subject: draft.subject,
+            content: draft.content,
+            attachFiles: draft.attachFiles.length ? draft.attachFiles : undefined,
+            // The composer supersedes the legacy plain-text body; drop
+            // it so the handler never prefers stale text over the doc
+            // the MC just wrote.
+            body: undefined,
+          })
+        }
+      />
+    </>
+  )
+}
+
 function SendEmailForm({
   config,
   updateConfig,
@@ -1021,20 +1074,10 @@ function SendEmailForm({
           retry.
         </p>
       ) : (
-        <>
-          <TextInput
-            label="Subject"
-            value={(config['subject'] as string) ?? ''}
-            onChange={(v) => updateConfig({ subject: v })}
-          />
-          <TextArea
-            label="Body"
-            rows={8}
-            value={(config['body'] as string) ?? ''}
-            onChange={(v) => updateConfig({ body: v })}
-          />
-          <InlineVariableHint />
-        </>
+        // Writing an email is a document, not a form row: the content
+        // lives in a modal (subject, rich body, attachments) and the
+        // card shows what is written plus an edit affordance.
+        <EmailContentSummary config={config} updateConfig={updateConfig} />
       )}
       <TriggerFilterList
         filters={EMAIL_OPTION_CHIPS}
