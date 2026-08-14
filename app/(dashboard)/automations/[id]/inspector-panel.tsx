@@ -16,7 +16,6 @@
 import { ChevronRight, Repeat2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { EmailTemplatePicker } from '@/app/(dashboard)/templates/email-template-picker'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -55,7 +54,6 @@ import {
 } from '../actions'
 
 import {
-  EMAIL_OPTION_CHIPS,
   RequestSectionChips,
   StageChips,
   TASK_STATUS_CHIP,
@@ -800,14 +798,7 @@ function ActionFields({ actionType, config, setConfig }: FieldProps & { actionTy
 
   switch (actionType) {
     case 'send_email':
-      return (
-        <SendEmailForm
-          config={config}
-          updateConfig={updateInner}
-          recipients={recipients}
-          updateRecipients={updateRecipients}
-        />
-      )
+      return <SendEmailForm config={config} updateConfig={updateInner} />
     case 'send_sms':
     case 'send_whatsapp':
       return (
@@ -1037,56 +1028,17 @@ function EmailContentSummary({ config, updateConfig }: ConfigProps) {
         isOpen={open}
         onClose={() => setOpen(false)}
         config={config}
-        onSave={(draft) =>
-          updateConfig({
-            subject: draft.subject,
-            content: draft.content,
-            attachFiles: draft.attachFiles.length ? draft.attachFiles : undefined,
-            // The composer supersedes the legacy plain-text body; drop
-            // it so the handler never prefers stale text over the doc
-            // the MC just wrote.
-            body: undefined,
-          })
-        }
+        // The composer owns the whole step config, so its draft is
+        // written back wholesale.
+        onSave={(draft) => updateConfig(draft)}
       />
     </>
   )
 }
 
-function SendEmailForm({
-  config,
-  updateConfig,
-  recipients,
-  updateRecipients,
-}: ConfigProps & { recipients?: RecipientConfig; updateRecipients: (r: RecipientConfig) => void }) {
-  const templateId = (config['templateId'] as string) ?? ''
-  return (
-    <>
-      <RecipientsField recipients={recipients} update={updateRecipients} />
-      <EmailTemplatePicker
-        value={templateId}
-        onChange={(id) => updateConfig({ templateId: id || undefined })}
-      />
-      {templateId ? (
-        <p className="text-body text-text-muted">
-          This email uses a saved template — edit its subject and body in Templates. If a variable
-          can&apos;t be filled for a couple, the run pauses and you&apos;ll be alerted to fix &amp;
-          retry.
-        </p>
-      ) : (
-        // Writing an email is a document, not a form row: the content
-        // lives in a modal (subject, rich body, attachments) and the
-        // card shows what is written plus an edit affordance.
-        <EmailContentSummary config={config} updateConfig={updateConfig} />
-      )}
-      <TriggerFilterList
-        filters={EMAIL_OPTION_CHIPS}
-        config={config}
-        setConfig={(c) => updateConfig(c)}
-        addLabel="Add option"
-      />
-    </>
-  )
+function SendEmailForm({ config, updateConfig }: ConfigProps) {
+  // Every field lives in the composer; the card is its summary.
+  return <EmailContentSummary config={config} updateConfig={updateConfig} />
 }
 
 function SendMessagingForm({
