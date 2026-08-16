@@ -73,7 +73,10 @@ import {
   UpdateTimelineEventExtraFields,
 } from './inspector-extended'
 import { NoteComposerModal } from './note-composer-modal'
+import { QuestionnaireComposerModal } from './questionnaire-composer-modal'
+import { RunSheetComposerModal } from './run-sheet-composer-modal'
 import { TaskComposerModal } from './task-composer-modal'
+import { TimelineComposerModal } from './timeline-composer-modal'
 import { TriggerFilterList } from './trigger-filter-list'
 import { WAIT_CHIPS } from './wait-chips'
 
@@ -225,6 +228,11 @@ export const MODAL_ACTIONS: ReadonlySet<string> = new Set([
   // 380px node is a cramped form.
   'create_task',
   'add_note',
+  // Its email is canned, so the modal is a preview of what the couple
+  // receives rather than a form.
+  'send_couple_questionnaire',
+  'create_timeline_event',
+  'send_timeline_to_vendors',
 ])
 
 
@@ -744,6 +752,17 @@ function ActionFields({
       return <UpdateTaskForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
     case 'update_couple_stage':
       return <UpdateCoupleStageForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
+    case 'send_couple_questionnaire':
+      return modal ? (
+        <QuestionnaireComposerModal
+          isOpen={modal.open}
+          onClose={modal.onClose}
+          config={config}
+          onSave={(draft) => setConfig(draft)}
+        />
+      ) : (
+        <ExtendedActionForm actionType={actionType} config={config} updateConfig={updateInner} />
+      )
     case 'add_note':
       return modal ? (
         <NoteComposerModal
@@ -758,14 +777,27 @@ function ActionFields({
     case 'update_custom_fields':
       return <UpdateCustomFieldsForm config={config} updateConfig={updateInner} />
     case 'send_portal_link':
+      // Retired from the picker (2026-08-16). Still rendered for
+      // automations saved with it, and it still runs.
       return (
         <>
+          <Hint>
+            Legacy step: emails the couple their portal link with the message below. New
+            automations should use “Send email” with the {'{{portal.link}}'} variable, which
+            can say more than one line.
+          </Hint>
           <MessageBodyForm config={config} updateConfig={updateInner} label="Message" />
         </>
       )
     case 'request_information':
+      // Retired from the picker (2026-08-16). Still rendered for
+      // automations saved with it, and it still runs.
       return (
         <>
+          <Hint>
+            Legacy step: emails the couple a link to one portal section with the message
+            below. New automations should use “Send email”.
+          </Hint>
           <RequestSectionChips config={config} setConfig={(c) => setConfig(c)} />
           <MessageBodyForm config={config} updateConfig={updateInner} label="Message" />
         </>
@@ -782,23 +814,35 @@ function ActionFields({
         </Hint>
       )
     case 'create_timeline_event':
-      return <TimelineEventForm config={config} updateConfig={updateInner} requireExistingItem={false} />
+      return modal ? (
+        <TimelineComposerModal
+          isOpen={modal.open}
+          onClose={modal.onClose}
+          config={config}
+          onSave={(draft) => setConfig(draft)}
+        />
+      ) : (
+        <TimelineEventForm config={config} updateConfig={updateInner} requireExistingItem={false} />
+      )
     case 'update_timeline_event':
       return <TimelineEventForm config={config} updateConfig={updateInner} requireExistingItem={true} />
     case 'send_timeline_to_vendors':
-      // "Send run sheet". The old RecipientsField here was a dead
-      // input — the handler hardcoded vendors — so recipients are now
-      // these three explicit checkboxes, which the handler reads.
-      return (
-        <>
-          <TriggerFilterList
-            filters={[RUN_SHEET_CHIP]}
-            config={config}
-            setConfig={(c) => setConfig(c as Record<string, unknown>)}
-            addLabel="Add option"
-          />
-          <MessageBodyForm config={config} updateConfig={updateInner} label="Message" />
-        </>
+      // "Send run sheet". Most of this email is the handler's — the
+      // subject, the shell, the link — so the modal is a preview with
+      // the two things the MC controls above it.
+      return modal ? (
+        <RunSheetComposerModal
+          isOpen={modal.open}
+          onClose={modal.onClose}
+          config={config}
+          onSave={(draft) => setConfig(draft)}
+        />
+      ) : (
+        <TriggerFilterList
+          filters={[RUN_SHEET_CHIP]}
+          config={config}
+          setConfig={(c) => setConfig(c as Record<string, unknown>)}
+        />
       )
     case 'send_final_run_sheet':
       // Hidden from the picker (folded into "Send run sheet"); still

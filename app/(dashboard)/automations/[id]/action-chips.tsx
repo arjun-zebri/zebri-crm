@@ -21,6 +21,7 @@ import { LEAD_SOURCE_LABELS, LEAD_SOURCES, type LeadSource } from '@/types/coupl
 import { ComparisonControl } from './filter-controls'
 import { useCoupleStatuses, useQuestionnaireTemplateOptions } from './filter-options'
 import { runSheetAudience } from './step-summary'
+import { formatTimeLabel, timeOptions } from './time-options'
 import {
   TriggerFilterList,
   configString as str,
@@ -378,7 +379,7 @@ export const CREATE_COUPLE_CHIPS: TriggerFilterDef[] = [
 const RUN_SHEET_AUDIENCES: { key: string; label: string; on: (c: FilterConfig) => boolean }[] = [
   {
     key: 'sendToVendors',
-    label: 'Every vendor contact on this couple',
+    label: 'Vendor contacts',
     // Default on: a config saved before the recipient flags existed
     // has none of these keys and went to vendors.
     on: (c) => c['sendToVendors'] !== false,
@@ -391,6 +392,11 @@ const RUN_SHEET_AUDIENCES: { key: string; label: string; on: (c: FilterConfig) =
  * Required "send to" chip for the run sheet. A required chip rather
  * than an option: a run sheet nobody receives is not a step, it is a
  * no-op, so the parameter is always on the card.
+ *
+ * Multi-select: the three audiences are independent flags on the
+ * handler, so picking one must not clear the others. Rows toggle and
+ * the popover stays open, which is what separates this from the
+ * single-choice chips.
  */
 export const RUN_SHEET_CHIP: TriggerFilterDef = {
   key: 'runSheetAudience',
@@ -400,26 +406,96 @@ export const RUN_SHEET_CHIP: TriggerFilterDef = {
   ...fieldFilter({ sendToVendors: true }),
   valueLabel: runSheetAudience,
   summary: (c) => `Sends the run sheet to ${runSheetAudience(c)}`,
+  // The labels are phrases, and the default panel truncates.
+  panelWidth: 'lg',
   render: (config, setConfig) => (
     <>
-      {RUN_SHEET_AUDIENCES.map((audience) => (
-        <MenuItem
-          key={audience.key}
-          onClick={() => setConfig({ ...config, [audience.key]: !audience.on(config) })}
-        >
-          <span className="flex w-full items-center gap-2">
-            <Check
-              size={14}
-              strokeWidth={1.5}
-              className={audience.on(config) ? 'text-text' : 'invisible'}
-            />
+      {RUN_SHEET_AUDIENCES.map((audience) => {
+        const on = audience.on(config)
+        return (
+          <MenuItem
+            key={audience.key}
+            checked={on}
+            selected={on}
+            // Trailing, not leading: a leading tick that is merely
+            // invisible when off indents every unticked label.
+            trailing={on ? <Check size={14} strokeWidth={1.5} /> : null}
+            onClick={() => setConfig({ ...config, [audience.key]: !on })}
+          >
             {audience.label}
-          </span>
-        </MenuItem>
-      ))}
+          </MenuItem>
+        )
+      })}
     </>
   ),
 }
+
+/* ─── create_timeline_event ────────────────────────────────────── */
+
+/**
+ * When the item starts, and how long it runs.
+ *
+ * Both optional on the runner's side, so both are removable chips
+ * behind "Add option" rather than fields that sit empty on every
+ * card. The title and description stay fields: prose is not a chip.
+ */
+export const TIMELINE_ITEM_CHIPS: TriggerFilterDef[] = [
+  {
+    key: 'startTime',
+    label: 'Start time',
+    chipLabel: 'starts',
+    ...fieldFilter({ startTime: '' }),
+    current: (c) => str(c, 'startTime'),
+    valueLabel: (c) => (str(c, 'startTime') ? formatTimeLabel(str(c, 'startTime')) : 'not set'),
+    summary: (c) =>
+      str(c, 'startTime') ? `Starts at ${formatTimeLabel(str(c, 'startTime'))}` : '',
+    // Rows rather than the design-system Select: nothing inside a chip
+    // popover may portal, and a Radix portal counts as an outside
+    // interaction that dismisses the popover on the first click. The
+    // options are the shared list, so this and `TimeField` cannot
+    // drift.
+    render: (config, setConfig) => (
+      <div className="max-h-72 overflow-y-auto">
+        {timeOptions(str(config, 'startTime')).map((option) => {
+          const selected = option.value === str(config, 'startTime')
+          return (
+            <MenuItem
+              key={option.value}
+              selected={selected}
+              trailing={selected ? <Check size={14} strokeWidth={1.5} /> : null}
+              onClick={() => setConfig({ ...config, startTime: option.value })}
+            >
+              {option.label}
+            </MenuItem>
+          )
+        })}
+      </div>
+    ),
+  },
+  {
+    key: 'durationMin',
+    label: 'Duration',
+    chipLabel: 'runs for',
+    ...fieldFilter({ durationMin: 30 }),
+    valueLabel: (c) => {
+      const minutes = Number(c['durationMin'] ?? 0)
+      return minutes > 0 ? `${minutes} min` : 'not set'
+    },
+    summary: (c) => {
+      const minutes = Number(c['durationMin'] ?? 0)
+      return minutes > 0 ? `Runs for ${minutes} min` : ''
+    },
+    // The trigger filters' own number control, so this reads like
+    // every other quantity in the builder.
+    render: (config, setConfig) => (
+      <ComparisonControl
+        value={Number(config['durationMin'] ?? 30)}
+        unit="minutes"
+        onChange={(_op, value) => setConfig({ ...config, durationMin: value })}
+      />
+    ),
+  },
+]
 
 /* ─── send_email options ───────────────────────────────────────── */
 

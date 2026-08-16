@@ -228,11 +228,14 @@ function defaultActionConfigFor(type: ActionType): Record<string, unknown> {
     case 'send_email':
       return { recipients: { roles: ['primary'], fallback: 'primary_only' }, subject: 'Subject line', body: 'Hi {{couple.primary_name}},\n\nYour message here.\n\n- {{mc.contact_name}}', wrap: true }
     case 'create_task':
-      return { title: 'New task' }
+      // Same: the modal's placeholder does this job.
+      return {}
     case 'update_couple_stage':
       return { toStatus: 'contacted' }
     case 'add_note':
-      return { text: 'Note text' }
+      // Empty: the composer's placeholder says what goes here, and a
+      // default nobody typed reads as a note they wrote.
+      return {}
     // Flow-control actions
     case 'wait':
       return { mode: 'duration', durationMinutes: 24 * 60, respectQuietHours: true }

@@ -129,12 +129,21 @@ const updateTimelineEvent: ActionSpec<z.infer<typeof updateTimelineEventSchema>>
  * before the merge — which has no flags — keeps doing exactly what it
  * did.
  */
+/**
+ * The run sheet email's body, above the link.
+ *
+ * Exported so the builder's preview shows the words that are actually
+ * sent. It is no longer editable in the UI: the subject, the shell
+ * and the link were always the handler's, and a one-line message that
+ * had to be typed on every step was a field asking to be left as its
+ * default. A custom message saved before that still sends.
+ */
+export const RUN_SHEET_MESSAGE =
+  'Here is the latest timeline for {{couple.name}} on {{event.date | friendly}}. Please review and let me know if anything looks off.'
+
 const sendTimelineToVendorsSchema = z.object({
   eventId: z.string().uuid().optional(),
-  message: z
-    .string()
-    .min(1)
-    .default('Here is the latest timeline for {{couple.name}} on {{event.date | friendly}}. Please review and let me know if anything looks off.'),
+  message: z.string().min(1).default(RUN_SHEET_MESSAGE),
   sendToVendors: z.boolean().default(true),
   sendToCouple: z.boolean().default(false),
   sendToMe: z.boolean().default(false),

@@ -248,15 +248,31 @@ function FilterChip({
     target?.focus({ preventScroll: true })
   }
 
+  // A chip with no ✕ reserves no room for one: `pr-1` here plus the
+  // trigger's own `pr-2` left a label-less chip reading off-centre.
+  const removable = !filter.required
+  const label = filter.chipLabel ?? filter.label
+
   return (
-    <span className="inline-flex h-8 items-center rounded-pill border border-border bg-surface pr-1 transition-colors hover:border-border-strong">
+    <span
+      className={`inline-flex h-8 items-center rounded-pill border border-border bg-surface transition-colors hover:border-border-strong${
+        removable ? ' pr-1' : ''
+      }`}
+    >
       <Popover.Root open={open} onOpenChange={onOpenChange}>
         <Popover.Trigger asChild>
           <button
             type="button"
-            className="inline-flex h-full cursor-pointer items-center gap-2 rounded-pill pl-3 pr-2 text-body"
+            className={`inline-flex h-full cursor-pointer items-center gap-2 rounded-pill pl-3 text-body${
+              removable ? ' pr-2' : ' pr-3'
+            }`}
           >
-            <span className="text-text-muted">{filter.chipLabel ?? filter.label}</span>
+            {/* Empty when the chip is one of several parts of a phrase
+                (the branch's conditions), where a name per pill would
+                be noise. The span is dropped entirely rather than
+                rendered blank, which left a `gap-2` hanging in front
+                of the value. */}
+            {label ? <span className="text-text-muted">{label}</span> : null}
             <span className="font-medium text-text">{filter.valueLabel(config)}</span>
           </button>
         </Popover.Trigger>
@@ -305,7 +321,7 @@ function FilterChip({
         </Popover.Portal>
       </Popover.Root>
 
-      {!filter.required && (
+      {removable && (
         <button
           type="button"
           onClick={() => setConfig(filter.remove(config))}

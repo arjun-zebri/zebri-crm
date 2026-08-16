@@ -125,6 +125,34 @@ describe('TriggerFilterList', () => {
     expect(savedConfig()).toEqual({ leadSource: '', season: 'any' })
   })
 
+  it('centres a chip that has neither a label nor a remove button', () => {
+    // The branch's condition pills are parts of one phrase, so they
+    // carry no chip label. Reserving room for a ✕ they do not have,
+    // and a gap for a label span that renders blank, both pushed the
+    // text off-centre.
+    const bare: TriggerFilterDef = {
+      key: 'bare',
+      label: 'Bare',
+      chipLabel: '',
+      required: true,
+      isActive: () => true,
+      add: (c) => c,
+      remove: (c) => c,
+      valueLabel: () => 'is Booked',
+      summary: () => '',
+      options: [{ value: 'a', label: 'A' }],
+      apply: (c) => c,
+    }
+    render(<Harness filters={[bare]} />)
+
+    const trigger = screen.getByRole('button', { name: 'is Booked' })
+    expect(trigger.className).toContain('pr-3')
+    expect(trigger.className).not.toContain('pr-2')
+    // One child, the value: no blank label span with a gap in front.
+    expect(trigger.children).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument()
+  })
+
   it('drops an added filter from the add menu', async () => {
     const user = userEvent.setup()
     render(<Harness filters={[...FILTERS, THIRD_FILTER]} initial={{ leadSource: '' }} />)

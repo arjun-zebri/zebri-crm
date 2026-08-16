@@ -83,6 +83,15 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
  *
  * `send_sms` is included but flagged `comingSoon` in its spec — it
  * renders greyed/disabled rather than hidden, per the review.
+ * `request_information` is excluded by product decision
+ * (2026-08-16): like `send_portal_link`, it is a one-line email
+ * carrying a portal link — `send_email` says more, and now has the
+ * portal variables to link with.
+ * `send_portal_link` is excluded by product decision (2026-08-16):
+ * it sends a fixed one-line email whose only configurable part is
+ * the message, which `send_email` does better now that
+ * `{{portal.link}}` resolves on its own. Its spec stays registered
+ * so saved automations keep running.
  * `update_task` is excluded by product decision (2026-08-15): it
  * edits "the most recent task created by an earlier action", or one
  * pasted UUID, neither of which an MC can reason about while looking
@@ -104,8 +113,6 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'send_sms', // greyed coming-soon, kept per review
   'update_couple_stage',
   'add_note',
-  'send_portal_link',
-  'request_information',
   'create_couple',
   'create_task',
   'send_contract',

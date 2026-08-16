@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   EMAIL_OPTION_CHIPS,
+  TIMELINE_ITEM_CHIPS,
   RUN_SHEET_CHIP,
   TASK_STATUS_CHIP,
   taskDueChip,
@@ -76,6 +77,49 @@ describe('the run sheet audience chip', () => {
       label: null,
     } as never
     expect(stepSummary(action)).toBe(`Sends the run sheet to ${RUN_SHEET_CHIP.valueLabel(config)}`)
+  })
+})
+
+describe('timeline item chips', () => {
+  const schema = actionRegistry.create_timeline_event!.configSchema
+  const base = { title: 'Ceremony' }
+
+  it('every chip seeds a config the runner accepts', () => {
+    for (const chip of TIMELINE_ITEM_CHIPS) {
+      const seeded = chip.add(base)
+      expect(schema.safeParse(seeded).success, chip.key).toBe(true)
+    }
+  })
+
+  it('reads as not set until a value is chosen', () => {
+    // `startTime` seeds `''`, which the handler stores as null — the
+    // chip has to say so rather than showing an empty value.
+    const startTime = TIMELINE_ITEM_CHIPS.find((c) => c.key === 'startTime')!
+    expect(startTime.valueLabel(startTime.add(base))).toBe('not set')
+  })
+
+  it('says the start time the way the clock is read aloud', () => {
+    // Stored 24-hour (that is what the handler writes), shown
+    // 12-hour, and the card says the same words.
+    const startTime = TIMELINE_ITEM_CHIPS.find((c) => c.key === 'startTime')!
+    expect(startTime.valueLabel({ startTime: '15:30' })).toBe('3:30 pm')
+    expect(startTime.summary({ startTime: '15:30' })).toBe('Starts at 3:30 pm')
+  })
+
+  it('phrases a duration in minutes', () => {
+    const duration = TIMELINE_ITEM_CHIPS.find((c) => c.key === 'durationMin')!
+    expect(duration.valueLabel({ durationMin: 45 })).toBe('45 min')
+    expect(duration.summary({ durationMin: 45 })).toBe('Runs for 45 min')
+    // Zero is "not set", not "0 min": the handler stores null.
+    expect(duration.valueLabel({ durationMin: 0 })).toBe('not set')
+  })
+
+  it('removing a chip clears the field it owned', () => {
+    for (const chip of TIMELINE_ITEM_CHIPS) {
+      const removed = chip.remove(chip.add(base))
+      expect(chip.isActive(removed), chip.key).toBe(false)
+      expect(schema.safeParse(removed).success, chip.key).toBe(true)
+    }
   })
 })
 

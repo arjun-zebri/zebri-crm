@@ -523,6 +523,131 @@ Two gotchas: the shared `Modal` had to be portalled to `document.body`
 popovers inside the modal need `z-[90]`, the shared popover tier above
 the modal panel's `z-[60]`.
 
+#### Send run sheet (2026-08-16)
+
+Same treatment as the questionnaire step, for the same reason: the
+whole email is the handler's — the subject
+(`Run sheet for <couple> - <business>`), the shell, the message and
+the link — and the one thing the MC decides is who receives it. So
+the modal is that choice and a preview.
+
+The message field is gone (`RUN_SHEET_MESSAGE` is exported from the
+action so the preview shows the words that actually send). It was a
+one-line body that had to be typed on every step, which is a field
+asking to be left as its default. A custom message saved before this
+still sends, and still previews.
+
+Because nothing in the modal is typed, `srcDoc` binds directly: the
+patch-in-place dance only existed to stop a reload on every
+keystroke.
+
+**`MenuItem` gained `checked`**, which turns a row into a
+`menuitemcheckbox` that announces its own state. The three audiences
+are independent flags, so picking one must not clear the others, and
+that had been hand-rolled twice (here and in the email composer's
+recipient picker). The tick is `trailing` now rather than a leading
+icon made `invisible` when off, which was indenting every unticked
+label.
+
+The preview calls **`wrapAutomationShell`**, the same builder the
+handler wraps its body in, and resolves variables through the same
+`renderTemplate`, so it cannot drift from the send. That needed the
+builder moving: it lived in `lib/automations/actions/messaging.ts`
+next to Resend and the admin client, and importing it from a client
+component would have pulled the transport layer into the browser
+bundle. It now sits in `lib/email/html.ts` — the module whose header
+already says it is the client-safe home for pure builders — taking a
+business name instead of a run context, with `wrapAutomationHtml` in
+messaging.ts kept as the context-taking wrapper every handler already
+calls.
+
+#### create_timeline_event (2026-08-16)
+
+The last content-carrying step on the old stacked form. Same shape as
+`create_task`, so it gets the same treatment: a modal with the title
+and description as fields, and the two optional parameters as chips
+(`starts · 15:30`, `runs for · 45 min`) rather than labelled inputs
+sitting empty on every card. The duration chip uses
+`ComparisonControl`, so a quantity reads the same here as in every
+trigger filter.
+
+`update_timeline_event` keeps the old form: it is hidden from the
+picker, and it cannot be made sane as-is (one hardcoded item id means
+an automation firing for every couple edits one specific couple's
+row).
+
+**Card summaries went in at the same time**, for every step whose
+card previously never changed no matter what was saved — which reads
+exactly like a save that did not happen. `send_couple_questionnaire`
+(the reported one), the six pre-composed emails, `create_couple` and
+`create_timeline_event` all say what they are set to now. The
+questionnaire's name lives in the database rather than the config, so
+`stepSummary` takes an optional `StepSummaryLabels` lookup that the
+builder fills from the list it already loads for the picker, and
+degrades to "Sends a questionnaire" without it rather than printing a
+raw id.
+
+#### More retirements, and the questionnaire preview (2026-08-16)
+
+Out of the picker, registered and still running for saved
+automations: **`send_portal_link`** and **`request_information`**.
+Both are one-line emails carrying a portal link, which `send_email`
+does better now that `{{portal.link}}` resolves on its own and can
+say more than a sentence. That leaves 15 visible actions.
+
+**`send_couple_questionnaire` opens a modal** with a **preview**
+rather than a form. Its email is canned — `questionnaireHtml` builds
+it and the MC controls only which questionnaire and what it is
+called — so the question worth answering is "what does the couple
+receive?". The preview calls that same pure builder, so it cannot
+drift from what is sent, with a sample couple (the automation is not
+attached to one) but the MC's **real** business name and branding via
+`loadSenderIdentityAction`.
+
+Two things about that iframe, both of which `TemplatePreview` had
+already got right:
+
+- `srcDoc` is set **once** and the document is patched in place
+  afterwards. Swapping `srcDoc` reloads the whole frame, so typing a
+  title flashed the preview on every keystroke.
+- The sandbox is `allow-same-origin`, **not** `sandbox=""`. Scripts,
+  forms and popups stay blocked either way; what the flag buys is the
+  parent being able to reach `contentDocument` at all. A bare
+  `sandbox=""` puts the frame in an opaque origin, where
+  `contentDocument` is null in a real browser — so the patch above
+  silently did nothing and the preview froze on its first paint.
+  **jsdom does not enforce this**, so the tests passed while the app
+  was broken; the sandbox value is now asserted for that reason.
+
+#### Portal link variables (2026-08-16)
+
+`{{portal.link}}` was the only share link on offer, and it resolved
+**only** from a trigger payload key that one action stamps
+(`send_portal_link`) — so in an ordinary email it was empty. It now
+builds from the couple's own token, and two more join it:
+
+| Variable | Built from | Surface |
+|---|---|---|
+| `{{portal.link}}` | `couples.portal_token` | primary partner's portal |
+| `{{portal.partner_link}}` | `couples.secondary_portal_token` | second partner's portal |
+| `{{portal.vendor_link}}` | the primary event's `share_token` | the vendor run sheet |
+
+The tokens ride on `CoupleSnapshot`, so nothing new is queried per
+variable. Both partner tokens hang off the single
+`portal_token_enabled` flag (`_resolve_portal_couple` gates on it);
+the run sheet has its own, which **defaults to false**.
+
+**A disabled token resolves to `''`, never a URL.** The RPCs refuse
+it, so the link would 404 — and an unresolvable variable pauses the
+run and alerts the MC, which beats mailing a couple a dead link.
+Reading a variable must not enable sharing as a side effect, so this
+path never writes. A `send_portal_link` step's own stamped URL still
+wins for `{{portal.link}}`.
+
+Both editors pick these up for free: `EMAIL_TEMPLATE_VARIABLES`
+derives from `VARIABLE_CATALOGUE`, so the templates library and the
+`send_email` composer offer the same list.
+
 #### The chip-popover shape (2026-08-15)
 
 Every compound chip popover now follows the branch's: **pick the
@@ -561,12 +686,24 @@ Registered and running for saved automations; its card says so.
 
 **`add_note` opens a modal** too (`note-composer-modal.tsx`): a
 paragraph written five rows at a time in a 380px node is prose through
-a letterbox. Plain text, not the rich editor — the handler appends the
-rendered string to `couples.notes`, a text column, so formatting would
-be discarded on the way in. The variable tokens are click-to-append
-chips rather than a caret insert: a textarea loses its selection the
-moment a button takes focus, and inserting in the wrong place is worse
-than appending.
+a letterbox. It uses the same `RichTextEditor` the email composer
+does, so variables behave the way they do everywhere else: type `@`
+for the inline list, or the toolbar's "Insert variable", and what
+lands is a green chip. The note is still *stored* as a plain mustache
+string, because the handler appends it to `couples.notes`, a text
+column.
+
+That seam is `lib/automations/mustache-doc.ts` (`textToDoc` /
+`docToText`), extracted from the email composer's own lift and now
+shared by both. It round-trips, filters included
+(`event.date | friendly`), and drops a mention that lost its
+`attrs.id` rather than writing `{{undefined}}` onto a couple's record.
+
+**Steps no longer seed placeholder config.** `add_note` came with
+`text: 'Note text'` and `create_task` with `title: 'New task'`, which
+read as something the MC had written. Both are empty now and the
+field's placeholder does that job; the collapsed card says "No note
+yet" / "No title yet".
 
 **`create_task` opens a modal**, like the email actions:
 `task-composer-modal.tsx`, with the title, the description and the

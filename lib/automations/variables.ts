@@ -252,15 +252,50 @@ function flattenSignatureText(doc: TextishNode | null | undefined): string {
     .trim()
 }
 
+/** Base URL for every share link. Mirrors the action handlers'. */
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+
+/**
+ * Portal and run-sheet share links.
+ *
+ * - `link` — the primary partner's portal.
+ * - `partner_link` — the second partner's own portal. Separate tokens
+ *   so each partner's edits are attributed to them.
+ * - `vendor_link` — the run sheet the "Send run sheet" step emails,
+ *   for putting that link in a hand-written email instead.
+ *
+ * A link whose token is disabled resolves to `''` rather than a URL
+ * that 404s: an unresolvable variable pauses the run and alerts the
+ * MC, which is the outcome you want over mailing a couple a dead
+ * link. Reading a variable must not enable sharing as a side effect,
+ * so this never writes.
+ */
 function readPortal(ctx: RunContext, key: string): string {
-  if (key !== 'link') return ''
-  // The dispatcher stamps the absolute portal URL onto the trigger
-  // payload when the source row has a portal_token; if missing, we
-  // surface the empty string and let the user's template default
-  // kick in.
+  // A preceding `send_portal_link` step stamps the link it used, and
+  // that specific URL wins over anything rebuilt here.
   const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
-  const link = payload['portal_link']
-  return typeof link === 'string' ? link : ''
+  const stamped = payload['portal_link']
+  if (key === 'link' && typeof stamped === 'string' && stamped) return stamped
+
+  const couple = ctx.couple
+  if (!couple) return ''
+
+  switch (key) {
+    case 'link':
+      return couple.portalEnabled && couple.portalToken
+        ? `${APP_URL}/portal/${couple.portalToken}`
+        : ''
+    case 'partner_link':
+      return couple.portalEnabled && couple.secondaryPortalToken
+        ? `${APP_URL}/portal/${couple.secondaryPortalToken}`
+        : ''
+    case 'vendor_link':
+      return couple.runSheetEnabled && couple.runSheetToken
+        ? `${APP_URL}/timeline/${couple.runSheetToken}`
+        : ''
+    default:
+      return ''
+  }
 }
 
 /**
@@ -378,7 +413,9 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
   {
     group: 'Links',
     variables: [
-      { token: '{{portal.link}}', label: 'Couple portal link', example: 'https://zebri.app/portal/…' },
+      { token: '{{portal.link}}', label: 'Portal link (primary contact)', example: 'https://zebri.app/portal/…' },
+      { token: '{{portal.partner_link}}', label: 'Portal link (second contact)', example: 'https://zebri.app/portal/…' },
+      { token: '{{portal.vendor_link}}', label: 'Vendor run sheet link', example: 'https://zebri.app/timeline/…' },
       { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/invoice/…' },
       { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/contract/…' },
       { token: '{{questionnaire.link}}', label: 'Questionnaire link', example: 'https://zebri.app/questionnaire/…' },

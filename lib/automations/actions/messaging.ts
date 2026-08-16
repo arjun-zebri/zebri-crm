@@ -14,6 +14,7 @@ import { z } from 'zod'
 
 import { wrapTemplateHtml } from '@/lib/email'
 import { dispatchEmail, type EmailAttachment } from '@/lib/email/dispatch'
+import { wrapAutomationShell } from '@/lib/email/html'
 import { downloadStaticAttachments } from '@/lib/email/send-context'
 import { DEFAULT_FROM, resolveSender, type ResolvedSender } from '@/lib/email/sender-identity'
 import {
@@ -391,40 +392,21 @@ const sendWhatsApp: ActionSpec<z.infer<typeof deferredConfigSchema>> = {
   },
 }
 
-/**
- * Wraps a plain-text body (with `{{variables}}` already resolved)
- * in the standard Zebri-branded HTML shell so automation emails
- * match the look of system emails. Bodies preserve newlines.
- */
-export function wrapAutomationHtml(body: string, ctx: RunContext): string {
-  const safe = escapeHtml(body).replace(/\n/g, '<br>')
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
-        <tr><td style="padding:40px;font-size:15px;color:#374151;line-height:1.6;">${safe}</td></tr>
-        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
-          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${escapeHtml(ctx.mc.businessName)} via Zebri</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 export const messagingActions: Partial<Record<ActionType, ActionSpec<any>>> = {
   send_email: sendEmail,
   send_sms: sendSms,
   send_whatsapp: sendWhatsApp,
+}
+
+/**
+ * The plain-text automation shell, addressed by run context.
+ *
+ * A thin wrapper over {@link wrapAutomationShell}: the builder is
+ * pure and lives in `lib/email/html` so the in-app preview can import
+ * it without dragging Resend into the browser bundle, and every
+ * handler here already has a context rather than a bare name.
+ */
+export function wrapAutomationHtml(body: string, ctx: RunContext): string {
+  return wrapAutomationShell(body, ctx.mc.businessName)
 }

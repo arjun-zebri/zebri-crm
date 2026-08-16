@@ -511,6 +511,21 @@ export interface CoupleSnapshot {
   spousePhone: string | null
   /** Couple-local IANA timezone for quiet-hours math. */
   timezone: string
+  /**
+   * Portal tokens, for `{{portal.link}}` / `{{portal.partner_link}}`.
+   * `portalEnabled` gates both: the portal RPCs refuse a token whose
+   * couple has sharing off, so a link built from one would 404.
+   */
+  portalToken?: string | null | undefined
+  secondaryPortalToken?: string | null | undefined
+  portalEnabled?: boolean | undefined
+  /**
+   * The primary event's timeline share token, for
+   * `{{portal.vendor_link}}`. Its own enable flag defaults to false,
+   * hence the pair.
+   */
+  runSheetToken?: string | null | undefined
+  runSheetEnabled?: boolean | undefined
 }
 
 /**

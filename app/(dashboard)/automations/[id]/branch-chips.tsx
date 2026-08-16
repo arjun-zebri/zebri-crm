@@ -334,8 +334,8 @@ export function branchChips(config: FilterConfig, statusOptions: StatusOption[])
         summary: () => '',
         panelWidth: 'lg',
         options: [
-          { value: 'and', label: 'and — every condition must match' },
-          { value: 'or', label: 'or — any condition can match' },
+          { value: 'and', label: 'and (every condition must match)' },
+          { value: 'or', label: 'or (any condition can match)' },
         ],
         apply: (c, value) =>
           writeConditions(c, branchConditions(c), value === 'or' ? 'or' : 'and'),

@@ -112,6 +112,13 @@ export function buildSampleContext(opts: SampleContextOptions = {}): RunContext 
       spouseEmail: 'alex@example.com',
       spousePhone: null,
       timezone: 'Australia/Sydney',
+      // Sharing on, with sample tokens, so the three portal links
+      // preview as URLs rather than amber "missing" chips.
+      portalToken: 'sample-primary',
+      secondaryPortalToken: 'sample-partner',
+      portalEnabled: true,
+      runSheetToken: 'sample-run-sheet',
+      runSheetEnabled: true,
     },
     invoice: null,
     mc: {

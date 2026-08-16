@@ -15,6 +15,39 @@
 import { FONT_STACKS, googleFontsHref } from "@/lib/branding/fonts";
 import type { PublicBranding } from "@/lib/branding/public-branding";
 
+/**
+ * The plain-text automation email shell.
+ *
+ * Used by every automation step that sends a message the MC typed as
+ * plain text (portal link, run sheet, the pre-composed sends without
+ * a rich body). The body is escaped and its newlines become `<br>`,
+ * so what the MC typed is what arrives and nothing they type can
+ * inject markup.
+ *
+ * Takes a business name rather than a run context so the in-app
+ * preview can call it: the context type drags the automation runner
+ * in, and this module has to stay importable from a client
+ * component. `wrapAutomationHtml` in the messaging actions is the
+ * context-taking wrapper the handlers use.
+ */
+export function wrapAutomationShell(body: string, businessName: string): string {
+  const safe = escapeHtmlText(body).replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/\n/g, "<br>");
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <tr><td style="padding:40px;font-size:15px;color:#374151;line-height:1.6;">${safe}</td></tr>
+        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
+          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${escapeHtmlText(businessName)} via Zebri</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
 function escapeHtmlText(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

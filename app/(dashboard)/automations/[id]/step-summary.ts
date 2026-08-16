@@ -12,6 +12,8 @@
 import { actionUi } from '@/lib/automations/actions/ui'
 import type { ActionType, AutomationActionRow } from '@/types/automations'
 
+import { formatTimeLabel } from './time-options'
+
 /** Reads a config key as a trimmed string, or `''`. */
 function text(config: Record<string, unknown>, key: string): string {
   const raw = config[key]
@@ -41,8 +43,20 @@ export function stepTitle(action: AutomationActionRow): string {
   }
 }
 
+/**
+ * Names for ids a config stores but cannot read.
+ *
+ * A questionnaire step holds a template id; the card has to show the
+ * template's *name*, and that lives in the database. The builder
+ * already loads the list for the picker, so it passes the lookup in
+ * rather than this module fetching anything.
+ */
+export interface StepSummaryLabels {
+  questionnaires?: Record<string, string>
+}
+
 /** Collapsed-card summary for one action. */
-export function stepSummary(action: AutomationActionRow): string {
+export function stepSummary(action: AutomationActionRow, labels?: StepSummaryLabels): string {
   const config = (action.config as Record<string, unknown>) ?? {}
 
   switch (action.type) {
@@ -65,7 +79,7 @@ export function stepSummary(action: AutomationActionRow): string {
       return 'Not enabled yet — this step will not run'
     case 'create_task': {
       const title = text(config, 'title')
-      return title ? truncate(title) : 'No title set'
+      return title ? truncate(title) : 'No title yet'
     }
     case 'update_couple_stage': {
       const status = text(config, 'toStatus')
@@ -73,10 +87,41 @@ export function stepSummary(action: AutomationActionRow): string {
     }
     case 'add_note': {
       const note = text(config, 'text')
-      return note ? truncate(note) : 'No note set'
+      return note ? truncate(note) : 'No note yet'
     }
     case 'send_timeline_to_vendors':
       return `Sends the run sheet to ${runSheetAudience(config)}`
+    case 'send_couple_questionnaire': {
+      const templateId = text(config, 'questionnaireTemplateId')
+      if (!templateId) return 'No questionnaire chosen'
+      // The title override is what the couple sees, so it wins over
+      // the template's own name when set.
+      const title = text(config, 'title')
+      return truncate(title || labels?.questionnaires?.[templateId] || 'Sends a questionnaire')
+    }
+    // The pre-composed sends are emails; their subject is the
+    // headline, exactly as it is for send_email.
+    case 'send_onboarding_pack':
+    case 'send_pre_event_checklist':
+    case 'send_thank_you_message':
+    case 'send_anniversary_message':
+    case 'request_review':
+    case 'send_referral_request': {
+      const subject = text(config, 'subject')
+      return subject ? `Subject: ${truncate(subject)}` : 'No subject yet'
+    }
+    case 'create_couple': {
+      const name = text(config, 'name')
+      return name ? `Creates ${truncate(name)}` : 'No couple name yet'
+    }
+    case 'create_timeline_event': {
+      const title = text(config, 'title')
+      if (!title) return 'No title yet'
+      const startTime = text(config, 'startTime')
+      return startTime
+        ? `${truncate(title, 50)} at ${formatTimeLabel(startTime)}`
+        : truncate(title)
+    }
     default:
       return actionUi[action.type as ActionType]?.description ?? ''
   }

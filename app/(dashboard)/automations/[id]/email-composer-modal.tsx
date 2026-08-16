@@ -27,6 +27,7 @@ import { MenuPanel } from '@/components/ui/menu'
 import { Modal } from '@/components/ui/modal'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { Select } from '@/components/ui/select'
+import { EMPTY_DOC, textToDoc } from '@/lib/automations/mustache-doc'
 import { EMAIL_TEMPLATE_VARIABLES } from '@/lib/email/template-variables'
 
 import { EmailTemplatePicker } from '../../templates/email-template-picker'
@@ -38,7 +39,7 @@ import { EMAIL_OPTION_CHIPS } from './action-chips'
 import { TriggerFilterList, type FilterConfig } from './trigger-filter-list'
 
 /** Empty TipTap doc — an editor needs a paragraph to put a caret in. */
-const EMPTY_BODY: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] }
+const EMPTY_BODY = EMPTY_DOC as JSONContent
 
 /** Recipient roles, in the order the picker lists them. */
 const ROLES = ['primary', 'spouse', 'family', 'vendor', 'me'] as const
@@ -91,52 +92,16 @@ interface Props {
  * Read the body out of a saved config.
  *
  * `content` is the composer's TipTap doc. `body` is the plain string
- * the action stored before this modal existed; it is lifted into a
- * paragraph so an older automation opens with its text intact rather
- * than blank, and saving migrates it to rich content.
+ * the action stored before this modal existed; `textToDoc` lifts it,
+ * turning its `{{variables}}` into the mention nodes the composer's
+ * render path actually resolves — as literal text they would be
+ * mailed verbatim.
  */
 function initialContent(config: Record<string, unknown>): JSONContent {
   const content = config['content']
   if (content && typeof content === 'object') return content as JSONContent
   const body = typeof config['body'] === 'string' ? config['body'] : ''
-  if (!body) return EMPTY_BODY
-  return {
-    type: 'doc',
-    content: body.split('\n').map((line) => {
-      const inline = lineToInline(line)
-      return { type: 'paragraph', ...(inline.length ? { content: inline } : {}) }
-    }),
-  }
-}
-
-/**
- * Split one plain-text line into text and mention nodes.
- *
- * The plain-text path renders `{{couple.name}}` as mustache, but the
- * composer's path only resolves **mention nodes** — so lifting a body
- * verbatim turned every variable into literal text that would be
- * mailed to the couple as `Hi {{couple.primary_name}},`. Every step
- * seeded before the composer (including the action picker's own
- * default body) carried exactly that.
- */
-function lineToInline(line: string): JSONContent[] {
-  const nodes: JSONContent[] = []
-  let cursor = 0
-  // Non-greedy so two variables on one line don't swallow the text
-  // between them.
-  const pattern = /\{\{\s*(.+?)\s*\}\}/g
-  let match: RegExpExecArray | null
-  while ((match = pattern.exec(line)) !== null) {
-    if (match.index > cursor) {
-      nodes.push({ type: 'text', text: line.slice(cursor, match.index) })
-    }
-    // The expression keeps any filter (`event.date | friendly`), which
-    // is exactly the id format the editor's own picker inserts.
-    nodes.push({ type: 'mention', attrs: { id: match[1] } })
-    cursor = match.index + match[0].length
-  }
-  if (cursor < line.length) nodes.push({ type: 'text', text: line.slice(cursor) })
-  return nodes
+  return textToDoc(body) as JSONContent
 }
 
 /**

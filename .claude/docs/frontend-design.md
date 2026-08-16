@@ -120,6 +120,12 @@ more than one line.
 density** (padding and min-width), not a height or a type size. Menu
 rows do not sit in a line with page controls.
 
+**`MenuItem` takes `checked`** (2026-08-16) for a menu whose choices
+are independent rather than one-of. The row becomes a
+`menuitemcheckbox` and announces its own state; put the tick in
+`trailing`, not as a leading icon hidden with `invisible`, which
+indents every unticked label by the width of the tick.
+
 ### Controls never resize when you click them
 
 A control that changes size mid-action moves everything beside it. Two

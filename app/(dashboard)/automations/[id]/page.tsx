@@ -70,10 +70,11 @@ import { AiCopilotBar } from './ai-copilot-bar';
 import { ROW_GAP, autoLayout } from './auto-layout';
 import { CanvasHeader } from './canvas-header';
 import { CanvasSkeleton } from './canvas-skeleton';
+import { useQuestionnaireTemplateOptions } from './filter-options';
 import { FlowNode, FlowNodeContext, type FlowNodeApi, type FlowNodeData } from './flow-node';
 import { MODAL_ACTIONS, StepConfigForm } from './inspector-panel';
 import { RunHistoryPanel } from './runs-panel';
-import { stepSummary, stepTitle } from './step-summary';
+import { stepSummary, stepTitle, type StepSummaryLabels } from './step-summary';
 import { TriggerCardBody, triggerSummaryLine, useTriggerFilters } from './trigger-card-body';
 import { TriggerPicker } from './trigger-picker';
 
@@ -234,6 +235,17 @@ function AutomationCanvas() {
     };
   }, [actions, layout]);
 
+  // Names for the ids a step config stores but cannot read. The
+  // picker already loads this list, so the card reuses it rather than
+  // fetching again.
+  const questionnaireOptions = useQuestionnaireTemplateOptions();
+  const summaryLabels = useMemo<StepSummaryLabels>(
+    () => ({
+      questionnaires: Object.fromEntries(questionnaireOptions.map((o) => [o.value, o.label])),
+    }),
+    [questionnaireOptions],
+  );
+
   const initialNodes = useMemo<Node<FlowNodeData>[]>(() => {
     if (!automation) return [];
     const spec = triggerIsSet ? triggerRegistry[triggerType as TriggerType] : null;
@@ -269,7 +281,7 @@ function AutomationCanvas() {
         kind: action.type === 'branch' ? 'branch' : 'action',
         nodeId: action.id,
         title: stepTitle(action),
-        summary: stepSummary(action),
+        summary: stepSummary(action, summaryLabels),
         iconName: actionIconName(action),
         // These steps configure themselves in a modal, so the card
         // opens it straight away rather than expanding onto a button
@@ -306,6 +318,7 @@ function AutomationCanvas() {
     filters,
     tailContext,
     expandedId,
+    summaryLabels,
   ]);
 
   const initialEdges = useMemo<Edge[]>(() => {

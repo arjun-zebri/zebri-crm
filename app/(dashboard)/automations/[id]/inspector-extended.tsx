@@ -58,6 +58,7 @@ import {
 import type { ActionType, TriggerType } from '@/types/automations'
 
 import { QuestionnaireChips } from './action-chips'
+import { timeOptions } from './time-options'
 
 /* ─── Field primitives (small wrappers around the design system) ─ */
 
@@ -124,36 +125,23 @@ function DateField({
 /**
  * Time-of-day picker built on the design-system Select (30-minute
  * steps) instead of a native `type="time"` input, whose platform
- * chrome ignores our tokens. A previously saved arbitrary value
- * (e.g. "14:45" from the old free-form input) is injected as an
- * extra option so it still displays and round-trips.
+ * chrome ignores our tokens. Options come from the shared list, which
+ * also keeps a previously saved arbitrary value (e.g. "14:45" from
+ * the old free-form input) so it still displays and round-trips.
  */
 function TimeField({
   label, value, onChange,
 }: {
   label: string; value: string; onChange: (v: string) => void
 }) {
-  const options = [{ value: '', label: 'Not set' }]
-  for (let h = 0; h < 24; h++) {
-    for (const m of [0, 30]) {
-      const v = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-      options.push({ value: v, label: formatTimeLabel(h, m) })
-    }
-  }
-  if (value && !options.some((o) => o.value === value)) {
-    const [h, m] = value.split(':').map(Number)
-    options.push({
-      value,
-      label: Number.isFinite(h) && Number.isFinite(m) ? formatTimeLabel(h!, m!) : value,
-    })
-  }
-  return <SelectField label={label} value={value} onChange={onChange} options={options} />
-}
-
-function formatTimeLabel(h: number, m: number): string {
-  const period = h < 12 ? 'am' : 'pm'
-  const hour12 = h % 12 === 0 ? 12 : h % 12
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`
+  return (
+    <SelectField
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={[{ value: '', label: 'Not set' }, ...timeOptions(value)]}
+    />
+  )
 }
 
 function TextAreaField({
@@ -287,7 +275,7 @@ export function ExtendedTriggerFields({
     case 'couple_unsubscribed':
     case 'couple_set_do_not_contact':
     case 'branding_published':
-      return <Hint>This trigger fires whenever the event happens — no extra parameters needed.</Hint>
+      return <Hint>This trigger fires whenever the event happens. There is nothing to configure.</Hint>
     case 'vendor_contact_assigned':
       return <VendorAssignedExtra config={config} setConfig={setConfig} />
     case 'subscription_status_changed':

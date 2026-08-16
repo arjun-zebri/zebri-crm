@@ -22,6 +22,8 @@ import {
 } from '@/lib/automations/home-payload'
 import { partitionResume } from '@/lib/automations/run-controls'
 import { advanceRunNow } from '@/lib/automations/runner'
+import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding'
+import type { PublicBranding } from '@/lib/branding/public-surface'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import type {
@@ -639,4 +641,28 @@ export async function loadAutomationsHomeAction(): Promise<
   })
 
   return { ok: true, data: payload }
+}
+
+/**
+ * The MC's own name and branding, for previewing a canned email in
+ * the builder.
+ *
+ * The automation isn't attached to a couple, so a preview uses sample
+ * couple details — but the *sender* half should be real, or the MC is
+ * looking at someone else's email. Reads the calling user's own
+ * metadata (no admin client, no user id parameter).
+ */
+export async function loadSenderIdentityAction(): Promise<{
+  businessName: string
+  branding: PublicBranding | null
+}> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const metadata = (user?.user_metadata ?? {}) as UserMetadata
+  return {
+    businessName: (metadata.business_name as string | undefined)?.trim() || 'Your business',
+    branding: buildPublicBranding(metadata),
+  }
 }

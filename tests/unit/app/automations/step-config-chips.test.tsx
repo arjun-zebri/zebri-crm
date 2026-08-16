@@ -35,6 +35,15 @@ vi.mock('@/app/(dashboard)/automations/[id]/task-composer-modal', () => ({
 vi.mock('@/app/(dashboard)/automations/[id]/note-composer-modal', () => ({
   NoteComposerModal: () => null,
 }))
+vi.mock('@/app/(dashboard)/automations/[id]/questionnaire-composer-modal', () => ({
+  QuestionnaireComposerModal: () => null,
+}))
+vi.mock('@/app/(dashboard)/automations/[id]/timeline-composer-modal', () => ({
+  TimelineComposerModal: () => null,
+}))
+vi.mock('@/app/(dashboard)/automations/[id]/run-sheet-composer-modal', () => ({
+  RunSheetComposerModal: () => null,
+}))
 vi.mock('@/app/(dashboard)/automations/[id]/inspector-extended', () => ({
   ApprovalExtraFields: () => null,
   BranchExtraFields: () => null,

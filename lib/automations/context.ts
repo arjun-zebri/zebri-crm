@@ -82,7 +82,7 @@ export async function loadCoupleSnapshot(
   const { data } = await supabase
     .from('couples')
     .select(
-      'id, user_id, name, email, phone, event_date, venue, notes, status, lead_source, primary_name, primary_email, primary_phone, secondary_name, secondary_email, secondary_phone',
+      'id, user_id, name, email, phone, event_date, venue, notes, status, lead_source, primary_name, primary_email, primary_phone, secondary_name, secondary_email, secondary_phone, portal_token, secondary_portal_token, portal_token_enabled',
     )
     .eq('id', coupleId)
     .single()
@@ -120,6 +120,11 @@ export async function loadCoupleSnapshot(
     spouseEmail: spouseDetails.email ?? data.secondary_email,
     spousePhone: spouseDetails.phone ?? data.secondary_phone,
     timezone: DEFAULT_TIMEZONE,
+    portalToken: data.portal_token ?? null,
+    secondaryPortalToken: (data as { secondary_portal_token?: string | null }).secondary_portal_token ?? null,
+    portalEnabled: data.portal_token_enabled ?? false,
+    runSheetToken: primaryEvent?.shareToken ?? null,
+    runSheetEnabled: primaryEvent?.shareEnabled ?? false,
   }
 }
 
@@ -132,15 +137,26 @@ export async function loadCoupleSnapshot(
 async function loadPrimaryEvent(
   supabase: SupabaseClient<Database>,
   coupleId: string,
-): Promise<{ date: string | null; venue: string | null } | null> {
+): Promise<{
+  date: string | null
+  venue: string | null
+  shareToken: string | null
+  shareEnabled: boolean
+} | null> {
   const { data } = await supabase
     .from('events')
-    .select('date, venue')
+    .select('date, venue, share_token, share_token_enabled')
     .eq('couple_id', coupleId)
     .order('date', { ascending: true })
     .limit(1)
     .maybeSingle()
-  return data ?? null
+  if (!data) return null
+  return {
+    date: data.date,
+    venue: data.venue,
+    shareToken: data.share_token ?? null,
+    shareEnabled: data.share_token_enabled ?? false,
+  }
 }
 
 /**

@@ -1,16 +1,29 @@
 /**
  * The add-note composer.
  *
- * The note is plain text (the handler appends it to a text column),
- * so variables are inserted rather than typed as mention nodes. What
- * matters here is that a token lands where the caret was, not
- * wherever the field happened to be scrolled to, and that a step can
- * never be saved without the text its runner requires.
+ * The note is stored as a plain mustache string (the handler appends
+ * it to a text column) but written in the mention-bearing editor, so
+ * what matters here is the seam: a saved note opens with its
+ * variables as chips, and what is saved is the flattened string the
+ * runner can render.
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { NoteComposerModal } from '@/app/(dashboard)/automations/[id]/note-composer-modal'
+import { textToDoc } from '@/lib/automations/mustache-doc'
+
+const editorProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }))
+
+// The real editor is TipTap: it needs a DOM range API jsdom does not
+// have, and its own behaviour has its own tests. This stub records
+// what it was handed and lets a test drive `onChange`.
+vi.mock('@/components/ui/rich-text-editor', () => ({
+  RichTextEditor: (props: Record<string, unknown>) => {
+    editorProps.current = props
+    return <div data-testid="editor">{JSON.stringify(props['value'])}</div>
+  },
+}))
 
 function open(config: Record<string, unknown> = {}) {
   const onSave = vi.fn()
@@ -18,22 +31,34 @@ function open(config: Record<string, unknown> = {}) {
   return onSave
 }
 
-/** The note field, by its label. */
-function field() {
-  return screen.getByLabelText('Note') as HTMLTextAreaElement
-}
-
 function save() {
   fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 }
 
 describe('the note composer', () => {
-  it('hydrates from the saved config and writes the text back', () => {
-    const onSave = open({ text: 'Called the venue' })
-    expect(field()).toHaveValue('Called the venue')
-    fireEvent.change(field(), { target: { value: 'Called the venue twice' } })
+  it('opens a saved note with its variables as mentions, not braces', () => {
+    // Text in braces is inert in the editor — it would render as
+    // literal `{{…}}` instead of a green chip.
+    open({ text: 'Hi {{couple.primary_name}}' })
+    const value = JSON.parse(screen.getByTestId('editor').textContent!)
+    expect(value.content[0].content[1]).toEqual({
+      type: 'mention',
+      attrs: { id: 'couple.primary_name' },
+    })
+  })
+
+  it('saves the flattened string the runner stores', () => {
+    const onSave = open({ text: 'old' })
+    const onChange = editorProps.current!['onChange'] as (doc: unknown) => void
+    act(() => onChange(textToDoc('Called {{venue.name}} today')))
     save()
-    expect(onSave.mock.calls[0]![0]).toMatchObject({ text: 'Called the venue twice' })
+    expect(onSave.mock.calls[0]![0]).toMatchObject({ text: 'Called {{venue.name}} today' })
+  })
+
+  it('keeps the rest of the step config', () => {
+    const onSave = open({ text: 'a', someOtherKey: 1 })
+    save()
+    expect(onSave.mock.calls[0]![0]).toMatchObject({ someOtherKey: 1 })
   })
 
   it('refuses to save an empty note', () => {
@@ -41,39 +66,15 @@ describe('the note composer', () => {
     // that fails on its first run.
     const onSave = open({})
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
-    fireEvent.change(field(), { target: { value: '   ' } })
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('inserts a variable at the caret, not at the end', async () => {
-    const onSave = open({ text: 'Hi , welcome' })
-    const input = field()
-    // Caret between "Hi " and the comma.
-    input.setSelectionRange(3, 3)
-    fireEvent.select(input)
-
-    fireEvent.click(screen.getByRole('button', { name: /Insert variable/ }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: /Primary contact/ }))
-
-    save()
-    expect(onSave.mock.calls[0]![0]).toMatchObject({
-      text: 'Hi {{couple.primary_name}}, welcome',
-    })
-  })
-
-  it('appends when nothing has been focused yet', () => {
-    const onSave = open({ text: 'Note from' })
-    fireEvent.click(screen.getByRole('button', { name: /Insert variable/ }))
-    fireEvent.click(screen.getByRole('menuitem', { name: /Your name/ }))
-    save()
-    expect(onSave.mock.calls[0]![0]).toMatchObject({ text: 'Note from{{mc.contact_name}}' })
-  })
-
-  it('groups the variables the way the catalogue does', () => {
-    open({ text: 'x' })
-    fireEvent.click(screen.getByRole('button', { name: /Insert variable/ }))
-    expect(screen.getByText('Couple')).toBeInTheDocument()
-    expect(screen.getByText('You (MC)')).toBeInTheDocument()
+  it('offers the variables and prompts for @, with no label above the field', () => {
+    open({})
+    expect(editorProps.current!['variables']).toBeTruthy()
+    expect(String(editorProps.current!['placeholder'])).toContain('@')
+    // The modal title already names it; a lone field needs no second
+    // name above it.
+    expect(screen.queryByText('Note')).not.toBeInTheDocument()
   })
 })
