@@ -102,3 +102,28 @@ describe('request_review without a link', () => {
     expect(result.kind).toBe('ok')
   })
 })
+
+describe('retired request_review fields', () => {
+  const schema = getActionSpec('request_review')!.configSchema
+
+  it('still parses a config saved against them', () => {
+    // platforms / incentive / followUpIfIgnored were declared and
+    // never read. An automation saved with them is a live row, so a
+    // rejected config would be a step that fails at run time rather
+    // than one quietly ignoring a setting it never used.
+    const legacy = {
+      platforms: ['google', 'facebook'],
+      incentive: 'First reviewer wins a bottle',
+      followUpIfIgnored: true,
+    }
+    const parsed = schema.safeParse(legacy)
+    expect(parsed.success).toBe(true)
+    expect(parsed.success && parsed.data).toMatchObject(legacy)
+  })
+
+  it('still fills the copy those configs never carried', () => {
+    const parsed = schema.safeParse({ platforms: ['google'] })
+    expect(parsed.success && String((parsed.data as { subject: string }).subject).length)
+      .toBeGreaterThan(0)
+  })
+})

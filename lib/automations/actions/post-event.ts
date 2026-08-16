@@ -209,12 +209,12 @@ const requestReviewSchema = baseSchema.extend({
         "Thank you either way, and thank you again for having me.\n\n" +
         "{{mc.contact_name}}",
     ),
-  /** Which platforms the email should link to (multi-select). */
-  platforms: z.array(z.enum(['google', 'easy_weddings', 'abia', 'wedsites', 'wedding_wire', 'facebook', 'other'])).optional(),
-  /** Free-text incentive ("first reviewer wins…"). */
-  incentive: z.string().optional(),
-  /** Send a polite follow-up after N days if no review was posted. */
-  followUpIfIgnored: z.boolean().optional(),
+  // The old platforms / incentive / followUpIfIgnored fields were
+  // declared and never read. `platforms` in particular promised a
+  // choice the handler could not honour: there is one review link,
+  // the MC's own, and it comes from settings. A follow-up is a second
+  // step behind a `wait`, which the builder already does. Passthrough
+  // (from `baseSchema`) keeps configs saved against them parsing.
 })
 
 const requestReview: ActionSpec<z.infer<typeof requestReviewSchema>> = {
