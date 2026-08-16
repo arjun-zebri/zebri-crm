@@ -39,7 +39,9 @@ function renderModal(kind: DocumentKind) {
 }
 
 function previewHtml(kind: DocumentKind): string {
-  return (screen.getByTitle(`${kind} email preview`) as HTMLIFrameElement).srcdoc
+  const frame = screen.queryByTitle(`${kind} email preview`) as HTMLIFrameElement | null
+  if (!frame) return ''
+  return frame.contentDocument?.documentElement.innerHTML || frame.srcdoc
 }
 
 describe('the document preview modal', () => {
@@ -79,8 +81,20 @@ describe('the document preview modal', () => {
 
   it('sandboxes the preview, but keeps it same-origin', async () => {
     renderModal('contract')
-    const frame = screen.getByTitle('contract email preview')
-    expect(frame.getAttribute('sandbox')).toBe('allow-same-origin')
     await waitFor(() => expect(previewHtml('contract')).toContain('Acme MC Co'))
+    expect(screen.getByTitle('contract email preview').getAttribute('sandbox')).toBe(
+      'allow-same-origin',
+    )
+  })
+
+  it('shows a skeleton until the branding has loaded', async () => {
+    // Rendering before it lands shows the unbranded shell and then
+    // swaps, which reads as the preview changing its mind about what
+    // the email looks like.
+    renderModal('contract')
+    expect(screen.queryByTitle('contract email preview')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByTitle('contract email preview')).toBeInTheDocument(),
+    )
   })
 })

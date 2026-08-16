@@ -33,6 +33,7 @@ import { buildSampleContext } from '@/lib/email/template-variables'
 import { loadSenderIdentityAction } from '../actions'
 
 import { RUN_SHEET_CHIP } from './action-chips'
+import { EmailPreview } from './email-preview'
 import { TriggerFilterList, type FilterConfig } from './trigger-filter-list'
 
 /** Stands in for the run sheet the step will actually link to. */
@@ -141,10 +142,14 @@ export function RunSheetComposerModal({ isOpen, onClose, config, onSave }: Props
           />
         </div>
 
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-3">
-            <p className="text-body font-medium text-text">Preview</p>
-            {audiences.length > 1 && (
+        <EmailPreview
+          ready={identity !== undefined}
+          subject={`Run sheet for Sam & Alex - ${businessName}`}
+          html={previewHtml}
+          frameTitle="Run sheet email preview"
+          caption="Shown with a sample couple and link."
+          actions={
+            audiences.length > 1 ? (
               <div className="flex gap-1">
                 {audiences.map((audience, index) => (
                   <button
@@ -161,32 +166,9 @@ export function RunSheetComposerModal({ isOpen, onClose, config, onSave }: Props
                   </button>
                 ))}
               </div>
-            )}
-          </div>
-          <div className="overflow-hidden rounded-control border border-border">
-            <div className="border-b border-border bg-surface-muted px-4 py-3">
-              <p className="text-body text-text-subtle">Subject</p>
-              {/* The exact subject the handler builds. */}
-              <p className="text-body font-medium text-text">
-                Run sheet for Sam &amp; Alex - {businessName}
-              </p>
-            </div>
-            {/* `srcDoc` can be bound directly here: nothing in this
-                modal is typed, so the frame reloads only when the
-                identity query lands, not on every keystroke. */}
-            <iframe
-              // `allow-same-origin` and nothing else: scripts, forms
-              // and popups stay blocked.
-              sandbox="allow-same-origin"
-              srcDoc={previewHtml}
-              title="Run sheet email preview"
-              className="h-80 w-full bg-white"
-            />
-          </div>
-          <p className="mt-1.5 text-body text-text-muted">
-            Shown with a sample couple and link.
-          </p>
-        </div>
+            ) : null
+          }
+        />
       </div>
     </Modal>
   )

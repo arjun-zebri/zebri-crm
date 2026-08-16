@@ -40,7 +40,9 @@ function renderModal(config: Record<string, unknown> = {}) {
 
 /** The preview markup. Bound straight to srcDoc: nothing is typed. */
 function previewHtml(): string {
-  return (screen.getByTitle('Run sheet email preview') as HTMLIFrameElement).srcdoc
+  const frame = screen.queryByTitle('Run sheet email preview') as HTMLIFrameElement | null
+  if (!frame) return ''
+  return frame.contentDocument?.documentElement.innerHTML || frame.srcdoc
 }
 
 /** Open the send-to popover and return its rows. */
@@ -56,6 +58,15 @@ describe('the run sheet composer', () => {
     renderModal({})
     await waitFor(() => expect(previewHtml()).toContain('Charlie Park'))
     expect(previewHtml()).not.toMatch(/Thanks,<br>You/)
+  })
+
+  it('shows a skeleton until the branding has loaded', async () => {
+    // Rendering before it lands shows the unbranded shell and then
+    // swaps, which reads as the preview changing its mind about what
+    // the email looks like.
+    renderModal({})
+    expect(screen.queryByTitle('Run sheet email preview')).not.toBeInTheDocument()
+    await waitFor(() => expect(previewHtml()).toContain('Acme MC Co'))
   })
 
   it('shows the subject the handler builds', async () => {

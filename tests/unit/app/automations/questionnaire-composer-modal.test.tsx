@@ -53,7 +53,8 @@ function renderModal(config: Record<string, unknown> = {}) {
  * the first load fires.
  */
 function previewHtml(): string {
-  const frame = screen.getByTitle('Questionnaire email preview') as HTMLIFrameElement
+  const frame = screen.queryByTitle('Questionnaire email preview') as HTMLIFrameElement | null
+  if (!frame) return ''
   return frame.contentDocument?.documentElement.innerHTML || frame.srcdoc
 }
 
@@ -137,8 +138,18 @@ describe('the questionnaire preview modal', () => {
     // browser and the preview silently stops updating. jsdom does not
     // enforce that, which is why this needs saying here.
     renderModal({ questionnaireTemplateId: 'q1' })
+    await settled()
     const sandbox = previewFrame().getAttribute('sandbox') ?? ''
     expect(sandbox.split(' ')).toEqual(['allow-same-origin'])
+  })
+
+  it('shows a skeleton until the branding has loaded', async () => {
+    // Rendering before it lands shows the unbranded shell and then
+    // swaps, which reads as the preview changing its mind about what
+    // the email looks like.
+    renderModal({ questionnaireTemplateId: 'q1' })
+    expect(screen.queryByTitle('Questionnaire email preview')).not.toBeInTheDocument()
     await settled()
+    expect(screen.getByTitle('Questionnaire email preview')).toBeInTheDocument()
   })
 })

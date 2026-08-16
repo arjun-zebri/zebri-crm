@@ -25,6 +25,8 @@ import { contractHtml, invoiceHtml } from '@/lib/email/html'
 
 import { loadSenderIdentityAction } from '../actions'
 
+import { EmailPreview } from './email-preview'
+
 /** Which document the step sends. */
 export type DocumentKind = 'contract' | 'invoice'
 
@@ -97,31 +99,13 @@ export function DocumentComposerModal({ isOpen, onClose, kind }: Props) {
           link if it is off. There is nothing to configure.
         </p>
 
-        <div>
-          <p className="mb-1.5 text-body font-medium text-text">Preview</p>
-          <div className="overflow-hidden rounded-control border border-border">
-            <div className="border-b border-border bg-surface-muted px-4 py-3">
-              <p className="text-body text-text-subtle">Subject</p>
-              {/* The exact subject the sender builds. */}
-              <p className="text-body font-medium text-text">
-                {kind === 'contract' ? 'Contract' : 'Invoice'} from {businessName} - {copy.number}
-              </p>
-            </div>
-            {/* `srcDoc` binds directly: nothing here is typed, so the
-                frame reloads only when the identity query lands. */}
-            <iframe
-              // `allow-same-origin` and nothing else: scripts, forms
-              // and popups stay blocked.
-              sandbox="allow-same-origin"
-              srcDoc={previewHtml}
-              title={`${kind} email preview`}
-              className="h-80 w-full bg-white"
-            />
-          </div>
-          <p className="mt-1.5 text-body text-text-muted">
-            Shown with a sample couple and {kind}.
-          </p>
-        </div>
+        <EmailPreview
+          ready={identity !== undefined}
+          subject={`${kind === 'contract' ? 'Contract' : 'Invoice'} from ${businessName} - ${copy.number}`}
+          html={previewHtml}
+          frameTitle={`${kind} email preview`}
+          caption={`Shown with a sample couple and ${kind}.`}
+        />
       </div>
     </Modal>
   )

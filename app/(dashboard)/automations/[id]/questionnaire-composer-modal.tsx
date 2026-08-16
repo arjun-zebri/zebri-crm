@@ -9,7 +9,9 @@
  * receive?".
  *
  * The preview is the real builder, the same pure function the sender
- * calls, so it cannot drift from what is sent. Sample couple details
+ * calls, so it cannot drift from what is sent. `EmailPreview` holds
+ * it back until the MC's branding has loaded, so the first frame they
+ * see is the branded one. Sample couple details
  * (the automation is not attached to a couple) but the MC's real
  * business name and branding, or they would be previewing someone
  * else's email.
@@ -19,7 +21,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,6 +31,7 @@ import { questionnaireHtml } from '@/lib/email/html'
 
 import { loadSenderIdentityAction } from '../actions'
 
+import { EmailPreview } from './email-preview'
 import { useQuestionnaireTemplateOptions } from './filter-options'
 
 /** Stand-ins for the couple the run will actually be about. */
@@ -63,6 +66,7 @@ export function QuestionnaireComposerModal({ isOpen, onClose, config, onSave }: 
     queryFn: () => loadSenderIdentityAction(),
   })
 
+  const businessName = identity?.businessName ?? 'Your business'
   const templateName = templates.find((t) => t.value === templateId)?.label ?? ''
   // The handler's own fallback: an empty override sends the template's
   // name, so the preview has to show that and not a blank heading.
@@ -75,30 +79,12 @@ export function QuestionnaireComposerModal({ isOpen, onClose, config, onSave }: 
           coupleName: SAMPLE_COUPLE,
           title: effectiveTitle || 'Your questionnaire',
           shareUrl: SAMPLE_LINK,
-          mcBusinessName: identity?.businessName ?? 'Your business',
+          mcBusinessName: businessName,
         },
         identity?.branding ?? null,
       ),
-    [effectiveTitle, identity],
+    [effectiveTitle, businessName, identity],
   )
-
-  // The iframe document loads ONCE; every later change patches the
-  // live document in place. Swapping `srcDoc` reloads the iframe, and
-  // a reload per keystroke reads as the preview flashing — the same
-  // reason `TemplatePreview` does it this way.
-  const frameRef = useRef<HTMLIFrameElement>(null)
-  const [initialHtml] = useState(previewHtml)
-  // A flag, not a counter: it flips once and `setState` to the same
-  // value is a no-op, so a re-load costs no extra render.
-  const [frameReady, setFrameReady] = useState(false)
-  useEffect(() => {
-    if (!frameReady) return
-    const doc = frameRef.current?.contentDocument
-    if (!doc) return
-    doc.documentElement.innerHTML = previewHtml
-      .replace(/^[\s\S]*?<html>/, '')
-      .replace(/<\/html>\s*$/, '')
-  }, [frameReady, previewHtml])
 
   return (
     <Modal
@@ -147,39 +133,14 @@ export function QuestionnaireComposerModal({ isOpen, onClose, config, onSave }: 
           />
         </div>
 
-        <div>
-          <p className="mb-1.5 text-body font-medium text-text">Preview</p>
-          <div className="overflow-hidden rounded-control border border-border">
-            <div className="border-b border-border bg-surface-muted px-4 py-3">
-              <p className="text-body text-text-subtle">Subject</p>
-              {/* The exact subject `sendQuestionnaireEmail` builds. */}
-              <p className="text-body font-medium text-text">
-                {identity?.businessName ?? 'Your business'} sent you a few questions
-              </p>
-            </div>
-            <iframe
-              ref={frameRef}
-              // `allow-same-origin` and nothing else, matching
-              // TemplatePreview. Scripts, forms and popups stay
-              // blocked; what it buys is the parent being able to
-              // reach `contentDocument` to patch the body. A bare
-              // `sandbox=""` puts the frame in an opaque origin, and
-              // then `contentDocument` is null in a real browser, so
-              // the preview never updated after its first paint.
-              sandbox="allow-same-origin"
-              // `srcDoc` is set once and never changed — see the
-              // effect above. Swapping it per keystroke reloads the
-              // whole document, which is the flash.
-              srcDoc={initialHtml}
-              onLoad={() => setFrameReady(true)}
-              title="Questionnaire email preview"
-              className="h-96 w-full bg-white"
-            />
-          </div>
-          <p className="mt-1.5 text-body text-text-muted">
-            Shown with a sample couple and link.
-          </p>
-        </div>
+        <EmailPreview
+          ready={identity !== undefined}
+          subject={`${businessName} sent you a few questions`}
+          html={previewHtml}
+          frameTitle="Questionnaire email preview"
+          caption="Shown with a sample couple and link."
+          height="h-96"
+        />
       </div>
     </Modal>
   )

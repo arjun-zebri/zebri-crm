@@ -523,6 +523,26 @@ Two gotchas: the shared `Modal` had to be portalled to `document.body`
 popovers inside the modal need `z-[90]`, the shared popover tier above
 the modal panel's `z-[60]`.
 
+#### The preview panel (2026-08-16)
+
+`email-preview.tsx` is the shared "what does the couple receive?"
+panel: subject row, sandboxed frame, caption. Three modals had the
+same markup three times.
+
+It owns the loading state, which is the point. The MC's branding
+arrives from a query, so a frame rendered before it lands shows the
+**unbranded** shell and then swaps, which reads as the preview
+changing its mind about what the email looks like. Nothing is painted
+until the branding is in: a skeleton in the shape of the email stands
+in, so the panel does not jump either.
+
+The frame loads one blank document and every version of the email is
+written into it. Binding `srcDoc` to the html instead reloads the
+whole frame on each change, which the questionnaire's title field
+would do on every keystroke. The skeleton also covers the frame until
+that first write lands, rather than showing an empty white box for a
+tick.
+
 #### Contract and invoice previews (2026-08-16)
 
 `send_contract` and `send_invoice` open a shared preview modal
