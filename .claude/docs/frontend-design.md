@@ -46,10 +46,13 @@ Three sizes, no more:
 |---|---|---|
 | `text-display` | 30 / 36px | Page titles, with `font-semibold` |
 | `text-section` | 20 / 28px | Section titles, with `font-semibold` |
-| `text-body` | 14 / 20px | Everything else |
+| `text-body` | 13 / 20px | Everything else |
 
-Each ships a paired `--text-*--line-height`, so `text-body` and
-`text-sm` are byte-identical and `leading-*` still overrides.
+Each ships a paired `--text-*--line-height`, and `leading-*` still
+overrides. `text-body` dropped from 14px to 13px on 2026-08-16 (the app
+read too large next to its own chrome); leading stayed at 20px so every
+control and row keeps its exact height. It is no longer equivalent to
+`text-sm`, which is one more reason `text-sm` must not reappear.
 
 **There is no caption size.** `--text-caption` (12px) was removed on
 2026-08-07 and its 777 uses swept to `text-body`. Secondary text is
@@ -64,7 +67,7 @@ and dense toolbar chrome.
 
 Any panel rendered into `document.body` (Radix `Select`/`Popover` content,
 the `DatePicker` calendar, `Tooltip`) is outside its trigger's subtree, so
-it inherits the document's 16px rather than the control's 14px. Every one
+it inherits the document's 16px rather than the control's 13px. Every one
 of them sets `text-body` on the panel root. If you add a new floating
 surface, do the same: the symptom is dropdown rows that read noticeably
 larger than the placeholder they replaced.
@@ -263,15 +266,17 @@ customisation, intentionally separate from these internal tokens.
 
 ### Typography
 
-CLAUDE.md anchors are preserved (`text-3xl font-semibold` page titles,
-`text-xl font-semibold` section titles, `text-sm` body) — the semantic
-tokens below are equivalent and preferred in new code:
+The semantic tokens below are the only type sizes. The old CLAUDE.md
+anchors (`text-3xl font-semibold` page titles, `text-xl font-semibold`
+section titles, `text-sm` body) map onto `text-display` and
+`text-section`, but since 2026-08-16 `text-body` is 13px and no longer
+matches `text-sm`:
 
 | Token | Utility | Size | Use |
 |---|---|---|---|
 | `--text-display` | `text-display` | 1.875rem / 2.25rem | Page titles (pair with `font-semibold`) |
 | `--text-section` | `text-section` | 1.25rem / 1.75rem | Section titles (pair with `font-semibold`) |
-| `--text-body` | `text-body` | 0.875rem / 1.25rem | Everything that is not a title |
+| `--text-body` | `text-body` | 0.8125rem / 1.25rem | Everything that is not a title |
 
 ### Radius
 

@@ -104,10 +104,13 @@
   --text-section--line-height: calc(1.75 / 1.25);
   /* One body size. `--text-caption` (12px) was removed on 2026-08-07:
      captions, labels, helper text and dense control chrome now render at
-     the same 14px as body copy. Secondary text is distinguished by
-     colour (`text-text-muted` / `text-text-subtle`), not by size. */
-  --text-body:    0.875rem; /* body, captions, labels, controls */
-  --text-body--line-height: calc(1.25 / 0.875);
+     the same size as body copy. Secondary text is distinguished by
+     colour (`text-text-muted` / `text-text-subtle`), not by size.
+     Dropped from 14px to 13px on 2026-08-16 (the app chrome read too
+     large next to the 13px sidebar; 13px won). Leading stays at 20px so
+     every control, row and toolbar keeps its exact height. */
+  --text-body:    0.8125rem; /* body, captions, labels, controls */
+  --text-body--line-height: calc(1.25 / 0.8125);
 }
 
 /* Every button is clickable, so every button gets the hand cursor.
