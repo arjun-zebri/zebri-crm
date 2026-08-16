@@ -206,7 +206,7 @@ const ERROR_BUDGET = 54;
 // panels moved onto the new primitives. Running eslint --fix over the ~35
 // touched files cleared a large backlog of import-order warnings that had
 // accumulated in those pages (250 -> 199). Locking in.
-const WARNING_BUDGET = 113;
+const WARNING_BUDGET = 112;
 
 function runEslintJson() {
   try {

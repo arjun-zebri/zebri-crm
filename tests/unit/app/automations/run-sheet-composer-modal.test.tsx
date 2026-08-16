@@ -52,16 +52,36 @@ describe('the run sheet composer', () => {
     )
   })
 
-  it('previews the canned message and the link, in the handler\'s shell', async () => {
+  it('previews the supplier copy and the link, in the handler\'s shell', async () => {
     renderModal({})
     await waitFor(() => expect(previewHtml()).toContain('Acme MC Co'))
     // The default copy, with its variables filled in.
-    expect(previewHtml()).toContain('Here is the latest timeline for Sam &amp; Alex')
+    expect(previewHtml()).toContain('the run sheet for Sam &amp; Alex')
+    expect(previewHtml()).toContain('check it against your own schedule')
     expect(previewHtml()).not.toContain('{{couple.name}}')
     expect(previewHtml()).toContain('/timeline/')
     // `wrapAutomationShell`'s footer: the same builder the handler
     // calls, so the preview cannot drift from the send.
     expect(previewHtml()).toContain('via Zebri')
+  })
+
+  it('previews the couple their own copy, on its own tab', async () => {
+    // A supplier checks their slot; the couple is looking at their
+    // own day. Showing one of the two would be showing half the step.
+    renderModal({ sendToVendors: true, sendToCouple: true })
+    await waitFor(() => expect(previewHtml()).toContain('Acme MC Co'))
+    expect(previewHtml()).toContain('check it against your own schedule')
+
+    fireEvent.click(screen.getByRole('button', { name: 'To the couple' }))
+    // Apostrophes are entity-escaped by the shell, so match around one.
+    await waitFor(() => expect(previewHtml()).toContain('how your day is looking'))
+    expect(previewHtml()).not.toContain('check it against your own schedule')
+  })
+
+  it('shows no tabs when only one audience is selected', async () => {
+    renderModal({ sendToVendors: true })
+    await waitFor(() => expect(previewHtml()).toContain('Acme MC Co'))
+    expect(screen.queryByRole('button', { name: 'To the couple' })).not.toBeInTheDocument()
   })
 
   it('offers no way to write a message', () => {
@@ -73,7 +93,11 @@ describe('the run sheet composer', () => {
   })
 
   it('still previews a message saved before the field went away', async () => {
-    renderModal({ message: 'Run sheet attached, thanks all.' })
+    // And it applies to both audiences: overriding one and not the
+    // other would be a surprise.
+    renderModal({ message: 'Run sheet attached, thanks all.', sendToCouple: true })
+    await waitFor(() => expect(previewHtml()).toContain('Run sheet attached, thanks all.'))
+    fireEvent.click(screen.getByRole('button', { name: 'To the couple' }))
     await waitFor(() => expect(previewHtml()).toContain('Run sheet attached, thanks all.'))
   })
 

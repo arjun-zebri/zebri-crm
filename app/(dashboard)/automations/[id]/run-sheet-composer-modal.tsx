@@ -6,6 +6,11 @@
  * link — and the one thing the MC decides is who receives it. So the
  * modal is that choice and a preview of what lands.
  *
+ * The couple and the suppliers receive different copy (a supplier
+ * checks their own slot; the couple is looking at their own day), so
+ * the preview has a tab per audience once both are selected. Showing
+ * one of them would be showing half the step.
+ *
  * The preview calls `wrapAutomationShell`, the builder the handler
  * wraps its body in, and resolves the message through the same
  * renderer, so it cannot drift from what is sent. A sample couple
@@ -20,7 +25,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
-import { RUN_SHEET_MESSAGE } from '@/lib/automations/actions/timeline'
+import { RUN_SHEET_COUPLE_MESSAGE, RUN_SHEET_MESSAGE } from '@/lib/automations/actions/timeline'
 import { renderTemplate } from '@/lib/automations/variables'
 import { wrapAutomationShell } from '@/lib/email/html'
 import { buildSampleContext } from '@/lib/email/template-variables'
@@ -60,16 +65,43 @@ export function RunSheetComposerModal({ isOpen, onClose, config, onSave }: Props
 
   const businessName = identity?.businessName ?? 'Your business'
   // A step saved before the message stopped being editable keeps its
-  // own words, and the preview has to show those rather than the
-  // default it no longer uses.
-  const message = typeof draft['message'] === 'string' ? draft['message'] : RUN_SHEET_MESSAGE
+  // own words for every recipient, and the preview has to show those
+  // rather than a default it no longer uses.
+  const saved = typeof draft['message'] === 'string' ? draft['message'] : null
+  const custom = saved && saved !== RUN_SHEET_MESSAGE ? saved : null
+
+  // Suppliers and the couple get different copy, so the preview has a
+  // tab per audience — showing one of them would be showing half the
+  // step.
+  const audiences = useMemo(() => {
+    const rows: { key: string; label: string; message: string }[] = []
+    if (draft['sendToVendors'] !== false || draft['sendToMe'] === true) {
+      rows.push({
+        key: 'suppliers',
+        label: draft['sendToVendors'] === false ? 'To me' : 'To suppliers',
+        message: custom ?? RUN_SHEET_MESSAGE,
+      })
+    }
+    if (draft['sendToCouple'] === true) {
+      rows.push({ key: 'couple', label: 'To the couple', message: custom ?? RUN_SHEET_COUPLE_MESSAGE })
+    }
+    return rows.length ? rows : [{ key: 'suppliers', label: 'To suppliers', message: custom ?? RUN_SHEET_MESSAGE }]
+  }, [draft, custom])
+
+  const [shown, setShown] = useState(0)
+  // The audience list shrinks when a chip is unticked; keep the tab
+  // in range rather than previewing nothing.
+  const active = audiences[Math.min(shown, audiences.length - 1)]!
 
   const previewHtml = useMemo(() => {
     const ctx = buildSampleContext({ businessName })
     // The handler's own shape: the rendered message, then the link on
     // its own line.
-    return wrapAutomationShell(`${renderTemplate(message, ctx)}\n\n${SAMPLE_LINK}`, businessName)
-  }, [message, businessName])
+    return wrapAutomationShell(
+      `${renderTemplate(active.message, ctx)}\n\n${SAMPLE_LINK}`,
+      businessName,
+    )
+  }, [active, businessName])
 
   return (
     <Modal
@@ -104,7 +136,27 @@ export function RunSheetComposerModal({ isOpen, onClose, config, onSave }: Props
         </div>
 
         <div>
-          <p className="mb-1.5 text-body font-medium text-text">Preview</p>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <p className="text-body font-medium text-text">Preview</p>
+            {audiences.length > 1 && (
+              <div className="flex gap-1">
+                {audiences.map((audience, index) => (
+                  <button
+                    key={audience.key}
+                    type="button"
+                    onClick={() => setShown(index)}
+                    className={`h-8 cursor-pointer rounded-pill px-3 text-body transition-colors ${
+                      audience.key === active.key
+                        ? 'bg-surface-emphasis font-medium text-text'
+                        : 'text-text-muted hover:text-text'
+                    }`}
+                  >
+                    {audience.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="overflow-hidden rounded-control border border-border">
             <div className="border-b border-border bg-surface-muted px-4 py-3">
               <p className="text-body text-text-subtle">Subject</p>

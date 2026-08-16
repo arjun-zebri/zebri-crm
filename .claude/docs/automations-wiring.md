@@ -531,11 +531,24 @@ whole email is the handler's — the subject
 the link — and the one thing the MC decides is who receives it. So
 the modal is that choice and a preview.
 
-The message field is gone (`RUN_SHEET_MESSAGE` is exported from the
-action so the preview shows the words that actually send). It was a
-one-line body that had to be typed on every step, which is a field
-asking to be left as its default. A custom message saved before this
-still sends, and still previews.
+The message field is gone. It was a one-line body that had to be
+typed on every step, which is a field asking to be left as its
+default. A custom message saved before this still sends, and still
+previews.
+
+**Two audiences, two messages** (`RUN_SHEET_MESSAGE` and
+`RUN_SHEET_COUPLE_MESSAGE`, both exported so the preview shows what
+actually sends). A supplier is checking their own slot and needs to
+know they can push back; the couple is looking at the shape of their
+own day and should not be asked to proofread a call sheet. The single
+old version ("please review and let me know if anything looks off")
+did neither: no action, no deadline, nothing named to look at. The
+handler sends the couple separately from everyone else; a custom
+message overrides both, since overriding one audience and not the
+other would be a surprise. The modal previews each on its own tab.
+`run-sheet-copy.test.ts` pins that both only use tokens the resolver
+knows — an unknown one renders empty, which reads as a typo in the
+MC's own email.
 
 Because nothing in the modal is typed, `srcDoc` binds directly: the
 patch-in-place dance only existed to stop a reload on every
