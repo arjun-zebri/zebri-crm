@@ -84,6 +84,10 @@ describe('the run sheet composer', () => {
     expect(previewHtml()).toContain('check it against your own schedule')
     expect(previewHtml()).not.toContain('{{couple.name}}')
     expect(previewHtml()).toContain('/timeline/')
+    // A button and its copyable address, the way every other
+    // couple-facing email in the app presents a link.
+    expect(previewHtml()).toContain('View run sheet')
+    expect(previewHtml()).toContain('Or copy this link')
     // `wrapAutomationShell`'s footer: the same builder the handler
     // calls, so the preview cannot drift from the send.
     expect(previewHtml()).toContain('via Zebri')

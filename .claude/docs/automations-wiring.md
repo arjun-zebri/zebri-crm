@@ -586,9 +586,11 @@ other would be a surprise. The modal previews each on its own tab.
 knows — an unknown one renders empty, which reads as a typo in the
 MC's own email.
 
-Because nothing in the modal is typed, `srcDoc` binds directly: the
-patch-in-place dance only existed to stop a reload on every
-keystroke.
+**The link renders as a button.** `wrapAutomationShell` takes an
+optional `cta` now and draws the same button-plus-copyable-address the
+questionnaire, contract and invoice emails use. A bare URL in the body
+was a link the recipient had to notice and select. `safeUrl` gates the
+href, so only http(s) reaches the inbox as a button.
 
 **`MenuItem` gained `checked`**, which turns a row into a
 `menuitemcheckbox` that announces its own state. The three audiences

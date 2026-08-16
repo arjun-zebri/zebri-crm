@@ -24,21 +24,46 @@ import type { PublicBranding } from "@/lib/branding/public-branding";
  * so what the MC typed is what arrives and nothing they type can
  * inject markup.
  *
+ * Pass `cta` when the email carries a link: it renders the button and
+ * the copyable address beneath it that every other couple-facing
+ * email uses, instead of leaving a bare URL in the text for the
+ * recipient to find.
+ *
  * Takes a business name rather than a run context so the in-app
  * preview can call it: the context type drags the automation runner
  * in, and this module has to stay importable from a client
  * component. `wrapAutomationHtml` in the messaging actions is the
  * context-taking wrapper the handlers use.
  */
-export function wrapAutomationShell(body: string, businessName: string): string {
+export function wrapAutomationShell(
+  body: string,
+  businessName: string,
+  cta?: { label: string; url: string } | undefined,
+): string {
   const safe = escapeHtmlText(body).replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/\n/g, "<br>");
+  // A bare URL in the body is a link the recipient has to notice and
+  // select. Every other couple-facing email in the app gives it a
+  // button with the address underneath for the clients that strip
+  // them, and this matches that markup.
+  const url = safeUrl(cta?.url);
+  const action = cta && url
+    ? `
+          <table cellpadding="0" cellspacing="0" style="margin-top:32px;">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${url}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">${escapeHtmlText(cta.label)}</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${url}" style="color:#6b7280;">${escapeHtmlText(cta.url)}</a>
+          </p>`
+    : "";
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
-        <tr><td style="padding:40px;font-size:15px;color:#374151;line-height:1.6;">${safe}</td></tr>
+        <tr><td style="padding:40px;font-size:15px;color:#374151;line-height:1.6;">${safe}${action}</td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
           <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${escapeHtmlText(businessName)} via Zebri</p>
         </td></tr>

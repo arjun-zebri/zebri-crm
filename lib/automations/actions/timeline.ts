@@ -15,13 +15,13 @@
 import { Resend } from 'resend'
 import { z } from 'zod'
 
+import { wrapAutomationShell } from '@/lib/email/html'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult, ActionType, RunContext } from '@/types/automations'
 
 import { resolveRecipients } from '../recipients'
 import { renderTemplate } from '../variables'
 
-import { wrapAutomationHtml } from './messaging'
 
 import type { ActionSpec } from './index'
 
@@ -216,12 +216,15 @@ const sendTimelineToVendors: ActionSpec<z.infer<typeof sendTimelineToVendorsSche
     // that narrowing does not survive into a callback.
     const coupleName = ctx.couple.name
     const send = async (to: string, message: string) => {
-      const body = renderTemplate(message, ctx) + `\n\n${url}`
+      const html = wrapAutomationShell(renderTemplate(message, ctx), ctx.mc.businessName, {
+        label: 'View run sheet',
+        url,
+      })
       await resend().emails.send({
         from: FROM,
         to,
         subject: `Run sheet for ${coupleName} - ${ctx.mc.businessName}`,
-        html: wrapAutomationHtml(body, ctx),
+        html,
         replyTo: ctx.mc.email,
       })
     }

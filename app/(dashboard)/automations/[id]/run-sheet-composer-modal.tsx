@@ -36,8 +36,12 @@ import { RUN_SHEET_CHIP } from './action-chips'
 import { EmailPreview } from './email-preview'
 import { TriggerFilterList, type FilterConfig } from './trigger-filter-list'
 
-/** Stands in for the run sheet the step will actually link to. */
-const SAMPLE_LINK = 'https://app.zebri.com.au/timeline/…'
+/**
+ * Stands in for the run sheet the step will actually link to. A real
+ * URL, not an ellipsis: `wrapAutomationShell` only renders the button
+ * for a link it can trust as http(s).
+ */
+const SAMPLE_LINK = 'https://app.zebri.com.au/timeline/sample'
 
 interface Props {
   isOpen: boolean
@@ -102,12 +106,12 @@ export function RunSheetComposerModal({ isOpen, onClose, config, onSave }: Props
       ...(identity?.contactName ? { contactName: identity.contactName } : {}),
       ...(identity?.email ? { email: identity.email } : {}),
     })
-    // The handler's own shape: the rendered message, then the link on
-    // its own line.
-    return wrapAutomationShell(
-      `${renderTemplate(active.message, ctx)}\n\n${SAMPLE_LINK}`,
-      businessName,
-    )
+    // The handler's own call: the message, then the button and its
+    // copyable address.
+    return wrapAutomationShell(renderTemplate(active.message, ctx), businessName, {
+      label: 'View run sheet',
+      url: SAMPLE_LINK,
+    })
   }, [active, businessName, identity])
 
   return (

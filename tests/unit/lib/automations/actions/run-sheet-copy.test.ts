@@ -13,6 +13,7 @@ import {
   RUN_SHEET_MESSAGE,
 } from '@/lib/automations/actions/timeline'
 import { VARIABLE_CATALOGUE } from '@/lib/automations/variables'
+import { wrapAutomationShell } from '@/lib/email/html'
 
 /** Every `{{token}}` a piece of copy uses. */
 function tokensIn(copy: string): string[] {
@@ -56,5 +57,47 @@ describe('run sheet copy', () => {
     for (const copy of [RUN_SHEET_MESSAGE, RUN_SHEET_COUPLE_MESSAGE]) {
       expect(copy).toMatch(/\{\{mc\.contact_name\}\}/)
     }
+  })
+})
+
+describe('the run sheet shell', () => {
+  const html = wrapAutomationShell('Have a look.', 'Acme MC Co', {
+    label: 'View run sheet',
+    url: 'https://app.zebri.com.au/timeline/abc',
+  })
+
+  it('renders the link as a button with the address underneath', () => {
+    // A bare URL in the body is a link the recipient has to notice
+    // and select; every other couple-facing email gives it a button,
+    // and the address for clients that strip them.
+    expect(html).toContain('View run sheet')
+    expect(html).toContain('Or copy this link')
+    expect(html).toContain('href="https://app.zebri.com.au/timeline/abc"')
+  })
+
+  it('renders nothing extra when there is no link', () => {
+    const plain = wrapAutomationShell('Just words.', 'Acme MC Co')
+    expect(plain).not.toContain('Or copy this link')
+    expect(plain).toContain('Just words.')
+  })
+
+  it('refuses a link that is not http(s)', () => {
+    // `safeUrl` gates the href, so a javascript: URL cannot reach the
+    // couple's inbox as a button.
+    const unsafe = wrapAutomationShell('Hi.', 'Acme MC Co', {
+      label: 'Click',
+      url: 'javascript:alert(1)',
+    })
+    expect(unsafe).not.toContain('Click')
+    expect(unsafe).not.toContain('javascript:')
+  })
+
+  it('escapes the label and the body', () => {
+    const escaped = wrapAutomationShell('<script>x</script>', 'Acme MC Co', {
+      label: '<b>Go</b>',
+      url: 'https://app.zebri.com.au/timeline/abc',
+    })
+    expect(escaped).not.toContain('<script>')
+    expect(escaped).not.toContain('<b>Go</b>')
   })
 })
