@@ -22,17 +22,36 @@ sendAlert(event) ──────────┤
   + `.child({...})`). Writes to console; additional destinations plug in
   via `registerTransport`.
 - **`lib/alerts/slack.ts`** — low-level Slack webhook transport (still
-  available for one-off custom Block-Kit payloads).
+  available for one-off custom Block-Kit payloads). Owns the local-run
+  suppression gate, `slackSuppressed()`.
 
-### Local development suppression
+### Local run suppression
 
-`sendAlert` never posts to Slack when `NODE_ENV === 'development'`; the
-structured log record is still written (look for
-`alert slack suppressed (dev): <type>` in the dev console). Local
-checkouts share the production webhook through `.env.local`, so this
-keeps dev-server noise out of the real alerts channel. To deliberately
-test Slack delivery from a dev server, set `ALERTS_DEV_SLACK=1`.
-Covered by `tests/unit/alerts/send-alert-suppression.test.ts`.
+**No Slack delivery ever leaves a local machine.** The gate lives in
+`sendSlackAlert` (the transport), not in `sendAlert`, because several
+call sites post to Slack directly and would otherwise bypass it:
+
+- `app/api/stripe/webhook/route.ts`
+- `app/api/email/send-contract/route.ts`
+- `app/api/alerts/slack/route.ts`, which the client error boundaries
+  (`app/error.tsx`, `app/global-error.tsx`, `app/providers.tsx`) POST to
+  on every uncaught render or query error
+
+`slackSuppressed()` returns true on two signals: `NODE_ENV ===
+'development'` (the dev server) and a `NEXT_PUBLIC_APP_URL` pointing at
+localhost / 127.0.0.1 / ::1 (catches a local production build run with
+`npm run build && npm start`). Vercel always sets a real domain, so
+neither fires in a deployed environment.
+
+Structured log records are still written in every case; look for
+`slack alert suppressed (local run)` in the console. Local checkouts
+share the production webhook through `.env.local`, which is what makes
+this gate necessary. To deliberately test Slack delivery from a local
+server, set `ALERTS_DEV_SLACK=1` (it overrides both signals).
+
+Covered by `tests/unit/alerts/slack-transport-suppression.test.ts` (the
+transport gate) and `tests/unit/alerts/send-alert-suppression.test.ts`
+(the dispatcher's log-and-return behaviour).
 
 > **Observability stack:** Vercel runtime logs (captures every logger
 > write) + Slack alerts via `sendAlert()` + the existing global error

@@ -36,6 +36,18 @@ export interface FlowNodeData extends Record<string, unknown> {
   summary: string
   /** Lucide icon name from the trigger / action UI catalogue. */
   iconName?: string | undefined
+  /**
+   * The step configures itself in a modal (`send_email`), so the card
+   * has no inline body: clicking it opens the modal and there is no
+   * expand chevron to offer.
+   */
+  modalOnly?: boolean | undefined
+  /**
+   * The step has nothing to configure at all (`stop`). No chevron, no
+   * panel, and the card does not respond to a click — an expand that
+   * opens onto nothing is a promise the card cannot keep.
+   */
+  noConfig?: boolean | undefined
 }
 
 export interface FlowNodeApi {
@@ -87,9 +99,11 @@ export function FlowNode({ data, selected }: NodeProps) {
         <div className="flex items-center gap-3 px-3 py-3">
           <button
             type="button"
-            onClick={() => api?.onToggle(d.nodeId)}
-            aria-expanded={expanded}
-            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+            {...(d.noConfig ? { disabled: true } : { onClick: () => api?.onToggle(d.nodeId) })}
+            {...(d.modalOnly || d.noConfig ? {} : { 'aria-expanded': expanded })}
+            className={`flex min-w-0 flex-1 items-center gap-3 text-left ${
+              d.noConfig ? '' : 'cursor-pointer'
+            }`}
           >
             <span
               className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control ${
@@ -130,18 +144,20 @@ export function FlowNode({ data, selected }: NodeProps) {
                 <Trash2 size={15} strokeWidth={1.5} />
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => api?.onToggle(d.nodeId)}
-              aria-label={expanded ? `Collapse ${d.title}` : `Expand ${d.title}`}
-              className="cursor-pointer p-1 text-text-subtle transition-colors hover:text-text"
-            >
-              <ChevronDown
-                size={16}
-                strokeWidth={1.5}
-                className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-              />
-            </button>
+            {!d.modalOnly && !d.noConfig && (
+              <button
+                type="button"
+                onClick={() => api?.onToggle(d.nodeId)}
+                aria-label={expanded ? `Collapse ${d.title}` : `Expand ${d.title}`}
+                className="cursor-pointer p-1 text-text-subtle transition-colors hover:text-text"
+              >
+                <ChevronDown
+                  size={16}
+                  strokeWidth={1.5}
+                  className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+            )}
           </div>
         </div>
 
@@ -156,11 +172,15 @@ export function FlowNode({ data, selected }: NodeProps) {
             node, and scrolling a long form zooms the canvas. */}
         <div
           className={`grid transition-[grid-template-rows] duration-200 ease-out ${
-            expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+            expanded && !d.modalOnly && !d.noConfig ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
           }`}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="nodrag nowheel border-t border-border px-3 py-3">
+            <div
+              className={`nodrag nowheel ${
+                d.modalOnly || d.noConfig ? '' : 'border-t border-border px-3 py-3'
+              }`}
+            >
               {api?.renderBody(d.nodeId)}
             </div>
           </div>

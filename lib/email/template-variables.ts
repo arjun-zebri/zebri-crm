@@ -112,6 +112,13 @@ export function buildSampleContext(opts: SampleContextOptions = {}): RunContext 
       spouseEmail: 'alex@example.com',
       spousePhone: null,
       timezone: 'Australia/Sydney',
+      // Sharing on, with sample tokens, so the three portal links
+      // preview as URLs rather than amber "missing" chips.
+      portalToken: 'sample-primary',
+      secondaryPortalToken: 'sample-partner',
+      portalEnabled: true,
+      runSheetToken: 'sample-run-sheet',
+      runSheetEnabled: true,
     },
     invoice: null,
     mc: {
@@ -119,6 +126,7 @@ export function buildSampleContext(opts: SampleContextOptions = {}): RunContext 
       businessName: businessName?.trim() || 'Your business',
       contactName: contactName?.trim() || 'You',
       email: email?.trim() || 'hello@example.com',
+      reviewLink: 'https://g.page/r/sample/review',
       phone: null,
       brandColor: null,
       logoUrl: null,

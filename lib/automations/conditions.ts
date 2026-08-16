@@ -58,7 +58,10 @@ export const branchPredicateSchema: z.ZodSchema<BranchPredicate> = z.lazy(() =>
       kind: z.literal('couple_field'),
       field: z.string(),
       op: z.enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'is_set', 'is_unset']),
-      value: z.any(),
+      // Optional because `is_set` / `is_unset` take no operand, and
+      // `z.any()` alone still demands the key be present — a branch
+      // saved without it failed the union parse and never ran.
+      value: z.any().optional(),
     }),
     z.object({
       kind: z.literal('event_in'),
@@ -66,12 +69,13 @@ export const branchPredicateSchema: z.ZodSchema<BranchPredicate> = z.lazy(() =>
       days: z.number().int(),
     }),
     z.object({ kind: z.literal('has_paid_deposit') }),
+    z.object({ kind: z.literal('has_paid_invoice') }),
     z.object({ kind: z.literal('has_signed_contract') }),
     z.object({
       kind: z.literal('custom_field'),
       key: z.string(),
       op: z.enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'is_set', 'is_unset']),
-      value: z.any(),
+      value: z.any().optional(),
     }),
     z.object({ kind: z.literal('and'), predicates: z.array(branchPredicateSchema) }),
     z.object({ kind: z.literal('or'), predicates: z.array(branchPredicateSchema) }),
@@ -182,8 +186,21 @@ export function evaluatePredicate(pred: BranchPredicate, ctx: RunContext): boole
       // a column the couples table does not have, so it never returned true.
       return Boolean(ctx.invoice?.firstStagePaidAt)
     }
+    case 'has_paid_invoice':
+      // Settled in full, as opposed to `has_paid_deposit`, which only
+      // asks whether the first stage landed.
+      return ctx.invoice?.status === 'paid'
     case 'has_signed_contract':
-      return Boolean(ctx.actionResults?.['contract_signed_at']) || Boolean((ctx.triggerEvent.payload as Record<string, unknown>)?.['contract_signed'])
+      // `contractSignedAt` is the real answer, loaded with the rest of
+      // the context. The other two reads are kept for the trigger that
+      // carries a signature in its own payload, but neither was ever
+      // written by anything, so on their own this condition could not
+      // return true.
+      return (
+        Boolean(ctx.contractSignedAt) ||
+        Boolean(ctx.actionResults?.['contract_signed_at']) ||
+        Boolean((ctx.triggerEvent.payload as Record<string, unknown>)?.['contract_signed'])
+      )
     case 'custom_field': {
       const value = (ctx.actionResults?.[`custom_field_${pred.key}`] as unknown) ?? null
       return compare(value, pred.op, pred.value)
@@ -207,6 +224,8 @@ function readCoupleField(ctx: RunContext, field: string): unknown {
       return c.eventDate
     case 'venue':
       return c.venue
+    case 'lead_source':
+      return c.leadSource
     case 'email':
       return c.email
     case 'phone':

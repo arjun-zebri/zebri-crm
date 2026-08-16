@@ -15,13 +15,14 @@
 import { Resend } from 'resend'
 import { z } from 'zod'
 
+import { wrapAutomationShell } from '@/lib/email/html'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult, ActionType, RunContext } from '@/types/automations'
 
 import { resolveRecipients } from '../recipients'
 import { renderTemplate } from '../variables'
 
-import { wrapAutomationHtml } from './messaging'
+
 import type { ActionSpec } from './index'
 
 let _resend: Resend | undefined
@@ -129,12 +130,43 @@ const updateTimelineEvent: ActionSpec<z.infer<typeof updateTimelineEventSchema>>
  * before the merge — which has no flags — keeps doing exactly what it
  * did.
  */
+/**
+ * The run sheet email's body, above the link.
+ *
+ * Exported so the builder's preview shows the words that are actually
+ * sent. Not editable in the UI: the subject, the shell and the link
+ * were always the handler's, and a one-line message that had to be
+ * typed on every step was a field asking to be left as its default.
+ * A custom message saved before that still sends.
+ *
+ * Two audiences read this, so it is written twice. A vendor needs to
+ * check their own slot and knows they can push back; the couple is
+ * reading the shape of their own day and should not be asked to
+ * proofread a call sheet. The old single version ("please review and
+ * let me know if anything looks off") did neither job: it named no
+ * action, no deadline, and nothing to actually look at.
+ */
+export const RUN_SHEET_MESSAGE =
+  "Hi, the run sheet for {{couple.name}} on {{event.date | friendly}} is ready.\n\n" +
+  "Please check it against your own schedule, especially your arrival time and anything " +
+  "you're leading. If a time doesn't work on your end, reply to this email and I'll sort it out.\n\n" +
+  "Thanks,\n{{mc.contact_name}}"
+
+/**
+ * The couple's version. They are not checking a call sheet, they are
+ * seeing their day laid out, so this reads as a share rather than a
+ * request for corrections.
+ */
+export const RUN_SHEET_COUPLE_MESSAGE =
+  "Hi {{couple.primary_name}}, here's how your day is looking.\n\n" +
+  "This is the run sheet your suppliers are working from, so it is the clearest picture of " +
+  "the timings. Have a read whenever you like, and tell me if anything is not what you had " +
+  "in mind.\n\n" +
+  "Thanks,\n{{mc.contact_name}}"
+
 const sendTimelineToVendorsSchema = z.object({
   eventId: z.string().uuid().optional(),
-  message: z
-    .string()
-    .min(1)
-    .default('Here is the latest timeline for {{couple.name}} on {{event.date | friendly}}. Please review and let me know if anything looks off.'),
+  message: z.string().min(1).default(RUN_SHEET_MESSAGE),
   sendToVendors: z.boolean().default(true),
   sendToCouple: z.boolean().default(false),
   sendToMe: z.boolean().default(false),
@@ -172,16 +204,38 @@ const sendTimelineToVendors: ActionSpec<z.infer<typeof sendTimelineToVendorsSche
     if (config.sendToMe && ctx.mc.email) emails.add(ctx.mc.email)
     if (emails.size === 0) return { kind: 'ok', output: { skipped: 'no recipients' } }
 
-    const body = renderTemplate(config.message, ctx) + `\n\n${url}`
-    let sent = 0
-    for (const to of emails) {
+    // The couple reads a different email from the suppliers, so the
+    // recipient sets are built and sent separately. A step saved with
+    // its own message keeps using it for everyone: overriding one
+    // audience's copy and not the other's would be a surprise.
+    const custom = config.message !== RUN_SHEET_MESSAGE ? config.message : null
+    const coupleEmail = config.sendToCouple ? (ctx.couple.email ?? null) : null
+    const others = [...emails].filter((to) => to !== coupleEmail)
+
+    // Captured before the closure: `ctx.couple` is narrowed above, but
+    // that narrowing does not survive into a callback.
+    const coupleName = ctx.couple.name
+    const send = async (to: string, message: string) => {
+      const html = wrapAutomationShell(renderTemplate(message, ctx), ctx.mc.businessName, {
+        label: 'View run sheet',
+        url,
+      })
       await resend().emails.send({
         from: FROM,
         to,
-        subject: `Run sheet for ${ctx.couple.name} - ${ctx.mc.businessName}`,
-        html: wrapAutomationHtml(body, ctx),
+        subject: `Run sheet for ${coupleName} - ${ctx.mc.businessName}`,
+        html,
         replyTo: ctx.mc.email,
       })
+    }
+
+    let sent = 0
+    for (const to of others) {
+      await send(to, custom ?? RUN_SHEET_MESSAGE)
+      sent += 1
+    }
+    if (coupleEmail) {
+      await send(coupleEmail, custom ?? RUN_SHEET_COUPLE_MESSAGE)
       sent += 1
     }
     return { kind: 'ok', output: { sent, run_sheet_link: url } }

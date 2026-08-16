@@ -231,7 +231,13 @@ const requestInformation: ActionSpec<z.infer<typeof requestInformationSchema>> =
 // against them parsing.
 const createCoupleSchema = z.object({
   name: z.string().min(1),
-  email: z.string().email().optional(),
+  /**
+   * `''` is the chip's "added, nothing typed yet" value and means
+   * unset — rejecting it would fail the config parse and leave a
+   * silently dead automation. The handler already writes `''` for an
+   * absent email, so the two are the same row.
+   */
+  email: z.union([z.string().email(), z.literal('')]).optional(),
   phone: z.string().optional(),
   eventDate: z.string().optional(),
   leadSource: z.string().optional(),

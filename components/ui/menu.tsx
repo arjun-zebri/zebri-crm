@@ -91,6 +91,13 @@ export interface MenuItemProps {
   onClick?: () => void;
   /** Marks the current choice: tinted background, stronger text. */
   selected?: boolean;
+  /**
+   * Turns the row into a checkbox row (`menuitemcheckbox`), for a menu
+   * where choices are independent and picking one must not clear the
+   * others. Pass the row's own state; leave unset for an ordinary
+   * single-choice row.
+   */
+  checked?: boolean;
   /** Destructive action: danger-toned text. */
   destructive?: boolean;
   /** Greys the row out and blocks activation. */
@@ -113,6 +120,7 @@ export function MenuItem({
   children,
   onClick,
   selected = false,
+  checked,
   destructive = false,
   disabled = false,
   size = 'md',
@@ -130,7 +138,10 @@ export function MenuItem({
   return (
     <button
       type="button"
-      role="menuitem"
+      // A checkbox row announces its own state; a plain row does not
+      // have one to announce.
+      role={checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+      {...(checked === undefined ? {} : { 'aria-checked': checked })}
       onClick={onClick}
       disabled={disabled}
       className={`flex w-full cursor-pointer items-center text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${ITEM_SIZE[size]} ${tone}${

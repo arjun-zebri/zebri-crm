@@ -83,6 +83,28 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
  *
  * `send_sms` is included but flagged `comingSoon` in its spec — it
  * renders greyed/disabled rather than hidden, per the review.
+ * `send_pre_event_checklist` is excluded by product decision
+ * (2026-08-16). Its spec stays registered so saved automations keep
+ * running.
+ * `request_information` is excluded by product decision
+ * (2026-08-16): like `send_portal_link`, it is a one-line email
+ * carrying a portal link — `send_email` says more, and now has the
+ * portal variables to link with.
+ * `send_portal_link` is excluded by product decision (2026-08-16):
+ * it sends a fixed one-line email whose only configurable part is
+ * the message, which `send_email` does better now that
+ * `{{portal.link}}` resolves on its own. Its spec stays registered
+ * so saved automations keep running.
+ * `update_task` is excluded by product decision (2026-08-15): it
+ * edits "the most recent task created by an earlier action", or one
+ * pasted UUID, neither of which an MC can reason about while looking
+ * at the canvas. Its spec stays registered so saved automations keep
+ * running.
+ * `pause_couple_automations` is excluded by product decision
+ * (2026-08-15): pausing every other automation on a couple from
+ * inside one of them is a rule that is very hard to reason about
+ * from the canvas. Its spec stays registered so saved automations
+ * keep running.
  * Excluded (hidden): the un-reviewed extras
  * (`create_calendar_event`, `create_reminder`,
  * `update_timeline_event`, `send_onboarding_pack`,
@@ -94,12 +116,8 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'send_sms', // greyed coming-soon, kept per review
   'update_couple_stage',
   'add_note',
-  'send_portal_link',
-  'request_information',
   'create_couple',
-  'pause_couple_automations',
   'create_task',
-  'update_task',
   'send_contract',
   'send_invoice',
   'send_couple_questionnaire',
@@ -113,7 +131,6 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   // its recipient checkboxes. All three specs stay in the registry so
   // saved automations keep running.
   'send_timeline_to_vendors',
-  'send_pre_event_checklist',
   'send_thank_you_message',
   'request_review',
   'send_referral_request',

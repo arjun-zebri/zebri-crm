@@ -28,7 +28,8 @@ export interface DispatchPayload {
   subject: string;
   html: string;
   replyTo?: string;
-  bcc?: string;
+  /** One address or several — an MC can BCC themselves and an assistant. */
+  bcc?: string | string[];
   cc?: string[];
   attachments?: EmailAttachment[];
 }
@@ -121,7 +122,7 @@ function buildMime(from: string, payload: DispatchPayload): string {
   ];
   if (payload.replyTo) headers.push(`Reply-To: ${payload.replyTo}`);
   if (payload.cc?.length) headers.push(`Cc: ${payload.cc.join(', ')}`);
-  if (payload.bcc) headers.push(`Bcc: ${payload.bcc}`);
+  if (payload.bcc) headers.push(`Bcc: ${toList(payload.bcc).join(', ')}`);
 
   if (!payload.attachments?.length) {
     headers.push('Content-Type: text/html; charset="UTF-8"');
@@ -169,7 +170,7 @@ async function sendViaGraph(from: string, accessToken: string, payload: Dispatch
     body: { contentType: 'HTML', content: payload.html },
     toRecipients: recipients(toList(payload.to)),
     ...(payload.cc?.length ? { ccRecipients: recipients(payload.cc) } : {}),
-    ...(payload.bcc ? { bccRecipients: recipients([payload.bcc]) } : {}),
+    ...(payload.bcc ? { bccRecipients: recipients(toList(payload.bcc)) } : {}),
     ...(payload.replyTo ? { replyTo: recipients([payload.replyTo]) } : {}),
     ...(payload.attachments?.length
       ? {

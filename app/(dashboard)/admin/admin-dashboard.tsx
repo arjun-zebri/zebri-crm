@@ -7,10 +7,12 @@ import type {
   AdminDashboard,
   AdminUser,
 } from '@/lib/admin/admin-analytics';
+import type { UserStats } from '@/lib/admin/user-value';
 
 import { UserDetailPanel } from './components/user-detail-panel';
 import { ConnectIssuesList } from './sections/connect-issues-list';
 import { DormantList } from './sections/dormant-list';
+import { EngagementSection } from './sections/engagement-section';
 import { MetricCards } from './sections/metric-cards';
 import { PastDueList } from './sections/past-due-list';
 import { RecentSignupsList } from './sections/recent-signups-list';
@@ -35,9 +37,11 @@ const tabs: { id: TabId; label: string }[] = [
 export function AdminDashboardView({
   users,
   dashboard,
+  stats,
 }: {
   users: AdminUser[];
   dashboard: AdminDashboard;
+  stats: Record<string, UserStats>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -81,7 +85,7 @@ export function AdminDashboardView({
           {activeTab === 'dashboard' ? (
             <DashboardView dashboard={dashboard} onOpenUser={setOpenUserId} />
           ) : (
-            <UsersTableView users={users} onOpenUser={setOpenUserId} />
+            <UsersTableView users={users} stats={stats} onOpenUser={setOpenUserId} />
           )}
         </div>
       </div>
@@ -107,7 +111,15 @@ function DashboardView({
       {/* Row 1 — 4 hero chart cards (MRR / active / churn / signups) */}
       <MetricCards dashboard={dashboard} />
 
-      {/* Row 2 — operational action lists */}
+      {/* Row 2 — engagement: who's actually using the product, and
+          which paying accounts have gone quiet */}
+      <EngagementSection
+        engagement={dashboard.engagement}
+        goneQuiet={dashboard.goneQuietUsers}
+        onOpenUser={onOpenUser}
+      />
+
+      {/* Row 3 — operational action lists */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <UpcomingRenewalsList
           renewals={dashboard.renewals}
@@ -120,7 +132,7 @@ function DashboardView({
         />
       </div>
 
-      {/* Row 3 — supporting lists */}
+      {/* Row 4 — supporting lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <DormantList rows={dashboard.dormantUsers} onOpenUser={onOpenUser} />
         <RecentSignupsList

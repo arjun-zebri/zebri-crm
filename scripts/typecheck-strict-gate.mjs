@@ -69,8 +69,10 @@ import { execSync } from 'node:child_process';
 // it one exactOptionalPropertyTypes site (273 -> 272). The full trigger
 // sweep then replaced seven more hand-written spec config types with
 // z.infer-derived ones (272 -> 265), and the action-picker
-// condensation cleared one more (265 -> 264). Locking in.
-const STRICT_BUDGET = 264;
+// condensation cleared one more (265 -> 264). Moving the send_email
+// config out of the card and into the composer modal cleared two more
+// (264 -> 262). Locking in.
+const STRICT_BUDGET = 262;
 
 function runTscStrict() {
   try {

@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { renderTemplate } from '@/lib/automations/variables'
+import { renderTemplate, VARIABLE_CATALOGUE } from '@/lib/automations/variables'
 import type { RunContext } from '@/types/automations'
 
 function makeCtx(overrides: Partial<RunContext> = {}): RunContext {
@@ -101,5 +101,69 @@ describe('renderTemplate', () => {
 
   it('leaves {{questionnaire.link}} empty when no questionnaire is in context', () => {
     expect(renderTemplate('{{questionnaire.link}}', makeCtx())).toBe('')
+  })
+})
+
+describe('portal links', () => {
+  /** A context whose couple has sharing on and all three tokens. */
+  function withTokens(overrides: Record<string, unknown> = {}) {
+    const ctx = makeCtx()
+    return {
+      ...ctx,
+      couple: {
+        ...ctx.couple!,
+        portalToken: 'tok-primary',
+        secondaryPortalToken: 'tok-partner',
+        portalEnabled: true,
+        runSheetToken: 'tok-run-sheet',
+        runSheetEnabled: true,
+        ...overrides,
+      },
+    }
+  }
+
+  it('gives each partner their own portal link', () => {
+    // Separate tokens, so each partner's portal edits are attributed
+    // to them rather than to "the couple".
+    const ctx = withTokens()
+    expect(renderTemplate('{{portal.link}}', ctx)).toContain('/portal/tok-primary')
+    expect(renderTemplate('{{portal.partner_link}}', ctx)).toContain('/portal/tok-partner')
+  })
+
+  it('resolves the vendor run sheet link', () => {
+    expect(renderTemplate('{{portal.vendor_link}}', withTokens())).toContain(
+      '/timeline/tok-run-sheet',
+    )
+  })
+
+  it('resolves nothing when sharing is off, rather than a link that 404s', () => {
+    // Both partner tokens hang off the one `portal_token_enabled`
+    // flag, and the portal RPCs refuse a token whose couple has it
+    // off. An empty variable pauses the run and alerts the MC; a dead
+    // URL just reaches the couple.
+    const off = withTokens({ portalEnabled: false })
+    expect(renderTemplate('{{portal.link}}', off)).toBe('')
+    expect(renderTemplate('{{portal.partner_link}}', off)).toBe('')
+
+    const noRunSheet = withTokens({ runSheetEnabled: false })
+    expect(renderTemplate('{{portal.vendor_link}}', noRunSheet)).toBe('')
+  })
+
+  it('prefers the link a preceding send-portal-link step used', () => {
+    const ctx = withTokens()
+    const stamped = {
+      ...ctx,
+      triggerEvent: { ...ctx.triggerEvent, payload: { portal_link: 'https://x.test/p/abc' } },
+    } as typeof ctx
+    expect(renderTemplate('{{portal.link}}', stamped)).toBe('https://x.test/p/abc')
+    // …but only for the link it actually stamped.
+    expect(renderTemplate('{{portal.partner_link}}', stamped)).toContain('/portal/tok-partner')
+  })
+
+  it('offers all three in the catalogue the editors read', () => {
+    const tokens = VARIABLE_CATALOGUE.flatMap((g) => g.variables).map((v) => v.token)
+    expect(tokens).toContain('{{portal.link}}')
+    expect(tokens).toContain('{{portal.partner_link}}')
+    expect(tokens).toContain('{{portal.vendor_link}}')
   })
 })
