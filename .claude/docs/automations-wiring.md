@@ -523,6 +523,22 @@ Two gotchas: the shared `Modal` had to be portalled to `document.body`
 popovers inside the modal need `z-[90]`, the shared popover tier above
 the modal panel's `z-[60]`.
 
+#### Contract and invoice previews (2026-08-16)
+
+`send_contract` and `send_invoice` open a shared preview modal
+(`document-composer-modal.tsx`). Both are **zero-config**: the handler
+picks the couple's most recent document and sends it as saved, and
+every field their schemas carried — `templateId`, `signersRequired`,
+`expiryDays`, `customMessage`, the invoice's payment fields — was
+declared and never read. So a form here would be a form that changes
+nothing; the modal says that plainly and shows what the couple
+receives, built by `contractHtml` / `invoiceHtml`, the same builders
+the senders call.
+
+`send_pre_event_checklist` left the picker the same day (product
+decision). Registered and still running for saved automations. 14
+visible actions.
+
 #### Send run sheet (2026-08-16)
 
 Same treatment as the questionnaire step, for the same reason: the

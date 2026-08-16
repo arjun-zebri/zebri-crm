@@ -44,6 +44,9 @@ vi.mock('@/app/(dashboard)/automations/[id]/timeline-composer-modal', () => ({
 vi.mock('@/app/(dashboard)/automations/[id]/run-sheet-composer-modal', () => ({
   RunSheetComposerModal: () => null,
 }))
+vi.mock('@/app/(dashboard)/automations/[id]/document-composer-modal', () => ({
+  DocumentComposerModal: () => null,
+}))
 vi.mock('@/app/(dashboard)/automations/[id]/inspector-extended', () => ({
   ApprovalExtraFields: () => null,
   BranchExtraFields: () => null,

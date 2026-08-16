@@ -61,6 +61,7 @@ import {
   taskDueChip,
 } from './action-chips'
 import { BranchChips } from './branch-chips'
+import { DocumentComposerModal } from './document-composer-modal'
 import { EmailComposerModal } from './email-composer-modal'
 import {
   ApprovalExtraFields,
@@ -233,6 +234,10 @@ export const MODAL_ACTIONS: ReadonlySet<string> = new Set([
   'send_couple_questionnaire',
   'create_timeline_event',
   'send_timeline_to_vendors',
+  // Zero-config sends: the modal is purely a preview of what the
+  // couple receives.
+  'send_contract',
+  'send_invoice',
 ])
 
 
@@ -860,21 +865,14 @@ function ActionFields({
     case 'create_reminder':
       return <CalendarEntryForm config={config} updateConfig={updateInner} />
     case 'send_contract':
-      return (
-        <>
-          <Hint>
-            This action sends the most recent contract for the triggering couple.
-          </Hint>
-        </>
+    case 'send_invoice': {
+      const kind = actionType === 'send_contract' ? 'contract' : 'invoice'
+      return modal ? (
+        <DocumentComposerModal isOpen={modal.open} onClose={modal.onClose} kind={kind} />
+      ) : (
+        <Hint>This action sends the most recent {kind} for the triggering couple.</Hint>
       )
-    case 'send_invoice':
-      return (
-        <>
-          <Hint>
-            This action sends the most recent invoice for the triggering couple.
-          </Hint>
-        </>
-      )
+    }
     case 'trigger_payment_reminder':
       return (
         <>

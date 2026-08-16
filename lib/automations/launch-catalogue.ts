@@ -83,6 +83,9 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
  *
  * `send_sms` is included but flagged `comingSoon` in its spec — it
  * renders greyed/disabled rather than hidden, per the review.
+ * `send_pre_event_checklist` is excluded by product decision
+ * (2026-08-16). Its spec stays registered so saved automations keep
+ * running.
  * `request_information` is excluded by product decision
  * (2026-08-16): like `send_portal_link`, it is a one-line email
  * carrying a portal link — `send_email` says more, and now has the
@@ -128,7 +131,6 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   // its recipient checkboxes. All three specs stay in the registry so
   // saved automations keep running.
   'send_timeline_to_vendors',
-  'send_pre_event_checklist',
   'send_thank_you_message',
   'request_review',
   'send_referral_request',

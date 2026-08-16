@@ -110,7 +110,7 @@ describe('launch catalogue — triggers', () => {
 })
 
 describe('launch catalogue — actions', () => {
-  it('lists exactly the 15 actions offered today', () => {
+  it('lists exactly the 14 actions offered today', () => {
     // 21 from the launch review, + send_couple_questionnaire (the
     // couple-questionnaires feature added it), - trigger_payment_
     // reminder and the two folded run-sheet steps, -
@@ -118,15 +118,17 @@ describe('launch catalogue — actions', () => {
     // one pauses every other automation on the couple from inside one
     // of them, the other edits "the most recent task created by an
     // earlier action"; neither is a rule anyone can reason about from
-    // the canvas), and send_portal_link + request_information
+    // the canvas), send_portal_link + request_information
     // (2026-08-16: both are one-line emails carrying a portal link,
-    // which send_email now does better and at any length).
-    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(15)
+    // which send_email now does better and at any length), and
+    // send_pre_event_checklist (2026-08-16, product decision).
+    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(14)
     for (const retired of [
       'pause_couple_automations',
       'update_task',
       'send_portal_link',
       'request_information',
+      'send_pre_event_checklist',
     ] as const) {
       expect(LAUNCH_VISIBLE_ACTIONS.has(retired)).toBe(false)
       // Still registered, so automations saved with it keep running.
