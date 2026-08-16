@@ -22,7 +22,12 @@ vi.mock('@/app/(dashboard)/automations/[id]/filter-options', () => ({
 }))
 
 vi.mock('@/app/(dashboard)/automations/actions', () => ({
-  loadSenderIdentityAction: async () => ({ businessName: 'Acme MC Co', branding: null }),
+  loadSenderIdentityAction: async () => ({
+    businessName: 'Acme MC Co',
+    contactName: 'Charlie Park',
+    email: 'charlie@acmemc.com',
+    branding: null,
+  }),
 }))
 
 function renderModal(config: Record<string, unknown> = {}) {

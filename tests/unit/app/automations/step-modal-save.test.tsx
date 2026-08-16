@@ -21,7 +21,12 @@ const upsertMock = vi.fn<(input: UpsertInput) => Promise<{ ok: true }>>(async ()
 vi.mock('@/app/(dashboard)/automations/actions', () => ({
   upsertAutomationActionRow: (input: UpsertInput) => upsertMock(input),
   setAutomationTriggerAction: vi.fn(),
-  loadSenderIdentityAction: async () => ({ businessName: 'Acme MC Co', branding: null }),
+  loadSenderIdentityAction: async () => ({
+    businessName: 'Acme MC Co',
+    contactName: 'Charlie Park',
+    email: 'charlie@acmemc.com',
+    branding: null,
+  }),
 }))
 
 vi.mock('@/app/(dashboard)/automations/[id]/filter-options', () => ({

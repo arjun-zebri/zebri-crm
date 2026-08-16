@@ -94,14 +94,20 @@ export function RunSheetComposerModal({ isOpen, onClose, config, onSave }: Props
   const active = audiences[Math.min(shown, audiences.length - 1)]!
 
   const previewHtml = useMemo(() => {
-    const ctx = buildSampleContext({ businessName })
+    // The MC's real name and address, so the sign-off previews as the
+    // person it will be signed by rather than the sample's "You".
+    const ctx = buildSampleContext({
+      businessName,
+      ...(identity?.contactName ? { contactName: identity.contactName } : {}),
+      ...(identity?.email ? { email: identity.email } : {}),
+    })
     // The handler's own shape: the rendered message, then the link on
     // its own line.
     return wrapAutomationShell(
       `${renderTemplate(active.message, ctx)}\n\n${SAMPLE_LINK}`,
       businessName,
     )
-  }, [active, businessName])
+  }, [active, businessName, identity])
 
   return (
     <Modal

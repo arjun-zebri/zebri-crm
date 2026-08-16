@@ -16,7 +16,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { RunSheetComposerModal } from '@/app/(dashboard)/automations/[id]/run-sheet-composer-modal'
 
 vi.mock('@/app/(dashboard)/automations/actions', () => ({
-  loadSenderIdentityAction: async () => ({ businessName: 'Acme MC Co', branding: null }),
+  loadSenderIdentityAction: async () => ({
+    businessName: 'Acme MC Co',
+    contactName: 'Charlie Park',
+    email: 'charlie@acmemc.com',
+    branding: null,
+  }),
 }))
 
 function renderModal(config: Record<string, unknown> = {}) {
@@ -45,6 +50,14 @@ async function openAudiences() {
 }
 
 describe('the run sheet composer', () => {
+  it('signs off as the MC, not as the sample context\'s "You"', async () => {
+    // `buildSampleContext` falls back to "You" for the contact name,
+    // which is nobody: the preview has to carry the MC's real one.
+    renderModal({})
+    await waitFor(() => expect(previewHtml()).toContain('Charlie Park'))
+    expect(previewHtml()).not.toMatch(/Thanks,<br>You/)
+  })
+
   it('shows the subject the handler builds', async () => {
     renderModal({})
     await waitFor(() =>

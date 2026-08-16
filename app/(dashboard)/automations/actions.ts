@@ -644,25 +644,35 @@ export async function loadAutomationsHomeAction(): Promise<
 }
 
 /**
- * The MC's own name and branding, for previewing a canned email in
- * the builder.
+ * The MC's own identity and branding, for previewing a canned email
+ * in the builder.
  *
  * The automation isn't attached to a couple, so a preview uses sample
  * couple details — but the *sender* half should be real, or the MC is
- * looking at someone else's email. Reads the calling user's own
- * metadata (no admin client, no user id parameter).
+ * looking at someone else's email signed by someone else. Mirrors
+ * `loadMcSnapshot`'s fallbacks so the preview and the send agree on
+ * who this is from. Reads the calling user's own metadata (no admin
+ * client, no user id parameter).
  */
 export async function loadSenderIdentityAction(): Promise<{
   businessName: string
+  contactName: string
+  email: string
   branding: PublicBranding | null
 }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  const metadata = (user?.user_metadata ?? {}) as UserMetadata
+  // Read as a bag: `UserMetadata` describes the branding fields, and
+  // `display_name` is not one of them.
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>
+  const str = (key: string) =>
+    typeof metadata[key] === 'string' ? (metadata[key] as string).trim() : ''
   return {
-    businessName: (metadata.business_name as string | undefined)?.trim() || 'Your business',
-    branding: buildPublicBranding(metadata),
+    businessName: str('business_name') || 'Your business',
+    contactName: str('display_name') || user?.email?.split('@')[0] || 'You',
+    email: user?.email ?? '',
+    branding: buildPublicBranding(metadata as UserMetadata),
   }
 }
