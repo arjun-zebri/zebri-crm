@@ -550,6 +550,12 @@ export interface InvoiceSnapshot {
 
 export interface McSnapshot {
   userId: string
+  /**
+   * Where the review-request automation sends couples, from settings.
+   * Optional: an MC who has not set one has no link, and the copy
+   * that uses it pauses rather than mailing a dead URL.
+   */
+  reviewLink?: string | null | undefined
   businessName: string
   contactName: string
   email: string

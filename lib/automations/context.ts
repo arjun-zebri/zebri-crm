@@ -280,6 +280,7 @@ export async function loadMcSnapshot(
   return {
     userId,
     businessName: (metadata['business_name'] as string) ?? 'Your business',
+    reviewLink: (metadata['google_review_url'] as string) ?? null,
     contactName: (metadata['display_name'] as string) ?? user?.email?.split('@')[0] ?? 'You',
     email: user?.email ?? '',
     phone: (metadata['phone'] as string) ?? null,

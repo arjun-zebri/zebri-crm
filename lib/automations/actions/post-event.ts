@@ -15,6 +15,7 @@ import { Resend } from 'resend'
 import { z } from 'zod'
 
 import type { EmailAttachment } from '@/lib/email/dispatch'
+import { wrapAutomationShell } from '@/lib/email/html'
 import { downloadStaticAttachments } from '@/lib/email/send-context'
 import {
   detectMissingVariables,
@@ -26,7 +27,6 @@ import type { ActionResult, ActionType, RunContext } from '@/types/automations'
 
 import { renderTemplate } from '../variables'
 
-import { wrapAutomationHtml } from './messaging'
 import type { ActionSpec } from './index'
 
 let _resend: Resend | undefined
@@ -64,10 +64,16 @@ const baseSchema = z.object({
  * path saved templates and the send_email composer use — so
  * formatting survives. Without one, the plain-text `body` renders as
  * before, which is what every default copy still relies on.
+ *
+ * `cta` renders a button under the message, for the sends that carry
+ * a link. Asking for the link in the copy and then leaving the
+ * recipient to find a bare URL is how the review request used to
+ * work.
  */
 async function sendPreComposed(
   ctx: RunContext,
   config: z.infer<typeof baseSchema>,
+  cta?: { label: string; url: string },
 ): Promise<ActionResult> {
   if (!ctx.couple?.email) return { kind: 'ok', output: { skipped: 'no primary email' } }
 
@@ -85,10 +91,14 @@ async function sendPreComposed(
       }
     }
     subject = renderEmailSubject(config.subject, ctx, 'send')
-    html = wrapAutomationHtml(renderEmailTemplate(doc, ctx, 'send').html, ctx)
+    html = wrapAutomationShell(
+      renderEmailTemplate(doc, ctx, 'send').html,
+      ctx.mc.businessName,
+      cta,
+    )
   } else {
     subject = renderTemplate(config.subject, ctx)
-    html = wrapAutomationHtml(renderTemplate(config.body, ctx), ctx)
+    html = wrapAutomationShell(renderTemplate(config.body, ctx), ctx.mc.businessName, cta)
   }
 
   // Attachments resolve through the same loader send_email uses; a
@@ -160,11 +170,18 @@ const sendPreEventChecklist: ActionSpec<z.infer<typeof baseSchema>> = {
 const sendThankYou: ActionSpec<z.infer<typeof baseSchema>> = {
   type: 'send_thank_you_message',
   configSchema: baseSchema.extend({
-    subject: z.string().default('What a day 💕'),
+    subject: z.string().default('Thank you, {{couple.primary_name}}'),
     body: z
       .string()
       .default(
-        "Hi {{couple.primary_name}},\n\nThank you for letting me be part of your event. It was such a beautiful day and I'm honoured to have been there for it.\n\nA few photos and the run-sheet I used are in your portal if you ever want to look back. And whenever you're ready to share, I'd love a couple of lines about how you found the day - it really helps me reach more couples like you.\n\nAll the best for the next chapter.\n- {{mc.contact_name}}",
+        "Hi {{couple.primary_name}},\n\n" +
+          "What a day. Thank you for trusting me with it.\n\n" +
+          "You two were completely yourselves the whole way through, and everyone in the room " +
+          "felt it. That is the part I will remember.\n\n" +
+          "Your portal stays open, so the timings and details are there whenever you want to " +
+          "look back on how the day ran.\n\n" +
+          "Wishing you both every happiness.\n\n" +
+          "{{mc.contact_name}}",
       ),
   }),
   async handler(ctx, config) {
@@ -178,11 +195,19 @@ const sendThankYou: ActionSpec<z.infer<typeof baseSchema>> = {
 // ────────────────────────────────────────────────────────────────
 
 const requestReviewSchema = baseSchema.extend({
-  subject: z.string().default('Could I ask a small favour? ⭐'),
+  subject: z.string().default('One small favour, {{couple.primary_name}}'),
   body: z
     .string()
     .default(
-      "Hi {{couple.primary_name}},\n\nNow that the dust has settled - if the day felt the way you hoped it would, would you mind dropping a quick review? Even a sentence or two helps me out enormously.\n\nGoogle review link: https://g.page/r/your-place\n\nThanks so much.\n- {{mc.contact_name}}",
+      "Hi {{couple.primary_name}},\n\n" +
+        "I hope the last few weeks have been a good kind of quiet after the day.\n\n" +
+        "If you were happy with how it all ran, would you leave me a review? Couples looking " +
+        "for an MC are trusting a stranger with the biggest day they have planned, and hearing " +
+        "it from someone who has been through it is worth more than anything I can say about " +
+        "myself.\n\n" +
+        "Two lines is plenty. It takes a minute and it genuinely helps.\n\n" +
+        "Thank you either way, and thank you again for having me.\n\n" +
+        "{{mc.contact_name}}",
     ),
   /** Which platforms the email should link to (multi-select). */
   platforms: z.array(z.enum(['google', 'easy_weddings', 'abia', 'wedsites', 'wedding_wire', 'facebook', 'other'])).optional(),
@@ -196,7 +221,18 @@ const requestReview: ActionSpec<z.infer<typeof requestReviewSchema>> = {
   type: 'request_review',
   configSchema: requestReviewSchema,
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config)
+    // The copy asks for a review, so an email with nowhere to leave
+    // one is worse than no email. Fail loudly and visibly instead:
+    // the fix is one field in Settings, and the run log says so.
+    const url = ctx.mc.reviewLink?.trim()
+    if (!url) {
+      return {
+        kind: 'error',
+        message: 'Add your Google review link in Settings before this step can run.',
+        recoverable: false,
+      }
+    }
+    return sendPreComposed(ctx, config, { label: 'Leave a review', url })
   },
   ui: { category: 'post_event', label: 'Request review', description: 'Ask the couple for a Google / vendor-site review', icon: 'Star' },
 }
@@ -206,11 +242,19 @@ const requestReview: ActionSpec<z.infer<typeof requestReviewSchema>> = {
 // ────────────────────────────────────────────────────────────────
 
 const sendReferralRequestSchema = baseSchema.extend({
-  subject: z.string().default('Know anyone planning an event? 👋'),
+  subject: z.string().default('If anyone you know is planning a wedding'),
   body: z
     .string()
     .default(
-      "Hi {{couple.primary_name}},\n\nIf any of your friends are starting to plan an event, I'd love to be part of theirs too. You can pass on my details - {{mc.contact_name}}, {{mc.email}} - or tell me their name and I'll reach out gently.\n\nThanks for trusting me with your day.\n- {{mc.contact_name}}",
+      "Hi {{couple.primary_name}},\n\n" +
+        "Weddings tend to come in waves, so there is a fair chance someone in your circle is " +
+        "in the thick of planning theirs right now.\n\n" +
+        "If my name comes up, I would love you to pass it on. You can send them straight to " +
+        "{{mc.email}}, or give me theirs and I will reach out gently, no hard sell.\n\n" +
+        "There is no pressure here at all. Recommending someone puts your own judgement on " +
+        "the line, and I would only want that if the day earned it.\n\n" +
+        "Thanks again for having me.\n\n" +
+        "{{mc.contact_name}}",
     ),
   /** Free-text referral bonus copy. */
   referralBonus: z.string().optional(),

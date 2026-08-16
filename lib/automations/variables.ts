@@ -219,6 +219,8 @@ function readMc(mc: McSnapshot, key: string): string {
       return mc.email
     case 'phone':
       return mc.phone ?? ''
+    case 'review_link':
+      return mc.reviewLink ?? ''
     case 'signature':
       // The signature is rich TipTap JSON. The string resolver (subjects,
       // SMS, plain renderTemplate) gets its flattened text; the email-body
@@ -408,6 +410,11 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
       { token: '{{mc.contact_name}}', label: 'Your name', example: 'Charlie Park' },
       { token: '{{mc.email}}', label: 'Your email', example: 'hello@acmemc.com' },
       { token: '{{mc.signature}}', label: 'Your email signature', example: 'Cheers, Charlie' },
+      {
+        token: '{{mc.review_link}}',
+        label: 'Your Google review link',
+        example: 'https://g.page/r/…/review',
+      },
     ],
   },
   {

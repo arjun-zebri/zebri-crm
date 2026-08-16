@@ -523,6 +523,24 @@ Two gotchas: the shared `Modal` had to be portalled to `document.body`
 popovers inside the modal need `z-[90]`, the shared popover tier above
 the modal panel's `z-[60]`.
 
+#### Post-event copy, and the review link (2026-08-16)
+
+The thank-you, review-request and referral defaults are rewritten.
+These ship as-is for most MCs, so the defaults are the product; the
+old ones were placeholder-grade ("Could I ask a small favour? ⭐").
+`post-event-copy.test.ts` pins that all three only use tokens the
+resolver knows and sign off as the MC.
+
+**The review request shipped a dead link.** Its default body carried
+a literal `https://g.page/r/your-place`, which an MC who did not edit
+it would have mailed to a real couple. There is now a **Google review
+link** field in Settings → Personal info, a `{{mc.review_link}}`
+variable behind it, and the step renders it as a button under the
+copy (`sendPreComposed` takes a `cta`). With no link set the step
+fails with "Add your Google review link in Settings before this step
+can run" rather than sending a review request with nowhere to leave
+one.
+
 #### The preview panel (2026-08-16)
 
 `email-preview.tsx` is the shared "what does the couple receive?"

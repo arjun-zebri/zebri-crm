@@ -126,6 +126,7 @@ export function buildSampleContext(opts: SampleContextOptions = {}): RunContext 
       businessName: businessName?.trim() || 'Your business',
       contactName: contactName?.trim() || 'You',
       email: email?.trim() || 'hello@example.com',
+      reviewLink: 'https://g.page/r/sample/review',
       phone: null,
       brandColor: null,
       logoUrl: null,
