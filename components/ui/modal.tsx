@@ -1,6 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 import {
   getOpenOverlayDepth,
@@ -84,9 +85,20 @@ export function Modal({
   useOverlay({ isOpen, onClose });
   const backdropHandlers = useBackdropDismiss(onClose);
 
-  if (!isOpen) return null;
+  // Portal to the body. The panel is `position: fixed`, which resolves
+  // against the nearest transformed ancestor rather than the viewport —
+  // so a modal opened from inside a React Flow node (every node carries
+  // a `transform`) rendered at the node's own size and position, with a
+  // backdrop covering only part of the screen.
+  //
+  // Guarded on `document` rather than a mounted-state effect: effects
+  // run child-first, so an effect-gated portal let a nested
+  // ConfirmDialog attach to the body *before* the Modal containing it,
+  // inverting overlay order in the DOM. Portalling during render keeps
+  // parent-before-child.
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <>
       {/* `h-screen` looks redundant alongside `inset-0` but is load-
           bearing on mobile: iOS Safari's dynamic browser chrome
@@ -175,6 +187,7 @@ export function Modal({
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

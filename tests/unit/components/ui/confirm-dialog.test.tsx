@@ -80,7 +80,13 @@ describe('<ConfirmDialog />', () => {
       </>,
     );
 
-    const [nestedPanel, confirmPanel] = screen.getAllByRole('dialog');
+    // Found by content, not array position: Modal portals to the body,
+    // so DOM order reflects portal attachment rather than render
+    // order. The stacking contract is the z-tier, which is what this
+    // asserts.
+    const dialogs = screen.getAllByRole('dialog');
+    const nestedPanel = dialogs.find((d) => d.textContent?.includes('Nested'));
+    const confirmPanel = dialogs.find((d) => d !== nestedPanel);
     expect(nestedPanel).toHaveClass('z-[80]');
     expect(confirmPanel).toHaveClass('z-[130]');
   });

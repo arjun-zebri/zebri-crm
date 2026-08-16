@@ -29,6 +29,7 @@ interface PersonalInfoSectionProps {
     businessName: string
     phone: string
     website: string
+    googleReviewUrl: string
     instagramUrl: string
     facebookUrl: string
     twitterUrl: string
@@ -47,6 +48,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [emailValue, setEmailValue] = useState(email)
   const [businessName, setBusinessName] = useState(initialData.businessName)
   const [website, setWebsite] = useState(initialData.website)
+  const [googleReviewUrl, setGoogleReviewUrl] = useState(initialData.googleReviewUrl)
   const [phone, setPhone] = useState(initialData.phone)
   const [instagramUrl, setInstagramUrl] = useState(initialData.instagramUrl)
   const [facebookUrl, setFacebookUrl] = useState(initialData.facebookUrl)
@@ -76,6 +78,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     businessName: initialData.businessName,
     phone: initialData.phone,
     website: initialData.website,
+    googleReviewUrl: initialData.googleReviewUrl,
     instagramUrl: initialData.instagramUrl,
     facebookUrl: initialData.facebookUrl,
     twitterUrl: initialData.twitterUrl,
@@ -95,6 +98,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       businessName !== s.businessName ||
       phone !== s.phone ||
       website !== s.website ||
+      googleReviewUrl !== s.googleReviewUrl ||
       instagramUrl !== s.instagramUrl ||
       facebookUrl !== s.facebookUrl ||
       twitterUrl !== s.twitterUrl ||
@@ -144,6 +148,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
         business_name: businessName,
         phone,
         website,
+        google_review_url: googleReviewUrl,
         instagram_url: instagramUrl,
         facebook_url: facebookUrl,
         twitter_url: twitterUrl,
@@ -182,6 +187,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       businessName,
       phone,
       website,
+      googleReviewUrl,
       instagramUrl,
       facebookUrl,
       twitterUrl,
@@ -324,6 +330,22 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               onChange={(e) => setWebsite(e.target.value)}
               className={inputClass}
               placeholder="https://yoursite.com"
+            />
+          </div>
+
+          <div>
+            {/* Backs the `{{mc.review_link}}` variable, so the
+                review-request automation can link somewhere real
+                instead of shipping a placeholder URL. */}
+            <label className="block text-body font-medium text-gray-700 mb-1">
+              Google review link
+            </label>
+            <input
+              type="url"
+              value={googleReviewUrl}
+              onChange={(e) => setGoogleReviewUrl(e.target.value)}
+              className={inputClass}
+              placeholder="https://g.page/r/…/review"
             />
           </div>
 

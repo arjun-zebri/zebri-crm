@@ -13,7 +13,18 @@
  */
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
+import { invoiceTotal } from "@/lib/payments/invoice-total";
 import type { Database } from "@/types/database";
+
+import {
+  computeGoneQuiet,
+  emptyUserStats,
+  isPayingActive,
+  type GoneQuietUser,
+  type UserStats,
+} from "./user-value";
+
+export type { GoneQuietUser, UserStats } from "./user-value";
 
 function adminClient() {
   return createServiceClient<Database>(
@@ -123,6 +134,109 @@ export async function getUserAnalytics(userId: string): Promise<UserAnalytics> {
   };
 }
 
+// ── Per-user value stats (Users tab) ─────────────────────────────
+
+const ROWS_PER_PAGE = 1000;
+
+/**
+ * Drain a PostgREST query past the 1000-row response cap. The
+ * callback must build a FRESH query per page (builders are one-shot);
+ * rows must arrive in a stable order per table scan, which PostgREST
+ * guarantees within a single statement plan — good enough for
+ * whole-table aggregate reads like these.
+ */
+async function fetchAllRows<Row>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>,
+): Promise<Row[]> {
+  const all: Row[] = [];
+  for (let from = 0; ; from += ROWS_PER_PAGE) {
+    const { data, error } = await fetchPage(from, from + ROWS_PER_PAGE - 1);
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < ROWS_PER_PAGE) return all;
+  }
+}
+
+/** Tables whose row count feeds the combined "templates" number. */
+const TEMPLATE_TABLES = [
+  "email_templates",
+  "contract_templates",
+  "invoice_templates",
+  "questionnaire_templates",
+  "packages",
+] as const;
+
+type OwnerCountTable = "couples" | "events" | "automations" | (typeof TEMPLATE_TABLES)[number];
+
+function statsFor(stats: Record<string, UserStats>, userId: string): UserStats {
+  const existing = stats[userId];
+  if (existing) return existing;
+  const fresh = emptyUserStats();
+  stats[userId] = fresh;
+  return fresh;
+}
+
+/**
+ * One service-role pass over every activity table, aggregated per
+ * user in TypeScript (no SQL migration; mirrors the engagement-query
+ * pattern above). Returned as a plain object keyed by user id so it
+ * serializes across the RSC boundary.
+ */
+export async function getAllUserStats(): Promise<Record<string, UserStats>> {
+  const admin = adminClient();
+  const ownerRows = (table: OwnerCountTable) =>
+    fetchAllRows<{ user_id: string }>((from, to) =>
+      admin.from(table).select("user_id").range(from, to),
+    );
+
+  const [couples, events, invoices, automations, ...templateCounts] = await Promise.all([
+    ownerRows("couples"),
+    ownerRows("events"),
+    fetchAllRows<{
+      user_id: string;
+      paid_at: string | null;
+      subtotal: number;
+      tax_rate: number;
+      discount_type: string | null;
+      discount_value: number | null;
+    }>((from, to) =>
+      admin
+        .from("invoices")
+        .select("user_id, paid_at, subtotal, tax_rate, discount_type, discount_value")
+        .range(from, to),
+    ),
+    ownerRows("automations"),
+    ...TEMPLATE_TABLES.map((t) => ownerRows(t)),
+  ]);
+
+  const stats: Record<string, UserStats> = {};
+  for (const row of couples) statsFor(stats, row.user_id).couples++;
+  for (const row of events) statsFor(stats, row.user_id).events++;
+  for (const row of automations) statsFor(stats, row.user_id).automations++;
+  for (const rows of templateCounts) {
+    for (const row of rows) statsFor(stats, row.user_id).templates++;
+  }
+  for (const inv of invoices) {
+    const s = statsFor(stats, inv.user_id);
+    s.invoices++;
+    if (inv.paid_at) {
+      s.paidTotal += invoiceTotal({
+        subtotal: inv.subtotal,
+        taxRate: inv.tax_rate,
+        discountType: inv.discount_type,
+        discountValue: inv.discount_value,
+      });
+    }
+  }
+  // Round once at the end so per-invoice float noise can't accumulate
+  // into a visible off-by-a-cent.
+  for (const s of Object.values(stats)) {
+    s.paidTotal = Math.round(s.paidTotal * 100) / 100;
+  }
+  return stats;
+}
+
 // ── Dashboard-shape aggregator ────────────────────────────────────
 
 export interface MrrBreakdown {
@@ -183,6 +297,8 @@ export interface UpcomingRenewals {
 }
 
 export interface EngagementSummary {
+  /** Distinct user_ids that wrote a couple / event / invoice / contract in the last 7 days. */
+  activeLast7d: number;
   /** Distinct user_ids that wrote a couple / event / invoice / contract / quote in the last 30 days. */
   activeLast30d: number;
   /** Signed-up > 30 days ago AND have zero couples in any table — never engaged. */
@@ -270,19 +386,10 @@ export interface AdminDashboard {
   pastDueUsers: PastDueUser[];
   connectIssues: ConnectIssue[];
   dormantUsers: DormantUser[];
+  goneQuietUsers: GoneQuietUser[];
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function isPayingActive(u: AdminUser): boolean {
-  return (
-    u.subscription_status === "active" &&
-    !u.is_comped &&
-    !u.is_beta_user &&
-    !!u.stripe_subscription_id &&
-    !!u.subscription_plan
-  );
-}
 
 function computeMrr(users: AdminUser[]): MrrBreakdown {
   let pro = 0;
@@ -386,24 +493,28 @@ function computeRenewals(users: AdminUser[], now: number): UpcomingRenewals {
 }
 
 interface EngagementCounts {
+  active7dUserIds: Set<string>;
   active30dUserIds: Set<string>;
   everEngagedUserIds: Set<string>;
 }
 
 async function loadEngagementSets(): Promise<EngagementCounts> {
   const admin = adminClient();
-  const cutoff = new Date(Date.now() - 30 * MS_PER_DAY).toISOString();
+  const now = Date.now();
+  const cutoff30 = new Date(now - 30 * MS_PER_DAY).toISOString();
+  const cutoff7Ms = now - 7 * MS_PER_DAY;
 
   // Active-in-last-30d set. A "use" event is any new row in any of
   // these tables. We deliberately keep this list small (couples /
   // events / invoices / contracts) — these are the surfaces that
-  // signal real product use.
+  // signal real product use. `created_at` rides along so the 7-day
+  // subset falls out of the same four queries.
   const [active30dResults, everEngagedResults] = await Promise.all([
     Promise.all([
-      admin.from("couples").select("user_id").gte("created_at", cutoff),
-      admin.from("events").select("user_id").gte("created_at", cutoff),
-      admin.from("invoices").select("user_id").gte("created_at", cutoff),
-      admin.from("contracts").select("user_id").gte("created_at", cutoff),
+      admin.from("couples").select("user_id, created_at").gte("created_at", cutoff30),
+      admin.from("events").select("user_id, created_at").gte("created_at", cutoff30),
+      admin.from("invoices").select("user_id, created_at").gte("created_at", cutoff30),
+      admin.from("contracts").select("user_id, created_at").gte("created_at", cutoff30),
     ]),
     // Ever-engaged set: any couple ever created. If a user has
     // ZERO couples in their history they've never used the core
@@ -411,17 +522,19 @@ async function loadEngagementSets(): Promise<EngagementCounts> {
     admin.from("couples").select("user_id"),
   ]);
 
-  const active = new Set<string>();
+  const active7d = new Set<string>();
+  const active30d = new Set<string>();
   for (const r of active30dResults) {
-    for (const row of (r.data ?? []) as Array<{ user_id: string }>) {
-      active.add(row.user_id);
+    for (const row of (r.data ?? []) as Array<{ user_id: string; created_at: string }>) {
+      active30d.add(row.user_id);
+      if (new Date(row.created_at).getTime() >= cutoff7Ms) active7d.add(row.user_id);
     }
   }
   const ever = new Set<string>();
   for (const row of (everEngagedResults.data ?? []) as Array<{ user_id: string }>) {
     ever.add(row.user_id);
   }
-  return { active30dUserIds: active, everEngagedUserIds: ever };
+  return { active7dUserIds: active7d, active30dUserIds: active30d, everEngagedUserIds: ever };
 }
 
 function computeEngagement(
@@ -444,6 +557,7 @@ function computeEngagement(
   // user_ids in the activity tables may include deleted users
   // (rare), but that's a benign overcount.
   return {
+    activeLast7d: counts.active7dUserIds.size,
     activeLast30d: counts.active30dUserIds.size,
     dormantAccounts: dormant,
     newThisWeek,
@@ -748,5 +862,6 @@ export async function getAdminDashboard(): Promise<AdminDashboard> {
     pastDueUsers: computePastDue(users),
     connectIssues,
     dormantUsers: computeDormantUsers(users, engagementCounts, now),
+    goneQuietUsers: computeGoneQuiet(users, now),
   };
 }

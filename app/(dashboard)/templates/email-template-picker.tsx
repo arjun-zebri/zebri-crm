@@ -22,19 +22,32 @@ interface EmailTemplatePickerProps {
   value: string
   onChange: (templateId: string) => void
   label?: string
+  /**
+   * Turns the picker into a one-shot loader: the empty value shows
+   * this placeholder instead of the "write inline" row, for callers
+   * (the automation email composer) where choosing a template copies
+   * it into their own fields rather than binding to it.
+   */
+  placeholder?: string
 }
 
-export function EmailTemplatePicker({ value, onChange, label = 'Email template' }: EmailTemplatePickerProps) {
+export function EmailTemplatePicker({
+  value,
+  onChange,
+  label = 'Email template',
+  placeholder,
+}: EmailTemplatePickerProps) {
   const { data: templates = [] } = useTemplates()
   const { data: categories = [] } = useCategories()
   const categoryName = (id: string | null) => categories.find((c) => c.id === id)?.name
   return (
     <Select
       label={label}
-      value={value || INLINE}
+      {...(placeholder ? { placeholder } : {})}
+      value={placeholder ? value : value || INLINE}
       onValueChange={(v) => onChange(v === INLINE ? '' : v)}
       options={[
-        { value: INLINE, label: 'Write inline (no template)' },
+        ...(placeholder ? [] : [{ value: INLINE, label: 'Write inline (no template)' }]),
         // Archived templates are hidden, except the one currently
         // selected — an automation referencing it must keep displaying.
         ...templates

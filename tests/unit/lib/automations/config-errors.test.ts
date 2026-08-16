@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
+import { branchConfigSchema } from '@/lib/automations/conditions'
 import {
   configErrorMessage,
   describeConfigError,
@@ -93,6 +94,19 @@ describe('friendlyRunError', () => {
     expect(friendlyRunError(friendly)).toBe(friendly)
     expect(friendlyRunError('Email failed to send: recipient bounced')).toBe(
       'Email failed to send: recipient bounced',
+    )
+  })
+})
+
+describe('an unconfigured branch', () => {
+  it('asks for a condition rather than naming the union that rejected it', () => {
+    // A branch now starts empty by design, so this is a message an MC
+    // can actually hit.
+    const parsed = branchConfigSchema.safeParse({})
+    expect(parsed.success).toBe(false)
+    if (parsed.success) return
+    expect(configErrorMessage('Branch', parsed.error)).toBe(
+      'The "Branch" step has invalid settings: no condition chosen. Edit the automation to fix it.',
     )
   })
 })

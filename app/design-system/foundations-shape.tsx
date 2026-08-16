@@ -15,7 +15,7 @@ const TYPE_SCALE = [
   {
     cls: 'text-body',
     name: 'text-body',
-    size: '14px',
+    size: '13px',
     leading: '20px',
     use: 'Everything else: body, labels, help text, captions, controls',
   },

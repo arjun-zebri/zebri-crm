@@ -9,11 +9,13 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 import { Demo, DemoGrid, DemoRow, Rule, Spec } from './showroom';
 
 /**
- * Form primitives: Button, Input, Select, Checkbox, DatePicker.
+ * Form primitives: Button, Input, Textarea, Select, Checkbox,
+ * DatePicker.
  *
  * Every variant and state is rendered, so a missing or off-pattern
  * combination is visible rather than inferred from the type signature.
@@ -95,6 +97,24 @@ export function PrimitivesForms() {
           </Demo>
           <Demo label="Read only">
             <Input label="Reference" readOnly defaultValue="ZEB-0041" />
+          </Demo>
+        </DemoGrid>
+      </Spec>
+
+      <Spec name="Textarea" file="components/ui/textarea.tsx"
+        importPath="@/components/ui/textarea" description="Input's sibling for prose. Same chrome; height comes from rows, and it resizes vertically only.">
+        <DemoGrid cols={3}>
+          <Demo label="Default">
+            <Textarea label="Note" placeholder="Anything worth remembering" />
+          </Demo>
+          <Demo label="With help text">
+            <Textarea label="Description" rows={3} help="Shown on the task when it lands." />
+          </Demo>
+          <Demo label="Error">
+            <Textarea label="Message" error="A message is required." />
+          </Demo>
+          <Demo label="Fixed height">
+            <Textarea label="Description" rows={3} resizable={false} />
           </Demo>
         </DemoGrid>
       </Spec>

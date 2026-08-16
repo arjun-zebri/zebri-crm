@@ -24,7 +24,7 @@
 
 import type { AlertEvent } from './events';
 import { logger } from './logger';
-import { sendSlackAlert, type SlackPayload } from './slack';
+import { sendSlackAlert, slackSuppressed, type SlackPayload } from './slack';
 
 
 const SEVERITY_EMOJI: Record<AlertEvent['severity'], string> = {
@@ -119,16 +119,6 @@ function describe(event: AlertEvent): string {
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }
-}
-
-/**
- * True when running a local dev server. Local runs share the production
- * Slack webhook via .env.local, so without this gate every dev action
- * pings the real alerts channel. Set ALERTS_DEV_SLACK=1 to deliberately
- * test Slack delivery from a dev server.
- */
-function slackSuppressed(): boolean {
-  return process.env.NODE_ENV === 'development' && process.env.ALERTS_DEV_SLACK !== '1';
 }
 
 /**

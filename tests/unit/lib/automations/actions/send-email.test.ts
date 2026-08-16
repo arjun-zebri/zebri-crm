@@ -134,7 +134,28 @@ describe('send_email handler', () => {
 
   it('BCCs the MC when bccSelf is set', async () => {
     await run(baseConfig({ bccSelf: true }))
-    expect(sendMock.mock.calls[0]![0].bcc).toBe('alex@mcbusiness.com')
+    // A list, since an MC can BCC themselves and an assistant.
+    expect(sendMock.mock.calls[0]![0].bcc).toEqual(['alex@mcbusiness.com'])
+  })
+
+  it('BCCs typed addresses alongside the MC, without repeating one', async () => {
+    await run(
+      baseConfig({
+        bccSelf: true,
+        bccEmails: ['assistant@mcbusiness.com', 'alex@mcbusiness.com', 'half-typed'],
+      }),
+    )
+    // The half-typed entry is dropped at send time rather than
+    // rejected at load time, which would kill the automation.
+    expect(sendMock.mock.calls[0]![0].bcc).toEqual([
+      'alex@mcbusiness.com',
+      'assistant@mcbusiness.com',
+    ])
+  })
+
+  it('CCs typed addresses on top of the vendor contacts', async () => {
+    await run(baseConfig({ ccEmails: ['planner@venue.com', 'nope'] }))
+    expect(sendMock.mock.calls[0]![0].cc).toEqual(['planner@venue.com'])
   })
 
   it('CCs vendor contacts when ccVendors is set', async () => {

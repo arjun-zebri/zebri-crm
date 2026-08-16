@@ -132,7 +132,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                 }`}
               >
                 <Icon size={18} strokeWidth={1.5} className="flex-shrink-0" />
-                <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
+                <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-body`}>
                   {item.label}
                 </span>
               </Link>
@@ -167,7 +167,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                   }`}
                 >
                   <Icon size={18} strokeWidth={1.5} className="flex-shrink-0" />
-                  <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
+                  <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-body`}>
                     {item.label}
                   </span>
                 </Link>
@@ -192,7 +192,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                 className="w-full flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-control text-base text-gray-800 hover:bg-gray-50 hover:text-text transition whitespace-nowrap cursor-pointer"
               >
                 <RotateCcw size={18} strokeWidth={1.5} className="flex-shrink-0" />
-                <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
+                <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-body`}>
                   Replay onboarding
                 </span>
               </button>
@@ -202,8 +202,8 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
               <div className="border-t border-border mt-2 pt-2">
                 <div className="flex items-center px-[10px] py-2.5">
                   <div className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 min-w-0 flex-1`}>
-                    <div className="text-[13px] font-medium truncate">{displayName}</div>
-                    <div className="text-[11px] text-gray-600 truncate">{email}</div>
+                    <div className="text-body font-medium truncate">{displayName}</div>
+                    <div className="text-body text-gray-600 truncate">{email}</div>
                   </div>
                   <button
                     onClick={handleSignOut}

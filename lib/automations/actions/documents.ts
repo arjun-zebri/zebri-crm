@@ -55,12 +55,13 @@ async function emailRunSheetLink(
 // send_contract
 // ────────────────────────────────────────────────────────────────
 
+// Only `contractId` remains: the handler sends the contract as saved,
+// so the old templateId / signersRequired / expiryDays / customMessage
+// fields were declared and never read (signers and expiry belong to
+// the contract itself, and the email's copy is `contractHtml`'s).
+// Passthrough keeps configs saved against them parsing.
 const sendContractSchema = z.object({
   contractId: z.string().uuid().optional(),
-  templateId: z.string().optional(),
-  signersRequired: z.enum(['primary', 'spouse', 'both']).optional(),
-  expiryDays: z.number().int().min(1).max(365).optional(),
-  customMessage: z.string().optional(),
 }).passthrough()
 
 const sendContract: ActionSpec<z.infer<typeof sendContractSchema>> = {

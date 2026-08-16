@@ -70,10 +70,11 @@ import { AiCopilotBar } from './ai-copilot-bar';
 import { ROW_GAP, autoLayout } from './auto-layout';
 import { CanvasHeader } from './canvas-header';
 import { CanvasSkeleton } from './canvas-skeleton';
+import { useQuestionnaireTemplateOptions } from './filter-options';
 import { FlowNode, FlowNodeContext, type FlowNodeApi, type FlowNodeData } from './flow-node';
-import { StepConfigForm } from './inspector-panel';
+import { MODAL_ACTIONS, StepConfigForm } from './inspector-panel';
 import { RunHistoryPanel } from './runs-panel';
-import { stepSummary, stepTitle } from './step-summary';
+import { stepSummary, stepTitle, type StepSummaryLabels } from './step-summary';
 import { TriggerCardBody, triggerSummaryLine, useTriggerFilters } from './trigger-card-body';
 import { TriggerPicker } from './trigger-picker';
 
@@ -234,6 +235,17 @@ function AutomationCanvas() {
     };
   }, [actions, layout]);
 
+  // Names for the ids a step config stores but cannot read. The
+  // picker already loads this list, so the card reuses it rather than
+  // fetching again.
+  const questionnaireOptions = useQuestionnaireTemplateOptions();
+  const summaryLabels = useMemo<StepSummaryLabels>(
+    () => ({
+      questionnaires: Object.fromEntries(questionnaireOptions.map((o) => [o.value, o.label])),
+    }),
+    [questionnaireOptions],
+  );
+
   const initialNodes = useMemo<Node<FlowNodeData>[]>(() => {
     if (!automation) return [];
     const spec = triggerIsSet ? triggerRegistry[triggerType as TriggerType] : null;
@@ -269,8 +281,15 @@ function AutomationCanvas() {
         kind: action.type === 'branch' ? 'branch' : 'action',
         nodeId: action.id,
         title: stepTitle(action),
-        summary: stepSummary(action),
+        summary: stepSummary(action, summaryLabels),
         iconName: actionIconName(action),
+        // These steps configure themselves in a modal, so the card
+        // opens it straight away rather than expanding onto a button
+        // that opens it.
+        modalOnly: MODAL_ACTIONS.has(action.type),
+        // `stop` takes no settings; `send_sms` cannot send yet, so
+        // there is nothing worth configuring on either.
+        noConfig: action.type === 'stop' || action.type === 'send_sms',
       },
     }));
 
@@ -299,6 +318,7 @@ function AutomationCanvas() {
     filters,
     tailContext,
     expandedId,
+    summaryLabels,
   ]);
 
   const initialEdges = useMemo<Edge[]>(() => {
@@ -480,10 +500,19 @@ function AutomationCanvas() {
         }
         const action = actions.find((a) => a.id === nodeId);
         if (!action) return null;
+        if (action.type === 'stop' || action.type === 'send_sms') return null;
         return (
           <StepConfigForm
             selection={{ kind: 'action', action }}
             automationId={automationId}
+            {...(MODAL_ACTIONS.has(action.type)
+              ? {
+                  modal: {
+                    open: expandedId === nodeId,
+                    onClose: () => setExpandedId(null),
+                  },
+                }
+              : {})}
             onSaved={(payload) => {
               if (payload.kind !== 'action') return;
               setActions((prev) =>
@@ -570,6 +599,13 @@ function AutomationCanvas() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
+            // Clicking the canvas closes whatever is open. An expanded
+            // card overlaps the steps beneath it, and hunting for the
+            // chevron you opened it with is not how anyone dismisses
+            // something. Popovers inside the card portal to the body,
+            // so a click in one is not a pane click and does not
+            // collapse it mid-edit.
+            onPaneClick={() => setExpandedId(null)}
             nodeTypes={nodeTypes}
             fitView
             fitViewOptions={{ padding: 0.3, maxZoom: 1, minZoom: 0.5 }}

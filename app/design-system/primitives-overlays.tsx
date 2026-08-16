@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Pencil, Trash2 } from 'lucide-react';
+import { Check, Copy, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -113,7 +113,7 @@ export function PrimitivesOverlays() {
         name="MenuPanel / MenuItem"
         file="components/ui/menu.tsx"
         importPath="@/components/ui/menu"
-        description="The dropdown surface and its rows. Positioning stays with the caller; this owns chrome and row density only."
+        description="The dropdown surface and its rows. Positioning stays with the caller; this owns chrome and row density only. Pass `checked` when the choices are independent: the row becomes a menuitemcheckbox and announces its own state."
       >
         <DemoGrid cols={2}>
           <Demo label="md rows">
@@ -133,6 +133,15 @@ export function PrimitivesOverlays() {
               <MenuItem size="sm" selected>Status</MenuItem>
               <MenuItem size="sm">Priority</MenuItem>
               <MenuItem size="sm" disabled>Archived</MenuItem>
+            </MenuPanel>
+          </Demo>
+          <Demo label="checkbox rows (independent choices)">
+            <MenuPanel className="w-56">
+              <MenuItem checked selected trailing={<Check size={14} strokeWidth={1.5} />}>
+                Vendor contacts
+              </MenuItem>
+              <MenuItem checked={false}>The couple</MenuItem>
+              <MenuItem checked={false}>Me</MenuItem>
             </MenuPanel>
           </Demo>
         </DemoGrid>

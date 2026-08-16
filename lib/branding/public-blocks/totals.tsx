@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { TotalsBlock } from '@/app/(dashboard)/branding/blocks/types'
+import { invoiceDiscountAmount, invoiceTotal } from '@/lib/payments/invoice-total'
 
 import type { PublicBranding } from '../public-surface'
 import { roleDefaults } from '../type-defaults'
@@ -56,12 +57,10 @@ export function RenderTotals({
 }) {
   const p = pad(branding)
   const subtotal = doc.subtotal
-  const discountAmt = doc.discountType && (doc.discountValue ?? 0) > 0
-    ? (doc.discountType === 'percentage' ? subtotal * (doc.discountValue ?? 0) / 100 : (doc.discountValue ?? 0))
-    : 0
+  const discountAmt = invoiceDiscountAmount(doc)
   const taxableAmount = subtotal - discountAmt
   const tax = taxableAmount * (doc.taxRate / 100)
-  const total = taxableAmount + tax
+  const total = invoiceTotal(doc)
 
   const rowDefaults = roleDefaults(branding, 'body')
   const totalDefaults = roleDefaults(branding, 'total')

@@ -45,6 +45,8 @@ export interface UserMetadata {
   phone?: string;
   avatar_url?: string;
   website?: string;
+  /** Where the review-request automation sends couples. */
+  google_review_url?: string;
   instagram_url?: string;
   facebook_url?: string;
   twitter_url?: string;
@@ -112,6 +114,7 @@ export function SettingsBody({ activeTab, data }: SettingsBodyProps) {
               businessName: metadata?.business_name || '',
               phone: metadata?.phone || '',
               website: metadata?.website || '',
+              googleReviewUrl: metadata?.google_review_url || '',
               instagramUrl: metadata?.instagram_url || '',
               facebookUrl: metadata?.facebook_url || '',
               twitterUrl: metadata?.twitter_url || '',

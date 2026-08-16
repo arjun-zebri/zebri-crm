@@ -463,15 +463,486 @@ chips.
 - `update_task` — title/description fields + optional status and due
   chips. Its dead `appendNote` / `reassignTo` / `pushDueDateBy`
   schema fields deleted (the handler never read them).
-- `send_email` — recipients / template / subject / body unchanged;
-  the wrap checkbox and the reply-to / CC-vendors / BCC extras are
-  now "Add option" chips. The reply-to chip surfaced a run-killer:
+- `send_email` — the whole step is a **modal** (see "The email
+  composer" below). Only the branded-shell and reply-to extras are
+  left as "Add option" chips. The reply-to chip surfaced a run-killer:
   it seeds `''`, which `z.string().email()` rejected, so the schema
   now unions `''` (= unset) and the handler treats `''` as absent.
   `action-chips.test.ts` pins every chip against the runner schemas.
 
-Still on the old form: `branch` — the predicate builder is genuine
-design work, not a restyle. Content fields everywhere else are the
+#### The email composer (2026-08-14)
+
+Writing an email is a document, not a row of controls in a 380px node,
+so `send_email` has no inline body at all: its node carries
+`modalOnly`, clicking it opens `email-composer-modal.tsx` directly
+(no expand, no chevron, no "Edit email" button in between), and
+closing the modal collapses the node. The wiring is a
+`modal: { open, onClose }` prop threaded `StepConfigForm` →
+`ActionConfigForm` → `ActionFields` → `EmailContentSummary`; every
+other step is untouched.
+
+The modal is the same three controls as the template editor
+(`SubjectField`, `RichTextEditor`, `TemplateAttachments`) plus
+addressing above them: a **Send to** multi-select, and **CC** / **BCC**
+dropdowns that hold typed addresses (Enter or comma commits one, ✕
+removes one) over a standing toggle — the couple's own vendor contacts
+for CC, yourself for BCC. Typed addresses store as `ccEmails` /
+`bccEmails` arrays of plain `z.string()`, never `z.email()`: a config
+that fails to parse is a silently dead automation, so a half-typed
+address is dropped at send time instead of rejected at load time.
+`DispatchPayload.bcc` widened to `string | string[]` for this.
+
+**A template is a starting point, never a live link.** Picking one in
+the composer copies its subject + TipTap content into the step's own
+fields and stores the id as display-only `sourceTemplateId`; the
+runtime `templateId` is cleared, including on a config saved before
+the composer, which is materialised the first time it opens. Showing a
+subject and body the runner would then ignore in favour of a linked
+template is how you mail the wrong email.
+
+The pre-composed sends (`send_onboarding_pack`,
+`send_pre_event_checklist`, `send_thank_you_message`,
+`send_anniversary_message`, `request_review`, `send_referral_request`)
+use the same modal with `showRecipients={false} showOptions={false}` —
+their handlers address the couple directly and read none of the
+delivery options. They keep their inline card, since
+`PostEventExtraFields` still has content.
+
+**Mustache text is not a variable in the composer.** The plain-text
+`body` path renders `{{couple.name}}` as mustache, but the composer's
+path resolves **mention nodes only** — so lifting a saved body
+verbatim turned every variable into literal text that would be mailed
+as `Hi {{couple.primary_name}},`. The action picker's own default body
+did exactly this. `initialContent` now parses `{{…}}` runs into
+mention nodes (filters preserved, so `event.date | friendly` survives),
+which fixes every automation seeded before the composer as it opens.
+
+Two gotchas: the shared `Modal` had to be portalled to `document.body`
+(a React Flow node's `transform` creates a containing block, so
+`position: fixed` inside one renders at the node's own size), and
+popovers inside the modal need `z-[90]`, the shared popover tier above
+the modal panel's `z-[60]`.
+
+#### Schema defaults are invisible to the UI (2026-08-16)
+
+A step's copy declared as a Zod `.default()` is applied when the
+**runner** parses the config, not when the step is created. So a
+freshly added post-event email stores `{}` while the email it would
+send is fully written — and every surface reading the raw config was
+blind to it: the compose modal opened blank, and the card said "no
+subject yet".
+
+`lib/automations/action-defaults.ts` (`configWithDefaults`) reads a
+config the way the runner will. The inspector and `stepSummary` both
+go through it. It returns the config untouched when the action is
+unknown or the config does not parse, because a half-configured step
+still has to be openable.
+
+Worth remembering for any future action: **anything that renders a
+step's config must read it through this**, or it will disagree with
+what actually sends.
+
+#### Post-event copy, and the review link (2026-08-16)
+
+The thank-you, review-request and referral defaults are rewritten.
+These ship as-is for most MCs, so the defaults are the product; the
+old ones were placeholder-grade ("Could I ask a small favour? ⭐").
+`post-event-copy.test.ts` pins that all three only use tokens the
+resolver knows and sign off as the MC.
+
+**The review request shipped a dead link.** Its default body carried
+a literal `https://g.page/r/your-place`, which an MC who did not edit
+it would have mailed to a real couple. There is now a **Google review
+link** field in Settings → Personal info, a `{{mc.review_link}}`
+variable behind it, and the step renders it as a button under the
+copy (`sendPreComposed` takes a `cta`). With no link set the step
+fails with "Add your Google review link in Settings before this step
+can run" rather than sending a review request with nowhere to leave
+one.
+
+#### The preview panel (2026-08-16)
+
+`email-preview.tsx` is the shared "what does the couple receive?"
+panel: subject row, sandboxed frame, caption. Three modals had the
+same markup three times.
+
+It owns the loading state, which is the point. The MC's branding
+arrives from a query, so a frame rendered before it lands shows the
+**unbranded** shell and then swaps, which reads as the preview
+changing its mind about what the email looks like. Nothing is painted
+until the branding is in: a skeleton in the shape of the email stands
+in, so the panel does not jump either.
+
+The frame loads one blank document and every version of the email is
+written into it. Binding `srcDoc` to the html instead reloads the
+whole frame on each change, which the questionnaire's title field
+would do on every keystroke. The skeleton also covers the frame until
+that first write lands, rather than showing an empty white box for a
+tick.
+
+#### Contract and invoice previews (2026-08-16)
+
+`send_contract` and `send_invoice` open a shared preview modal
+(`document-composer-modal.tsx`). Both are **zero-config**: the handler
+picks the couple's most recent document and sends it as saved, and
+every field their schemas carried — `templateId`, `signersRequired`,
+`expiryDays`, `customMessage`, the invoice's payment fields — was
+declared and never read. So a form here would be a form that changes
+nothing; the modal says that plainly and shows what the couple
+receives, built by `contractHtml` / `invoiceHtml`, the same builders
+the senders call.
+
+`send_pre_event_checklist` left the picker the same day (product
+decision). Registered and still running for saved automations. 14
+visible actions.
+
+#### Send run sheet (2026-08-16)
+
+Same treatment as the questionnaire step, for the same reason: the
+whole email is the handler's — the subject
+(`Run sheet for <couple> - <business>`), the shell, the message and
+the link — and the one thing the MC decides is who receives it. So
+the modal is that choice and a preview.
+
+The message field is gone. It was a one-line body that had to be
+typed on every step, which is a field asking to be left as its
+default. A custom message saved before this still sends, and still
+previews.
+
+**Two audiences, two messages** (`RUN_SHEET_MESSAGE` and
+`RUN_SHEET_COUPLE_MESSAGE`, both exported so the preview shows what
+actually sends). A supplier is checking their own slot and needs to
+know they can push back; the couple is looking at the shape of their
+own day and should not be asked to proofread a call sheet. The single
+old version ("please review and let me know if anything looks off")
+did neither: no action, no deadline, nothing named to look at. The
+handler sends the couple separately from everyone else; a custom
+message overrides both, since overriding one audience and not the
+other would be a surprise. The modal previews each on its own tab.
+`run-sheet-copy.test.ts` pins that both only use tokens the resolver
+knows — an unknown one renders empty, which reads as a typo in the
+MC's own email.
+
+**The link renders as a button.** `wrapAutomationShell` takes an
+optional `cta` now and draws the same button-plus-copyable-address the
+questionnaire, contract and invoice emails use. A bare URL in the body
+was a link the recipient had to notice and select. `safeUrl` gates the
+href, so only http(s) reaches the inbox as a button.
+
+**`MenuItem` gained `checked`**, which turns a row into a
+`menuitemcheckbox` that announces its own state. The three audiences
+are independent flags, so picking one must not clear the others, and
+that had been hand-rolled twice (here and in the email composer's
+recipient picker). The tick is `trailing` now rather than a leading
+icon made `invisible` when off, which was indenting every unticked
+label.
+
+The preview calls **`wrapAutomationShell`**, the same builder the
+handler wraps its body in, and resolves variables through the same
+`renderTemplate`, so it cannot drift from the send. That needed the
+builder moving: it lived in `lib/automations/actions/messaging.ts`
+next to Resend and the admin client, and importing it from a client
+component would have pulled the transport layer into the browser
+bundle. It now sits in `lib/email/html.ts` — the module whose header
+already says it is the client-safe home for pure builders — taking a
+business name instead of a run context, with `wrapAutomationHtml` in
+messaging.ts kept as the context-taking wrapper every handler already
+calls.
+
+#### create_timeline_event (2026-08-16)
+
+The last content-carrying step on the old stacked form. Same shape as
+`create_task`, so it gets the same treatment: a modal with the title
+and description as fields, and the two optional parameters as chips
+(`starts · 15:30`, `runs for · 45 min`) rather than labelled inputs
+sitting empty on every card. The duration chip uses
+`ComparisonControl`, so a quantity reads the same here as in every
+trigger filter.
+
+`update_timeline_event` keeps the old form: it is hidden from the
+picker, and it cannot be made sane as-is (one hardcoded item id means
+an automation firing for every couple edits one specific couple's
+row).
+
+**Card summaries went in at the same time**, for every step whose
+card previously never changed no matter what was saved — which reads
+exactly like a save that did not happen. `send_couple_questionnaire`
+(the reported one), the six pre-composed emails, `create_couple` and
+`create_timeline_event` all say what they are set to now. The
+questionnaire's name lives in the database rather than the config, so
+`stepSummary` takes an optional `StepSummaryLabels` lookup that the
+builder fills from the list it already loads for the picker, and
+degrades to "Sends a questionnaire" without it rather than printing a
+raw id.
+
+#### More retirements, and the questionnaire preview (2026-08-16)
+
+Out of the picker, registered and still running for saved
+automations: **`send_portal_link`** and **`request_information`**.
+Both are one-line emails carrying a portal link, which `send_email`
+does better now that `{{portal.link}}` resolves on its own and can
+say more than a sentence. That leaves 15 visible actions.
+
+**`send_couple_questionnaire` opens a modal** with a **preview**
+rather than a form. Its email is canned — `questionnaireHtml` builds
+it and the MC controls only which questionnaire and what it is
+called — so the question worth answering is "what does the couple
+receive?". The preview calls that same pure builder, so it cannot
+drift from what is sent, with a sample couple (the automation is not
+attached to one) but the MC's **real** business name and branding via
+`loadSenderIdentityAction`.
+
+Two things about that iframe, both of which `TemplatePreview` had
+already got right:
+
+- `srcDoc` is set **once** and the document is patched in place
+  afterwards. Swapping `srcDoc` reloads the whole frame, so typing a
+  title flashed the preview on every keystroke.
+- The sandbox is `allow-same-origin`, **not** `sandbox=""`. Scripts,
+  forms and popups stay blocked either way; what the flag buys is the
+  parent being able to reach `contentDocument` at all. A bare
+  `sandbox=""` puts the frame in an opaque origin, where
+  `contentDocument` is null in a real browser — so the patch above
+  silently did nothing and the preview froze on its first paint.
+  **jsdom does not enforce this**, so the tests passed while the app
+  was broken; the sandbox value is now asserted for that reason.
+
+#### Portal link variables (2026-08-16)
+
+`{{portal.link}}` was the only share link on offer, and it resolved
+**only** from a trigger payload key that one action stamps
+(`send_portal_link`) — so in an ordinary email it was empty. It now
+builds from the couple's own token, and two more join it:
+
+| Variable | Built from | Surface |
+|---|---|---|
+| `{{portal.link}}` | `couples.portal_token` | primary partner's portal |
+| `{{portal.partner_link}}` | `couples.secondary_portal_token` | second partner's portal |
+| `{{portal.vendor_link}}` | the primary event's `share_token` | the vendor run sheet |
+
+The tokens ride on `CoupleSnapshot`, so nothing new is queried per
+variable. Both partner tokens hang off the single
+`portal_token_enabled` flag (`_resolve_portal_couple` gates on it);
+the run sheet has its own, which **defaults to false**.
+
+**A disabled token resolves to `''`, never a URL.** The RPCs refuse
+it, so the link would 404 — and an unresolvable variable pauses the
+run and alerts the MC, which beats mailing a couple a dead link.
+Reading a variable must not enable sharing as a side effect, so this
+path never writes. A `send_portal_link` step's own stamped URL still
+wins for `{{portal.link}}`.
+
+Both editors pick these up for free: `EMAIL_TEMPLATE_VARIABLES`
+derives from `VARIABLE_CATALOGUE`, so the templates library and the
+`send_email` composer offer the same list.
+
+#### The chip-popover shape (2026-08-15)
+
+Every compound chip popover now follows the branch's: **pick the
+shape, then fill that shape in**, with a back row naming the current
+one. The due chip was the last holdout — five preset day counts, then
+a Days/Weeks list, then a Before/After list, then two mode rows, all
+flat, read as ten unrelated choices rather than one date.
+
+Unit and direction are **one list** there (`days before the event`,
+`weeks after the event`, …): "7" plus "days before the event" is a
+single thought, and splitting it made two decisions out of one. Two
+things fell out of the rebuild — the preset counts are gone, so any
+number can be typed, and `unit: 'weeks'` became reachable at all (the
+schema always took it; the old popover only ever wrote `days`).
+
+**Clicking the canvas collapses whatever is open** (`onPaneClick`).
+An expanded card overlaps the steps beneath it, and hunting for the
+chevron you opened it with is not how anyone dismisses something.
+Popovers inside a card portal to the body, so a click in one is not a
+pane click and cannot collapse the card mid-edit.
+
+#### SMS, tasks and the Textarea primitive (2026-08-15)
+
+**`send_sms` cannot be picked or opened.** It was listed with a
+"(coming soon)" label but still selectable, so an MC could add a step
+that fails at run time. The picker row is `disabled` now (the command
+palette already supported it — the picker just never set it), the node
+carries `noConfig`, and the collapsed card says "Not enabled yet —
+this step will not run", since it can no longer be opened to find
+that out.
+
+**`update_task` is out of the picker** (2026-08-15). It edits "the
+most recent task created by an earlier action", or one pasted UUID —
+neither is a rule an MC can reason about while looking at the canvas.
+Registered and running for saved automations; its card says so.
+
+**`add_note` opens a modal** too (`note-composer-modal.tsx`): a
+paragraph written five rows at a time in a 380px node is prose through
+a letterbox. It uses the same `RichTextEditor` the email composer
+does, so variables behave the way they do everywhere else: type `@`
+for the inline list, or the toolbar's "Insert variable", and what
+lands is a green chip. The note is still *stored* as a plain mustache
+string, because the handler appends it to `couples.notes`, a text
+column.
+
+That seam is `lib/automations/mustache-doc.ts` (`textToDoc` /
+`docToText`), extracted from the email composer's own lift and now
+shared by both. It round-trips, filters included
+(`event.date | friendly`), and drops a mention that lost its
+`attrs.id` rather than writing `{{undefined}}` onto a couple's record.
+
+**Steps no longer seed placeholder config.** `add_note` came with
+`text: 'Note text'` and `create_task` with `title: 'New task'`, which
+read as something the MC had written. Both are empty now and the
+field's placeholder does that job; the collapsed card says "No note
+yet" / "No title yet".
+
+**`create_task` opens a modal**, like the email actions:
+`task-composer-modal.tsx`, with the title, the description and the
+due chip. `EMAIL_MODAL_ACTIONS` became `MODAL_ACTIONS` — the rule is
+"the step's whole config is a modal", not "the step is an email".
+
+That modal needed a prose field, and there was no primitive for one:
+`components/ui/textarea.tsx` now exists (Input's chrome, height from
+`rows`, vertical resize only) with unit tests and a `/design-system`
+entry. The seven hand-rolled `<textarea>` call sites in
+`inspector-panel.tsx` moved onto it, deleting the local copy that had
+been drifting from `Input`.
+
+#### Stop and pause (2026-08-15)
+
+**`stop` has no config and no expand.** Its only field was a reason
+that went into an audit-log entry nobody asked for; the card existed
+to hold it. The node carries `noConfig` now — no chevron, no panel,
+and the header does not respond to a click, because an expand that
+opens onto nothing is a promise the card cannot keep. `stopConfigSchema`
+still accepts `reason`, so a saved one parses and still narrates.
+
+**`pause_couple_automations` is out of the picker.** Pausing every
+other automation on a couple from inside one of them is a rule nobody
+can reason about looking at the canvas. Its spec stays registered and
+its handler still runs, so saved automations are unaffected; the card
+says it is a legacy step. `PAUSE_CATEGORIES` / `PAUSE_CATEGORY_LABELS`
+went with it — nothing ever read them.
+
+#### The step-card audit (2026-08-14)
+
+A pass over every launch-visible action's card, asking the sweep's
+questions of the *inputs* rather than the schema:
+
+- **Every email action is modal-only.** `PostEventExtraFields` had
+  already been reduced to `() => null`, so the six pre-composed sends
+  were a summary box and an "Edit email" button inside an expanded
+  node. They now open the composer directly, like `send_email`, with
+  the action's own label as the modal title.
+- **"Send run sheet"**: its three recipient checkboxes are one
+  required `send to · vendors, me` chip. The phrase comes from
+  `runSheetAudience()` in `step-summary.ts`, which the collapsed card
+  uses too, so the card and its chip can never describe the same
+  config differently. Vendors read as on when the key is absent — the
+  runner defaults them on for configs saved before the merge.
+- **`create_couple`**: name stays a field (it is the one thing the
+  action cannot run without); email, phone, event date and lead source
+  are chips. Its `email` had to widen to `z.union([z.string().email(),
+  z.literal('')])` first — the chip seeds `''` when added, which the
+  bare `.email()` rejected. Same run-killer the reply-to chip found.
+- **`create_timeline_event`**: the "Event ID (optional)" input is
+  gone. It asked the MC to paste a UUID no screen in the app shows,
+  and the handler already falls back to the couple's own event.
+- **14 dead `*ExtraFields` components deleted** — six unreferenced,
+  eight rendering `null` at a live call site.
+- `update_timeline_event` and `update_custom_fields` keep their
+  paste-a-UUID / free-key forms, and both are already hidden from the
+  picker. `update_timeline_event` cannot be made sane as-is: one
+  hardcoded item id means an automation firing for every couple would
+  edit one specific couple's timeline row.
+
+**The bug this pass found.** Every chip row was wired to the *merging*
+setter (`updateInner`, which spreads a patch over the config). A
+`fieldFilter` chip's `remove` **deletes** its keys, so merging spread
+them straight back: the chip disappeared from the card while the
+runner kept acting on the value. Chip-hosting forms now take a
+`replaceConfig` prop alongside `updateConfig`
+(`ChipHostProps`), and `step-config-chips.test.tsx` pins removal
+through a real step card. The task due chip survived the old wiring
+only because it writes `undefined` instead of deleting.
+
+#### Branch (2026-08-14)
+
+The last step on the old stacked form. Now a chip row like a
+trigger's — **one pill per condition**, saying the whole condition:
+
+    if [wedding is at most 60 days away]
+    if [stage is Booked] and [the deposit is paid] [+ Add condition]
+
+One pill, not three. Splitting a single condition across a subject
+pill, an operator pill and a value pill made one thought look like
+three settings and wrapped onto two lines in a 380px node. The pill's
+popover is two steps instead — the subject list, then that subject's
+own control, with a back row between them — so no popover is longer
+than a menu. A subject with nothing to configure ("the deposit is
+paid") opens straight onto the list. The days control is the trigger
+filters' own `ComparisonControl`, not a lookalike: same layout, same
+commit-on-blur, same digit-only field.
+
+**A branch starts empty**, on the "Add condition" button alone — no
+default predicate guessing which condition was meant. That menu *is*
+the condition list, so picking a row creates that condition outright
+rather than adding a placeholder to open and choose inside. The
+runner rejects a branch with no predicate, and
+`config-errors.ts` phrases it as "no condition chosen" rather than
+"Predicate: Invalid input". `TriggerFilterList` also adds the last
+remaining filter outright now: with one choice left, the menu was a
+single row repeating the button that opened it. A def can set
+`openAfterAdd` when the chip to open afterwards isn't itself (the
+branch's conditions are keyed by index).
+
+**Conditions chain.** `evaluatePredicate` has always understood
+`and` / `or` groups — nothing ever offered them, so a branch could
+only test one thing. "Add condition" rewrites the config into a
+group and the join pill flips the whole group between "every
+condition must match" and "any condition can match" (one join for the
+group, which is the only shape the runner's `and` / `or` has). A
+one-condition branch collapses back to a bare predicate on save, so
+nothing saved before chaining changes shape on disk just because it
+was opened. The last condition's ✕ disappears: a branch with nothing
+to test cannot split.
+
+**Conditions offered:** how far away the wedding is; stage, lead
+source, venue, wedding date, couple name, email or phone; the contract
+is signed; the deposit is paid; the invoice is paid in full. That is
+everything the run context can answer without a new query — the
+remaining candidates (questionnaire completed, portal section done,
+tasks outstanding) all need a DB read, and `evaluatePredicate` is
+synchronous.
+
+What the audit changed underneath it:
+
+- **Two new conditions, both backed by data that was already there.**
+  `has_paid_invoice` reads the invoice's own status (`InvoiceSnapshot`
+  gained `status`), which is the question `has_paid_deposit` does not
+  answer — that one only asks about the first stage. And `lead_source`
+  joins the couple fields: the column has been on `couples` all along,
+  `readCoupleField` just had no case for it.
+
+- **`has_signed_contract` could never be true.** It read
+  `actionResults.contract_signed_at` and a payload `contract_signed`,
+  neither of which anything writes (the emitter's key is `signed_at`).
+  The run context now carries `contractSignedAt`, loaded from the
+  couple's most recently signed contract, and the predicate reads
+  that first.
+- **`is_set` / `is_unset` killed the branch they were on.** `value:
+  z.any()` is *non-optional* in Zod 4, so a predicate saved without an
+  operand failed the union parse. Both `value` fields are
+  `.optional()` now, in the schema and in `BranchPredicate`.
+- **Numeric comparisons on a couple field are gone from the UI.**
+  Every readable couple field is a string, and `compare()` turns a
+  non-numeric operand into `null` and returns false — so `>`/`<` on
+  one was a branch that always took "no".
+- **The couple field is a list, not a free-text box.** It offered
+  `lead_source` as a placeholder example; `readCoupleField` supports
+  status, name, email, phone, venue and event_date only, so that
+  example never matched.
+- **`custom_field` is retired from the picker** (it reads action
+  results nothing writes; `couple_custom_fields` has no UI at all)
+  and **`groupOperator` is deleted** — AND/OR scaffolding the runner
+  has never evaluated. Content fields everywhere else are the
 design-system `TextInput`/`TextArea` and stay as they are.
 
 #### The chip popover for numbers

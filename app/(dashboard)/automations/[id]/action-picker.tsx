@@ -109,6 +109,9 @@ export function ActionPicker({
         label: ui.comingSoon ? `${ui.label} (coming soon)` : ui.label,
         description: ui.description,
         icon: getLucideIcon(ui.icon),
+        // Listed so the MC knows it is coming, but not selectable:
+        // adding a step that cannot send is adding a step that fails.
+        disabled: ui.comingSoon === true,
       })),
   ]
 
@@ -225,16 +228,21 @@ function defaultActionConfigFor(type: ActionType): Record<string, unknown> {
     case 'send_email':
       return { recipients: { roles: ['primary'], fallback: 'primary_only' }, subject: 'Subject line', body: 'Hi {{couple.primary_name}},\n\nYour message here.\n\n- {{mc.contact_name}}', wrap: true }
     case 'create_task':
-      return { title: 'New task' }
+      // Same: the modal's placeholder does this job.
+      return {}
     case 'update_couple_stage':
       return { toStatus: 'contacted' }
     case 'add_note':
-      return { text: 'Note text' }
+      // Empty: the composer's placeholder says what goes here, and a
+      // default nobody typed reads as a note they wrote.
+      return {}
     // Flow-control actions
     case 'wait':
       return { mode: 'duration', durationMinutes: 24 * 60, respectQuietHours: true }
     case 'branch':
-      return { predicate: { kind: 'event_in', op: '<', days: 60 } }
+      // No predicate: the card opens on "Add condition" rather than a
+      // guess about which condition was meant.
+      return {}
     case 'stop':
       return {}
     case 'approval':
