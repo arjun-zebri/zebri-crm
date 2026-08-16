@@ -3,57 +3,50 @@
 import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import type { AdminUser, SubscriptionStatus } from '@/lib/admin/admin-analytics';
+import type { AdminUser } from '@/lib/admin/admin-analytics';
+import {
+  compareUsersByPlanThenSignIn,
+  emptyUserStats,
+  type UserStats,
+} from '@/lib/admin/user-value';
 
-const statusVariant: Record<SubscriptionStatus, 'paid' | 'contacted' | 'cancelled' | 'default'> = {
-  active: 'paid',
-  trialing: 'contacted',
-  past_due: 'cancelled',
-  cancelled: 'default',
-  expired: 'default',
-};
-
-function formatDate(iso: string | null) {
-  if (!iso) return ' - ';
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function planLabel(user: AdminUser): string {
-  if (user.subscription_status === 'active' && user.subscription_plan) {
-    return user.subscription_plan === 'pro' ? 'Pro' : 'Max';
-  }
-  return 'Starter';
-}
+import { UsersTableRow } from './users-table-row';
 
 /**
  * Users tab — full-table view with a search bar at the top. Filters
  * by email / business / display name (case-insensitive substring) as
- * the user types. Click a row → opens the user detail panel.
+ * the user types; email stays searchable even though it's no longer a
+ * column (the detail panel shows it). Rows are ordered by plan tier
+ * (Max → Pro → Starter), then most recent sign-in, so the highest
+ * value accounts sit at the top. Click a row → opens the user detail
+ * panel.
  */
 export function UsersTableView({
   users,
+  stats,
   onOpenUser,
 }: {
   users: AdminUser[];
+  stats: Record<string, UserStats>;
   onOpenUser: (userId: string) => void;
 }) {
   const [query, setQuery] = useState('');
+  // One clock reading per mount: relative "last sign-in" cells stay
+  // stable within a render and the render itself stays pure.
+  const [now] = useState(() => Date.now());
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) => {
-      return (
-        u.email.toLowerCase().includes(q) ||
-        u.business_name.toLowerCase().includes(q) ||
-        u.display_name.toLowerCase().includes(q)
-      );
-    });
+    const matched = q
+      ? users.filter((u) => {
+          return (
+            u.email.toLowerCase().includes(q) ||
+            u.business_name.toLowerCase().includes(q) ||
+            u.display_name.toLowerCase().includes(q)
+          );
+        })
+      : users;
+    return [...matched].sort(compareUsersByPlanThenSignIn);
   }, [query, users]);
 
   return (
@@ -79,52 +72,32 @@ export function UsersTableView({
               <tr>
                 <Th>Name</Th>
                 <Th>Business</Th>
-                <Th>Email</Th>
-                <Th>Status</Th>
                 <Th>Plan</Th>
+                <Th>Last sign-in</Th>
+                <Th align="right">Couples</Th>
+                <Th align="right">Events</Th>
+                <Th align="right">Invoices</Th>
+                <Th align="right">Templates</Th>
+                <Th align="right">Automations</Th>
                 <Th>Signed up</Th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-text-subtle">
+                  <td colSpan={10} className="px-4 py-12 text-center text-text-subtle">
                     {query ? 'No matches.' : 'No users yet.'}
                   </td>
                 </tr>
               ) : (
                 filtered.map((user) => (
-                  <tr
+                  <UsersTableRow
                     key={user.id}
-                    onClick={() => onOpenUser(user.id)}
-                    className="border-b border-border last:border-0 hover:bg-surface-emphasis cursor-pointer"
-                  >
-                    <td className="px-4 py-3 font-medium text-text">
-                      {user.display_name || ' - '}
-                      {user.account_type === 'admin' && (
-                        <span className="ml-2 text-body bg-surface-emphasis text-text-muted px-1.5 py-0.5 rounded-control">
-                          admin
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-text-muted">
-                      {user.business_name || ' - '}
-                    </td>
-                    <td className="px-4 py-3 text-text-muted">{user.email}</td>
-                    <td className="px-4 py-3">
-                      {user.subscription_status ? (
-                        <Badge variant={statusVariant[user.subscription_status]}>
-                          {user.subscription_status.replace('_', ' ')}
-                        </Badge>
-                      ) : (
-                        <span className="text-text-subtle text-body"> - </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-text-muted">{planLabel(user)}</td>
-                    <td className="px-4 py-3 text-text-muted">
-                      {formatDate(user.created_at)}
-                    </td>
-                  </tr>
+                    user={user}
+                    stats={stats[user.id] ?? emptyUserStats()}
+                    now={now}
+                    onOpenUser={onOpenUser}
+                  />
                 ))
               )}
             </tbody>
@@ -140,9 +113,13 @@ export function UsersTableView({
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children, align }: { children: React.ReactNode; align?: 'right' }) {
   return (
-    <th className="text-left px-4 py-3 font-medium text-text-muted whitespace-nowrap">
+    <th
+      className={`px-4 py-3 font-medium text-text-muted whitespace-nowrap ${
+        align === 'right' ? 'text-right' : 'text-left'
+      }`}
+    >
       {children}
     </th>
   );

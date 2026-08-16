@@ -31,10 +31,11 @@ export async function buildRunContext(
   run: AutomationRunRow,
   event: AutomationEventRow,
 ): Promise<RunContext> {
-  const [couple, mc, invoice] = await Promise.all([
+  const [couple, mc, invoice, contractSignedAt] = await Promise.all([
     run.couple_id ? loadCoupleSnapshot(supabase, run.couple_id) : Promise.resolve(null),
     loadMcSnapshot(supabase, run.user_id),
     run.couple_id ? loadInvoiceSnapshot(supabase, run.couple_id, event) : Promise.resolve(null),
+    run.couple_id ? loadContractSignedAt(supabase, run.couple_id) : Promise.resolve(null),
   ])
   const actionResults = (run.last_payload as Record<string, unknown> | null)?.['action_results']
   return {
@@ -45,9 +46,33 @@ export async function buildRunContext(
     triggerEvent: event,
     couple,
     invoice,
+    contractSignedAt,
     mc,
     actionResults: (actionResults as Record<string, never>) ?? {},
   }
+}
+
+/**
+ * When the couple last signed a contract, or null.
+ *
+ * One field rather than a snapshot: the only thing that reads it is
+ * the `has_signed_contract` branch condition, and "have they signed?"
+ * is the whole question. Signing is monotonic, so the most recent
+ * signature is the answer for every contract they hold.
+ */
+export async function loadContractSignedAt(
+  supabase: SupabaseClient<Database>,
+  coupleId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('contracts')
+    .select('signed_at')
+    .eq('couple_id', coupleId)
+    .not('signed_at', 'is', null)
+    .order('signed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (data?.signed_at as string | null) ?? null
 }
 
 export async function loadCoupleSnapshot(
@@ -57,7 +82,7 @@ export async function loadCoupleSnapshot(
   const { data } = await supabase
     .from('couples')
     .select(
-      'id, user_id, name, email, phone, event_date, venue, notes, status, primary_name, primary_email, primary_phone, secondary_name, secondary_email, secondary_phone',
+      'id, user_id, name, email, phone, event_date, venue, notes, status, lead_source, primary_name, primary_email, primary_phone, secondary_name, secondary_email, secondary_phone',
     )
     .eq('id', coupleId)
     .single()
@@ -89,6 +114,7 @@ export async function loadCoupleSnapshot(
     eventDate: primaryEvent?.date ?? data.event_date ?? null,
     venue: primaryEvent?.venue || data.venue || null,
     status: data.status,
+    leadSource: data.lead_source ?? null,
     primaryName: data.primary_name?.trim() || primaryName,
     spouseName: spouseDetails.name ?? data.secondary_name ?? spouseName,
     spouseEmail: spouseDetails.email ?? data.secondary_email,
@@ -168,12 +194,12 @@ export async function loadInvoiceSnapshot(
   const invoiceIdFromPayload = (event.payload as Record<string, unknown> | null)?.['invoice_id']
   const invoiceId = typeof invoiceIdFromPayload === 'string' ? invoiceIdFromPayload : null
 
-  let invoice: { id: string } | null = null
+  let invoice: { id: string; status?: string } | null = null
 
   if (invoiceId) {
     const { data } = await supabase
       .from('invoices')
-      .select('id')
+      .select('id, status')
       .eq('id', invoiceId)
       .eq('couple_id', coupleId)
       .single()
@@ -181,7 +207,7 @@ export async function loadInvoiceSnapshot(
   } else {
     const { data } = await supabase
       .from('invoices')
-      .select('id')
+      .select('id, status')
       .eq('couple_id', coupleId)
       .neq('status', 'cancelled')
       .order('created_at', { ascending: false })
@@ -203,6 +229,7 @@ export async function loadInvoiceSnapshot(
   return {
     id: invoice.id,
     firstStagePaidAt: (stages?.['paid_at'] as string | null) ?? null,
+    ...(invoice.status ? { status: invoice.status } : {}),
   }
 }
 

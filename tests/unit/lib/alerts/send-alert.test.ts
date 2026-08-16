@@ -4,6 +4,10 @@ import { afterEach, beforeEach, vi } from 'vitest';
 // binding captures the spy. The logger writes to console (silenced here).
 vi.mock('@/lib/alerts/slack', () => ({
   sendSlackAlert: vi.fn().mockResolvedValue(undefined),
+  // These tests assert dispatch behaviour, not the local-run gate, so the
+  // gate is stubbed open. Suppression itself is covered in
+  // tests/unit/alerts/send-alert-suppression.test.ts.
+  slackSuppressed: vi.fn().mockReturnValue(false),
 }));
 
 import { sendAlert, formatSlackMessage } from '@/lib/alerts/send-alert';

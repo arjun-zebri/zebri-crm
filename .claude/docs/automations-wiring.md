@@ -463,15 +463,261 @@ chips.
 - `update_task` — title/description fields + optional status and due
   chips. Its dead `appendNote` / `reassignTo` / `pushDueDateBy`
   schema fields deleted (the handler never read them).
-- `send_email` — recipients / template / subject / body unchanged;
-  the wrap checkbox and the reply-to / CC-vendors / BCC extras are
-  now "Add option" chips. The reply-to chip surfaced a run-killer:
+- `send_email` — the whole step is a **modal** (see "The email
+  composer" below). Only the branded-shell and reply-to extras are
+  left as "Add option" chips. The reply-to chip surfaced a run-killer:
   it seeds `''`, which `z.string().email()` rejected, so the schema
   now unions `''` (= unset) and the handler treats `''` as absent.
   `action-chips.test.ts` pins every chip against the runner schemas.
 
-Still on the old form: `branch` — the predicate builder is genuine
-design work, not a restyle. Content fields everywhere else are the
+#### The email composer (2026-08-14)
+
+Writing an email is a document, not a row of controls in a 380px node,
+so `send_email` has no inline body at all: its node carries
+`modalOnly`, clicking it opens `email-composer-modal.tsx` directly
+(no expand, no chevron, no "Edit email" button in between), and
+closing the modal collapses the node. The wiring is a
+`modal: { open, onClose }` prop threaded `StepConfigForm` →
+`ActionConfigForm` → `ActionFields` → `EmailContentSummary`; every
+other step is untouched.
+
+The modal is the same three controls as the template editor
+(`SubjectField`, `RichTextEditor`, `TemplateAttachments`) plus
+addressing above them: a **Send to** multi-select, and **CC** / **BCC**
+dropdowns that hold typed addresses (Enter or comma commits one, ✕
+removes one) over a standing toggle — the couple's own vendor contacts
+for CC, yourself for BCC. Typed addresses store as `ccEmails` /
+`bccEmails` arrays of plain `z.string()`, never `z.email()`: a config
+that fails to parse is a silently dead automation, so a half-typed
+address is dropped at send time instead of rejected at load time.
+`DispatchPayload.bcc` widened to `string | string[]` for this.
+
+**A template is a starting point, never a live link.** Picking one in
+the composer copies its subject + TipTap content into the step's own
+fields and stores the id as display-only `sourceTemplateId`; the
+runtime `templateId` is cleared, including on a config saved before
+the composer, which is materialised the first time it opens. Showing a
+subject and body the runner would then ignore in favour of a linked
+template is how you mail the wrong email.
+
+The pre-composed sends (`send_onboarding_pack`,
+`send_pre_event_checklist`, `send_thank_you_message`,
+`send_anniversary_message`, `request_review`, `send_referral_request`)
+use the same modal with `showRecipients={false} showOptions={false}` —
+their handlers address the couple directly and read none of the
+delivery options. They keep their inline card, since
+`PostEventExtraFields` still has content.
+
+**Mustache text is not a variable in the composer.** The plain-text
+`body` path renders `{{couple.name}}` as mustache, but the composer's
+path resolves **mention nodes only** — so lifting a saved body
+verbatim turned every variable into literal text that would be mailed
+as `Hi {{couple.primary_name}},`. The action picker's own default body
+did exactly this. `initialContent` now parses `{{…}}` runs into
+mention nodes (filters preserved, so `event.date | friendly` survives),
+which fixes every automation seeded before the composer as it opens.
+
+Two gotchas: the shared `Modal` had to be portalled to `document.body`
+(a React Flow node's `transform` creates a containing block, so
+`position: fixed` inside one renders at the node's own size), and
+popovers inside the modal need `z-[90]`, the shared popover tier above
+the modal panel's `z-[60]`.
+
+#### The chip-popover shape (2026-08-15)
+
+Every compound chip popover now follows the branch's: **pick the
+shape, then fill that shape in**, with a back row naming the current
+one. The due chip was the last holdout — five preset day counts, then
+a Days/Weeks list, then a Before/After list, then two mode rows, all
+flat, read as ten unrelated choices rather than one date.
+
+Unit and direction are **one list** there (`days before the event`,
+`weeks after the event`, …): "7" plus "days before the event" is a
+single thought, and splitting it made two decisions out of one. Two
+things fell out of the rebuild — the preset counts are gone, so any
+number can be typed, and `unit: 'weeks'` became reachable at all (the
+schema always took it; the old popover only ever wrote `days`).
+
+**Clicking the canvas collapses whatever is open** (`onPaneClick`).
+An expanded card overlaps the steps beneath it, and hunting for the
+chevron you opened it with is not how anyone dismisses something.
+Popovers inside a card portal to the body, so a click in one is not a
+pane click and cannot collapse the card mid-edit.
+
+#### SMS, tasks and the Textarea primitive (2026-08-15)
+
+**`send_sms` cannot be picked or opened.** It was listed with a
+"(coming soon)" label but still selectable, so an MC could add a step
+that fails at run time. The picker row is `disabled` now (the command
+palette already supported it — the picker just never set it), the node
+carries `noConfig`, and the collapsed card says "Not enabled yet —
+this step will not run", since it can no longer be opened to find
+that out.
+
+**`update_task` is out of the picker** (2026-08-15). It edits "the
+most recent task created by an earlier action", or one pasted UUID —
+neither is a rule an MC can reason about while looking at the canvas.
+Registered and running for saved automations; its card says so.
+
+**`add_note` opens a modal** too (`note-composer-modal.tsx`): a
+paragraph written five rows at a time in a 380px node is prose through
+a letterbox. Plain text, not the rich editor — the handler appends the
+rendered string to `couples.notes`, a text column, so formatting would
+be discarded on the way in. The variable tokens are click-to-append
+chips rather than a caret insert: a textarea loses its selection the
+moment a button takes focus, and inserting in the wrong place is worse
+than appending.
+
+**`create_task` opens a modal**, like the email actions:
+`task-composer-modal.tsx`, with the title, the description and the
+due chip. `EMAIL_MODAL_ACTIONS` became `MODAL_ACTIONS` — the rule is
+"the step's whole config is a modal", not "the step is an email".
+
+That modal needed a prose field, and there was no primitive for one:
+`components/ui/textarea.tsx` now exists (Input's chrome, height from
+`rows`, vertical resize only) with unit tests and a `/design-system`
+entry. The seven hand-rolled `<textarea>` call sites in
+`inspector-panel.tsx` moved onto it, deleting the local copy that had
+been drifting from `Input`.
+
+#### Stop and pause (2026-08-15)
+
+**`stop` has no config and no expand.** Its only field was a reason
+that went into an audit-log entry nobody asked for; the card existed
+to hold it. The node carries `noConfig` now — no chevron, no panel,
+and the header does not respond to a click, because an expand that
+opens onto nothing is a promise the card cannot keep. `stopConfigSchema`
+still accepts `reason`, so a saved one parses and still narrates.
+
+**`pause_couple_automations` is out of the picker.** Pausing every
+other automation on a couple from inside one of them is a rule nobody
+can reason about looking at the canvas. Its spec stays registered and
+its handler still runs, so saved automations are unaffected; the card
+says it is a legacy step. `PAUSE_CATEGORIES` / `PAUSE_CATEGORY_LABELS`
+went with it — nothing ever read them.
+
+#### The step-card audit (2026-08-14)
+
+A pass over every launch-visible action's card, asking the sweep's
+questions of the *inputs* rather than the schema:
+
+- **Every email action is modal-only.** `PostEventExtraFields` had
+  already been reduced to `() => null`, so the six pre-composed sends
+  were a summary box and an "Edit email" button inside an expanded
+  node. They now open the composer directly, like `send_email`, with
+  the action's own label as the modal title.
+- **"Send run sheet"**: its three recipient checkboxes are one
+  required `send to · vendors, me` chip. The phrase comes from
+  `runSheetAudience()` in `step-summary.ts`, which the collapsed card
+  uses too, so the card and its chip can never describe the same
+  config differently. Vendors read as on when the key is absent — the
+  runner defaults them on for configs saved before the merge.
+- **`create_couple`**: name stays a field (it is the one thing the
+  action cannot run without); email, phone, event date and lead source
+  are chips. Its `email` had to widen to `z.union([z.string().email(),
+  z.literal('')])` first — the chip seeds `''` when added, which the
+  bare `.email()` rejected. Same run-killer the reply-to chip found.
+- **`create_timeline_event`**: the "Event ID (optional)" input is
+  gone. It asked the MC to paste a UUID no screen in the app shows,
+  and the handler already falls back to the couple's own event.
+- **14 dead `*ExtraFields` components deleted** — six unreferenced,
+  eight rendering `null` at a live call site.
+- `update_timeline_event` and `update_custom_fields` keep their
+  paste-a-UUID / free-key forms, and both are already hidden from the
+  picker. `update_timeline_event` cannot be made sane as-is: one
+  hardcoded item id means an automation firing for every couple would
+  edit one specific couple's timeline row.
+
+**The bug this pass found.** Every chip row was wired to the *merging*
+setter (`updateInner`, which spreads a patch over the config). A
+`fieldFilter` chip's `remove` **deletes** its keys, so merging spread
+them straight back: the chip disappeared from the card while the
+runner kept acting on the value. Chip-hosting forms now take a
+`replaceConfig` prop alongside `updateConfig`
+(`ChipHostProps`), and `step-config-chips.test.tsx` pins removal
+through a real step card. The task due chip survived the old wiring
+only because it writes `undefined` instead of deleting.
+
+#### Branch (2026-08-14)
+
+The last step on the old stacked form. Now a chip row like a
+trigger's — **one pill per condition**, saying the whole condition:
+
+    if [wedding is at most 60 days away]
+    if [stage is Booked] and [the deposit is paid] [+ Add condition]
+
+One pill, not three. Splitting a single condition across a subject
+pill, an operator pill and a value pill made one thought look like
+three settings and wrapped onto two lines in a 380px node. The pill's
+popover is two steps instead — the subject list, then that subject's
+own control, with a back row between them — so no popover is longer
+than a menu. A subject with nothing to configure ("the deposit is
+paid") opens straight onto the list. The days control is the trigger
+filters' own `ComparisonControl`, not a lookalike: same layout, same
+commit-on-blur, same digit-only field.
+
+**A branch starts empty**, on the "Add condition" button alone — no
+default predicate guessing which condition was meant. That menu *is*
+the condition list, so picking a row creates that condition outright
+rather than adding a placeholder to open and choose inside. The
+runner rejects a branch with no predicate, and
+`config-errors.ts` phrases it as "no condition chosen" rather than
+"Predicate: Invalid input". `TriggerFilterList` also adds the last
+remaining filter outright now: with one choice left, the menu was a
+single row repeating the button that opened it. A def can set
+`openAfterAdd` when the chip to open afterwards isn't itself (the
+branch's conditions are keyed by index).
+
+**Conditions chain.** `evaluatePredicate` has always understood
+`and` / `or` groups — nothing ever offered them, so a branch could
+only test one thing. "Add condition" rewrites the config into a
+group and the join pill flips the whole group between "every
+condition must match" and "any condition can match" (one join for the
+group, which is the only shape the runner's `and` / `or` has). A
+one-condition branch collapses back to a bare predicate on save, so
+nothing saved before chaining changes shape on disk just because it
+was opened. The last condition's ✕ disappears: a branch with nothing
+to test cannot split.
+
+**Conditions offered:** how far away the wedding is; stage, lead
+source, venue, wedding date, couple name, email or phone; the contract
+is signed; the deposit is paid; the invoice is paid in full. That is
+everything the run context can answer without a new query — the
+remaining candidates (questionnaire completed, portal section done,
+tasks outstanding) all need a DB read, and `evaluatePredicate` is
+synchronous.
+
+What the audit changed underneath it:
+
+- **Two new conditions, both backed by data that was already there.**
+  `has_paid_invoice` reads the invoice's own status (`InvoiceSnapshot`
+  gained `status`), which is the question `has_paid_deposit` does not
+  answer — that one only asks about the first stage. And `lead_source`
+  joins the couple fields: the column has been on `couples` all along,
+  `readCoupleField` just had no case for it.
+
+- **`has_signed_contract` could never be true.** It read
+  `actionResults.contract_signed_at` and a payload `contract_signed`,
+  neither of which anything writes (the emitter's key is `signed_at`).
+  The run context now carries `contractSignedAt`, loaded from the
+  couple's most recently signed contract, and the predicate reads
+  that first.
+- **`is_set` / `is_unset` killed the branch they were on.** `value:
+  z.any()` is *non-optional* in Zod 4, so a predicate saved without an
+  operand failed the union parse. Both `value` fields are
+  `.optional()` now, in the schema and in `BranchPredicate`.
+- **Numeric comparisons on a couple field are gone from the UI.**
+  Every readable couple field is a string, and `compare()` turns a
+  non-numeric operand into `null` and returns false — so `>`/`<` on
+  one was a branch that always took "no".
+- **The couple field is a list, not a free-text box.** It offered
+  `lead_source` as a placeholder example; `readCoupleField` supports
+  status, name, email, phone, venue and event_date only, so that
+  example never matched.
+- **`custom_field` is retired from the picker** (it reads action
+  results nothing writes; `couple_custom_fields` has no UI at all)
+  and **`groupOperator` is deleted** — AND/OR scaffolding the runner
+  has never evaluated. Content fields everywhere else are the
 design-system `TextInput`/`TextArea` and stay as they are.
 
 #### The chip popover for numbers

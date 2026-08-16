@@ -110,10 +110,21 @@ describe('launch catalogue — triggers', () => {
 })
 
 describe('launch catalogue — actions', () => {
-  it('lists exactly the 22 actions offered today', () => {
-    // 21 from the launch review + send_couple_questionnaire (the
-    // couple-questionnaires feature added it to the catalogue).
-    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(19)
+  it('lists exactly the 17 actions offered today', () => {
+    // 21 from the launch review, + send_couple_questionnaire (the
+    // couple-questionnaires feature added it), - trigger_payment_
+    // reminder and the two folded run-sheet steps, -
+    // pause_couple_automations and update_task (both dropped
+    // 2026-08-15: one pauses every other automation on the couple
+    // from inside one of them, the other edits "the most recent task
+    // created by an earlier action" — neither is a rule anyone can
+    // reason about from the canvas).
+    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(17)
+    for (const retired of ['pause_couple_automations', 'update_task'] as const) {
+      expect(LAUNCH_VISIBLE_ACTIONS.has(retired)).toBe(false)
+      // Still registered, so automations saved with it keep running.
+      expect(actionRegistry[retired], retired).toBeDefined()
+    }
   })
 
   it('every visible action is a real registry entry', () => {

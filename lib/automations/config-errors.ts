@@ -42,6 +42,10 @@ function fieldLabel(path: ConfigIssueLike['path']): string | null {
 /** One issue → one clause, e.g. `Subject is required`. */
 function describeIssue(issue: ConfigIssueLike): string {
   const label = fieldLabel(issue.path)
+  // A branch saved before its condition was chosen. "Predicate:
+  // Invalid input" describes the union that rejected it; what the MC
+  // has to do is pick a condition.
+  if (label === 'Predicate') return 'no condition chosen'
   // Zod's own defaults ("Too small: expected string to have >=1
   // characters", "Invalid input: expected string, received undefined")
   // describe the type system, not the form — rephrase the common

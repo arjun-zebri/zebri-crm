@@ -10,9 +10,18 @@
  * @module lib/automations/actions/post-event
  */
 
+import type { JSONContent } from '@tiptap/react'
 import { Resend } from 'resend'
 import { z } from 'zod'
 
+import type { EmailAttachment } from '@/lib/email/dispatch'
+import { downloadStaticAttachments } from '@/lib/email/send-context'
+import {
+  detectMissingVariables,
+  renderEmailSubject,
+  renderEmailTemplate,
+} from '@/lib/email/templates'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult, ActionType, RunContext } from '@/types/automations'
 
 import { renderTemplate } from '../variables'
@@ -36,25 +45,70 @@ const FROM = 'Zebri <noreply@app.zebri.com.au>'
 // what the MC wrote. The old templateId / attachAssets / tone /
 // recipientRole / trackEngagement fields were declared but never
 // read. Passthrough keeps configs saved against them parsing.
+//
+// `content` + `attachFiles` mirror send_email: these are emails, so
+// they get the same composer and therefore the same rich body and
+// file attachments. `body` remains for the baked-in default copy and
+// for anything saved before the composer existed.
 const baseSchema = z.object({
   subject: z.string().min(1),
   body: z.string().min(1),
+  content: z.record(z.string(), z.unknown()).optional(),
+  attachFiles: z.array(z.uuid()).optional(),
 }).passthrough()
 
+/**
+ * Send one of the pre-composed emails to the couple.
+ *
+ * A rich `content` doc renders through `renderEmailTemplate` — the
+ * path saved templates and the send_email composer use — so
+ * formatting survives. Without one, the plain-text `body` renders as
+ * before, which is what every default copy still relies on.
+ */
 async function sendPreComposed(
   ctx: RunContext,
-  subject: string,
-  body: string,
+  config: z.infer<typeof baseSchema>,
 ): Promise<ActionResult> {
   if (!ctx.couple?.email) return { kind: 'ok', output: { skipped: 'no primary email' } }
-  const resolvedSubject = renderTemplate(subject, ctx)
-  const resolvedBody = renderTemplate(body, ctx)
+
+  let subject: string
+  let html: string
+  if (config.content) {
+    const doc = config.content as JSONContent
+    const missing = detectMissingVariables({ subject: config.subject, content: doc }, ctx)
+    if (missing.blocked) {
+      return {
+        kind: 'sleep',
+        reason: 'missing_variables',
+        wakeAt: '9999-12-31T00:00:00.000Z',
+        payload: { missing: missing.missing, couple_name: ctx.couple.name },
+      }
+    }
+    subject = renderEmailSubject(config.subject, ctx, 'send')
+    html = wrapAutomationHtml(renderEmailTemplate(doc, ctx, 'send').html, ctx)
+  } else {
+    subject = renderTemplate(config.subject, ctx)
+    html = wrapAutomationHtml(renderTemplate(config.body, ctx), ctx)
+  }
+
+  // Attachments resolve through the same loader send_email uses; a
+  // file deleted since is skipped rather than failing the send.
+  let attachments: EmailAttachment[] = []
+  if (config.attachFiles?.length) {
+    try {
+      attachments = await downloadStaticAttachments(createAdminClient(), config.attachFiles)
+    } catch {
+      attachments = []
+    }
+  }
+
   await resend().emails.send({
     from: FROM,
     to: ctx.couple.email,
-    subject: resolvedSubject,
-    html: wrapAutomationHtml(resolvedBody, ctx),
+    subject,
+    html,
     replyTo: ctx.mc.email,
+    ...(attachments.length ? { attachments } : {}),
   })
   return { kind: 'ok', output: { sent: true } }
 }
@@ -74,7 +128,7 @@ const sendOnboardingPack: ActionSpec<z.infer<typeof baseSchema>> = {
       ),
   }),
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config.subject, config.body)
+    return sendPreComposed(ctx, config)
   },
   ui: { category: 'couple', label: 'Send onboarding pack', description: 'A welcoming "what happens next" email', icon: 'PackageOpen' },
 }
@@ -94,7 +148,7 @@ const sendPreEventChecklist: ActionSpec<z.infer<typeof baseSchema>> = {
       ),
   }),
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config.subject, config.body)
+    return sendPreComposed(ctx, config)
   },
   ui: { category: 'couple', label: 'Send pre-event checklist', description: 'A countdown checklist email', icon: 'CheckSquare' },
 }
@@ -114,7 +168,7 @@ const sendThankYou: ActionSpec<z.infer<typeof baseSchema>> = {
       ),
   }),
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config.subject, config.body)
+    return sendPreComposed(ctx, config)
   },
   ui: { category: 'post_event', label: 'Send thank-you message', description: "Post-event 'thank you' email", icon: 'Heart' },
 }
@@ -142,7 +196,7 @@ const requestReview: ActionSpec<z.infer<typeof requestReviewSchema>> = {
   type: 'request_review',
   configSchema: requestReviewSchema,
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config.subject, config.body)
+    return sendPreComposed(ctx, config)
   },
   ui: { category: 'post_event', label: 'Request review', description: 'Ask the couple for a Google / vendor-site review', icon: 'Star' },
 }
@@ -168,7 +222,7 @@ const sendReferralRequest: ActionSpec<z.infer<typeof sendReferralRequestSchema>>
   type: 'send_referral_request',
   configSchema: sendReferralRequestSchema,
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config.subject, config.body)
+    return sendPreComposed(ctx, config)
   },
   ui: { category: 'post_event', label: 'Send referral request', description: 'Ask for word-of-mouth referrals', icon: 'Share2' },
 }
@@ -188,7 +242,7 @@ const sendAnniversaryMessage: ActionSpec<z.infer<typeof baseSchema>> = {
       ),
   }),
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config.subject, config.body)
+    return sendPreComposed(ctx, config)
   },
   ui: { category: 'post_event', label: 'Send anniversary message', description: 'Annual anniversary touchpoint', icon: 'Cake' },
 }

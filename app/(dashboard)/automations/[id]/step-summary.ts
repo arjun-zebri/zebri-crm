@@ -59,10 +59,10 @@ export function stepSummary(action: AutomationActionRow): string {
       return subject ? `Subject: ${truncate(subject)}` : 'No subject set'
     }
     case 'send_sms':
-    case 'send_whatsapp': {
-      const body = text(config, 'body')
-      return body ? truncate(body) : 'No message set'
-    }
+    case 'send_whatsapp':
+      // Neither can send yet, and neither card opens, so the summary
+      // is the only place that can say so.
+      return 'Not enabled yet — this step will not run'
     case 'create_task': {
       const title = text(config, 'title')
       return title ? truncate(title) : 'No title set'
@@ -75,9 +75,28 @@ export function stepSummary(action: AutomationActionRow): string {
       const note = text(config, 'text')
       return note ? truncate(note) : 'No note set'
     }
+    case 'send_timeline_to_vendors':
+      return `Sends the run sheet to ${runSheetAudience(config)}`
     default:
       return actionUi[action.type as ActionType]?.description ?? ''
   }
+}
+
+/**
+ * Who the run sheet reaches, phrased for the collapsed card and the
+ * step's own "send to" chip (which imports this, so the two can never
+ * describe the same config differently).
+ *
+ * Vendors read as on when the key is absent: a config saved before
+ * the recipient flags existed went to vendors, and the runner still
+ * treats it that way.
+ */
+export function runSheetAudience(config: Record<string, unknown>): string {
+  const on: string[] = []
+  if (config['sendToVendors'] !== false) on.push('vendors')
+  if (config['sendToCouple'] === true) on.push('the couple')
+  if (config['sendToMe'] === true) on.push('me')
+  return on.length ? on.join(', ') : 'nobody'
 }
 
 /**
@@ -141,16 +160,118 @@ function plural(unit: string, amount: number): string {
   return amount === 1 ? base : `${base}s`
 }
 
-const BRANCH_KIND_LABELS: Record<string, string> = {
-  event_in: 'How far away the wedding is',
-  has_signed_contract: 'Whether the contract is signed',
-  has_paid_deposit: 'Whether the deposit is paid',
-  couple_field: 'A couple field',
-  custom_field: 'A custom field',
+/** Couple fields the runner can actually read in a branch. */
+export const BRANCH_COUPLE_FIELDS: { value: string; label: string }[] = [
+  { value: 'status', label: 'Stage' },
+  { value: 'lead_source', label: 'Lead source' },
+  { value: 'venue', label: 'Venue' },
+  { value: 'event_date', label: 'Wedding date' },
+  { value: 'name', label: 'Couple name' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+]
+
+/**
+ * Comparisons offered on a couple field.
+ *
+ * The numeric ones (`gt`/`gte`/`lt`/`lte`) are deliberately absent:
+ * every readable couple field is a string, and the runner's `compare`
+ * turns a non-numeric operand into `null` and returns false. Offering
+ * them meant offering a branch that always took the "no" path.
+ */
+export const BRANCH_FIELD_OPS: { value: string; label: string }[] = [
+  { value: 'eq', label: 'is' },
+  { value: 'neq', label: 'is not' },
+  { value: 'contains', label: 'contains' },
+  { value: 'is_set', label: 'is set' },
+  { value: 'is_unset', label: 'is empty' },
+]
+
+/** "at most" / "at least", the same words the trigger chips use. */
+export const BRANCH_DAY_OPS: { value: string; label: string }[] = [
+  { value: '<=', label: 'at most' },
+  { value: '>=', label: 'at least' },
+]
+
+function label(options: { value: string; label: string }[], value: string, fallback: string) {
+  return options.find((o) => o.value === value)?.label ?? fallback
+}
+
+/**
+ * One leaf predicate, as a sentence.
+ *
+ * Shared by the collapsed card and the branch's own chips so the two
+ * can never phrase the same predicate differently.
+ */
+export function conditionPhrase(predicate: Record<string, unknown>): string {
+  const kind = typeof predicate['kind'] === 'string' ? predicate['kind'] : 'event_in'
+  switch (kind) {
+    case 'event_in': {
+      const op = label(BRANCH_DAY_OPS, String(predicate['op'] ?? '<='), 'at most')
+      const days = Number(predicate['days'] ?? 60)
+      return `wedding is ${op} ${days} ${days === 1 ? 'day' : 'days'} away`
+    }
+    case 'has_signed_contract':
+      return 'the contract is signed'
+    case 'has_paid_deposit':
+      return 'the deposit is paid'
+    case 'has_paid_invoice':
+      return 'the invoice is paid in full'
+    case 'couple_field': {
+      const field = label(
+        BRANCH_COUPLE_FIELDS,
+        String(predicate['field'] ?? ''),
+        String(predicate['field'] ?? 'a couple field'),
+      ).toLowerCase()
+      const op = String(predicate['op'] ?? 'eq')
+      const opLabel = label(BRANCH_FIELD_OPS, op, 'is')
+      if (op === 'is_set' || op === 'is_unset') return `${field} ${opLabel}`
+      const value = String(predicate['value'] ?? '')
+      return value ? `${field} ${opLabel} ${value}` : `${field} ${opLabel} …`
+    }
+    // Retired from the picker (nothing writes the action results it
+    // reads), but saved branches still have to describe themselves.
+    case 'custom_field':
+      return `custom field ${String(predicate['key'] ?? '')} is ${String(predicate['value'] ?? '')}`
+    default:
+      return 'a condition'
+  }
+}
+
+/**
+ * The leaf conditions a branch tests, in order.
+ *
+ * A branch holds either one predicate or an `and` / `or` group of
+ * them; the runner has always evaluated both, so this flattens the
+ * group into the list the chips render.
+ */
+export function branchConditions(config: Record<string, unknown>): Record<string, unknown>[] {
+  const predicate = (config['predicate'] as Record<string, unknown> | undefined) ?? {}
+  const kind = predicate['kind']
+  if (kind === 'and' || kind === 'or') {
+    const children = predicate['predicates']
+    return Array.isArray(children) ? (children as Record<string, unknown>[]) : []
+  }
+  // A brand-new branch has no predicate: it starts empty and the MC
+  // adds the first condition, rather than arriving with a guess about
+  // what they meant already filled in.
+  return typeof kind === 'string' ? [predicate] : []
+}
+
+/** How a group's conditions are joined: every one, or any one. */
+export function branchJoin(config: Record<string, unknown>): 'and' | 'or' {
+  const kind = (config['predicate'] as Record<string, unknown> | undefined)?.['kind']
+  return kind === 'or' ? 'or' : 'and'
+}
+
+/** Every condition a branch splits on, as one sentence. */
+export function branchCondition(config: Record<string, unknown>): string {
+  const parts = branchConditions(config).map(conditionPhrase)
+  if (parts.length === 0) return 'a condition'
+  return parts.join(branchJoin(config) === 'or' ? ' or ' : ' and ')
 }
 
 function branchSummary(config: Record<string, unknown>): string {
-  const predicate = (config['predicate'] as Record<string, unknown> | undefined) ?? {}
-  const kind = typeof predicate['kind'] === 'string' ? predicate['kind'] : 'event_in'
-  return BRANCH_KIND_LABELS[kind] ?? 'Splits the run in two'
+  if (branchConditions(config).length === 0) return 'No condition set'
+  return `Yes when ${branchCondition(config)}`
 }

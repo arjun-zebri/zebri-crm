@@ -105,6 +105,17 @@ treatment: the `Input` chrome. Two knock-ons, both intentional:
 - The builder meta row's couple and terms pickers were `py-1.5` (34px)
   and are now `h-8`.
 
+**`Textarea` is `Input`'s sibling for prose** (2026-08-15,
+`components/ui/textarea.tsx`). Same chrome — control radius, border
+darkening to `brand-fg` on focus, `danger` border on error, label /
+help / error linked by `aria-describedby` — with the one deliberate
+difference that height comes from `rows` rather than the 32px control
+height, and the field resizes vertically only. It exists because
+multi-line fields were being hand-rolled with a copied class string
+that drifted from `Input` (the automations inspector had seven of
+them behind a local `TextArea`). Reach for it wherever a form needs
+more than one line.
+
 `MenuItem` and `RowActionsMenu` keep a `size` prop, but it is a **row
 density** (padding and min-width), not a height or a type size. Menu
 rows do not sit in a line with page controls.

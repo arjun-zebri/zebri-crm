@@ -51,12 +51,30 @@ const FILTERS: TriggerFilterDef[] = [
   },
 ]
 
+/** A third filter, for the cases that need the add *menu* to appear. */
+const THIRD_FILTER: TriggerFilterDef = {
+  key: 'venue',
+  label: 'Venue',
+  chipLabel: 'venue',
+  ...fieldFilter({ venue: '' }),
+  valueLabel: (config) => (config['venue'] as string) || 'any',
+  summary: () => 'Any venue',
+  options: [{ value: '', label: 'Any venue' }],
+  apply: (config, value) => ({ ...config, venue: value }),
+}
+
 /** Harness holding config state the way the step card does. */
-function Harness({ initial = {} }: { initial?: FilterConfig }) {
+function Harness({
+  initial = {},
+  filters = FILTERS,
+}: {
+  initial?: FilterConfig
+  filters?: TriggerFilterDef[]
+}) {
   const [config, setConfig] = useState<FilterConfig>(initial)
   return (
     <>
-      <TriggerFilterList filters={FILTERS} config={config} setConfig={setConfig} />
+      <TriggerFilterList filters={filters} config={config} setConfig={setConfig} />
       <output data-testid="config">{JSON.stringify(config)}</output>
     </>
   )
@@ -92,9 +110,24 @@ describe('TriggerFilterList', () => {
     expect(await screen.findByRole('menuitem', { name: 'Peak' })).toBeInTheDocument()
   })
 
-  it('drops an added filter from the add menu', async () => {
+  it('names what it is about to add, even for a single choice', async () => {
+    // Adding a filter seeds a default value, so the menu comes first
+    // however short it is: a default nobody picked is a setting
+    // nobody knows they have.
     const user = userEvent.setup()
     render(<Harness initial={{ leadSource: '' }} />)
+
+    await user.click(screen.getByRole('button', { name: 'Add filter' }))
+    expect(await screen.findByRole('menuitem', { name: 'Season' })).toBeInTheDocument()
+    expect(savedConfig()).toEqual({ leadSource: '' })
+
+    await user.click(screen.getByRole('menuitem', { name: 'Season' }))
+    expect(savedConfig()).toEqual({ leadSource: '', season: 'any' })
+  })
+
+  it('drops an added filter from the add menu', async () => {
+    const user = userEvent.setup()
+    render(<Harness filters={[...FILTERS, THIRD_FILTER]} initial={{ leadSource: '' }} />)
 
     await user.click(screen.getByRole('button', { name: 'Add filter' }))
     expect(await screen.findByRole('menuitem', { name: 'Season' })).toBeInTheDocument()

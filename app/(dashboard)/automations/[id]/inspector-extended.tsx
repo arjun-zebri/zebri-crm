@@ -1047,39 +1047,6 @@ function PushForm({ config, updateConfig }: FormProps) {
 
 /* ─── New-param fragments injected into existing-action forms ───── */
 
-/**
- * Extra fields appended to the inspector's existing `send_email`
- * form. Only fields the handler actually honours are offered:
- * reply-to override, CC vendors, BCC self.
- *
- * The Phase 14a scaffolding fields (attachments, per-email quiet
- * hours, do-not-email, preview-before-send, track-opens, send-at)
- * were removed from the form because the handler ignores them —
- * advertising a control that silently does nothing is worse than
- * not offering it. The config schema still accepts them so saved
- * configs keep parsing; see `sendEmailConfigSchema` in
- * `lib/automations/actions/messaging.ts` for the per-field
- * blockers. Timing belongs to a `wait` action and approval to an
- * Approval-gate action, both first-class builder steps.
- */
-export function SendEmailExtraFields({
-  config, updateConfig,
-}: FormProps) {
-  return (
-    <>
-      <TextField label="Reply-to override (optional)" value={(config['replyToOverride'] as string) ?? ''} onChange={(v) => updateConfig({ replyToOverride: v || undefined })} placeholder="you@your-business.com" />
-      <Check label="CC every vendor contact attached to the couple" checked={config['ccVendors'] === true} onChange={(v) => updateConfig({ ccVendors: v })} />
-      <Check label="BCC yourself for the paper trail" checked={config['bccSelf'] === true} onChange={(v) => updateConfig({ bccSelf: v })} />
-    </>
-  )
-}
-
-/** Extra fields for the `update_couple_stage` form. */
-export const UpdateCoupleStageExtraFields: (p: FormProps) => null = () => null
-
-/** Extra fields for the `add_note` form. */
-export const AddNoteExtraFields: (p: FormProps) => null = () => null
-
 /** Extra fields for the `update_custom_fields` form. */
 export function UpdateCustomFieldsExtraFields({ config, updateConfig }: FormProps) {
   return (
@@ -1090,25 +1057,6 @@ export function UpdateCustomFieldsExtraFields({ config, updateConfig }: FormProp
   )
 }
 
-/** Extra fields for the `send_portal_link` form. */
-export const SendPortalLinkExtraFields: (p: FormProps) => null = () => null
-
-/** Extra fields for the `request_information` form. */
-export const RequestInformationExtraFields: (p: FormProps) => null = () => null
-
-/** Extra fields for the `create_couple` form. */
-export const CreateCoupleExtraFields: (p: FormProps) => null = () => null
-
-/** Extra fields for the `pause_couple_automations` form. */
-export const PauseCoupleExtraFields: (p: FormProps) => React.JSX.Element = () => (
-  <Hint>Pauses every other running automation on this couple.</Hint>
-)
-
-/** Extra fields for `create_task`. */
-export const CreateTaskExtraFields: (p: FormProps) => null = () => null
-
-/** Extra fields for `update_task`. */
-export const UpdateTaskExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for `create_calendar_event` / `create_reminder`. */
 export function CalendarEventExtraFields({ config, updateConfig }: FormProps) {
@@ -1126,15 +1074,6 @@ export function CalendarEventExtraFields({ config, updateConfig }: FormProps) {
   )
 }
 
-/** Extra fields for `send_contract`. */
-export const SendContractExtraFields: (p: FormProps) => null = () => null
-
-/** Extra fields for `send_invoice`. */
-export const SendInvoiceExtraFields: (p: FormProps) => null = () => null
-
-/** Extra fields for `trigger_payment_reminder`. */
-export const PaymentReminderExtraFields: (p: FormProps) => null = () => null
-
 /** Extra fields for `generate_run_sheet_pdf` (shares the run-sheet link). */
 export function RunSheetExtraFields({ config, updateConfig }: FormProps) {
   return (
@@ -1144,9 +1083,6 @@ export function RunSheetExtraFields({ config, updateConfig }: FormProps) {
     </>
   )
 }
-
-/** Extra fields for `create_timeline_event`. */
-export const TimelineEventExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for `update_timeline_event`. */
 export function UpdateTimelineEventExtraFields({ config, updateConfig }: FormProps) {
@@ -1166,23 +1102,7 @@ export function UpdateTimelineEventExtraFields({ config, updateConfig }: FormPro
 }
 
 /** Extra fields for `send_timeline_to_vendors` / `send_final_run_sheet`. */
-/** Extra fields for the post-event email actions (baseSchema-based). */
-export const PostEventExtraFields: (p: FormProps & { isReview?: boolean; isReferral?: boolean }) => null = () => null
-
 /* ─── Flow-control extra fields ─────────────────────────────────── */
-
-/** Extra fields for `wait`. */
-export function WaitExtraFields({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <Check label="Skip weekends (Sat & Sun)" checked={config['respectWeekend'] === true} onChange={(v) => setConfig({ ...config, respectWeekend: v })} />
-      <Check label="Respect Australian public holidays" checked={config['respectPublicHolidays'] === true} onChange={(v) => setConfig({ ...config, respectPublicHolidays: v })} />
-      <TimeField label="Only resume after (optional)" value={(config['windowStart'] as string) ?? ''} onChange={(v) => setConfig({ ...config, windowStart: v || undefined })} />
-      <TimeField label="Only resume before (optional)" value={(config['windowEnd'] as string) ?? ''} onChange={(v) => setConfig({ ...config, windowEnd: v || undefined })} />
-      <NumField label="Safety cap — max wait days (optional)" value={(config['maxWaitDays'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, maxWaitDays: v || undefined })} />
-    </>
-  )
-}
 
 /** Extra fields for `approval`. */
 export function ApprovalExtraFields({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
@@ -1207,26 +1127,3 @@ export function SubFlowExtraFields({ config, setConfig }: { config: Cfg; setConf
   )
 }
 
-/** Extra fields for `branch` — composable multi-predicate AND/OR groups. */
-export function BranchExtraFields({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  const predicate = (config['predicate'] as Record<string, unknown> | undefined) ?? {}
-  return (
-    <>
-      <SelectField
-        label="Logical operator"
-        value={(config['groupOperator'] as string) ?? 'single'}
-        onChange={(v) => setConfig({ ...config, groupOperator: v })}
-        options={[
-          { value: 'single', label: 'Single condition' },
-          { value: 'and', label: 'AND (all must match)' },
-          { value: 'or', label: 'OR (any can match)' },
-        ]}
-      />
-      <Hint>
-        AND/OR groups are scaffolded — the runner still evaluates a single condition today.
-        Composing groups will land alongside the engine update.
-      </Hint>
-      {!predicate['kind'] && null}
-    </>
-  )
-}

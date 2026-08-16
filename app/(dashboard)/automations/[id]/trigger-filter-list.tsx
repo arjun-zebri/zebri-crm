@@ -20,9 +20,9 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { Check, Plus, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useRef, useState } from 'react'
 
-import { MenuItem, MenuPanel } from '@/components/ui/menu'
+import { MenuItem, MenuPanel, type MenuWidth } from '@/components/ui/menu'
 
 /** Trigger config object, as owned by the inspector's form state. */
 export type FilterConfig = Record<string, unknown>
@@ -71,6 +71,19 @@ export interface TriggerFilterDef {
   current?: (config: FilterConfig) => string
   /** Compound control, rendered in the popover instead of `options`. */
   render?: (config: FilterConfig, setConfig: (c: FilterConfig) => void) => React.ReactNode
+  /**
+   * Which chip to open once this one has been added, when it is not
+   * this chip itself. For a filter that appends to a list (the
+   * branch's conditions) the new chip's key depends on how many there
+   * now are, so it is computed from the config `add` produced.
+   */
+  openAfterAdd?: (config: FilterConfig) => string
+  /**
+   * Panel width for this chip's popover. The default (`md`) fits a
+   * status or a lead source; a filter whose rows are phrases needs
+   * more, and `MenuPanel` truncates rather than wrapping.
+   */
+  panelWidth?: MenuWidth
 }
 
 /**
@@ -100,6 +113,8 @@ interface Props {
   setConfig: (c: FilterConfig) => void
   /** Label on the dashed add chip. Triggers add filters; steps add options. */
   addLabel?: string
+  /** Panel width for the add menu, when its rows are phrases. */
+  addWidth?: MenuWidth
 }
 
 /**
@@ -107,7 +122,13 @@ interface Props {
  * step card's debounced autosave watches; nothing here persists on
  * its own.
  */
-export function TriggerFilterList({ filters, config, setConfig, addLabel = 'Add filter' }: Props) {
+export function TriggerFilterList({
+  filters,
+  config,
+  setConfig,
+  addLabel = 'Add filter',
+  addWidth,
+}: Props) {
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [pendingKey, setPendingKey] = useState<string | null>(null)
@@ -128,6 +149,15 @@ export function TriggerFilterList({ filters, config, setConfig, addLabel = 'Add 
   const active = filters.filter((f) => f.required || f.isActive(config))
   const available = filters.filter((f) => !f.required && !f.isActive(config))
 
+  function addFilter(filter: TriggerFilterDef) {
+    const next = filter.add(config)
+    setConfig(next)
+    setAddOpen(false)
+    // Land straight in the value picker: adding a filter is never the
+    // goal, choosing its value is.
+    setPendingKey(filter.openAfterAdd ? filter.openAfterAdd(next) : filter.key)
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       {active.map((filter) => (
@@ -141,31 +171,23 @@ export function TriggerFilterList({ filters, config, setConfig, addLabel = 'Add 
         />
       ))}
 
+      {/* Always the menu, even for a single choice: adding a filter
+          seeds a default value, and a default nobody picked is a
+          setting nobody knows they have. The menu names what is about
+          to be added first. */}
       {available.length > 0 && (
         <Popover.Root open={addOpen} onOpenChange={setAddOpen}>
           <Popover.Trigger asChild>
-            <button
-              type="button"
-              className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-pill border border-dashed border-border px-3 text-body text-text-muted transition-colors hover:border-border-strong hover:text-text"
-            >
-              <Plus size={14} strokeWidth={1.5} />
-              {addLabel}
-            </button>
+            <AddChip label={addLabel} />
           </Popover.Trigger>
           <Popover.Portal>
-            <Popover.Content align="start" sideOffset={6} className="z-50">
-              <MenuPanel className="max-h-72 overflow-y-auto">
+            <Popover.Content align="start" sideOffset={6} className="z-[90]">
+              <MenuPanel
+                {...(addWidth ? { width: addWidth } : {})}
+                className="max-h-72 overflow-y-auto"
+              >
                 {available.map((filter) => (
-                  <MenuItem
-                    key={filter.key}
-                    onClick={() => {
-                      setConfig(filter.add(config))
-                      setAddOpen(false)
-                      // Land straight in the value picker: adding a
-                      // filter is never the goal, choosing its value is.
-                      setPendingKey(filter.key)
-                    }}
-                  >
+                  <MenuItem key={filter.key} onClick={() => addFilter(filter)}>
                     {filter.label}
                   </MenuItem>
                 ))}
@@ -177,6 +199,24 @@ export function TriggerFilterList({ filters, config, setConfig, addLabel = 'Add 
     </div>
   )
 }
+
+/** The dashed "add" pill, as a trigger or as a plain button. */
+const AddChip = forwardRef<HTMLButtonElement, { label: string; onClick?: () => void }>(
+  function AddChip({ label, onClick, ...props }, ref) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        {...props}
+        {...(onClick ? { onClick } : {})}
+        className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-pill border border-dashed border-border px-3 text-body text-text-muted transition-colors hover:border-border-strong hover:text-text"
+      >
+        <Plus size={14} strokeWidth={1.5} />
+        {label}
+      </button>
+    )
+  },
+)
 
 function FilterChip({
   filter,
@@ -225,11 +265,18 @@ function FilterChip({
             ref={contentRef}
             align="start"
             sideOffset={6}
-            className="z-50"
+            // z-[90] is the shared popover tier (see the design-system
+            // Select): above a base modal's z-[60] panel, below the
+            // confirm-dialog tier. At z-50 these opened *behind* the
+            // modal that contains them.
+            className="z-[90]"
             onOpenAutoFocus={focusFirstControl}
           >
             {filter.options && filter.apply ? (
-              <MenuPanel className="max-h-72 overflow-y-auto">
+              <MenuPanel
+                {...(filter.panelWidth ? { width: filter.panelWidth } : {})}
+                className="max-h-72 overflow-y-auto"
+              >
                 {filter.options.map((option) => (
                   <MenuItem
                     key={option.value}
@@ -250,7 +297,9 @@ function FilterChip({
               // Same panel as the option lists, and no extra padding:
               // compound controls own their own rows so the two kinds
               // of popover read as one control.
-              <MenuPanel>{filter.render?.(config, setConfig)}</MenuPanel>
+              <MenuPanel {...(filter.panelWidth ? { width: filter.panelWidth } : {})}>
+                {filter.render?.(config, setConfig)}
+              </MenuPanel>
             )}
           </Popover.Content>
         </Popover.Portal>

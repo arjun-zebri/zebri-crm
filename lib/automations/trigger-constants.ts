@@ -492,17 +492,6 @@ export const NOTE_CATEGORY_LABELS: Record<NoteCategory, string> = {
   private: 'Private (never visible to couple)',
 }
 
-/** Pause categories for pause_couple_automations. */
-export const PAUSE_CATEGORIES = ['general', 'cancellation', 'on_hold', 'postponed'] as const
-export type PauseCategory = (typeof PAUSE_CATEGORIES)[number]
-
-export const PAUSE_CATEGORY_LABELS: Record<PauseCategory, string> = {
-  general: 'General pause',
-  cancellation: 'Cancellation',
-  on_hold: 'On hold',
-  postponed: 'Wedding postponed',
-}
-
 /** Run-sheet PDF format variants. */
 export const RUN_SHEET_FORMATS = ['full', 'vendor_only', 'mc_only', 'couple_only'] as const
 export type RunSheetFormat = (typeof RUN_SHEET_FORMATS)[number]

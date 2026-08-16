@@ -91,10 +91,19 @@ const sendEmailConfigSchema = z.object({
    * `''` is the chip's "added but nothing typed yet" value and means
    * unset — rejecting it would fail the whole run at send time. */
   replyToOverride: z.union([z.string().email(), z.literal('')]).optional(),
-  /** CC every vendor contact attached to the couple. */
+  /** CC the vendor contacts attached to this couple. */
   ccVendors: z.boolean().optional(),
+  /**
+   * Extra CC addresses the MC typed. `z.string()` rather than
+   * `z.email()` on purpose: a config that fails to parse is a silently
+   * dead automation, so anything without an `@` is dropped at send
+   * time instead of rejected at load time.
+   */
+  ccEmails: z.array(z.string()).optional(),
   /** BCC the MC so they retain a paper trail. */
   bccSelf: z.boolean().optional(),
+  /** Extra BCC addresses, same handling as {@link ccEmails}. */
+  bccEmails: z.array(z.string()).optional(),
   // ── Deferred fields ────────────────────────────────────────────
   // Accepted so previously saved configs keep parsing, but the
   // handler ignores them and the inspector no longer offers them:
@@ -231,24 +240,32 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     }
 
     // CC list resolves once and applies to every outgoing message.
-    // Vendors already addressed directly are dropped so nobody gets
-    // the same email twice.
+    // Anyone already addressed directly is dropped so nobody gets the
+    // same email twice.
     let cc: string[] | undefined
+    const ccCandidates: string[] = []
     if (config.ccVendors) {
       const vendors = await resolveRecipients(supabase, ctx.couple, {
         roles: ['vendor'],
         fallback: 'skip',
       })
-      const direct = new Set(
-        recipients.map((r) => r.email?.toLowerCase()).filter(Boolean),
-      )
-      const ccList = [
-        ...new Set(
-          vendors
-            .map((v) => v.email)
-            .filter((e): e is string => !!e && !direct.has(e.toLowerCase())),
-        ),
-      ]
+      for (const v of vendors) if (v.email) ccCandidates.push(v.email)
+    }
+    // Typed addresses: anything without an `@` is a half-finished
+    // entry, not a recipient, so it is dropped rather than sent to.
+    for (const raw of config.ccEmails ?? []) {
+      const trimmed = raw.trim()
+      if (trimmed.includes('@')) ccCandidates.push(trimmed)
+    }
+    if (ccCandidates.length > 0) {
+      const direct = new Set(recipients.map((r) => r.email?.toLowerCase()).filter(Boolean))
+      const seen = new Set<string>()
+      const ccList = ccCandidates.filter((e) => {
+        const key = e.toLowerCase()
+        if (direct.has(key) || seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
       if (ccList.length > 0) cc = ccList
     }
 
@@ -260,13 +277,22 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     const messageIds: string[] = []
     let lastError: string | null = null
     const replyTo = config.replyToOverride || ctx.mc.email
+    // BCC: the MC's own address plus anything they typed, deduped.
+    const bcc = [
+      ...new Set(
+        [
+          ...(config.bccSelf && ctx.mc.email ? [ctx.mc.email] : []),
+          ...(config.bccEmails ?? []).map((e) => e.trim()).filter((e) => e.includes('@')),
+        ].map((e) => e),
+      ),
+    ]
     for (const r of addressable) {
       const res = await dispatchEmail(sender, {
         to: r.email!,
         subject,
         html,
         ...(replyTo ? { replyTo } : {}),
-        ...(config.bccSelf && ctx.mc.email ? { bcc: ctx.mc.email } : {}),
+        ...(bcc.length ? { bcc } : {}),
         ...(cc ? { cc } : {}),
         ...(attachments.length ? { attachments } : {}),
       })

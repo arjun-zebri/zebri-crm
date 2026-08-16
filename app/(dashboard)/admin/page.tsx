@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/ui/page-header';
 import {
   getAdminDashboard,
+  getAllUserStats,
   listUsersWithSubscription,
 } from '@/lib/admin/admin-analytics';
 
@@ -36,9 +37,10 @@ export const dynamic = 'force-dynamic';
  * helpers; the route is gated by middleware via `isAdmin(user)`.
  */
 export default async function AdminPage() {
-  const [users, dashboard] = await Promise.all([
+  const [users, dashboard, stats] = await Promise.all([
     listUsersWithSubscription(),
     getAdminDashboard(),
+    getAllUserStats(),
   ]);
 
   return (
@@ -47,7 +49,7 @@ export default async function AdminPage() {
         <PageHeader title="Admin" />
       </div>
 
-      <AdminDashboardView users={users} dashboard={dashboard} />
+      <AdminDashboardView users={users} dashboard={dashboard} stats={stats} />
     </div>
   );
 }
