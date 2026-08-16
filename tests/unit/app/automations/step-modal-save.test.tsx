@@ -35,8 +35,12 @@ vi.mock('@/app/(dashboard)/automations/[id]/filter-options', () => ({
 }))
 
 // Heavy leaves with their own tests; not what this is about.
+const composerProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }))
 vi.mock('@/app/(dashboard)/automations/[id]/email-composer-modal', () => ({
-  EmailComposerModal: () => null,
+  EmailComposerModal: (props: Record<string, unknown>) => {
+    composerProps.current = props
+    return null
+  },
 }))
 vi.mock('@/app/(dashboard)/automations/[id]/inspector-extended', () => ({
   ApprovalExtraFields: () => null,
@@ -141,5 +145,20 @@ describe('saving a step from its modal', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     await flushAutosave()
     expect(upsertMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('a step whose copy lives in its schema', () => {
+  it('opens the composer already written', async () => {
+    // The post-event emails store `{}` until edited, because their
+    // subject and body are Zod `.default()` values applied when the
+    // runner parses. Handed the raw config, the modal opened blank on
+    // an email that was fully written.
+    renderStep('send_thank_you_message')
+    await waitFor(() => expect(composerProps.current).not.toBeNull())
+
+    const config = composerProps.current!['config'] as Record<string, unknown>
+    expect(String(config['subject']).length).toBeGreaterThan(0)
+    expect(String(config['body'])).toContain('{{couple.primary_name}}')
   })
 })

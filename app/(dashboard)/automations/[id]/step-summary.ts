@@ -9,6 +9,7 @@
  *
  * @module app/(dashboard)/automations/[id]/step-summary
  */
+import { configWithDefaults } from '@/lib/automations/action-defaults'
 import { actionUi } from '@/lib/automations/actions/ui'
 import type { ActionType, AutomationActionRow } from '@/types/automations'
 
@@ -57,7 +58,10 @@ export interface StepSummaryLabels {
 
 /** Collapsed-card summary for one action. */
 export function stepSummary(action: AutomationActionRow, labels?: StepSummaryLabels): string {
-  const config = (action.config as Record<string, unknown>) ?? {}
+  // Read through the schema: an action whose copy is a `.default()`
+  // stores `{}` until it is edited, and a card reading that raw says
+  // "no subject yet" about an email that is fully written.
+  const config = configWithDefaults(action.type, (action.config as Record<string, unknown>) ?? {})
 
   switch (action.type) {
     case 'wait':

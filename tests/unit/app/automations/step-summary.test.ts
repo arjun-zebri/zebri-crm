@@ -58,7 +58,14 @@ describe('other step summaries', () => {
     expect(stepSummary(row('request_review', { subject: 'How did we do?' }))).toBe(
       'Subject: How did we do?',
     )
-    expect(stepSummary(row('send_thank_you_message', {}))).toBe('No subject yet')
+  })
+
+  it('shows the shipped copy for a step that has not been edited', () => {
+    // These carry their subject as a schema `.default()`, applied when
+    // the runner parses rather than when the step is created — so the
+    // stored config is `{}` on an email that is fully written.
+    expect(stepSummary(row('send_thank_you_message', {}))).toContain('Thank you')
+    expect(stepSummary(row('send_referral_request', {}))).toContain('planning a wedding')
   })
 
   it('leads a timeline item with its title, and its time when set', () => {

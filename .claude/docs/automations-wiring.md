@@ -523,6 +523,25 @@ Two gotchas: the shared `Modal` had to be portalled to `document.body`
 popovers inside the modal need `z-[90]`, the shared popover tier above
 the modal panel's `z-[60]`.
 
+#### Schema defaults are invisible to the UI (2026-08-16)
+
+A step's copy declared as a Zod `.default()` is applied when the
+**runner** parses the config, not when the step is created. So a
+freshly added post-event email stores `{}` while the email it would
+send is fully written — and every surface reading the raw config was
+blind to it: the compose modal opened blank, and the card said "no
+subject yet".
+
+`lib/automations/action-defaults.ts` (`configWithDefaults`) reads a
+config the way the runner will. The inspector and `stepSummary` both
+go through it. It returns the config untouched when the action is
+unknown or the config does not parse, because a half-configured step
+still has to be openable.
+
+Worth remembering for any future action: **anything that renders a
+step's config must read it through this**, or it will disagree with
+what actually sends.
+
 #### Post-event copy, and the review link (2026-08-16)
 
 The thank-you, review-request and referral defaults are rewritten.

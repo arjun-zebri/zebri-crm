@@ -23,6 +23,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { configWithDefaults } from '@/lib/automations/action-defaults'
 import { actionUi } from '@/lib/automations/actions/ui'
 import {
   ANY_SENTINEL,
@@ -901,9 +902,13 @@ function ActionFields({
     case 'send_anniversary_message':
     case 'request_review':
     case 'send_referral_request':
+      // Their copy lives in the schema as `.default()`, applied when
+      // the runner parses rather than when the step is created — so
+      // the stored config is `{}` and the modal would open blank on
+      // an email that is fully written.
       return (
         <EmailContentSummary
-          config={config}
+          config={configWithDefaults(actionType, config)}
           updateConfig={updateInner}
           title={actionUi[actionType]?.label ?? 'Compose email'}
           showRecipients={false}
