@@ -17,7 +17,7 @@ import type { Block, BlockType } from './types'
  *  each surface injects the live content at the marker position. */
 export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
   'couplePortal', 'contractBody', 'contractSign', 'vendorTimelineBody',
-  'questionnaireOneAtATime', 'questionnaireAllOnePage',
+  'questionnaireOneAtATime', 'questionnaireAllOnePage', 'formSubmit',
 ] as const)
 
 /**
@@ -30,7 +30,7 @@ export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
  */
 export const CLEARABLE_MARKERS: ReadonlySet<BlockType> = new Set([
   'contractBody', 'contractSign', 'vendorTimelineBody', 'couplePortal',
-  'questionnaireOneAtATime', 'questionnaireAllOnePage',
+  'questionnaireOneAtATime', 'questionnaireAllOnePage', 'formSubmit',
 ] as const)
 
 /**
@@ -45,9 +45,10 @@ export const STYLE_WRAPPING_MARKERS: ReadonlySet<BlockType> = new Set([
   'questionnaireOneAtATime', 'questionnaireAllOnePage',
 ] as const)
 
-/** Blocks whose content comes from live document data, not template text. */
+/** Blocks whose content comes from live document data, not template text. The
+ *  website-form field collects a visitor's answer, so it is data-bound too. */
 const DATA_BOUND: ReadonlySet<BlockType> = new Set([
-  'paymentSchedule', 'lineItems', 'totals',
+  'paymentSchedule', 'lineItems', 'totals', 'formField',
 ] as const)
 
 /** Required non-conditional blocks per surface. Contracts do not list an
@@ -64,12 +65,18 @@ export const REQUIRED_BY_SURFACE: Readonly<Record<SurfaceTab, readonly BlockType
   // The questionnaire's form style is governed by the exactly-one rule below,
   // not a fixed required block, so neither form block is individually required.
   questionnaire: [],
+  // The website form's presence rules are the at-least-one (a field) and
+  // exactly-one (a submit) constraints below, plus a name-field check in
+  // readiness. No single block type is unconditionally required.
+  lead: [],
 }
 
 /** Surfaces that need at least one of a set of blocks present. */
 export const AT_LEAST_ONE_BY_SURFACE: Readonly<Partial<Record<SurfaceTab, readonly BlockType[]>>> = {
   // Invoice payment rule: at least one of Bank details / Pay CTA; both allowed.
   invoice: ['paymentDetails', 'action'],
+  // A website form needs at least one field to collect anything.
+  lead: ['formField'],
 }
 
 /**
@@ -80,6 +87,8 @@ export const AT_LEAST_ONE_BY_SURFACE: Readonly<Partial<Record<SurfaceTab, readon
  */
 export const EXACTLY_ONE_BY_SURFACE: Readonly<Partial<Record<SurfaceTab, readonly BlockType[]>>> = {
   questionnaire: ['questionnaireOneAtATime', 'questionnaireAllOnePage'],
+  // A website form needs exactly one submit button.
+  lead: ['formSubmit'],
 }
 
 /** Check if a block type is a render-split marker. */

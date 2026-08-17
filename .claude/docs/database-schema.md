@@ -31,7 +31,7 @@ Scalars returned by `_user_branding(uuid)` and merged into public RPCs. Migratio
 
 **user_branding table** (Branding overhaul, Phase 11 onwards). One row per user, RLS-owned, stores the block tree + surface configuration for the branding editor. Columns: `user_id` (PK, FK auth.users cascade), `branding_blocks` (jsonb, keyed by surface: `quote`, `invoice`, `contract`, `vendorTimeline`, `questionnaire`), `enabled_surfaces` (text[], default `{quote,invoice,contract}`), `onboarded_at` (timestamptz, null until first save), `created_at`, `updated_at`.
 
-Surface-level reset: setting a surface's block tree to an empty array disables public render (the get_public_* RPCs treat it as null). `enabled_surfaces` tracks which surfaces the MC has customized; the editor's first-run wizard gates by this.
+Surface-level reset: setting a surface's block tree to an empty array disables public render (the get_public_* RPCs treat it as null). `enabled_surfaces` tracks which surfaces the MC has opted into. The stored value has held three shapes over time (jsonb array column default, legacy true-only map, current explicit-boolean map); `lib/branding/enabled-surfaces.ts` (`resolveEnabledSurfaces` / `buildEnabledSurfacesMap`) is the single read/write path. A missing `lead` key resolves to enabled (the surface postdates the older shapes), so existing rows show the Website form tab by default; saves write an explicit boolean for every surface so a deliberate disable persists.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
@@ -168,10 +168,46 @@ target_status_slug (text, nullable) — couple_statuses.slug the lead lands in; 
 
 created_at (timestamp) updated_at (timestamp)
 
-Ingest (submit_lead): validates the token, resolves the landing status,
-and inserts a couple owned by the token issuer with lead_source='website'
-and referral_source from the "how did you hear" field. A Starter
-couple-cap block returns {error:'plan_limit'} rather than raising.
+Website form (block-based, 2026-08): the form is now a `lead` branding
+surface designed from blocks. get_lead_form additionally returns
+`blocks` = user_branding.branding_blocks->'lead' (the saved form design,
+or JSON null when uncustomised); the public /lead/[token] page renders
+that block tree. Fields are `formField` blocks whose `role` maps each
+answer to a couple column (name/partnerName/email/phone/weddingDate/
+venue/message/referral) or, for `role='custom'`, into the couple notes.
+
+Ingest (submit_lead): validates the token, stores a form_submissions row
+FIRST (so a lead is never lost), resolves the landing status, and inserts
+a couple owned by the token issuer with lead_source='website' and
+referral_source from the "how did you hear" field. Custom answers +
+message fold into couple notes as "Label: value" lines; the new couple id
+is linked back onto the submission. A Starter couple-cap block returns
+{error:'plan_limit'} and keeps the stored submission (couple_id null).
+
+------------------------------------------------------------------------
+
+# form_submissions (Website form)
+
+Durable record of every website-form submission, including custom-field
+answers that map to no couple column. Written only inside the
+security-definer submit_lead RPC (no anon grant); the anon client never
+touches the table directly.
+
+RLS: single owner-isolation policy (auth.uid() = user_id).
+
+Columns:
+
+id (uuid) user_id (uuid, not null, FK auth.users on delete cascade)
+
+couple_id (uuid, nullable, FK couples on delete set null) — the couple
+created from this submission; null when the plan cap blocked creation
+
+payload (jsonb, not null) — the full submitted payload (canonical fields
++ custom array)
+
+created_at (timestamp)
+
+Indexes: user_id; created_at desc.
 
 ------------------------------------------------------------------------
 
@@ -887,7 +923,14 @@ address), refreshing the access token when expired. Written by the OAuth
 callback route + the Public Page server actions
 (`app/(dashboard)/settings/public/actions.ts`).
 
-Migration: `20260621000000_create_user_public_settings.sql`.
+Migrations: `20260621000000_create_user_public_settings.sql`;
+`20260817000000_repair_user_public_settings_oauth_columns.sql`. The
+repair exists because the prod table pre-dated the create-table
+migration (SQL-editor era), so its `create table if not exists` silently
+no-opped on prod and the email/OAuth columns never landed there (found
+via PGRST204 when the first real mailbox connect tried to save). The
+repair re-adds every declared column/index/policy idempotently; it
+no-ops on a from-zero database.
 
 ------------------------------------------------------------------------
 

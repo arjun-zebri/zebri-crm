@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ on staging. **Phase 13 (Admin + Ops)** ✅ in flight on `phase-13-admin-ops`. **Branding overhaul (all 8 phases)** ✅ shipped on feature/proposals-phase-a (2026-07-17), awaiting CI migration deploy.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ on staging. **Phase 13 (Admin + Ops)** ✅ in flight on `phase-13-admin-ops`. **Branding overhaul (all 8 phases)** ✅ shipped on feature/proposals-phase-a (2026-07-17), awaiting CI migration deploy. **Website form (block-based lead surface)** 🚧 in flight on `worktree-lead-form-blocks` (2026-08-13): extends ZEB-2 into a `lead` branding surface with configurable `formField` blocks, block-rendered public page, `form_submissions` storage, and couple creation.
 
 ### Admin / Shadow mode — single-pane founder dashboard (Phase 13)
 

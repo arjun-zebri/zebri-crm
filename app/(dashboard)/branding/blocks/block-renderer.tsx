@@ -37,6 +37,8 @@ import {
   RenderContractBody,
   RenderContractSign,
   RenderCouplePortal,
+  RenderFormField,
+  RenderFormSubmit,
   RenderHeaderBanner,
   RenderImage,
   RenderLineItems,
@@ -479,6 +481,12 @@ function renderBlock(
           removeImage={extras.removeImage}
         />
       )
+    case 'formField':
+      // These previews read only block + state; omit the optional `surface`
+      // (exactOptionalPropertyTypes rejects passing a possibly-undefined value).
+      return <RenderFormField block={block} state={state} updateBlock={updateBlock} />
+    case 'formSubmit':
+      return <RenderFormSubmit block={block} state={state} updateBlock={updateBlock} />
     case 'spacer': {
       const branding = publicBrandingFromEditorState(state)
       const heightPx = block.heightPx ?? 32

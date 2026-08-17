@@ -14,10 +14,11 @@ import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 import { Slider } from '../components/slider'
 import { publicBrandingFromEditorState } from '../editor-branding'
 
+import { FormFieldControls, FormSubmitControls } from './form-field-controls'
 import { isDataBound, isDeletable, isMarker, isRequired, stylesWrapMarker } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
-import { blockLabel } from './types'
+import { blockDisplayName } from './types'
 import type {
   Block,
   TextStyle,
@@ -41,6 +42,7 @@ import type {
   VendorTimelineBodyBlock,
   QuestionnaireOneAtATimeBlock,
   QuestionnaireAllOnePageBlock,
+  FormSubmitBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -77,7 +79,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
     >
       {/* Row 0: block-type label + lock/live-data chips */}
       <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-        <span className="text-body font-medium text-gray-600">{blockLabel(block.type, surface)}</span>
+        <span className="text-body font-medium text-gray-600">{blockDisplayName(block, surface)}</span>
         <div className="flex items-center gap-1 ml-auto">
           {isBlockRequired && (
             <Tooltip label="Required to send. You can remove it, but the document will show as not ready until you add it back.">
@@ -97,8 +99,16 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
 
       {/* Row 1: block-type-specific controls + background, so the background
           colour sits beside the block's text/colour controls rather than down
-          in the structural row. */}
-      <div className="flex items-center gap-1 px-1 pt-1">
+          in the structural row. The form blocks' controls carry captions above
+          each input, making the row taller; bottom-align so the background
+          swatch lines up with the 32px inputs instead of floating mid-label. */}
+      <div
+        className={`flex ${
+          block.type === 'formField' || block.type === 'formSubmit'
+            ? 'items-end'
+            : 'items-center'
+        } gap-1 px-1 pt-1`}
+      >
         <BlockSpecificControls block={block} state={state} surface={surface} updateBlock={updateBlock} activeSubTarget={activeSubTarget} />
         {/* Text-content blocks render Background inside their controls, right
             next to the text colour (via bgSlot); the divider renders it beside
@@ -227,7 +237,200 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
     case 'questionnaireOneAtATime':
     case 'questionnaireAllOnePage':
       return <QuestionnaireControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
+    case 'formField':
+      return <FormFieldControls block={block} updateBlock={updateBlock} />
+    case 'formSubmit':
+      // Content controls (label + after-submit) stacked over the button-style
+      // row, mirroring the action block's styling options for a single button.
+      return (
+        <div className="flex flex-col gap-2 w-full">
+          <FormSubmitControls block={block} updateBlock={updateBlock} />
+          <SubmitStyleControls block={block} state={state} updateBlock={updateBlock} />
+        </div>
+      )
   }
+}
+
+/**
+ * Button-style controls for the Website form's {@link FormSubmitBlock}: fill
+ * colour, fill/outline variant, size preset, alignment, and corner radius,
+ * mirroring the action block's primary-button options (minus text styling and
+ * the secondary button, which a submit button does not have). Every control
+ * writes a block-level override; unset values fall back to the brand's global
+ * button settings, exactly like the action block.
+ */
+function SubmitStyleControls({
+  block,
+  state,
+  updateBlock,
+}: {
+  block: FormSubmitBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const buttonColor = block.buttonColor ?? state.brandColor
+  const radius = block.buttonRadius ?? state.buttonRadius
+  const variant = block.variant ?? state.buttonVariant
+  const size = block.size ?? state.buttonSize
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <ColorPopover
+        value={buttonColor}
+        onChange={(v) => updateBlock<FormSubmitBlock>(block.id, { buttonColor: v })}
+        swatches={COLOR_PALETTE}
+        trigger={
+          <button
+            type="button"
+            title="Button fill"
+            className="inline-flex items-center h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border"
+          >
+            <span className="w-4 h-4 rounded-control ring-1 ring-black/10" style={{ background: buttonColor }} />
+          </button>
+        }
+      />
+      <Divider />
+      <div className="inline-flex items-center bg-gray-50 rounded-control border border-border">
+        {([
+          { value: 'fill', label: 'Fill' },
+          { value: 'outline', label: 'Outline' },
+        ] as const).map(({ value, label }) => {
+          const active = variant === value
+          return (
+            <Tooltip key={value} label={label}>
+              <button
+                type="button"
+                onClick={() => updateBlock<FormSubmitBlock>(block.id, { variant: value })}
+                aria-label={label}
+                className={`px-2.5 h-8 text-body font-medium transition cursor-pointer ${
+                  active ? 'bg-surface text-text shadow-sm rounded-control m-0.5' : 'text-text-muted hover:text-text'
+                }`}
+              >
+                {label}
+              </button>
+            </Tooltip>
+          )
+        })}
+      </div>
+      <div className="inline-flex items-center bg-gray-50 rounded-control border border-border">
+        {([
+          { value: 'sm' as const, label: 'S' },
+          { value: 'md' as const, label: 'M' },
+          { value: 'lg' as const, label: 'L' },
+        ] as const).map(({ value, label }) => {
+          const active = size === value
+          return (
+            <Tooltip key={value} label={value === 'sm' ? 'Small' : value === 'md' ? 'Medium' : 'Large'}>
+              <button
+                type="button"
+                onClick={() => updateBlock<FormSubmitBlock>(block.id, { size: value })}
+                aria-label={label}
+                className={`w-7 h-8 text-body font-medium transition cursor-pointer ${
+                  active ? 'bg-surface text-text shadow-sm rounded-control m-0.5' : 'text-text-muted hover:text-text'
+                }`}
+              >
+                {label}
+              </button>
+            </Tooltip>
+          )
+        })}
+      </div>
+      <Divider />
+      <div className="inline-flex items-center bg-gray-50 rounded-control border border-border">
+        {([
+          { value: 'start', Icon: AlignLeft, label: 'Align left' },
+          { value: 'center', Icon: AlignCenter, label: 'Align center' },
+          { value: 'end', Icon: AlignRight, label: 'Align right' },
+        ] as const).map(({ value, Icon, label }) => {
+          const active = (block.buttonJustify ?? 'start') === value
+          return (
+            <Tooltip key={value} label={label}>
+              <button
+                type="button"
+                onClick={() => updateBlock<FormSubmitBlock>(block.id, { buttonJustify: value })}
+                aria-label={label}
+                className={`p-1.5 transition cursor-pointer ${active ? 'bg-surface text-text shadow-sm rounded-control m-0.5' : 'text-text-muted hover:text-text'}`}
+              >
+                <Icon size={12} strokeWidth={1.75} />
+              </button>
+            </Tooltip>
+          )
+        })}
+      </div>
+      <Divider />
+      <Popover.Root>
+        <Tooltip label="Button radius">
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border text-gray-700"
+            >
+              <Square size={12} strokeWidth={1.75} />
+              {radius !== state.buttonRadius && (
+                <span className="font-mono text-[10px]">{radius}px</span>
+              )}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
+        <Popover.Portal>
+          <Popover.Content
+            align="start"
+            sideOffset={4}
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px]"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-body text-gray-600">Radius</span>
+              <span className="text-body font-mono text-text">{radius}px</span>
+            </div>
+            <Slider
+              value={radius}
+              min={0}
+              max={32}
+              step={1}
+              onChange={(v) => updateBlock<FormSubmitBlock>(block.id, { buttonRadius: v })}
+              ariaLabel="Button radius"
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+      <Popover.Root>
+        <Tooltip label="Button width">
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-body border cursor-pointer transition bg-surface text-gray-600 border-border hover:text-text shrink-0"
+            >
+              <Equal size={12} strokeWidth={1.75} />
+              {block.widthPx !== undefined && (
+                <span className="font-mono text-[10px]">{block.widthPx}px</span>
+              )}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
+        <Popover.Portal>
+          <Popover.Content
+            align="center"
+            sideOffset={6}
+            className="bg-surface border border-border rounded-control shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">Button width</span>
+              <span className="text-body font-mono text-gray-700 tabular-nums">{block.widthPx ?? 'auto'}px</span>
+            </div>
+            <Slider
+              value={block.widthPx ?? 0}
+              min={0}
+              max={400}
+              step={10}
+              onChange={(v) => updateBlock<FormSubmitBlock>(block.id, { widthPx: v || undefined })}
+              ariaLabel="Button width"
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
+  )
 }
 
 // ── Questionnaire ─────────────────────────────────────────────────────────────

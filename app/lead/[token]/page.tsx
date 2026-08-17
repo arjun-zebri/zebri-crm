@@ -91,12 +91,16 @@ export default function PublicLeadPage() {
         {state === 'unavailable' && <LeadFormUnavailable />}
         {state === 'ready' && form && (
           <>
-            {!embed && (
+            {/* When the MC has a saved block tree, that tree carries the form's
+                identity (a businessName/text block), so the page-level heading
+                would duplicate it. Keep the heading only for the fixed
+                fallback. */}
+            {!embed && !(form.blocks && form.blocks.length > 0) && (
               <h1 className="text-2xl font-semibold mb-6">
                 {form.business_name || 'Enquire'}
               </h1>
             )}
-            <LeadForm token={params.token} businessName={form.business_name || 'us'} />
+            <LeadForm token={params.token} form={form} />
           </>
         )}
       </div>

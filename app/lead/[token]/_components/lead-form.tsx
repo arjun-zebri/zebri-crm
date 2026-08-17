@@ -12,9 +12,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+import { BlockLeadForm } from './block-lead-form';
+import type { PublicLeadForm } from './public-lead-form';
+
 export interface LeadFormProps {
   token: string;
-  businessName: string;
+  /** The full RPC payload (branding + business name + the saved block tree). */
+  form: PublicLeadForm;
 }
 
 type SubmitState = 'ready' | 'submitting' | 'success' | 'error';
@@ -30,8 +34,22 @@ const EMPTY = {
   message: '',
 };
 
-/** The branded enquiry form rendered on `/lead/[token]`. */
-export function LeadForm({ token, businessName }: LeadFormProps) {
+/**
+ * The branded enquiry form rendered on `/lead/[token]`. When the MC has
+ * customised the Website form (a saved block tree), it renders that tree via
+ * {@link BlockLeadForm}; otherwise it falls back to the fixed field set below so
+ * forms published before the block editor existed keep working unchanged.
+ */
+export function LeadForm({ token, form }: LeadFormProps) {
+  const blocks = form.blocks;
+  if (blocks && blocks.length > 0) {
+    return <BlockLeadForm token={token} form={form} blocks={blocks} />;
+  }
+  return <FixedLeadForm token={token} businessName={form.business_name || 'us'} />;
+}
+
+/** The fixed-field fallback form, used when the MC has not customised the tree. */
+function FixedLeadForm({ token, businessName }: { token: string; businessName: string }) {
   const [state, setState] = useState<SubmitState>('ready');
   // Stamped on mount (client only) so the submit route can measure fill time.
   // Date.now() during render trips the react-hooks purity rule.

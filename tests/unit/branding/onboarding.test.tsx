@@ -86,12 +86,14 @@ describe('OnboardingWizard', () => {
     const portalCheckbox = within(dialog).getByLabelText('Client portal')
     const runSheetCheckbox = within(dialog).getByLabelText('Run sheet')
     const questionnaireCheckbox = within(dialog).getByLabelText('Questionnaires')
+    const websiteFormCheckbox = within(dialog).getByLabelText('Website form')
 
     expect(invoiceCheckbox).toBeChecked()
     expect(contractCheckbox).toBeChecked()
     expect(portalCheckbox).toBeChecked()
     expect(runSheetCheckbox).toBeChecked()
     expect(questionnaireCheckbox).toBeChecked()
+    expect(websiteFormCheckbox).toBeChecked()
 
     // Toggle Invoice off
     await user.click(invoiceCheckbox)
@@ -130,7 +132,7 @@ describe('OnboardingWizard', () => {
     // Verify invoice is NOT in enabledSurfaces
     const call = onComplete.mock.calls[0][0]
     expect(call.enabledSurfaces).toEqual(
-      expect.arrayContaining(['contract', 'portal', 'vendorTimeline', 'questionnaire']),
+      expect.arrayContaining(['contract', 'portal', 'vendorTimeline', 'questionnaire', 'lead']),
     )
     expect(call.enabledSurfaces).not.toContain('invoice')
   })
@@ -163,8 +165,8 @@ describe('OnboardingWizard', () => {
     // Get all checkboxes
     const checkboxes = within(dialog).getAllByRole('checkbox')
 
-    // Uncheck 4 of the 5 surfaces
-    for (let i = 0; i < 4; i++) {
+    // Uncheck every surface except the last one
+    for (let i = 0; i < checkboxes.length - 1; i++) {
       if (checkboxes[i].getAttribute('checked') !== null) {
         await user.click(checkboxes[i])
       }
@@ -206,6 +208,7 @@ describe('OnboardingWizard', () => {
       'portal',
       'vendorTimeline',
       'questionnaire',
+      'lead',
     ])
   })
 })

@@ -1,13 +1,13 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical, Calculator, LayoutDashboard, FileSignature, CalendarClock, Clock, ClipboardList, SquareStack } from 'lucide-react'
+import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical, Calculator, LayoutDashboard, FileSignature, CalendarClock, Clock, ClipboardList, SquareStack, Users2, Mail, Phone, Calendar, MapPin, HelpCircle, MessageSquare, PencilLine, Send, TextCursorInput } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { SurfaceTab } from '@/types/branding-preview'
 
-import { paletteGroupsForSurface } from './blocks-by-surface'
-import { BLOCK_DESCRIPTIONS, blockLabel, type BlockType } from './types'
+import { paletteGroupsForSurface, type PaletteEntry } from './blocks-by-surface'
+import { type BlockType } from './types'
 
 const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   headerBanner: Image,
@@ -29,12 +29,27 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   vendorTimelineBody: Clock,
   questionnaireOneAtATime: SquareStack,
   questionnaireAllOnePage: ClipboardList,
+  formField: TextCursorInput,
+  formSubmit: Send,
+}
+
+/** Icons for preset palette entries (keyed by entry key), over the type icon. */
+const ENTRY_ICONS: Record<string, typeof ImageIcon> = {
+  'lead-name': User,
+  'lead-partner': Users2,
+  'lead-email': Mail,
+  'lead-phone': Phone,
+  'lead-date': Calendar,
+  'lead-venue': MapPin,
+  'lead-referral': HelpCircle,
+  'lead-message': MessageSquare,
+  'lead-custom': PencilLine,
 }
 
 interface AddBlockPaletteProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAdd: (type: BlockType) => void
+  onAdd: (entry: PaletteEntry) => void
   trigger: React.ReactNode
   /** The surface for which blocks are being added. Controls which blocks are available. */
   surface: SurfaceTab
@@ -47,25 +62,25 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
 
   const groups = paletteGroupsForSurface(surface)
 
-  // Build flat list of filtered blocks and track which group each belongs to
-  const flatBlocks: { type: BlockType; group: string }[] = []
+  // Build flat list of filtered entries and track which group each belongs to
+  const flatBlocks: { entry: PaletteEntry; group: string }[] = []
   const groupHeaders: Map<string, number> = new Map() // group name -> first index in flatBlocks
 
   for (const group of groups) {
     const q = query.toLowerCase().trim()
-    const filteredTypes = group.types.filter((type) => {
+    const filteredEntries = group.entries.filter((entry) => {
       if (!q) return true
       return (
-        blockLabel(type, surface).toLowerCase().includes(q) ||
-        BLOCK_DESCRIPTIONS[type].toLowerCase().includes(q) ||
-        type.toLowerCase().includes(q)
+        (entry.label ?? '').toLowerCase().includes(q) ||
+        (entry.description ?? '').toLowerCase().includes(q) ||
+        entry.type.toLowerCase().includes(q)
       )
     })
 
-    if (filteredTypes.length > 0) {
+    if (filteredEntries.length > 0) {
       groupHeaders.set(group.label, flatBlocks.length)
-      for (const type of filteredTypes) {
-        flatBlocks.push({ type, group: group.label })
+      for (const entry of filteredEntries) {
+        flatBlocks.push({ entry, group: group.label })
       }
     }
   }
@@ -105,7 +120,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
       e.preventDefault()
       const picked = flatBlocks[activeIndex]
       if (picked) {
-        onAdd(picked.type)
+        onAdd(picked.entry)
         onOpenChange(false)
       }
     } else if (e.key === 'Escape') {
@@ -142,13 +157,13 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
             {flatBlocks.length === 0 ? (
               <p className="text-body text-text-subtle text-center py-6">No matching blocks</p>
             ) : (
-              flatBlocks.map(({ type, group }, idx) => {
-                const Icon = BLOCK_ICONS[type] ?? Type
+              flatBlocks.map(({ entry, group }, idx) => {
+                const Icon = ENTRY_ICONS[entry.key] ?? BLOCK_ICONS[entry.type] ?? Type
                 const active = idx === activeIndex
                 // Header before the first item of each group present.
                 const showHeader = idx === 0 || flatBlocks[idx - 1]?.group !== group
                 return (
-                  <div key={type}>
+                  <div key={entry.key}>
                     {showHeader ? (
                       <p className="px-2.5 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-text-subtle">
                         {group}
@@ -158,7 +173,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                       type="button"
                       onMouseEnter={() => setActiveIndex(idx)}
                       onClick={() => {
-                        onAdd(type)
+                        onAdd(entry)
                         handleOpenChange(false)
                       }}
                       className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-control text-left transition cursor-pointer ${
@@ -169,8 +184,8 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                         <Icon size={15} strokeWidth={1.5} className="text-text-muted" />
                       </span>
                       <span className="flex-1 min-w-0">
-                        <span className="block text-body font-medium text-text">{blockLabel(type, surface)}</span>
-                        <span className="block text-body text-text-muted truncate">{BLOCK_DESCRIPTIONS[type]}</span>
+                        <span className="block text-body font-medium text-text">{entry.label}</span>
+                        <span className="block text-body text-text-muted truncate">{entry.description}</span>
                       </span>
                     </button>
                   </div>

@@ -41,6 +41,17 @@ export const leadSubmitSchema = z.object({
   venue: optionalText(200),
   referral_source: optionalText(200),
   message: optionalText(2000),
+  // Answers to MC-defined custom fields (role: 'custom'). These map to no couple
+  // column: they are stored on the submission and folded into the couple notes.
+  custom: z
+    .array(
+      z.object({
+        label: z.string().trim().min(1).max(120),
+        value: z.string().trim().max(2000),
+      }),
+    )
+    .max(30)
+    .optional(),
   hp: z.string().max(200).optional(),
   rendered_at: z.number().int().nonnegative(),
 });

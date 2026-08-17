@@ -138,7 +138,6 @@ function CouplesPageContent() {
   useCouplesShortcuts({
     hasSelection: selectedIds.size > 0,
     onClearSelection: () => setSelectedIds(new Set()),
-    onAdd: () => tryOpenAdd(),
   });
 
   // Clicking the page background (not on a card / bulk-bar / modal)

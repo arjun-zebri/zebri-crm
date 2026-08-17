@@ -1,5 +1,6 @@
 'use client'
 
+import { ALL_SURFACE_TABS } from '@/lib/branding/enabled-surfaces'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
@@ -44,18 +45,16 @@ const SURFACES: Record<SurfaceTab, SurfaceDescription> = {
     label: 'Questionnaires',
     description: 'Forms that collect details from your couples',
   },
+  lead: {
+    label: 'Website form',
+    description: 'A public enquiry form you embed on your own website',
+  },
 }
 
 /**
  * Ordered list of all surfaces for consistent display.
  */
-const SURFACE_ORDER: SurfaceTab[] = [
-  'invoice',
-  'contract',
-  'portal',
-  'vendorTimeline',
-  'questionnaire',
-]
+const SURFACE_ORDER: SurfaceTab[] = ALL_SURFACE_TABS
 
 /**
  * StepDocuments — Choose which document surfaces to enable.

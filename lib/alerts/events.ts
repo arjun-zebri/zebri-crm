@@ -307,6 +307,15 @@ export type AlertEvent =
       userId: string;
       email: string;
     })
+  | (BaseEvent & {
+      type: 'lead_new_enquiry';
+      severity: 'info';
+      /** The MC who received the inbound website enquiry. */
+      userId: string;
+      email: string;
+      /** The MC's business name, when known. */
+      businessName?: string;
+    })
 
   // ───── Catch-all ──────────────────────────────────────────────────
   | (BaseEvent & {

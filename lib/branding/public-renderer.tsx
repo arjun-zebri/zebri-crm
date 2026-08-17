@@ -126,6 +126,11 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'questionnaireOneAtATime': return null
     case 'questionnaireAllOnePage': return null
     case 'image': return <RenderImage block={block} branding={branding} />
+    // The Website form field + submit blocks are interactive: the live form
+    // wrapper (app/lead/[token]/_components/lead-form.tsx) injects the real
+    // controls at their positions, so the generic static renderer emits nothing.
+    case 'formField': return null
+    case 'formSubmit': return null
   }
 }
 

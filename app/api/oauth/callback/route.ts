@@ -85,10 +85,13 @@ export async function GET(request: NextRequest) {
     res.cookies.delete(OAUTH_STATE_COOKIE);
     return res;
   } catch (err) {
+    // Supabase/PostgREST failures throw plain objects, not Errors —
+    // serialise them fully so the log shows the code/details, not
+    // "[object Object]".
     logger.error('[oauth/callback] connect failed', {
       userId: user.id,
       provider,
-      error: err instanceof Error ? err.message : String(err),
+      error: err instanceof Error ? err.message : JSON.stringify(err),
     });
     return NextResponse.redirect(settingsUrl('error'));
   }
