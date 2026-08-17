@@ -14,11 +14,12 @@
 
 import { X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useScrollLock } from '@/components/ui/use-overlay';
 import { createClient } from '@/lib/supabase/client';
 
+import { OAUTH_RETURN_FLAG } from './public-page-email';
 import {
   SettingsBody,
   type EntitlementSource,
@@ -43,14 +44,6 @@ export function SettingsModal() {
   // (remounting the modal and resetting the tab). Local state mirrors
   // the working `couple-profile` overlay, which never navigates on a
   // tab change.
-  // Landing here with `?oauth=` means we arrived via the mailbox-connect
-  // redirect chain, so the previous history entry is the provider's
-  // consent screen — closing with router.back() would reopen it. Capture
-  // the flag in a ref (PublicPageEmail strips the param right after
-  // toasting) and close by navigating forward instead.
-  const returnedFromOAuth = useRef(false);
-  if (searchParams.get('oauth')) returnedFromOAuth.current = true;
-
   const rawTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<SettingsTabId>(
     rawTab && VALID_TABS.includes(rawTab as SettingsTabId)
@@ -113,7 +106,19 @@ export function SettingsModal() {
   // Close = pop history back to wherever the modal opened from; fall
   // back to the dashboard home if there's nothing to pop (hard load).
   const handleClose = () => {
-    if (returnedFromOAuth.current || window.history.length <= 1) router.push('/');
+    // Arriving via the mailbox-connect redirect leaves the provider's
+    // consent screen as the previous history entry, so router.back()
+    // would reopen it. PublicPageEmail sets a per-tab flag on that
+    // return (sessionStorage, not state — this modal remounts when the
+    // route re-resolves); consume it and navigate forward instead.
+    let returnedFromOAuth = false;
+    try {
+      returnedFromOAuth = sessionStorage.getItem(OAUTH_RETURN_FLAG) === '1';
+      if (returnedFromOAuth) sessionStorage.removeItem(OAUTH_RETURN_FLAG);
+    } catch {
+      // Storage unavailable — fall back to history navigation.
+    }
+    if (returnedFromOAuth || window.history.length <= 1) router.push('/');
     else router.back();
   };
 

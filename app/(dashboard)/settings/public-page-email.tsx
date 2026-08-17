@@ -12,7 +12,7 @@
  */
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/toast';
@@ -22,6 +22,14 @@ import type { PublicSettingsData } from './settings-body';
 
 /** Friendly fallback address shown for the "Send from Zebri" option. */
 const DEFAULT_FROM = 'no-reply@zebri.com.au';
+
+/**
+ * Per-tab flag set when the settings page is reached via the mailbox
+ * OAuth return redirect. The settings modal's close handler reads (and
+ * clears) it to avoid `router.back()`, which would land on the
+ * provider's consent screen left behind in this tab's history.
+ */
+export const OAUTH_RETURN_FLAG = 'zebri_oauth_return';
 
 const PROVIDER_LABEL: Record<NonNullable<PublicSettingsData['oauthProvider']>, string> = {
   google: 'Gmail',
@@ -33,7 +41,6 @@ interface PublicPageEmailProps {
 }
 
 export function PublicPageEmail({ initial }: PublicPageEmailProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
@@ -52,8 +59,20 @@ export function PublicPageEmail({ initial }: PublicPageEmailProps) {
     toastedRef.current = true;
     if (result === 'connected') toast('Mailbox connected.');
     else if (result === 'error') toast('Could not connect that mailbox. Please try again.', 'error');
-    router.replace('/settings?tab=public');
-  }, [searchParams, toast, router]);
+    // Flag the OAuth return for the modal's close handler: the provider's
+    // consent screen sits behind us in history, so router.back() must not
+    // be used to close. sessionStorage (not component state) because the
+    // flag has to survive a modal remount and a page reload.
+    try {
+      sessionStorage.setItem(OAUTH_RETURN_FLAG, '1');
+    } catch {
+      // Storage can be unavailable (private mode); close just falls back
+      // to history navigation.
+    }
+    // Strip the param shallowly. A router.replace here re-resolves the
+    // intercepting route and remounts the entire settings modal.
+    window.history.replaceState(null, '', '/settings?tab=public');
+  }, [searchParams, toast]);
 
   const selectZebri = async () => {
     setEmailMode('zebri');
