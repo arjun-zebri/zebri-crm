@@ -12,7 +12,7 @@ import {
 } from '@/app/(dashboard)/branding/blocks/blocks-by-surface'
 import { blockTemplate, defaultBlocksFor } from '@/app/(dashboard)/branding/blocks/defaults'
 import { atLeastOneForSurface, exactlyOneForSurface } from '@/app/(dashboard)/branding/blocks/policy'
-import { BLOCK_DESCRIPTIONS, BLOCK_LABELS } from '@/app/(dashboard)/branding/blocks/types'
+import { BLOCK_DESCRIPTIONS, BLOCK_LABELS, blockDisplayName } from '@/app/(dashboard)/branding/blocks/types'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 describe('lead surface registration', () => {
@@ -66,11 +66,50 @@ describe('lead defaults + templates', () => {
     }
   })
 
-  it('default lead form is valid: a name field, an email field, and a submit', () => {
+  it('default lead form mirrors the fixed public form: every question, in order, plus a submit', () => {
     const blocks = defaultBlocksFor('lead')
     const roles = blocks.flatMap((b) => (b.type === 'formField' ? [b.role] : []))
-    expect(roles).toContain('name')
-    expect(roles).toContain('email')
+    // Same question set and order as the fixed-field fallback form on the
+    // public /lead/[token] page.
+    expect(roles).toEqual([
+      'name',
+      'partnerName',
+      'email',
+      'phone',
+      'weddingDate',
+      'venue',
+      'referral',
+      'message',
+    ])
     expect(blocks.some((b) => b.type === 'formSubmit')).toBe(true)
+  })
+
+  it('default lead form requires only the fields the couple must fill in (name + email)', () => {
+    const blocks = defaultBlocksFor('lead')
+    const requiredRoles = blocks.flatMap((b) =>
+      b.type === 'formField' && b.required ? [b.role] : [],
+    )
+    expect(requiredRoles).toEqual(['name', 'email'])
+  })
+})
+
+describe('blockDisplayName', () => {
+  it('names a formField block by its question label', () => {
+    const b = blockTemplate('formField')
+    if (b.type === 'formField') {
+      expect(blockDisplayName({ ...b, label: 'Wedding date' }, 'lead')).toBe('Wedding date')
+    }
+  })
+
+  it('falls back to the type label when the field has no label', () => {
+    const b = blockTemplate('formField')
+    if (b.type === 'formField') {
+      expect(blockDisplayName({ ...b, label: '' }, 'lead')).toBe('Form field')
+    }
+  })
+
+  it('uses the type label for every other block', () => {
+    const b = blockTemplate('formSubmit')
+    expect(blockDisplayName(b, 'lead')).toBe('Submit button')
   })
 })

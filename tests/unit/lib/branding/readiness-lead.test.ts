@@ -33,20 +33,44 @@ const submit: Block = {
 } as Block
 
 describe('lead readiness', () => {
-  it('is ready with a name field + submit', () => {
-    expect(evaluateSurface('lead', [field('name'), submit], account).ready).toBe(true)
+  it('is ready with a name field + email field + submit', () => {
+    expect(
+      evaluateSurface('lead', [field('name'), field('email'), submit], account).ready,
+    ).toBe(true)
   })
 
-  it('is not ready without a submit', () => {
-    const r = evaluateSurface('lead', [field('name')], account)
+  it('is not ready without an email field, naming the "Email" question', () => {
+    const r = evaluateSurface('lead', [field('name'), submit], account)
     expect(r.ready).toBe(false)
-    expect(r.issues.some((i) => i.kind === 'need-exactly-one')).toBe(true)
+    const issue = r.issues.find((i) => i.kind === 'need-email-field')
+    expect(issue).toBeDefined()
+    expect(issue!.message).toContain('Email')
   })
 
-  it('is not ready without any field', () => {
+  it('is not ready without a submit, with website-form copy (not questionnaire copy)', () => {
+    const r = evaluateSurface('lead', [field('name'), field('email')], account)
+    expect(r.ready).toBe(false)
+    const issue = r.issues.find((i) => i.kind === 'need-exactly-one')
+    expect(issue).toBeDefined()
+    expect(issue!.message).toContain('Submit button')
+    expect(issue!.message).not.toContain('form style')
+  })
+
+  it('is not ready without any field, with website-form copy (not invoice copy)', () => {
     const r = evaluateSurface('lead', [submit], account)
     expect(r.ready).toBe(false)
-    expect(r.issues.some((i) => i.kind === 'need-at-least-one')).toBe(true)
+    const issue = r.issues.find((i) => i.kind === 'need-at-least-one')
+    expect(issue).toBeDefined()
+    expect(issue!.message).toContain('question')
+    expect(issue!.message).not.toContain('Payment')
+  })
+
+  it('is not ready without a name field, naming the "Your name" question', () => {
+    const r = evaluateSurface('lead', [field('email'), submit], account)
+    expect(r.ready).toBe(false)
+    const issue = r.issues.find((i) => i.kind === 'need-name-field')
+    expect(issue).toBeDefined()
+    expect(issue!.message).toContain('Your name')
   })
 
   it('is not ready without a name field', () => {

@@ -1,5 +1,6 @@
 'use client'
 
+import { ALL_SURFACE_TABS } from '@/lib/branding/enabled-surfaces'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
@@ -53,13 +54,7 @@ const SURFACES: Record<SurfaceTab, SurfaceDescription> = {
 /**
  * Ordered list of all surfaces for consistent display.
  */
-const SURFACE_ORDER: SurfaceTab[] = [
-  'invoice',
-  'contract',
-  'portal',
-  'vendorTimeline',
-  'questionnaire',
-]
+const SURFACE_ORDER: SurfaceTab[] = ALL_SURFACE_TABS
 
 /**
  * StepDocuments — Choose which document surfaces to enable.

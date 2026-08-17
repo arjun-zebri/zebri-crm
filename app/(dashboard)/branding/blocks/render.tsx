@@ -4,13 +4,13 @@ import { ImageIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, type SelectOption } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { getTextColor } from '@/lib/branding/contrast'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
+import { RenderFormSubmitButton } from '@/lib/branding/public-blocks/form-submit'
 import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
 import { RenderImage as PublicRenderImage, type ImageInteraction } from '@/lib/branding/public-blocks/image'
 import { RenderLineItems as PublicRenderLineItems } from '@/lib/branding/public-blocks/line-items'
@@ -1344,20 +1344,23 @@ export function RenderFormField({ block, state }: RenderProps<FormFieldBlock>) {
 // ── Website form submit ─────────────────────────────────────────────────────────
 
 /**
- * Editor preview for the {@link FormSubmitBlock}: a static design-system button
- * showing the block's label. Preview-only — wrapped so it never receives
- * pointer or keyboard focus in the editor. On the public page the live submit
- * button is injected at this marker's position.
+ * Editor preview for the {@link FormSubmitBlock}: the same branded button the
+ * public page renders ({@link RenderFormSubmitButton}), resolved against the
+ * editor's brand state, so styling it here is styling the real thing. The
+ * after-submit behaviour (success message or redirect URL) is configured in
+ * the labelled toolbar controls, not in the canvas: the canvas mirrors the
+ * public page, which shows nothing under the button. Preview-only: wrapped so
+ * it never receives pointer or keyboard focus in the editor.
  */
 export function RenderFormSubmit({ block, state }: RenderProps<FormSubmitBlock>) {
-  const pad = PAD(state)
+  // Vertical rhythm comes from the shared button (it owns blockY, like every
+  // public block), so no extra padding wrapper here.
   return (
-    <div className={pad.blockY}>
-      <div className="pointer-events-none select-none">
-        <Button type="button" tabIndex={-1} aria-hidden>
-          {block.label || 'Send enquiry'}
-        </Button>
-      </div>
+    <div className="pointer-events-none select-none">
+      <RenderFormSubmitButton
+        block={block}
+        branding={publicBrandingFromEditorState(state)}
+      />
     </div>
   )
 }

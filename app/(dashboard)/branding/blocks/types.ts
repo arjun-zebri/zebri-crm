@@ -354,8 +354,35 @@ export interface FormSubmitBlock extends BaseBlock {
   type: 'formSubmit'
   /** Button label, e.g. "Send enquiry". */
   label: string
-  /** Message shown after a successful submit. */
+  /** Message shown after a successful submit (successMode 'message'). */
   successMessage: string
+  /**
+   * What happens after a successful submit: show {@link successMessage} in
+   * place of the form ('message', the default when absent) or navigate to
+   * {@link redirectUrl} ('redirect', for the MC's own thank-you page, e.g.
+   * for ad conversion tracking).
+   */
+  successMode?: 'message' | 'redirect'
+  /**
+   * Destination for successMode 'redirect'. Only http(s) URLs are honoured
+   * on the public page (see successRedirectUrl in lib/lead-capture); anything
+   * else falls back to showing {@link successMessage}.
+   */
+  redirectUrl?: string
+  /** Button fill (label colour on 'outline'). Falls back to brand colour. */
+  buttonColor?: string
+  /** Button corner radius (px). Falls back to the brand corner radius. */
+  buttonRadius?: number
+  /** 'fill' (solid) or 'outline'. Falls back to the global button variant. */
+  variant?: 'fill' | 'outline'
+  /** Size preset (padding + font size). Falls back to the global button size. */
+  size?: 'sm' | 'md' | 'lg'
+  /** Horizontal alignment of the button within the block. Default 'start'. */
+  buttonJustify?: 'start' | 'center' | 'end'
+  /** Explicit button width (px). When undefined, the button sizes to its label.
+   *  Explicitly settable to undefined so the width slider's zero position can
+   *  clear the override under exactOptionalPropertyTypes. */
+  widthPx?: number | undefined
 }
 
 /**
@@ -632,6 +659,17 @@ const BLOCK_LABEL_OVERRIDES: Record<string, Partial<Record<BlockType, string>>> 
  */
 export function blockLabel(type: BlockType, surface?: string): string {
   return (surface ? BLOCK_LABEL_OVERRIDES[surface]?.[type] : undefined) ?? BLOCK_LABELS[type]
+}
+
+/**
+ * Display name for a block INSTANCE (vs {@link blockLabel}'s per-type name).
+ * A `formField` is named by its question ("Your name", "Wedding date") so the
+ * selection toolbar and other chrome speak the same language as the palette's
+ * ready-made question entries; every other block uses its type label.
+ */
+export function blockDisplayName(block: Block, surface?: string): string {
+  if (block.type === 'formField' && block.label.trim() !== '') return block.label
+  return blockLabel(block.type, surface)
 }
 
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {

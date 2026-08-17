@@ -32,4 +32,9 @@ describe('<Textarea />', () => {
     await userEvent.type(screen.getByLabelText('Message'), 'Hello');
     expect(onChange).toHaveBeenCalled();
   });
+
+  it('is not user-resizable', () => {
+    render(<Textarea label="Message" />);
+    expect(screen.getByLabelText('Message').className).toContain('resize-none');
+  });
 });

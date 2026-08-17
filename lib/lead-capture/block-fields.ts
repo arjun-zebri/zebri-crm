@@ -12,7 +12,7 @@
 // the public form + submit route. Layering exception, mirroring lib/branding/
 // readiness.ts and use-current-branding.ts.
 // eslint-disable-next-line no-restricted-imports
-import type { Block, FormFieldBlock } from '@/app/(dashboard)/branding/blocks/types'
+import type { Block, FormFieldBlock, FormSubmitBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 /** The canonical (non-custom) submit keys a field role maps to. */
 const ROLE_TO_KEY: Partial<Record<FormFieldBlock['role'], string>> = {
@@ -36,6 +36,22 @@ export function requiredFieldIds(blocks: Block[]): string[] {
   return leadFieldBlocks(blocks)
     .filter((b) => b.required)
     .map((b) => b.id)
+}
+
+/**
+ * The post-submit redirect destination of a lead block tree, or null when the
+ * form should show its success message instead.
+ *
+ * Non-null only when the submit block opts into redirect mode AND carries an
+ * http(s) URL. The scheme check matters: the URL is MC-authored content
+ * rendered on a public page, so anything else (javascript:, data:, relative)
+ * must fall back to the message rather than navigate.
+ */
+export function successRedirectUrl(blocks: Block[]): string | null {
+  const submit = blocks.find((b): b is FormSubmitBlock => b.type === 'formSubmit')
+  if (!submit || submit.successMode !== 'redirect') return null
+  const url = (submit.redirectUrl ?? '').trim()
+  return /^https?:\/\//i.test(url) ? url : null
 }
 
 /** The submit payload built from a lead block tree and its per-field values. */

@@ -101,7 +101,7 @@ export function PrimitivesForms() {
       </Spec>
 
       <Spec name="Textarea" file="components/ui/textarea.tsx"
-        importPath="@/components/ui/textarea" description="The multi-line Input. Same chrome, but it grows with rows and resizes vertically.">
+        importPath="@/components/ui/textarea" description="The multi-line Input. Same chrome; its height is set by rows and it is not user-resizable.">
         <Rule>
           Not 32px tall. A paragraph field is inherently multi-line, so it is the one control that
           breaks the single-height rule, keeping only the border, radius, padding and focus

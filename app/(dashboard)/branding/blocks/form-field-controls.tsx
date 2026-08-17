@@ -35,6 +35,20 @@ const TYPE_OPTIONS: { value: FormFieldInputType; label: string }[] = [
 type UpdateBlock = <B extends Block>(id: string, patch: Partial<B>) => void
 
 /**
+ * A toolbar control with a small caption above it saying what it edits,
+ * mirroring the toolbar's existing label style. The form controls need
+ * these: three unlabelled inputs in a row don't explain themselves.
+ */
+function LabelledControl({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[11px] text-text-subtle uppercase tracking-[0.08em]">{label}</span>
+      {children}
+    </div>
+  )
+}
+
+/**
  * Toolbar controls for a selected {@link FormFieldBlock}. Lets the MC set the
  * field's role (how the answer maps to a couple), the rendered input type, its
  * label and placeholder, whether it is required, and, for a dropdown, the list
@@ -43,28 +57,36 @@ type UpdateBlock = <B extends Block>(id: string, patch: Partial<B>) => void
 export function FormFieldControls({ block, updateBlock }: { block: FormFieldBlock; updateBlock: UpdateBlock }) {
   const patch = (p: Partial<FormFieldBlock>) => updateBlock<FormFieldBlock>(block.id, p)
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="w-36">
-        <Select options={ROLE_OPTIONS} value={block.role} onValueChange={(v) => patch({ role: v as FormFieldRole })} />
-      </div>
-      <div className="w-32">
-        <Select
-          options={TYPE_OPTIONS}
-          value={block.inputType}
-          onValueChange={(v) => patch({ inputType: v as FormFieldInputType })}
-        />
-      </div>
-      <div className="w-36">
-        <Input aria-label="Field label" value={block.label} placeholder="Label" onChange={(e) => patch({ label: e.target.value })} />
-      </div>
-      <div className="w-36">
-        <Input
-          aria-label="Placeholder"
-          value={block.placeholder ?? ''}
-          placeholder="Placeholder"
-          onChange={(e) => patch({ placeholder: e.target.value })}
-        />
-      </div>
+    <div className="flex flex-wrap items-end gap-2">
+      <LabelledControl label="Maps to">
+        <div className="w-36">
+          <Select options={ROLE_OPTIONS} value={block.role} onValueChange={(v) => patch({ role: v as FormFieldRole })} />
+        </div>
+      </LabelledControl>
+      <LabelledControl label="Input type">
+        <div className="w-32">
+          <Select
+            options={TYPE_OPTIONS}
+            value={block.inputType}
+            onValueChange={(v) => patch({ inputType: v as FormFieldInputType })}
+          />
+        </div>
+      </LabelledControl>
+      <LabelledControl label="Question">
+        <div className="w-36">
+          <Input aria-label="Field label" value={block.label} placeholder="Label" onChange={(e) => patch({ label: e.target.value })} />
+        </div>
+      </LabelledControl>
+      <LabelledControl label="Placeholder">
+        <div className="w-36">
+          <Input
+            aria-label="Placeholder"
+            value={block.placeholder ?? ''}
+            placeholder="Placeholder"
+            onChange={(e) => patch({ placeholder: e.target.value })}
+          />
+        </div>
+      </LabelledControl>
       <RequiredToggle active={block.required} onChange={(v) => patch({ required: v })} />
       {block.inputType === 'select' && <OptionsControl block={block} onChange={(options) => patch({ options })} />}
     </div>
@@ -72,24 +94,56 @@ export function FormFieldControls({ block, updateBlock }: { block: FormFieldBloc
 }
 
 /**
- * Toolbar controls for the selected {@link FormSubmitBlock}: the button label
- * and the message shown after a successful submit.
+ * Toolbar controls for the selected {@link FormSubmitBlock}: the button label,
+ * the after-submit behaviour (show a message or redirect to the MC's own
+ * thank-you page), and the message or URL that behaviour uses.
  */
 export function FormSubmitControls({ block, updateBlock }: { block: FormSubmitBlock; updateBlock: UpdateBlock }) {
   const patch = (p: Partial<FormSubmitBlock>) => updateBlock<FormSubmitBlock>(block.id, p)
+  const mode = block.successMode ?? 'message'
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="w-40">
-        <Input aria-label="Button label" value={block.label} placeholder="Button label" onChange={(e) => patch({ label: e.target.value })} />
+    <div className="flex flex-col gap-2 w-full">
+      <div className="flex flex-wrap items-end gap-2">
+        <LabelledControl label="Button label">
+          <div className="w-40">
+            <Input aria-label="Button label" value={block.label} placeholder="Button label" onChange={(e) => patch({ label: e.target.value })} />
+          </div>
+        </LabelledControl>
+        <LabelledControl label="After sending">
+          <div className="w-40">
+            <Select
+              options={[
+                { value: 'message', label: 'Show a message' },
+                { value: 'redirect', label: 'Redirect to a URL' },
+              ]}
+              value={mode}
+              onValueChange={(v) => patch({ successMode: v as 'message' | 'redirect' })}
+            />
+          </div>
+        </LabelledControl>
       </div>
-      <div className="w-64">
-        <Input
-          aria-label="Success message"
-          value={block.successMessage}
-          placeholder="Message shown after sending"
-          onChange={(e) => patch({ successMessage: e.target.value })}
-        />
-      </div>
+      {/* The message / URL gets its own full-width row: it is a sentence, not a
+          setting, and cramming it beside the selects truncated it. */}
+      {mode === 'message' ? (
+        <LabelledControl label="Success message">
+          <Input
+            aria-label="Success message"
+            value={block.successMessage}
+            placeholder="Message shown after sending"
+            onChange={(e) => patch({ successMessage: e.target.value })}
+          />
+        </LabelledControl>
+      ) : (
+        <LabelledControl label="Redirect URL">
+          <Input
+            aria-label="Redirect URL"
+            type="url"
+            value={block.redirectUrl ?? ''}
+            placeholder="https://yoursite.com/thank-you"
+            onChange={(e) => patch({ redirectUrl: e.target.value })}
+          />
+        </LabelledControl>
+      )}
     </div>
   )
 }

@@ -15,12 +15,13 @@ import type { FormEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import type { Block, FormFieldBlock, FormSubmitBlock } from '@/app/(dashboard)/branding/blocks/types';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RenderFormSubmitButton } from '@/lib/branding/public-blocks/form-submit';
+import { pad } from '@/lib/branding/public-blocks/shared';
 import { BlockOuter, PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer';
-import { buildLeadPayload, requiredFieldIds } from '@/lib/lead-capture/block-fields';
+import { buildLeadPayload, requiredFieldIds, successRedirectUrl } from '@/lib/lead-capture/block-fields';
 
 import type { PublicLeadForm } from './public-lead-form';
 
@@ -79,7 +80,25 @@ export function BlockLeadForm({
           rendered_at: renderedAt.current,
         }),
       });
-      setState(res.ok ? 'success' : 'error');
+      if (res.ok) {
+        // Redirect mode sends the couple to the MC's own thank-you page.
+        // Navigate the TOP window: the form usually lives in an iframe embed,
+        // and a thank-you page inside the iframe would defeat its purpose
+        // (conversion pixels, page layout). Cross-origin top navigation is
+        // permitted from an unsandboxed iframe; if anything blocks it we fall
+        // through to the success message.
+        const redirect = successRedirectUrl(blocks);
+        if (redirect) {
+          try {
+            (window.top ?? window).location.href = redirect;
+          } catch {
+            window.location.href = redirect;
+          }
+        }
+        setState('success');
+      } else {
+        setState('error');
+      }
     } catch {
       setState('error');
     }
@@ -117,23 +136,29 @@ export function BlockLeadForm({
           if (block.type === 'formField') {
             return (
               <BlockOuter key={block.id} block={block} branding={form}>
-                <FormFieldControl block={block} value={values[block.id] ?? ''} onChange={setValue(block.id)} />
+                {/* Vertical rhythm lives inside each public block: fields get
+                    the density blockY, matching the editor preview's spacing. */}
+                <div className={pad(form).blockY}>
+                  <FormFieldControl block={block} value={values[block.id] ?? ''} onChange={setValue(block.id)} />
+                </div>
               </BlockOuter>
             );
           }
           if (block.type === 'formSubmit') {
             return (
               <BlockOuter key={block.id} block={block} branding={form}>
-                <div className="pt-2">
-                  {state === 'error' && (
-                    <p role="alert" className="text-body text-danger mb-2">
-                      Something went wrong. Please try again.
-                    </p>
-                  )}
-                  <Button type="submit" disabled={!canSubmit} loading={state === 'submitting'} className="w-full">
-                    {block.label || 'Send enquiry'}
-                  </Button>
-                </div>
+                {state === 'error' && (
+                  <p role="alert" className="text-body text-danger mb-2">
+                    Something went wrong. Please try again.
+                  </p>
+                )}
+                <RenderFormSubmitButton
+                  block={block}
+                  branding={form}
+                  asSubmit
+                  disabled={!canSubmit}
+                  submitting={state === 'submitting'}
+                />
               </BlockOuter>
             );
           }

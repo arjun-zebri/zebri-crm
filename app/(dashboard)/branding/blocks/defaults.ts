@@ -129,20 +129,32 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
 
 export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead'): Block[] {
   if (surface === 'lead') {
-    // A sensible wedding-enquiry form: identity, a heading, the fields most MCs
-    // ask for, then the submit button. Every field maps to a couple column via
-    // `role`; the MC can add/remove/reorder fields and add custom ones.
+    // Mirrors the fixed-field fallback form on the public /lead/[token] page:
+    // same questions, same order, same labels, so customising starts from
+    // exactly what the couple already sees. Required matches what the couple
+    // must fill in there (name + email). Every field maps to a couple column
+    // via `role`; the MC can add/remove/reorder fields and add custom ones.
     const field = (
       role: FormFieldRole, inputType: FormFieldInputType, label: string,
       required = false,
     ): FormFieldBlock => ({ id: newId('ff'), type: 'formField', role, inputType, label, required })
     return [
       { id: newId('bn'), type: 'businessName' },
-      { id: newId('tx'), type: 'text', text: textDoc('Enquire') },
+      {
+        id: newId('tx'),
+        type: 'text',
+        text: textDoc(
+          "Planning your wedding? Tell me a little about your day below and I'll be in touch soon.",
+        ),
+      },
       field('name', 'text', 'Your name', true),
+      field('partnerName', 'text', "Partner's name"),
       field('email', 'email', 'Email', true),
+      field('phone', 'tel', 'Phone'),
       field('weddingDate', 'date', 'Wedding date'),
-      field('message', 'textarea', 'Your message'),
+      field('venue', 'text', 'Venue'),
+      field('referral', 'text', 'How did you hear about me?'),
+      field('message', 'textarea', 'Message'),
       blockTemplate('formSubmit'),
     ]
   }

@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from 'react'
 
+import {
+  ALL_SURFACE_TABS,
+  buildEnabledSurfacesMap,
+  resolveEnabledSurfaces,
+} from '@/lib/branding/enabled-surfaces'
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { shouldShowOnboarding } from '@/lib/branding/onboarding-gate'
 import type { TextCase } from '@/lib/branding/text-case'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 import { createClient } from '@/lib/supabase/client'
-import type { BrandKit, SurfaceTab } from '@/types/branding-preview'
+import type { BrandKit } from '@/types/branding-preview'
 import type { Json } from '@/types/database'
 
 import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
@@ -250,18 +255,12 @@ export default function BrandingPage() {
     }
 
     // Step (b): Build enabled_surfaces map and blocks, then upsert user_branding.
-    const enabledSurfacesMap = result.enabledSurfaces.reduce(
-      (acc, surface) => {
-        acc[surface] = true
-        return acc
-      },
-      {} as Record<string, boolean>,
-    )
+    const enabledSurfacesMap = buildEnabledSurfacesMap(result.enabledSurfaces)
 
     // Seed branding_blocks from the default tree for each ENABLED surface only.
     // Disabled surfaces get empty arrays.
     const branding_blocks: Record<string, Block[]> = {}
-    for (const surface of ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as SurfaceTab[]) {
+    for (const surface of ALL_SURFACE_TABS) {
       branding_blocks[surface] = result.enabledSurfaces.includes(surface)
         ? defaultBlocksFor(surface)
         : []
@@ -346,15 +345,7 @@ export default function BrandingPage() {
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
-  // Default to all five surfaces enabled
-  const defaultEnabledSurfaces: Record<string, boolean> = {
-    invoice: true,
-    contract: true,
-    portal: true,
-    vendorTimeline: true,
-    questionnaire: true,
-  }
-  const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
+  const enabledSurfaces = resolveEnabledSurfaces(branding?.enabled_surfaces)
   const onboardedAt = branding?.onboarded_at ?? null
   const showOnboarding =
     forceOnboarding ||
@@ -448,7 +439,7 @@ export default function BrandingPage() {
             buttonSize: metadata?.button_size ?? 'md',
             buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
             sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
-            enabledSurfaces: Object.keys(enabledSrc).filter((k) => enabledSrc[k]) as SurfaceTab[],
+            enabledSurfaces,
             onboardedAt,
           }}
         />

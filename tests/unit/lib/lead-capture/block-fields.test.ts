@@ -5,8 +5,8 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { buildLeadPayload, leadFieldBlocks, requiredFieldIds } from '@/lib/lead-capture/block-fields'
+import type { Block, FormSubmitBlock } from '@/app/(dashboard)/branding/blocks/types'
+import { buildLeadPayload, leadFieldBlocks, requiredFieldIds, successRedirectUrl } from '@/lib/lead-capture/block-fields'
 
 const field = (
   id: string,
@@ -57,5 +57,42 @@ describe('buildLeadPayload', () => {
     expect(p.name).toBe('Sam')
     expect(p.email).toBe('')
     expect(p.custom).toEqual([])
+  })
+})
+
+describe('successRedirectUrl', () => {
+  const submit = (over: Partial<FormSubmitBlock>): Block[] => [
+    {
+      id: 'fs1',
+      type: 'formSubmit',
+      label: 'Send',
+      successMessage: 'Thanks',
+      ...over,
+    } as FormSubmitBlock,
+  ]
+
+  it('returns the URL when redirect mode is on and the URL is http(s)', () => {
+    expect(
+      successRedirectUrl(submit({ successMode: 'redirect', redirectUrl: 'https://example.com/thanks' })),
+    ).toBe('https://example.com/thanks')
+  })
+
+  it('returns null in message mode (the default), even when a URL is saved', () => {
+    expect(successRedirectUrl(submit({ redirectUrl: 'https://example.com/thanks' }))).toBeNull()
+    expect(
+      successRedirectUrl(submit({ successMode: 'message', redirectUrl: 'https://example.com/thanks' })),
+    ).toBeNull()
+  })
+
+  it('returns null for a missing, empty, or non-http(s) URL', () => {
+    expect(successRedirectUrl(submit({ successMode: 'redirect' }))).toBeNull()
+    expect(successRedirectUrl(submit({ successMode: 'redirect', redirectUrl: ' ' }))).toBeNull()
+    expect(
+      successRedirectUrl(submit({ successMode: 'redirect', redirectUrl: 'javascript:alert(1)' })),
+    ).toBeNull()
+  })
+
+  it('returns null when there is no submit block', () => {
+    expect(successRedirectUrl([])).toBeNull()
   })
 })

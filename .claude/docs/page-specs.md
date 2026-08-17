@@ -1082,13 +1082,45 @@ iframe embedding. Works on desktop + mobile.
 
 **Website form branding surface (block-based, 2026-08).** The form is
 also a `lead` branding surface ("Website form" tab) in the branding
-editor, designed from blocks like every other surface. General blocks
+editor, designed from blocks like every other surface. The surface is
+enabled by default: `resolveEnabledSurfaces` (in
+`lib/branding/enabled-surfaces.ts`) treats a missing `lead` key in
+`user_branding.enabled_surfaces` as on, so existing accounts see the tab
+without re-onboarding; only an explicit `lead: false` (written when the
+MC toggles it off) hides it. It also appears as a toggle in the branding
+onboarding wizard's documents step, on by default. General blocks
 (business name, text, image, divider, spacer, tagline, footer) plus two
 document-specific blocks: `formField` (a configurable input, one per
 field, with a `role` + `inputType` + required flag; `role='select'`
-carries options) and `formSubmit` (the singleton submit button, with
-button label + success message). Readiness (`NotReadyPanel`) nags when
-the form has no field, no submit, or no Name field. `get_lead_form`
+carries options) and `formSubmit` (the singleton submit button). The
+add-block palette lists each enquiry question as its own ready-made
+entry (Your name, Partner's name, Email, Phone, Wedding date, Venue,
+How did you hear about me?, Message, plus Custom question): all are
+`formField` presets (`PaletteEntry.preset` in `blocks-by-surface.ts`),
+not distinct block types, with required preset on name + email. The
+submit block has an after-submit choice (`successMode`): show
+`successMessage` in place of the form (default) or redirect to
+`redirectUrl` (the MC's own thank-you page, e.g. for conversion
+pixels). Only http(s) URLs are honoured (`successRedirectUrl` in
+`lib/lead-capture/block-fields.ts`); the redirect navigates the top
+window out of the iframe embed, falling back to the message if blocked. Readiness (`NotReadyPanel`) nags when
+the form has no field, no submit, no Name question, or no Email
+question, in question vocabulary: "At least one question for the
+couple to answer", "A Submit button", 'A "Your name" question', and
+'An "Email" question'. Selected
+`formField` blocks title their toolbar by their question label
+(`blockDisplayName` in blocks/types.ts), not the generic type name. The default block
+tree mirrors the fixed-field fallback form exactly: same eight
+questions, same order and labels, required matching what the couple
+must fill in (name + email). The submit block renders through the shared
+`RenderFormSubmitButton` (editor preview and public form alike),
+styled like the action block's primary button: block overrides for
+colour, radius, variant, size, alignment, and width fall back to the
+brand's global button settings. The after-submit behaviour is
+configured in the labelled toolbar controls (Button label / After
+sending on one row, Success message or Redirect URL full-width on the
+next, then the style row). Field controls are
+labelled too (Maps to / Input type / Question / Placeholder). `get_lead_form`
 returns the saved `lead` block tree; the public page renders it, mapping
 each `formField` answer to a couple column by `role` and folding
 `role='custom'` answers into the couple notes. Every submission is also

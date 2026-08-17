@@ -33,11 +33,12 @@ export interface TextareaProps
 }
 
 // Matches the Input chrome (border darkens to brand-fg on focus, no ring) with
-// vertical padding + a minimum height for the multi-line body. Vertical resize
-// only, so a wide drag can't break the surrounding layout.
+// vertical padding + a minimum height for the multi-line body. Not resizable:
+// the field's height is a design decision (set `rows`), and a drag handle
+// fights the block editor canvas and the lead embed's iframe auto-sizing.
 const BASE_CLASSES =
   'block w-full rounded-control bg-surface text-text placeholder:text-text-subtle ' +
-  'border transition-colors px-2.5 py-2 text-body min-h-20 resize-y ' +
+  'border transition-colors px-2.5 py-2 text-body min-h-20 resize-none ' +
   'focus-visible:outline-none ' +
   'disabled:opacity-50 disabled:cursor-not-allowed read-only:bg-surface-muted';
 
