@@ -1010,3 +1010,27 @@ who deletes all six does not get them resurrected.
 
 Written by `app/(dashboard)/couples/time-actions.ts`. Migration:
 `20260730120000_create_couple_time_tracking.sql`.
+
+------------------------------------------------------------------------
+
+## ai_copilot_usage (AI copilot Phase A)
+
+Per-user daily message counter backing the automations AI copilot's
+daily cap. DB-backed (not the in-memory limiter) because the cap is a
+spend control on a paid third-party API and must survive serverless
+cold starts.
+
+Columns: id (uuid pk), user_id (uuid, not null, fk auth.users cascade),
+day (date, not null, default UTC today), message_count (integer, not
+null, default 0, check >= 0), created_at / updated_at (timestamptz).
+Unique (user_id, day).
+
+RLS: **SELECT-only** owner policy (`auth.uid() = user_id`). There are
+deliberately no INSERT/UPDATE/DELETE policies — a user must not be able
+to reset their own counter through PostgREST. The only write path is
+`increment_ai_copilot_usage()` (SECURITY DEFINER, granted to
+`authenticated`), which upserts today's row for `auth.uid()` and
+returns the new count; the copilot route compares that against the
+app-side cap.
+
+Migration: `20260807000000_create_ai_copilot_usage.sql`.

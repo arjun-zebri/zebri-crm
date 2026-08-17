@@ -129,3 +129,30 @@ describe('<MenuPanel /> and <MenuItem />', () => {
     expect(screen.getAllByRole('menuitem')).toHaveLength(1);
   });
 });
+
+describe('<MenuItem checked />', () => {
+  it('is an ordinary menu row when `checked` is not given', () => {
+    render(
+      <MenuPanel>
+        <MenuItem>Rename</MenuItem>
+      </MenuPanel>,
+    );
+    const row = screen.getByRole('menuitem');
+    expect(row).not.toHaveAttribute('aria-checked');
+  });
+
+  it('announces its own state when it is a checkbox row', () => {
+    // For menus whose choices are independent (the run sheet's
+    // audiences), where picking one must not clear the others.
+    render(
+      <MenuPanel>
+        <MenuItem checked>Vendor contacts</MenuItem>
+        <MenuItem checked={false}>Me</MenuItem>
+      </MenuPanel>,
+    );
+    const rows = screen.getAllByRole('menuitemcheckbox');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveAttribute('aria-checked', 'true');
+    expect(rows[1]).toHaveAttribute('aria-checked', 'false');
+  });
+});

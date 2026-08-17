@@ -41,12 +41,11 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
 // update_couple_stage
 // ────────────────────────────────────────────────────────────────
 
+// Only `toStatus` remains: the handler moves the couple and nothing
+// else. The old onlyIfCurrentStatus / addNote fields were declared but
+// never read. Passthrough keeps configs saved against them parsing.
 const updateStageSchema = z.object({
   toStatus: z.string().min(1),
-  /** Guard rail — only run when the couple is currently in one of these statuses. */
-  onlyIfCurrentStatus: z.array(z.string()).optional(),
-  /** Auto-append a note to the couple recording why the move happened. */
-  addNote: z.string().optional(),
 }).passthrough()
 
 const updateCoupleStage: ActionSpec<z.infer<typeof updateStageSchema>> = {
@@ -70,14 +69,11 @@ const updateCoupleStage: ActionSpec<z.infer<typeof updateStageSchema>> = {
 // add_note
 // ────────────────────────────────────────────────────────────────
 
+// Only `text` remains: notes are one shared column on the couple, so
+// the old category / pinned / visibleToCouple fields had nothing to
+// act on. Passthrough keeps configs saved against them parsing.
 const addNoteSchema = z.object({
   text: z.string().min(1),
-  /** Bucket for filtering / dashboard surfaces. */
-  category: z.enum(['general', 'admin', 'followup', 'risk', 'private']).optional(),
-  /** Pin to the top of the couple's notes panel. */
-  pinned: z.boolean().optional(),
-  /** Whether this note can ever be shown to the couple (default: no). */
-  visibleToCouple: z.boolean().optional(),
 }).passthrough()
 
 const addNote: ActionSpec<z.infer<typeof addNoteSchema>> = {
@@ -139,16 +135,12 @@ const updateCustomFields: ActionSpec<z.infer<typeof updateCustomFieldsSchema>> =
 // send_portal_link
 // ────────────────────────────────────────────────────────────────
 
+// Only `message` remains: the portal token doesn't expire, doesn't
+// deep-link per section, and the recipient set is the resolver's job,
+// so subject / expiresInDays / restrictToSection / magicLinkRecipient
+// were never read. Passthrough keeps saved configs parsing.
 const sendPortalLinkSchema = z.object({
   message: z.string().min(1).default('Hi {{couple.primary_name}}, here is your event portal - please add your details when you have a moment.'),
-  /** Subject line override (default is "Your event portal — {business_name}"). */
-  subject: z.string().optional(),
-  /** Burn the magic link after N days. */
-  expiresInDays: z.number().int().min(1).max(365).optional(),
-  /** Deep-link to one portal section only. */
-  restrictToSection: z.enum(['onboarding', 'pre_event', 'day_of', 'people', 'songs', 'files', 'timeline']).optional(),
-  /** Send to primary only, both partners, or one specifically. */
-  magicLinkRecipient: z.enum(['primary', 'spouse', 'both']).optional(),
 }).passthrough()
 
 const sendPortalLink: ActionSpec<z.infer<typeof sendPortalLinkSchema>> = {
@@ -192,17 +184,14 @@ const sendPortalLink: ActionSpec<z.infer<typeof sendPortalLinkSchema>> = {
 // request_information
 // ────────────────────────────────────────────────────────────────
 
+// Only section + message remain: the email shows no due date and
+// there is no reminder / escalation machinery, so those fields were
+// never read. Passthrough keeps saved configs parsing.
 const requestInformationSchema = z.object({
   section: z.enum(['onboarding', 'pre_event', 'day_of', 'people', 'songs', 'files', 'timeline']),
   message: z.string().min(1).default(
     "Hi {{couple.primary_name}}, when you have a moment could you fill in the next section of your event portal? It helps me prepare for the big day.",
   ),
-  /** Date the MC needs this back by — shown in the email. */
-  dueDate: z.string().optional(),
-  /** none / weekly / every-2-days follow-up cadence if the couple ignores. */
-  reminderCadence: z.enum(['none', 'weekly', 'two_day']).optional(),
-  /** Auto-create an MC task if not completed within N days. */
-  escalateAfterDays: z.number().int().min(1).max(60).optional(),
 }).passthrough()
 
 const requestInformation: ActionSpec<z.infer<typeof requestInformationSchema>> = {
@@ -235,20 +224,23 @@ const requestInformation: ActionSpec<z.infer<typeof requestInformationSchema>> =
 // create_couple
 // ────────────────────────────────────────────────────────────────
 
+// Only the five fields the handler writes remain. The old eventType /
+// venue / partnerName / assignTags / autoCreateTask / dedupeOnEmail
+// fields were declared but never read (venue and events are created
+// separately; tags don't exist). Passthrough keeps configs saved
+// against them parsing.
 const createCoupleSchema = z.object({
   name: z.string().min(1),
-  email: z.string().email().optional(),
+  /**
+   * `''` is the chip's "added, nothing typed yet" value and means
+   * unset — rejecting it would fail the config parse and leave a
+   * silently dead automation. The handler already writes `''` for an
+   * absent email, so the two are the same row.
+   */
+  email: z.union([z.string().email(), z.literal('')]).optional(),
   phone: z.string().optional(),
   eventDate: z.string().optional(),
   leadSource: z.string().optional(),
-  eventType: z.string().optional(),
-  venue: z.string().optional(),
-  partnerName: z.string().optional(),
-  assignTags: z.array(z.string()).optional(),
-  /** Auto-create a "welcome call" task once the couple is added. */
-  autoCreateTask: z.boolean().optional(),
-  /** Skip creating duplicates if an existing couple shares the email. */
-  dedupeOnEmail: z.boolean().optional(),
 }).passthrough()
 
 const createCouple: ActionSpec<z.infer<typeof createCoupleSchema>> = {
@@ -281,14 +273,11 @@ const createCouple: ActionSpec<z.infer<typeof createCoupleSchema>> = {
 // pause_couple_automations
 // ────────────────────────────────────────────────────────────────
 
-const pauseCoupleAutomationsSchema = z.object({
-  /** Auto-resume after N days (omit for indefinite pause). */
-  pauseForDays: z.number().int().min(1).max(365).optional(),
-  /** Free-text reason — surfaces in the audit log. */
-  pauseReason: z.string().optional(),
-  /** Bucket for filtering: general / cancellation / on_hold / postponed. */
-  pauseCategory: z.enum(['general', 'cancellation', 'on_hold', 'postponed']).optional(),
-}).passthrough()
+// The pause is indefinite and uncategorised — the handler reads no
+// config at all, so the old pauseForDays / pauseReason / pauseCategory
+// fields were pure scaffolding. Passthrough keeps saved configs
+// parsing.
+const pauseCoupleAutomationsSchema = z.object({}).passthrough()
 
 const pauseCoupleAutomations: ActionSpec<z.infer<typeof pauseCoupleAutomationsSchema>> = {
   type: 'pause_couple_automations',

@@ -1,32 +1,34 @@
 /**
- * Automation canvas builder.
- *
- * Minimal layout: just the canvas + a contextual right inspector
- * when a node is selected. No persistent library sidebar - every
- * "add" action is a click-target placeholder on the canvas itself,
- * which opens a Notion-style command palette to pick from.
+ * Automation builder canvas.
  *
  *   ┌─ Header (back · name · saved · Test · Activate) ──┐
- *   │                                                   │
- *   │      [ Trigger card / Add trigger placeholder ]   │
+ *   │  · · · · · · · · · · · · · · · · · · · · · · · ·  │
+ *   │            TRIGGER                                │
+ *   │        [ New enquiry · from Referral ]            │
  *   │                  │                                │
- *   │      [ Action ]                                   │
- *   │                  │                                │
- *   │      [ + Add action ]                             │
+ *   │        [ Send welcome email ]                     │
+ *   │                  ┊                                │
+ *   │        [ + Add action ]                           │
  *   │                                                   │
+ *   │      ( Ask Zebri to build a step …        ↑ )     │
  *   └───────────────────────────────────────────────────┘
  *
- * Click the trigger card → trigger picker.
- * Click the "+ Add action" placeholder → action picker (flow + actions).
- * Click any existing node → right inspector opens with its config.
+ * Nodes drag freely, the canvas zooms, and edges follow. Config lives
+ * inside the node: clicking a card expands it in place to hold its
+ * filter chips or action form, so there is no side rail. That is the
+ * one change from the original canvas, and it exists because a fixed
+ * 340px rail was both too empty for a two-filter trigger and too
+ * narrow to write an email in.
  *
- * Engine semantics are unchanged.
+ * Engine semantics are unchanged: run order comes from `position` /
+ * `parent_action_id` / `branch_path`. Node x/y is presentation only,
+ * persisted per drag so a layout survives a reload.
  *
  * @module app/(dashboard)/automations/[id]/page
  */
-'use client'
+'use client';
 
-import '@xyflow/react/dist/style.css'
+import '@xyflow/react/dist/style.css';
 
 import {
   Background,
@@ -38,97 +40,123 @@ import {
   type Connection,
   type Edge,
   type Node,
-} from '@xyflow/react'
-import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+} from '@xyflow/react';
+import { useParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { createClient } from '@/lib/supabase/client'
+import { actionUi } from '@/lib/automations/actions/ui';
+import { triggerRegistry } from '@/lib/automations/triggers';
+import { createClient } from '@/lib/supabase/client';
 import type {
+  ActionType,
   AutomationRow,
   AutomationStatus,
   AutomationActionRow,
   BranchPath,
   TriggerType,
-} from '@/types/automations'
+} from '@/types/automations';
 
 import {
   deleteAutomationActionRow,
   renameAutomationAction,
   setAutomationStatusAction,
+  setAutomationTriggerAction,
   updateAutomationActionEdges,
   updateAutomationActionPosition,
-} from '../actions'
+} from '../actions';
 
-import { ActionPicker } from './action-picker'
-import { AiCopilotPanel } from './ai-copilot-panel'
-import { autoLayout } from './auto-layout'
-import { CanvasHeader } from './canvas-header'
-import { CanvasNode, type CanvasNodeData } from './canvas-node'
-import { CanvasSkeleton } from './canvas-skeleton'
-import { InspectorPanel } from './inspector-panel'
-import { RunHistoryPanel } from './runs-panel'
-import { TriggerPicker } from './trigger-picker'
+import { ActionPicker } from './action-picker';
+import { AiCopilotBar } from './ai-copilot-bar';
+import { ROW_GAP, autoLayout } from './auto-layout';
+import { CanvasHeader } from './canvas-header';
+import { CanvasSkeleton } from './canvas-skeleton';
+import { useQuestionnaireTemplateOptions } from './filter-options';
+import { FlowNode, FlowNodeContext, type FlowNodeApi, type FlowNodeData } from './flow-node';
+import { MODAL_ACTIONS, StepConfigForm } from './inspector-panel';
+import { RunHistoryPanel } from './runs-panel';
+import { stepSummary, stepTitle, type StepSummaryLabels } from './step-summary';
+import { TriggerCardBody, triggerSummaryLine, useTriggerFilters } from './trigger-card-body';
+import { TriggerPicker } from './trigger-picker';
 
-const TRIGGER_NODE_ID = '__trigger__'
-const ADD_ACTION_NODE_ID = '__add_action__'
+const TRIGGER_NODE_ID = '__trigger__';
+const ADD_ACTION_NODE_ID = '__add_action__';
 
-/**
- * Feature flag for the Zebri AI copilot on the automation canvas. Hidden for
- * now; set to `true` to bring the panel and its open button back.
- */
-const SHOW_ZEBRI_AI = false
+/** Feature flag for the Zebri AI bar. */
+const SHOW_ZEBRI_AI = true;
 
-const nodeTypes = { canvasNode: CanvasNode }
+const nodeTypes = { flowNode: FlowNode };
+
+/** Node stacking: dashed placeholder < resting card < the opened card. */
+const PLACEHOLDER_Z = 0;
+const CARD_Z = 1;
+const EXPANDED_Z = 20;
 
 export default function AutomationCanvasPage() {
   return (
     <ReactFlowProvider>
       <AutomationCanvas />
     </ReactFlowProvider>
-  )
+  );
 }
 
 function AutomationCanvas() {
-  const params = useParams<{ id: string }>()
-  const router = useRouter()
-  const automationId = params.id
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const automationId = params.id;
 
-  const [automation, setAutomation] = useState<AutomationRow | null>(null)
-  const [actions, setActions] = useState<AutomationActionRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [savedAt, setSavedAt] = useState<Date>(new Date())
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
-  const [triggerPickerAnchor, setTriggerPickerAnchor] = useState<{ x: number; y: number } | null>(null)
-  const [copilotOpen, setCopilotOpen] = useState(true)
-  const [runsOpen, setRunsOpen] = useState(false)
-  const [actionPickerCtx, setActionPickerCtx] = useState<
-    | null
-    | {
-        parentActionId: string | null
-        branchPath: BranchPath | null
-        afterPosition: number
-        positionX: number
-        positionY: number
-        anchor: { x: number; y: number }
-      }
-  >(null)
+  const [automation, setAutomation] = useState<AutomationRow | null>(null);
+  const [actions, setActions] = useState<AutomationActionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savedAt, setSavedAt] = useState<Date>(new Date());
+  // Opens collapsed: a canvas should show the shape of the flow first,
+  // and an auto-expanded trigger overlaps whatever sits under it.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Nodes whose config form has been mounted. A card animates open by
+  // growing a wrapper that is always in the DOM, but mounting every
+  // node's form up front would build dozens of forms nobody opens, so
+  // the body appears the first time a node is opened and stays after.
+  const [openedIds, setOpenedIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [runsOpen, setRunsOpen] = useState(false);
+  const [triggerPickerAnchor, setTriggerPickerAnchor] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [actionPickerCtx, setActionPickerCtx] = useState<null | {
+    parentActionId: string | null;
+    branchPath: BranchPath | null;
+    afterPosition: number;
+    positionX: number;
+    positionY: number;
+    anchor: { x: number; y: number };
+  }>(null);
 
   const reloadActions = useCallback(async () => {
-    const supabase = createClient()
+    const supabase = createClient();
     const { data } = await supabase
       .from('automation_actions' as never)
       .select('*')
       .eq('automation_id', automationId)
-      .order('position', { ascending: true })
-    setActions(((data as AutomationActionRow[] | null) ?? []))
-    setSavedAt(new Date())
-  }, [automationId])
+      .order('position', { ascending: true });
+    setActions((data as AutomationActionRow[] | null) ?? []);
+    setSavedAt(new Date());
+  }, [automationId]);
 
+  // Copilot edits can touch the trigger (automation row) as well as
+  // the steps, so its refresh callback reloads both.
+  const reloadWorkflow = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('automations' as never)
+      .select('*')
+      .eq('id', automationId)
+      .maybeSingle();
+    if (data) setAutomation(data as AutomationRow);
+    await reloadActions();
+  }, [automationId, reloadActions]);
 
   useEffect(() => {
-    let cancelled = false
-    const supabase = createClient()
-    setLoading(true)
+    let cancelled = false;
+    const supabase = createClient();
+    setLoading(true);
     Promise.all([
       supabase.from('automations' as never).select('*').eq('id', automationId).single(),
       supabase
@@ -137,100 +165,183 @@ function AutomationCanvas() {
         .eq('automation_id', automationId)
         .order('position', { ascending: true }),
     ]).then(([a, s]) => {
-      if (cancelled) return
-      setAutomation((a.data as AutomationRow | null) ?? null)
-      setActions(((s.data as AutomationActionRow[] | null) ?? []))
-      setLoading(false)
-    })
+      if (cancelled) return;
+      setAutomation((a.data as AutomationRow | null) ?? null);
+      setActions((s.data as AutomationActionRow[] | null) ?? []);
+      setLoading(false);
+    });
     return () => {
-      cancelled = true
-    }
-  }, [automationId])
+      cancelled = true;
+    };
+  }, [automationId]);
 
-  /* ── React Flow nodes/edges derived from actions + auto-layout ──── */
+  const triggerType = (automation?.trigger_type ?? 'unset') as TriggerType | 'unset';
+  const triggerIsSet = triggerType !== 'unset';
+  const triggerConfig = useMemo(
+    () => (automation?.trigger_config as Record<string, unknown>) ?? {},
+    [automation],
+  );
+  const filters = useTriggerFilters(triggerType as TriggerType, triggerConfig);
 
-  const layout = useMemo(() => autoLayout(actions), [actions])
+  /* ── Config autosave ───────────────────────────────────────── */
 
-  const triggerIsSet =
-    !!automation?.trigger_type && (automation.trigger_type as string) !== 'unset'
+  // The chip UI writes whole-config patches, so the trigger's save path
+  // lives here: the card body stays stateless and the page remains the
+  // single owner of the automation row.
+  const handleTriggerConfigChange = useCallback(
+    (next: Record<string, unknown>) => {
+      setAutomation((prev) => (prev ? { ...prev, trigger_config: next as never } : prev));
+      setSavedAt(new Date());
+      if (!triggerIsSet) return;
+      void setAutomationTriggerAction({
+        automationId,
+        triggerType: triggerType as string,
+        triggerConfig: next,
+      });
+    },
+    [automationId, triggerType, triggerIsSet],
+  );
+
+  /* ── Layout → nodes / edges ────────────────────────────────── */
+
+  const layout = useMemo(() => autoLayout(actions), [actions]);
 
   const tailContext = useMemo(() => {
-    // Compute where to anchor the "+ Add action" placeholder.
-    // Sits below the deepest top-level action, or directly under the
-    // trigger if there are no actions yet.
-    const topLevel = actions.filter((a) => !a.parent_action_id).sort((a, b) => a.position - b.position)
+    const topLevel = actions
+      .filter((a) => !a.parent_action_id)
+      .sort((a, b) => a.position - b.position);
     if (topLevel.length === 0) {
       return {
         parentActionId: null,
         branchPath: null as BranchPath | null,
         afterPosition: 100,
         x: layout.trigger.x,
-        y: layout.trigger.y + 160,
-      }
+        // A whole row's worth of clearance rather than one gap: with
+        // nothing built yet the trigger usually sits open, and the
+        // placeholder tucked right under it read as part of the card.
+        y: layout.trigger.y + ROW_GAP * 1.75,
+      };
     }
-    const last = topLevel[topLevel.length - 1]!
-    const lastPlaced = layout.actions[last.id] ?? { x: layout.trigger.x, y: 0 }
+    const last = topLevel[topLevel.length - 1]!;
+    const lastPlaced = layout.actions[last.id] ?? { x: layout.trigger.x, y: 0 };
     return {
       parentActionId: null,
       branchPath: null as BranchPath | null,
       afterPosition: last.position + 100,
       x: lastPlaced.x,
-      y: lastPlaced.y + 160,
-    }
-  }, [actions, layout])
+      // Clears every placed node: branch children hang below the last
+      // top-level action, so `lastPlaced.y + 160` overlapped them.
+      y: layout.tailY,
+    };
+  }, [actions, layout]);
 
-  const initialNodes = useMemo<Node<CanvasNodeData>[]>(() => {
-    if (!automation) return []
-    const triggerNode: Node<CanvasNodeData> = {
+  // Names for the ids a step config stores but cannot read. The
+  // picker already loads this list, so the card reuses it rather than
+  // fetching again.
+  const questionnaireOptions = useQuestionnaireTemplateOptions();
+  const summaryLabels = useMemo<StepSummaryLabels>(
+    () => ({
+      questionnaires: Object.fromEntries(questionnaireOptions.map((o) => [o.value, o.label])),
+    }),
+    [questionnaireOptions],
+  );
+
+  const initialNodes = useMemo<Node<FlowNodeData>[]>(() => {
+    if (!automation) return [];
+    const spec = triggerIsSet ? triggerRegistry[triggerType as TriggerType] : null;
+
+    const triggerNode: Node<FlowNodeData> = {
       id: TRIGGER_NODE_ID,
-      type: 'canvasNode',
+      type: 'flowNode',
       position: layout.trigger,
       deletable: false,
-      data: {
-        kind: 'trigger',
-        action: null,
-        triggerType: (automation.trigger_type as TriggerType | 'unset'),
-        triggerConfig: (automation.trigger_config as Record<string, unknown>) ?? {},
-      },
-    }
-    const actionNodes: Node<CanvasNodeData>[] = actions.map((action) => ({
+      zIndex: expandedId === TRIGGER_NODE_ID ? EXPANDED_Z : CARD_Z,
+      data: triggerIsSet
+        ? {
+            kind: 'trigger',
+            nodeId: TRIGGER_NODE_ID,
+            title: spec?.ui.label ?? (triggerType as string),
+            summary: triggerSummaryLine(filters, triggerConfig, spec?.ui.description ?? ''),
+            iconName: spec?.ui.icon,
+          }
+        : {
+            kind: 'trigger_empty',
+            nodeId: TRIGGER_NODE_ID,
+            title: 'Add trigger',
+            summary: 'Choose what starts this automation',
+          },
+    };
+
+    const actionNodes: Node<FlowNodeData>[] = actions.map((action) => ({
       id: action.id,
-      type: 'canvasNode',
+      type: 'flowNode',
       position: layout.actions[action.id] ?? { x: 0, y: 0 },
-      data: { kind: nodeKindFor(action.type), action } as CanvasNodeData,
-    }))
-    // Only show the "Add action" placeholder once the trigger is set.
-    const addActionNode: Node<CanvasNodeData> | null = triggerIsSet
+      zIndex: expandedId === action.id ? EXPANDED_Z : CARD_Z,
+      data: {
+        kind: action.type === 'branch' ? 'branch' : 'action',
+        nodeId: action.id,
+        title: stepTitle(action),
+        summary: stepSummary(action, summaryLabels),
+        iconName: actionIconName(action),
+        // These steps configure themselves in a modal, so the card
+        // opens it straight away rather than expanding onto a button
+        // that opens it.
+        modalOnly: MODAL_ACTIONS.has(action.type),
+        // `stop` takes no settings; `send_sms` cannot send yet, so
+        // there is nothing worth configuring on either.
+        noConfig: action.type === 'stop' || action.type === 'send_sms',
+      },
+    }));
+
+    const addNode: Node<FlowNodeData> | null = triggerIsSet
       ? {
           id: ADD_ACTION_NODE_ID,
-          type: 'canvasNode',
+          type: 'flowNode',
           position: { x: tailContext.x, y: tailContext.y },
           deletable: false,
           selectable: false,
-          data: { kind: 'add_action', action: null } as CanvasNodeData,
+          // Behind every real card: an opened step grows downward over
+          // this placeholder, and the placeholder must not cover it.
+          zIndex: PLACEHOLDER_Z,
+          data: { kind: 'add', nodeId: ADD_ACTION_NODE_ID, title: 'Add action', summary: '' },
         }
-      : null
-    return [triggerNode, ...actionNodes, ...(addActionNode ? [addActionNode] : [])]
-  }, [automation, actions, layout, triggerIsSet, tailContext])
+      : null;
+
+    return [triggerNode, ...actionNodes, ...(addNode ? [addNode] : [])];
+  }, [
+    automation,
+    actions,
+    layout,
+    triggerIsSet,
+    triggerType,
+    triggerConfig,
+    filters,
+    tailContext,
+    expandedId,
+    summaryLabels,
+  ]);
 
   const initialEdges = useMemo<Edge[]>(() => {
-    const topLevel = actions.filter((a) => !a.parent_action_id).sort((a, b) => a.position - b.position)
-    const edges: Edge[] = []
-    // Trigger → first top-level action, or trigger → add-action ghost.
+    const topLevel = actions
+      .filter((a) => !a.parent_action_id)
+      .sort((a, b) => a.position - b.position);
+    const edges: Edge[] = [];
+    const dashed = { strokeDasharray: '4 4', stroke: 'var(--color-border)' };
+
     if (triggerIsSet) {
       if (topLevel[0]) {
         edges.push({
           id: `${TRIGGER_NODE_ID}->${topLevel[0].id}`,
           source: TRIGGER_NODE_ID,
           target: topLevel[0].id,
-        })
+        });
       } else {
         edges.push({
           id: `${TRIGGER_NODE_ID}->add`,
           source: TRIGGER_NODE_ID,
           target: ADD_ACTION_NODE_ID,
-          style: { strokeDasharray: '4 4', stroke: 'var(--color-border)' },
-        })
+          style: dashed,
+        });
       }
     }
     for (let i = 0; i < topLevel.length - 1; i++) {
@@ -238,60 +349,59 @@ function AutomationCanvas() {
         id: `${topLevel[i]!.id}->${topLevel[i + 1]!.id}`,
         source: topLevel[i]!.id,
         target: topLevel[i + 1]!.id,
-      })
+      });
     }
-    // Tail edge: last top-level action → add-action ghost (dashed).
     if (triggerIsSet && topLevel.length > 0) {
       edges.push({
         id: `${topLevel[topLevel.length - 1]!.id}->add`,
         source: topLevel[topLevel.length - 1]!.id,
         target: ADD_ACTION_NODE_ID,
-        style: { strokeDasharray: '4 4', stroke: 'var(--color-border)' },
-      })
+        style: dashed,
+      });
     }
-    // Branch wiring identical to before.
     for (const action of actions.filter((a) => a.type === 'branch')) {
       for (const branchPath of ['yes', 'no'] as BranchPath[]) {
         const children = actions
           .filter((a) => a.parent_action_id === action.id && a.branch_path === branchPath)
-          .sort((a, b) => a.position - b.position)
+          .sort((a, b) => a.position - b.position);
         if (children[0]) {
           edges.push({
             id: `${action.id}-${branchPath}->${children[0].id}`,
             source: action.id,
             sourceHandle: branchPath,
             target: children[0].id,
-          })
+            label: branchPath === 'yes' ? 'Yes' : 'No',
+          });
         }
         for (let i = 0; i < children.length - 1; i++) {
           edges.push({
             id: `${children[i]!.id}->${children[i + 1]!.id}`,
             source: children[i]!.id,
             target: children[i + 1]!.id,
-          })
+          });
         }
       }
     }
-    return edges
-  }, [actions, triggerIsSet])
+    return edges;
+  }, [actions, triggerIsSet]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   useEffect(() => {
-    setNodes(initialNodes)
-  }, [initialNodes, setNodes])
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
   useEffect(() => {
-    setEdges(initialEdges)
-  }, [initialEdges, setEdges])
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
 
-  /* ── Drag → persist position ──────────────────────────────── */
+  /* ── Drag → persist position ───────────────────────────────── */
 
-  const dragPersistTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const dragPersistTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const handleNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChange>[0]) => {
-      onNodesChange(changes)
+      onNodesChange(changes);
       for (const c of changes) {
         if (
           c.type === 'position' &&
@@ -300,39 +410,141 @@ function AutomationCanvas() {
           c.id !== ADD_ACTION_NODE_ID &&
           !c.dragging
         ) {
-          const id = c.id
-          const pos = c.position
-          const existing = dragPersistTimeouts.current.get(id)
-          if (existing) clearTimeout(existing)
+          const id = c.id;
+          const pos = c.position;
+          // Mirror the drop into the local rows immediately. Without
+          // this the row keeps its stale position_x/y and the next
+          // setActions rebuilds from auto-layout, snapping the dragged
+          // node back to where it used to be.
+          setActions((prev) =>
+            prev.map((a) => (a.id === id ? { ...a, position_x: pos.x, position_y: pos.y } : a)),
+          );
+          const existing = dragPersistTimeouts.current.get(id);
+          if (existing) clearTimeout(existing);
           dragPersistTimeouts.current.set(
             id,
             setTimeout(() => {
-              void updateAutomationActionPosition({ actionId: id, positionX: pos.x, positionY: pos.y }).then(() => {
-                setSavedAt(new Date())
-              })
+              void updateAutomationActionPosition({
+                actionId: id,
+                positionX: pos.x,
+                positionY: pos.y,
+              }).then(() => setSavedAt(new Date()));
             }, 250),
-          )
+          );
         }
       }
     },
     [onNodesChange],
-  )
+  );
 
-  /* ── Click handling ──────────────────────────────────────── */
+  const onConnect = useCallback(
+    async (conn: Connection) => {
+      if (!conn.source || !conn.target) return;
+      if (conn.target === ADD_ACTION_NODE_ID) return;
+      setEdges((eds) => addEdge(conn, eds));
+      if (conn.source === TRIGGER_NODE_ID) {
+        await updateAutomationActionEdges({
+          actionId: conn.target,
+          parentActionId: null,
+          branchPath: null,
+        });
+      } else {
+        const branchPath = (conn.sourceHandle as BranchPath | undefined) ?? null;
+        await updateAutomationActionEdges({
+          actionId: conn.target,
+          parentActionId: branchPath ? conn.source : null,
+          branchPath,
+        });
+      }
+      void reloadActions();
+    },
+    [setEdges, reloadActions],
+  );
+
+  /* ── Node interaction ──────────────────────────────────────── */
+
+  const openTriggerPicker = useCallback((e: React.MouseEvent) => {
+    setTriggerPickerAnchor({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const nodeApi = useMemo<FlowNodeApi>(
+    () => ({
+      expandedId,
+      onToggle: (nodeId) => {
+        if (nodeId === TRIGGER_NODE_ID && !triggerIsSet) return;
+        setOpenedIds((prev) => (prev.has(nodeId) ? prev : new Set(prev).add(nodeId)));
+        setExpandedId((current) => (current === nodeId ? null : nodeId));
+      },
+      onDelete: (nodeId) => {
+        // Destructive, so remove optimistically and let the server
+        // catch up; a failed delete surfaces on the next reload.
+        setActions((prev) => prev.filter((a) => a.id !== nodeId));
+        setExpandedId((current) => (current === nodeId ? null : current));
+        setSavedAt(new Date());
+        void deleteAutomationActionRow({ actionId: nodeId, automationId });
+      },
+      onChangeTrigger: openTriggerPicker,
+      renderBody: (nodeId) => {
+        if (!openedIds.has(nodeId)) return null;
+        if (nodeId === TRIGGER_NODE_ID) {
+          if (!triggerIsSet) return null;
+          return (
+            <TriggerCardBody
+              automationId={automationId}
+              triggerType={triggerType as TriggerType}
+              config={triggerConfig}
+              filters={filters}
+              onConfigChange={handleTriggerConfigChange}
+            />
+          );
+        }
+        const action = actions.find((a) => a.id === nodeId);
+        if (!action) return null;
+        if (action.type === 'stop' || action.type === 'send_sms') return null;
+        return (
+          <StepConfigForm
+            selection={{ kind: 'action', action }}
+            automationId={automationId}
+            {...(MODAL_ACTIONS.has(action.type)
+              ? {
+                  modal: {
+                    open: expandedId === nodeId,
+                    onClose: () => setExpandedId(null),
+                  },
+                }
+              : {})}
+            onSaved={(payload) => {
+              if (payload.kind !== 'action') return;
+              setActions((prev) =>
+                prev.map((a) =>
+                  a.id === payload.actionId ? { ...a, config: payload.config as never } : a,
+                ),
+              );
+              setSavedAt(new Date());
+            }}
+          />
+        );
+      },
+    }),
+    [
+      expandedId,
+      openedIds,
+      automationId,
+      actions,
+      triggerIsSet,
+      triggerType,
+      triggerConfig,
+      filters,
+      handleTriggerConfigChange,
+      openTriggerPicker,
+    ],
+  );
 
   const onNodeClick = useCallback(
     (e: React.MouseEvent, node: Node) => {
-      if (node.id === TRIGGER_NODE_ID) {
-        // Trigger already chosen → open the inspector drawer to
-        // configure params. Unset → open the picker palette so the
-        // user can choose what fires this automation.
-        if (triggerIsSet) {
-          setSelectedNodeId(TRIGGER_NODE_ID)
-        } else {
-          setTriggerPickerAnchor({ x: e.clientX, y: e.clientY })
-          setSelectedNodeId(null)
-        }
-        return
+      if (node.id === TRIGGER_NODE_ID && !triggerIsSet) {
+        setTriggerPickerAnchor({ x: e.clientX, y: e.clientY });
+        return;
       }
       if (node.id === ADD_ACTION_NODE_ID) {
         setActionPickerCtx({
@@ -342,78 +554,32 @@ function AutomationCanvas() {
           positionX: tailContext.x,
           positionY: tailContext.y,
           anchor: { x: e.clientX, y: e.clientY },
-        })
-        setSelectedNodeId(null)
-        return
+        });
       }
-      setSelectedNodeId(node.id)
     },
     [tailContext, triggerIsSet],
-  )
-
-  /* ── Connect handles → persist parent_action_id ─────────────── */
-
-  const onConnect = useCallback(
-    async (conn: Connection) => {
-      if (!conn.source || !conn.target) return
-      if (conn.target === ADD_ACTION_NODE_ID) return
-      setEdges((eds) => addEdge(conn, eds))
-      if (conn.source === TRIGGER_NODE_ID) {
-        await updateAutomationActionEdges({ actionId: conn.target, parentActionId: null, branchPath: null })
-      } else {
-        const branchPath = (conn.sourceHandle as BranchPath | undefined) ?? null
-        await updateAutomationActionEdges({
-          actionId: conn.target,
-          parentActionId: branchPath ? conn.source : null,
-          branchPath,
-        })
-      }
-      void reloadActions()
-    },
-    [setEdges, reloadActions],
-  )
-
-  const inspectorSelection = useMemo<
-    | { kind: 'trigger'; triggerType: TriggerType; triggerConfig: Record<string, unknown> }
-    | { kind: 'action'; action: AutomationActionRow }
-    | null
-  >(() => {
-    if (!selectedNodeId || !automation) return null
-    if (selectedNodeId === ADD_ACTION_NODE_ID) return null
-    if (selectedNodeId === TRIGGER_NODE_ID) {
-      const triggerType = automation.trigger_type as TriggerType | 'unset'
-      if (triggerType === 'unset') return null
-      return {
-        kind: 'trigger',
-        triggerType,
-        triggerConfig: (automation.trigger_config as Record<string, unknown>) ?? {},
-      }
-    }
-    const action = actions.find((a) => a.id === selectedNodeId)
-    if (!action) return null
-    return { kind: 'action', action }
-  }, [selectedNodeId, automation, actions])
+  );
 
   async function handleRename(name: string) {
-    if (!automation || name === automation.name) return
-    await renameAutomationAction({ automationId, name })
-    setAutomation((prev) => (prev ? { ...prev, name } : prev))
-    setSavedAt(new Date())
+    if (!automation || name === automation.name) return;
+    await renameAutomationAction({ automationId, name });
+    setAutomation((prev) => (prev ? { ...prev, name } : prev));
+    setSavedAt(new Date());
   }
 
   async function handleToggleActive() {
-    if (!automation) return
-    const next: AutomationStatus = automation.status === 'active' ? 'paused' : 'active'
-    await setAutomationStatusAction({ automationId, status: next })
-    setAutomation((prev) => (prev ? { ...prev, status: next } : prev))
-    setSavedAt(new Date())
+    if (!automation) return;
+    const next: AutomationStatus = automation.status === 'active' ? 'paused' : 'active';
+    await setAutomationStatusAction({ automationId, status: next });
+    setAutomation((prev) => (prev ? { ...prev, status: next } : prev));
+    setSavedAt(new Date());
   }
 
-  if (loading) return <CanvasSkeleton />
-  if (!automation) return <div className="p-8 text-text-muted">Automation not found</div>
+  if (loading) return <CanvasSkeleton />;
+  if (!automation) return <div className="p-8 text-text-muted">Automation not found</div>;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       <CanvasHeader
         name={automation.name}
         status={automation.status}
@@ -423,23 +589,9 @@ function AutomationCanvas() {
         onToggleActive={handleToggleActive}
         onShowRuns={() => setRunsOpen(true)}
       />
-      <div className="flex flex-1 min-h-0 overflow-hidden relative">
-        {/* Zebri AI copilot temporarily hidden. Flip SHOW_ZEBRI_AI to re-enable. */}
-        {SHOW_ZEBRI_AI && (
-          <AiCopilotPanel open={copilotOpen} onClose={() => setCopilotOpen(false)} />
-        )}
-        <div className="flex-1 relative">
-          {SHOW_ZEBRI_AI && !copilotOpen && (
-            <button
-              type="button"
-              onClick={() => setCopilotOpen(true)}
-              className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-body bg-surface border border-border rounded-control hover:bg-surface-muted cursor-pointer transition shadow-sm"
-              title="Open Zebri AI"
-            >
-              <CopilotIcon />
-              Zebri AI
-            </button>
-          )}
+
+      <div className="relative min-h-0 flex-1">
+        <FlowNodeContext.Provider value={nodeApi}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -447,73 +599,51 @@ function AutomationCanvas() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
-            onPaneClick={() => setSelectedNodeId(null)}
+            // Clicking the canvas closes whatever is open. An expanded
+            // card overlaps the steps beneath it, and hunting for the
+            // chevron you opened it with is not how anyone dismisses
+            // something. Popovers inside the card portal to the body,
+            // so a click in one is not a pane click and does not
+            // collapse it mid-edit.
+            onPaneClick={() => setExpandedId(null)}
             nodeTypes={nodeTypes}
             fitView
             fitViewOptions={{ padding: 0.3, maxZoom: 1, minZoom: 0.5 }}
             minZoom={0.4}
             maxZoom={1.5}
             proOptions={{ hideAttribution: true }}
-            onNodesDelete={async (deletedNodes) => {
-              for (const n of deletedNodes) {
-                if (n.id === TRIGGER_NODE_ID || n.id === ADD_ACTION_NODE_ID) continue
-                await deleteAutomationActionRow({ actionId: n.id, automationId })
+            onNodesDelete={async (deleted) => {
+              for (const n of deleted) {
+                if (n.id === TRIGGER_NODE_ID || n.id === ADD_ACTION_NODE_ID) continue;
+                await deleteAutomationActionRow({ actionId: n.id, automationId });
               }
-              await reloadActions()
+              await reloadActions();
             }}
           >
             <Background gap={20} size={1} color="var(--color-border)" />
           </ReactFlow>
-        </div>
-        {inspectorSelection && (
-          <InspectorPanel
-            selection={inspectorSelection}
+        </FlowNodeContext.Provider>
+
+        {SHOW_ZEBRI_AI && (
+          <AiCopilotBar
             automationId={automationId}
-            onClose={() => setSelectedNodeId(null)}
-            onSaved={(payload) => {
-              // Optimistic patch - no network reload. The drawer's
-              // local form state already reflects the new config;
-              // we just have to mirror it into the page so the
-              // canvas / next-open shows it too.
-              if (payload.kind === 'trigger') {
-                setAutomation((prev) =>
-                  prev ? { ...prev, trigger_config: payload.triggerConfig as never } : prev,
-                )
-              } else {
-                setActions((prev) =>
-                  prev.map((a) =>
-                    a.id === payload.actionId ? { ...a, config: payload.config as never } : a,
-                  ),
-                )
-              }
-              setSavedAt(new Date())
-            }}
-            onChangeTrigger={(e) => {
-              setSelectedNodeId(null)
-              setTriggerPickerAnchor({ x: e.clientX, y: e.clientY })
-            }}
-            onDeleteAction={async (actionId) => {
-              // Delete is destructive - optimistically remove the
-              // action then fire the server action.
-              setActions((prev) => prev.filter((a) => a.id !== actionId))
-              setSelectedNodeId(null)
-              setSavedAt(new Date())
-              void deleteAutomationActionRow({ actionId, automationId })
-            }}
+            automationStatus={automation.status}
+            onWorkflowChanged={() => void reloadWorkflow()}
           />
         )}
-        <RunHistoryPanel
-          automationId={automationId}
-          actions={actions}
-          open={runsOpen}
-          onClose={() => setRunsOpen(false)}
-        />
       </div>
+
+      <RunHistoryPanel
+        automationId={automationId}
+        actions={actions}
+        open={runsOpen}
+        onClose={() => setRunsOpen(false)}
+      />
 
       {triggerPickerAnchor && (
         <TriggerPicker
           automationId={automationId}
-          currentTrigger={(automation.trigger_type as TriggerType | 'unset')}
+          currentTrigger={triggerType}
           anchor={triggerPickerAnchor}
           onClose={() => setTriggerPickerAnchor(null)}
           onPicked={(next) => {
@@ -521,13 +651,9 @@ function AutomationCanvas() {
               prev
                 ? { ...prev, trigger_type: next as TriggerType, trigger_config: {} as never }
                 : prev,
-            )
-            setTriggerPickerAnchor(null)
-            setSavedAt(new Date())
-            // Auto-open the inspector drawer for the new trigger so
-            // the user lands directly on the parameter form.
-            if (next !== 'unset') setSelectedNodeId(TRIGGER_NODE_ID)
-            else setSelectedNodeId(null)
+            );
+            setTriggerPickerAnchor(null);
+            setSavedAt(new Date());
           }}
         />
       )}
@@ -544,60 +670,35 @@ function AutomationCanvas() {
           onClose={() => setActionPickerCtx(null)}
           onCreated={(optimistic, serverResult) => {
             // The action's id is generated client-side and the server
-            // upserts under that id, so the optimistic row IS the
-            // real row - no swap needed. We only watch the server
-            // promise so we can roll back if the insert fails.
-            setActions((prev) => [...prev, optimistic])
-            setActionPickerCtx(null)
-            setSavedAt(new Date())
+            // upserts under that id, so the optimistic row IS the real
+            // row; we only watch the promise to roll back on failure.
+            setActions((prev) => [...prev, optimistic]);
+            setActionPickerCtx(null);
+            setSavedAt(new Date());
             void serverResult.then((res) => {
-              if (!res.ok) {
-                setActions((prev) => prev.filter((a) => a.id !== optimistic.id))
-              }
-            })
+              if (!res.ok) setActions((prev) => prev.filter((a) => a.id !== optimistic.id));
+            });
           }}
         />
       )}
     </div>
-  )
+  );
 }
 
-function CopilotIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-brand"
-      aria-hidden
-    >
-      <path d="M9.94 14.062 12 13l-2.06-1.062L8.875 9.875 7.812 11.94 5.75 13l2.062 1.062L8.875 16.125l1.063-2.063Z" />
-      <path d="M18 5v4" />
-      <path d="M16 7h4" />
-      <path d="M15 14v2" />
-      <path d="M14 15h2" />
-    </svg>
-  )
-}
-
-function nodeKindFor(type: AutomationActionRow['type']): CanvasNodeData['kind'] {
-  switch (type) {
+/** Lucide icon name for a step, from the client-safe action catalogue. */
+function actionIconName(action: AutomationActionRow): string | undefined {
+  switch (action.type) {
     case 'wait':
-      return 'wait'
+      return 'Clock';
     case 'branch':
-      return 'branch'
+      return 'GitBranch';
     case 'stop':
-      return 'stop'
+      return 'Square';
     case 'approval':
-      return 'approval'
+      return 'Pause';
     case 'sub_flow':
-      return 'action'
+      return 'Sparkles';
     default:
-      return 'action'
+      return actionUi[action.type as ActionType]?.icon;
   }
 }

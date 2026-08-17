@@ -13,7 +13,9 @@ import type { JSONContent } from '@tiptap/react'
 import { z } from 'zod'
 
 import { wrapTemplateHtml } from '@/lib/email'
-import { dispatchEmail } from '@/lib/email/dispatch'
+import { dispatchEmail, type EmailAttachment } from '@/lib/email/dispatch'
+import { wrapAutomationShell } from '@/lib/email/html'
+import { downloadStaticAttachments } from '@/lib/email/send-context'
 import { DEFAULT_FROM, resolveSender, type ResolvedSender } from '@/lib/email/sender-identity'
 import {
   detectMissingVariables,
@@ -70,19 +72,45 @@ const sendEmailConfigSchema = z.object({
   templateId: z.uuid().optional(),
   // Inline subject/body — optional now that a template can supply them.
   subject: z.string().min(1).max(200).optional(),
+  /**
+   * Rich body authored in the composer modal, as a TipTap doc. Renders
+   * through the same `renderEmailTemplate` path saved templates use, so
+   * bold / lists / links survive to the inbox.
+   */
+  content: z.record(z.string(), z.unknown()).optional(),
+  /**
+   * Legacy plain-text body, from before the composer existed. Still
+   * rendered (as text) when no `content` is present, so automations
+   * saved against it keep sending exactly what they sent.
+   */
   body: z.string().min(1).optional(),
+  /** `email_template_files` ids to attach. */
+  attachFiles: z.array(z.uuid()).optional(),
   /** Wrap the body in the standard Zebri-branded HTML shell. */
   wrap: z.boolean().default(true),
-  /** Override the Reply-To header (defaults to the MC's email). */
-  replyToOverride: z.string().email().optional(),
-  /** CC every vendor contact attached to the couple. */
+  /** Override the Reply-To header (defaults to the MC's email).
+   * `''` is the chip's "added but nothing typed yet" value and means
+   * unset — rejecting it would fail the whole run at send time. */
+  replyToOverride: z.union([z.string().email(), z.literal('')]).optional(),
+  /** CC the vendor contacts attached to this couple. */
   ccVendors: z.boolean().optional(),
+  /**
+   * Extra CC addresses the MC typed. `z.string()` rather than
+   * `z.email()` on purpose: a config that fails to parse is a silently
+   * dead automation, so anything without an `@` is dropped at send
+   * time instead of rejected at load time.
+   */
+  ccEmails: z.array(z.string()).optional(),
   /** BCC the MC so they retain a paper trail. */
   bccSelf: z.boolean().optional(),
+  /** Extra BCC addresses, same handling as {@link ccEmails}. */
+  bccEmails: z.array(z.string()).optional(),
   // ── Deferred fields ────────────────────────────────────────────
   // Accepted so previously saved configs keep parsing, but the
   // handler ignores them and the inspector no longer offers them:
-  //   - attach* needs PDF generation plumbed into Resend attachments
+  //   - attachQuote/Contract/Invoice/RunSheet need those documents
+  //     rendered to PDF first (static file attachments are wired —
+  //     see `attachFiles` above)
   //   - respectQuietHours only exists at the `wait` action level
   //   - respectCoupleDoNotEmail needs a couples.do_not_email column
   //   - previewBeforeSend duplicates the Approval-gate action
@@ -93,7 +121,6 @@ const sendEmailConfigSchema = z.object({
   attachContract: z.boolean().optional(),
   attachInvoice: z.boolean().optional(),
   attachRunSheet: z.boolean().optional(),
-  attachFiles: z.array(z.string()).optional(),
   respectQuietHours: z.boolean().optional(),
   respectCoupleDoNotEmail: z.boolean().optional(),
   previewBeforeSend: z.boolean().optional(),
@@ -133,6 +160,24 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       subject = renderEmailSubject(tplSubject, ctx, 'send')
       const rendered = renderEmailTemplate(tplContent, ctx, 'send').html
       html = config.wrap ? wrapTemplateHtml(rendered, ctx.mc.businessName, ctx.mc.branding) : rendered
+    } else if (config.content) {
+      // Composer body. Same render + missing-variable guard as the
+      // template path, so an unresolvable {{couple.x}} pauses the run
+      // instead of mailing a literal placeholder to the couple.
+      const doc = config.content as JSONContent
+      const rawSubject = config.subject ?? ''
+      const missing = detectMissingVariables({ subject: rawSubject, content: doc }, ctx)
+      if (missing.blocked) {
+        return {
+          kind: 'sleep',
+          reason: 'missing_variables',
+          wakeAt: '9999-12-31T00:00:00.000Z',
+          payload: { missing: missing.missing, couple_name: ctx.couple.name },
+        }
+      }
+      subject = renderEmailSubject(rawSubject, ctx, 'send')
+      const rendered = renderEmailTemplate(doc, ctx, 'send').html
+      html = config.wrap ? wrapTemplateHtml(rendered, ctx.mc.businessName, ctx.mc.branding) : rendered
     } else {
       subject = renderTemplate(config.subject ?? '', ctx)
       const bodyText = renderTemplate(config.body ?? '', ctx)
@@ -154,6 +199,14 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       sender = { transport: 'resend', from: DEFAULT_FROM }
     }
 
+    // Static attachments resolve once for every recipient. A file the
+    // MC has since deleted is skipped by the loader rather than
+    // failing the send — a missing PDF should not stop the email.
+    let attachments: EmailAttachment[] = []
+    if (config.attachFiles?.length && supabase) {
+      attachments = await downloadStaticAttachments(supabase, config.attachFiles)
+    }
+
     // Test run (manual "Test automation"): route the rendered email to
     // the MC instead of the couple, so they preview exactly what would
     // go out without ever contacting the couple. The subject is tagged
@@ -168,6 +221,7 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
         subject: `[Test] ${subject}`,
         html,
         replyTo: ctx.mc.email,
+        ...(attachments.length ? { attachments } : {}),
       })
       if (!res.ok || !res.messageId) {
         return { kind: 'error', message: `send_email (test): ${res.error ?? 'no message id'}` }
@@ -187,24 +241,32 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     }
 
     // CC list resolves once and applies to every outgoing message.
-    // Vendors already addressed directly are dropped so nobody gets
-    // the same email twice.
+    // Anyone already addressed directly is dropped so nobody gets the
+    // same email twice.
     let cc: string[] | undefined
+    const ccCandidates: string[] = []
     if (config.ccVendors) {
       const vendors = await resolveRecipients(supabase, ctx.couple, {
         roles: ['vendor'],
         fallback: 'skip',
       })
-      const direct = new Set(
-        recipients.map((r) => r.email?.toLowerCase()).filter(Boolean),
-      )
-      const ccList = [
-        ...new Set(
-          vendors
-            .map((v) => v.email)
-            .filter((e): e is string => !!e && !direct.has(e.toLowerCase())),
-        ),
-      ]
+      for (const v of vendors) if (v.email) ccCandidates.push(v.email)
+    }
+    // Typed addresses: anything without an `@` is a half-finished
+    // entry, not a recipient, so it is dropped rather than sent to.
+    for (const raw of config.ccEmails ?? []) {
+      const trimmed = raw.trim()
+      if (trimmed.includes('@')) ccCandidates.push(trimmed)
+    }
+    if (ccCandidates.length > 0) {
+      const direct = new Set(recipients.map((r) => r.email?.toLowerCase()).filter(Boolean))
+      const seen = new Set<string>()
+      const ccList = ccCandidates.filter((e) => {
+        const key = e.toLowerCase()
+        if (direct.has(key) || seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
       if (ccList.length > 0) cc = ccList
     }
 
@@ -215,15 +277,25 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
 
     const messageIds: string[] = []
     let lastError: string | null = null
-    const replyTo = config.replyToOverride ?? ctx.mc.email
+    const replyTo = config.replyToOverride || ctx.mc.email
+    // BCC: the MC's own address plus anything they typed, deduped.
+    const bcc = [
+      ...new Set(
+        [
+          ...(config.bccSelf && ctx.mc.email ? [ctx.mc.email] : []),
+          ...(config.bccEmails ?? []).map((e) => e.trim()).filter((e) => e.includes('@')),
+        ].map((e) => e),
+      ),
+    ]
     for (const r of addressable) {
       const res = await dispatchEmail(sender, {
         to: r.email!,
         subject,
         html,
         ...(replyTo ? { replyTo } : {}),
-        ...(config.bccSelf && ctx.mc.email ? { bcc: ctx.mc.email } : {}),
+        ...(bcc.length ? { bcc } : {}),
         ...(cc ? { cc } : {}),
+        ...(attachments.length ? { attachments } : {}),
       })
       if (!res.ok || !res.messageId) {
         lastError = res.error ?? 'Send returned no message id'
@@ -320,40 +392,21 @@ const sendWhatsApp: ActionSpec<z.infer<typeof deferredConfigSchema>> = {
   },
 }
 
-/**
- * Wraps a plain-text body (with `{{variables}}` already resolved)
- * in the standard Zebri-branded HTML shell so automation emails
- * match the look of system emails. Bodies preserve newlines.
- */
-export function wrapAutomationHtml(body: string, ctx: RunContext): string {
-  const safe = escapeHtml(body).replace(/\n/g, '<br>')
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
-        <tr><td style="padding:40px;font-size:15px;color:#374151;line-height:1.6;">${safe}</td></tr>
-        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
-          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${escapeHtml(ctx.mc.businessName)} via Zebri</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 export const messagingActions: Partial<Record<ActionType, ActionSpec<any>>> = {
   send_email: sendEmail,
   send_sms: sendSms,
   send_whatsapp: sendWhatsApp,
+}
+
+/**
+ * The plain-text automation shell, addressed by run context.
+ *
+ * A thin wrapper over {@link wrapAutomationShell}: the builder is
+ * pure and lives in `lib/email/html` so the in-app preview can import
+ * it without dragging Resend into the browser bundle, and every
+ * handler here already has a context rather than a bare name.
+ */
+export function wrapAutomationHtml(body: string, ctx: RunContext): string {
+  return wrapAutomationShell(body, ctx.mc.businessName)
 }

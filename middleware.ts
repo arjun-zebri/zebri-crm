@@ -25,6 +25,13 @@ const PUBLIC_ROUTES = [
   // token-gated (share_token is the capability), no session expected.
   "/questionnaire",
   "/api/questionnaire",
+  // Public lead-capture surfaces — the capture token is the capability,
+  // no session expected (prospective couples aren't logged in, and the
+  // embed is loaded cross-site so no cookie is sent anyway). Covers the
+  // hosted form + embed variant (`/lead/<token>`), the embed loader
+  // script (`/lead-embed.js`), and the submit endpoint (`/api/lead/*`).
+  "/lead",
+  "/api/lead",
   // Internal component showroom. The route itself 404s in production
   // (see app/design-system/layout.tsx); this entry only keeps the
   // dev-server middleware from bouncing it to /login.

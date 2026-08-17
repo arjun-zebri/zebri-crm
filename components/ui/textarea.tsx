@@ -1,44 +1,55 @@
-import { useId } from 'react';
-import type { TextareaHTMLAttributes, Ref } from 'react';
+import { useId, type Ref, type TextareaHTMLAttributes } from 'react';
 
 /**
- * Canonical multi-line text-input primitive.
+ * Multi-line text field.
  *
- * The `<textarea>` counterpart to {@link Input}: a label, optional help text,
- * and an optional error message, all wired with `aria-describedby`. Use this
- * everywhere a free-text paragraph is collected instead of bare `<textarea>`
- * markup, so multi-line fields share token-driven styling and dark-mode
- * behaviour. Unlike the other controls it is not a fixed 32px tall — a
- * paragraph field is inherently multi-line — but it keeps the same border,
- * radius, padding rhythm and focus treatment.
+ * `Input`'s sibling for prose — a note, a task description, an email
+ * body typed as plain text. Same chrome as `Input` (control radius,
+ * border darkening to `brand-fg` on focus, `danger` border on error,
+ * label / help / error linkage) so a form mixing the two reads as one
+ * set of fields.
+ *
+ * The one deliberate difference is height: a control height would
+ * defeat the purpose, so height comes from `rows` (4 by default) and
+ * the field resizes vertically only — horizontal resize would drag it
+ * out of whatever column it sits in. Pass `resizable={false}` in a
+ * fixed layout, where dragging it just pushes the rest around.
  *
  * @example
  * ```tsx
- * <Textarea label="Message" rows={4} value={message} onChange={…} />
+ * <Textarea
+ *   label="Note"
+ *   rows={5}
+ *   value={note}
+ *   onChange={(e) => setNote(e.target.value)}
+ * />
  * ```
  *
  * @module components/ui/textarea
  */
 
-export interface TextareaProps
-  extends TextareaHTMLAttributes<HTMLTextAreaElement> {
-  /** Visible label rendered above the textarea. Strongly preferred over placeholder-as-label. */
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  /** Visible label rendered above the field. Preferred over placeholder-as-label. */
   label?: string;
-  /** Helper text below the textarea. Hidden when `error` is set. */
+  /** Helper text below the field. Hidden when `error` is set. */
   help?: string;
   /** Error message rendered in place of `help`. Role=alert. */
   error?: string;
+  /**
+   * Whether the user can drag the field taller. Off for a field in a
+   * fixed layout (a modal, a card), where dragging it only pushes the
+   * rest of the form around.
+   */
+  resizable?: boolean;
   /** Optional ref to the underlying `<textarea>`. */
   ref?: Ref<HTMLTextAreaElement>;
 }
 
-// Matches the Input chrome (border darkens to brand-fg on focus, no ring) with
-// vertical padding + a minimum height for the multi-line body. Not resizable:
-// the field's height is a design decision (set `rows`), and a drag handle
-// fights the block editor canvas and the lead embed's iframe auto-sizing.
+// Matches `Input`, minus the fixed height: see input.tsx for why focus
+// darkens the border rather than adding a ring.
 const BASE_CLASSES =
-  'block w-full rounded-control bg-surface text-text placeholder:text-text-subtle ' +
-  'border transition-colors px-2.5 py-2 text-body min-h-20 resize-none ' +
+  'block w-full rounded-control bg-surface px-2.5 py-2 text-body text-text ' +
+  'placeholder:text-text-subtle border transition-colors ' +
   'focus-visible:outline-none ' +
   'disabled:opacity-50 disabled:cursor-not-allowed read-only:bg-surface-muted';
 
@@ -49,15 +60,16 @@ export function Textarea({
   help,
   error,
   className,
-  ref,
   rows = 4,
+  resizable = true,
+  ref,
   ...rest
 }: TextareaProps) {
   // `useId` keeps label/help/error linkage stable across SSR + client.
   const autoId = useId();
-  const areaId = id ?? autoId;
-  const helpId = help ? `${areaId}-help` : undefined;
-  const errorId = error ? `${areaId}-error` : undefined;
+  const fieldId = id ?? autoId;
+  const helpId = help ? `${fieldId}-help` : undefined;
+  const errorId = error ? `${fieldId}-error` : undefined;
   const describedBy = [helpId, errorId].filter(Boolean).join(' ') || undefined;
 
   const borderClass = error
@@ -67,18 +79,18 @@ export function Textarea({
   return (
     <div className={`space-y-1${className ? ` ${className}` : ''}`}>
       {label ? (
-        <label htmlFor={areaId} className="block text-body font-medium text-text">
+        <label htmlFor={fieldId} className="block text-body font-medium text-text">
           {label}
         </label>
       ) : null}
       <textarea
-        id={areaId}
+        {...rest}
+        id={fieldId}
         ref={ref}
         rows={rows}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`${BASE_CLASSES} ${borderClass}`}
-        {...rest}
+        className={`${BASE_CLASSES} ${resizable ? 'resize-y' : 'resize-none'} ${borderClass}`}
       />
       {error ? (
         <p id={errorId} role="alert" className="text-body text-danger">

@@ -49,7 +49,6 @@ export type TriggerType =
   | 'custom_field_changed'
   // Pipeline (couples)
   | 'couple_stage_changed'
-  | 'booking_cancelled'
   // Invoices / payments
   | 'invoice_created'
   | 'invoice_sent'
@@ -473,6 +472,18 @@ export interface RunContext {
    */
   invoice: InvoiceSnapshot | null
 
+  /**
+   * When the couple's most recently signed contract was signed, or
+   * null if they have none.
+   *
+   * Optional so a hand-built context (tests, previews) need not carry
+   * it. The `has_signed_contract` branch condition reads this: it used
+   * to look for an `actionResults.contract_signed_at` and a payload
+   * `contract_signed` that nothing anywhere writes, so it could never
+   * be true.
+   */
+  contractSignedAt?: string | null | undefined
+
   /** The MC's profile / branding for `{{mc.*}}` variables. */
   mc: McSnapshot
 
@@ -488,12 +499,33 @@ export interface CoupleSnapshot {
   eventDate: string | null
   venue: string | null
   status: string
+  /**
+   * Where the enquiry came from. Optional so a hand-built snapshot
+   * (tests, previews) need not carry it; the branch condition reads
+   * it as "not set" when absent.
+   */
+  leadSource?: string | null | undefined
   primaryName: string
   spouseName: string | null
   spouseEmail: string | null
   spousePhone: string | null
   /** Couple-local IANA timezone for quiet-hours math. */
   timezone: string
+  /**
+   * Portal tokens, for `{{portal.link}}` / `{{portal.partner_link}}`.
+   * `portalEnabled` gates both: the portal RPCs refuse a token whose
+   * couple has sharing off, so a link built from one would 404.
+   */
+  portalToken?: string | null | undefined
+  secondaryPortalToken?: string | null | undefined
+  portalEnabled?: boolean | undefined
+  /**
+   * The primary event's timeline share token, for
+   * `{{portal.vendor_link}}`. Its own enable flag defaults to false,
+   * hence the pair.
+   */
+  runSheetToken?: string | null | undefined
+  runSheetEnabled?: boolean | undefined
 }
 
 /**
@@ -508,10 +540,22 @@ export interface InvoiceSnapshot {
   id: string
   /** paid_at timestamp of the first (position=1) stage, or null if unpaid. */
   firstStagePaidAt: string | null
+  /**
+   * The invoice's own status (`paid`, `deposit_paid`, `sent`, …), for
+   * the "invoice is paid in full" branch condition. Optional so a
+   * hand-built context need not carry it.
+   */
+  status?: string | undefined
 }
 
 export interface McSnapshot {
   userId: string
+  /**
+   * Where the review-request automation sends couples, from settings.
+   * Optional: an MC who has not set one has no link, and the copy
+   * that uses it pauses rather than mailing a dead URL.
+   */
+  reviewLink?: string | null | undefined
   businessName: string
   contactName: string
   email: string
@@ -608,11 +652,14 @@ export interface BranchActionConfig {
  * predicate evaluator can pattern-match without ambiguity.
  */
 export type BranchPredicate =
-  | { kind: 'couple_field'; field: string; op: ComparisonOp; value: Json }
+  // `value` is optional because `is_set` / `is_unset` take no operand;
+  // requiring it killed any branch saved with either of them.
+  | { kind: 'couple_field'; field: string; op: ComparisonOp; value?: Json }
   | { kind: 'event_in'; op: '<' | '<=' | '>' | '>='; days: number }
   | { kind: 'has_paid_deposit' }
+  | { kind: 'has_paid_invoice' }
   | { kind: 'has_signed_contract' }
-  | { kind: 'custom_field'; key: string; op: ComparisonOp; value: Json }
+  | { kind: 'custom_field'; key: string; op: ComparisonOp; value?: Json }
   | { kind: 'and'; predicates: BranchPredicate[] }
   | { kind: 'or'; predicates: BranchPredicate[] }
   | { kind: 'not'; predicate: BranchPredicate }

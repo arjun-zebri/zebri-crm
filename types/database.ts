@@ -61,6 +61,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_copilot_usage: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          message_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day?: string
+          id?: string
+          message_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          message_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       automation_actions: {
         Row: {
           automation_id: string
@@ -2616,6 +2643,7 @@ export type Database = {
       get_public_questionnaire: { Args: { token: string }; Returns: Json }
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }
+      increment_ai_copilot_usage: { Args: never; Returns: number }
       is_own_couple: { Args: { couple_id_value: string }; Returns: boolean }
       is_valid_portal_token: { Args: { token_value: string }; Returns: boolean }
       mark_contract_reminder_sent: {

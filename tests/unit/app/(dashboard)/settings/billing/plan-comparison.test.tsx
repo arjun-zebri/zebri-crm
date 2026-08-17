@@ -130,7 +130,7 @@ describe('PlanComparisonDialog — column tint position', () => {
     ['pro', '60%'],
     ['max', '80%'],
   ] as const)('tint sits at %s for currentPlan=%s', (currentPlan, expectedLeft) => {
-    const { container } = render(
+    render(
       <PlanComparisonDialog
         open
         onClose={vi.fn()}
@@ -140,10 +140,13 @@ describe('PlanComparisonDialog — column tint position', () => {
         onRequestCancel={vi.fn()}
       />,
     );
+    // Queried from the document, not RTL's container: Modal portals to
+    // the body, so its contents sit outside the render root.
+    //
     // Two elements carry aria-hidden in this surface (the tint div
     // and an empty <th> in the action row). Pick the DIV — it's the
     // one with the inline `left` style we're asserting on.
-    const tints = container.querySelectorAll<HTMLElement>('div[aria-hidden="true"]');
+    const tints = document.body.querySelectorAll<HTMLElement>('div[aria-hidden="true"]');
     expect(tints.length).toBeGreaterThan(0);
     expect(tints[0]?.style.left).toBe(expectedLeft);
   });

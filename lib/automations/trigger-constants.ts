@@ -79,39 +79,18 @@ export const CONTACT_CATEGORY_LABELS: Record<ContactCategory, string> = {
   other: 'Other',
 }
 
-/** Common AU lead-source slugs for the `new_enquiry` filter. */
-export const LEAD_SOURCES = [
-  'website',
-  'instagram',
-  'facebook',
-  'tiktok',
-  'google',
-  'easy_weddings',
-  'wedding_wire',
-  'abia',
-  'heart_wedding',
-  'referral',
-  'word_of_mouth',
-  'past_couple',
-  'other',
-] as const
-export type LeadSource = (typeof LEAD_SOURCES)[number]
-
-export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
-  website: 'Website form',
-  instagram: 'Instagram',
-  facebook: 'Facebook',
-  tiktok: 'TikTok',
-  google: 'Google search',
-  easy_weddings: 'Easy Weddings',
-  wedding_wire: 'WeddingWire',
-  abia: 'ABIA',
-  heart_wedding: 'Heart Wedding directory',
-  referral: 'Referral (vendor / planner)',
-  word_of_mouth: 'Word of mouth',
-  past_couple: 'Past couple referral',
-  other: 'Other',
-}
+/**
+ * Lead sources, re-exported from the couple domain module.
+ *
+ * These are not a free list of channels an MC might imagine: they are
+ * exactly the values that can end up in `couples.lead_source`. Only two
+ * writers exist: the couple modal (which offers this list) and
+ * `submit_lead()` (which hard-codes `'website'`). An automation filter
+ * offering anything else would be a filter that can never match, so the
+ * enum lives in one place and both sides read it.
+ */
+export { LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple'
+export type { LeadSource } from '@/types/couple'
 
 /** Time units used by amount + unit triggers. */
 export const TIME_UNITS = ['minutes', 'hours', 'days', 'weeks'] as const
@@ -159,6 +138,11 @@ export function dateMatchesDayOfWeek(isoDate: string | null | undefined, bucket:
 }
 
 /** Numeric comparison operators used by min/max amount + days filters. */
+/**
+ * Every comparison the matcher understands. Kept complete so a config
+ * saved against `gt` / `lt` / `eq` still parses **and still matches**
+ * — they simply left the picker (see {@link OFFERED_COMPARISON_OPS}).
+ */
 export const COMPARISON_OPS = ['gte', 'gt', 'lte', 'lt', 'eq'] as const
 export type ComparisonOp = (typeof COMPARISON_OPS)[number]
 
@@ -169,6 +153,23 @@ export const COMPARISON_OP_LABELS: Record<ComparisonOp, string> = {
   lt: 'less than',
   eq: 'exactly',
 }
+
+/**
+ * The comparisons a numeric filter actually offers.
+ *
+ * `gt` and `lt` are dropped as off-by-one twins of `gte` / `lte` —
+ * nobody setting up "invoices over $2,000" is distinguishing $2,000
+ * from $2,000.01, and showing both makes a reader stop to work out
+ * whether the boundary is included.
+ *
+ * The three kept all earn their place. "The wedding is inside 90
+ * days" and "the wedding is still over a year out" are different
+ * automations, and `eq` pins an exact figure — a fixed package price,
+ * a specific day count. Note it is a narrow instrument on a date: a
+ * trigger firing on a couple's activity only matches `eq` when that
+ * activity lands on precisely the configured day.
+ */
+export const OFFERED_COMPARISON_OPS = ['lte', 'gte', 'eq'] as const
 
 export function compareNumber(actual: number, op: ComparisonOp, threshold: number): boolean {
   switch (op) {
@@ -221,67 +222,35 @@ export const SEASON_LABELS: Record<Season, string> = {
   off: 'Off (Jun–Aug)',
 }
 
-/** Booking package tiers — generic, not tied to a saved template. */
-export const BOOKING_TIERS = ['bronze', 'silver', 'gold', 'platinum', 'custom'] as const
-export type BookingTier = (typeof BOOKING_TIERS)[number]
-
-export const BOOKING_TIER_LABELS: Record<BookingTier, string> = {
-  bronze: 'Bronze',
-  silver: 'Silver',
-  gold: 'Gold',
-  platinum: 'Platinum',
-  custom: 'Custom / other',
+/**
+ * Month slug of an ISO date, or `null` when the date is absent or
+ * unparseable.
+ *
+ * Read in UTC to agree with {@link dateMatchesDayOfWeek}: a `date`
+ * column serialises as `YYYY-MM-DD`, which parses to UTC midnight, so
+ * a local-time read would shift the month for anyone west of UTC on
+ * the first of the month.
+ */
+export function monthOfDate(isoDate: string | null | undefined): Month | null {
+  if (!isoDate) return null
+  const d = new Date(isoDate)
+  if (Number.isNaN(d.getTime())) return null
+  return MONTHS[d.getUTCMonth()] ?? null
 }
 
-/** Task category slugs used by create_task + task_created triggers. */
-export const TASK_CATEGORIES = [
-  'admin',
-  'ceremony',
-  'coordination',
-  'followup',
-  'compliance',
-  'travel',
-  'other',
-] as const
-export type TaskCategory = (typeof TASK_CATEGORIES)[number]
-
-export const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
-  admin: 'Admin',
-  ceremony: 'Ceremony',
-  coordination: 'Coordination',
-  followup: 'Follow-up',
-  compliance: 'Compliance / paperwork',
-  travel: 'Travel',
-  other: 'Other',
-}
-
-/** Task priority levels. */
-export const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const
-export type TaskPriority = (typeof TASK_PRIORITIES)[number]
-
-export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-  urgent: 'Urgent',
-}
-
-/** Payment methods seen on invoices / received payments. */
-export const PAYMENT_METHODS = [
-  'stripe_card',
-  'bank_transfer',
-  'cash',
-  'cheque',
-  'other',
-] as const
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
-
-export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  stripe_card: 'Stripe card',
-  bank_transfer: 'Bank transfer',
-  cash: 'Cash',
-  cheque: 'Cheque',
-  other: 'Other',
+/**
+ * AU wedding-season bucket of an ISO date, or `null` when the date is
+ * absent or unparseable. Never returns `'any'`, since that slug means "no
+ * filter", not a season a date can fall in.
+ */
+export function seasonOfDate(isoDate: string | null | undefined): Exclude<Season, 'any'> | null {
+  if (!isoDate) return null
+  const d = new Date(isoDate)
+  if (Number.isNaN(d.getTime())) return null
+  const month = d.getUTCMonth() + 1
+  if (month === 5 || month === 9) return 'shoulder'
+  if (month >= 6 && month <= 8) return 'off'
+  return 'peak'
 }
 
 /** Stripe-style payment failure reasons surfaced to the picker. */
@@ -416,26 +385,6 @@ export const EVENT_CHANGE_FIELD_LABELS: Record<EventChangeField, string> = {
   notes: 'Notes',
 }
 
-/** Cancellation reasons surfaced on the booking_cancelled trigger. */
-export const CANCELLATION_REASONS = [
-  'couple_changed_mind',
-  'wedding_postponed',
-  'wedding_cancelled',
-  'mc_unavailable',
-  'budget',
-  'other',
-] as const
-export type CancellationReason = (typeof CANCELLATION_REASONS)[number]
-
-export const CANCELLATION_REASON_LABELS: Record<CancellationReason, string> = {
-  couple_changed_mind: 'Couple changed their mind',
-  wedding_postponed: 'Wedding postponed',
-  wedding_cancelled: 'Wedding cancelled',
-  mc_unavailable: 'You became unavailable',
-  budget: 'Budget',
-  other: 'Other',
-}
-
 /** AU paperwork milestone slugs (NOIM, DONLIM, certificates). */
 export const COMPLIANCE_MILESTONES = [
   'noim_lodged',
@@ -541,17 +490,6 @@ export const NOTE_CATEGORY_LABELS: Record<NoteCategory, string> = {
   followup: 'Follow-up',
   risk: 'Risk / watchout',
   private: 'Private (never visible to couple)',
-}
-
-/** Pause categories for pause_couple_automations. */
-export const PAUSE_CATEGORIES = ['general', 'cancellation', 'on_hold', 'postponed'] as const
-export type PauseCategory = (typeof PAUSE_CATEGORIES)[number]
-
-export const PAUSE_CATEGORY_LABELS: Record<PauseCategory, string> = {
-  general: 'General pause',
-  cancellation: 'Cancellation',
-  on_hold: 'On hold',
-  postponed: 'Wedding postponed',
 }
 
 /** Run-sheet PDF format variants. */

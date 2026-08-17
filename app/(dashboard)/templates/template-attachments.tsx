@@ -21,7 +21,12 @@ import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
 import type { TemplateFileRow } from './attachment-actions'
-import { useDeleteTemplateFile, useTemplateFiles, useUploadTemplateFile } from './use-template-files'
+import {
+  useDeleteTemplateFile,
+  useFilesByIds,
+  useTemplateFiles,
+  useUploadTemplateFile,
+} from './use-template-files'
 
 /** Mirrors the bucket's MIME whitelist for the picker dialog. */
 const ACCEPT = '.pdf,.docx,.png,.jpg,.jpeg'
@@ -41,20 +46,45 @@ interface TemplateAttachmentsProps {
    * the draft is discarded. Only fires for `templateId === null` flows.
    */
   onPendingChange?: (fileIds: string[]) => void
+  /**
+   * File ids the caller persists itself, for owners that are not a
+   * template row — the automation email composer keeps them in the
+   * action config. Supplying this hydrates the list on mount, so
+   * reopening the editor still shows what is attached.
+   */
+  fileIds?: string[]
+  /** Copy under an empty list; the default speaks about templates. */
+  emptyHint?: string
 }
 
-export function TemplateAttachments({ templateId, onPendingChange }: TemplateAttachmentsProps) {
+export function TemplateAttachments({
+  templateId,
+  onPendingChange,
+  fileIds,
+  emptyHint,
+}: TemplateAttachmentsProps) {
   const { toast } = useToast()
   const supabase = useMemo(() => createClient(), [])
   const inputRef = useRef<HTMLInputElement>(null)
   const { data: savedFiles = [] } = useTemplateFiles(templateId)
+  // Caller-owned ids (automation composer). Merged with the local
+  // pending list so a file uploaded this session shows immediately,
+  // before the query has refetched.
+  const { data: byIdFiles = [] } = useFilesByIds(fileIds ?? [])
   // Draft uploads for an unsaved template, held locally until save links
   // them (the saved-files query can't see unlinked rows by template id).
   const [pendingFiles, setPendingFiles] = useState<TemplateFileRow[]>([])
   const upload = useUploadTemplateFile(templateId)
   const remove = useDeleteTemplateFile(templateId)
 
-  const files = templateId ? savedFiles : pendingFiles
+  const files = templateId
+    ? savedFiles
+    : fileIds
+      ? [
+          ...byIdFiles,
+          ...pendingFiles.filter((p) => !byIdFiles.some((b) => b.id === p.id)),
+        ]
+      : pendingFiles
 
   const setPending = (next: TemplateFileRow[]) => {
     setPendingFiles(next)
@@ -118,7 +148,7 @@ export function TemplateAttachments({ templateId, onPendingChange }: TemplateAtt
       />
       {files.length === 0 ? (
         <p className="text-body text-text-subtle">
-          Files attached here are included every time this template is sent.
+          {emptyHint ?? 'Files attached here are included every time this template is sent.'}
         </p>
       ) : (
         <ul className="space-y-1">

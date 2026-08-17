@@ -14,7 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Demo, DemoGrid, DemoRow, Rule, Spec } from './showroom';
 
 /**
- * Form primitives: Button, Input, Select, Checkbox, DatePicker.
+ * Form primitives: Button, Input, Textarea, Select, Checkbox,
+ * DatePicker.
  *
  * Every variant and state is rendered, so a missing or off-pattern
  * combination is visible rather than inferred from the type signature.
@@ -101,7 +102,7 @@ export function PrimitivesForms() {
       </Spec>
 
       <Spec name="Textarea" file="components/ui/textarea.tsx"
-        importPath="@/components/ui/textarea" description="The multi-line Input. Same chrome; its height is set by rows and it is not user-resizable.">
+        importPath="@/components/ui/textarea" description="Input's sibling for prose. Same chrome; height comes from rows, and it resizes vertically only.">
         <Rule>
           Not 32px tall. A paragraph field is inherently multi-line, so it is the one control that
           breaks the single-height rule, keeping only the border, radius, padding and focus
@@ -110,13 +111,16 @@ export function PrimitivesForms() {
         </Rule>
         <DemoGrid cols={3}>
           <Demo label="Default">
-            <Textarea label="Message" placeholder="Tell us about your day" />
+            <Textarea label="Note" placeholder="Anything worth remembering" />
           </Demo>
           <Demo label="With help text">
-            <Textarea label="Notes" help="Only you can see these." rows={3} />
+            <Textarea label="Description" rows={3} help="Shown on the task when it lands." />
           </Demo>
           <Demo label="Error">
-            <Textarea label="Message" error="Please add a short message." />
+            <Textarea label="Message" error="A message is required." />
+          </Demo>
+          <Demo label="Fixed height">
+            <Textarea label="Description" rows={3} resizable={false} />
           </Demo>
         </DemoGrid>
       </Spec>

@@ -64,4 +64,39 @@ test.describe('Lead capture', () => {
     await expect(embed.getByRole('heading', { level: 1 })).toHaveCount(0);
     await embed.close();
   });
+
+  test('embed is publicly reachable and frameable for a logged-out visitor', async ({
+    page,
+    browser,
+  }) => {
+    // The MC session is only needed to read the embed URL from Settings.
+    await login(page);
+    await page.goto('/settings?tab=lead-capture', { waitUntil: 'networkidle' });
+    const hostedUrl = await page.getByLabel('Hosted link').inputValue();
+    const embedUrl = `${hostedUrl}?embed=1`;
+
+    // A genuinely unauthenticated visitor needs a FRESH browser context, so
+    // none of the MC's cookies leak in. Reusing the shared `context` (as the
+    // other tests do) sends the MC's session and masks the middleware auth
+    // wall — that's the gap that let the "refused to connect" redirect ship.
+    const freshCtx = await browser.newContext();
+    try {
+      const visitor = await freshCtx.newPage();
+      const resp = await visitor.goto(embedUrl, { waitUntil: 'networkidle' });
+
+      // No 307 to /login: we land on the form, not the sign-in page.
+      expect(new URL(visitor.url()).pathname).toContain('/lead/');
+      await expect(
+        visitor.getByRole('button', { name: /send enquiry/i }),
+      ).toBeVisible();
+
+      // Frameable on any MC site: the clickjacking DENY is lifted here and
+      // CSP opens `frame-ancestors` instead.
+      const headers = resp?.headers() ?? {};
+      expect(headers['x-frame-options']).toBeUndefined();
+      expect(headers['content-security-policy']).toContain('frame-ancestors');
+    } finally {
+      await freshCtx.close();
+    }
+  });
 });

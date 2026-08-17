@@ -55,12 +55,13 @@ async function emailRunSheetLink(
 // send_contract
 // ────────────────────────────────────────────────────────────────
 
+// Only `contractId` remains: the handler sends the contract as saved,
+// so the old templateId / signersRequired / expiryDays / customMessage
+// fields were declared and never read (signers and expiry belong to
+// the contract itself, and the email's copy is `contractHtml`'s).
+// Passthrough keeps configs saved against them parsing.
 const sendContractSchema = z.object({
   contractId: z.string().uuid().optional(),
-  templateId: z.string().optional(),
-  signersRequired: z.enum(['primary', 'spouse', 'both']).optional(),
-  expiryDays: z.number().int().min(1).max(365).optional(),
-  customMessage: z.string().optional(),
 }).passthrough()
 
 const sendContract: ActionSpec<z.infer<typeof sendContractSchema>> = {
@@ -97,15 +98,12 @@ const sendContract: ActionSpec<z.infer<typeof sendContractSchema>> = {
 // send_invoice
 // ────────────────────────────────────────────────────────────────
 
+// Only `invoiceId` remains: the handler re-sends the invoice as
+// saved, so the old paymentMethods / dueInDays / latePaymentFeePercent
+// / customMessage fields were never read. Passthrough keeps configs
+// saved against them parsing.
 const sendInvoiceSchema = z.object({
   invoiceId: z.string().uuid().optional(),
-  /** Toggle which payment methods are surfaced on the public invoice page. */
-  paymentMethods: z.array(z.enum(['stripe_card', 'bank_transfer', 'cash', 'cheque', 'other'])).optional(),
-  /** Override the due-in days. */
-  dueInDays: z.number().int().min(0).max(365).optional(),
-  /** Show a late-payment fee notice (%). */
-  latePaymentFeePercent: z.number().min(0).max(100).optional(),
-  customMessage: z.string().optional(),
 }).passthrough()
 
 const sendInvoice: ActionSpec<z.infer<typeof sendInvoiceSchema>> = {
@@ -139,14 +137,10 @@ const sendInvoice: ActionSpec<z.infer<typeof sendInvoiceSchema>> = {
 // trigger_payment_reminder
 // ────────────────────────────────────────────────────────────────
 
-const triggerPaymentReminderSchema = sendInvoiceSchema.extend({
-  /** Friendly / firm / final escalation tone. */
-  tone: z.enum(['friendly', 'firm', 'final']).optional(),
-  /** Escalation level for tracking (1 → first nudge, 3 → final notice). */
-  escalationLevel: z.number().int().min(1).max(5).optional(),
-  /** Attach a separate late-fee notice PDF. */
-  attachLateFeeNotice: z.boolean().optional(),
-})
+// The old tone / escalationLevel / attachLateFeeNotice fields are
+// gone: the handler delegates straight to send_invoice and never read
+// them. Passthrough keeps configs saved against them parsing.
+const triggerPaymentReminderSchema = sendInvoiceSchema
 
 const triggerPaymentReminder: ActionSpec<z.infer<typeof triggerPaymentReminderSchema>> = {
   type: 'trigger_payment_reminder',
@@ -154,7 +148,7 @@ const triggerPaymentReminder: ActionSpec<z.infer<typeof triggerPaymentReminderSc
   async handler(ctx, config) {
     return sendInvoice.handler(ctx, config)
   },
-  ui: { category: 'payments', label: 'Send payment reminder', description: 'Re-send the most recent unpaid invoice', icon: 'AlertTriangle' },
+  ui: { category: 'payments', label: 'Send payment reminder', description: "Re-send the couple's most recent invoice", icon: 'AlertTriangle' },
 }
 
 // ────────────────────────────────────────────────────────────────

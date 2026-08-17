@@ -38,7 +38,6 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   // Lead / pipeline
   'new_enquiry',
   'couple_stage_changed',
-  'booking_cancelled',
   // Invoices / payments
   'invoice_created',
   'invoice_sent',
@@ -69,8 +68,11 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   'time_after_event', // T2
   'anniversary_of_event', // T3
   // Portal (DB-trigger emitted)
-  'couple_uploaded_file', // P1
-  'couple_added_song_to_playlist', // P2
+  // `couple_uploaded_file` (P1) and `couple_added_song_to_playlist`
+  // (P2) are deliberately absent: they fire on the same inserts as
+  // `section_completed` ("Portal item added") and existed only to
+  // carry a file-size / playlist-slot filter, which now lives there.
+  // Their specs and emitters stay, so saved automations keep firing.
   'couple_completed_vows', // P3
   'questionnaire_completed', // P4 — emitted by tg_couple_questionnaires_emit_completed
 ])
@@ -81,6 +83,28 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
  *
  * `send_sms` is included but flagged `comingSoon` in its spec — it
  * renders greyed/disabled rather than hidden, per the review.
+ * `send_pre_event_checklist` is excluded by product decision
+ * (2026-08-16). Its spec stays registered so saved automations keep
+ * running.
+ * `request_information` is excluded by product decision
+ * (2026-08-16): like `send_portal_link`, it is a one-line email
+ * carrying a portal link — `send_email` says more, and now has the
+ * portal variables to link with.
+ * `send_portal_link` is excluded by product decision (2026-08-16):
+ * it sends a fixed one-line email whose only configurable part is
+ * the message, which `send_email` does better now that
+ * `{{portal.link}}` resolves on its own. Its spec stays registered
+ * so saved automations keep running.
+ * `update_task` is excluded by product decision (2026-08-15): it
+ * edits "the most recent task created by an earlier action", or one
+ * pasted UUID, neither of which an MC can reason about while looking
+ * at the canvas. Its spec stays registered so saved automations keep
+ * running.
+ * `pause_couple_automations` is excluded by product decision
+ * (2026-08-15): pausing every other automation on a couple from
+ * inside one of them is a rule that is very hard to reason about
+ * from the canvas. Its spec stays registered so saved automations
+ * keep running.
  * Excluded (hidden): the un-reviewed extras
  * (`create_calendar_event`, `create_reminder`,
  * `update_timeline_event`, `send_onboarding_pack`,
@@ -92,24 +116,24 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'send_sms', // greyed coming-soon, kept per review
   'update_couple_stage',
   'add_note',
-  'send_portal_link',
-  'request_information',
   'create_couple',
-  'pause_couple_automations',
   'create_task',
-  'update_task',
   'send_contract',
   'send_invoice',
   'send_couple_questionnaire',
-  'trigger_payment_reminder',
+  // `trigger_payment_reminder` is deliberately absent: its handler
+  // delegates verbatim to send_invoice (and never filtered to unpaid,
+  // despite its old description), so it was the same action twice.
   'create_timeline_event',
+  // "Send run sheet". Absorbs `send_final_run_sheet` (same handler
+  // with the MC's message silently replaced) and
+  // `generate_run_sheet_pdf` (same link, sent to the MC / couple) via
+  // its recipient checkboxes. All three specs stay in the registry so
+  // saved automations keep running.
   'send_timeline_to_vendors',
-  'send_final_run_sheet',
-  'send_pre_event_checklist',
   'send_thank_you_message',
   'request_review',
   'send_referral_request',
-  'generate_run_sheet_pdf', // AC1 (run-sheet link)
 ])
 
 /** True when the trigger should appear in the builder's trigger picker. */

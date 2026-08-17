@@ -1862,3 +1862,52 @@ primarily for the intro video's "You decide" scene; a persisted
 - **State:** in-memory only; a refresh resets the poll (deliberate,
   for clean retakes while filming). Route sits behind the normal
   auth middleware.
+
+# Admin (`/admin`)
+
+Founder-only single pane, gated by `isAdmin()` in middleware + page.
+All data comes from service-role aggregators in
+`lib/admin/admin-analytics.ts`; pure tier/value helpers safe for
+client components live in `lib/admin/user-value.ts`. Two tabs
+(`?tab=dashboard|users`); clicking any user anywhere opens the shared
+detail slide-over.
+
+## Dashboard tab
+
+- **Row 1 — hero chart cards:** MRR (Pro/Max breakdown), active subs,
+  churn rate, new signups; 12-week approximate series.
+- **Row 2 — Engagement:** activity strip (active last 7d / 30d, new
+  this week) beside the **Gone quiet** list: paying or comped users
+  with no sign-in for 14+ days, highest tier first (`computeGoneQuiet`
+  in `user-value.ts`). Dormant = never started; gone quiet = revenue
+  at risk. Shadow mode refreshes the target's `last_sign_in_at`, so a
+  recently-shadowed user can look falsely active.
+- **Row 3 — operational lists:** upcoming renewals, past due, Connect
+  issues.
+- **Row 4 — supporting lists:** dormant accounts, recent signups.
+
+## Users tab
+
+- Search box filters by email / business / display name (email is
+  searchable but not a column — it lives in the detail panel).
+- Columns: Name (+ admin badge), Business, Plan (effective plan today;
+  cancelled ex-payers show Starter, comped users show their granted
+  plan with a "comped" suffix), Last sign-in (relative), Couples,
+  Events, Invoices (count + $ collected from PAID invoices via the
+  canonical `invoiceTotal()` math in `lib/payments/invoice-total.ts`),
+  Templates (combined count across email / contract / invoice /
+  questionnaire templates + packages), Automations, Signed up.
+- Default order: Max → Pro → Starter, then most recent sign-in
+  (`compareUsersByPlanThenSignIn`).
+- Per-user numbers come from `getAllUserStats()` — one paginated
+  service-role pass over the activity tables, aggregated in TS (no
+  SQL migration required).
+
+## Fixing a paying user who shows as free
+
+A missed Stripe webhook leaves `app_metadata` without
+`subscription_*` fields, so the user counts as free Starter. Fix via
+the detail panel → Subscription → **Link Stripe customer** (pulls the
+subscription from Stripe and writes entitlements), or **Comp user**
+for non-Stripe arrangements (comped users are excluded from the
+paying/MRR counts by design).

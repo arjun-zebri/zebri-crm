@@ -80,7 +80,13 @@ describe('<ConfirmDialog />', () => {
       </>,
     );
 
-    const [nestedPanel, confirmPanel] = screen.getAllByRole('dialog');
+    // Found by content, not array position: Modal portals to the body,
+    // so DOM order reflects portal attachment rather than render
+    // order. The stacking contract is the z-tier, which is what this
+    // asserts.
+    const dialogs = screen.getAllByRole('dialog');
+    const nestedPanel = dialogs.find((d) => d.textContent?.includes('Nested'));
+    const confirmPanel = dialogs.find((d) => d !== nestedPanel);
     expect(nestedPanel).toHaveClass('z-[80]');
     expect(confirmPanel).toHaveClass('z-[130]');
   });
@@ -101,6 +107,58 @@ describe('<ConfirmDialog />', () => {
 
     expect(cancelConfirm).toHaveBeenCalledTimes(1);
     expect(closeModal).not.toHaveBeenCalled();
+  });
+
+  // The dialog renders inline (fixed-position, not portalled), so it is
+  // a DOM descendant of whatever opened it. In the automations table it
+  // sits inside a clickable <tr>: confirming a delete also fired the
+  // row's onClick, navigating to the automation that had just been
+  // deleted. A modal must never leak clicks to its ancestors.
+  describe('click containment', () => {
+    it('does not fire an ancestor onClick when confirming', async () => {
+      const onConfirm = vi.fn();
+      const rowClick = vi.fn();
+      render(
+        <div onClick={rowClick}>
+          <ConfirmDialog {...base} open onConfirm={onConfirm} />
+        </div>,
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      expect(rowClick).not.toHaveBeenCalled();
+    });
+
+    it('does not fire an ancestor onClick when cancelling', async () => {
+      const onCancel = vi.fn();
+      const rowClick = vi.fn();
+      render(
+        <div onClick={rowClick}>
+          <ConfirmDialog {...base} open onCancel={onCancel} />
+        </div>,
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(rowClick).not.toHaveBeenCalled();
+    });
+
+    it('does not fire an ancestor onClick when dismissing via the backdrop', async () => {
+      const onCancel = vi.fn();
+      const rowClick = vi.fn();
+      render(
+        <div onClick={rowClick}>
+          <ConfirmDialog {...base} open onCancel={onCancel} />
+        </div>,
+      );
+
+      await userEvent.click(screen.getByRole('dialog'));
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(rowClick).not.toHaveBeenCalled();
+    });
   });
 
   it('keeps the scroll lock when only the topmost overlay closes', () => {

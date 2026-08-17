@@ -46,10 +46,13 @@ Three sizes, no more:
 |---|---|---|
 | `text-display` | 30 / 36px | Page titles, with `font-semibold` |
 | `text-section` | 20 / 28px | Section titles, with `font-semibold` |
-| `text-body` | 14 / 20px | Everything else |
+| `text-body` | 13 / 20px | Everything else |
 
-Each ships a paired `--text-*--line-height`, so `text-body` and
-`text-sm` are byte-identical and `leading-*` still overrides.
+Each ships a paired `--text-*--line-height`, and `leading-*` still
+overrides. `text-body` dropped from 14px to 13px on 2026-08-16 (the app
+read too large next to its own chrome); leading stayed at 20px so every
+control and row keeps its exact height. It is no longer equivalent to
+`text-sm`, which is one more reason `text-sm` must not reappear.
 
 **There is no caption size.** `--text-caption` (12px) was removed on
 2026-08-07 and its 777 uses swept to `text-body`. Secondary text is
@@ -64,7 +67,7 @@ and dense toolbar chrome.
 
 Any panel rendered into `document.body` (Radix `Select`/`Popover` content,
 the `DatePicker` calendar, `Tooltip`) is outside its trigger's subtree, so
-it inherits the document's 16px rather than the control's 14px. Every one
+it inherits the document's 16px rather than the control's 13px. Every one
 of them sets `text-body` on the panel root. If you add a new floating
 surface, do the same: the symptom is dropdown rows that read noticeably
 larger than the placeholder they replaced.
@@ -76,7 +79,10 @@ that callers can still override.
 ### Controls: one height, no `size` prop
 
 `Button`, `Input`, `Select` and `DatePicker` are all **32px** (`h-8`).
-None of them takes a `size` prop.
+None of them takes a `size` prop. Content never grows a control
+either: `Select` truncates a too-long selected label inside the 32px
+trigger (added 2026-08-07 after long email-template names wrapped and
+overflowed the automation inspector).
 
 Four button sizes, two input sizes and two select sizes existed until
 2026-08-07. Roughly 80% of the 193 call sites passing a `size` passed
@@ -102,9 +108,26 @@ treatment: the `Input` chrome. Two knock-ons, both intentional:
 - The builder meta row's couple and terms pickers were `py-1.5` (34px)
   and are now `h-8`.
 
+**`Textarea` is `Input`'s sibling for prose** (2026-08-15,
+`components/ui/textarea.tsx`). Same chrome — control radius, border
+darkening to `brand-fg` on focus, `danger` border on error, label /
+help / error linked by `aria-describedby` — with the one deliberate
+difference that height comes from `rows` rather than the 32px control
+height, and the field resizes vertically only. It exists because
+multi-line fields were being hand-rolled with a copied class string
+that drifted from `Input` (the automations inspector had seven of
+them behind a local `TextArea`). Reach for it wherever a form needs
+more than one line.
+
 `MenuItem` and `RowActionsMenu` keep a `size` prop, but it is a **row
 density** (padding and min-width), not a height or a type size. Menu
 rows do not sit in a line with page controls.
+
+**`MenuItem` takes `checked`** (2026-08-16) for a menu whose choices
+are independent rather than one-of. The row becomes a
+`menuitemcheckbox` and announces its own state; put the tick in
+`trailing`, not as a leading icon hidden with `invisible`, which
+indents every unticked label by the width of the tick.
 
 ### Controls never resize when you click them
 
@@ -260,15 +283,17 @@ customisation, intentionally separate from these internal tokens.
 
 ### Typography
 
-CLAUDE.md anchors are preserved (`text-3xl font-semibold` page titles,
-`text-xl font-semibold` section titles, `text-sm` body) — the semantic
-tokens below are equivalent and preferred in new code:
+The semantic tokens below are the only type sizes. The old CLAUDE.md
+anchors (`text-3xl font-semibold` page titles, `text-xl font-semibold`
+section titles, `text-sm` body) map onto `text-display` and
+`text-section`, but since 2026-08-16 `text-body` is 13px and no longer
+matches `text-sm`:
 
 | Token | Utility | Size | Use |
 |---|---|---|---|
 | `--text-display` | `text-display` | 1.875rem / 2.25rem | Page titles (pair with `font-semibold`) |
 | `--text-section` | `text-section` | 1.25rem / 1.75rem | Section titles (pair with `font-semibold`) |
-| `--text-body` | `text-body` | 0.875rem / 1.25rem | Everything that is not a title |
+| `--text-body` | `text-body` | 0.8125rem / 1.25rem | Everything that is not a title |
 
 ### Radius
 

@@ -42,6 +42,32 @@ export function useTemplateFiles(templateId: string | null) {
 }
 
 /**
+ * Attachments held by id rather than by template.
+ *
+ * The automation email composer stores its file ids in the action
+ * config, not on a template row, so it has no `template_id` to list
+ * by. Without this the composer would forget its attachments every
+ * time the modal reopened.
+ */
+export function useFilesByIds(fileIds: string[]) {
+  const supabase = createClient()
+  const key = [...fileIds].sort().join(',')
+  return useQuery({
+    queryKey: ['email-template-files-by-id', key] as const,
+    enabled: fileIds.length > 0,
+    queryFn: async (): Promise<TemplateFileRow[]> => {
+      const { data, error } = await supabase
+        .from('email_template_files')
+        .select('*')
+        .in('id', fileIds)
+        .order('created_at')
+      if (error) throw error
+      return data ?? []
+    },
+  })
+}
+
+/**
  * Upload a file to the bucket, then register its metadata row. With a
  * `null` templateId the upload is a **draft** (unsaved template): it
  * parks under `{user}/drafts/` with an unlinked row, and the editor

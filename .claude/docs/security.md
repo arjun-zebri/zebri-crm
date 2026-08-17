@@ -69,11 +69,29 @@ Applied to every route + asset response:
 
 | Header | Value |
 |---|---|
-| `X-Frame-Options` | `DENY` |
+| `X-Frame-Options` | `DENY` — **except `/lead/*`** (see below) |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), interest-cohort=()` |
+| `Permissions-Policy` | `camera=(), microphone=(self), geolocation=(), interest-cohort=()` *(`microphone=(self)` so the couple-portal AudioRecorder works on first-party frames)* |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` *(prod only — dev http://localhost stays plain)* |
+
+**Frame policy is split per-route.** The app proper carries
+`X-Frame-Options: DENY` (clickjacking guard). The public lead-capture
+embed at `/lead/*` is *meant* to render inside an iframe on an arbitrary
+MC marketing site, so it can't. `X-Frame-Options` has no
+allowlist-any-origin value (`ALLOW-FROM` is dead in modern browsers), so
+`/lead/*` drops `X-Frame-Options` and opens framing via
+`Content-Security-Policy: frame-ancestors *` instead. Implemented as two
+`headers()` rules: `source: '/lead/:path*'` (frame-ancestors) and
+`source: '/((?!lead/).*)'` (DENY), the negative lookahead keeping the two
+policies from both applying to the embed. The lead form is a public,
+token-gated enquiry surface with no session to hijack, so the residual
+clickjacking surface is limited to "trick a visitor into submitting an
+enquiry". `/lead-embed.js` (the loader asset) is *not* framed and keeps
+`DENY`. Note `/lead` + `/api/lead` are also in the middleware
+`PUBLIC_ROUTES` allowlist — without that, an unauthenticated (hence any
+cross-site iframe) request to `/lead/<token>` 307s to `/login`, and
+`/login` itself is `DENY`, so the embed showed "refused to connect".
 
 **`Content-Security-Policy` deferred.** CSP needs per-page testing
 against Stripe (`js.stripe.com`), Supabase (`<project>.supabase.co`),

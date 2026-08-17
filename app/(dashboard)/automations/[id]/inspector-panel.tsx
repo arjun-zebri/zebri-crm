@@ -16,31 +16,27 @@
 import { ChevronRight, Repeat2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { EmailTemplatePicker } from '@/app/(dashboard)/templates/email-template-picker'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { configWithDefaults } from '@/lib/automations/action-defaults'
 import { actionUi } from '@/lib/automations/actions/ui'
 import {
   ANY_SENTINEL,
   CONTACT_CATEGORIES,
   CONTACT_CATEGORY_LABELS,
-  COMPARISON_OPS,
+  OFFERED_COMPARISON_OPS,
   COMPARISON_OP_LABELS,
   DAY_OF_WEEK_BUCKETS,
   DAY_OF_WEEK_LABELS,
   EVENT_TYPES,
   EVENT_TYPE_LABELS,
-  LEAD_SOURCES,
-  LEAD_SOURCE_LABELS,
-  PEOPLE_CATEGORIES,
-  PEOPLE_CATEGORY_LABELS,
   PORTAL_SECTIONS,
   PORTAL_SECTION_LABELS,
-  TIME_UNITS,
-  TIME_UNIT_LABELS,
   type ComparisonOp,
 } from '@/lib/automations/trigger-constants'
 import { triggerRegistry } from '@/lib/automations/triggers'
@@ -58,33 +54,33 @@ import {
 } from '../actions'
 
 import {
-  AddNoteExtraFields,
+  CREATE_COUPLE_CHIPS,
+  RequestSectionChips,
+  RUN_SHEET_CHIP,
+  StageChips,
+  TASK_STATUS_CHIP,
+  taskDueChip,
+} from './action-chips'
+import { BranchChips } from './branch-chips'
+import { DocumentComposerModal } from './document-composer-modal'
+import { EmailComposerModal } from './email-composer-modal'
+import {
   ApprovalExtraFields,
-  BranchExtraFields,
   CalendarEventExtraFields,
-  CreateCoupleExtraFields,
-  CreateTaskExtraFields,
   ExtendedActionForm,
   ExtendedTriggerFields,
-  PauseCoupleExtraFields,
-  PaymentReminderExtraFields,
-  PostEventExtraFields,
-  RequestInformationExtraFields,
   RunSheetExtraFields,
-  SendContractExtraFields,
-  SendEmailExtraFields,
-  SendInvoiceExtraFields,
-  SendPortalLinkExtraFields,
-  SendTimelineExtraFields,
-  StopExtraFields,
   SubFlowExtraFields,
-  TimelineEventExtraFields,
-  UpdateCoupleStageExtraFields,
   UpdateCustomFieldsExtraFields,
-  UpdateTaskExtraFields,
   UpdateTimelineEventExtraFields,
-  WaitExtraFields,
 } from './inspector-extended'
+import { NoteComposerModal } from './note-composer-modal'
+import { QuestionnaireComposerModal } from './questionnaire-composer-modal'
+import { RunSheetComposerModal } from './run-sheet-composer-modal'
+import { TaskComposerModal } from './task-composer-modal'
+import { TimelineComposerModal } from './timeline-composer-modal'
+import { TriggerFilterList } from './trigger-filter-list'
+import { WAIT_CHIPS } from './wait-chips'
 
 /**
  * Optimistic save payload. The parent page applies these updates
@@ -206,14 +202,70 @@ function actionDescription(action: AutomationActionRow): string {
 
 /* ─── Configure tab ───────────────────────────────────────────── */
 
+/**
+ * The per-step config form, without the drawer chrome around it.
+ *
+ * The builder renders step config inline inside the flow card, so it
+ * needs the form on its own. This is the same component the inspector
+ * drawer uses, exported rather than duplicated: the ~3,000 lines of
+ * per-action forms below have exactly one home.
+ */
+/**
+ * Actions whose whole config is a modal, so their node opens it
+ * instead of expanding onto a card.
+ *
+ * The pre-composed sends qualify because their only other control —
+ * `PostEventExtraFields` — was deleted once its inputs turned out to
+ * be fields no handler read.
+ */
+export const MODAL_ACTIONS: ReadonlySet<string> = new Set([
+  'send_email',
+  'send_onboarding_pack',
+  'send_pre_event_checklist',
+  'send_thank_you_message',
+  'send_anniversary_message',
+  'request_review',
+  'send_referral_request',
+  // Not emails, same reasoning: a form (or a paragraph of prose) in a
+  // 380px node is a cramped form.
+  'create_task',
+  'add_note',
+  // Its email is canned, so the modal is a preview of what the couple
+  // receives rather than a form.
+  'send_couple_questionnaire',
+  'create_timeline_event',
+  'send_timeline_to_vendors',
+  // Zero-config sends: the modal is purely a preview of what the
+  // couple receives.
+  'send_contract',
+  'send_invoice',
+])
+
+
+export function StepConfigForm(props: {
+  selection: Props['selection']
+  automationId: string
+  onSaved: (payload: SavedPayload) => void
+  /**
+   * Present for steps whose whole config is a modal (`send_email`).
+   * The card then renders nothing inline: opening the node opens the
+   * modal, and closing it collapses the node.
+   */
+  modal?: { open: boolean; onClose: () => void }
+}) {
+  return <ConfigureTab {...props} />
+}
+
 function ConfigureTab({
   selection,
   automationId,
   onSaved,
+  modal,
 }: {
   selection: Props['selection']
   automationId: string
   onSaved: (payload: SavedPayload) => void
+  modal?: { open: boolean; onClose: () => void }
 }) {
   if (selection.kind === 'trigger') {
     return (
@@ -230,6 +282,7 @@ function ConfigureTab({
       action={selection.action}
       automationId={automationId}
       onSaved={onSaved}
+      {...(modal ? { modal } : {})}
     />
   )
 }
@@ -257,28 +310,12 @@ function TriggerConfigForm({
     void setAutomationTriggerAction({ automationId, triggerType, triggerConfig: config })
   })
 
-  const amountQuoteInvoice =
-    triggerType === 'invoice_created' ||
-    triggerType === 'invoice_sent' ||
-    triggerType === 'payment_received'
 
   return (
     <div className="space-y-3">
-      {triggerType === 'new_enquiry' && (
-        <>
-          <SelectInput
-            label="Lead source (optional)"
-            value={(config['leadSource'] as string) ?? ''}
-            onChange={(v) => setConfig({ ...config, leadSource: v || undefined })}
-            options={leadSourceOptions()}
-          />
-          <DaysUntilEventFields
-            config={config}
-            setConfig={setConfig}
-            label="Days until event date"
-          />
-        </>
-      )}
+      {/* `new_enquiry` is not handled here: its filters render as chips
+          inside the step card itself (trigger-card-body.tsx). Triggers
+          still on this legacy form migrate one at a time. */}
 
       {triggerType === 'lead_inactive' && (
         <>
@@ -313,55 +350,13 @@ function TriggerConfigForm({
         </>
       )}
 
-      {triggerType === 'couple_stage_changed' && (
-        <>
-          <CoupleStageFields config={config} setConfig={setConfig} />
-          <DaysUntilEventFields
-            config={config}
-            setConfig={setConfig}
-            label="Days until event date"
-          />
-        </>
-      )}
+      {/* `couple_stage_changed` is chip-driven; see couple-stage-filters.tsx. */}
 
-      {triggerType === 'booking_cancelled' && (
-        <DaysUntilEventFields
-          config={config}
-          setConfig={setConfig}
-          label="Days until event date"
-        />
-      )}
+      {/* The invoice / payment triggers are chip-driven; see invoice-filters.tsx. */}
 
-      {amountQuoteInvoice && (
-        <NumericComparisonFields
-          label="Amount filter (optional)"
-          opField="amountOp"
-          valueField="amountValue"
-          config={config}
-          setConfig={setConfig}
-        />
-      )}
-
-
-      {triggerType === 'invoice_due' && (
-        <NumberInput
-          label="Days before due date (0 = on the day)"
-          value={Number(config['days'] ?? 0)}
-          onChange={(v) => setConfig({ ...config, days: v })}
-        />
-      )}
-
-      {triggerType === 'invoice_overdue' && (
-        <NumberInput
-          label="Minimum days overdue (optional)"
-          value={Number(config['daysOverdueMin'] ?? 0)}
-          onChange={(v) => setConfig({ ...config, daysOverdueMin: v || undefined })}
-        />
-      )}
-
-      {(triggerType === 'event_created' ||
-        triggerType === 'event_updated' ||
-        triggerType === 'event_deleted') && (
+      {/* event_created / event_updated are chip-driven; see event-row-filters.tsx.
+          event_deleted is hidden but old automations may still hold it. */}
+      {triggerType === 'event_deleted' && (
         <>
           <SelectInput
             label="Event type (optional)"
@@ -375,40 +370,11 @@ function TriggerConfigForm({
             onChange={(v) => setConfig({ ...config, dayOfWeek: v === 'any' ? undefined : v })}
             options={dayOfWeekOptions()}
           />
-          {triggerType === 'event_updated' && (
-            <SelectInput
-              label="Only when this changed (optional)"
-              value={(config['changed'] as string) ?? 'any'}
-              onChange={(v) => setConfig({ ...config, changed: v === 'any' ? undefined : v })}
-              options={[
-                { value: 'any', label: 'Anything changed' },
-                { value: 'date', label: 'Date changed' },
-                { value: 'venue', label: 'Venue changed' },
-              ]}
-            />
-          )}
         </>
       )}
 
-      {(triggerType === 'time_before_event' || triggerType === 'time_after_event') && (
-        <>
-          {/* Day-grain only — the offset is a number of days (no unit
-              picker), so the daily cron can serve it without Vercel Pro.
-              `unit: 'days'` is set explicitly so the emitter's
-              day-grain guard always matches. */}
-          <NumberInput
-            label={triggerType === 'time_before_event' ? 'Days before the event' : 'Days after the event'}
-            value={Number(config['amount'] ?? 1)}
-            onChange={(v) => setConfig({ ...config, amount: v, unit: 'days' })}
-          />
-          <SelectInput
-            label="Anchor to event type (optional)"
-            value={(config['eventType'] as string) ?? ''}
-            onChange={(v) => setConfig({ ...config, eventType: v || undefined })}
-            options={eventTypeOptions()}
-          />
-        </>
-      )}
+      {/* time_before/after_event + anniversary_of_event are chip-driven;
+          see event-row-filters.tsx. */}
 
       {triggerType === 'specific_date_reached' && (
         <>
@@ -425,23 +391,9 @@ function TriggerConfigForm({
         </>
       )}
 
-      {triggerType === 'anniversary_of_event' && (
-        <>
-          <NumberInput
-            label="Years after the event"
-            value={Number(config['years'] ?? 1)}
-            onChange={(v) => setConfig({ ...config, years: v })}
-          />
-          <NumberInput
-            label="Stop after N years (optional, leave 0 to fire once)"
-            value={Number(config['maxYears'] ?? 0)}
-            onChange={(v) => setConfig({ ...config, maxYears: v || undefined })}
-          />
-        </>
-      )}
 
-      {(triggerType === 'section_completed' ||
-        triggerType === 'portal_section_started_not_finished') && (
+      {/* section_completed is chip-driven; see portal-filters.tsx. */}
+      {triggerType === 'portal_section_started_not_finished' && (
         <>
           <SelectInput
             label="Section (optional)"
@@ -449,35 +401,19 @@ function TriggerConfigForm({
             onChange={(v) => setConfig({ ...config, section: v || undefined })}
             options={sectionOptions()}
           />
-          {triggerType === 'section_completed' && (config['section'] as string) === 'people' && (
-            <SelectInput
-              label="People category (optional)"
-              value={(config['category'] as string) ?? ''}
-              onChange={(v) => setConfig({ ...config, category: v || undefined })}
-              options={peopleCategoryOptions()}
-            />
-          )}
-          {triggerType === 'portal_section_started_not_finished' && (
-            <NumberInput
-              label="Days inactive"
-              value={Number(config['days'] ?? 7)}
-              onChange={(v) => setConfig({ ...config, days: v })}
-            />
-          )}
+          <NumberInput
+            label="Days inactive"
+            value={Number(config['days'] ?? 7)}
+            onChange={(v) => setConfig({ ...config, days: v })}
+          />
         </>
       )}
 
-      {triggerType === 'task_overdue' && (
-        <NumberInput
-          label="Minimum days overdue (optional)"
-          value={Number(config['daysOverdueMin'] ?? 0)}
-          onChange={(v) => setConfig({ ...config, daysOverdueMin: v || undefined })}
-        />
-      )}
+      {/* The task triggers are chip-driven; see task-filters.tsx. */}
 
-      {(triggerType === 'contact_created' ||
-        triggerType === 'contact_updated' ||
-        triggerType === 'contact_linked_to_couple') && (
+      {/* contact_created / contact_linked_to_couple are chip-driven; see
+          contact-filters.tsx. contact_updated is hidden but may exist. */}
+      {triggerType === 'contact_updated' && (
         <>
           <SelectInput
             label="Contact category (optional)"
@@ -509,26 +445,6 @@ function TriggerConfigForm({
 
 /* ─── Reusable composite fields ────────────────────────────────── */
 
-function DaysUntilEventFields({
-  config,
-  setConfig,
-  label,
-}: {
-  config: Record<string, unknown>
-  setConfig: (c: Record<string, unknown>) => void
-  label: string
-}) {
-  return (
-    <NumericComparisonFields
-      label={label}
-      opField="daysUntilEventOp"
-      valueField="daysUntilEventValue"
-      config={config}
-      setConfig={setConfig}
-    />
-  )
-}
-
 function NumericComparisonFields({
   label,
   opField,
@@ -554,7 +470,7 @@ function NumericComparisonFields({
           onChange={(v) => setConfig({ ...config, [opField]: v || undefined })}
           options={[
             { value: '', label: 'Any value' },
-            ...COMPARISON_OPS.map((o) => ({ value: o, label: COMPARISON_OP_LABELS[o] })),
+            ...OFFERED_COMPARISON_OPS.map((o) => ({ value: o, label: COMPARISON_OP_LABELS[o] })),
           ]}
         />
         <NumberInput
@@ -624,13 +540,6 @@ function sectionOptions() {
   ]
 }
 
-function peopleCategoryOptions() {
-  return [
-    { value: '', label: 'Any people category' },
-    ...PEOPLE_CATEGORIES.map((c) => ({ value: c, label: PEOPLE_CATEGORY_LABELS[c] })),
-  ]
-}
-
 function contactCategoryOptions() {
   return [
     { value: '', label: 'Any category' },
@@ -640,13 +549,6 @@ function contactCategoryOptions() {
 
 function dayOfWeekOptions() {
   return DAY_OF_WEEK_BUCKETS.map((d) => ({ value: d, label: DAY_OF_WEEK_LABELS[d] }))
-}
-
-function leadSourceOptions() {
-  return [
-    { value: '', label: 'Any source' },
-    ...LEAD_SOURCES.map((s) => ({ value: s, label: LEAD_SOURCE_LABELS[s] })),
-  ]
 }
 
 const NO_CONFIG_HINT_TRIGGERS = new Set<TriggerType>([
@@ -664,32 +566,7 @@ const NO_CONFIG_HINT_TRIGGERS = new Set<TriggerType>([
   'manual_fire',
 ])
 
-/* ─── Couple-stage fields (loads user's status list from DB) ──── */
-
 interface CoupleStatus { slug: string; name: string }
-
-function CoupleStageFields({
-  config,
-  setConfig,
-}: {
-  config: Record<string, unknown>
-  setConfig: (c: Record<string, unknown>) => void
-}) {
-  return (
-    <>
-      <CoupleStatusSelect
-        label="From status (optional)"
-        value={(config['fromStatus'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, fromStatus: v || undefined })}
-      />
-      <CoupleStatusSelect
-        label="To status (optional)"
-        value={(config['toStatus'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, toStatus: v || undefined })}
-      />
-    </>
-  )
-}
 
 /* ─── Action config form (action / wait / branch / stop / approval) ─ */
 
@@ -697,10 +574,12 @@ function ActionConfigForm({
   action,
   automationId,
   onSaved,
+  modal,
 }: {
   action: AutomationActionRow
   automationId: string
   onSaved: (payload: SavedPayload) => void
+  modal?: { open: boolean; onClose: () => void }
 }) {
   const [config, setConfig] = useState<Record<string, unknown>>((action.config as Record<string, unknown>) ?? {})
 
@@ -721,18 +600,15 @@ function ActionConfigForm({
   return (
     <div className="space-y-3">
       {action.type === 'wait' && (
-        <>
-          <WaitFields config={config} setConfig={setConfig} />
-          <WaitExtraFields config={config} setConfig={setConfig} />
-        </>
+        <TriggerFilterList
+          filters={WAIT_CHIPS}
+          config={config}
+          setConfig={setConfig}
+          addLabel="Add option"
+        />
       )}
-      {action.type === 'branch' && (
-        <>
-          <BranchFields config={config} setConfig={setConfig} />
-          <BranchExtraFields config={config} setConfig={setConfig} />
-        </>
-      )}
-      {action.type !== 'wait' && action.type !== 'branch' && action.type !== 'approval' && action.type !== 'sub_flow' && action.type !== 'stop' && <ActionFields actionType={action.type as ActionType} config={config} setConfig={setConfig} />}
+      {action.type === 'branch' && <BranchChips config={config} setConfig={setConfig} />}
+      {action.type !== 'wait' && action.type !== 'branch' && action.type !== 'approval' && action.type !== 'sub_flow' && action.type !== 'stop' && <ActionFields actionType={action.type as ActionType} config={config} setConfig={setConfig} {...(modal ? { modal } : {})} />}
       {action.type === 'approval' && (
         <>
           <ApprovalFields config={config} setConfig={setConfig} />
@@ -745,17 +621,10 @@ function ActionConfigForm({
           <SubFlowExtraFields config={config} setConfig={setConfig} />
         </>
       )}
-      {action.type === 'stop' && (
-        <>
-          <TextInput
-            label="Reason this run is stopping (optional)"
-            placeholder="Shows in the audit log"
-            value={(config['reason'] as string) ?? ''}
-            onChange={(v) => setConfig({ ...config, reason: v })}
-          />
-          <StopExtraFields config={config} setConfig={setConfig} />
-        </>
-      )}
+      {/* `stop` has no config at all: its card does not expand. The
+          reason field is gone — an audit-log note nobody asked for was
+          the only thing keeping the card open. Saved reasons still
+          parse and still narrate. */}
     </div>
   )
 }
@@ -803,223 +672,7 @@ function useDebouncedAutosave(config: Record<string, unknown>, fire: () => void)
 
 /* ─── Wait step ────────────────────────────────────────────────── */
 
-function WaitFields({ config, setConfig }: FieldProps) {
-  const mode = (config['mode'] as string) ?? 'duration'
-  return (
-    <>
-      <SelectInput
-        label="When to resume"
-        value={mode}
-        onChange={(v) => setConfig({ ...config, mode: v })}
-        options={[
-          { value: 'duration', label: 'Wait a fixed amount of time' },
-          { value: 'until_date', label: 'Wait until a specific date' },
-          { value: 'relative_to_event', label: 'Wait until X before/after the event' },
-        ]}
-      />
-      {mode === 'duration' && <DurationField config={config} setConfig={setConfig} />}
-      {mode === 'until_date' && (
-        <DateInput
-          label="Resume on"
-          value={(config['untilDate'] as string) ?? ''}
-          onChange={(v) => setConfig({ ...config, untilDate: v })}
-        />
-      )}
-      {mode === 'relative_to_event' && <RelativeFields config={config} setConfig={setConfig} />}
-      <CheckboxField
-        label="Defer into the next allowed window if it falls inside quiet hours"
-        checked={config['respectQuietHours'] !== false}
-        onChange={(v) => setConfig({ ...config, respectQuietHours: v })}
-      />
-    </>
-  )
-}
-
-/**
- * Duration UX: ask "amount + unit" and persist as `durationMinutes`.
- * "Wait 1440 minutes" never reads naturally; "Wait 1 day" does.
- */
-function DurationField({ config, setConfig }: FieldProps) {
-  const minutes = Number(config['durationMinutes'] ?? 1440)
-  const { amount, unit } = minutesToAmountUnit(minutes)
-  function update(nextAmount: number, nextUnit: 'minutes' | 'hours' | 'days' | 'weeks') {
-    setConfig({ ...config, durationMinutes: amountUnitToMinutes(nextAmount, nextUnit) })
-  }
-  return (
-    <div>
-      <Label>Wait for</Label>
-      <div className="grid grid-cols-2 gap-2">
-        <NumberInput label="" value={amount} onChange={(v) => update(v, unit)} />
-        <SelectInput
-          label=""
-          value={unit}
-          onChange={(v) => update(amount, v as 'minutes' | 'hours' | 'days' | 'weeks')}
-          options={TIME_UNITS.map((u) => ({ value: u, label: TIME_UNIT_LABELS[u] }))}
-        />
-      </div>
-    </div>
-  )
-}
-
-function minutesToAmountUnit(min: number): { amount: number; unit: 'minutes' | 'hours' | 'days' | 'weeks' } {
-  if (min % (60 * 24 * 7) === 0 && min >= 60 * 24 * 7) return { amount: min / (60 * 24 * 7), unit: 'weeks' }
-  if (min % (60 * 24) === 0 && min >= 60 * 24) return { amount: min / (60 * 24), unit: 'days' }
-  if (min % 60 === 0 && min >= 60) return { amount: min / 60, unit: 'hours' }
-  return { amount: min, unit: 'minutes' }
-}
-
-function amountUnitToMinutes(amount: number, unit: 'minutes' | 'hours' | 'days' | 'weeks'): number {
-  switch (unit) {
-    case 'weeks': return amount * 60 * 24 * 7
-    case 'days': return amount * 60 * 24
-    case 'hours': return amount * 60
-    case 'minutes': return amount
-  }
-}
-
-function RelativeFields({ config, setConfig }: FieldProps) {
-  const r = (config['relative'] as { amount?: number; unit?: string; direction?: string }) ?? {}
-  function update(patch: Partial<typeof r>) {
-    setConfig({ ...config, relative: { amount: 1, unit: 'weeks', direction: 'before', anchor: 'event_date', ...r, ...patch } })
-  }
-  return (
-    <>
-      <div>
-        <Label>Time offset</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <NumberInput label="" value={r.amount ?? 1} onChange={(v) => update({ amount: v })} />
-          <SelectInput
-            label=""
-            value={r.unit ?? 'weeks'}
-            onChange={(v) => update({ unit: v })}
-            options={TIME_UNITS.map((u) => ({ value: u, label: TIME_UNIT_LABELS[u] }))}
-          />
-        </div>
-      </div>
-      <SelectInput
-        label="Direction"
-        value={r.direction ?? 'before'}
-        onChange={(v) => update({ direction: v })}
-        options={[
-          { value: 'before', label: 'Before the event' },
-          { value: 'after', label: 'After the event' },
-        ]}
-      />
-    </>
-  )
-}
-
 /* ─── Branch step ──────────────────────────────────────────────── */
-
-function BranchFields({ config, setConfig }: FieldProps) {
-  const predicate = (config['predicate'] as { kind?: string; days?: number; op?: string; field?: string; key?: string; value?: unknown }) ?? { kind: 'event_in', op: '<', days: 60 }
-  function setKind(kind: string) {
-    if (kind === 'event_in') setConfig({ ...config, predicate: { kind, op: '<', days: 60 } })
-    else if (kind === 'couple_field') setConfig({ ...config, predicate: { kind, field: 'status', op: 'eq', value: '' } })
-    else if (kind === 'custom_field') setConfig({ ...config, predicate: { kind, key: '', op: 'eq', value: '' } })
-    else setConfig({ ...config, predicate: { kind } })
-  }
-  return (
-    <>
-      <SelectInput
-        label="Branch on"
-        value={predicate.kind ?? 'event_in'}
-        onChange={setKind}
-        options={[
-          { value: 'event_in', label: 'Event is X days away' },
-          { value: 'has_signed_contract', label: 'Couple has signed the contract' },
-          { value: 'has_paid_deposit', label: 'Couple has paid the deposit' },
-          { value: 'couple_field', label: 'A couple field equals…' },
-          { value: 'custom_field', label: 'A custom field equals…' },
-        ]}
-      />
-      {predicate.kind === 'event_in' && (
-        <div>
-          <Label>Event is</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <SelectInput
-              label=""
-              value={predicate.op ?? '<'}
-              onChange={(v) => setConfig({ ...config, predicate: { ...predicate, op: v } })}
-              options={[
-                { value: '<', label: 'less than' },
-                { value: '<=', label: 'at most' },
-                { value: '>', label: 'more than' },
-                { value: '>=', label: 'at least' },
-              ]}
-            />
-            <NumberInput
-              label=""
-              value={predicate.days ?? 60}
-              onChange={(v) => setConfig({ ...config, predicate: { ...predicate, days: v } })}
-            />
-          </div>
-          <div className="text-body text-text-muted mt-1">days away from today.</div>
-        </div>
-      )}
-      {predicate.kind === 'couple_field' && (
-        <>
-          <TextInput
-            label="Couple field name"
-            placeholder="e.g. status, lead_source, venue"
-            value={(predicate.field as string) ?? ''}
-            onChange={(v) => setConfig({ ...config, predicate: { ...predicate, field: v } })}
-          />
-          <BranchValueOpFields predicate={predicate} config={config} setConfig={setConfig} />
-        </>
-      )}
-      {predicate.kind === 'custom_field' && (
-        <>
-          <TextInput
-            label="Custom field key"
-            placeholder="e.g. ceremony_style"
-            value={(predicate.key as string) ?? ''}
-            onChange={(v) => setConfig({ ...config, predicate: { ...predicate, key: v } })}
-          />
-          <BranchValueOpFields predicate={predicate} config={config} setConfig={setConfig} />
-        </>
-      )}
-    </>
-  )
-}
-
-function BranchValueOpFields({
-  predicate,
-  config,
-  setConfig,
-}: {
-  predicate: Record<string, unknown>
-  config: Record<string, unknown>
-  setConfig: (c: Record<string, unknown>) => void
-}) {
-  return (
-    <>
-      <SelectInput
-        label="Comparison"
-        value={(predicate['op'] as string) ?? 'eq'}
-        onChange={(v) => setConfig({ ...config, predicate: { ...predicate, op: v } })}
-        options={[
-          { value: 'eq', label: 'equals' },
-          { value: 'neq', label: 'does not equal' },
-          { value: 'contains', label: 'contains' },
-          { value: 'is_set', label: 'is set' },
-          { value: 'is_unset', label: 'is not set' },
-          { value: 'gt', label: 'greater than (numeric)' },
-          { value: 'gte', label: 'at least (numeric)' },
-          { value: 'lt', label: 'less than (numeric)' },
-          { value: 'lte', label: 'at most (numeric)' },
-        ]}
-      />
-      {predicate['op'] !== 'is_set' && predicate['op'] !== 'is_unset' && (
-        <TextInput
-          label="Value"
-          value={String(predicate['value'] ?? '')}
-          onChange={(v) => setConfig({ ...config, predicate: { ...predicate, value: v } })}
-        />
-      )}
-    </>
-  )
-}
 
 /* ─── Approval step ────────────────────────────────────────────── */
 
@@ -1049,7 +702,15 @@ function ApprovalFields({ config, setConfig }: FieldProps) {
 
 /* ─── Action step dispatch ─────────────────────────────────────── */
 
-function ActionFields({ actionType, config, setConfig }: FieldProps & { actionType: ActionType }) {
+function ActionFields({
+  actionType,
+  config,
+  setConfig,
+  modal,
+}: FieldProps & {
+  actionType: ActionType
+  modal?: { open: boolean; onClose: () => void }
+}) {
   // The action's `type` lives at the row level, not inside `config`.
   // Reading it off `config['type']` (the prior shape) always
   // returned undefined — every registered action's inspector
@@ -1068,8 +729,7 @@ function ActionFields({ actionType, config, setConfig }: FieldProps & { actionTy
         <SendEmailForm
           config={config}
           updateConfig={updateInner}
-          recipients={recipients}
-          updateRecipients={updateRecipients}
+          {...(modal ? { modal } : {})}
         />
       )
     case 'send_sms':
@@ -1084,112 +744,177 @@ function ActionFields({ actionType, config, setConfig }: FieldProps & { actionTy
         />
       )
     case 'create_task':
-      return <CreateTaskForm config={config} updateConfig={updateInner} />
+      return modal ? (
+        <TaskComposerModal
+          isOpen={modal.open}
+          onClose={modal.onClose}
+          config={config}
+          onSave={(draft) => setConfig(draft)}
+        />
+      ) : (
+        <CreateTaskForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
+      )
     case 'update_task':
-      return <UpdateTaskForm config={config} updateConfig={updateInner} />
+      return <UpdateTaskForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
     case 'update_couple_stage':
-      return <UpdateCoupleStageForm config={config} updateConfig={updateInner} />
+      return <UpdateCoupleStageForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
+    case 'send_couple_questionnaire':
+      return modal ? (
+        <QuestionnaireComposerModal
+          isOpen={modal.open}
+          onClose={modal.onClose}
+          config={config}
+          onSave={(draft) => setConfig(draft)}
+        />
+      ) : (
+        <ExtendedActionForm actionType={actionType} config={config} updateConfig={updateInner} />
+      )
     case 'add_note':
-      return <AddNoteForm config={config} updateConfig={updateInner} />
+      return modal ? (
+        <NoteComposerModal
+          isOpen={modal.open}
+          onClose={modal.onClose}
+          config={config}
+          onSave={(draft) => setConfig(draft)}
+        />
+      ) : (
+        <AddNoteForm config={config} updateConfig={updateInner} />
+      )
     case 'update_custom_fields':
       return <UpdateCustomFieldsForm config={config} updateConfig={updateInner} />
     case 'send_portal_link':
+      // Retired from the picker (2026-08-16). Still rendered for
+      // automations saved with it, and it still runs.
       return (
         <>
+          <Hint>
+            Legacy step: emails the couple their portal link with the message below. New
+            automations should use “Send email” with the {'{{portal.link}}'} variable, which
+            can say more than one line.
+          </Hint>
           <MessageBodyForm config={config} updateConfig={updateInner} label="Message" />
-          <SendPortalLinkExtraFields config={config} updateConfig={updateInner} />
         </>
       )
     case 'request_information':
-      return <RequestInformationForm config={config} updateConfig={updateInner} />
-    case 'create_couple':
-      return <CreateCoupleForm config={config} updateConfig={updateInner} />
-    case 'pause_couple_automations':
+      // Retired from the picker (2026-08-16). Still rendered for
+      // automations saved with it, and it still runs.
       return (
         <>
-          <Hint>Pauses every other running automation on this couple.</Hint>
-          <PauseCoupleExtraFields config={config} updateConfig={updateInner} />
+          <Hint>
+            Legacy step: emails the couple a link to one portal section with the message
+            below. New automations should use “Send email”.
+          </Hint>
+          <RequestSectionChips config={config} setConfig={(c) => setConfig(c)} />
+          <MessageBodyForm config={config} updateConfig={updateInner} label="Message" />
         </>
       )
+    case 'create_couple':
+      return <CreateCoupleForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
+    case 'pause_couple_automations':
+      // Retired from the picker (2026-08-15). Still rendered for
+      // automations saved with it, and it still runs.
+      return (
+        <Hint>
+          Legacy step: pauses every other running automation on this couple. No longer offered
+          for new automations.
+        </Hint>
+      )
     case 'create_timeline_event':
-      return <TimelineEventForm config={config} updateConfig={updateInner} requireExistingItem={false} />
+      return modal ? (
+        <TimelineComposerModal
+          isOpen={modal.open}
+          onClose={modal.onClose}
+          config={config}
+          onSave={(draft) => setConfig(draft)}
+        />
+      ) : (
+        <TimelineEventForm config={config} updateConfig={updateInner} requireExistingItem={false} />
+      )
     case 'update_timeline_event':
       return <TimelineEventForm config={config} updateConfig={updateInner} requireExistingItem={true} />
     case 'send_timeline_to_vendors':
+      // "Send run sheet". Most of this email is the handler's — the
+      // subject, the shell, the link — so the modal is a preview with
+      // the two things the MC controls above it.
+      return modal ? (
+        <RunSheetComposerModal
+          isOpen={modal.open}
+          onClose={modal.onClose}
+          config={config}
+          onSave={(draft) => setConfig(draft)}
+        />
+      ) : (
+        <TriggerFilterList
+          filters={[RUN_SHEET_CHIP]}
+          config={config}
+          setConfig={(c) => setConfig(c as Record<string, unknown>)}
+        />
+      )
     case 'send_final_run_sheet':
+      // Hidden from the picker (folded into "Send run sheet"); still
+      // rendered for automations saved before the merge. Its handler
+      // sends canned copy to vendors regardless of any message typed
+      // here, so say that instead of offering a field it ignores.
       return (
-        <>
-          <MessageBodyForm
-            config={config}
-            updateConfig={updateInner}
-            label="Message to vendors"
-            recipients={recipients}
-            updateRecipients={updateRecipients}
-          />
-          <SendTimelineExtraFields config={config} updateConfig={updateInner} />
-        </>
+        <Hint>
+          Legacy step: emails the run sheet link to every vendor contact with a fixed
+          message. New automations should use “Send run sheet”, which also reaches the
+          couple or you.
+        </Hint>
       )
     case 'create_calendar_event':
     case 'create_reminder':
       return <CalendarEntryForm config={config} updateConfig={updateInner} />
     case 'send_contract':
-      return (
-        <>
-          <Hint>
-            This action sends the most recent contract for the triggering couple.
-          </Hint>
-          <SendContractExtraFields config={config} updateConfig={updateInner} />
-        </>
+    case 'send_invoice': {
+      const kind = actionType === 'send_contract' ? 'contract' : 'invoice'
+      return modal ? (
+        <DocumentComposerModal isOpen={modal.open} onClose={modal.onClose} kind={kind} />
+      ) : (
+        <Hint>This action sends the most recent {kind} for the triggering couple.</Hint>
       )
-    case 'send_invoice':
-      return (
-        <>
-          <Hint>
-            This action sends the most recent invoice for the triggering couple.
-          </Hint>
-          <SendInvoiceExtraFields config={config} updateConfig={updateInner} />
-        </>
-      )
+    }
     case 'trigger_payment_reminder':
       return (
         <>
           <Hint>
-            Re-sends the most recent unpaid invoice. Use the tone / escalation fields below
-            to tier the message between first nudge and final notice.
+            Legacy step: identical to “Send invoice” — re-sends the couple’s most
+            recent invoice.
           </Hint>
-          <PaymentReminderExtraFields config={config} updateConfig={updateInner} />
         </>
       )
     case 'generate_run_sheet_pdf':
       return (
         <>
-          <Hint>Renders a PDF run sheet from the couple's current event timeline.</Hint>
+          <Hint>
+            Legacy step: emails you (and optionally the couple) the run sheet link. New
+            automations should use “Send run sheet”.
+          </Hint>
           <RunSheetExtraFields config={config} updateConfig={updateInner} />
         </>
       )
+    // The pre-composed sends are emails too, so they get the same
+    // composer. Their handlers address the couple directly and read
+    // none of the delivery options, so neither is offered.
     case 'send_onboarding_pack':
     case 'send_pre_event_checklist':
     case 'send_thank_you_message':
     case 'send_anniversary_message':
-      return (
-        <>
-          <SubjectBodyEmailForm config={config} updateConfig={updateInner} />
-          <PostEventExtraFields config={config} updateConfig={updateInner} />
-        </>
-      )
     case 'request_review':
-      return (
-        <>
-          <SubjectBodyEmailForm config={config} updateConfig={updateInner} />
-          <PostEventExtraFields config={config} updateConfig={updateInner} isReview />
-        </>
-      )
     case 'send_referral_request':
+      // Their copy lives in the schema as `.default()`, applied when
+      // the runner parses rather than when the step is created — so
+      // the stored config is `{}` and the modal would open blank on
+      // an email that is fully written.
       return (
-        <>
-          <SubjectBodyEmailForm config={config} updateConfig={updateInner} />
-          <PostEventExtraFields config={config} updateConfig={updateInner} isReferral />
-        </>
+        <EmailContentSummary
+          config={configWithDefaults(actionType, config)}
+          updateConfig={updateInner}
+          title={actionUi[actionType]?.label ?? 'Compose email'}
+          showRecipients={false}
+          showOptions={false}
+          {...(modal ? { modal } : {})}
+        />
       )
     default:
       return <ExtendedActionForm actionType={actionType} config={config} updateConfig={updateInner} />
@@ -1230,55 +955,104 @@ function SubFlowField({ config, setConfig }: FieldProps) {
 
 type ConfigProps = { config: Record<string, unknown>; updateConfig: (patch: Record<string, unknown>) => void }
 
+/**
+ * A form that hosts chips needs the replacing setter as well as the
+ * merging one.
+ *
+ * `updateConfig` merges a patch, which is right for a field writing
+ * one key. A chip's `remove` returns the whole config with its keys
+ * *deleted*, and merging that over the old object resurrects them —
+ * the chip disappears from the card while the runner keeps acting on
+ * the value it claims was removed.
+ */
+type ChipHostProps = ConfigProps & { replaceConfig: (config: Record<string, unknown>) => void }
+
 interface RecipientConfig {
   roles: ('primary' | 'spouse' | 'family' | 'vendor' | 'custom' | 'me')[]
   customTag?: string
   fallback: 'primary_only' | 'skip' | 'error'
 }
 
+/**
+ * The card's stand-in for the email body: a one-line précis of what is
+ * written, and the button that opens the composer.
+ */
+function EmailContentSummary({
+  config,
+  updateConfig,
+  title,
+  showRecipients = true,
+  showOptions = true,
+  modal,
+}: ConfigProps & {
+  title?: string
+  showRecipients?: boolean
+  showOptions?: boolean
+  /** Card-less mode: the node itself opens and closes the composer. */
+  modal?: { open: boolean; onClose: () => void }
+}) {
+  const [open, setOpen] = useState(false)
+  const subject = (config['subject'] as string) ?? ''
+  const attachments = Array.isArray(config['attachFiles'])
+    ? (config['attachFiles'] as string[]).length
+    : 0
+  const hasBody = Boolean(config['content']) || Boolean(config['body'])
+
+  const composer = (
+    <EmailComposerModal
+      isOpen={modal ? modal.open : open}
+      onClose={modal ? modal.onClose : () => setOpen(false)}
+      config={config}
+      {...(title ? { title } : {})}
+      showRecipients={showRecipients}
+      showOptions={showOptions}
+      // The composer owns the whole step config, so its draft is
+      // written back wholesale.
+      onSave={(draft) => updateConfig(draft)}
+    />
+  )
+
+  // Nothing to show on the card: the summary the box would repeat is
+  // already on the node's own title line.
+  if (modal) return composer
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3 rounded-control border border-border px-3 py-2">
+        <div className="min-w-0">
+          <p className="truncate text-body text-text">
+            {subject || <span className="text-text-subtle">No subject yet</span>}
+          </p>
+          <p className="text-body text-text-subtle">
+            {hasBody ? 'Body written' : 'No body yet'}
+            {attachments > 0
+              ? ` · ${attachments} attachment${attachments === 1 ? '' : 's'}`
+              : ''}
+          </p>
+        </div>
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          {hasBody || subject ? 'Edit email' : 'Write email'}
+        </Button>
+      </div>
+
+      {composer}
+    </>
+  )
+}
+
 function SendEmailForm({
   config,
   updateConfig,
-  recipients,
-  updateRecipients,
-}: ConfigProps & { recipients?: RecipientConfig; updateRecipients: (r: RecipientConfig) => void }) {
-  const templateId = (config['templateId'] as string) ?? ''
+  modal,
+}: ConfigProps & { modal?: { open: boolean; onClose: () => void } }) {
+  // Every field lives in the composer; the card is its summary, or
+  // nothing at all when the node opens the composer directly.
   return (
-    <>
-      <RecipientsField recipients={recipients} update={updateRecipients} />
-      <EmailTemplatePicker
-        value={templateId}
-        onChange={(id) => updateConfig({ templateId: id || undefined })}
-      />
-      {templateId ? (
-        <p className="text-body text-text-muted">
-          This email uses a saved template — edit its subject and body in Templates. If a variable
-          can&apos;t be filled for a couple, the run pauses and you&apos;ll be alerted to fix &amp;
-          retry.
-        </p>
-      ) : (
-        <>
-          <TextInput
-            label="Subject"
-            value={(config['subject'] as string) ?? ''}
-            onChange={(v) => updateConfig({ subject: v })}
-          />
-          <TextArea
-            label="Body"
-            rows={8}
-            value={(config['body'] as string) ?? ''}
-            onChange={(v) => updateConfig({ body: v })}
-          />
-          <InlineVariableHint />
-        </>
-      )}
-      <CheckboxField
-        label="Wrap with Zebri-branded HTML shell"
-        checked={config['wrap'] !== false}
-        onChange={(v) => updateConfig({ wrap: v })}
-      />
-      <SendEmailExtraFields config={config} updateConfig={updateConfig} />
-    </>
+    <EmailContentSummary
+      config={config}
+      updateConfig={updateConfig}
+      {...(modal ? { modal } : {})}
+    />
   )
 }
 
@@ -1297,30 +1071,11 @@ function SendMessagingForm({
     <>
       <Hint>{channel} sending isn't enabled yet. The action will fail at runtime until {channel} is wired (Phase 14b).</Hint>
       <RecipientsField recipients={recipients} update={updateRecipients} />
-      <TextArea
+      <Textarea
         label="Message"
         rows={5}
         value={(config['body'] as string) ?? ''}
-        onChange={(v) => updateConfig({ body: v })}
-      />
-      <InlineVariableHint />
-    </>
-  )
-}
-
-function SubjectBodyEmailForm({ config, updateConfig }: ConfigProps) {
-  return (
-    <>
-      <TextInput
-        label="Subject"
-        value={(config['subject'] as string) ?? ''}
-        onChange={(v) => updateConfig({ subject: v })}
-      />
-      <TextArea
-        label="Body"
-        rows={10}
-        value={(config['body'] as string) ?? ''}
-        onChange={(v) => updateConfig({ body: v })}
+        onChange={(e) => updateConfig({ body: e.target.value })}
       />
       <InlineVariableHint />
     </>
@@ -1343,18 +1098,18 @@ function MessageBodyForm({
       {recipients !== undefined && updateRecipients && (
         <RecipientsField recipients={recipients} update={updateRecipients} />
       )}
-      <TextArea
+      <Textarea
         label={label}
         rows={6}
         value={(config['message'] as string) ?? ''}
-        onChange={(v) => updateConfig({ message: v })}
+        onChange={(e) => updateConfig({ message: e.target.value })}
       />
       <InlineVariableHint />
     </>
   )
 }
 
-function CreateTaskForm({ config, updateConfig }: ConfigProps) {
+function CreateTaskForm({ config, updateConfig, replaceConfig }: ChipHostProps) {
   return (
     <>
       <TextInput
@@ -1363,157 +1118,71 @@ function CreateTaskForm({ config, updateConfig }: ConfigProps) {
         value={(config['title'] as string) ?? ''}
         onChange={(v) => updateConfig({ title: v })}
       />
-      <TextArea
+      <Textarea
         label="Description (optional)"
         rows={3}
         value={(config['description'] as string) ?? ''}
-        onChange={(v) => updateConfig({ description: v })}
+        onChange={(e) => updateConfig({ description: e.target.value })}
       />
-      <DueDateMode config={config} updateConfig={updateConfig} />
-      <CreateTaskExtraFields config={config} updateConfig={updateConfig} />
-    </>
-  )
-}
-
-function DueDateMode({ config, updateConfig }: ConfigProps) {
-  const mode: 'none' | 'date' | 'relative' = config['relativeToEvent']
-    ? 'relative'
-    : config['dueDate']
-      ? 'date'
-      : 'none'
-  function setMode(next: 'none' | 'date' | 'relative') {
-    if (next === 'none') updateConfig({ dueDate: undefined, relativeToEvent: undefined })
-    else if (next === 'date') updateConfig({ relativeToEvent: undefined, dueDate: (config['dueDate'] as string) ?? '' })
-    else updateConfig({ dueDate: undefined, relativeToEvent: (config['relativeToEvent'] as object) ?? { direction: 'before', amount: 7, unit: 'days' } })
-  }
-  return (
-    <>
-      <SelectInput
-        label="Due date"
-        value={mode}
-        onChange={(v) => setMode(v as 'none' | 'date' | 'relative')}
-        options={[
-          { value: 'none', label: 'No due date' },
-          { value: 'date', label: 'A specific date' },
-          { value: 'relative', label: 'Relative to the event date' },
-        ]}
-      />
-      {mode === 'date' && (
-        <DateInput
-          label="Due on"
-          value={(config['dueDate'] as string) ?? ''}
-          onChange={(v) => updateConfig({ dueDate: v })}
-        />
-      )}
-      {mode === 'relative' && (
-        <RelativeToEventField config={config} updateConfig={updateConfig} />
-      )}
-    </>
-  )
-}
-
-function RelativeToEventField({ config, updateConfig }: ConfigProps) {
-  const r = (config['relativeToEvent'] as { direction?: string; amount?: number; unit?: string }) ?? {}
-  function update(patch: Partial<typeof r>) {
-    updateConfig({ relativeToEvent: { direction: 'before', amount: 7, unit: 'days', ...r, ...patch } })
-  }
-  return (
-    <>
-      <div>
-        <Label>Offset from event</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <NumberInput label="" value={r.amount ?? 7} onChange={(v) => update({ amount: v })} />
-          <SelectInput
-            label=""
-            value={r.unit ?? 'days'}
-            onChange={(v) => update({ unit: v })}
-            options={[
-              { value: 'days', label: 'Days' },
-              { value: 'weeks', label: 'Weeks' },
-            ]}
-          />
-        </div>
-      </div>
-      <SelectInput
-        label="Direction"
-        value={r.direction ?? 'before'}
-        onChange={(v) => update({ direction: v })}
-        options={[
-          { value: 'before', label: 'Before the event' },
-          { value: 'after', label: 'After the event' },
-        ]}
+      <TriggerFilterList
+        filters={[taskDueChip(true)]}
+        config={config}
+        setConfig={(c) => replaceConfig(c)}
+        addLabel="Add option"
       />
     </>
   )
 }
 
-function UpdateTaskForm({ config, updateConfig }: ConfigProps) {
+function UpdateTaskForm({ config, updateConfig, replaceConfig }: ChipHostProps) {
   return (
     <>
-      <Hint>Updates the most recent task created by an earlier action. To target a specific task, paste its ID below.</Hint>
+      <Hint>
+        Legacy step: updates the most recent task created by an earlier action, or the one
+        whose ID is pasted below. No longer offered for new automations.
+      </Hint>
       <TextInput
         label="Task ID (optional)"
         placeholder="Leave blank to use the latest"
         value={(config['taskId'] as string) ?? ''}
         onChange={(v) => updateConfig({ taskId: v || undefined })}
       />
-      <SelectInput
-        label="Set status to (optional)"
-        value={(config['status'] as string) ?? ''}
-        onChange={(v) => updateConfig({ status: v || undefined })}
-        options={[
-          { value: '', label: 'Leave unchanged' },
-          { value: 'todo', label: 'To do' },
-          { value: 'in_progress', label: 'In progress' },
-          { value: 'done', label: 'Done' },
-        ]}
-      />
       <TextInput
         label="Set title to (optional)"
         value={(config['title'] as string) ?? ''}
         onChange={(v) => updateConfig({ title: v || undefined })}
       />
-      <TextArea
+      <Textarea
         label="Set description to (optional)"
         rows={3}
         value={(config['description'] as string) ?? ''}
-        onChange={(v) => updateConfig({ description: v || undefined })}
+        onChange={(e) => updateConfig({ description: e.target.value || undefined })}
       />
-      <DateInput
-        label="Set due date to (optional)"
-        value={(config['dueDate'] as string) ?? ''}
-        onChange={(v) => updateConfig({ dueDate: v || undefined })}
+      <TriggerFilterList
+        filters={[TASK_STATUS_CHIP, taskDueChip(false)]}
+        config={config}
+        setConfig={(c) => replaceConfig(c)}
+        addLabel="Add option"
       />
-      <UpdateTaskExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
 
-function UpdateCoupleStageForm({ config, updateConfig }: ConfigProps) {
-  return (
-    <>
-      <CoupleStatusSelect
-        label="Move couple to status"
-        value={(config['toStatus'] as string) ?? ''}
-        onChange={(v) => updateConfig({ toStatus: v })}
-      />
-      <UpdateCoupleStageExtraFields config={config} updateConfig={updateConfig} />
-    </>
-  )
+function UpdateCoupleStageForm({ config, replaceConfig }: ChipHostProps) {
+  return <StageChips config={config} setConfig={(c) => replaceConfig(c)} />
 }
 
 function AddNoteForm({ config, updateConfig }: ConfigProps) {
   return (
     <>
-      <TextArea
+      <Textarea
         label="Note text"
         rows={5}
         value={(config['text'] as string) ?? ''}
-        onChange={(v) => updateConfig({ text: v })}
+        onChange={(e) => updateConfig({ text: e.target.value })}
       />
       <Hint>Appends to the couple's notes with today's date.</Hint>
       <InlineVariableHint />
-      <AddNoteExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
@@ -1566,36 +1235,7 @@ function UpdateCustomFieldsForm({ config, updateConfig }: ConfigProps) {
   )
 }
 
-function RequestInformationForm({ config, updateConfig }: ConfigProps) {
-  return (
-    <>
-      <SelectInput
-        label="Portal section the couple is being asked to fill in"
-        value={(config['section'] as string) ?? 'onboarding'}
-        onChange={(v) => updateConfig({ section: v })}
-        options={[
-          { value: 'onboarding', label: 'Onboarding intro' },
-          { value: 'pre_event', label: 'Pre-event details' },
-          { value: 'day_of', label: 'Day-of run sheet' },
-          { value: 'people', label: 'People (partner, family, bridal party)' },
-          { value: 'songs', label: 'Music & songs' },
-          { value: 'files', label: 'Files / documents' },
-          { value: 'timeline', label: 'Timeline' },
-        ]}
-      />
-      <TextArea
-        label="Message"
-        rows={5}
-        value={(config['message'] as string) ?? ''}
-        onChange={(v) => updateConfig({ message: v })}
-      />
-      <InlineVariableHint />
-      <RequestInformationExtraFields config={config} updateConfig={updateConfig} />
-    </>
-  )
-}
-
-function CreateCoupleForm({ config, updateConfig }: ConfigProps) {
+function CreateCoupleForm({ config, updateConfig, replaceConfig }: ChipHostProps) {
   return (
     <>
       <TextInput
@@ -1604,31 +1244,15 @@ function CreateCoupleForm({ config, updateConfig }: ConfigProps) {
         value={(config['name'] as string) ?? ''}
         onChange={(v) => updateConfig({ name: v })}
       />
-      <TextInput
-        label="Primary email (optional)"
-        value={(config['email'] as string) ?? ''}
-        onChange={(v) => updateConfig({ email: v || undefined })}
+      {/* Everything else is optional, so it goes behind "Add option"
+          rather than stacking five mostly-empty controls in a 380px
+          node. */}
+      <TriggerFilterList
+        filters={CREATE_COUPLE_CHIPS}
+        config={config}
+        setConfig={(c) => replaceConfig(c as Record<string, unknown>)}
+        addLabel="Add option"
       />
-      <TextInput
-        label="Primary phone (optional)"
-        value={(config['phone'] as string) ?? ''}
-        onChange={(v) => updateConfig({ phone: v || undefined })}
-      />
-      <DateInput
-        label="Event date (optional)"
-        value={(config['eventDate'] as string) ?? ''}
-        onChange={(v) => updateConfig({ eventDate: v || undefined })}
-      />
-      <SelectInput
-        label="Lead source (optional)"
-        value={(config['leadSource'] as string) ?? ''}
-        onChange={(v) => updateConfig({ leadSource: v || undefined })}
-        options={[
-          { value: '', label: 'No source' },
-          ...LEAD_SOURCES.map((s) => ({ value: s, label: LEAD_SOURCE_LABELS[s] })),
-        ]}
-      />
-      <CreateCoupleExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
@@ -1654,11 +1278,11 @@ function TimelineEventForm({
         value={(config['title'] as string) ?? ''}
         onChange={(v) => updateConfig({ title: v })}
       />
-      <TextArea
+      <Textarea
         label="Description (optional)"
         rows={3}
         value={(config['description'] as string) ?? ''}
-        onChange={(v) => updateConfig({ description: v || undefined })}
+        onChange={(e) => updateConfig({ description: e.target.value || undefined })}
       />
       <TextInput
         label="Start time (optional, HH:MM)"
@@ -1671,17 +1295,12 @@ function TimelineEventForm({
         value={Number(config['durationMin'] ?? 0)}
         onChange={(v) => updateConfig({ durationMin: v || undefined })}
       />
-      {!requireExistingItem && (
-        <TextInput
-          label="Event ID (optional)"
-          placeholder="Leave blank to use the couple's main event"
-          value={(config['eventId'] as string) ?? ''}
-          onChange={(v) => updateConfig({ eventId: v || undefined })}
-        />
+      {/* No "Event ID" field: it asked the MC to paste a UUID that no
+          screen in the app shows, and the handler already falls back
+          to the couple's own event when it is absent. */}
+      {requireExistingItem && (
+        <UpdateTimelineEventExtraFields config={config} updateConfig={updateConfig} />
       )}
-      {requireExistingItem
-        ? <UpdateTimelineEventExtraFields config={config} updateConfig={updateConfig} />
-        : <TimelineEventExtraFields config={config} updateConfig={updateConfig} />}
     </>
   )
 }
@@ -1699,11 +1318,11 @@ function CalendarEntryForm({ config, updateConfig }: ConfigProps) {
         value={(config['date'] as string) ?? ''}
         onChange={(v) => updateConfig({ date: v })}
       />
-      <TextArea
+      <Textarea
         label="Notes (optional)"
         rows={3}
         value={(config['notes'] as string) ?? ''}
-        onChange={(v) => updateConfig({ notes: v || undefined })}
+        onChange={(e) => updateConfig({ notes: e.target.value || undefined })}
       />
       <CalendarEventExtraFields config={config} updateConfig={updateConfig} />
     </>
@@ -1910,20 +1529,6 @@ function NumberInput({
  * `Textarea` primitive yet, so this stays inline but uses the same
  * token-driven classes the `Input` primitive applies.
  */
-function TextArea({ label, value, onChange, rows }: { label: string; value: string; onChange: (v: string) => void; rows: number }) {
-  return (
-    <div className="space-y-1">
-      <Label>{label}</Label>
-      <textarea
-        rows={rows}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="block w-full rounded-control bg-surface text-text placeholder:text-text-subtle border border-border px-2.5 py-2 text-body transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-fg focus-visible:border-brand-fg"
-      />
-    </div>
-  )
-}
-
 /**
  * Thin wrapper around the design-system `Select` that keeps the
  * "empty string = no filter" API the forms use here while honouring

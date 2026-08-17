@@ -13,9 +13,12 @@ import type { NextConfig } from "next";
  */
 const isProd = process.env.NODE_ENV === "production";
 
-const securityHeaders = [
-  // Clickjacking guard. Superseded by CSP `frame-ancestors` once CSP lands.
-  { key: "X-Frame-Options", value: "DENY" },
+/**
+ * Security headers common to every response. The clickjacking guard
+ * (`X-Frame-Options`) is intentionally NOT here — it's applied per-route
+ * below so the public lead-capture embed can opt out of it.
+ */
+const baseSecurityHeaders = [
   // Disable MIME sniffing.
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Don't leak full URLs to third-party resources.
@@ -40,13 +43,36 @@ const securityHeaders = [
     : []),
 ];
 
+// Clickjacking guard for the app proper. Superseded by CSP
+// `frame-ancestors` once a full CSP lands.
+const frameDenyHeader = { key: "X-Frame-Options", value: "DENY" };
+
+// The lead-capture embed is designed to render inside an iframe on an
+// arbitrary MC marketing site, so it can't carry `X-Frame-Options: DENY`.
+// `X-Frame-Options` has no allowlist-any-origin value (its `ALLOW-FROM`
+// is dead in modern browsers), so `/lead/*` drops it and opens framing
+// via CSP `frame-ancestors *` instead. The page is a public, token-gated
+// enquiry form with no session to hijack, so the residual clickjacking
+// surface is limited to "trick a visitor into submitting an enquiry".
+const embedFrameHeader = {
+  key: "Content-Security-Policy",
+  value: "frame-ancestors *",
+};
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Apply to every route — page, API, and asset.
-        source: "/:path*",
-        headers: securityHeaders,
+        // Public lead-capture embed — must be frameable on any MC site.
+        source: "/lead/:path*",
+        headers: [...baseSecurityHeaders, embedFrameHeader],
+      },
+      {
+        // Every other route — page, API, and asset. The negative
+        // lookahead keeps this off `/lead/*` so the two frame policies
+        // never both apply to the embed.
+        source: "/((?!lead/).*)",
+        headers: [...baseSecurityHeaders, frameDenyHeader],
       },
     ];
   },
