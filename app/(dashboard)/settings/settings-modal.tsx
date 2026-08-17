@@ -14,7 +14,7 @@
 
 import { X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useScrollLock } from '@/components/ui/use-overlay';
 import { createClient } from '@/lib/supabase/client';
@@ -43,6 +43,14 @@ export function SettingsModal() {
   // (remounting the modal and resetting the tab). Local state mirrors
   // the working `couple-profile` overlay, which never navigates on a
   // tab change.
+  // Landing here with `?oauth=` means we arrived via the mailbox-connect
+  // redirect chain, so the previous history entry is the provider's
+  // consent screen — closing with router.back() would reopen it. Capture
+  // the flag in a ref (PublicPageEmail strips the param right after
+  // toasting) and close by navigating forward instead.
+  const returnedFromOAuth = useRef(false);
+  if (searchParams.get('oauth')) returnedFromOAuth.current = true;
+
   const rawTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<SettingsTabId>(
     rawTab && VALID_TABS.includes(rawTab as SettingsTabId)
@@ -105,8 +113,8 @@ export function SettingsModal() {
   // Close = pop history back to wherever the modal opened from; fall
   // back to the dashboard home if there's nothing to pop (hard load).
   const handleClose = () => {
-    if (window.history.length > 1) router.back();
-    else router.push('/');
+    if (returnedFromOAuth.current || window.history.length <= 1) router.push('/');
+    else router.back();
   };
 
   // Shared count rather than a local overflow write, so a confirm dialog
