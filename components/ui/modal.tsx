@@ -1,10 +1,12 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import {
   getOpenOverlayDepth,
+  getScrollLockCount,
   OVERLAY_Z,
   useBackdropDismiss,
   useOverlay,
@@ -79,8 +81,27 @@ export function Modal({
   flushBottom = false,
   floatingClose = false,
 }: ModalProps) {
-  // `nested` predates `layer`; honour it when `layer` is not given.
-  const z = OVERLAY_Z[layer ?? (nested ? 'nested' : 'base')];
+  // Auto-tier: a base backdrop (z-50) opened from inside a fullscreen
+  // overlay (couple/contact profile, settings — panels at z-[60]) is
+  // swallowed behind the panel, so the modal appears with no dark
+  // backdrop. Any surface covering the page holds the shared scroll
+  // lock, so a non-zero count at the moment of opening means "stack
+  // above". Latched via render-phase state adjustment on each
+  // open/close transition — computed before this modal's own lock
+  // registers (its effects haven't run yet), and frozen afterwards so
+  // later re-renders (which would count ourselves) can't flip the tier
+  // mid-life.
+  const [latched, setLatched] = useState<{ open: boolean; tier: OverlayLayer }>({
+    open: false,
+    tier: 'base',
+  });
+  if (isOpen !== latched.open) {
+    setLatched({ open: isOpen, tier: isOpen && getScrollLockCount() > 0 ? 'nested' : 'base' });
+  }
+
+  // `nested` predates `layer`; honour both when given — the auto tier
+  // only decides for call sites that never said.
+  const z = OVERLAY_Z[layer ?? (nested ? 'nested' : latched.tier)];
 
   useOverlay({ isOpen, onClose });
   const backdropHandlers = useBackdropDismiss(onClose);

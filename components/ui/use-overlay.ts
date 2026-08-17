@@ -47,6 +47,20 @@ export function getOpenOverlayDepth(): number {
   return openOverlayDepth;
 }
 
+/**
+ * How many surfaces currently hold the page's scroll lock.
+ *
+ * The bespoke fullscreen overlays (couple/contact profile, settings)
+ * never register in {@link getOpenOverlayDepth}, but they all lock
+ * scroll — so this count is the reliable "is anything already covering
+ * the page?" signal. Modal reads it at open time to auto-pick its
+ * stacking tier: a base-tier backdrop (z-50) opened from inside a
+ * profile overlay (panel z-[60]) is swallowed behind the panel.
+ */
+export function getScrollLockCount(): number {
+  return scrollLockCount;
+}
+
 /** Stacking tier. Each maps to a backdrop and panel z-index. */
 export type OverlayLayer = 'base' | 'nested' | 'top';
 
