@@ -130,13 +130,11 @@ test.describe('Couple Management', () => {
     await expect(page.locator('h2:has-text("Add Couple")')).not.toBeVisible()
   })
 
-  // ── 11. "n" shortcut opens New modal ──────────────────────────────────────
-  test('"n" shortcut opens Add Couple modal', async ({ page }) => {
-    // Make sure no input is focused
+  // ── 11. "n" does NOT open the New modal (shortcut removed 2026-08-17) ─────
+  test('"n" key does not open the Add Couple modal', async ({ page }) => {
     await page.locator('body').click()
     await page.keyboard.press('n')
-    await expect(page.locator('h2:has-text("Add Couple")')).toBeVisible()
-    await page.locator('button:has-text("Cancel")').click()
+    await expect(page.locator('h2:has-text("Add Couple")')).not.toBeVisible()
   })
 
   // ── 12. "/" shortcut focuses search ──────────────────────────────────────

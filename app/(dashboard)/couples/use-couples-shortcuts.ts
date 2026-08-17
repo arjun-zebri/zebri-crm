@@ -2,8 +2,10 @@
  * Keyboard shortcuts for the `/couples` page.
  *
  * - **Esc** clears multi-select (when any couples are selected).
- * - **n** opens the add-couple modal (unless the focus is in a text
- *   input — typing "n" into the search box must not steal focus).
+ *
+ * The old **n** = add-couple shortcut was removed (2026-08-17): its
+ * input guard missed contenteditable surfaces (rich-text editors), so
+ * typing "n" mid-sentence could steal focus into the add modal.
  *
  * Extracted from `page.tsx` so the orchestrator stays composition-
  * only and the shortcut behaviour can be tested in isolation.
@@ -17,30 +19,20 @@ import { useEffect } from 'react';
 export interface UseCouplesShortcutsArgs {
   hasSelection: boolean;
   onClearSelection: () => void;
-  onAdd: () => void;
 }
 
 export function useCouplesShortcuts({
   hasSelection,
   onClearSelection,
-  onAdd,
 }: UseCouplesShortcutsArgs): void {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && hasSelection) {
         onClearSelection();
-        return;
-      }
-      if (e.key === 'n' && !e.ctrlKey && !e.metaKey) {
-        const target = e.target as HTMLElement;
-        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
-          e.preventDefault();
-          onAdd();
-        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasSelection, onClearSelection, onAdd]);
+  }, [hasSelection, onClearSelection]);
 }
