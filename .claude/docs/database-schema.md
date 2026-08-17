@@ -923,7 +923,14 @@ address), refreshing the access token when expired. Written by the OAuth
 callback route + the Public Page server actions
 (`app/(dashboard)/settings/public/actions.ts`).
 
-Migration: `20260621000000_create_user_public_settings.sql`.
+Migrations: `20260621000000_create_user_public_settings.sql`;
+`20260817000000_repair_user_public_settings_oauth_columns.sql`. The
+repair exists because the prod table pre-dated the create-table
+migration (SQL-editor era), so its `create table if not exists` silently
+no-opped on prod and the email/OAuth columns never landed there (found
+via PGRST204 when the first real mailbox connect tried to save). The
+repair re-adds every declared column/index/policy idempotently; it
+no-ops on a from-zero database.
 
 ------------------------------------------------------------------------
 
