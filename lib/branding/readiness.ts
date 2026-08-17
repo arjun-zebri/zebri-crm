@@ -35,8 +35,8 @@ export interface AccountReadiness {
 
 /** A single readiness issue blocking editing or sending. */
 export interface ReadinessIssue {
-  /** Category of issue: missing required block, at-least-one constraint, exactly-one constraint, or account prerequisite. */
-  kind: 'missing-required' | 'need-at-least-one' | 'need-exactly-one' | 'account'
+  /** Category of issue: missing required block, at-least-one constraint, exactly-one constraint, a required Name or Email question on the website form, or account prerequisite. */
+  kind: 'missing-required' | 'need-at-least-one' | 'need-exactly-one' | 'need-name-field' | 'need-email-field' | 'account'
   /** Plain-language message (no block type codes, only human labels from blockLabel). */
   message: string
 }
@@ -90,7 +90,9 @@ export function evaluateSurface(
     }
   }
 
-  // Layer A: At-least-one constraint (invoice only)
+  // Layer A: At-least-one constraint (invoice: a way to pay; lead: a field).
+  // The copy is per-surface because the sets mean different things: the
+  // invoice needs a payment mechanism, the website form needs a question.
   const atLeastOne = atLeastOneForSurface(surface)
   if (atLeastOne !== null) {
     const hasAtLeastOne = atLeastOne.some((type) => blockTypes.has(type))
@@ -98,7 +100,10 @@ export function evaluateSurface(
       layerAReady = false
       issues.push({
         kind: 'need-at-least-one',
-        message: 'Payment details or a payment action',
+        message:
+          surface === 'lead'
+            ? 'At least one question for the couple to answer'
+            : 'Payment details or a payment action',
       })
     }
   }
@@ -108,17 +113,49 @@ export function evaluateSurface(
   const exactlyOne = exactlyOneForSurface(surface)
   if (exactlyOne !== null) {
     const present = exactlyOne.filter((type) => blockTypes.has(type))
+    // "Form style" copy is questionnaire-specific (its set is a choice between
+    // two styles); on other surfaces the set is a single mandatory block, so
+    // the message just names it.
+    const isStyleChoice = surface === 'questionnaire'
     if (present.length === 0) {
       layerAReady = false
       issues.push({
         kind: 'need-exactly-one',
-        message: `Add a form style: ${exactlyOne.map((t) => blockLabel(t, surface)).join(' or ')}`,
+        message: isStyleChoice
+          ? `Add a form style: ${exactlyOne.map((t) => blockLabel(t, surface)).join(' or ')}`
+          : `A ${exactlyOne.map((t) => blockLabel(t, surface)).join(' or ')}`,
       })
     } else if (present.length > 1) {
       layerAReady = false
       issues.push({
         kind: 'need-exactly-one',
-        message: `Pick one form style: remove ${present.map((t) => blockLabel(t, surface)).join(' or ')} so only one remains`,
+        message: isStyleChoice
+          ? `Pick one form style: remove ${present.map((t) => blockLabel(t, surface)).join(' or ')} so only one remains`
+          : `Only one ${present.map((t) => blockLabel(t, surface)).join(' or ')}`,
+      })
+    }
+  }
+
+  // Layer A: the website form must have a Name question (a couple cannot be
+  // created without a name) and an Email question (the MC cannot reply to the
+  // enquiry without one). These are prop-level rules (the `role` on a
+  // formField block), so they sit outside the type-level
+  // required/at-least-one/exactly-one machinery above.
+  if (surface === 'lead') {
+    const hasRole = (role: string) =>
+      blocks.some((b) => b.type === 'formField' && b.role === role)
+    if (!hasRole('name')) {
+      layerAReady = false
+      issues.push({
+        kind: 'need-name-field',
+        message: 'A "Your name" question, so the enquiry has the couple\'s name',
+      })
+    }
+    if (!hasRole('email')) {
+      layerAReady = false
+      issues.push({
+        kind: 'need-email-field',
+        message: 'An "Email" question, so you can reply to the enquiry',
       })
     }
   }

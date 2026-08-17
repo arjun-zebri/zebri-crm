@@ -695,6 +695,10 @@ Each block type offers additional controls audited per surface:
 - **Totals:** heading/label/value text controls, show/hide rows
 - **Payment details:** heading/label/value text controls
 - **Footer:** note + contact text controls, show/hide contact lines
+- **Form field** (Website form surface): role (Name / Partner / Email / Phone / Wedding date / Venue / Message / Referral / Custom), input type (text / email / phone / date / long text / dropdown), label, placeholder, required toggle, and options list (dropdown only)
+- **Submit button** (Website form surface): labelled toolbar controls on two rows: Button label + After sending (Select: show a success message / redirect to a URL, http(s) only), then the matching Success message / Redirect URL input full-width. Below them, action-style button styling: fill colour, fill/outline, size (S/M/L), alignment, radius, and width, each a block override falling back to the brand's global button settings. Editor preview and public page render the same `RenderFormSubmitButton` (`lib/branding/public-blocks/form-submit.tsx`)
+
+The **Website form** (`lead`) is a full branding surface with its own tab, edited exactly like the invoice/contract/questionnaire surfaces. Its palette is the General blocks plus one ready-made entry per enquiry question (each a `formField` preset with its role, input type, label, and required flag preset; name + email preset required), a Custom question, and the Submit button; the public `/lead/[token]` page renders the block tree. See `page-specs.md` (Lead Capture) for the public + ingest behaviour.
 
 ------------------------------------------------------------------------
 

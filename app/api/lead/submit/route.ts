@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
       venue: input.venue ?? '',
       referral_source: input.referral_source ?? '',
       message: input.message ?? '',
+      // MC-defined custom answers; the RPC stores these on the submission and
+      // folds them into the couple notes.
+      custom: input.custom ?? [],
     } as Json,
   });
 
@@ -124,6 +127,16 @@ export async function POST(request: NextRequest) {
       mcBusinessName: result.business_name || 'your business',
       lead: leadFrom(input),
       replyTo: input.email,
+    });
+    // Slack heads-up in addition to the email, so a new enquiry is visible in
+    // the team channel even if the MC misses the email.
+    await sendAlert({
+      type: 'lead_new_enquiry',
+      severity: 'info',
+      userId: 'unknown',
+      email: result.mc_email,
+      // Only include the key when known (exactOptionalPropertyTypes: no explicit undefined).
+      ...(result.business_name ? { businessName: result.business_name } : {}),
     });
   }
   return ok();

@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from 'react'
 
+import {
+  ALL_SURFACE_TABS,
+  buildEnabledSurfacesMap,
+  resolveEnabledSurfaces,
+} from '@/lib/branding/enabled-surfaces'
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { shouldShowOnboarding } from '@/lib/branding/onboarding-gate'
 import type { TextCase } from '@/lib/branding/text-case'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 import { createClient } from '@/lib/supabase/client'
-import type { BrandKit, SurfaceTab } from '@/types/branding-preview'
+import type { BrandKit } from '@/types/branding-preview'
 import type { Json } from '@/types/database'
 
 import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
@@ -69,7 +74,7 @@ interface UserMetadata {
   section_spacing?: number
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
-  branding_blocks?: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] }
+  branding_blocks?: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[]; lead?: Block[] }
   brand_kits?: BrandKit[]
   portal_sections?: {
     timeline?: boolean
@@ -83,7 +88,7 @@ interface UserMetadata {
 }
 
 interface UserBrandingRow {
-  branding_blocks: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] } | null
+  branding_blocks: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[]; lead?: Block[] } | null
   brand_kits: BrandKit[] | null
   portal_sections: {
     timeline?: boolean
@@ -250,18 +255,12 @@ export default function BrandingPage() {
     }
 
     // Step (b): Build enabled_surfaces map and blocks, then upsert user_branding.
-    const enabledSurfacesMap = result.enabledSurfaces.reduce(
-      (acc, surface) => {
-        acc[surface] = true
-        return acc
-      },
-      {} as Record<string, boolean>,
-    )
+    const enabledSurfacesMap = buildEnabledSurfacesMap(result.enabledSurfaces)
 
     // Seed branding_blocks from the default tree for each ENABLED surface only.
     // Disabled surfaces get empty arrays.
     const branding_blocks: Record<string, Block[]> = {}
-    for (const surface of ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as SurfaceTab[]) {
+    for (const surface of ALL_SURFACE_TABS) {
       branding_blocks[surface] = result.enabledSurfaces.includes(surface)
         ? defaultBlocksFor(surface)
         : []
@@ -342,18 +341,11 @@ export default function BrandingPage() {
   const migratedPortal   = blocksSrc.portal   !== undefined ? repairBlocks('portal', migrateBlocks(blocksSrc.portal, 'portal'))   : null
   const migratedVendorTimeline = blocksSrc.vendorTimeline !== undefined ? repairBlocks('vendorTimeline', migrateBlocks(blocksSrc.vendorTimeline, 'vendorTimeline')) : null
   const migratedQuestionnaire = blocksSrc.questionnaire !== undefined ? repairBlocks('questionnaire', migrateBlocks(blocksSrc.questionnaire, 'questionnaire')) : null
+  const migratedLead = blocksSrc.lead !== undefined ? repairBlocks('lead', migrateBlocks(blocksSrc.lead, 'lead')) : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
-  // Default to all five surfaces enabled
-  const defaultEnabledSurfaces: Record<string, boolean> = {
-    invoice: true,
-    contract: true,
-    portal: true,
-    vendorTimeline: true,
-    questionnaire: true,
-  }
-  const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
+  const enabledSurfaces = resolveEnabledSurfaces(branding?.enabled_surfaces)
   const onboardedAt = branding?.onboarded_at ?? null
   const showOnboarding =
     forceOnboarding ||
@@ -403,6 +395,7 @@ export default function BrandingPage() {
               portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
               vendorTimeline: migratedVendorTimeline !== null ? migratedVendorTimeline : defaultBlocksFor('vendorTimeline'),
               questionnaire: migratedQuestionnaire !== null ? migratedQuestionnaire : defaultBlocksFor('questionnaire'),
+              lead: migratedLead !== null ? migratedLead : defaultBlocksFor('lead'),
             },
             businessName: metadata?.business_name || '',
             phone: metadata?.phone || '',
@@ -446,7 +439,7 @@ export default function BrandingPage() {
             buttonSize: metadata?.button_size ?? 'md',
             buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
             sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
-            enabledSurfaces: Object.keys(enabledSrc).filter((k) => enabledSrc[k]) as SurfaceTab[],
+            enabledSurfaces,
             onboardedAt,
           }}
         />

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { ALL_SURFACE_TABS } from '@/lib/branding/enabled-surfaces'
 import type { BodyFont, HeadingFont } from '@/lib/branding/fonts'
 import type { Density } from '@/lib/branding/themes'
 import type { SurfaceTab } from '@/types/branding-preview'
@@ -76,7 +77,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   const [enabledSurfaces, setEnabledSurfaces] = useState<SurfaceTab[]>(
     props.initial.enabledSurfaces && props.initial.enabledSurfaces.length > 0
       ? props.initial.enabledSurfaces
-      : ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
+      : ALL_SURFACE_TABS,
   )
   const [loading, setLoading] = useState(false)
 
@@ -125,7 +126,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       fontHeading: fontHeading || props.initial.fontHeading || 'playfair',
       fontBody: fontBody || props.initial.fontBody || 'inter',
       density: density || props.initial.density || 'cozy',
-      enabledSurfaces: ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
+      enabledSurfaces: ALL_SURFACE_TABS,
     }
     setLoading(true)
     try {

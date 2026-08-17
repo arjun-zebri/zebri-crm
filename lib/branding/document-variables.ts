@@ -75,6 +75,9 @@ export const VARIABLES_BY_SURFACE: Record<SurfaceTab, DocumentVariable[]> = {
   portal: [...COUPLE, ...BUSINESS],
   vendorTimeline: [...COUPLE, ...BUSINESS],
   questionnaire: [...COUPLE, ...BUSINESS],
+  // The website form is filled by a visitor before any couple exists, so only
+  // the MC's own business variables are offered (no couple chips).
+  lead: [...BUSINESS],
 }
 
 /** Flat lookup of every known variable id to its definition, across all surfaces. */

@@ -4,9 +4,13 @@ import { ImageIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
+import { Input } from '@/components/ui/input'
+import { Select, type SelectOption } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { getTextColor } from '@/lib/branding/contrast'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
+import { RenderFormSubmitButton } from '@/lib/branding/public-blocks/form-submit'
 import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
 import { RenderImage as PublicRenderImage, type ImageInteraction } from '@/lib/branding/public-blocks/image'
 import { RenderLineItems as PublicRenderLineItems } from '@/lib/branding/public-blocks/line-items'
@@ -47,6 +51,8 @@ import type {
   ContractSignBlock,
   CouplePortalBlock,
   VendorTimelineBodyBlock,
+  FormFieldBlock,
+  FormSubmitBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -1292,6 +1298,69 @@ export function RenderQuestionnairePreview({
             </div>
           )}
       </div>
+    </div>
+  )
+}
+
+// ── Website form field ──────────────────────────────────────────────────────────
+
+/**
+ * Editor preview for a {@link FormFieldBlock} on the Website form (`lead`)
+ * surface. Renders a static, non-interactive labelled control matching the
+ * field's `inputType` using the design-system primitives (Input for text /
+ * email / tel / date / textarea, Select for a dropdown). It is preview-only:
+ * every control is read-only or disabled, so the MC configures the field
+ * through the toolbar controls rather than by typing here. A danger-coloured
+ * marker appears when the field is required.
+ */
+export function RenderFormField({ block, state }: RenderProps<FormFieldBlock>) {
+  const pad = PAD(state)
+  const placeholder = block.placeholder || undefined
+  return (
+    <div className={pad.blockY}>
+      <label className="block text-body font-medium text-text mb-1">
+        {block.label || 'Field label'}
+        {block.required && (
+          <span className="text-danger ml-0.5" aria-hidden>
+            *
+          </span>
+        )}
+      </label>
+      {block.inputType === 'select' ? (
+        <Select
+          options={(block.options ?? []).map((o): SelectOption => ({ value: o, label: o }))}
+          placeholder={block.placeholder || 'Select an option'}
+          disabled
+        />
+      ) : block.inputType === 'textarea' ? (
+        <Textarea {...(placeholder ? { placeholder } : {})} readOnly tabIndex={-1} resizable={false} />
+      ) : (
+        <Input type={block.inputType} {...(placeholder ? { placeholder } : {})} readOnly tabIndex={-1} />
+      )}
+    </div>
+  )
+}
+
+// ── Website form submit ─────────────────────────────────────────────────────────
+
+/**
+ * Editor preview for the {@link FormSubmitBlock}: the same branded button the
+ * public page renders ({@link RenderFormSubmitButton}), resolved against the
+ * editor's brand state, so styling it here is styling the real thing. The
+ * after-submit behaviour (success message or redirect URL) is configured in
+ * the labelled toolbar controls, not in the canvas: the canvas mirrors the
+ * public page, which shows nothing under the button. Preview-only: wrapped so
+ * it never receives pointer or keyboard focus in the editor.
+ */
+export function RenderFormSubmit({ block, state }: RenderProps<FormSubmitBlock>) {
+  // Vertical rhythm comes from the shared button (it owns blockY, like every
+  // public block), so no extra padding wrapper here.
+  return (
+    <div className="pointer-events-none select-none">
+      <RenderFormSubmitButton
+        block={block}
+        branding={publicBrandingFromEditorState(state)}
+      />
     </div>
   )
 }

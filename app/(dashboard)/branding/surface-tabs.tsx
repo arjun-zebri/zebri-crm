@@ -1,7 +1,7 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Clock, FileSignature, FileText, MessageSquare, Receipt, Settings2, Users2 } from 'lucide-react'
+import { Clock, FileSignature, FileText, Globe, MessageSquare, Receipt, Settings2, Users2 } from 'lucide-react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { SurfaceTab, BrandPreviewState } from '@/types/branding-preview'
@@ -23,6 +23,7 @@ const TABS: { id: SurfaceTab; label: string; icon: typeof Receipt; subtitle: str
   { id: 'portal',   label: 'Portal',   subtitle: 'Couple dashboard',  icon: Users2 },
   { id: 'vendorTimeline', label: 'Run sheet', subtitle: 'Live timeline', icon: Clock },
   { id: 'questionnaire', label: 'Questionnaire', subtitle: 'Inquiry form', icon: MessageSquare },
+  { id: 'lead', label: 'Website form', subtitle: 'Embed on your site', icon: Globe },
 ]
 
 export function SurfaceTabs({

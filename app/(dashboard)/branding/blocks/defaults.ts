@@ -3,7 +3,7 @@ import type { JSONContent } from '@tiptap/core'
 import { htmlToPlainText } from '@/lib/branding/sanitize'
 import type { SurfaceTab } from '@/types/branding-preview'
 
-import type { Block, BlockType } from './types'
+import type { Block, BlockType, FormFieldBlock, FormFieldInputType, FormFieldRole } from './types'
 
 /** Build a single-paragraph rich-text doc from a plain string (empty = blank paragraph). */
 function textDoc(s: string): JSONContent {
@@ -105,12 +105,59 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
       return { id: newId('im'), type: 'image', fit: 'cover', heightPx: 160 }
     case 'spacer':
       return { id: newId('sp'), type: 'spacer', heightPx: 32 }
+    case 'formField':
+      // A fresh field seeds as a required Name so a lead always yields a couple
+      // name (the one couple-required column). The MC changes role/type/label
+      // from the field controls.
+      return {
+        id: newId('ff'), type: 'formField',
+        role: 'name', inputType: 'text',
+        label: 'Your name', required: true,
+      }
+    case 'formSubmit':
+      // Locked so it can't be duplicated; still deletable + re-addable as a
+      // clearable marker singleton (see policy.CLEARABLE_MARKERS / EXACTLY_ONE).
+      return {
+        id: newId('fs'), type: 'formSubmit', locked: true,
+        label: 'Send enquiry',
+        successMessage: 'Thanks! Your enquiry has been sent. We will be in touch soon.',
+      }
   }
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
+export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead'): Block[] {
+  if (surface === 'lead') {
+    // Mirrors the fixed-field fallback form on the public /lead/[token] page:
+    // same questions, same order, same labels, so customising starts from
+    // exactly what the couple already sees. Required matches what the couple
+    // must fill in there (name + email). Every field maps to a couple column
+    // via `role`; the MC can add/remove/reorder fields and add custom ones.
+    const field = (
+      role: FormFieldRole, inputType: FormFieldInputType, label: string,
+      required = false,
+    ): FormFieldBlock => ({ id: newId('ff'), type: 'formField', role, inputType, label, required })
+    return [
+      { id: newId('bn'), type: 'businessName' },
+      {
+        id: newId('tx'),
+        type: 'text',
+        text: textDoc(
+          "Planning your wedding? Tell me a little about your day below and I'll be in touch soon.",
+        ),
+      },
+      field('name', 'text', 'Your name', true),
+      field('partnerName', 'text', "Partner's name"),
+      field('email', 'email', 'Email', true),
+      field('phone', 'tel', 'Phone'),
+      field('weddingDate', 'date', 'Wedding date'),
+      field('venue', 'text', 'Venue'),
+      field('referral', 'text', 'How did you hear about me?'),
+      field('message', 'textarea', 'Message'),
+      blockTemplate('formSubmit'),
+    ]
+  }
   if (surface === 'portal') {
     return [
       { id: newId('bn'), type: 'businessName' },
@@ -194,7 +241,7 @@ export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'v
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead'): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {

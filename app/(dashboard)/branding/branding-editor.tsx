@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/toast'
 import { getAccountReadiness } from '@/lib/branding/account-readiness'
+import { buildEnabledSurfacesMap } from '@/lib/branding/enabled-surfaces'
 import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { evaluateSurface, type AccountReadiness } from '@/lib/branding/readiness'
 import type { TextCase } from '@/lib/branding/text-case'
@@ -23,6 +24,7 @@ import type { Json } from '@/types/database'
 
 import { AddBlockPalette } from './blocks/add-block-palette'
 import { BlockRenderer } from './blocks/block-renderer'
+import type { PaletteEntry } from './blocks/blocks-by-surface'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import { CLEARABLE_MARKERS, isDeletable, isMarker } from './blocks/policy'
 import type { Block, ImageBlock } from './blocks/types'
@@ -69,7 +71,7 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
+    blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] }
     businessName: string
     phone: string
     website: string
@@ -135,7 +137,7 @@ export interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] }
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
@@ -241,14 +243,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     // with required blocks), so the user's "hide and clear" intent is not lost.
     const repairedBlocks = repairAllSurfaces(value.blocks)
 
-    // Build enabled_surfaces map from the enabledSurfaces array.
-    const enabledSurfacesMap = value.enabledSurfaces.reduce(
-      (acc, surface) => {
-        acc[surface] = true
-        return acc
-      },
-      {} as Record<string, boolean>,
-    )
+    // Build enabled_surfaces map from the enabledSurfaces array. Every
+    // surface is written as an explicit boolean so a deliberate disable is
+    // distinguishable from a key that predates the surface (which the load
+    // path defaults to enabled for `lead`).
+    const enabledSurfacesMap = buildEnabledSurfacesMap(value.enabledSurfaces)
 
     // Heavy fields (block trees, saved kits, portal section toggles) live in
     // public.user_branding so they don't bloat the auth JWT and trigger HTTP
@@ -620,7 +619,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     updateBlock<ImageBlock>(blockId, { url: undefined })
   }
 
-  const docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' = surface
+  const docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead' = surface
 
   /** Normalise a kit's per-surface block trees, filling any missing
    *  surface with its default layout so applying a kit keeps the MC's
@@ -635,6 +634,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       portal: blocks.portal ?? defaultBlocksFor('portal'),
       vendorTimeline: blocks.vendorTimeline ?? defaultBlocksFor('vendorTimeline'),
       questionnaire: blocks.questionnaire ?? defaultBlocksFor('questionnaire'),
+      lead: blocks.lead ?? defaultBlocksFor('lead'),
     }
   }
 
@@ -684,7 +684,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setBlocksForCurrent(list.map((b) => (b.id === id ? cleared : b)))
   }
 
-  const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
+  const addBlock = (entry: PaletteEntry) => {
+    const { type } = entry
     const list = state.blocks[docSurface] ?? []
     // Singleton markers (contract body / sign) stay in the palette permanently
     // so the MC can see them, but only one may exist. If one is already there,
@@ -697,7 +698,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         return
       }
     }
-    const newBlock = blockTemplate(type, docSurface)
+    // Preset entries (the Website form's ready-made questions) overlay their
+    // props on the fresh template, so one block type can back many entries.
+    const newBlock = { ...blockTemplate(type, docSurface), ...entry.preset } as Block
     if (insertAfterId) {
       const idx = list.findIndex((b) => b.id === insertAfterId)
       const next = [...list]
@@ -797,6 +800,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       portal: defaultBlocksFor('portal'),
       vendorTimeline: defaultBlocksFor('vendorTimeline'),
       questionnaire: defaultBlocksFor('questionnaire'),
+      lead: defaultBlocksFor('lead'),
     }
     const kit: BrandKit = {
       id: `kit-${Date.now().toString(36)}`,
@@ -1286,8 +1290,8 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] },
-  docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire',
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] },
+  docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead',
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return
