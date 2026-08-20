@@ -467,6 +467,9 @@ RLS: service role only (no client access).
 portal_token (uuid, not null, default gen_random_uuid())  -  unique token for the **primary partner**'s portal link
 secondary_portal_token (uuid, not null, default gen_random_uuid(), unique)  -  unique token for the **spouse/secondary partner**'s portal link (added 2026-06-16; allows per-partner access with privacy-filtered vow content)
 portal_token_enabled (boolean, not null, default true)  -  gates both primary and secondary partner portal access; MCs can rotate portal_token to invalidate old primary links
+selected_package_id (uuid, nullable, FK packages **on delete set null**, indexed)  -  the package this couple has chosen. Set from the portal (couple picks via `save_portal_package`), on the Add/Edit Couple modal at creation, or inline on the couple profile Overview (plain RLS update). Null until a choice is made. (added 2026-08-19)
+
+**The couples INSERT/UPDATE policies carry a package-ownership guard.** Foreign keys are checked with elevated privileges and ignore RLS, so the plain `auth.uid() = user_id` policy still accepted a `selected_package_id` belonging to another MC: the FK found a row the writer could never read, linking across tenants and confirming that package id exists. Both policies therefore add `with check (... and _owns_package_or_null(selected_package_id))`. Same class of hole as the `couple_time_entries` couple_id guard below; found by `tests/integration/rls/couple-selected-package.test.ts`. Migration: `20260820010000_couple_package_ownership_guard.sql`.
 
 ## timeline_items table additions
 
@@ -558,6 +561,10 @@ save_portal_couple_details(p_token, p_primary_name, p_primary_email, p_primary_p
 
 **Events (Overview tab):**
 save_portal_event(p_token, p_id, p_date, p_venue)  -  add or edit a couple's event (date + venue) from the portal. Upserts on p_id; the `ON CONFLICT ... WHERE couple_id = <resolved>` clause is the cross-couple guard (a token can only touch its own couple's events). New rows default to status='upcoming'; status is preserved on edit. No delete path. (added 2026-06-17)
+
+**Package selection (Overview tab, added 2026-08-19):**
+get_portal_packages(p_token)  -  returns `{ selected_package_id, packages: [{ id, name, description, gst_inclusive, total_amount }] }` for the owning MC's non-archived packages, ordered by position. `total_amount` sums required items only (amount x quantity); optional add-ons don't inflate the headline price. Null on a bad token.
+save_portal_package(p_token, p_package_id)  -  sets (or clears, with null) `couples.selected_package_id`. Cross-tenant guard: the package must belong to the couple's MC and be non-archived, otherwise raises.
 
 **Files:**
 delete_portal_file(p_token, p_id)
@@ -826,9 +833,12 @@ Migration: `20260619000000_create_couple_emails.sql`.
 ## questionnaire_templates / couple_questionnaires (Couple questionnaires)
 
 Couples fill in MC-built questionnaires on a branded public page, either one
-question at a time (typeform style) or as a classic all-on-one-page form (per
-the template's display mode). Structurally a twin of contracts: a reusable
-template plus a per-couple token-gated instance.
+question at a time (typeform style) or as a classic all-on-one-page form. The
+answer style is derived at render time from the MC's branding blocks
+(`questionnaireOneAtATime` / `questionnaireAllOnePage` markers), not from the
+stored display_mode columns, which remain as legacy snapshots (the template
+builder links to Branding to change the style, 2026-08-19). Structurally a
+twin of contracts: a reusable template plus a per-couple token-gated instance.
 
 **questionnaire_templates** (Templates page — Questionnaires tab). The MC's
 reusable forms. Columns: id, user_id (RLS key, FK auth.users cascade), name,
@@ -862,6 +872,10 @@ Anon access via SECURITY DEFINER RPCs (all token-gated, granted to `anon`):
 - `submit_questionnaire(token, p_responses)` — stores answers, stamps
   `completed_at`, flips status to `completed`, and spawns a follow-up task for
   the MC; refuses a second submission.
+- `couple_questionnaires.description` (text, nullable, added 2026-08-19) is
+  snapshotted from the template at send time and returned by
+  `get_public_questionnaire` so the fill page can show intro text under the
+  title (both answer styles).
 - `get_portal_questionnaires(token)` — lists a couple's sent/completed
   questionnaires for the client portal, gated by the portal token via
   `_resolve_portal_couple`.
@@ -875,7 +889,9 @@ sent_at, completed_at }`.
 Migrations: `20260626000000_create_questionnaires_feature.sql`,
 `20260626000100_portal_questionnaires.sql`,
 `20260705000000_questionnaires_v2.sql` (display_mode, viewed_at,
-completed-event trigger).
+completed-event trigger),
+`20260819100000_questionnaire_description_public.sql` (description snapshot
+column + public RPC exposure).
 
 ## user_public_settings (Settings — Public Page)
 

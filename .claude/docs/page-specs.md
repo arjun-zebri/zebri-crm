@@ -474,8 +474,16 @@ point moved here off the Overview's General section.)
 
 **Overview tab (default):**
 - Two-column grid on `lg+` (`grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16`), stacks to 1-col on mobile
-- Left: General info (Phone, Email, Lead Source inline editable fields) + Notes textarea (4 rows default, 6 rows when focused)
+- Left: General info (Phone, Email, Lead Source inline editable fields) + Package (inline editable Popover of the MC's non-archived packages with name + price, mirroring the Lead Source row; shows what the couple picked in the portal and lets the MC set/override/clear it via a plain RLS update to `couples.selected_package_id`, added 2026-08-19; `couple-package-selector.tsx` on the shared `use-packages` hook). The Package row is **always rendered**, reading "None selected" when the MC has packages but this couple has none, and "No packages yet" only when there are none to choose from: a field that hides itself is undiscoverable. A package can also be chosen up front in the Add/Edit Couple modal, so it does not have to be set as an after-the-fact override. The row is presentational: it reports the chosen id and the couple's single update path persists it, the same as Lead Source.
+
+**Adding a new editable column to `couples` means adding it to `useUpdateCouple`'s payload too.** That mutation sends an explicit field whitelist, and `updateCoupleAction`'s schema defaults any missing field to null and writes it, so an omitted column is erased rather than left alone. `selected_package_id` shipped missing from that list and every save silently cleared the package the MC had just picked. + Notes textarea (4 rows default, 6 rows when focused)
 - Right: Events list + Vendors/Contacts list
+
+The client portal's Overview section mirrors this with a couple-facing "Your
+package" selector (`app/portal/[token]/package-selector.tsx`, rendered only
+when the MC has non-archived packages): a dropdown of packages with formatted
+totals, saving through the token-gated `save_portal_package` RPC with inline
+Saving/Saved/error feedback and fed by `get_portal_packages`.
 
 **Payments tab:**
 - Invoices list for the couple, with a "+ New Invoice" button opening the builder in couple context
@@ -621,6 +629,7 @@ Form fields:
 - Phone (tel, optional)
 - Status (select, required)
 - Lead Source (select, optional  -  referral, website, social_media, word_of_mouth, wedding_expo, venue_partner)
+- Package (select, optional  -  the MC's non-archived packages with name + price, same Popover pattern as Lead Source; writes `couples.selected_package_id` through the create and update actions, added 2026-08-19)
 - Notes (textarea, optional)
 
 Note: Event Date and Venue fields are managed exclusively via the Events tab. The couple modal does not expose these fields for editing.
@@ -783,8 +792,14 @@ InvoiceBuilderModal is rendered on this page (and reused on the couple profile).
 - Meta row: couple picker + payment terms (Net 7/14/30/due-on-receipt/custom) + due date. Net terms auto-fill the due date.
 - **Template picker**: prominent "Start from template" card above the items area when the invoice is empty; collapses to a smaller "Apply template" link in the items header once items exist. Sources are the MC's invoice templates + packages.
 - Line items table: description + amount only (quantity removed in 2C.2 — `saveInvoiceAction` writes `quantity = 1, unit_price = amount` for forward compat with the existing schema).
-- "+ Add discount" / "+ Apply 10% GST" link buttons below the items — expand inline when configured. Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold).
-- **Payment schedule**: vertical timeline. `● Deposit ─┊─ ○ Final` with state pill + amount + due date + inline "Mark paid" affordance per stage. Filled dot when paid, hollow when due. "+ Add payment schedule" link button when none is configured.
+- "+ Add discount" / "+ Apply 10% GST" link buttons below the items, expanding inline when configured. Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold). The tax rate and the "Prices include GST" note are mutually exclusive in `TaxControl` (2026-08-19): ticking the note clears and disables the rate, and a set rate disables the note, because the rate is always added on top and combining the two double-charged GST. The exclusion reacts to the **typed draft**, not the committed value, so the checkbox enables and disables as the MC types or clears the rate rather than only after Done.
+The invoice's delete and cancel confirmations render through the shared
+`ConfirmDialog`, which portals to `document.body` (2026-08-19). Without that
+it stayed a DOM descendant of whatever mounted it, so a confirm raised from
+an invoice opened inside the couple profile was trapped in that overlay's
+stacking context and painted behind the invoice modal despite its `top` tier.
+
+- **Payment schedule**: vertical timeline. `● Deposit ─┊─ ○ Final` with state pill + amount + due date + inline "Mark paid" affordance per stage. Filled dot when paid, hollow when due. "+ Add payment schedule" link button when none is configured. Unpaid stages render their due date as an inline `DatePicker` (2026-08-19) so the MC can overwrite the template-computed date per payment; paid stages stay locked, and reapplying a template recomputes all dates. The schedule combobox opens on input click/focus (not just the chevron), typing filters saved schedules, and an unmatched name offers a Notion-style "Create '<typed>'" row that seeds the schedule modal with that name.
 - **Card payments toggle**: only visible if `stripeConnectEnabled(user)` is true (read via `@/lib/auth/entitlements` — `app_metadata.stripe_connect_enabled`; never the user-writable `user_metadata`). Toggle + helper text in a token-styled row.
 - **Contextual header CTA** (status-aware):
   - Sent (no schedule) → "Mark paid"
@@ -1780,13 +1795,29 @@ MC-side preview are pixel-identical.
 `questionnaire-template-manager.tsx` lists the MC's templates (create from
 scratch, duplicate an existing one, or clone a starter from
 `STARTER_QUESTIONNAIRES`). `questionnaire-builder-modal.tsx` is a two-pane
-modal: the left pane edits name/description, the display-mode toggle, and a
-dnd-kit-sortable question list (`questionnaire-question-row.tsx`, with
-per-question duplicate); the right pane is the real branded couple experience
-(`QuestionnaireExperiencePreview`), interactive but local-only. Save is
+modal: the left pane edits name/description, shows the answer style read-only
+(derived from the MC's branding blocks via `useCurrentBranding`, with a
+"Change in Branding" link to `/branding?surface=questionnaire`; the old
+per-template display-mode toggle was removed 2026-08-19 because the public
+page derives the mode from branding), and a dnd-kit-sortable question list
+(`questionnaire-question-row.tsx`, with per-question duplicate); the right
+pane is the real branded couple experience
+(`QuestionnaireExperiencePreview`), interactive but local-only, rendering
+whichever answer style branding currently has. The one-at-a-time preview
+sits at its natural height at the top of the frame with no outer scrollbar,
+so brand, title, question and nav stay grouped; stretching it to fill the
+frame pushed the progress bar into the middle and the Next button out of
+sight. `TypeformFlow` also reserves a shorter step floor in preview mode
+than on the live page, where a full viewport can carry it. Save is
 blocked (with inline per-question messages) while a question has no text or a
 choice/dropdown has no options — `questionIssues` in
 `lib/questionnaires/builder-state.ts`.
+
+The Questionnaires tab's detail pane shows the same preview for the selected
+template, fed by the same branding-derived answer style and the template's
+description, so the two MC-side previews and the live page cannot disagree.
+All three derive the style through `displayModeFromBlocks` in
+`lib/questionnaires/display-mode`.
 
 ## Send + view — couple profile → Questionnaires tab
 
@@ -1800,7 +1831,8 @@ picks a template and opens the send preview
 desktop/phone width toggle) and the actual cover email
 (`questionnaireHtml` in a sandboxed iframe) — then calls
 `sendCoupleQuestionnaireAction` (`questionnaire-actions.ts`), which snapshots
-the template's questions + display mode into a `couple_questionnaires` row,
+the template's questions + description + display mode into a
+`couple_questionnaires` row,
 enables the share token, and emails the couple the link. Clicking a row opens
 the answers panel (`couple-questionnaire-answers.tsx`): sent/completed
 metadata, print / save-as-PDF export (`lib/questionnaires/answers-html.ts`),
@@ -1810,15 +1842,28 @@ the RLS-scoped `responses` update).
 ## Public fill-in page — `/questionnaire/[token]`
 
 Branded with the MC's colours/fonts (`useBrandingHead` + the shared
-questionnaire theme). Two render modes from the instance's display_mode:
+questionnaire theme). Two render modes, derived at render time from the MC's
+branding blocks (`questionnaireOneAtATime` / `questionnaireAllOnePage`
+markers; the instance's stored display_mode is a legacy snapshot):
 
 - **typeform** — one question per screen, progress bar, keyboard-advance
   (Enter), choice/yes-no/dropdown answers auto-advance, and a final
-  "Ready to send your answers?" confirmation step.
+  "Ready to send your answers?" confirmation step. Required answers hold
+  the couple on the question **only in `live` mode**: an MC paging through
+  a preview is reading the questions, not answering them, so a preview
+  never blocks on Next.
 - **form** — every question on one page with per-question required errors,
   scroll-to-first-missing, and the same pre-submit confirmation.
 
-Both modes show a question count under the title, a visible autosave state
+Both modes take their required-answer message from
+`REQUIRED_ANSWER_MESSAGE` in `lib/questionnaires/question-schema` ("Please
+answer this to continue."), phrased as the next step rather than as a rule:
+the old "This one is required." scolded without saying what to do, and "this
+one" was vague sitting under the question it referred to.
+
+Both modes show the questionnaire's description (when set, muted text under
+the title, snapshotted from the template at send time), a question count
+under the title, a visible autosave state
 ("Saving… / Saved / Couldn't save") for the debounced autosave to
 `/api/questionnaire/save`, and submit to `/api/questionnaire/submit`.
 Long-text answers are fixed-height (6 rows, `resize-none`) and scroll

@@ -54,6 +54,11 @@ export interface Couple {
   secondary_portal_token?: string
   portal_token_enabled?: boolean
   /**
+   * The package this couple has chosen from the portal or set by the MC.
+   * Null until a choice is made. References packages(id).
+   */
+  selected_package_id?: string | null
+  /**
    * Derived, list-only fields. NOT persisted columns — populated by
    * `useCouples()` from the couple's embedded `events`. The couple-level
    * `event_date` / `venue` columns are legacy denormalised fields; the

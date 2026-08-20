@@ -9,6 +9,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Modal } from "@/components/ui/modal";
 import { Couple, CoupleStatusRecord, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple';
 
+import { formatPrice, usePackages } from "./use-packages";
 import { VenueAutocomplete, EMPTY_VENUE, type VenueDetails } from "./venue-autocomplete";
 
 /** The first-event payload captured alongside the couple — the date and
@@ -52,6 +53,7 @@ export function CoupleModal({
   const [notes, setNotes] = useState("");
   const [leadSource, setLeadSource] = useState<string>("");
   const [referralSource, setReferralSource] = useState<string>("");
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [statusOpen, setStatusOpen] = useState(false);
   const [leadSourceOpen, setLeadSourceOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -77,6 +79,7 @@ export function CoupleModal({
       });
       setLeadSource(couple.lead_source || "");
       setReferralSource(couple.referral_source ?? "");
+      setSelectedPackageId(couple.selected_package_id ?? null);
       setNotes(couple.notes);
     } else {
       resetForm();
@@ -100,6 +103,7 @@ export function CoupleModal({
     setVenue(EMPTY_VENUE);
     setLeadSource("");
     setReferralSource("");
+    setSelectedPackageId(null);
     setNotes("");
   };
 
@@ -130,6 +134,7 @@ export function CoupleModal({
       status: status as any,
       lead_source: leadSource || null,
       referral_source: trim(referralSource),
+      selected_package_id: selectedPackageId ?? null,
       kanban_position: couple?.kanban_position ?? 0,
       notes,
     }, { date: eventDate || null, ...venue });
@@ -417,6 +422,16 @@ export function CoupleModal({
             </Popover.Root>
           </div>
           </div>
+
+          {/* Package selection — optional field for setting the couple's
+              default package from the add/edit flow. Mirrors Status/Lead
+              Source pattern but on its own row since it's optional. */}
+          <PackageSelector
+            selectedPackageId={selectedPackageId}
+            onSelect={setSelectedPackageId}
+            userId={couple?.user_id ?? ""}
+            inputClass={inputClass}
+          />
         </div>
 
         <div>
@@ -458,5 +473,111 @@ export function CoupleModal({
       loading={loading}
     />
     </>
+  );
+}
+
+/**
+ * Inline package selector using Popover, matching the modal's Status/Lead Source
+ * pattern. Shows MC's available packages with calculated totals.
+ */
+interface PackageSelectorProps {
+  selectedPackageId: string | null;
+  onSelect: (packageId: string | null) => void;
+  userId: string;
+  inputClass: string;
+}
+
+function PackageSelector({
+  selectedPackageId,
+  onSelect,
+  userId,
+  inputClass,
+}: PackageSelectorProps) {
+  const { data: packages = [], isLoading } = usePackages(userId);
+  const [packagePopoverOpen, setPackagePopoverOpen] = useState(false);
+  const selectedPackage = packages.find((p) => p.id === selectedPackageId);
+  const selectedLabel = selectedPackage
+    ? `${selectedPackage.name} (${formatPrice(selectedPackage.total_amount)})`
+    : null;
+
+  return (
+    <div>
+      <label className="block text-body text-gray-600 mb-1">Package</label>
+      <Popover.Root
+        open={packagePopoverOpen}
+        onOpenChange={setPackagePopoverOpen}
+      >
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={`${inputClass} flex items-center justify-between text-left`}
+          >
+            <span
+              className={
+                selectedLabel ? "text-text" : "text-text-subtle"
+              }
+            >
+              {selectedLabel || "Select package"}
+            </span>
+            <ChevronDown
+              size={14}
+              strokeWidth={1.5}
+              className="text-text-subtle shrink-0"
+            />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+            sideOffset={4}
+            align="start"
+          >
+            {isLoading ? (
+              <div className="px-3 py-2 text-body text-text-muted">
+                Loading packages...
+              </div>
+            ) : packages.length === 0 ? (
+              <div className="px-3 py-2 text-body text-text-muted">
+                No packages available
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelect(null);
+                    setPackagePopoverOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-body transition ${
+                    !selectedPackageId
+                      ? "bg-green-50 text-green-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  None
+                </button>
+                {packages.map((pkg) => (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(pkg.id);
+                      setPackagePopoverOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-body transition ${
+                      selectedPackageId === pkg.id
+                        ? "bg-green-50 text-green-700"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {pkg.name} ({formatPrice(pkg.total_amount)})
+                  </button>
+                ))}
+              </>
+            )}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
   );
 }

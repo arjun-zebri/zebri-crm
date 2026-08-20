@@ -1,9 +1,10 @@
 /**
  * Questionnaire template builder.
  *
- * A two-pane modal: the left pane edits the name, description, display style
- * (one question at a time vs all on one page), and an ordered, drag-sortable
- * list of questions; the right pane shows the real branded couple experience
+ * A two-pane modal: the left pane edits the name and description, shows the
+ * branding-derived answer style read-only with a link into the branding
+ * editor, and holds an ordered, drag-sortable list of questions; the right
+ * pane shows the real branded couple experience
  * via {@link QuestionnaireExperiencePreview}. All list edits route through
  * the pure helpers in `lib/questionnaires/builder-state`, keeping this
  * component a thin shell; the same helpers validate before save.
@@ -22,13 +23,14 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Loader2, Plus } from 'lucide-react'
+import { ExternalLink, Loader2, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { QuestionnaireExperiencePreview } from '@/components/questionnaires/experience-preview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
+import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 import {
   addQuestion,
   createQuestion,
@@ -38,7 +40,8 @@ import {
   removeQuestion,
   updateQuestion,
 } from '@/lib/questionnaires/builder-state'
-import { DISPLAY_MODES, toDisplayMode, type Question, type QuestionnaireDisplayMode } from '@/lib/questionnaires/question-schema'
+import { displayModeFromBlocks, displayModeLabel } from '@/lib/questionnaires/display-mode'
+import type { Question } from '@/lib/questionnaires/question-schema'
 
 import { QuestionnaireQuestionRow } from './questionnaire-question-row'
 import type { QuestionnaireTemplateRow } from './questionnaire-template-manager'
@@ -53,15 +56,23 @@ interface BuilderProps {
 export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }: BuilderProps) {
   const [name, setName] = useState(template.name)
   const [description, setDescription] = useState(template.description ?? '')
-  const [displayMode, setDisplayMode] = useState<QuestionnaireDisplayMode>(toDisplayMode(template.display_mode))
   const [questions, setQuestions] = useState<Question[]>(template.questions)
   // Validation stays quiet while building; it surfaces on a save attempt.
   const [showIssues, setShowIssues] = useState(false)
+
+  // Fetch the user's current branding to determine the questionnaire display mode
+  // (one-at-a-time vs all-on-one-page). The template's display_mode is legacy;
+  // the actual mode shown to couples comes from branding blocks.
+  const { blocks: brandingBlocks } = useCurrentBranding('questionnaire')
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
+
+  // Shared derivation so the builder preview, the template detail preview and
+  // the live fill page can never disagree about the answer style.
+  const previewMode = displayModeFromBlocks(brandingBlocks)
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e
@@ -83,7 +94,9 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
       setShowIssues(true)
       return
     }
-    onSave({ ...template, name, description: description || null, display_mode: displayMode, questions })
+    // Keep snapshotting display_mode for backward compatibility, but the
+    // actual mode shown to couples comes from branding blocks, not this setting.
+    onSave({ ...template, name, description: description || null, display_mode: template.display_mode, questions })
   }
 
   return (
@@ -120,24 +133,22 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Shown in the template picker"
+                placeholder="Shown to the couple under the questionnaire title"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-body font-medium text-text">Couples answer</label>
-              <div className="inline-flex overflow-hidden rounded-control border border-border bg-surface">
-                {DISPLAY_MODES.map((m, i) => (
-                  <button
-                    key={m.value}
-                    type="button"
-                    onClick={() => setDisplayMode(m.value)}
-                    className={`cursor-pointer px-2.5 py-1 text-body font-medium transition-colors ${i > 0 ? 'border-l border-border' : ''} ${
-                      displayMode === m.value ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
+              <label className="mb-1.5 block text-body font-medium text-text">Answer style</label>
+              <div className="flex items-center justify-between rounded-control border border-border bg-surface p-3">
+                <p className="text-body text-text">
+                  Couples answer: <span className="font-medium">{displayModeLabel(previewMode)}</span>
+                </p>
+                <a
+                  href="/branding?surface=questionnaire"
+                  className="ml-2 inline-flex items-center gap-1.5 text-body font-medium text-brand-fg hover:opacity-80 transition cursor-pointer"
+                >
+                  Change in Branding
+                  <ExternalLink size={14} strokeWidth={1.5} />
+                </a>
               </div>
             </div>
           </div>
@@ -173,7 +184,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
         <div className="hidden rounded-control bg-surface-muted p-4 lg:flex lg:flex-1 lg:min-w-0 lg:flex-col">
           <p className="mb-3 px-2 text-body uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
           <div className="min-h-0 lg:flex-1">
-            <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} heightClass="h-full min-h-[600px]" />
+            <QuestionnaireExperiencePreview title={name} description={description} questions={questions} displayMode={previewMode} heightClass="h-full" />
           </div>
         </div>
       </div>

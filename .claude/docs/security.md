@@ -487,7 +487,7 @@ DELETE (sampled clean across the migrations).
 | `email_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/email-templates.test.ts` (7 tests — incl. starter seeding) | Email Templates |
 | `email_template_files` | ✅ | `user_id` | ☐ (added with static-upload flow) | Email Templates |
 | `email_template_categories` | ✅ | `user_id` | ✅ `tests/integration/rls/email-template-categories.test.ts` (6 tests — cross-tenant read/rename/delete/insert denial + category-delete set-null keeps templates) | Email Templates |
-| `packages` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (6 tests) | Templates |
+| `packages` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (6 tests) + `tests/integration/portal/package-selection.test.ts` (10 tests: `get_portal_packages`/`save_portal_package` token gating, cross-tenant package rejection, archived rejection, clear) + `tests/integration/rls/couple-selected-package.test.ts` (6 tests: MC-side set/clear, FK-set-null on package delete, cross-tenant denial both directions) | Templates |
 | `package_items` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (covered via parent) | Templates |
 | `invoice_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (6 tests) | Templates |
 | `invoice_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (covered via parent) | Templates |
@@ -520,6 +520,16 @@ DELETE (sampled clean across the migrations).
 | `automation_runs` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cross-tenant retry/cancel/pause/resume are no-ops) | Automations |
 | `automation_waits` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cancel consumes; resume reads — exercised via the control actions) | Automations |
 | `automation_audit_log` | ✅ (SELECT-only for owner; writes service-role) | `user_id` | ☐ (read RLS-scoped by the couple Automations feed) | Automations |
+
+**Two tables need more than `auth.uid() = user_id` in WITH CHECK.**
+Foreign keys are checked with elevated privileges and ignore RLS, so an
+owner-only policy still lets a user write a row that *references* another
+tenant's row. `couples.selected_package_id` hit this in 2026-08 (an MC could
+point their couple at another MC's package, which also confirms that package
+id exists); the fix is `_owns_package_or_null(selected_package_id)` in the
+couples INSERT and UPDATE policies, proved by
+`tests/integration/rls/couple-selected-package.test.ts`. The original
+instance follows.
 
 **`couple_time_entries` WITH CHECK is not just `auth.uid() = user_id`.**
 Foreign keys ignore RLS, so an owner-only check still let a user insert a

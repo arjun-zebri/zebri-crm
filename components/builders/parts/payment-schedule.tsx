@@ -47,6 +47,8 @@ export interface PaymentScheduleProps {
   canRecordPayments: boolean
   markPendingStageId: string | null
   onMarkPaid: (stageId: string) => void
+  /** Called when the MC manually edits an unpaid stage's due date. */
+  onDueDateChange: (stageId: string, newDueDate: string) => void
   /** Resolve the template against this invoice and set its stages. */
   onApplyTemplate: (stages: TemplateStage[]) => void
   onCreateSchedule: (input: { name: string; stages: TemplateStage[] }) => Promise<void>
@@ -70,6 +72,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
     canRecordPayments,
     markPendingStageId,
     onMarkPaid,
+    onDueDateChange,
     onApplyTemplate,
     onCreateSchedule,
     onDeleteSchedule,
@@ -152,6 +155,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
               isNextUnpaid={stage.id === nextUnpaidId}
               markPending={markPendingStageId === stage.id}
               onMarkPaid={() => onMarkPaid(stage.id)}
+              onDueDateChange={onDueDateChange}
             />
           ))}
         </div>

@@ -186,6 +186,11 @@ export function FillSection({
         <h1 className="mb-1.5 font-semibold" style={{ fontSize: `${theme.docTitleFontSize}px`, color: theme.textColor, fontFamily: theme.headingStack }}>
           {questionnaire.title}
         </h1>
+        {questionnaire.description && (
+          <p className="mb-4" style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>
+            {questionnaire.description}
+          </p>
+        )}
         <p className="mb-8" style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>
           {questionCount} question{questionCount === 1 ? '' : 's'} · your answers save as you go
         </p>
@@ -211,6 +216,11 @@ export function FillSection({
       <h1 className="mb-1.5 shrink-0 font-semibold" style={{ fontSize: `${theme.docTitleFontSize}px`, color: theme.textColor, fontFamily: theme.headingStack }}>
         {questionnaire.title}
       </h1>
+      {questionnaire.description && (
+        <p className="mb-4 shrink-0" style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>
+          {questionnaire.description}
+        </p>
+      )}
       <p className="mb-8 shrink-0" style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>
         {questionCount} question{questionCount === 1 ? '' : 's'} · your answers save as you go
       </p>

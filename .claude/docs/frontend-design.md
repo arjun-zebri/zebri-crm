@@ -246,6 +246,16 @@ Stacking comes from `OVERLAY_Z`, keyed by `layer`:
 `Modal` takes `layer="nested" | "top"`. The older `nested` boolean still
 works and maps to `layer="nested"`.
 
+**A tier only means anything if the overlay escapes to the body.** `Modal`
+and `ConfirmDialog` both `createPortal` to `document.body` **during render**,
+not from an effect. A z-index is resolved inside the nearest ancestor that
+creates a stacking context, so an inline overlay rendered within a
+transformed, `overflow-hidden` modal panel is trapped and clipped there no
+matter how high its tier: `ConfirmDialog` carried `z-[130]` and still painted
+*behind* an invoice modal until it was portalled (2026-08-19). Portalling
+during render also keeps parent-before-child DOM order, which an
+effect-gated portal inverts because effects run child-first.
+
 Known gap: roughly a hundred call sites still hard-code raw `z-[…]`
 values across fifteen tiers, including a `z-[9999]` in
 `add-status-modal.tsx`. Point those at `OVERLAY_Z` as each page is

@@ -42,6 +42,7 @@ function setup(overrides: Partial<Parameters<typeof PaymentSchedule>[0]> = {}) {
     markPendingStageId: null,
     onApplyTemplate: vi.fn(),
     onMarkPaid: vi.fn(),
+    onDueDateChange: vi.fn(),
     onCreateSchedule: vi.fn().mockResolvedValue(undefined),
     onDeleteSchedule: vi.fn().mockResolvedValue(undefined),
     onSetDefaultSchedule: vi.fn().mockResolvedValue(undefined),

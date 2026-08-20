@@ -178,6 +178,11 @@ export function useUpdateCouple() {
           status: couple.status,
           lead_source: couple.lead_source,
           referral_source: couple.referral_source ?? null,
+          // Every editable column must be listed here. The action's schema
+          // defaults a missing field to null and writes it, so leaving one
+          // out does not preserve it, it erases it: omitting this wiped the
+          // package the MC had just chosen on the next save.
+          selected_package_id: couple.selected_package_id ?? null,
           kanban_position: couple.kanban_position,
         }),
       ),

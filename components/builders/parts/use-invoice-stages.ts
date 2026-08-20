@@ -128,6 +128,15 @@ export function useInvoiceStages(input: {
     setDraft(next.map((s, i) => ({ ...s, position: i + 1 })))
   }, [])
 
+  /** Update the due date of an unpaid stage. Manual overrides take precedence over
+   *  template-computed dates. Reapplying a template recomputes all dates, losing
+   *  manual edits (this is intentional: the MC can re-edit after reapply). */
+  const updateStageDueDate = useCallback((stageId: string, newDueDate: string) => {
+    setDraft((current) =>
+      current.map((s) => (s.id === stageId ? { ...s, dueDate: newDueDate } : s)),
+    )
+  }, [])
+
   // Library writes take explicit stages from the modal, never the current
   // invoice: the library and the invoice are two separate scopes. Save always
   // creates (the modal handles name collisions), so there is no update path.
@@ -173,6 +182,7 @@ export function useInvoiceStages(input: {
   return {
     stages,
     setStages: changeStages,
+    updateStageDueDate,
     schedules: schedulesQuery.data ?? [],
     schedulesLoading: schedulesQuery.isLoading,
     schedulesError: schedulesQuery.error ? 'Could not load your saved schedules.' : null,

@@ -109,11 +109,11 @@ describe('<ConfirmDialog />', () => {
     expect(closeModal).not.toHaveBeenCalled();
   });
 
-  // The dialog renders inline (fixed-position, not portalled), so it is
-  // a DOM descendant of whatever opened it. In the automations table it
-  // sits inside a clickable <tr>: confirming a delete also fired the
-  // row's onClick, navigating to the automation that had just been
-  // deleted. A modal must never leak clicks to its ancestors.
+  // The dialog portals to the body, but clicks still bubble through the
+  // React component tree to ancestors. In the automations table it sits
+  // inside a clickable <tr>: confirming a delete also fired the row's
+  // onClick, navigating to the automation that had just been deleted.
+  // A modal must never leak clicks to its ancestors.
   describe('click containment', () => {
     it('does not fire an ancestor onClick when confirming', async () => {
       const onConfirm = vi.fn();
@@ -183,5 +183,28 @@ describe('<ConfirmDialog />', () => {
 
     // The Modal is still up, so the page must stay locked.
     expect(document.body.style.overflow).toBe('hidden');
+  });
+
+  it('portals to document.body so it escapes its mounting container', () => {
+    // Regression: when ConfirmDialog renders inline (not portalled), it
+    // becomes a DOM descendant of whatever opened it (e.g. an invoice
+    // modal). A Modal that portals to the body creates a nested z-context,
+    // trapping the dialog's z-[130] underneath the modal's z-[80] or z-[75].
+    // The dialog must portal to the body to break free and render above.
+    const wrapper = document.createElement('div');
+    document.body.appendChild(wrapper);
+
+    try {
+      render(<ConfirmDialog {...base} open />, { container: wrapper });
+
+      const dialog = screen.getByRole('dialog');
+
+      // Assert that the dialog is NOT a descendant of the wrapper
+      expect(wrapper.contains(dialog)).toBe(false);
+      // Assert that it IS a direct child of the body (portalled)
+      expect(document.body.contains(dialog)).toBe(true);
+    } finally {
+      document.body.removeChild(wrapper);
+    }
   });
 });

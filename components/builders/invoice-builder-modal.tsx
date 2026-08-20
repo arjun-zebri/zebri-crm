@@ -971,6 +971,10 @@ export function InvoiceBuilderModal({
             canRecordPayments={canRecordPayments}
             markPendingStageId={invoiceStages.markPendingStageId}
             onMarkPaid={invoiceStages.markPaid}
+            onDueDateChange={(stageId, newDate) => {
+              invoiceStages.updateStageDueDate(stageId, newDate);
+              setDirty(true);
+            }}
             onApplyTemplate={(template) => {
               invoiceStages.applyTemplate(template);
               setDirty(true);
