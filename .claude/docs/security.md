@@ -176,6 +176,76 @@ so token existence never leaks.
   to the visitor and fires `lead_blocked_plan_limit` + an upgrade email
   to the MC, so inbound leads are never silently dropped.
 
+### Public booking ingest: `get_public_booking_page` / `submit_booking` (Scheduler Phase C)
+
+Backs the public `/book/[token]` page and the booking form submission. Unauthenticated: the `meeting_types.share_token` (`uuid`) IS the capability. Both RPCs are `security definer`, `set search_path = public, auth`, granted to `anon`, and return `null`/`{error}` (never raise) for a missing/disabled token so token existence never leaks.
+
+- **Scoping:** `submit_booking` derives the owning `user_id` from the token and creates the booking under it, plus matches/creates the couple under the same user. Cross-tenant write is impossible.
+- **Field selection:** `get_public_booking_page` returns meeting type fields (name, description, duration, location_type, address), business_name, and branding scalars via `_user_branding()`, so no user_id, no share_token, no internal flags, no mc_email (harvesting risk).
+- **Route hardening (`app/api/booking/slots/route.ts` and `app/api/booking/submit/route.ts`):**
+  - `GET /api/booking/slots`: rate-limited 30/min/IP; serves available slots for a date range. No validation issues (read-only).
+  - `POST /api/booking/submit`: Zod-validated form fields, rate-limited 5/min/IP; honeypot + min-fill timing (silent success). No service-role key.
+- **In-RPC rate limit (submit_booking):** Counts confirmed bookings for the meeting type in the last hour; returns `rate_limited` if >= 6 per hour. Complements the route-level IP limit.
+- **Couple matching:** Case-insensitive search by primary_email or legacy email (first by created_at). If no match, inserts a new couple with lead_source='booking'.
+- **Plan limit:** Starter couple-cap exception is caught; booking still inserts (couple_id null, couple_linked false); fires `booking_created` alert and potential upgrade email.
+- **Double-booking guard:** Exclusion constraint `bookings_no_confirmed_overlap` on (user_id, tstzrange) prevents overlapping confirmed bookings. Returns `slot_taken` if violated.
+
+### Booking management: `cancel_booking` / `reschedule_booking` (Scheduler Phase D)
+
+Backs the public `/book/manage/[manage_token]` page for booker self-service control. Unauthenticated: the `bookings.manage_token` (`uuid`) IS the capability. Both RPCs are `security definer`, granted to `anon`, and return `null`/`{error}` (never raise) so token existence never leaks.
+
+- **Capability model:** Each booking is issued a unique, non-sequential `manage_token` (uuid v4) at creation. The token is the sole key for booker access to their booking; no user_id or coupling to the couple is exposed.
+- **Route hardening (`app/api/booking/cancel/route.ts` and `app/api/booking/reschedule/route.ts`):**
+  - Both routes: Zod-validated input, rate-limited 5/min/IP. No service-role key.
+  - `cancel_booking(manage_token)`: Returns `{ok: true, ...}` or `{error: "not_found"|"already_cancelled"|"past"}`. On cancel, emits `booking_cancelled` automation event (payload: booking_id, couple_id, meeting_type_id, booker_name, booker_email, starts_at, ends_at, timezone).
+  - `reschedule_booking(manage_token, starts_at, ends_at)`: Returns `{ok: true, ...}` or `{error: "not_found"|"cancelled"|"past"|"slot_taken"|"invalid"}`. On reschedule, clears `reminder_sent_at` so the new time gets its own reminder; no automation event emitted.
+- **Token leakage protection:** `recordInvalidTokenAttempt` logs failed attempts (invalid token for either operation) without exposing booking existence; rate-limit responds uniformly for invalid tokens and valid-but-cancelled/past bookings.
+- **Scoping:** The RPC resolves the booking by manage_token alone; the owning `user_id` is never passed, derived, or returned to anon.
+- **Field selection:** Response includes booking_id, starts_at, ends_at, timezone, name, email, business_name (for confirmation UX). No user_id, no couple details beyond what's needed for the email.
+- **Slot-taken recovery:** If two bookers race to reschedule into the same slot, the first succeeds and the second receives `{error: "slot_taken"}`. The page re-displays the slot picker so the second booker can choose another time.
+
+### Service-role-only reminder RPCs (Scheduler Phase D)
+
+Two RPCs for the `/api/cron/booking-reminders` endpoint; neither is callable by anon:
+
+- **`bookings_due_for_reminder()`**: service_role only. Returns all confirmed bookings whose meeting type has `reminder_enabled = true`, whose `starts_at` is 0 to 36 hours away, and whose `reminder_sent_at` is null. Used by cron to batch-fetch remindable bookings.
+- **`mark_booking_reminder_sent(p_booking_id uuid)`**: service_role only. Sets `reminder_sent_at = now()`. Called after sending the reminder email so the booking is not re-sent on the next tick.
+
+### Cron auth gate: `/api/cron/booking-reminders` (Scheduler Phase D)
+
+Uses the shared `isCronAuthorized(request)` helper (constant-time comparison of `Authorization: Bearer CRON_SECRET`). Invoked on a 22:30 UTC schedule via `vercel.json`. See "Cron-secret enforcement" section above for full details.
+
+### MC Calendar Busy Route: `GET /api/calendar/busy` (Scheduler Phase E)
+
+Backs the authenticated MC's `/calendar` page Day and Week views. Authenticated session required; RLS scopes access.
+
+**Fail-soft posture (inverse of public surfaces):**
+- Returns HTTP 200 with an empty busy list plus `unavailable: true` flag when Google/Outlook providers are unreachable
+- Public booking surfaces (in `lib/booking/availability.ts` and `app/api/booking/slots/route.ts`) deliberately use `getBusyIntervals` (free/busy only, anonymous)
+- Dashboard-only surfaces use `getBusyEvents` (event titles visible) in `app/api/calendar/busy/route.ts` only
+- Why: the MC is viewing their own calendar, so an outage must not blank the page (fail-soft). A couple should never learn what is in an MC's private calendar (fail-closed on public surfaces). Both calls carry why-comments forbidding the inverse pattern.
+
+**Returns:** `{ busy: BusyBlock[], unavailable?: boolean }`
+- `BusyBlock`: `{ starts_at, ends_at, title?, color? }`
+- Title and color present only when provider succeeded; absent when `unavailable: true`
+- Covers both external calendar (Google Calendar, Outlook) and Zebri bookings
+
+**Security considerations:**
+- Session-authenticated (middleware + RLS client)
+- No public token, no IP rate-limit (authenticated, per-user query)
+- No existence oracle (any retrieval failure treated as "no busy blocks for that range")
+
+### MC Booking Actions (Scheduler Phase E)
+
+Backs the dashboard `/calendar` booking detail panel (cancel and reschedule from the MC's view). Authenticated and RLS-scoped; server action calling the same SECURITY DEFINER RPCs as the public manage page.
+
+**Server action:** `app/(dashboard)/calendar/booking-actions.ts`
+- `cancelBookingAction(bookingId)`: Proves RLS ownership (loads row via session client), then calls the public `cancel_booking` RPC using the booking's `manage_token`. No existence oracle (404 response for not-found vs not-owned is identical). No token ever sent to client.
+- `rescheduleBookingAction(bookingId, startsAt, endsAt)`: Same ownership proof, then calls `reschedule_booking` RPC with the new times. Handles slot-taken conflict by returning `{ error: "slot_taken" }` for UI display (booker sees same recovery UX as the public manage page).
+- Both compose `lib/booking/lifecycle.ts` post-RPC orchestration (calendar sync, emails, alerts) so the dashboard and public manage page cannot drift.
+
+**Field selection:** No manage_token in any SELECT; token is stored and used server-side only.
+
 ### Public RPC audit — `get_public_invoice`
 
 This `security definer` function backs the public-facing
@@ -481,6 +551,7 @@ DELETE (sampled clean across the migrations).
 | `tasks` | ✅ | `user_id` | ✅ `tests/integration/rls/tasks.test.ts` (Phase 4B, 5 tests) | Tasks |
 | `invoices` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoice_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `bookings` | ✅ | `user_id` | ✅ `tests/integration/rls/bookings.test.ts` (Phase C, 5 tests: cross-tenant read/insert/update/delete denial, manage_token uniqueness, couple-delete set-null) | Public Booking (Phase C) |
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
 | `contract_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/contract-templates.test.ts` (Phase 12, 6 tests) | Contracts |
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
@@ -514,6 +585,11 @@ DELETE (sampled clean across the migrations).
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
 | `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) + `tests/integration/branding/user-branding-rls.test.ts` (cross-tenant denial + RPC scoping, 4 tests) | Branding |
 | `user_public_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/user-public-settings.test.ts` (5 tests — cross-tenant read/update/insert denial incl. encrypted OAuth tokens + global subdomain uniqueness) | Settings — Public Page |
+| `calendar_connections` | ✅ | `user_id` | ✅ `tests/integration/rls/calendar-connections.test.ts` (cross-tenant read/update/delete denial incl. encrypted tokens) | Scheduler Phase A |
+| `meeting_types` | ✅ | `user_id` | ✅ `tests/integration/rls/scheduling-tables.test.ts` (Scheduler Phase B: cross-tenant read/insert/update/delete denial) | Scheduler Phase B |
+| `availability_rules` | ✅ | `user_id` | ✅ `tests/integration/rls/scheduling-tables.test.ts` (Scheduler Phase B) | Scheduler Phase B |
+| `availability_overrides` | ✅ | `user_id` | ✅ `tests/integration/rls/scheduling-tables.test.ts` (Scheduler Phase B) | Scheduler Phase B |
+| `meeting_type_availability_rules` | ✅ | `user_id` + `_owns_meeting_type(meeting_type_id)` on write | ✅ `tests/integration/rls/scheduling-tables.test.ts` (cross-tenant read/insert/update/delete denial, cross-parent insert denial, cascade on parent delete) | Per-type availability |
 | `automations` | ✅ | `user_id` | ✅ `tests/integration/automations/run-now.test.ts` (cross-tenant: cannot manually run another MC's automation) | Automations |
 | `automation_events` | ✅ (SELECT-only; writes via SECURITY DEFINER RPC + service-role) | `user_id` | ✅ exercised by `run-now.test.ts` (manual-fire event opens only the owner's run) | Automations |
 | `automation_actions` | ✅ | `automation_id` (→ `automations.user_id`) | ✅ exercised by `run-now.test.ts` | Automations |

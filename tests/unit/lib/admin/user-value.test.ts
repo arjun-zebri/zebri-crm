@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { AdminUser } from '@/lib/admin/admin-analytics'
 import {
-  compareUsersByPlanThenSignIn,
+  compareUsersByPlanThenLastSeen,
   computeGoneQuiet,
   effectivePlan,
   emptyUserStats,
@@ -41,6 +41,7 @@ function user(overrides: Partial<AdminUser>): AdminUser {
     is_comped: false,
     created_at: daysAgo(100),
     last_sign_in_at: null,
+    last_seen_at: null,
     ...overrides,
   }
 }
@@ -82,23 +83,34 @@ describe('effectivePlan / planRank', () => {
   })
 })
 
-describe('compareUsersByPlanThenSignIn', () => {
-  it('orders by tier first, then most recent sign-in', () => {
-    const staleMax = payingMax({ id: 'stale-max', last_sign_in_at: daysAgo(60) })
-    const freshPro = payingPro({ id: 'fresh-pro', last_sign_in_at: daysAgo(1) })
-    const fresherPro = payingPro({ id: 'fresher-pro', last_sign_in_at: daysAgo(0) })
-    const starter = user({ id: 'starter', last_sign_in_at: daysAgo(0) })
+describe('compareUsersByPlanThenLastSeen', () => {
+  it('orders by tier first, then most recently seen', () => {
+    const staleMax = payingMax({ id: 'stale-max', last_seen_at: daysAgo(60) })
+    const freshPro = payingPro({ id: 'fresh-pro', last_seen_at: daysAgo(1) })
+    const fresherPro = payingPro({ id: 'fresher-pro', last_seen_at: daysAgo(0) })
+    const starter = user({ id: 'starter', last_seen_at: daysAgo(0) })
 
-    const sorted = [starter, freshPro, staleMax, fresherPro].sort(compareUsersByPlanThenSignIn)
+    const sorted = [starter, freshPro, staleMax, fresherPro].sort(compareUsersByPlanThenLastSeen)
     expect(sorted.map((u) => u.id)).toEqual(['stale-max', 'fresher-pro', 'fresh-pro', 'starter'])
   })
 
-  it('puts never-signed-in users after signed-in ones within a tier', () => {
-    const never = payingPro({ id: 'never', last_sign_in_at: null })
-    const signed = payingPro({ id: 'signed', last_sign_in_at: daysAgo(300) })
-    expect([never, signed].sort(compareUsersByPlanThenSignIn).map((u) => u.id)).toEqual([
-      'signed',
+  it('puts never-seen users after seen ones within a tier', () => {
+    const never = payingPro({ id: 'never', last_seen_at: null })
+    const seen = payingPro({ id: 'seen', last_seen_at: daysAgo(300) })
+    expect([never, seen].sort(compareUsersByPlanThenLastSeen).map((u) => u.id)).toEqual([
+      'seen',
       'never',
+    ])
+  })
+
+  it('ignores last_sign_in_at: a daily user who never re-authenticates sorts first', () => {
+    // The production case (Sarah Joel): signed in once weeks ago, on the app
+    // yesterday. A sign-in-based sort buried her below dormant accounts.
+    const active = payingPro({ id: 'active', last_sign_in_at: daysAgo(29), last_seen_at: daysAgo(1) })
+    const lapsed = payingPro({ id: 'lapsed', last_sign_in_at: daysAgo(0), last_seen_at: daysAgo(40) })
+    expect([lapsed, active].sort(compareUsersByPlanThenLastSeen).map((u) => u.id)).toEqual([
+      'active',
+      'lapsed',
     ])
   })
 })

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+
 import { login, addCouple, deleteCouple, search, uniqueName } from './helpers'
 
 test.describe('Kanban / Board View', () => {

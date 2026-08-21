@@ -138,7 +138,7 @@ export type AlertEvent =
       type: 'public_token_attempt_burst';
       severity: 'warn';
       ip: string;
-      surface: 'invoice' | 'quote' | 'portal' | 'contract' | 'lead';
+      surface: 'invoice' | 'quote' | 'portal' | 'contract' | 'lead' | 'slots';
       /** Number of invalid attempts inside the burst window
        *  (typically 10 in 60s). */
       attempts: number;
@@ -315,6 +315,41 @@ export type AlertEvent =
       email: string;
       /** The MC's business name, when known. */
       businessName?: string;
+    })
+
+  // ───── Scheduler: Bookings ─────────────────────────────────────────
+  | (BaseEvent & {
+      type: 'booking_created';
+      severity: 'info';
+      /** The MC who received the booking. */
+      userId: string;
+      email: string;
+      /** The couple/booker's name. */
+      bookerName: string;
+      /** The booking's share token for the manage page. */
+      manageToken: string;
+    })
+  | (BaseEvent & {
+      type: 'booking_created_without_calendar';
+      severity: 'warn';
+      /** The MC who has no connected calendar. */
+      userId: string;
+      /** The booking that was created but never pushed anywhere. */
+      bookingId: string;
+      /** Where the meeting happens; 'video' also means no join link was minted. */
+      locationType: 'video' | 'phone' | 'in_person';
+    })
+  | (BaseEvent & {
+      type: 'booking_event_push_failed';
+      severity: 'warn';
+      /** The MC whose calendar push failed. */
+      userId: string;
+      /** Which provider failed (google or microsoft). */
+      provider: 'google' | 'microsoft';
+      /** The HTTP status code from the provider. */
+      status: number;
+      /** The booking ID that failed to push. */
+      bookingId: string;
     })
 
   // ───── Catch-all ──────────────────────────────────────────────────

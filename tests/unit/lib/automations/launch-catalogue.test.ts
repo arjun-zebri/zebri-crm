@@ -23,12 +23,13 @@ import {
 import { triggerRegistry } from '@/lib/automations/triggers'
 
 describe('launch catalogue — triggers', () => {
-  it('lists exactly the 26 triggers that fire today', () => {
+  it('lists exactly the 29 triggers that fire today', () => {
     // 28 from the launch review + questionnaire_completed (P4 — emitted by
-    // the couple_questionnaires completion DB trigger), minus
-    // booking_cancelled (retired in the trigger sweep, see below) and
-    // the two portal duplicates folded into "Portal item added".
-    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(26)
+    // the couple_questionnaires completion DB trigger) + consultation_booked,
+    // booking_cancelled (consultation lifecycle from Phase D DB trigger and RPC),
+    // and consultation_completed (Phase D time emitter), minus the two portal
+    // duplicates folded into "Portal item added".
+    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(29)
   })
 
   it('hides the portal triggers folded into "Portal item added"', () => {
@@ -62,14 +63,18 @@ describe('launch catalogue — triggers', () => {
     expect(isTriggerLaunchVisible('questionnaire_completed')).toBe(true)
   })
 
-  it('booking_cancelled is gone entirely, not merely hidden', () => {
-    // It tested `status in ('cancelled','lost')`, but those slugs are
-    // not in the seeded couple_statuses set, so it never fired for
-    // anyone. `couple_stage_changed` covers the case properly, with
-    // the MC's own stage names. Retired rather than left in the
-    // picker looking functional.
-    expect(isTriggerLaunchVisible('booking_cancelled' as never)).toBe(false)
-    expect(triggerRegistry['booking_cancelled' as never]).toBeUndefined()
+  it('consultation_booked, booking_cancelled, and consultation_completed are launch-visible (they emit today)', () => {
+    // consultation_booked and booking_cancelled fire from the booking insert
+    // trigger (Phase D) and cancel_booking RPC respectively. consultation_completed
+    // fires from the time emitter for past confirmed bookings (Phase D Task 9).
+    // All three were mistakenly left hidden in the picker until their emitters
+    // went live.
+    expect(isTriggerLaunchVisible('consultation_booked')).toBe(true)
+    expect(isTriggerLaunchVisible('booking_cancelled')).toBe(true)
+    expect(isTriggerLaunchVisible('consultation_completed')).toBe(true)
+    expect(triggerRegistry['consultation_booked']).toBeDefined()
+    expect(triggerRegistry['booking_cancelled']).toBeDefined()
+    expect(triggerRegistry['consultation_completed']).toBeDefined()
   })
 
   it('every visible trigger is a real registry entry', () => {
@@ -85,8 +90,8 @@ describe('launch catalogue — triggers', () => {
       'portal_section_started_not_finished',
       'specific_date_reached',
       'payment_failed',
-      // Phase 14b deferred
-      'consultation_booked',
+      // Phase 14b deferred (consultation_booked and consultation_completed now fire
+      // in Phase D; they were mistakenly left hidden until their emitters landed)
       'noim_lodged',
       'couple_opened_email',
       'tag_added_to_couple',

@@ -74,16 +74,19 @@ export function planRank(
 }
 
 /**
- * Default Users-table order: highest tier first, then most recent
- * sign-in (never-signed-in last), then newest signup as a stable
- * tiebreak.
+ * Default Users-table order: highest tier first, then most recently
+ * seen (never-seen last), then newest signup as a stable tiebreak.
+ *
+ * Sorts on `last_seen_at` so the order matches the "Last seen" column
+ * it sits under. `last_sign_in_at` would put a heavy daily user near
+ * the bottom purely because they have never been logged out.
  */
-export function compareUsersByPlanThenSignIn(a: AdminUser, b: AdminUser): number {
+export function compareUsersByPlanThenLastSeen(a: AdminUser, b: AdminUser): number {
   const tier = planRank(a) - planRank(b);
   if (tier !== 0) return tier;
-  const aSignIn = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0;
-  const bSignIn = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0;
-  if (aSignIn !== bSignIn) return bSignIn - aSignIn;
+  const aSeen = a.last_seen_at ? new Date(a.last_seen_at).getTime() : 0;
+  const bSeen = b.last_seen_at ? new Date(b.last_seen_at).getTime() : 0;
+  if (aSeen !== bSeen) return bSeen - aSeen;
   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 }
 
@@ -120,7 +123,7 @@ export function computeGoneQuiet(users: AdminUser[], now: number): GoneQuietUser
       if (!u.last_sign_in_at) return true;
       return new Date(u.last_sign_in_at).getTime() < cutoff;
     })
-    .sort(compareUsersByPlanThenSignIn)
+    .sort(compareUsersByPlanThenLastSeen)
     .map((u) => ({
       id: u.id,
       email: u.email,

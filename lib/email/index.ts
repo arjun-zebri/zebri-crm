@@ -16,7 +16,18 @@ export type { EmailAttachment } from "./dispatch";
 // them from `@/lib/email`. Client code (e.g. the email preview) must import
 // them from `@/lib/email/html` directly to avoid bundling the transport
 // layer (Resend + nodemailer) into the browser.
-export { contractHtml, invoiceHtml, leadNotificationHtml, questionnaireHtml, wrapTemplateHtml } from "./html";
+export {
+  bookingCancelledHtml,
+  bookingChangeNotificationHtml,
+  bookingConfirmationHtml,
+  bookingNotificationHtml,
+  bookingRescheduledHtml,
+  contractHtml,
+  invoiceHtml,
+  leadNotificationHtml,
+  questionnaireHtml,
+  wrapTemplateHtml,
+} from "./html";
 
 /**
  * Default transport for couple-facing mail: Resend, from the shared Zebri
@@ -151,3 +162,12 @@ export async function sendInvoiceEmail(opts: {
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
+
+// Re-export the booking email senders.
+export {
+  sendBookingCancelledEmail,
+  sendBookingChangeNotificationEmail,
+  sendBookingConfirmationEmail,
+  sendBookingNotificationEmail,
+  sendBookingRescheduledEmail,
+} from "./booking";

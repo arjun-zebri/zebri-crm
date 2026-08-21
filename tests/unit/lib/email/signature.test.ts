@@ -104,7 +104,7 @@ describe('renderSignatureHtml', () => {
 
     const bad = renderSignatureHtml({
       type: 'doc',
-      // eslint-disable-next-line no-script-url
+       
       content: [{ type: 'image', attrs: { src: 'javascript:alert(1)' } }],
     })
     expect(bad).not.toContain('javascript:')

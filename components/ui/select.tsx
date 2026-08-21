@@ -1,9 +1,11 @@
 'use client';
 
 import * as RadixSelect from '@radix-ui/react-select';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, HelpCircle } from 'lucide-react';
 import { useId } from 'react';
 import type { ReactNode } from 'react';
+
+import { Tooltip } from '@/components/ui/tooltip';
 
 /**
  * Canonical select primitive.
@@ -41,6 +43,15 @@ export interface SelectOption {
 export interface SelectProps {
   /** Visible label rendered above the trigger. */
   label?: string;
+  /**
+   * Explanation shown from a help icon beside the label.
+   *
+   * For settings whose name does not carry its own meaning. Prefer `help`
+   * when the text is short enough to sit under the control permanently;
+   * reach for this when the explanation is a sentence and would crowd a
+   * two-column form row.
+   */
+  tooltip?: string;
   /** Help text below the trigger. Hidden when `error` is set. */
   help?: string;
   /** Error message rendered in place of `help` (role=alert). */
@@ -84,6 +95,7 @@ const TRIGGER_BASE =
 /** Token-driven, accessible select. See {@link SelectProps}. */
 export function Select({
   label,
+  tooltip,
   help,
   error,
   options,
@@ -109,9 +121,24 @@ export function Select({
   return (
     <div className={`space-y-1${className ? ` ${className}` : ''}`}>
       {label ? (
-        <label htmlFor={autoId} className="block text-body font-medium text-text">
-          {label}
-        </label>
+        <div className="flex items-center gap-1.5">
+          <label htmlFor={autoId} className="block text-body font-medium text-text">
+            {label}
+          </label>
+          {tooltip ? (
+            <Tooltip label={tooltip}>
+              {/* A button, not a bare icon: the explanation has to be
+                  reachable by keyboard, and Tooltip opens on focus. */}
+              <button
+                type="button"
+                aria-label={`What does ${label} mean?`}
+                className="inline-flex text-text-subtle hover:text-text-muted"
+              >
+                <HelpCircle size={14} strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            </Tooltip>
+          ) : null}
+        </div>
       ) : null}
 
       {/* Conditionally spread optional props — Radix's typings forbid

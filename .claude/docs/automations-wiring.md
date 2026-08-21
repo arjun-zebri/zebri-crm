@@ -97,7 +97,7 @@ get unhidden by their wiring PR.
   *visible* tiles. Zod schemas keep `.passthrough()` so previously
   saved configs still parse; the fields just leave the UI.
 
-### Triggers — VISIBLE (28, fire today)
+### Triggers, VISIBLE (31, fire today)
 
 `new_enquiry`, `couple_stage_changed`, `invoice_created`,
 `invoice_sent`, `payment_received`, `invoice_due`, `invoice_overdue`,
@@ -108,10 +108,14 @@ get unhidden by their wiring PR.
 `contact_linked_to_couple`, `time_before_event`, `time_after_event`,
 `anniversary_of_event`, `couple_uploaded_file`,
 `couple_added_song_to_playlist`, `couple_completed_vows`,
-`questionnaire_completed`.
+`questionnaire_completed`, `consultation_booked`, `booking_cancelled`,
+`consultation_completed`.
 
 (The six `quote_*` triggers left this list when the quotes feature was
-dropped on 2026-07-11; `booking_cancelled` was retired 2026-08-13.)
+dropped on 2026-07-11. The old `booking_cancelled` (status-based) was
+retired 2026-08-13; the new one fires from the booking insert trigger
+and cancel_booking RPC (Scheduler Phase D). consultation_booked and
+consultation_completed are Phase D additions, visible starting 2026-08-20.)
 
 ### Triggers — HIDDEN
 
@@ -121,8 +125,8 @@ dropped on 2026-07-11; `booking_cancelled` was retired 2026-08-13.)
   `contract_revoked`, `event_deleted`, `contact_updated`,
   `custom_field_changed`, `couple_set_do_not_contact`,
   `branding_published`, `manual_fire`, `automation_failed`
-  (meta/internal), plus the entire Phase-14b set
-  (`consultation_*`, `noim_*`, `donlim_*`,
+  (meta/internal), plus the Phase-14b deferred set
+  (`noim_*`, `donlim_*`,
   `marriage_certificate_issued`, `document_signed`, `rehearsal_*`,
   the `couple_*_email` engagement triggers, `tag_*`,
   `subscription_*`, `couple_birthday`,

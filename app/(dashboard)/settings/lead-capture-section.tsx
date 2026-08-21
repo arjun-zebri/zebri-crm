@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { Toggle } from '@/components/ui/toggle';
 import {
   buildHostedUrl,
   buildIframeSnippet,
@@ -29,26 +30,6 @@ const DEFAULT_STATUS = '__default__';
 interface StatusOption {
   slug: string;
   name: string;
-}
-
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-pill transition-colors cursor-pointer ${
-        enabled ? 'bg-black' : 'bg-gray-200'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-pill bg-surface shadow transition-transform ${
-          enabled ? 'translate-x-[18px]' : 'translate-x-0.5'
-        }`}
-      />
-    </button>
-  );
 }
 
 function CopyField({ label, value }: { label: string; value: string }) {
@@ -128,7 +109,7 @@ export function LeadCaptureSection() {
               <p className="text-body text-text-subtle">Turn off to stop accepting new enquiries.</p>
             </div>
             <Toggle
-              enabled={enabled}
+              checked={enabled}
               onChange={(v) => {
                 setEnabled(v);
                 persist({ enabled: v, targetSlug });

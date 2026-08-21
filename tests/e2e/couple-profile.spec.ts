@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+
 import { login, addCouple, deleteCouple, openCoupleProfile, navigateToProfileTab, search, uniqueName } from './helpers'
 
 const COUPLE_NAME_PREFIX = 'Profile Test'

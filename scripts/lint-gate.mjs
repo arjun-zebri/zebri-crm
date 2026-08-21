@@ -68,7 +68,10 @@ import { execSync } from 'node:child_process';
 // payment-shaped action wiring from the contract surface, routing the contract
 // body through BlockFrame, and consolidating the contract-body mock into a
 // shared module cleared 8 lint errors → 54. Locking in.
-const ERROR_BUDGET = 54;
+// Scheduler UI pass: sweeping four hand-rolled toggle switches onto the shared
+// `Toggle` primitive removed the duplicated markup and its violations → 53,
+// then moving the meeting type status onto its card removed another → 52.
+const ERROR_BUDGET = 52;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -206,7 +209,12 @@ const ERROR_BUDGET = 54;
 // panels moved onto the new primitives. Running eslint --fix over the ~35
 // touched files cleared a large backlog of import-order warnings that had
 // accumulated in those pages (250 -> 199). Locking in.
-const WARNING_BUDGET = 111;
+// Scheduler Phase C e2e spec: added tests/e2e/booking.spec.ts with clean
+// imports and no unused variables → 111 → 110. Locking in.
+// Scheduler UI pass: import-order cleanups across the calendar tabs, the
+// settings sections and the toggle sweep → 106, then a further sweep while
+// wiring external event ids through the calendar → 97.
+const WARNING_BUDGET = 97;
 
 function runEslintJson() {
   try {

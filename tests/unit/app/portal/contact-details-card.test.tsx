@@ -9,8 +9,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildPublicBranding } from '@/lib/branding/public-branding'
 import { ContactDetailsCard, type ContactTriple } from '@/app/portal/[token]/contact-details-card';
+import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 const empty: ContactTriple = { name: '', email: '', phone: '' };
 const mockBranding = buildPublicBranding({});

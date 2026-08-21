@@ -24,6 +24,7 @@ import {
 import { useState } from 'react'
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Toggle } from '@/components/ui/toggle'
 import type {
   AutomationStatus,
   EnrichedAutomationRow,
@@ -169,8 +170,7 @@ function Row({
   const [deleting, setDeleting] = useState(false)
   const borderClass = isLast ? '' : 'border-b border-gray-100'
 
-  async function toggle(e: React.MouseEvent) {
-    e.stopPropagation()
+  async function toggle() {
     const next: AutomationStatus = a.status === 'active' ? 'paused' : 'active'
     await setAutomationStatusAction({ automationId: a.id, status: next })
     onChange()
@@ -199,7 +199,15 @@ function Row({
       className="cursor-pointer transition group hover:bg-gray-50/60"
     >
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
-        <ToggleSwitch checked={a.status === 'active'} onClick={toggle} />
+        {/* The row itself opens the automation, so the switch has to stop the
+            click before it bubbles or flipping one would also open it. */}
+        <span onClick={(e) => e.stopPropagation()} className="inline-flex">
+          <Toggle
+            checked={a.status === 'active'}
+            onChange={toggle}
+            ariaLabel={`${a.status === 'active' ? 'Pause' : 'Activate'} ${a.name}`}
+          />
+        </span>
       </td>
 
       <td className={`pl-0 pr-2 py-2.5 ${borderClass}`}>
@@ -296,35 +304,6 @@ function MobileRow({
 
 /* ─── Toggle switch ───────────────────────────────────────────── */
 
-function ToggleSwitch({
-  checked,
-  onClick,
-}: {
-  checked: boolean
-  onClick: (e: React.MouseEvent) => void
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={onClick}
-      className="cursor-pointer"
-    >
-      <span
-        className={`relative inline-flex h-4 w-7 items-center rounded-pill transition ${
-          checked ? 'bg-emerald-500' : 'bg-gray-200'
-        }`}
-      >
-        <span
-          className={`inline-block h-3 w-3 rounded-pill bg-surface shadow transform transition ${
-            checked ? 'translate-x-3.5' : 'translate-x-0.5'
-          }`}
-        />
-      </span>
-    </button>
-  )
-}
 
 /* ─── Success-rate cell ───────────────────────────────────────── */
 

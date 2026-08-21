@@ -1846,6 +1846,44 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_type_availability_rules: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          meeting_type_id: string
+          start_time: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          meeting_type_id: string
+          start_time: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          meeting_type_id?: string
+          start_time?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_type_availability_rules_meeting_type_id_fkey"
+            columns: ["meeting_type_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_types: {
         Row: {
           active: boolean
@@ -1864,6 +1902,7 @@ export type Database = {
           share_token: string
           updated_at: string
           user_id: string
+          uses_custom_availability: boolean
         }
         Insert: {
           active?: boolean
@@ -1882,6 +1921,7 @@ export type Database = {
           share_token?: string
           updated_at?: string
           user_id: string
+          uses_custom_availability?: boolean
         }
         Update: {
           active?: boolean
@@ -1900,6 +1940,7 @@ export type Database = {
           share_token?: string
           updated_at?: string
           user_id?: string
+          uses_custom_availability?: boolean
         }
         Relationships: []
       }
@@ -2807,6 +2848,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _owns_meeting_type: {
+        Args: { p_meeting_type_id: string }
+        Returns: boolean
+      }
       _owns_package_or_null: {
         Args: { p_package_id: string }
         Returns: boolean

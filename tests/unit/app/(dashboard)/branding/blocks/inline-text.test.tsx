@@ -8,6 +8,7 @@
  */
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+
 import { InlineText } from '@/app/(dashboard)/branding/blocks/inline-text'
 
 describe('InlineText', () => {

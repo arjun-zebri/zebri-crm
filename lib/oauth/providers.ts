@@ -15,6 +15,28 @@ export function isOAuthProvider(value: unknown): value is OAuthProvider {
   return value === 'google' || value === 'microsoft';
 }
 
+/** What a consent grant is for: sending mail or calendar access. */
+export type OAuthPurpose = 'email' | 'calendar';
+
+/** Narrowing guard for an untrusted `?purpose=` value. */
+export function isOAuthPurpose(value: unknown): value is OAuthPurpose {
+  return value === 'email' || value === 'calendar';
+}
+
+/**
+ * Where to send the MC after the consent round trip.
+ *
+ * A closed set, never a caller-supplied path: the value survives a redirect
+ * to a third-party consent screen and back, so echoing arbitrary input here
+ * would be an open redirect.
+ */
+export type OAuthReturnTo = 'settings' | 'calendar';
+
+/** Narrowing guard for an untrusted `?return=` value or cookie. */
+export function isOAuthReturnTo(value: unknown): value is OAuthReturnTo {
+  return value === 'settings' || value === 'calendar';
+}
+
 /** Resolved per-provider config (endpoints, scopes, client credentials). */
 export interface OAuthConfig {
   provider: OAuthProvider;
@@ -36,7 +58,10 @@ export function oauthRedirectUri(): string {
  * Build the {@link OAuthConfig} for `provider` from env. Throws if the
  * credentials are missing so a misconfigured deploy fails fast.
  */
-export function oauthConfig(provider: OAuthProvider): OAuthConfig {
+export function oauthConfig(
+  provider: OAuthProvider,
+  purpose: OAuthPurpose = 'email',
+): OAuthConfig {
   const redirectUri = oauthRedirectUri();
   if (provider === 'google') {
     const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -48,9 +73,18 @@ export function oauthConfig(provider: OAuthProvider): OAuthConfig {
       clientSecret,
       authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
       tokenUrl: 'https://oauth2.googleapis.com/token',
-      // `gmail.send` is send-only (the narrowest scope, best for Google
-      // verification); `openid email` gives us the connected address.
-      scopes: ['openid', 'email', 'https://www.googleapis.com/auth/gmail.send'],
+      scopes:
+        purpose === 'calendar'
+          ? [
+              'openid',
+              'email',
+              // events: create/update bookings (incl. conferenceData for Meet
+              // links). freebusy: availability reads. Narrowest pair that
+              // covers Phase A + C, best posture for Google verification.
+              'https://www.googleapis.com/auth/calendar.events',
+              'https://www.googleapis.com/auth/calendar.freebusy',
+            ]
+          : ['openid', 'email', 'https://www.googleapis.com/auth/gmail.send'],
       redirectUri,
     };
   }
@@ -64,8 +98,10 @@ export function oauthConfig(provider: OAuthProvider): OAuthConfig {
     clientSecret,
     authorizeUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize`,
     tokenUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
-    // `offline_access` is required to receive a refresh token.
-    scopes: ['openid', 'email', 'offline_access', 'https://graph.microsoft.com/Mail.Send'],
+    scopes:
+      purpose === 'calendar'
+        ? ['openid', 'email', 'offline_access', 'https://graph.microsoft.com/Calendars.ReadWrite']
+        : ['openid', 'email', 'offline_access', 'https://graph.microsoft.com/Mail.Send'],
     redirectUri,
   };
 }
@@ -74,8 +110,12 @@ export function oauthConfig(provider: OAuthProvider): OAuthConfig {
  * Build the provider's consent URL for `state`. `access_type=offline` +
  * `prompt=consent` (Google) guarantee a refresh token on every connect.
  */
-export function buildAuthorizeUrl(provider: OAuthProvider, state: string): string {
-  const cfg = oauthConfig(provider);
+export function buildAuthorizeUrl(
+  provider: OAuthProvider,
+  state: string,
+  purpose: OAuthPurpose = 'email',
+): string {
+  const cfg = oauthConfig(provider, purpose);
   const params = new URLSearchParams({
     client_id: cfg.clientId,
     redirect_uri: cfg.redirectUri,
@@ -91,4 +131,20 @@ export function buildAuthorizeUrl(provider: OAuthProvider, state: string): strin
     params.set('response_mode', 'query');
   }
   return `${cfg.authorizeUrl}?${params.toString()}`;
+}
+
+/**
+ * Parse a round-tripped OAuth `state` ("<provider>.<purpose>.<random>").
+ * States minted before the purpose dimension existed have only
+ * "<provider>.<random>"; those default to 'email' so in-flight consents
+ * keep working across the deploy.
+ */
+export function parseOAuthState(
+  state: string,
+): { provider: OAuthProvider; purpose: OAuthPurpose } | null {
+  const [first, second] = state.split('.');
+  if (!isOAuthProvider(first)) return null;
+  if (isOAuthPurpose(second)) return { provider: first, purpose: second };
+  if (second) return { provider: first, purpose: 'email' };
+  return null;
 }

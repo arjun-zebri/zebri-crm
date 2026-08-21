@@ -221,6 +221,7 @@ see their migrations.
 | Quotes, invoices & payments | `quote_created` · `quote_sent` · `quote_accepted` · `quote_declined` · `quote_due` · `quote_overdue` · `invoice_created` · `invoice_sent` · `payment_received` · `invoice_due` · `invoice_overdue` |
 | Contracts | `contract_created` · `contract_sent` · `contract_signed` · `contract_declined` · `contract_expired` |
 | Calendar & events | `event_created` · `event_updated` · `time_before_event` · `time_after_event` · `anniversary_of_event` |
+| Scheduler | `consultation_booked` (emitted by the bookings table AFTER INSERT trigger when a public booking is confirmed) · `booking_cancelled` (emitted by cancel_booking RPC when a booker cancels their consultation) · `consultation_completed` (emitted by the consultation_completed time emitter when a booking's ends_at passes) |
 | Client portal | `section_completed` (Portal item added — absorbs file / song adds) · `timeline_edited` · `couple_completed_vows` · `questionnaire_completed` |
 | Tasks | `task_created` · `task_completed` · `task_overdue` |
 | Contacts | `contact_created` · `contact_linked_to_couple` |

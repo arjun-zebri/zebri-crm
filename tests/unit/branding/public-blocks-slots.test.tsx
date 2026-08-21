@@ -2,11 +2,11 @@ import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { describe, expect, it } from 'vitest'
 
+import { RenderAction } from '@/lib/branding/public-blocks/action'
 import { RenderFooter } from '@/lib/branding/public-blocks/footer'
-import { RenderText } from '@/lib/branding/public-blocks/text'
 import { RenderLineItems } from '@/lib/branding/public-blocks/line-items'
 import { RenderPaymentDetails } from '@/lib/branding/public-blocks/payment-details'
-import { RenderAction } from '@/lib/branding/public-blocks/action'
+import { RenderText } from '@/lib/branding/public-blocks/text'
 
 const branding = { density: 'cozy', corner_radius: 8, brand_color: '#111', surface_color: '#fff', text_color: '#111', muted_color: '#666', button_size: 'md', button_radius: 8, button_variant: 'fill', secondary_color: '#EEE', font_body: 'system-ui' } as never
 

@@ -32,6 +32,11 @@ const PUBLIC_ROUTES = [
   // script (`/lead-embed.js`), and the submit endpoint (`/api/lead/*`).
   "/lead",
   "/api/lead",
+  // Public booking surfaces: the share token is the capability,
+  // no session expected. Covers the booking page + embed variant (`/book/<token>`),
+  // the embed loader script (`/book-embed.js`), and the submit endpoint (`/api/booking/*`).
+  "/book",
+  "/api/booking",
   // Internal component showroom. The route itself 404s in production
   // (see app/design-system/layout.tsx); this entry only keeps the
   // dev-server middleware from bouncing it to /login.

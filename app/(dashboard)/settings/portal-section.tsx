@@ -5,6 +5,7 @@ import { useState, useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { Toggle } from '@/components/ui/toggle';
 import { createClient } from '@/lib/supabase/client'
 
 interface PortalSectionSettings {
@@ -39,26 +40,6 @@ const DEFAULT_SETTINGS: PortalSectionSettings = {
   songs: true,
   files: true,
   vows: true,
-}
-
-function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-pill transition-colors cursor-pointer ${
-        enabled ? 'bg-black' : 'bg-gray-200'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-pill bg-surface shadow transition-transform ${
-          enabled ? 'translate-x-[18px]' : 'translate-x-0.5'
-        }`}
-      />
-    </button>
-  )
 }
 
 export function PortalSection({ initialSettings }: PortalSectionProps) {
@@ -117,7 +98,12 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
                     <p className="text-body text-text-subtle">{section.description}</p>
                   </div>
                 </div>
-                <Toggle enabled={settings[section.id]} onChange={() => toggle(section.id)} />
+                <Toggle
+                  checked={settings[section.id]}
+                  onChange={() => toggle(section.id)}
+                  ariaLabel={section.label}
+                  className="shrink-0"
+                />
               </div>
             )
           })}

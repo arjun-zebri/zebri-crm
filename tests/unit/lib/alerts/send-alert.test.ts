@@ -40,6 +40,34 @@ describe('formatSlackMessage', () => {
     expect(payload.text).toContain('card_declined');
   });
 
+  it('names the missing join link for a video booking with no calendar', () => {
+    const payload = formatSlackMessage({
+      type: 'booking_created_without_calendar',
+      severity: 'warn',
+      userId: 'u1',
+      bookingId: 'b1',
+      locationType: 'video',
+    });
+    expect(payload.text).toContain('u1');
+    expect(payload.text).toContain('b1');
+    expect(payload.text).toContain('no connected calendar');
+    // Why: a video booking without a push is worse than the others, because
+    // the couple receives a "Video call" confirmation with nothing to click.
+    expect(payload.text).toContain('no join link sent');
+  });
+
+  it('omits the join-link note for a non-video booking with no calendar', () => {
+    const payload = formatSlackMessage({
+      type: 'booking_created_without_calendar',
+      severity: 'warn',
+      userId: 'u1',
+      bookingId: 'b1',
+      locationType: 'in_person',
+    });
+    expect(payload.text).toContain('no connected calendar');
+    expect(payload.text).not.toContain('no join link sent');
+  });
+
   it('uses the warning emoji for warn severity', () => {
     const payload = formatSlackMessage({
       type: 'rls_denied_spike',

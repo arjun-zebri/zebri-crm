@@ -81,26 +81,26 @@ Redirects to `/login` on success.
 
 Route: Modal overlay during application (no standalone route).
 
-Route group: `(dashboard)` — authenticated, displays after login on first interaction.
+Route group: `(dashboard)`  -  authenticated, displays after login on first interaction.
 
-Purpose: Eight-step welcome wizard for new users — capture their profile details, then walk them through the core loop (couple → template → send → automation) as animated previews, closing on a personal founder note.
+Purpose: Eight-step welcome wizard for new users  -  capture their profile details, then walk them through the core loop (couple → template → send → automation) as animated previews, closing on a personal founder note.
 
 ## Gate
 
 The wizard is shown once per user, gated on `user_metadata.welcome_onboarded_at` timestamp. A soft gate using localStorage (key `zebri:welcome-onboarded`) acts as an offline hint to skip the fetch. Every user, regardless of age, has never been stamped on this field, so all existing accounts see the modal once after deploy. A backfill of the gate is the lever to suppress it for old users if needed.
 
-The modal uses `size="2xl"` with `floatingClose` (headerless — the step title sits flush at the top). It is dismissible on every exit path (Finish, Escape, ×, backdrop), each of which stamps the gate.
+The modal uses `size="2xl"` with `floatingClose` (headerless  -  the step title sits flush at the top). It is dismissible on every exit path (Finish, Escape, ×, backdrop), each of which stamps the gate.
 
 ## Eight Steps
 
-1. **Welcome** — What Zebri is, in a breath, over a bento grid of wedding-photo tiles that pop in one by one (grey placeholders until the real photos land). Zebri wordmark above the heading. "Next" CTA.
-2. **Details** — Name, email (read-only, with an info-glyph tooltip explaining why), business name, phone, signature name, address (`AddressAutocomplete`). Icon-labelled inputs. Prefilled from signup.
-3. **Links** — Website, Instagram, Facebook with icon labels. **Advancing from step 3 is the single save point** (writes `user_metadata` via `auth.updateUser`); a failed write never blocks the flow. On steps 2-3 a **Skip** button closes the whole tour (the dismiss path stamps the gate).
-4. **Preview: Add a couple** — Blank frame → sidebar click → New couple → Add manually → Add Couple modal (dark backdrop, underline fields, one caret at a time, typewriter) → Save → the couple lands on the Kanban board.
-5. **Preview: Create a template** — New template opens the editor modal (Template name + Category, Subject/Body with green `{{token}}` highlights and Insert-variable chips, editor toolbar) → Attach file → PDF lands. Modal opens at final size; content fades in without reflow.
-6. **Preview: Send it in two clicks** — Starts inside the couple profile overlay (vertical tab nav). Emails tab → Send email → template picker popover → compose modal with resolved plain-text subject/body (couple addressed by first name) → Send → the button flips to a green Sent and the animation rests on the composed email.
-7. **Preview: Let it run itself** — Automation canvas: Add trigger → anchored dropdown → New enquiry; Add action → Send email (card lands complete with `Template · Enquiry reply`); Activate flips the header pill to Active.
-8. **Founder note** — Real headshot (`public/headshot.jpeg`), personal note (why Zebri exists, one-tool-for-all vision, community emphasis), real signature (`public/signature.png`). "Finish" CTA.
+1. **Welcome**  -  What Zebri is, in a breath, over a bento grid of wedding-photo tiles that pop in one by one (grey placeholders until the real photos land). Zebri wordmark above the heading. "Next" CTA.
+2. **Details**  -  Name, email (read-only, with an info-glyph tooltip explaining why), business name, phone, signature name, address (`AddressAutocomplete`). Icon-labelled inputs. Prefilled from signup.
+3. **Links**  -  Website, Instagram, Facebook with icon labels. **Advancing from step 3 is the single save point** (writes `user_metadata` via `auth.updateUser`); a failed write never blocks the flow. On steps 2-3 a **Skip** button closes the whole tour (the dismiss path stamps the gate).
+4. **Preview: Add a couple**  -  Blank frame → sidebar click → New couple → Add manually → Add Couple modal (dark backdrop, underline fields, one caret at a time, typewriter) → Save → the couple lands on the Kanban board.
+5. **Preview: Create a template**  -  New template opens the editor modal (Template name + Category, Subject/Body with green `{{token}}` highlights and Insert-variable chips, editor toolbar) → Attach file → PDF lands. Modal opens at final size; content fades in without reflow.
+6. **Preview: Send it in two clicks**  -  Starts inside the couple profile overlay (vertical tab nav). Emails tab → Send email → template picker popover → compose modal with resolved plain-text subject/body (couple addressed by first name) → Send → the button flips to a green Sent and the animation rests on the composed email.
+7. **Preview: Let it run itself**  -  Automation canvas: Add trigger → anchored dropdown → New enquiry; Add action → Send email (card lands complete with `Template · Enquiry reply`); Activate flips the header pill to Active.
+8. **Founder note**  -  Real headshot (`public/headshot.jpeg`), personal note (why Zebri exists, one-tool-for-all vision, community emphasis), real signature (`public/signature.png`). "Finish" CTA.
 
 The previews share a beat-clock animation system: a fake cursor measured onto real elements (`data-cursor` attributes), a trailing content clock so effects land only after the pointer arrives (`useSettledBeat`), one-shot click ripples, and a no-loop rest on the final frame. Reduced motion jumps straight to each preview's finished state.
 
@@ -108,26 +108,26 @@ The previews share a beat-clock animation system: a fake cursor measured onto re
 
 ```
 app/(dashboard)/onboarding/
-  welcome-gate.tsx                      — gate logic (localStorage hint + metadata read)
-  welcome-modal.tsx                     — Modal shell (2xl, floatingClose, fixed-height wrapper)
-  welcome-wizard.tsx                    — step state, single save point, footer chrome host
-  wizard-chrome.tsx                     — progress bar + Skip/Back/Next/Finish
-  use-reduced-motion.ts                 — system prefers-reduced-motion hook
+  welcome-gate.tsx                       -  gate logic (localStorage hint + metadata read)
+  welcome-modal.tsx                      -  Modal shell (2xl, floatingClose, fixed-height wrapper)
+  welcome-wizard.tsx                     -  step state, single save point, footer chrome host
+  wizard-chrome.tsx                      -  progress bar + Skip/Back/Next/Finish
+  use-reduced-motion.ts                  -  system prefers-reduced-motion hook
   steps/
-    step-welcome.tsx                    — step 1
-    step-details.tsx                    — step 2 (owns the WelcomeProfile type)
-    step-links.tsx                      — step 3
-    step-preview.tsx                    — steps 4-7 host (title + copy + script)
-    step-founder.tsx                    — step 8
+    step-welcome.tsx                     -  step 1
+    step-details.tsx                     -  step 2 (owns the WelcomeProfile type)
+    step-links.tsx                       -  step 3
+    step-preview.tsx                     -  steps 4-7 host (title + copy + script)
+    step-founder.tsx                     -  step 8
   previews/
-    preview-frame.tsx                   — mini app chassis: sidebar rail, cursor engine, overlay slot
-    preview-modal.tsx                   — Backdrop + PreviewModal + EditorToolbar minis
-    typewriter.tsx                      — character-by-character reveal with caret
-    use-preview-script.ts               — beat clock + trailing settled-beat clock
-    script-couple.tsx                   — step 4 script
-    script-template.tsx                 — step 5 script
-    script-send.tsx                     — step 6 script
-    script-automation.tsx               — step 7 script
+    preview-frame.tsx                    -  mini app chassis: sidebar rail, cursor engine, overlay slot
+    preview-modal.tsx                    -  Backdrop + PreviewModal + EditorToolbar minis
+    typewriter.tsx                       -  character-by-character reveal with caret
+    use-preview-script.ts                -  beat clock + trailing settled-beat clock
+    script-couple.tsx                    -  step 4 script
+    script-template.tsx                  -  step 5 script
+    script-send.tsx                      -  step 6 script
+    script-automation.tsx                -  step 7 script
 ```
 
 ## Rollout Note
@@ -344,9 +344,9 @@ Opens as a centered full-screen modal (not a slide-over). Overlay covers the ful
 
 **Tab settings (gear):** A Settings (gear) button sits next to Delete in the
 header (desktop inline row; mobile actions popover), with a smooth rotate/fade
-when toggled. It flips the nav into an inline "settings mode" — a vertical,
+when toggled. It flips the nav into an inline "settings mode"  -  a vertical,
 drag-to-reorder list of every tab, each row with an eye / eye-off button to hide
-or show that tab (Overview is locked visible — the guaranteed fallback). Edits
+or show that tab (Overview is locked visible  -  the guaranteed fallback). Edits
 live in a working draft so the nav updates instantly (no flicker when toggling
 the gear back). The layout is **per-user and global across couples** (not
 per-couple) and is **saved when the modal closes** (overlay / Esc / ✕) to
@@ -416,7 +416,7 @@ would read as a record of when the work happened.
 a legend naming each segment with its duration and share. Part-to-whole
 across a handful of categories, so a stacked bar rather than a donut:
 proportion reads at a glance and it costs a row of the header instead of
-a panel. The total stays a plain number beside it — a chart of a single
+a panel. The total stays a plain number beside it  -  a chart of a single
 value is decoration, and the total is what the MC bills from.
 
 Rules that keep it honest:
@@ -466,7 +466,7 @@ The **Templates** tab (Mail icon, after Automations) is where the MC
 emails this couple. Header has two actions: **Send email** (compose from
 a saved template → sends to the couple) and **Test template** (same
 compose, but sends to the MC's own inbox with a `[Test]` subject, not
-logged). Below is the sent-history — newest first, each row showing
+logged). Below is the sent-history  -  newest first, each row showing
 subject, source template, recipient, a status pill, and relative sent
 time (calm card list mirroring Automations). Backed by `couple_emails`;
 the send route logs a row on each real send. (The "Send email" entry
@@ -636,6 +636,220 @@ Note: Event Date and Venue fields are managed exclusively via the Events tab. Th
 
 ---
 
+# Calendar Page (Scheduler Phase B / E)
+
+Route: `/calendar`
+
+Purpose: View the MC's couples' events and confirmed bookings on a calendar, manage meeting types, and configure personal availability.
+
+## Layout
+
+Four tabs at the top: Calendar | Meeting types | Availability | Bookings
+
+The Calendar, Meeting types, and Availability tabs toggle main-panel content while keeping the sidebar. The Bookings tab renders a full-height list (no sidebar switch).
+
+`PageHeader` shows the title alone. On the Bookings tab it also carries a **Share booking link** action: one active meeting type copies its link straight to the clipboard, several open a menu to pick which link, none renders the button disabled.
+
+## Which timezone the grid draws on
+
+`user_public_settings.timezone` is nullable with **no default**, and nothing
+seeds it at signup: it stays null until the MC first saves on the Availability
+tab, which writes the rules and the zone in the same action. So "rules exist"
+implies "timezone saved", and a null zone always means a brand-new MC.
+
+Every surface resolves it through `useMcTimezone()`
+(`app/(dashboard)/calendar/use-mc-timezone.ts`):
+
+**saved zone → browser zone (`useBrowserTimezone()`) → `UTC`**
+
+UTC is the last resort only. The grids previously each inlined
+`availability?.timezone || 'UTC'`, so a new MC's connected calendar was drawn on
+a UTC clock — ten hours out in Sydney — while the Availability tab showed them
+their browser zone and made the setting look already correct. The zone sets
+`dayStart` (`getLocalDayStart`), which is what every busy block, booking chip and
+availability band is positioned against, so getting it wrong moves every event
+on the grid.
+
+Note the public slot engine keeps its own server-side default of
+`Australia/Sydney` (`lib/booking/availability.ts`) because there is no browser to
+read. That cannot affect a real booking: with no rules there are no slots, and
+rules never exist without a saved zone.
+
+## Calendar connection states
+
+An MC can connect Google/Outlook from here as well as from Settings → Public Page → Calendars; both routes share `useCalendarConnections()` so they can never disagree. Connecting from here passes `return=calendar`, so the consent round trip lands back on `/calendar` with a toast.
+
+**Nothing on this route is blocked by a missing connection.** Scheduling on Zebri data alone stays supported; the MC just should not discover the trade-off by accident. What silently degrades without one: the grid shows no external busy blocks, offered slots ignore the MC's real calendar, confirmed bookings never reach it, and `video` meeting types produce no join link.
+
+- **Banner** above the tabs, visible from all four. Absent when a healthy connection exists, and while the query is still loading so it never flashes in. Two variants: never connected ("No calendar connected. Bookings won't check your real calendar for clashes.") and errored ("Your calendar connection stopped working…"). These read differently on purpose: telling a first-time MC their calendar "stopped working" is nonsense.
+- **Calendar tab** shows an inline prompt above the grid when the connection list is empty: "Only Zebri bookings are shown here." Mutually exclusive with the sidebar's existing "could not be reached" warning, which means *connected but unreachable*.
+- **Meeting types tab** warns when an **active** `video` type exists and no calendar is connected, because that gap is visible to the couple: they get a "Video call" confirmation with nothing to click.
+
+When a booking is confirmed while the MC has no connection, `booking_created_without_calendar` fires to Slack. The public booking page itself is unchanged.
+
+## Tab 0: Calendar
+
+MC's calendar with multiple views and a detail panel for managing bookings.
+
+**Views:** Three view modes (day/week/month) selectable via dropdown or mobile letter buttons (D/W/M). Day and Week show hourly time grids; Month shows a date grid.
+
+**Sidebar:**
+- Mini-month navigator with clickable dates (moves the main view)
+- Layer toggles (Bookings, Weddings, Busy) to show/hide each data class
+- Selected day agenda: lists that day's bookings and weddings in time order; clicking a booking or wedding row opens the detail panel or couple profile respectively
+
+**Day View (24-hour grid):**
+- Time column on left (00:00-23:59, 1 hour per row)
+- Single wide column showing bands and chips in the MC's timezone
+- All-day band at top (wedding events)
+- Availability shading (MC's availability windows as a tinted background)
+- External busy blocks (Google/Outlook calendar events, with titles visible on dashboard only)
+- Booking chips (brand-colored, overlap-layout managed by grid engine, cancelled state muted)
+- Current-time indicator (red line at the present moment)
+- Legend showing availability, busy, and booking swatch meanings
+
+**Week View (24-hour grid):**
+- Time column on left, seven day columns (Mon-Sun in MC's timezone local-midnight-based week)
+- Column headers fixed above scrolling grid with day numbers (derived in MC's timezone, not UTC)
+- All-day band at top (weddings only)
+- Same availability shading, busy blocks, and booking chips as Day view
+- Current-time indicator spans all columns
+- Legend and layer toggles visible at top
+
+**Month View (date grid):**
+- Six-week calendar grid (ISO week starting Monday if partial weeks included)
+- Day cells show couple names and wedding count (no time precision)
+- Click a day to navigate the sidebar agenda (does not switch to Day view)
+- No time grids; couples-era filtering and search still present
+
+**Booking detail modal** (opened from a calendar chip, the sidebar agenda, or a Bookings row):
+
+Laid out like the quote and invoice builders, so a booking reads as one of the app's documents rather than a one-off surface:
+
+- `Modal` size `md`, standard header band: the word "Booking" plus a status pill (Confirmed while it is live, Done once it has ended, Cancelled when called off), then **Join** and **Copy link** as the contextual `headerActions` beside the close. Both appear only when `video_join_url` is set and the booking is live, and both act on the same call: one takes the MC into it, the other puts the link on the clipboard to pass on.
+- Body opens with a `text-section` hero, "{meeting type} with {booker}", over one muted meta line: "Fri 21 Aug 2026 · 4:30pm–5:00pm AEST · 30 min · video call" in the MC's timezone.
+- Under it, the countdown ("Starts in 2 hours" / "Happening now" / "Ended 3 days ago", green while the meeting is still ahead). Cancelled bookings show no countdown.
+- There is no add-to-calendar action: a confirmed booking is pushed to the MC's connected calendar when it is made, so offering a file would invite a duplicate event.
+- **DETAILS** section, label-left / value-right rows in the couple-profile idiom, all about the booker: Name, Email (`mailto:`), Phone (`tel:`), Couple (a link into the couple profile, or "Not linked yet"), Booked ("18 Aug, via booking link" from `created_at`), and their timezone when it differs from the MC's.
+- **THEIR NOTE** section renders the booker's `notes` as muted prose when there is one.
+- Footer: **Cancel booking** (outline, behind `ConfirmDialog`, calls cancel_booking RPC) and **Reschedule** (outline, reveals a date + time form, calls reschedule_booking RPC). Both slots stay bordered controls in either mode, so the left button does not lose its edges when the modal flips into reschedule. A cancelled booking gets no footer.
+- A failed action keeps the modal open and shows the error; a successful one invalidates the `bookings` query and toasts.
+- Close (X), backdrop, or Escape to dismiss. Uses the shared `useOverlay` depth-aware state so it nests correctly over the couple profile.
+
+**Design:** Tailwind tokens only. Times rendered via `getLocalDayStart`, `zonedDateParts`, and `zonedTimeToUtc` from `lib/scheduling/timezone.ts`, composed in `lib/calendar/timezone.ts`. Grid layout managed by `bandGeometry` and `layoutOverlaps` in `lib/calendar/grid-layout.ts`. Grid window (viewport slice) handled by `lib/calendar/grid-window.ts`.
+
+## Tab 2: Meeting Types
+
+Bookable meeting types library. CRUD interface.
+
+Header: "Meeting Types" title + "+ New meeting type" button (opens modal).
+
+List of meeting types (table or card grid):
+- Name + description
+- Duration + location type (Video / Phone / In person)
+- Copy booking link icon (copies `${origin}/book/<share_token>` to clipboard; Phase C public page ships later)
+- Edit icon (opens modal)
+- Delete icon (with confirmation)
+
+**Add/Edit Meeting Type Modal:**
+
+Fields:
+- Name (text, required)
+- Description (textarea, optional)
+- Duration (minutes, 5-480, required)
+- Location type (radio or select: Video | Phone | In person, default Video)
+- Address (text, shown only when In person selected, optional)
+- Buffer before (minutes, 0-240, default 0)
+- Buffer after (minutes, 0-240, default 0)
+- Minimum notice (hours, 0-720, default 24)
+- Maximum advance (days, 1-365, default 60)
+- Reminder enabled (toggle, default on)
+- Active (toggle, default on)
+
+**Availability section** (bottom of the modal):
+
+- A "Use my standard hours" toggle, on by default. On, the type follows the weekly hours from Tab 3.
+- Off, a compact seven-row weekly grid appears (short day names, one on/off switch and one or more windows per day, an add-window button per row) plus a footer showing the weekly total and a reminder that date overrides still apply.
+- The grid is seeded from the MC's standard hours, so switching to custom starts from something real rather than an empty week that would quietly make the type unbookable.
+- Custom hours REPLACE the standard hours for that type: they can open times the standard week excludes, and a custom schedule with every day off means the type is never bookable.
+- Date overrides stay user-level and are not editable here; a blocked wedding day blocks every type.
+- Saved as `meeting_type_availability_rules` rows plus `meeting_types.uses_custom_availability`. The card shows "custom hours" beside the duration for a type on its own schedule.
+- Saving from the modal always writes the hours. Other callers (the card's pause switch) omit the availability payload entirely, which leaves the stored hours untouched.
+
+Actions: Save | Delete (edit only)
+
+## Tab 3: Availability
+
+MC's weekly availability + date overrides. Timezone-aware editor.
+
+**Action bar** (above both cards):
+
+- Left: timezone button showing the current IANA zone (e.g. 'Australia/Sydney') with a globe icon. Opens a searchable modal listing every zone the runtime knows, each with its current GMT offset and a tick on the selected one. The search field is **not** focused on open, so the modal reads as a list you can browse rather than a field you must type into; clicking it and pressing Enter still picks the top match. The list is a fixed height so the modal does not resize as matches are filtered.
+- Right: **Add an override** (opens the override modal), **Discard** (only while the weekly editor is dirty), **Save changes** (disabled until dirty).
+- Timezone is populated from the browser on first visit and persists to `user_public_settings.timezone`.
+
+**Weekly hours card:**
+
+Header row: "Weekly hours" plus two bulk actions, **Copy Monday to weekdays** (applies Monday's windows and on/off state to Tue-Fri, leaving the weekend alone) and **Clear week** (switches every day off; still needs Save, so Discard undoes it).
+
+These are the MC's **standard** hours, used by every meeting type except those switched to their own schedule in the meeting-type modal (Tab 2).
+
+Mon-first seven-day rows. Each row: a `Toggle` for the day, the day name, its time windows, the day's total hours, and an add-window button. A day switched off reads "Unavailable" and shows no hours; its windows are retained in state, so switching it back on restores what was typed.
+
+Actions per day:
+- Add window (+ button at the end of the row)
+- Edit window (TimeSelect at each end of the window)
+- Delete window (X per window, shown once a day has more than one)
+
+Footer row: "Times are in {timezone}. Couples always see their own timezone." and the total, "{n}h bookable".
+
+Windows display as 12-hour labels over "HH:mm" values. All windows across all enabled days persist as availability_rules rows.
+
+**Date Overrides:**
+
+Card below the weekly hours: "Date overrides", subtitled "These beat the weekly hours for that date".
+
+List of overrides with date ("Sat 12 Sept"), status (Blocked / "9:00 AM to 5:00 PM"), and delete icon behind a ConfirmDialog. Empty state invites adding one.
+
+Adding happens in the **Add a date override** modal (opened from the action bar), a `md` modal matching the meeting-type and timezone ones on this page: date picker, "Block the whole day" checkbox, and a time window when unchecked (each end taking half the row), with a line explaining what the choice does. The hours row stays mounted and the explanation keeps one line reserved, so ticking the checkbox never resizes the modal under the cursor.
+
+Each override is one availability_overrides row (available=true for custom window, available=false for blocked day).
+
+**Interaction / Save semantics:**
+
+- **Weekly hours are buffered.** Edits accumulate in local state; Save changes writes them (replace-all), Discard reverts to the last saved snapshot. The dirty check compares flattened rules, so re-ordering which day was switched on first, or windows retained on a disabled day, do not count as changes.
+- **Overrides save immediately.** Adding one from the modal or deleting one writes straight away, so those actions have no Save bar.
+- Both paths toast on success and on failure.
+- Changes persist across page reloads.
+
+**Design:**
+
+- `Toggle` primitive for the per-day on/off switch, `TimeSelect` for all time inputs (24-hour "HH:mm" value, 12-hour labels), `DatePicker` for override dates, `Card` for both sections, `Modal` for the timezone picker and the override form.
+- Pure helpers (week transforms, hour totals, dirty check, labels) live in `availability-utils.ts`; the tab is an orchestrator.
+- Minimal form styling, tokens only.
+
+## Tab 4: Bookings
+
+Every meeting an MC has taken through a booking link, as one full-height list that runs to the bottom of the page and scrolls inside itself.
+
+**Toolbar:** a segmented switcher (Upcoming | Past | Cancelled) with the row count beside each label, and a search box on the right matching booker name or couple name.
+
+- **Upcoming**: confirmed bookings that have not finished yet, soonest first.
+- **Past**: bookings whose `ends_at` is behind now, most recent first. A booking is history once it has ended, even though the status stays `confirmed`.
+- **Cancelled**: anything with status `cancelled`, most recent first.
+
+**List:** one bordered card holding day bands and their rows.
+
+- Day band: sticky heading, e.g. "Today · Fri 21 Aug" ("Tomorrow · …" for the next day, a plain date after that) plus "N bookings". Grouping happens in the MC's timezone, so a 9am Sydney booking never lands on the previous day.
+- Row: start time (tabular, MC timezone) · booker name over "{meeting type} · {duration} min · {location}" · "Couple: {name}" or "New enquiry" (hidden below `md`) · status pill · chevron. Today's rows carry a `bg-success/5` tint on the Upcoming filter. Clicking a row opens the booking detail modal.
+- Closing line "Nothing else booked yet." under the last row of an unfiltered Upcoming list.
+
+**States:** `BookingsSkeleton` while loading, `ErrorState` on failure, and a per-filter `Empty` ("Nothing booked yet" / "No past bookings" / "No cancelled bookings"). Searching with no match says so instead, so an empty result never reads as an empty diary.
+
+**Design:** the tab is an orchestrator; `bookings-toolbar.tsx`, `bookings-list.tsx` and `booking-row.tsx` own the layout, and every date, time and countdown string comes from `booking-display.ts` so the list and the modal cannot drift apart.
+
+---
+
 # Tasks Page
 
 Route: `/tasks`
@@ -734,16 +948,16 @@ Purpose: Unified hub for managing invoices and contracts. The MC can view, creat
 
 Header: Title "Payments" + two tabs: **Invoices** | **Contracts** (Invoices is the default tab). The active tab is the `PaymentsTab` type (`'invoices' | 'contracts'`, in `use-payments-shortcut.ts`). Search bar + "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
 
-Invoices are fully **manual** — the MC builds each one by hand (optionally starting from a saved invoice template or package). Nothing seeds an invoice or a payment schedule automatically; signing a contract does not create an invoice.
+Invoices are fully **manual**  -  the MC builds each one by hand (optionally starting from a saved invoice template or package). Nothing seeds an invoice or a payment schedule automatically; signing a contract does not create an invoice.
 
 **Composition (Phase 2C decomposition):** `app/(dashboard)/payments/page.tsx` is an orchestrator that composes the following co-located sections:
 
-- `payments-header.tsx` — title row, search toolbar, tab strip.
-- `payments-table.tsx` — shared desktop-table / mobile-list primitive consumed by both tabs.
-- `payments-footer.tsx` — fixed bottom count + (for invoices) money total.
-- `invoices-list.tsx`, `contracts-list.tsx` — per-tab row mapping + status pill catalogues.
-- `use-payments-data.ts` — React Query hooks for the two lists.
-- `use-payments-shortcut.ts` — `PaymentsTab` type + `/` keyboard shortcut + Escape-to-clear.
+- `payments-header.tsx`  -  title row, search toolbar, tab strip.
+- `payments-table.tsx`  -  shared desktop-table / mobile-list primitive consumed by both tabs.
+- `payments-footer.tsx`  -  fixed bottom count + (for invoices) money total.
+- `invoices-list.tsx`, `contracts-list.tsx`  -  per-tab row mapping + status pill catalogues.
+- `use-payments-data.ts`  -  React Query hooks for the two lists.
+- `use-payments-shortcut.ts`  -  `PaymentsTab` type + `/` keyboard shortcut + Escape-to-clear.
 
 ## Invoices Tab
 
@@ -751,7 +965,7 @@ Table Columns (matching couples/vendors style):
 - Number (invoice #, gray text)
 - Title
 - Couple (name)
-- Status (badge: gray=draft, blue=sent, emerald=paid, red=overdue, gray=cancelled). "Overdue" begins the day *after* `due_date` — an invoice due today is not yet overdue (derived via `isPastDue` in `@/lib/utils`; same boundary the A4 `invoice_overdue` automation uses).
+- Status (badge: gray=draft, blue=sent, emerald=paid, red=overdue, gray=cancelled). "Overdue" begins the day *after* `due_date`  -  an invoice due today is not yet overdue (derived via `isPastDue` in `@/lib/utils`; same boundary the A4 `invoice_overdue` automation uses).
 - Total (right-aligned, currency formatted AUD)
 - Due Date (right-aligned, formatted date, red if overdue)
 
@@ -769,19 +983,19 @@ InvoiceBuilderModal is rendered on this page (and reused on the couple profile).
 ### Shared shell (`builder-modal-shell.tsx`)
 - Top of the modal: document number (e.g. `INV-001`) + inline `StatePill` (the same tonal pill used on the Billing tab).
 - Right side of the header: status-aware contextual primary CTA + `⋯` overflow menu for destructive / revert actions.
-- Body: hero title input (large unbordered text — Notion-style) followed by the composed parts.
-- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple). While the doc is still a draft, a subtle "Mark as sent" text button sits next to Copy link / Open — it flips the status draft→sent **without** firing an email (for MCs who shared the link out-of-band via SMS/WhatsApp). It leaves `email_sent_at` null, so the primary stays "Send to couple".
+- Body: hero title input (large unbordered text  -  Notion-style) followed by the composed parts.
+- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple). While the doc is still a draft, a subtle "Mark as sent" text button sits next to Copy link / Open  -  it flips the status draft→sent **without** firing an email (for MCs who shared the link out-of-band via SMS/WhatsApp). It leaves `email_sent_at` null, so the primary stays "Send to couple".
   - **When the link affordances appear.** They need a saved row (the share token is generated on insert). Opened from the couple profile the row already exists, so Copy link / Open / Mark as sent are there from the first paint. Opened from `/payments`, "New invoice" starts an unsaved draft with no row and no token, so the footer shows only Save + Send to couple; the builder adopts the id its first save returns, and the link affordances appear in place without reopening the modal. The contract builder behaves the same way.
 - New `previewPane` prop carries the right-side preview content. When provided, the shell switches to a 2-column grid (`grid-cols-1 lg:grid-cols-2`) and the modal upgrades to `fullscreen` size.
 
 ### Preview pane (`builder-preview-pane.tsx`)
 - Header row: `<` collapse toggle + "Preview ⓘ" + tabs (PDF · Email · Payment page).
-- Sub-header: "Branded as {Business Name} · Update branding ↗" — the link opens `/branding` in a new tab so the user can tweak + come back without losing the modal.
+- Sub-header: "Branded as {Business Name} · Update branding ↗"  -  the link opens `/branding` in a new tab so the user can tweak + come back without losing the modal.
 - Three tabs, each rendering live (the form state flows directly into the preview every render):
-  - **PDF**: `<PreviewPdf>` — renders the same HTML that `buildPdfHtml()` produces for the print dialog, inside a sandboxed iframe.
-  - **Email**: `<PreviewEmail>` — `From/To/Subject` envelope above a sandboxed iframe carrying the templated email body (`invoiceHtml()` from `@/lib/email`).
-  - **Payment page**: `<PreviewPaymentPage>` — uses the same `PublicBlockRenderer` the public `/invoice/[token]` route uses, fed by `useCurrentBranding(surface)`. Pixel-faithful preview of what the couple sees.
-- The pane is collapsible — clicking the `<` chevron toggles a slim vertical bar with a `>` chevron to expand again. Useful when the MC wants to focus on just the form.
+  - **PDF**: `<PreviewPdf>`  -  renders the same HTML that `buildPdfHtml()` produces for the print dialog, inside a sandboxed iframe.
+  - **Email**: `<PreviewEmail>`  -  `From/To/Subject` envelope above a sandboxed iframe carrying the templated email body (`invoiceHtml()` from `@/lib/email`).
+  - **Payment page**: `<PreviewPaymentPage>`  -  uses the same `PublicBlockRenderer` the public `/invoice/[token]` route uses, fed by `useCurrentBranding(surface)`. Pixel-faithful preview of what the couple sees.
+- The pane is collapsible  -  clicking the `<` chevron toggles a slim vertical bar with a `>` chevron to expand again. Useful when the MC wants to focus on just the form.
 
 ### Branding integration (`useCurrentBranding`)
 - New hook at `lib/branding/use-current-branding.ts` fetches the user's branding from `user_metadata` + the `user_branding` table, assembles a `PublicBranding`-shaped object the renderer consumes.
@@ -791,7 +1005,7 @@ InvoiceBuilderModal is rendered on this page (and reused on the couple profile).
 ### `InvoiceBuilderModal`
 - Meta row: couple picker + payment terms (Net 7/14/30/due-on-receipt/custom) + due date. Net terms auto-fill the due date.
 - **Template picker**: prominent "Start from template" card above the items area when the invoice is empty; collapses to a smaller "Apply template" link in the items header once items exist. Sources are the MC's invoice templates + packages.
-- Line items table: description + amount only (quantity removed in 2C.2 — `saveInvoiceAction` writes `quantity = 1, unit_price = amount` for forward compat with the existing schema).
+- Line items table: description + amount only (quantity removed in 2C.2  -  `saveInvoiceAction` writes `quantity = 1, unit_price = amount` for forward compat with the existing schema).
 - "+ Add discount" / "+ Apply 10% GST" link buttons below the items, expanding inline when configured. Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold). The tax rate and the "Prices include GST" note are mutually exclusive in `TaxControl` (2026-08-19): ticking the note clears and disables the rate, and a set rate disables the note, because the rate is always added on top and combining the two double-charged GST. The exclusion reacts to the **typed draft**, not the committed value, so the checkbox enables and disables as the MC types or clears the rate rather than only after Done.
 The invoice's delete and cancel confirmations render through the shared
 `ConfirmDialog`, which portals to `document.body` (2026-08-19). Without that
@@ -800,7 +1014,7 @@ an invoice opened inside the couple profile was trapped in that overlay's
 stacking context and painted behind the invoice modal despite its `top` tier.
 
 - **Payment schedule**: vertical timeline. `● Deposit ─┊─ ○ Final` with state pill + amount + due date + inline "Mark paid" affordance per stage. Filled dot when paid, hollow when due. "+ Add payment schedule" link button when none is configured. Unpaid stages render their due date as an inline `DatePicker` (2026-08-19) so the MC can overwrite the template-computed date per payment; paid stages stay locked, and reapplying a template recomputes all dates. The schedule combobox opens on input click/focus (not just the chevron), typing filters saved schedules, and an unmatched name offers a Notion-style "Create '<typed>'" row that seeds the schedule modal with that name.
-- **Card payments toggle**: only visible if `stripeConnectEnabled(user)` is true (read via `@/lib/auth/entitlements` — `app_metadata.stripe_connect_enabled`; never the user-writable `user_metadata`). Toggle + helper text in a token-styled row.
+- **Card payments toggle**: only visible if `stripeConnectEnabled(user)` is true (read via `@/lib/auth/entitlements`  -  `app_metadata.stripe_connect_enabled`; never the user-writable `user_metadata`). Toggle + helper text in a token-styled row.
 - **Contextual header CTA** (status-aware):
   - Sent (no schedule) → "Mark paid"
   - Sent (with schedule) → "Mark deposit paid"
@@ -812,9 +1026,9 @@ stacking context and painted behind the invoice modal despite its `top` tier.
 
 ### Server actions (`app/(dashboard)/payments/actions.ts`)
 Mutations no longer happen inline. Saves flow through:
-- `saveInvoiceAction(input)` — Zod-validated, RLS-scoped, transactional (replace-line-items pattern), plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
-- `deleteInvoiceAction(id)` — RLS-scoped destructive.
-- Status mutations (mark sent / mark paid / revert / cancel) remain inline one-line UPDATEs in the modal — they don't justify their own server actions. "Mark sent" flips a draft to `sent` + ensures `share_token_enabled`, without sending an email.
+- `saveInvoiceAction(input)`  -  Zod-validated, RLS-scoped, transactional (replace-line-items pattern), plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
+- `deleteInvoiceAction(id)`  -  RLS-scoped destructive.
+- Status mutations (mark sent / mark paid / revert / cancel) remain inline one-line UPDATEs in the modal  -  they don't justify their own server actions. "Mark sent" flips a draft to `sent` + ensures `share_token_enabled`, without sending an email.
 
 ## Couple Profile Integration
 
@@ -963,7 +1177,7 @@ Route: `/settings`
 Route group: `(dashboard)`
 
 Purpose: Unified settings, rendered as an **overlay modal** (not a
-full page) styled to match the Couple Profile overlay — centered
+full page) styled to match the Couple Profile overlay  -  centered
 `rounded-2xl` card with a left side-tab nav.
 
 ## Rendering: intercepting-route modal
@@ -994,7 +1208,7 @@ switch). The existing section components are reused unchanged.
 ## Tab Navigation
 
 Left **side-tab nav** with Lucide icons (desktop: 200px vertical
-sidebar; mobile ≤ sm: horizontal scrollable pill row) — same pattern
+sidebar; mobile ≤ sm: horizontal scrollable pill row)  -  same pattern
 as `couple-profile-nav.tsx`. Active tab driven by `?tab=` search
 param (deep-linkable; tab clicks `router.replace` it), default
 `personal-info`. Legacy `?tab=branding` / `?tab=portal` redirect to
@@ -1006,9 +1220,9 @@ Tabs:
 
 Fields: Display Name, Business Name, Phone, Avatar URL
 
-**Auto-saves** — no Save button. Text fields persist on blur; the
+**Auto-saves**  -  no Save button. Text fields persist on blur; the
 business-type picker and address selection persist on change (writes
-`user_metadata` via `auth.updateUser({ data })` — user-owned fields,
+`user_metadata` via `auth.updateUser({ data })`  -  user-owned fields,
 not entitlements). A change to the email field is the one case that
 toasts (a confirmation link is sent; it isn't live until confirmed).
 A calm inline "Saving… / Saved" hint (`auto-save-status.tsx`) replaces
@@ -1017,7 +1231,7 @@ the button.
 ### Public Page (`?tab=public`)
 
 Outward-facing config couples see. Persisted to `user_public_settings`
-(one RLS-owned row per MC) — not `user_metadata`. Components:
+(one RLS-owned row per MC)  -  not `user_metadata`. Components:
 `public-page-section.tsx` (orchestrator: subdomain + surfaces) and
 `public-page-email.tsx` (the email subsection). Server actions live in
 `app/(dashboard)/settings/public/actions.ts`.
@@ -1027,7 +1241,7 @@ surfaces (`name.zebri.com.au`). **Auto-saves on blur** via
 `saveSubdomainAction` (same calm `auto-save-status.tsx` hint).
 Normalised to a DNS-safe slug, reserved words rejected, and **globally
 unique** (a partial unique index on `lower(subdomain)`; a clash returns
-"already taken"). Today this is a stored preference and a preview list —
+"already taken"). Today this is a stored preference and a preview list  - 
 routing the subdomain to the app (wildcard DNS + tenant middleware) is a
 separate infra task.
 
@@ -1036,9 +1250,9 @@ every plan (no gate):
 
 - **Send from Zebri** (default): mail goes from the shared Zebri address
   via Resend. Works instantly, no setup.
-- **Connect your own email** (OAuth — Gmail or Outlook): the MC clicks
+- **Connect your own email** (OAuth  -  Gmail or Outlook): the MC clicks
   "Connect Gmail" / "Connect Outlook" and authorizes. Connecting is the
-  redirect flow in `app/api/oauth/{authorize,callback}` — `authorize`
+  redirect flow in `app/api/oauth/{authorize,callback}`  -  `authorize`
   pins a CSRF `state` in a signed httpOnly cookie and 302s to the
   provider's consent screen; `callback` verifies the state, exchanges the
   code (`lib/oauth/tokens`), looks up the connected address, encrypts the
@@ -1051,18 +1265,18 @@ At send time every couple-facing email resolves its transport via
 (`lib/email/dispatch`): the MC's mailbox via the **Gmail API** /
 **Microsoft Graph** when `email_mode = 'oauth'` **and**
 `oauth_status = 'connected'` (the access token is auto-refreshed when
-expired), otherwise the shared Zebri address over Resend (fail-safe — any
+expired), otherwise the shared Zebri address over Resend (fail-safe  -  any
 lookup/decrypt/refresh error never blocks a send). Sending through the
 MC's own mailbox means mail lands in their Sent folder and replies come
 back to them, at no per-MC cost to Zebri.
 
-Note: Gmail's `gmail.send` is a Google *restricted* scope — usable
+Note: Gmail's `gmail.send` is a Google *restricted* scope  -  usable
 unverified for <100 connected accounts, then needs Google verification +
 a CASA assessment. Microsoft's `Mail.Send` has no equivalent gate. The
 Google Cloud OAuth client + Azure app registration are operational
 prerequisites (`.env.example`).
 
-### Lead Capture (`?tab=lead-capture`) — ZEB-2
+### Lead Capture (`?tab=lead-capture`)  -  ZEB-2
 
 An embeddable enquiry form the MC puts on their own website; submissions
 create couples automatically. Component: `lead-capture-section.tsx`
@@ -1075,16 +1289,16 @@ Controls:
 
 - **Form enabled** toggle (`lead_capture_forms.enabled`). Off stops the
   public form (`get_lead_form` returns null → "Form unavailable").
-- **New leads land in** — a `Select` of the MC's `couple_statuses`; the
+- **New leads land in**  -  a `Select` of the MC's `couple_statuses`; the
   chosen slug is `target_status_slug`. "Top of pipeline (default)" (a
   sentinel, not `value=""`) leaves it null → first status by position.
 - **Three copy blocks:** hosted link (`{origin}/lead/{token}`), iframe
   embed (`?embed=1`), and a JS snippet
-  (`<script src="{origin}/lead-embed.js" data-zebri-form="{token}">` — a
+  (`<script src="{origin}/lead-embed.js" data-zebri-form="{token}">`  -  a
   static loader in `public/lead-embed.js` that injects the iframe and
   auto-resizes it from the form's `postMessage` height).
 
-**Public form — `/lead/[token]`** (`app/lead/[token]/page.tsx`, client
+**Public form  -  `/lead/[token]`** (`app/lead/[token]/page.tsx`, client
 orchestrator). Loads `get_lead_form` via the anon client, applies the
 MC's `_user_branding` scalars, and renders `lead-form.tsx` with explicit
 loading / submitting / success / error states plus an "unavailable" card.
@@ -1179,47 +1393,47 @@ never blocks a send (it is exempt from the missing-variable gate). See
 
 Change password + email preferences + danger zone.
 
-- **Change password** — explicit `Change password` button (security
+- **Change password**  -  explicit `Change password` button (security
   action: requires the current password; not auto-saved).
-- **Email preferences** — toggles **auto-save** immediately on change.
-- **Danger zone** — explicit `Delete account` button (destructive).
+- **Email preferences**  -  toggles **auto-save** immediately on change.
+- **Danger zone**  -  explicit `Delete account` button (destructive).
 
 ### Plans & Billing (`?tab=billing`)
 
 Document-style layout. Section labels + thin dividers, no nested
 cards. Composition:
 
-- **Plan section** — `CurrentPlanCard` (plan name + state pill +
+- **Plan section**  -  `CurrentPlanCard` (plan name + state pill +
   inline price + meta line + prose summary + action row + Starter
   usage when applicable).
-- **Billing history** section — `BillingHistory` (last 12 invoices
+- **Billing history** section  -  `BillingHistory` (last 12 invoices
   via `/api/stripe/billing-history`; skeleton on load, hidden when
   empty + no upcoming charge).
-- **Plan comparison** — `PlanComparisonDialog`, opened from
+- **Plan comparison**  -  `PlanComparisonDialog`, opened from
   "Change plan" / "Upgrade". 3-column feature table with absolute-
   positioned tint behind the current plan's column.
-- **Cancel confirmation** — `CancelConfirmModal`, state hoisted to
+- **Cancel confirmation**  -  `CancelConfirmModal`, state hoisted to
   `BillingSection` so both the card and the comparison dialog
   trigger it via `onRequestCancel`.
 
 | CardState                  | StatePill          | Primary action          | Meta line          | Cancel link |
 | -------------------------- | ------------------ | ----------------------- | ------------------ | ----------- |
-| `starter`                  | "Free plan"        | Upgrade to Pro          | "Joined {date}"    | —           |
+| `starter`                  | "Free plan"        | Upgrade to Pro          | "Joined {date}"    |  -            |
 | `active`                   | "Active" (green)   | Change plan             | "Renews {date}"    | ✅          |
-| `cancelling_in_grace`      | "Cancelling"       | Resubscribe             | "Access until {d}" | —           |
-| `past_due`                 | "Payment failed"   | Update payment          | "Joined {date}"    | —           |
-| `expired`                  | "Ended"            | Upgrade to Pro          | "Ended {date}"     | —           |
-| `comped`                   | "Comped" (green)   | (no action row)         | "Joined {date}"    | —           |
+| `cancelling_in_grace`      | "Cancelling"       | Resubscribe             | "Access until {d}" |  -            |
+| `past_due`                 | "Payment failed"   | Update payment          | "Joined {date}"    |  -            |
+| `expired`                  | "Ended"            | Upgrade to Pro          | "Ended {date}"     |  -            |
+| `comped`                   | "Comped" (green)   | (no action row)         | "Joined {date}"    |  -            |
 
 Server actions in `app/(dashboard)/settings/billing/actions.ts`:
 
-- `createPlanChangeSessionAction(plan)` — Stripe Portal deep-link
+- `createPlanChangeSessionAction(plan)`  -  Stripe Portal deep-link
   `subscription_update_confirm`.
-- `cancelSubscriptionAction()` — Stripe API `cancel_at_period_end:
+- `cancelSubscriptionAction()`  -  Stripe API `cancel_at_period_end:
   true` + synchronous `app_metadata` write of
   `subscription_end` (UI doesn't wait on the webhook).
-- `resumeSubscriptionAction()` — symmetric undo.
-- `paymentMethodPortalAction()` — Stripe Portal deep-link
+- `resumeSubscriptionAction()`  -  symmetric undo.
+- `paymentMethodPortalAction()`  -  Stripe Portal deep-link
   `payment_method_update`.
 
 All four actions are rate-limited per-user (5/min/user) via
@@ -1229,7 +1443,7 @@ specific action name.
 After every cancel/resume, `BillingSection`'s polling effect (the
 same one used after Stripe Checkout) watches `app_metadata` and
 reloads when the webhook lands. Manual "Refresh" escape hatch
-appears after 60s — covers the local-dev "did you start
+appears after 60s  -  covers the local-dev "did you start
 `stripe listen`?" case.
 
 **Note:** the 14-day free trial was removed in Phase 1. The
@@ -1245,9 +1459,9 @@ opens.
 
 Two sections:
 
-**Bank details**  -  Account name, BSB, Account number inputs. **Auto-save on blur** (no Save button) — updates `user_metadata` (user-owned fields — `bank_account_name`, `bank_bsb`, `bank_account_number`), with the shared inline "Saving… / Saved" hint. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
+**Bank details**  -  Account name, BSB, Account number inputs. **Auto-save on blur** (no Save button)  -  updates `user_metadata` (user-owned fields  -  `bank_account_name`, `bank_bsb`, `bank_account_number`), with the shared inline "Saving… / Saved" hint. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
 
-**Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. The Connect callback writes `stripe_connect_account_id` and `stripe_connect_enabled` to **`app_metadata`** via `updateEntitlements()` (entitlements, not user-owned — they govern access to the public Pay button). Disconnect clears those fields the same way.
+**Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. The Connect callback writes `stripe_connect_account_id` and `stripe_connect_enabled` to **`app_metadata`** via `updateEntitlements()` (entitlements, not user-owned  -  they govern access to the public Pay button). Disconnect clears those fields the same way.
 
 ### Packages (`?tab=packages`)
 
@@ -1261,7 +1475,7 @@ Placeholder empty state. Coming soon.
 
 Inline Privacy Policy copy (`privacy-section.tsx`), mirroring
 zebri.com.au/privacy. Shows a "Last updated" line and a canonical
-"View the latest at zebri.com.au/privacy" external link. Read-only —
+"View the latest at zebri.com.au/privacy" external link. Read-only  - 
 no actions. Shares the `legal-section.tsx` prose chrome with Terms.
 
 ### Terms (`?tab=terms`)
@@ -1292,19 +1506,19 @@ Three-pane: **Header** (five surface tabs: Invoice, Contract, Portal, Run sheet,
 
 ## Brand Rail (left sidebar)
 
-1. **Your business** — Logo, favicon, business name, tagline, ABN, phone, website, Instagram/Facebook URLs.
-2. **Brand colours** — Six role-based colour pickers (all required, no toggles):
-   - **Heading colour** — for h1, h2, h3 across all surfaces; default: black (#111827)
-   - **Subheading colour** — for section titles and secondary headings; default: black (#111827)
-   - **Body text colour** — for paragraphs, regular text, and the muted label/metadata alias; default: grey (#6B7280)
-   - **Background colour** — for page backgrounds and surface fills; default: white (#FFFFFF)
-   - **Primary button colour** — for main CTAs (Accept, Pay, etc.); default: black (#111827)
-   - **Secondary button colour** — for supporting CTAs (Decline, etc.); default: grey (#6B7280)
+1. **Your business**  -  Logo, favicon, business name, tagline, ABN, phone, website, Instagram/Facebook URLs.
+2. **Brand colours**  -  Six role-based colour pickers (all required, no toggles):
+   - **Heading colour**  -  for h1, h2, h3 across all surfaces; default: black (#111827)
+   - **Subheading colour**  -  for section titles and secondary headings; default: black (#111827)
+   - **Body text colour**  -  for paragraphs, regular text, and the muted label/metadata alias; default: grey (#6B7280)
+   - **Background colour**  -  for page backgrounds and surface fills; default: white (#FFFFFF)
+   - **Primary button colour**  -  for main CTAs (Accept, Pay, etc.); default: black (#111827)
+   - **Secondary button colour**  -  for supporting CTAs (Decline, etc.); default: grey (#6B7280)
    Each role has a colour picker + hex input + suggested swatches from the uploaded logo.
    **Derived aliases** (no longer user-set): accent_color (≡ primary button), muted_color (≡ body text), secondary_text_color (computed from secondary button), page_background (≡ background colour).
-3. **Link colour** (editor-only control) — hyperlink colour; defaults to primary button colour. Not shown in onboarding.
-4. **Typography** — Per role (heading / body): font dropdown (30+ Google fonts), size, weight, colour, alignment, text case, letter-spacing, line-height. Overall scale slider.
-5. **Global styles** — Corner radius, link colour, default button style, base line-height, section spacing, page background.
+3. **Link colour** (editor-only control)  -  hyperlink colour; defaults to primary button colour. Not shown in onboarding.
+4. **Typography**  -  Per role (heading / body): font dropdown (30+ Google fonts), size, weight, colour, alignment, text case, letter-spacing, line-height. Overall scale slider.
+5. **Global styles**  -  Corner radius, link colour, default button style, base line-height, section spacing, page background.
 
 ## Documents Panel (below brand sections)
 
@@ -1312,7 +1526,7 @@ Toggles to enable/disable individual surfaces. Only enabled surfaces render to t
 
 ## Canvas (right side)
 
-Renders the selected surface with live sample data. Fixed-core blocks (contractBody, contractSign, couplePortal, questionnaire, vendorTimeline) are marked "Fixed layout"; chrome blocks (header banner, business name, text, image, spacer, divider, footer, action) are freely positioned above/below. (contractBody + contractSign are still selectable — they flow through BlockFrame so the MC can reach their style toolbars — but remain locked against delete/duplicate.)
+Renders the selected surface with live sample data. Fixed-core blocks (contractBody, contractSign, couplePortal, questionnaire, vendorTimeline) are marked "Fixed layout"; chrome blocks (header banner, business name, text, image, spacer, divider, footer, action) are freely positioned above/below. (contractBody + contractSign are still selectable  -  they flow through BlockFrame so the MC can reach their style toolbars  -  but remain locked against delete/duplicate.)
 
 Per-block toolbar (Canva-style): padding (per side), background colour, border (width/colour/radius), width, horizontal alignment, space above/below. Text-bearing blocks add font/size/weight/colour/alignment/case/letter-spacing/line-height. Block-specific controls (header overlay, action variant/size/radius, divider thickness, etc.) per type.
 
@@ -1342,48 +1556,48 @@ The block palette has two labeled groups:
 
 **Questionnaire mode**: the Questionnaire body block now persists `mode: 'form' | 'oneAtATime'` (replacing the preview-only toggle); public rendering reads this to show regular-form vs one-at-a-time.
 
-**Payment schedule**: now optional on Invoice. The shared `action` block is the Invoice Pay CTA; it is **not** used on Contracts — the sign/decline form is its own `contractSign` marker block (see the Contract surface below), so no generic CTA block belongs there. `headerBanner` remains only in migration code.
+**Payment schedule**: now optional on Invoice. The shared `action` block is the Invoice Pay CTA; it is **not** used on Contracts  -  the sign/decline form is its own `contractSign` marker block (see the Contract surface below), so no generic CTA block belongs there. `headerBanner` remains only in migration code.
 
-**Contract sign block**: the sign/decline form + MC countersignature are the `contractSign` marker block. Its behaviour is fixed (name input, agreement checkbox, sign/decline calls, decline dialog, signing state machine — all untouched); the MC edits only its heading, Sign/Decline labels, button colour and heading/label typography. `contractBody` + `contractSign` are the two `CLEARABLE_MARKERS`. **Legacy safety**: contracts sent before this block have no `contractSign` marker, so the public card injects the sign slot right after the body (today's placement) — they render identically and stay signable.
+**Contract sign block**: the sign/decline form + MC countersignature are the `contractSign` marker block. Its behaviour is fixed (name input, agreement checkbox, sign/decline calls, decline dialog, signing state machine  -  all untouched); the MC edits only its heading, Sign/Decline labels, button colour and heading/label typography. `contractBody` + `contractSign` are the two `CLEARABLE_MARKERS`. **Legacy safety**: contracts sent before this block have no `contractSign` marker, so the public card injects the sign slot right after the body (today's placement)  -  they render identically and stay signable.
 
 ## Five Surfaces
 
-- **Invoice** — Invoice header, Invoice line items, Invoice totals, Payment schedule (optional), Bank details (required—at least one of Bank details/Pay CTA), Pay CTA (required—at least one)
-- **Contract** — Contract header (Expires + Ref both off by default; reads as contract title + couple name), Contract body, Sign contract (the sign/decline form + MC countersignature). No generic Sign CTA block. Legacy contracts predating the sign block have no `contractSign` marker and get the form injected after the body instead.
-- **Client Portal** — Portal body
-- **Vendor Timeline** — Run sheet body
-- **Questionnaire** — Questionnaire body with mode toggle (form | oneAtATime)
+- **Invoice**  -  Invoice header, Invoice line items, Invoice totals, Payment schedule (optional), Bank details (required - at least one of Bank details/Pay CTA), Pay CTA (required - at least one)
+- **Contract**  -  Contract header (Expires + Ref both off by default; reads as contract title + couple name), Contract body, Sign contract (the sign/decline form + MC countersignature). No generic Sign CTA block. Legacy contracts predating the sign block have no `contractSign` marker and get the form injected after the body instead.
+- **Client Portal**  -  Portal body
+- **Vendor Timeline**  -  Run sheet body
+- **Questionnaire**  -  Questionnaire body with mode toggle (form | oneAtATime)
 
 ## File Structure
 
 ```
 app/(dashboard)/branding/
-  page.tsx                           — orchestrator
-  branding-editor.tsx                — editor state + autosave
-  brand-panel.tsx                    — rail sections
-  business-section.tsx               — Your business accordion
+  page.tsx                            -  orchestrator
+  branding-editor.tsx                 -  editor state + autosave
+  brand-panel.tsx                     -  rail sections
+  business-section.tsx                -  Your business accordion
   blocks/
-    render.tsx                       — editor block renderers (including new Image, Spacer)
-    block-toolbar.tsx                — per-block controls
-    blocks-by-surface.ts             — availability gating
-    block-frame.tsx                  — editor wrapper (applies padding/background/etc)
-    render-image.tsx                 — image block editor
-    render-spacer.tsx                — spacer block editor
+    render.tsx                        -  editor block renderers (including new Image, Spacer)
+    block-toolbar.tsx                 -  per-block controls
+    blocks-by-surface.ts              -  availability gating
+    block-frame.tsx                   -  editor wrapper (applies padding/background/etc)
+    render-image.tsx                  -  image block editor
+    render-spacer.tsx                 -  spacer block editor
   templates/
-    index.ts                         — template catalogue
-    templates-section.tsx            — Templates accordion picker
-  add-block-palette.tsx              — Add block grouped palette
+    index.ts                          -  template catalogue
+    templates-section.tsx             -  Templates accordion picker
+  add-block-palette.tsx               -  Add block grouped palette
 
 app/branding/
-  preview/[surface]/page.tsx         — customer preview route (auth, reads branding + sample data)
+  preview/[surface]/page.tsx          -  customer preview route (auth, reads branding + sample data)
 
 lib/branding/
-  fonts.ts                           — 30+ Google fonts (FONT_IDS, FONT_LABELS, FONT_STACKS, GOOGLE_FONT_FAMILIES)
-  type-defaults.ts                   — TypeDefaults + resolveTypeDefaults (heading/body type resolution)
-  block-outer-style.ts               — blockOuterStyle(block, branding) pure helper (padding/background/radius)
+  fonts.ts                            -  30+ Google fonts (FONT_IDS, FONT_LABELS, FONT_STACKS, GOOGLE_FONT_FAMILIES)
+  type-defaults.ts                    -  TypeDefaults + resolveTypeDefaults (heading/body type resolution)
+  block-outer-style.ts                -  blockOuterStyle(block, branding) pure helper (padding/background/radius)
   public-blocks/
-    image.tsx                        — public renderer for Image block
-    spacer.tsx                       — public renderer for Spacer block
+    image.tsx                         -  public renderer for Image block
+    spacer.tsx                        -  public renderer for Spacer block
 ```
 
 ---
@@ -1511,19 +1725,19 @@ app/timeline/
 
 # Templates Page (all reusable templates)
 
-Top-level sidebar page (`/templates`, `FileStack` icon) — the single
+Top-level sidebar page (`/templates`, `FileStack` icon)  -  the single
 home for every reusable-template kind. **Tabbed** (`templates-tabs.tsx`,
 underline tabs matching the Settings chrome):
 
-- **Emails** — the email-template library (below); used by automations
+- **Emails**  -  the email-template library (below); used by automations
   and the manual couple "Send email" flow.
-- **Packages** — `PackagesManager` (reusable priced service bundles;
+- **Packages**  -  `PackagesManager` (reusable priced service bundles;
   table `packages` + `package_items`). Sits before Quotes because
   quotes/invoices are built from packages.
-- **Quotes** — `QuoteTemplateManager` (reusable line-item sets; table
+- **Quotes**  -  `QuoteTemplateManager` (reusable line-item sets; table
   `quote_templates` + `quote_template_items`). The editor's **"Add
   from package"** picker snapshots a package's line items in.
-- **Invoices** — `InvoiceTemplatesManager` (reusable invoices; table
+- **Invoices**  -  `InvoiceTemplatesManager` (reusable invoices; table
   `invoice_templates` + `invoice_template_items`). The editor's
   **"Add from package or quote"** picker snapshots a package's or quote
   template's line items in (referencing by copy, not live FK).
@@ -1536,10 +1750,10 @@ tested directly). Saves rewrite items wipe-and-reinsert style so a
 drag-reorder inside the edit modal persists, and set `updated_at`
 explicitly (no touch trigger on these tables). Search matches name,
 subtitle, applied notes, and item descriptions.
-- **Contracts** — `ContractTemplateManager` (`contract_templates`).
+- **Contracts**  -  `ContractTemplateManager` (`contract_templates`).
 
 (A **Timelines** tab once lived here for reusable run-sheet item sets;
-it was removed on 2026-08-02 — every wedding is bespoke, so templated
+it was removed on 2026-08-02  -  every wedding is bespoke, so templated
 run-sheets added no value. The core per-event timeline is unaffected.)
 
 Tab order follows the money flow (packages → quotes → invoices build on
@@ -1549,7 +1763,7 @@ redirects to `/templates`).
 
 The couple-facing **quote and invoice builders** also reference these
 templates: their "Apply package or template" picker (shared
-`TemplatePicker`, fed by `useApplySources` — namespaced `it:`/`qt:`/
+`TemplatePicker`, fed by `useApplySources`  -  namespaced `it:`/`qt:`/
 `pkg:` ids) snapshots a source's line items + notes into the document.
 The quote builder offers quote templates + packages; the invoice
 builder opts into invoice templates too
@@ -1564,7 +1778,7 @@ internal subtitle shown only in the Templates list and is never applied.
   a `Plus` icon, matching the Couples "New couple" button).
 - Library: a slim search box, then templates **grouped by the MC's own
   categories** (Notion-style, colour-dotted uppercase subheaders in the
-  user's drag order, with a trailing "Uncategorised" bucket) — matching
+  user's drag order, with a trailing "Uncategorised" bucket)  -  matching
   the calm couple-overview / automations surfaces. Each row shows name
   + rendered subject; whole-row click opens the editor. Search filters
   by name or subject and only non-empty groups render.
@@ -1581,8 +1795,8 @@ internal subtitle shown only in the Templates list and is never applied.
   the email variable catalogue (toolbar popover **or typing `{{`** for
   the inline suggestion list; also a Link button), and an
   **Attachments** section (upload to the private bucket, listed with
-  remove; works on unsaved drafts too — uploads park unlinked under
-  `{user}/drafts/` and are linked on first save, deleted on discard —
+  remove; works on unsaved drafts too  -  uploads park unlinked under
+  `{user}/drafts/` and are linked on first save, deleted on discard  - 
   files are included on every send of the template, deselectable per
   send in the compose modal); right = **WYSIWYG preview**: subject row + the full branded
   email shell (logo/wordmark, brand accents, the MC's fonts, corner
@@ -1599,20 +1813,20 @@ internal subtitle shown only in the Templates list and is never applied.
 
 ## Page States
 
-- **Loading**: `TemplatesSkeleton` — search box + stage-grouped row
+- **Loading**: `TemplatesSkeleton`  -  search box + stage-grouped row
   placeholders mirroring the real layout (no spinner, no reflow).
-- **Empty** (no templates — the default for a new MC, since nothing is
+- **Empty** (no templates  -  the default for a new MC, since nothing is
   auto-seeded): `Empty` offering **Browse starter templates** + **New
   template**.
 - **Error**: `ErrorState` with retry.
 
-## Starter templates (opt-in catalog — no auto-seed)
+## Starter templates (opt-in catalog  -  no auto-seed)
 
 Nothing is auto-seeded. The Emails tab has a **Browse starter
 templates** button (and an empty-state CTA) opening
-`StarterLibraryPanel` — the catalog of **3 exemplars** (trimmed
+`StarterLibraryPanel`  -  the catalog of **3 exemplars** (trimmed
 2026-07-09: starters are a guide showing how a template is built, not a
-library — Enquiry acknowledgement, Quote cover email, You're booked
+library  -  Enquiry acknowledgement, Quote cover email, You're booked
 confirmation; canonical set in `lib/email/starter-templates.ts`).
 Catalog entries already in the library are hidden; **Add** (or
 **Add all**) inserts copies via `addStarterTemplatesAction`, which
@@ -1647,12 +1861,12 @@ identical:
   builders' pickers, restorable); Delete goes through a `ConfirmDialog`
   (copy notes that quotes/invoices already created from it keep their
   snapshot). The header also shows the "Edited X ago" line
-  (`updated_at`, set explicitly on every save — none of these tables
+  (`updated_at`, set explicitly on every save  -  none of these tables
   has a touch trigger) and, once a package has been applied to quotes,
   a "Used in N quotes · M accepted" line (`use-package-usage.ts`
   reading `quotes.source_package_id`).
 - **Edit modals**: Packages, Quotes, and Invoices share the calm
-  modal styling — underline inputs, black section headers, the shared
+  modal styling  -  underline inputs, black section headers, the shared
   `LineItemsEditor` grid (grip · description · [qty] · amount · remove,
   borderless with hairline rows, auto-animated add/remove), and a
   sticky Cancel / Save footer. Packages use `PackageEditForm`; Quotes
@@ -1745,7 +1959,7 @@ lib/email/
 types/email-template.ts     -  EmailTemplate + EmailTemplateCategory (+ legacy LifecycleStage)
 ```
 
-## Manual send — couple "Send email" modal
+## Manual send  -  couple "Send email" modal
 
 Entry point: a "Send email" button in the couple Overview (`couple-overview.tsx`).
 Opens `couple-send-email.tsx`:
@@ -1755,9 +1969,9 @@ Opens `couple-send-email.tsx`:
 - The template is resolved against the **real couple** via
   `loadSendContextAction` (couple + MC snapshot + stamped document
   links) into an **editable** subject + body. The MC edits the finished
-  email directly before sending — what they see is what goes out.
+  email directly before sending  -  what they see is what goes out.
 - Any variable the couple can't fill is shown as its label in the body
-  (editable in place) and flagged once in an amber banner — **no
+  (editable in place) and flagged once in an amber banner  -  **no
   separate input panel**. Fills are part of this one email only; they
   never touch the couple record.
 - On send, the edited subject + body go out **inline**
@@ -1783,14 +1997,14 @@ back inside the couple profile. Structurally modelled on contracts (template →
 token-gated instance → branded public page). Question types: short text, long
 text, single choice, multiple choice, dropdown, date, time, yes/no, number,
 email, phone, and a non-input section heading. Each template has a display
-mode — `typeform` (one question at a time) or `form` (all on one page) —
+mode  -  `typeform` (one question at a time) or `form` (all on one page)  - 
 snapshotted onto the instance at send. Schema + validation:
 `lib/questionnaires/`. The renderers themselves are shared feature components
 in `components/questionnaires/` (`question-field`, `typeform-flow`,
 `classic-form`, `experience-preview`, `theme`) so the public page and every
 MC-side preview are pixel-identical.
 
-## Template builder — Templates page → Questionnaires tab
+## Template builder  -  Templates page → Questionnaires tab
 
 `questionnaire-template-manager.tsx` lists the MC's templates (create from
 scratch, duplicate an existing one, or clone a starter from
@@ -1810,7 +2024,7 @@ frame pushed the progress bar into the middle and the Next button out of
 sight. `TypeformFlow` also reserves a shorter step floor in preview mode
 than on the live page, where a full viewport can carry it. Save is
 blocked (with inline per-question messages) while a question has no text or a
-choice/dropdown has no options — `questionIssues` in
+choice/dropdown has no options  -  `questionIssues` in
 `lib/questionnaires/builder-state.ts`.
 
 The Questionnaires tab's detail pane shows the same preview for the selected
@@ -1819,7 +2033,7 @@ description, so the two MC-side previews and the live page cannot disagree.
 All three derive the style through `displayModeFromBlocks` in
 `lib/questionnaires/display-mode`.
 
-## Send + view — couple profile → Questionnaires tab
+## Send + view  -  couple profile → Questionnaires tab
 
 `couple-questionnaires.tsx` lists this couple's questionnaires with a
 lifecycle pill (draft → sent → opened → in progress → completed, driven by
@@ -1827,9 +2041,9 @@ sent_at / viewed_at / non-empty responses / completed_at) and per-row actions
 (`couple-questionnaire-row.tsx`): copy the share link, resend the cover email
 (`resendCoupleQuestionnaireAction`), and turn the share link off/on. "Send"
 picks a template and opens the send preview
-(`questionnaire-send-preview.tsx`) — two tabs: the couple experience (with a
+(`questionnaire-send-preview.tsx`)  -  two tabs: the couple experience (with a
 desktop/phone width toggle) and the actual cover email
-(`questionnaireHtml` in a sandboxed iframe) — then calls
+(`questionnaireHtml` in a sandboxed iframe)  -  then calls
 `sendCoupleQuestionnaireAction` (`questionnaire-actions.ts`), which snapshots
 the template's questions + description + display mode into a
 `couple_questionnaires` row,
@@ -1839,20 +2053,20 @@ metadata, print / save-as-PDF export (`lib/questionnaires/answers-html.ts`),
 and an edit mode so the MC can fill answers on the couple's behalf (saved via
 the RLS-scoped `responses` update).
 
-## Public fill-in page — `/questionnaire/[token]`
+## Public fill-in page  -  `/questionnaire/[token]`
 
 Branded with the MC's colours/fonts (`useBrandingHead` + the shared
 questionnaire theme). Two render modes, derived at render time from the MC's
 branding blocks (`questionnaireOneAtATime` / `questionnaireAllOnePage`
 markers; the instance's stored display_mode is a legacy snapshot):
 
-- **typeform** — one question per screen, progress bar, keyboard-advance
+- **typeform**  -  one question per screen, progress bar, keyboard-advance
   (Enter), choice/yes-no/dropdown answers auto-advance, and a final
   "Ready to send your answers?" confirmation step. Required answers hold
   the couple on the question **only in `live` mode**: an MC paging through
   a preview is reading the questions, not answering them, so a preview
   never blocks on Next.
-- **form** — every question on one page with per-question required errors,
+- **form**  -  every question on one page with per-question required errors,
   scroll-to-first-missing, and the same pre-submit confirmation.
 
 Both modes take their required-answer message from
@@ -1919,32 +2133,41 @@ detail slide-over.
 
 ## Dashboard tab
 
-- **Row 1 — hero chart cards:** MRR (Pro/Max breakdown), active subs,
+- **Row 1  -  hero chart cards:** MRR (Pro/Max breakdown), active subs,
   churn rate, new signups; 12-week approximate series.
-- **Row 2 — Engagement:** activity strip (active last 7d / 30d, new
+- **Row 2  -  Engagement:** activity strip (active last 7d / 30d, new
   this week) beside the **Gone quiet** list: paying or comped users
   with no sign-in for 14+ days, highest tier first (`computeGoneQuiet`
   in `user-value.ts`). Dormant = never started; gone quiet = revenue
   at risk. Shadow mode refreshes the target's `last_sign_in_at`, so a
   recently-shadowed user can look falsely active.
-- **Row 3 — operational lists:** upcoming renewals, past due, Connect
+- **Row 3  -  operational lists:** upcoming renewals, past due, Connect
   issues.
-- **Row 4 — supporting lists:** dormant accounts, recent signups.
+- **Row 4  -  supporting lists:** dormant accounts, recent signups.
 
 ## Users tab
 
 - Search box filters by email / business / display name (email is
-  searchable but not a column — it lives in the detail panel).
+  searchable but not a column  -  it lives in the detail panel).
 - Columns: Name (+ admin badge), Business, Plan (effective plan today;
   cancelled ex-payers show Starter, comped users show their granted
-  plan with a "comped" suffix), Last sign-in (relative), Couples,
+  plan with a "comped" suffix), Last seen (relative), Couples,
   Events, Invoices (count + $ collected from PAID invoices via the
   canonical `invoiceTotal()` math in `lib/payments/invoice-total.ts`),
   Templates (combined count across email / contract / invoice /
   questionnaire templates + packages), Automations, Signed up.
-- Default order: Max → Pro → Starter, then most recent sign-in
-  (`compareUsersByPlanThenSignIn`).
-- Per-user numbers come from `getAllUserStats()` — one paginated
+- Default order: Max → Pro → Starter, then most recently seen
+  (`compareUsersByPlanThenLastSeen`).
+- **Last seen** is `AdminUser.last_seen_at`, sourced from `auth.sessions`
+  via the `admin_user_last_seen()` RPC  -  NOT `auth.users.last_sign_in_at`.
+  GoTrue only stamps `last_sign_in_at` on a real credential exchange; a
+  token refresh leaves it untouched. Zebri sets no session `timebox` or
+  `inactivity_timeout` and `login/page.tsx` redirects anyone with a live
+  session away from the form, so a returning user never re-authenticates
+  and that column froze at their last password entry. Confirmed in
+  production: a user whose sessions were refreshed the previous day still
+  reported a sign-in from four weeks earlier.
+- Per-user numbers come from `getAllUserStats()`  -  one paginated
   service-role pass over the activity tables, aggregated in TS (no
   SQL migration required).
 
@@ -1956,3 +2179,283 @@ the detail panel → Subscription → **Link Stripe customer** (pulls the
 subscription from Stripe and writes entitlements), or **Comp user**
 for non-Stripe arrangements (comped users are excluded from the
 paying/MRR counts by design).
+
+# Public Booking Page (`/book/[token]`)  -  Phase E
+
+Route: `/book/[token]`
+
+Route group: none (standalone public route, no sidebar, no auth required)
+
+Purpose: Allow logged-out visitors to book consultations with the MC via a share-token URL. Three-column branded interface (Calendly-style).
+
+## Three-Column Layout
+
+A single card wrapping three equal columns (or stacked on mobile):
+
+**Left panel (meta):**
+- MC name (from branding)
+- Meeting type name
+- Meeting type duration (e.g. "30 min")
+- Meeting type location type and address (if in-person)
+- Branding accent color used for interaction elements
+
+**Center column (month calendar and day selector):**
+- Month/year header with prev/next arrows (allows browsing forward)
+- Six-week calendar grid
+- Available days marked with a small filled circle in brand color (derived from availability rules, overrides, and booked slots)
+- Selected day marked with a solid filled circle (brand fill)
+- Unavailable dates are greyed out and not clickable
+- Clicking an available day populates the right column's slot list
+
+**Right column (time slots):**
+- Heading: the selected day, rendered in the booker's timezone
+- City line naming that zone, e.g. "All times are in Perth time" (IANA-derived, never a fixed offset)
+- Scrollable list of available time slots for the selected day (times in the booker's timezone, formatted HH:MM AM/PM)
+- Each slot is a button; clicking advances to the booking form
+- Empty state if no slots are available that day
+- Below the list, the timezone control: the current zone plus a searchable picker
+
+## Timezone handling
+
+Zebri cannot know where a couple is, so the booking page follows the Calendly
+model: **guess from the browser, state the guess next to the times, and make
+correcting it one click.** It never infers the booker's zone from the MC's.
+
+- **Detection** is `detectViewerTimezone()` (`lib/scheduling/timezone-options.ts`),
+  surfaced through `useSyncExternalStore` so the server snapshot is empty and
+  SSR and the first client render agree. On the server it returns `null` rather
+  than the host zone, which on Vercel is UTC and is nobody's actual timezone.
+- **Override** is `TimezonePickerModal` (`components/scheduling/`), the same
+  searchable list the MC's availability settings use. An explicit choice beats
+  detection and survives slot refetches.
+- **Regrouping**: slots are absolute instants, so changing zone refetches
+  nothing, but a slot can cross a local-day boundary. `changeTimezone` re-derives
+  the available dates and moves off a selected day that no longer has any times.
+- **Precedence** everywhere: explicit choice → browser detection → the MC's zone
+  (first paint only).
+
+**Two audiences, two zones.** `bookings.timezone` stores the BOOKER's zone:
+
+| Message | Rendered in |
+|---|---|
+| Booker's confirmation, 24h reminder, cancel/reschedule notice | booker's zone (`bookings.timezone`) |
+| MC's new-booking and change notifications | MC's zone (`user_public_settings.timezone`) |
+
+Sending the MC the booker's zone would make them convert their own diary; the
+reverse strands the couple. Regression coverage:
+`tests/unit/lib/booking/lifecycle.test.ts` ("audience-specific timezones").
+
+## 2-Step Booking Flow
+
+1. **Slot Picker (interactive month calendar plus day slots)**
+   - Booker clicks an available day, then a time slot
+   - Both selections must happen before form submission
+
+2. **Booking Form (modal overlay, step: "details")**
+   - Back button returns to month calendar (preserves day selection, resets time)
+   - Selected time displays as a read-only summary box
+   - Fields:
+     - Your name (required)
+     - Partner's name (optional)
+     - Email (required)
+     - Phone (optional)
+     - Notes (optional)
+   - Honeypot: hidden "website" field plus form-start timestamp (matches lead-capture bot defense pattern)
+   - CTA: "Confirm booking" button (disabled if name or email empty, or form is submitting)
+   - Loading state: button shows spinner overlay on label
+   - On submit: calls submit_booking RPC
+
+3. **Confirmation (step: "confirmed")**
+   - Meeting type name (from booking page)
+   - Scheduled time (formatted in booker's timezone with city line)
+   - Video join URL (if video meeting and event-push populated it)
+   - "Check your email" callout
+   - No further CTAs (end state)
+
+## Special Behaviors
+
+**Embed Variant (`?embed=1`)**
+Chromeless mode for iframe embedding on MC's website. Strips page chrome (heading, padding); emits `zebri-book-height` postMessage to parent so host can resize the iframe. Transparent background (inherited from host).
+
+**Slot-Taken Recovery**
+If the first visitor books a slot and a second visitor tries to book the same time:
+- The second visitor's form submission (step 2) receives `{"error": "slot_taken"}` from submit_booking RPC
+- Page transitions back to slot picker (step "pick")
+- A notice banner appears: "That time was just taken. Please choose another time."
+- The banner auto-hides or remains until slot re-selection (UX TBD; current code shows persistent)
+- Booker can pick a different slot
+
+**Fail-Closed (503)**
+If the share token is invalid/expired/inactive:
+- Renders NotFoundView: "This booking link is not available. Please check the URL or contact the business."
+- No fallback CTA (fail-closed; prevents token leak via public error message)
+
+If the slot-generation service is down:
+- Renders ErrorView: "Availability is temporarily unavailable, please try again shortly." + retry button
+- Retry reloads the page (soft retry pattern)
+
+## Data Fetching
+
+**Page Load (orchestrator)**
+1. Extracts share_token from URL params
+2. Calls get_public_booking_page(token) RPC → fetches meeting type, MC branding, business name
+3. Stores timezone from MC settings (user_public_settings.timezone)
+4. Initializes slot-generation state (currentFrom/currentTo fortnights)
+
+**Slot Generation**
+1. Server-side endpoint (route: `/api/booking/slots` per security.md) accepts (token, fromDate, toDate)
+2. Generates available time slots based on:
+   - Meeting type duration + buffers
+   - Availability rules (weekday-based)
+   - Availability overrides (date-based exceptions)
+   - Existing confirmed bookings (exclusion via query)
+3. Returns array of slots: [{start: ISO8601, end: ISO8601}, ...]
+4. Frontend groups by booker's local day, formats times with timezone abbreviations
+
+**Form Submission**
+1. submit_booking RPC (anon-callable, rate-limited)
+2. Returns:
+   - Success: {ok: true, booking_id, manage_token, couple_id, ...}
+   - Error: {error: "not_found" | "invalid" | "rate_limited" | "slot_taken"}
+3. Route fetches mc_email server-side (from auth.users) for Slack alert and email headers
+
+## Responsive Behavior
+
+**Mobile (Pixel 5, iPhone 12)**
+- Slot picker: 2-column grid on phone, 3-column on tablet
+- Form: full-width inputs, no multi-column layouts
+- Prev/Next pagination buttons stack vertically if space-constrained
+- Embed mode works identically (parent iframe handles sizing)
+
+**Desktop**
+- Max-width container (512px / 32rem) centered on page
+- Slot grid adjusts column count based on viewport width
+
+## Branding Integration
+
+The page reads MC's branding from the get_public_booking_page payload (merged via _user_branding RPC):
+- Page background (surface_color)
+- Text color, heading color
+- Font family + weights (bodyFontFamily utility)
+- Density (cozy/compact): affects padding scale
+
+All rendered directly as inline style attributes (not Tailwind tokens, to honor custom MC branding on public surfaces).
+
+## Accessibility & Bot Defense
+
+- Form uses Input primitive (semantic label + aria-label)
+- Honeypot field (hidden, aria-hidden="true", tabindex="-1")
+- Form-start timestamp (startedAt) submitted server-side for timing analysis
+- Buttons use native `<button>` with `disabled` prop
+
+## No Authentication
+
+- Fully public (no auth wall, no middleware redirect)
+- RPC calls are anon-callable (SECURITY DEFINER)
+- IP rate-limiting on API layer (/api/booking/slots: 30/min/IP, /api/booking/submit: 5/min/IP)
+- In-RPC rate-limit on submit_booking: 6/hour/meeting_type (per brief)
+
+Migration: `20260820000000_create_bookings.sql` + `20260820001000_booking_rpcs.sql`.
+
+---
+
+# /book/manage/[manage_token]
+
+Route: `/book/manage/[manage_token]` (public, unprotected)
+
+Route group: `(public)`
+
+Purpose: Allow booker to view, reschedule, or cancel their confirmed consultation booking via a capability token (manage_token).
+
+## States
+
+**Loading**
+- Fetches booking via get_booking_by_manage_token(token) RPC
+- Shows spinner with "Loading booking details" copy
+
+**Not Found**
+- Renders NotFoundView: "Booking link not found or expired. Please check the URL or contact the business."
+- No fallback CTA (fail-closed)
+- Thrown when token does not exist
+
+**Error**
+- Renders ErrorView: "Could not load booking. Please try again shortly." + retry button
+- Retry reloads the page
+- Thrown on RPC network errors
+
+**Active**
+- Booking status = "confirmed"
+- User can reschedule or cancel
+- Shows booking details (date/time in booker's timezone, meeting type name, business name, video URL if present)
+- Two CTA buttons: "Reschedule" and "Cancel"
+
+**Already Cancelled**
+- Booking status = "cancelled"
+- Read-only view
+- Shows original booking details
+- Shows "This booking has been cancelled" callout
+- No CTAs
+
+**Past**
+- Booking ends_at <= now()
+- Read-only view
+- Shows booking details
+- Shows "This booking is in the past. Rescheduling and cancellation are no longer available" callout
+- No CTAs
+
+## Cancel Flow
+
+1. User clicks "Cancel" button
+2. Modal opens: "Are you sure you want to cancel this booking?" + "This action cannot be undone."
+3. Confirmation checkbox: "I understand I am cancelling this booking. Please confirm." (required)
+4. CTA buttons: "Cancel Booking" (danger variant) and "Keep Booking"
+5. On confirmation:
+   - Calls cancel_booking(manage_token) RPC
+   - Button enters loading state
+   - On success: page transitions to "Already Cancelled" state
+   - On error (e.g. "past"): shows error banner, remains on active state
+6. Confirmation dismissal via Escape or modal close button returns to active state without action
+
+## Reschedule Flow
+
+1. User clicks "Reschedule" button
+2. Modal opens: "Pick a new time for your booking"
+3. Slot picker (same as public booking form):
+   - Calendar mini-picker (month/year navigation)
+   - Available time slots for selected date
+   - User selects a time slot
+   - Time display updates (converted to booker's timezone)
+4. On slot selection:
+   - Calls reschedule_booking(manage_token, starts_at, ends_at) RPC
+   - Button enters loading state
+   - On success: page transitions back to active state, details update to new time
+   - On error handling:
+     - "slot_taken": displays banner "That time was just taken. Please choose another time." and returns to slot picker
+     - "past": displays banner "Cannot reschedule a past booking. Please contact the business." and closes modal
+     - "invalid": displays banner "Invalid time selection. Please try again." and returns to slot picker
+     - "not_found": displays banner "Booking not found." and closes modal
+   - Other errors: displays generic error banner
+5. Modal dismissal via Escape or close button cancels reschedule (no state change)
+
+## Slot-Taken Recovery
+
+If two concurrent users try to book the same slot:
+- The first succeeds
+- The second's reschedule_booking call receives `{"error": "slot_taken"}`
+- Slot picker re-opens with banner: "That time was just taken. Please choose another time."
+- Booker can select a different slot
+
+## 503 Availability Message
+
+If the slot-generation service is down:
+- Renders message in slot picker: "Availability is temporarily unavailable, please try again shortly."
+- Retry button reloads the page
+
+## Mobile Layout
+
+- Full-width view
+- Modal transitions adjusted for smaller screens (stacks vertically on mobile)
+- Slot picker calendar adapted for mobile (smaller touch targets, scrollable day grid)
+- Time zone display always visible
+
+Migration: `20260821000000_booking_lifecycle.sql`.

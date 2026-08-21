@@ -536,6 +536,41 @@ RLS: Standard user_id = auth.uid(). MC dashboard uploads run client-side with th
 
 ------------------------------------------------------------------------
 
+## Admin RPC (SECURITY DEFINER, service_role only)
+
+### admin_user_last_seen() -> table (user_id uuid, last_seen timestamptz)
+
+Per-user last activity: the newest `created_at` / `refreshed_at` across that
+user's `auth.sessions` rows. Feeds the **Last seen** column on the admin Users
+table (`AdminUser.last_seen_at`).
+
+Why it exists: `auth.users.last_sign_in_at` is an authentication-event
+timestamp. GoTrue stamps it only on a real credential exchange; a
+refresh-token rotation leaves it untouched. Zebri sets no `[auth.sessions]`
+`timebox` or `inactivity_timeout`, and `login/page.tsx` redirects anyone with
+a live session away from the form, so a returning user never re-authenticates
+and the value freezes at their last password entry. `auth.sessions.refreshed_at`
+moves on every hourly token rotation, so it tracks real use to within the
+1-hour `jwt_expiry` window.
+
+Notes:
+
+- `auth.audit_log_entries` would be richer (it logs `login` / `token_refreshed`
+  per event) but is **pruned on hosted Supabase**  -  it returned zero rows for
+  a production user with active sessions. Do not build on it.
+- `greatest()` ignores NULLs in Postgres, so a session that has never been
+  refreshed correctly falls back to its `created_at`.
+- `refreshed_at` is `timestamp WITHOUT time zone` holding UTC while everything
+  around it is `timestamptz`; the function casts it `at time zone 'utc'` so the
+  result is not shifted by the server's offset.
+- **Access:** `EXECUTE` revoked from `public` / `anon` / `authenticated`,
+  granted to `service_role` only. It reads session activity across every
+  tenant, so an authenticated MC must never be able to call it (verified:
+  authenticated callers get `permission denied for function`).
+- `search_path = ''` with fully-qualified objects, per definer-function
+  hardening.
+
+
 ## Portal RPC Functions (SECURITY DEFINER, anon-accessible)
 
 **Helper (internal):**
@@ -1057,3 +1092,462 @@ returns the new count; the copilot route compares that against the
 app-side cap.
 
 Migration: `20260807000000_create_ai_copilot_usage.sql`.
+
+------------------------------------------------------------------------
+
+## calendar_connections (Scheduler Phase A)
+
+Per-user OAuth calendar connections for syncing events with Google
+Calendar and Microsoft Outlook. Stores encrypted tokens, provider
+identity, and connection status.
+
+Columns:
+id (uuid, primary key, default gen_random_uuid())
+user_id (uuid, not null, FK auth.users cascade)  -  RLS key
+provider (text, not null, check in: google | microsoft)  -  OAuth provider
+account_email (text, not null)  -  connected email address (from OAuth userinfo)
+access_token_encrypted (text, not null)  -  AES-256-GCM ciphertext (`v1:<iv>.<tag>.<data>`) via `lib/crypto/secret-box`, key `EMAIL_CRED_KEY`
+refresh_token_encrypted (text, not null)  -  AES-256-GCM ciphertext, server-only decryption
+token_expires_at (timestamptz, not null)  -  access token expiry; used to refresh before callback
+status (text, not null, default 'connected', check in: connected | error)  -  connection health
+last_error (text, nullable)  -  most recent error message when status = error
+calendar_id (text, nullable)  -  provider primary calendar ID (Google: 'primary' by default; Microsoft: Outlook folder id)
+connected_at (timestamptz, default now())  -  when the connection was first established
+created_at (timestamptz, default now())
+updated_at (timestamptz, default now())
+
+Unique constraint (user_id, provider): one per provider per user.
+Index on (user_id) for fast owner lookups.
+
+RLS: Standard owner-only policy `auth.uid() = user_id` (SELECT/INSERT/UPDATE/DELETE). Encrypted token columns are safe for client SELECT because the ciphertext is never decrypted client-side; decryption happens only in server-side token-refresh flows.
+
+Migration: `20260818000000_create_calendar_connections.sql`.
+
+## meeting_types (Scheduler Phase B)
+
+Bookable meeting types (Calendly-style) with duration, location, buffers, and notice windows. Each meeting type has a share_token for the Phase C public booking page.
+
+Columns:
+id (uuid, primary key)
+user_id (uuid, not null, FK auth.users cascade)  -  RLS key
+name (text, not null)
+description (text, nullable)
+duration_minutes (integer, not null, check 5-480)  -  slot duration
+location_type (text, not null, default 'video', check in: video | phone | in_person)
+address (text, nullable)  -  physical address for in_person meetings
+buffer_before_minutes (integer, not null, default 0, check 0-240)  -  buffer before slot
+buffer_after_minutes (integer, not null, default 0, check 0-240)  -  buffer after slot
+min_notice_hours (integer, not null, default 24, check 0-720)  -  minimum advance booking notice
+max_advance_days (integer, not null, default 60, check 1-365)  -  maximum days in advance to allow bookings
+reminder_enabled (boolean, not null, default true)
+active (boolean, not null, default true)
+uses_custom_availability (boolean, not null, default false)  -  when true the slot engine reads meeting_type_availability_rules for this type instead of the MC's availability_rules
+share_token (uuid, not null, unique, default gen_random_uuid())  -  capability token for Phase C public /book page
+created_at, updated_at (timestamptz)
+
+Index: (user_id) for fast owner lookups.
+
+RLS: Standard owner-only policy `auth.uid() = user_id` (SELECT/INSERT/UPDATE/DELETE).
+
+Migrations: `20260819000000_create_scheduling_tables.sql`, `20260821010000_meeting_type_availability.sql` (uses_custom_availability).
+
+## availability_rules (Scheduler Phase B)
+
+The MC's weekly repeating availability window(s). One row per (weekday, time-window) pair. Times are stored as wall-clock (HH:MM) and interpreted in the MC's timezone (user_public_settings.timezone).
+
+Columns:
+id (uuid, primary key)
+user_id (uuid, not null, FK auth.users cascade)  -  RLS key
+weekday (smallint, not null, check 0-6)  -  0=Sunday, 6=Saturday
+start_time (time, not null)  -  window start as HH:MM
+end_time (time, not null)  -  window end as HH:MM; constraint enforces start_time < end_time
+created_at (timestamptz, default now())
+
+An MC can define multiple windows per weekday (e.g. 9am-12pm and 2pm-5pm). The table has no uniqueness constraint on (user_id, weekday): multiple rows with the same weekday are allowed.
+
+These are the MC's standard hours, used by every meeting type except those with `uses_custom_availability` set (see meeting_type_availability_rules).
+
+Index: (user_id) for owner lookups.
+
+RLS: Standard owner-only policy `auth.uid() = user_id`.
+
+Migration: `20260819000000_create_scheduling_tables.sql`.
+
+## meeting_type_availability_rules
+
+One meeting type's own weekly windows, same shape as availability_rules but scoped to a type rather than the MC. Read only when `meeting_types.uses_custom_availability` is true, and they REPLACE the standard hours for that type rather than narrowing them, which is what makes "Saturdays only" or "weeknights after six" expressible.
+
+Columns:
+id (uuid, primary key)
+user_id (uuid, not null, FK auth.users cascade)  -  RLS key
+meeting_type_id (uuid, not null, FK meeting_types cascade)  -  the type these hours belong to
+weekday (smallint, not null, check 0-6)  -  0=Sunday, 6=Saturday
+start_time (time, not null)
+end_time (time, not null)  -  constraint enforces start_time < end_time
+created_at (timestamptz, default now())
+
+A custom schedule with no rows is legal and means the type is never bookable. That is why `uses_custom_availability` is a column rather than being inferred from row count.
+
+Date overrides are NOT per-type: `availability_overrides` stays user-level, so a blocked wedding day blocks every meeting type.
+
+Indexes: (user_id), (meeting_type_id).
+
+RLS: owner-only `auth.uid() = user_id` on all four verbs, plus `_owns_meeting_type(meeting_type_id)` in the INSERT and UPDATE `with check`. Foreign keys are checked with elevated privileges and ignore RLS, so without that clause an MC could attach hours to another MC's meeting type.
+
+Written by `updateMeetingTypeAction` / `createMeetingTypeAction` (replace-all) when the payload carries an `availability` object; an absent `availability` leaves the rows alone.
+
+Migration: `20260821010000_meeting_type_availability.sql`.
+
+## availability_overrides (Scheduler Phase B)
+
+Per-date availability exceptions. One row per date, either blocking the entire day (available=false, times null) or opening a custom window (available=true, start_time+end_time set). Unique (user_id, date) constraint prevents duplicate entries.
+
+Columns:
+id (uuid, primary key)
+user_id (uuid, not null, FK auth.users cascade)  -  RLS key
+date (date, not null)
+available (boolean, not null)  -  true=custom window, false=blocked day
+start_time (time, nullable)  -  custom window start; required when available=true
+end_time (time, nullable)  -  custom window end; required when available=true
+check enforces XOR: (available and times set) or (not available and times null)
+created_at (timestamptz, default now())
+
+Unique (user_id, date): one entry per MC per date.
+
+Index: (user_id) for owner lookups.
+
+RLS: Standard owner-only policy `auth.uid() = user_id`.
+
+Migration: `20260819000000_create_scheduling_tables.sql`.
+
+## user_public_settings.timezone (Scheduler Phase B)
+
+Column added to the existing user_public_settings table:
+
+timezone (text, nullable)  -  IANA timezone (e.g. 'Australia/Sydney', 'America/New_York'). Null until the MC first saves availability. The availability editor seeds it from the browser's local timezone.
+
+Times in availability_rules and availability_overrides are wall-clock in this timezone. Migration: `20260819000000_create_scheduling_tables.sql`.
+
+## bookings (Scheduler Phase C)
+
+Public booking records created by the submit_booking RPC (never inserted via normal SQL). Stores the booker's details, slot timing, and manage/external event tokens.
+
+Columns:
+id (uuid, primary key)
+user_id (uuid, not null, FK auth.users cascade)  -  RLS key (the MC who owns the slot)
+meeting_type_id (uuid, not null, FK meeting_types cascade)  -  the booked meeting type
+couple_id (uuid, nullable, FK couples set null)  -  matched or created couple; null if plan-limited
+name (text, not null)  -  booker's primary name
+partner_name (text, nullable)  -  booker's partner name
+email (text, not null)  -  booker's email
+phone (text, nullable)  -  booker's phone
+notes (text, nullable)  -  booker's free-text notes
+starts_at (timestamptz, not null)  -  slot start time (UTC)
+ends_at (timestamptz, not null)  -  slot end time (UTC); constraint enforces starts_at < ends_at
+timezone (text, not null)  -  booker's IANA timezone for rendering times in email/manage
+status (text, not null, default 'confirmed', check in: confirmed | cancelled | completed)
+manage_token (uuid, not null, unique)  -  capability token for Phase D manage (reschedule/cancel) page
+video_join_url (text, nullable)  -  Zoom/Teams/Meet URL for video meetings, populated by event-push automation
+external_event_ids (jsonb, not null, default '{}')  -  per-provider event ids e.g. {"google": "event-id-123"}; used by reschedule/cancel (Phase D)
+cancelled_at (timestamptz, nullable)  -  when the booking was cancelled
+reminder_sent_at (timestamptz, nullable, Phase D)  -  tracks when the reminder email was sent; cleared on reschedule so new time gets its own reminder
+created_at, updated_at (timestamptz)
+
+Indices:
+- (user_id) for owner lookups
+- (meeting_type_id) for type lookups
+- (couple_id) for couple lookups
+- (starts_at) for chronological sorting
+- (share_token) on meeting_types for public page lookups
+
+Constraint: bookings_no_confirmed_overlap (exclusion, using gist)
+Enforces that no two confirmed bookings for the same user (user_id) can overlap in time (tstzrange). The constraint uses:
+- EXCLUDE USING gist (user_id WITH =, tstzrange(starts_at, ends_at) WITH &&) WHERE (status = 'confirmed')
+This is the final arbiter of double-booking prevention. Requires the btree_gist extension (created in migration).
+
+RLS: Standard owner-only policy `auth.uid() = user_id` (SELECT/INSERT/UPDATE/DELETE). The submit_booking RPC is SECURITY DEFINER, so it bypasses RLS on insert.
+
+Trigger: tg_bookings_emit_consultation_booked
+On INSERT, if status='confirmed', emits a consultation_booked automation event (feeds the automation trigger bus). See automations documentation.
+
+Migration: `20260820000000_create_bookings.sql`.
+
+## Public Booking RPCs (Scheduler Phase C)
+
+Two SECURITY DEFINER functions (anon-callable) gate the public booking flow:
+
+### get_public_booking_page(token uuid) -> jsonb
+
+Fetches page data for the share-token public booking form. Returns null for a missing/disabled token (no existence leak).
+
+Returns jsonb object:
+{
+  "name": "Consultation",  -  meeting type name
+  "description": "30-minute consultation",  -  nullable
+  "duration_minutes": 30,
+  "location_type": "video",
+  "address": null,  -  only meaningful for in_person
+  "business_name": "MC Business Name",
+  ...branding scalars (surface_color, text_color, etc., merged from _user_branding)
+}
+
+Joins meeting_types, auth.users, and calls _user_branding(mc_user_id) to merge MC branding.
+
+Behavior:
+- Returns null if token not found or meeting_type.active=false
+- Merges MC's branding scalars (surface_color, heading_color, fonts, etc.) via _user_branding()
+- Uses coalesce on business_name (raw_user_meta_data->>'business_name' or display_name or '')
+
+Error handling:
+- Missing token: returns null (no existence leak)
+
+Rate limiting: none at the RPC boundary (route-level rate-limit applies).
+
+Migration: `20260820001000_booking_rpcs.sql`.
+
+### submit_booking(token, p_starts_at, p_ends_at, p_timezone, p_name, p_email, p_partner_name?, p_phone?, p_notes?) -> jsonb
+
+Validates the token, timing, and duration, then creates a booking. Couple match by email (case-insensitive), with exception handling for plan limits.
+
+Parameters:
+- token (uuid): meeting type share_token
+- p_starts_at (timestamptz): requested slot start (UTC)
+- p_ends_at (timestamptz): requested slot end (UTC)
+- p_timezone (text): booker's IANA timezone
+- p_name (text): booker's primary name
+- p_email (text): booker's email (case-insensitive couple match)
+- p_partner_name (text, optional): booker's partner name
+- p_phone (text, optional): booker's phone
+- p_notes (text, optional): free-text notes
+
+Response (success):
+{
+  "ok": true,
+  "booking_id": "uuid",
+  "manage_token": "uuid",  -  capability token for Phase D manage page
+  "user_id": "mc's user_id",  -  for alerting/logging
+  "couple_id": "uuid or null",  -  null if plan-limit exception
+  "couple_created": boolean,  -  true if new couple was created
+  "couple_linked": boolean,  -  true if couple was matched or created
+  "business_name": "MC Business Name"  -  for confirmation email
+}
+
+Response (error):
+{
+  "error": "<type>"
+}
+
+Error results:
+- "not_found": token not found or inactive
+- "invalid": p_starts_at >= p_ends_at, starts_at in past, or duration mismatch (>60sec off expected)
+- "rate_limited": >6 confirmed bookings for this meeting type in the last hour
+- "slot_taken": exclusion constraint violation (double-booking guard); booker should retry with different time
+
+Rate limiting (in-RPC):
+- Counts confirmed bookings for meeting_type_id created in last hour
+- Returns "rate_limited" if >= 6 (per-type hourly cap)
+- Note: route-level IP rate-limit (5/min) is also enforced by the API layer
+
+Validation:
+1. Token and active meeting type resolution; return not_found if missing
+2. Range validation: p_starts_at < p_ends_at, p_starts_at > now()
+3. Duration validation: |actual - expected| <= 60 seconds (tolerates rounding)
+4. Couple match by email (case-insensitive, primary_email or legacy email, ordered by created_at)
+5. If no couple match, attempt insert (wrapped in exception handler for plan-limit)
+   - Plan limit exception (STARTER_COUPLE_LIMIT) leaves couple_id null and couple_linked false; booking still inserts
+   - Other exceptions re-raise
+6. Booking insert (status='confirmed'); wrapped in exception handler for exclusion_violation (double-booking)
+   - Exclusion violation returns {"error": "slot_taken"}
+   - consultation_booked trigger fires on successful insert
+
+Couple creation (if no match):
+- Resolves landing status: first couple_statuses row by position, else 'new'
+- Inserts couple with lead_source='booking', status=resolved
+- Nullifies empty strings (partner_name, phone, notes)
+
+Security:
+- SECURITY DEFINER: bypasses RLS on insert
+- MC email is NOT returned to anon (harvesting risk via share tokens)
+- Route fetches mc_email server-side for alert/email headers
+
+Migration: `20260820001000_booking_rpcs.sql`.
+
+## Booking Lifecycle RPCs (Scheduler Phase D)
+
+Four SECURITY DEFINER functions manage the booking lifecycle on the public manage page (anon-callable, capability-token-gated), plus one service-role-only function for the reminder cron:
+
+### get_booking_by_manage_token(token uuid) -> jsonb
+
+Fetches booking details for the manage page. Returns null for a missing token (no existence leak).
+
+Returns jsonb object:
+{
+  "booking_id": "uuid",
+  "status": "confirmed|cancelled|completed",
+  "starts_at": "2026-09-15T10:00:00Z",
+  "ends_at": "2026-09-15T10:30:00Z",
+  "timezone": "Australia/Sydney",
+  "name": "Booker Name",
+  "email": "booker@example.com",
+  "video_join_url": "https://zoom.us/...",
+  "business_name": "MC Business Name",
+  "meeting_type": {
+    "id": "uuid",
+    "name": "Consultation",
+    "description": "30-minute consultation",
+    "duration_minutes": 30,
+    "location_type": "video",
+    "address": null
+  },
+  "share_token": "uuid",
+  ...branding scalars
+}
+
+Critical: never returns user_id or MC's email (auth.users.email is server-secret).
+Merges meeting_type fields and MC branding via _user_branding().
+
+Error: returns null for unknown token (no existence leak).
+
+Grant: anon (callable from public manage page).
+
+Migration: `20260821000000_booking_lifecycle.sql`.
+
+### cancel_booking(p_manage_token uuid) -> jsonb
+
+Anon-callable. Flips a booking to cancelled and emits booking_cancelled automation event.
+
+Parameters:
+- p_manage_token (uuid): manage page capability token
+
+Response (success):
+{
+  "ok": true,
+  "booking_id": "uuid",
+  "user_id": "mc's user_id",
+  "starts_at": "2026-09-15T10:00:00Z",
+  "ends_at": "2026-09-15T10:30:00Z",
+  "timezone": "Australia/Sydney",
+  "name": "Booker Name",
+  "email": "booker@example.com",
+  "business_name": "MC Business Name",
+  "external_event_ids": {...},
+  "meeting_type_name": "Consultation"
+}
+
+Response (error):
+{
+  "error": "not_found|already_cancelled|past"
+}
+
+Error conditions:
+- "not_found": token not found
+- "already_cancelled": booking status is already cancelled
+- "past": ends_at is in the past (cannot cancel past meetings)
+
+Payload emitted (booking_cancelled):
+{
+  "booking_id": "uuid",
+  "couple_id": "uuid|null",
+  "meeting_type_id": "uuid",
+  "booker_name": "text",
+  "booker_email": "text",
+  "starts_at": "timestamptz",
+  "ends_at": "timestamptz",
+  "timezone": "text"
+}
+
+Grant: anon (callable from public manage page).
+
+Migration: `20260821000000_booking_lifecycle.sql`.
+
+### reschedule_booking(p_manage_token uuid, p_starts_at timestamptz, p_ends_at timestamptz) -> jsonb
+
+Anon-callable. Moves a booking's time in place and clears reminder_sent_at so the new time gets its own reminder.
+
+Parameters:
+- p_manage_token (uuid): manage page capability token
+- p_starts_at (timestamptz): new slot start (UTC)
+- p_ends_at (timestamptz): new slot end (UTC)
+
+Response (success):
+{
+  "ok": true,
+  "booking_id": "uuid",
+  "user_id": "mc's user_id",
+  "previous_starts_at": "2026-09-15T10:00:00Z",
+  "starts_at": "2026-09-16T14:00:00Z",
+  "ends_at": "2026-09-16T14:30:00Z",
+  "timezone": "Australia/Sydney",
+  "name": "Booker Name",
+  "email": "booker@example.com",
+  "business_name": "MC Business Name",
+  "external_event_ids": {...},
+  "meeting_type_name": "Consultation"
+}
+
+Response (error):
+{
+  "error": "not_found|cancelled|past|slot_taken|invalid"
+}
+
+Error conditions:
+- "not_found": token not found
+- "cancelled": booking status is cancelled
+- "past": ends_at is in the past (cannot reschedule past meetings)
+- "invalid": p_starts_at >= p_ends_at, p_starts_at in past, or duration mismatch (>60sec off expected)
+- "slot_taken": exclusion constraint violation (another confirmed booking occupies this range)
+
+Validation:
+1. Token and booking resolution
+2. Guard against cancelled/past bookings
+3. Range validation: p_starts_at < p_ends_at, p_starts_at > now()
+4. Duration validation: |actual - expected| <= 60 seconds
+5. Update with exclusion constraint handling (returns slot_taken on violation)
+
+The partial exclusion constraint only checks OTHER confirmed rows, so a booking can reschedule onto its own current range.
+
+Grant: anon (callable from public manage page).
+
+Migration: `20260821000000_booking_lifecycle.sql`.
+
+### bookings_due_for_reminder() -> setof jsonb
+
+Service-role only (cron). Returns confirmed bookings due for reminder notification.
+
+Returns array of jsonb objects (one per booking):
+{
+  "booking_id": "uuid",
+  "user_id": "mc's user_id",
+  "name": "Booker Name",
+  "email": "booker@example.com",
+  "starts_at": "2026-09-15T10:00:00Z",
+  "ends_at": "2026-09-15T10:30:00Z",
+  "timezone": "Australia/Sydney",
+  "video_join_url": "https://zoom.us/...",
+  "business_name": "MC Business Name",
+  "meeting_type_name": "Consultation",
+  "location_type": "video",
+  "address": null
+}
+
+Selection criteria (all must match):
+- status = 'confirmed'
+- meeting_type.reminder_enabled = true
+- starts_at > now()
+- starts_at <= now() + 36 hours
+- reminder_sent_at is null
+
+Grant: service_role (cron only).
+
+Migration: `20260821000000_booking_lifecycle.sql`.
+
+### mark_booking_reminder_sent(p_booking_id uuid) -> void
+
+Service-role only (cron). Sets reminder_sent_at = now() to mark a booking as having been reminded.
+
+Parameters:
+- p_booking_id (uuid): booking to mark
+
+Grant: service_role (cron only).
+
+Migration: `20260821000000_booking_lifecycle.sql`.

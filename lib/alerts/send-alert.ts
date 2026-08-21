@@ -120,6 +120,14 @@ function describe(event: AlertEvent): string {
       return `user=${event.userId} · ${event.email}${
         event.businessName ? ` · ${event.businessName}` : ''
       } — new website enquiry`;
+    case 'booking_created':
+      return `user=${event.userId} · ${event.email}: booking from ${event.bookerName}`;
+    case 'booking_created_without_calendar':
+      return `user=${event.userId} · booking=${event.bookingId} · ${event.locationType} — booked with no connected calendar${
+        event.locationType === 'video' ? ' (no join link sent)' : ''
+      }`;
+    case 'booking_event_push_failed':
+      return `user=${event.userId} · ${event.provider} status=${event.status} · booking=${event.bookingId}`;
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }
