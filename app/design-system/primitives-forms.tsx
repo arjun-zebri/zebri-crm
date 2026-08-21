@@ -10,6 +10,8 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { TimeSelect } from '@/components/ui/time-select';
+import { Toggle } from '@/components/ui/toggle';
 
 import { Demo, DemoGrid, DemoRow, Rule, Spec } from './showroom';
 
@@ -35,8 +37,10 @@ const STATUS_OPTIONS = [
 /** All form-control primitives with their variant matrices. */
 export function PrimitivesForms() {
   const [checked, setChecked] = useState(true);
+  const [toggleOn, setToggleOn] = useState(true);
   const [date, setDate] = useState('');
   const [status, setStatus] = useState('new');
+  const [time, setTime] = useState('10:00');
 
   return (
     <>
@@ -133,6 +137,12 @@ export function PrimitivesForms() {
           itself, or its rows render at the document&apos;s 16px and read larger than the control
           that opened them.
         </Rule>
+        <Rule>
+          Use <code>help</code> for a short line that can sit under the control permanently, and
+          <code>tooltip</code> when the explanation is a sentence and would crowd a two-column form
+          row. The tooltip trigger is a real button so the text is reachable by keyboard, not just
+          on hover.
+        </Rule>
         <DemoGrid cols={3}>
           <Demo label="Default">
             <Select label="Status" options={STATUS_OPTIONS} value={status} onValueChange={setStatus} />
@@ -142,6 +152,14 @@ export function PrimitivesForms() {
           </Demo>
           <Demo label="Error">
             <Select label="Status" options={STATUS_OPTIONS} error="Pick a status." />
+          </Demo>
+          <Demo label="Tooltip">
+            <Select
+              label="Minimum notice"
+              tooltip="The least warning you will accept. Couples cannot book a time sooner than this."
+              options={STATUS_OPTIONS}
+              placeholder="Choose one"
+            />
           </Demo>
           <Demo label="Disabled">
             <Select label="Status" options={STATUS_OPTIONS} disabled placeholder="Unavailable" />
@@ -189,13 +207,56 @@ export function PrimitivesForms() {
         </DemoRow>
       </Spec>
 
+      <Spec name="Toggle" file="components/ui/toggle.tsx"
+        importPath="@/components/ui/toggle" description="An on/off switch for a setting that takes effect immediately.">
+        <Rule>
+          <strong>Toggle or Checkbox is not a style choice.</strong> A <code>Toggle</code> IS the
+          setting: flipping it turns something on or off there and then. A <code>Checkbox</code>
+          collects a value as part of a form the user will submit. More than two states means a{' '}
+          <code>Select</code>.
+          <br />
+          <strong>Say what off means.</strong> Pass a <code>description</code> where the
+          consequence is not obvious. &ldquo;Paused&rdquo; on its own leaves the reader wondering
+          whether their link still works.
+          <br />
+          <strong>Never hand-roll the switch.</strong> Four call sites did, and every one reached
+          for <code>bg-black</code> and <code>bg-gray-200</code> instead of tokens, so the control
+          ignored the theme around it. On is <code>bg-success</code>, the exact green a checked{' '}
+          <code>Checkbox</code> fills with, so a form holding both shows one green, not two; off is{' '}
+          <code>bg-border-strong</code>.
+        </Rule>
+        <DemoGrid cols={2}>
+          <Demo label="On, with description">
+            <Toggle
+              checked={toggleOn}
+              onChange={setToggleOn}
+              label={toggleOn ? 'Active' : 'Paused'}
+              description={
+                toggleOn
+                  ? 'Couples can book this meeting type.'
+                  : 'The link stops taking new bookings.'
+              }
+            />
+          </Demo>
+          <Demo label="Label only">
+            <Toggle checked={toggleOn} onChange={setToggleOn} label="Send a reminder" />
+          </Demo>
+          <Demo label="Disabled on">
+            <Toggle checked disabled onChange={() => {}} label="Locked on" />
+          </Demo>
+          <Demo label="Disabled off">
+            <Toggle checked={false} disabled onChange={() => {}} label="Locked off" />
+          </Demo>
+        </DemoGrid>
+      </Spec>
+
       <Spec name="DatePicker" file="components/ui/date-picker.tsx"
         importPath="@/components/ui/date-picker" description="One trigger, the Input geometry. Icon on either side, plus an inline calendar mode.">
         <Rule>
           There is no <code>variant</code> prop. A date field is a text field that opens a
           calendar, so it wears the <code>Input</code> chrome: 32px, control radius, border darkens
           on focus. The <code>underline</code> and <code>meta</code> treatments were removed on
-          2026-08-07 &mdash; three chromes for one control meant a date field looked like a
+          2026-08-07; three chromes for one control meant a date field looked like a
           different species depending on which form it landed in.
         </Rule>
         <DemoGrid cols={3}>
@@ -210,6 +271,31 @@ export function PrimitivesForms() {
           </Demo>
           <Demo label="Disabled">
             <DatePicker value={date} onChange={setDate} disabled placeholder="Pick a date" />
+          </Demo>
+        </DemoGrid>
+      </Spec>
+
+      <Spec name="TimeSelect" file="components/ui/time-select.tsx"
+        importPath="@/components/ui/time-select" description="Time picker for scheduling. 24h values, 12h labels. One height, matching Input and Select.">
+        <Rule>
+          <strong>Disable, do not unmount.</strong> When a time field does not currently apply,
+          pass <code>disabled</code> and leave it in place. Removing it resizes whatever surrounds
+          it, and in a modal that means the buttons move while the user is reaching for them.
+          <br />
+          Never hand-roll time dropdowns. TimeSelect generates predictable 24-hour option sets from
+          <code>startHour</code> to <code>endHour</code> in <code>minuteStep</code> increments. Values are 24h
+          format (<code>"HH:mm"</code>), but labels display as 12h (<code>"10:00 AM"</code>). It exists because
+          availability editors and scheduling modals need reliable time choices without a full datetime picker.
+        </Rule>
+        <DemoGrid cols={2}>
+          <Demo label="Default (6 AM to 10 PM, 30-min steps)">
+            <TimeSelect value={time} onChange={setTime} placeholder="Select time" />
+          </Demo>
+          <Demo label="Custom range (8 AM to 6 PM, hourly)">
+            <TimeSelect value={time} onChange={setTime} startHour={8} endHour={18} minuteStep={60} placeholder="Pick" />
+          </Demo>
+          <Demo label="Disabled">
+            <TimeSelect value={time} onChange={setTime} placeholder="Select time" disabled />
           </Demo>
         </DemoGrid>
       </Spec>

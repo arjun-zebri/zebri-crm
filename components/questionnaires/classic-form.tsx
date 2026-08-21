@@ -17,7 +17,7 @@ import { BusyLabel } from '@/components/ui/busy-label'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
-import { missingRequiredAnswers, QUESTION_TYPE_META, type Answer, type Question, type Responses } from '@/lib/questionnaires/question-schema'
+import { missingRequiredAnswers, QUESTION_TYPE_META, REQUIRED_ANSWER_MESSAGE, type Answer, type Question, type Responses } from '@/lib/questionnaires/question-schema'
 
 import { QuestionField } from './question-field'
 import { saveStateLabel, type SaveState } from './save-state'
@@ -108,7 +108,7 @@ export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSub
                 theme={theme}
                 {...(answerCss ? { answerCss } : {})}
               />
-              {missing.has(q.id) && <p style={{ color: STATUS_COLORS.error, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, marginTop: '0.5rem', lineHeight: bodyStyles.lineHeight }}>This one is required.</p>}
+              {missing.has(q.id) && <p style={{ color: STATUS_COLORS.error, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, marginTop: '0.5rem', lineHeight: bodyStyles.lineHeight }}>{REQUIRED_ANSWER_MESSAGE}</p>}
             </div>
           )
         })}

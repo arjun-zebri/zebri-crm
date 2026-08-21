@@ -1,18 +1,25 @@
 /**
  * One stage on the invoice builder's applied payment timeline.
  *
- * A read-only summary line: label, resolved share and amount, due (or paid)
- * date, and a state pill. Editing of shape happens in the schedule modal via
- * "Change". The only action here is recording a manual payment, and only once
- * the invoice is live (`canRecord`): while drafting there is nothing to record.
- * Recording is gated to the earliest unpaid stage because couples settle in
- * order.
+ * Displays: label, resolved share and amount, due (or paid) date, and a state
+ * pill. Unpaid stages show an editable DatePicker for the due date; paid
+ * stages show the paid date as locked read-only text. Editing of amount/label/
+ * timing happens in the schedule modal via "Change". The only action here is
+ * recording a manual payment, and only once the invoice is live (`canRecord`):
+ * while drafting there is nothing to record. Recording is gated to the earliest
+ * unpaid stage because couples settle in order.
+ *
+ * Manual due date overrides: when the MC changes a due date here, it persists
+ * to `invoice_payment_stages.due_date`. Reapplying a schedule template
+ * recomputes all dates, so manually set dates are lost on reapply (why-comment
+ * added: this is the intended UX: MCs can always re-edit after reapply).
  *
  * @module components/builders/parts/payment-stage-row
  */
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
 import { StatePill } from '@/components/ui/state-pill'
 import type { InvoiceStage } from '@/types/payment-schedule'
 
@@ -33,6 +40,9 @@ export interface PaymentStageRowProps {
   isNextUnpaid: boolean
   markPending: boolean
   onMarkPaid: () => void
+  /** Called when the MC manually edits an unpaid stage's due date.
+   *  Passes the stage id and new due date (YYYY-MM-DD). Paid stages ignore this. */
+  onDueDateChange: (stageId: string, newDueDate: string) => void
 }
 
 export function PaymentStageRow({
@@ -41,6 +51,7 @@ export function PaymentStageRow({
   isNextUnpaid,
   markPending,
   onMarkPaid,
+  onDueDateChange,
 }: PaymentStageRowProps) {
   const paid = Boolean(stage.paidAt)
   const unit = stage.amountType === 'percent' ? '%' : '$'
@@ -60,11 +71,21 @@ export function PaymentStageRow({
           {' · '}
           {formatCurrency(stage.amountCents)}
         </span>
-        <span className="text-body text-text-muted">
-          {paid
-            ? `Paid ${formatDateShort(stage.paidAt) ?? ''}`
-            : `Due ${formatDateShort(stage.dueDate) ?? '—'}`}
-        </span>
+        {paid ? (
+          <span className="text-body text-text-muted">
+            Paid {formatDateShort(stage.paidAt) ?? ''}
+          </span>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-body text-text-muted">Due</span>
+            <DatePicker
+              value={stage.dueDate ?? ''}
+              onChange={(newDate) => onDueDateChange(stage.id, newDate)}
+              placeholder="Set date"
+              className="w-32"
+            />
+          </div>
+        )}
         <span className="ml-auto flex items-center gap-2">
           <StatePill
             label={paid ? 'Paid' : 'Due'}

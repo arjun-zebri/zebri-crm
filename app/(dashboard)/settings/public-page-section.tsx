@@ -25,6 +25,7 @@ import { useRef, useState } from 'react';
 import { normalizeSubdomain } from '@/lib/settings/public-page';
 
 import { AutoSaveStatus, type SaveState } from './auto-save-status';
+import { CalendarConnectionsCard } from './calendar-connections-card';
 import { saveSubdomainAction } from './public/actions';
 import { PublicPageEmail } from './public-page-email';
 import type { PublicSettingsData } from './settings-body';
@@ -147,6 +148,9 @@ export function PublicPageSection({ seedName, initial }: PublicPageSectionProps)
 
       {/* Email sending address */}
       <PublicPageEmail initial={initial} />
+
+      {/* Calendar connections */}
+      <CalendarConnectionsCard />
     </div>
   );
 }

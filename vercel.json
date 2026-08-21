@@ -10,6 +10,10 @@
       "schedule": "15 22 * * *"
     },
     {
+      "path": "/api/cron/booking-reminders",
+      "schedule": "30 22 * * *"
+    },
+    {
       "path": "/api/cron/prune-stripe-events",
       "schedule": "0 3 * * *"
     },

@@ -195,6 +195,67 @@ middleware also whitelists the path before setting it in the URL.
 `/reset-password` → `supabase.auth.resetPasswordForEmail()` → email
 link → `/update-password` → `supabase.auth.updateUser({ password })`.
 
+### OAuth flows: Email and Calendar (Phase 0.8c+)
+
+The OAuth flow now supports multiple purposes, specified via query
+parameter. Both email and calendar flows use the same callback
+handler; the `purpose` field in the state cookie determines where
+to redirect and what to do with the tokens.
+
+**State format** (CSRF protection): `<provider>.<purpose>.<random_32_hex>`
+
+- Legacy two-part states (`<provider>.<random>`) parse as `purpose='email'`
+  for backward compatibility.
+- Signed httpOnly cookie pins the state on authorize; callback re-checks.
+- Callback clears the cookie once verified.
+
+**Purpose: email** (Settings → Public Page → Email)
+
+Connects an MC's Gmail or Outlook mailbox for send-as identity in
+outbound emails. Tokens stored in `user_public_settings` via the
+OAuth callback. Scopes: Google `openid email gmail.send` (send-only);
+Microsoft `openid email Mail.Send` (send-only).
+
+Callback redirects: `/settings?tab=public&oauth=connected` on success,
+`/settings?tab=public&oauth=error` on failure.
+
+**Purpose: calendar** (Scheduler Phase A)
+
+Connects an MC's Google Calendar or Outlook calendar for event sync.
+Tokens stored in `calendar_connections` table via the OAuth callback.
+Scopes: Google `openid email calendar.events calendar.freebusy`
+(read+write events, read free-busy); Microsoft `openid email
+offline_access Calendars.ReadWrite` (read+write all calendars).
+
+Connecting is offered from two places: Settings → Public Page →
+Calendars, and the `/calendar` route (banner above the tabs, plus
+per-tab prompts on the grid and the Meeting types tab). Both build the
+authorize URL through `calendarConnectUrl()` in
+`components/calendar/connect-url.ts`.
+
+**Return destination** (`?return=settings|calendar`)
+
+So a connect started on `/calendar` does not dump the MC back in
+Settings, authorize accepts an optional `return`, validated by
+`isOAuthReturnTo()` in `lib/oauth/providers.ts` and stashed in a second
+short-lived httpOnly cookie, `zebri_oauth_return`.
+
+- The value is an **allowlist** (`settings` | `calendar`), never a
+  caller-supplied path. It survives a redirect out to a third-party
+  consent screen and back, so echoing arbitrary input would be an open
+  redirect. Anything unrecognised, absent, or tampered with falls back
+  to `settings`.
+- It is kept **out of** the `state` string on purpose, so
+  `parseOAuthState()` and the state equality check are untouched: this
+  is a UX detail, not part of the CSRF token.
+- The callback reads it before the decline branch, so a cancelled
+  consent also returns to the page the MC started from.
+- Cleared alongside the state cookie once the callback completes.
+
+Callback redirects (calendar): `/settings?tab=public&calendar=<status>`
+when `return=settings` (the default), `/calendar?calendar=<status>`
+when `return=calendar`, where `<status>` is `connected` or `error`.
+
 ---
 
 ## Supabase client setup

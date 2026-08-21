@@ -5,7 +5,7 @@
  * Loads `get_public_questionnaire(token)`, applies the MC's branding to the
  * page chrome, and composes the right state: a loading skeleton, an
  * unavailable card, the fill experience (one-question-at-a-time or classic
- * form, per the questionnaire's display mode), or the thank-you state.
+ * form, per the MC's branding blocks), or the thank-you state.
  *
  * Auth model: unauthenticated. The share token IS the capability; the RPC
  * validates it against `share_token_enabled = true`.
@@ -23,6 +23,7 @@ import { DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead } from '@/lib/branding/public-surface'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
+import { displayModeFromBlocks, findFormStyleBlock } from '@/lib/questionnaires/display-mode'
 import { createClient } from '@/lib/supabase/client'
 
 import { FillSection } from './_components/fill-section'
@@ -77,15 +78,10 @@ export default function PublicQuestionnairePage() {
   const allBlocks = questionnaire?.branding_blocks && questionnaire.branding_blocks.length > 0
     ? repairBlocks('questionnaire', questionnaire.branding_blocks)
     : []
-  // The form style is chosen by which of the two form-style blocks is present.
-  // Safe fallback for the invalid states the editor warns about: if both are
-  // present, the first in the tree wins; if none is present, fall back to the
-  // classic all-on-one-page form so the couple always has something to fill.
-  const formBlock = allBlocks.find(
-    (b) => b.type === 'questionnaireOneAtATime' || b.type === 'questionnaireAllOnePage',
-  )
+  // Shared derivation, so this page and the MC-side previews always agree.
+  const formBlock = findFormStyleBlock(allBlocks)
   const displayMode: 'form' | 'oneAtATime' =
-    formBlock?.type === 'questionnaireOneAtATime' ? 'oneAtATime' : 'form'
+    displayModeFromBlocks(allBlocks) === 'typeform' ? 'oneAtATime' : 'form'
   const chrome = questionnaireChrome(allBlocks, displayMode)
 
   return (

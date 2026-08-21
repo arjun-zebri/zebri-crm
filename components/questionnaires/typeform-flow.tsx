@@ -17,7 +17,7 @@ import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { buildSteps } from '@/lib/questionnaires/flow-steps'
-import { missingRequiredAnswers, type Answer, type Question, type Responses } from '@/lib/questionnaires/question-schema'
+import { missingRequiredAnswers, REQUIRED_ANSWER_MESSAGE, type Answer, type Question, type Responses } from '@/lib/questionnaires/question-schema'
 
 import { QuestionField } from './question-field'
 import { saveStateLabel, type SaveState } from './save-state'
@@ -75,8 +75,11 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
       if (mode === 'live') onSubmit?.()
       return
     }
-    if (!force && !canAdvance()) {
-      setError('This one is required.')
+    // A preview is for reading through the questions, not answering them, so
+    // required answers never block the MC from paging forward. Only the
+    // couple filling it in for real is held on a question.
+    if (!force && mode === 'live' && !canAdvance()) {
+      setError(REQUIRED_ANSWER_MESSAGE)
       return
     }
     setError(null)
@@ -90,6 +93,12 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
 
   const progress = Math.min(((current + 1) / (total + 1)) * 100, 100)
   const saveLabel = saveStateLabel(saveState)
+
+  // The step area reserves a floor so the nav does not jump as the couple
+  // moves between questions. The live page fills the viewport and can afford
+  // the taller floor; inside a preview frame the same 300px reads as a large
+  // empty gap under a one-line answer, so preview reserves less.
+  const stepMinHeight = mode === 'preview' ? 'min-h-[180px]' : 'min-h-[300px]'
 
   return (
     // A fixed column when the parent is a sized flex column (the live fill
@@ -115,7 +124,7 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
       <p className="mb-6 min-h-4 shrink-0 text-right" style={{ color: saveState === 'error' ? STATUS_COLORS.error : mutedColor, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, lineHeight: bodyStyles.lineHeight }}>{saveLabel}</p>
 
       {atConfirm ? (
-        <div className="min-h-[300px] flex-1 overflow-y-auto">
+        <div className={`${stepMinHeight} flex-1 overflow-y-auto`}>
           <h2 style={{ color: questionHeadingStyles.color, fontSize: `${questionHeadingStyles.fontSize}px`, fontFamily: questionHeadingStyles.fontFamily, fontWeight: questionHeadingStyles.fontWeight, lineHeight: questionHeadingStyles.lineHeight, marginBottom: '0.5rem' }}>
             Ready to send your answers?
           </h2>
@@ -125,7 +134,7 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
           </p>
         </div>
       ) : (
-        <div className="min-h-[300px] flex-1 overflow-y-auto">
+        <div className={`${stepMinHeight} flex-1 overflow-y-auto`}>
           {step.section && <p className="mb-2" style={{ color: sectionLabelStyles.color, fontSize: `${sectionLabelStyles.fontSize}px`, fontFamily: sectionLabelStyles.fontFamily, fontWeight: sectionLabelStyles.fontWeight, textTransform: sectionLabelStyles.textTransform, letterSpacing: `${sectionLabelStyles.letterSpacing}em`, lineHeight: sectionLabelStyles.lineHeight }}>{step.section}</p>}
           <h2 style={{ color: questionHeadingStyles.color, fontSize: `${questionHeadingStyles.fontSize}px`, fontFamily: questionHeadingStyles.fontFamily, fontWeight: questionHeadingStyles.fontWeight, lineHeight: questionHeadingStyles.lineHeight, ...questionCss, marginBottom: '0.5rem' }}>
             {step.question.label}

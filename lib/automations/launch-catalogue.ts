@@ -67,6 +67,10 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   'time_before_event', // T1
   'time_after_event', // T2
   'anniversary_of_event', // T3
+  // Consultations (emitted by booking insert trigger, cancel_booking RPC, and time emitter)
+  'consultation_booked',
+  'booking_cancelled',
+  'consultation_completed',
   // Portal (DB-trigger emitted)
   // `couple_uploaded_file` (P1) and `couple_added_song_to_playlist`
   // (P2) are deliberately absent: they fire on the same inserts as

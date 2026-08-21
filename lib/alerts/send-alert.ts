@@ -120,9 +120,41 @@ function describe(event: AlertEvent): string {
       return `user=${event.userId} · ${event.email}${
         event.businessName ? ` · ${event.businessName}` : ''
       } — new website enquiry`;
+    case 'booking_created':
+      return `user=${event.userId} · ${event.email}: booking from ${event.bookerName}`;
+    case 'booking_created_without_calendar':
+      return `user=${event.userId} · booking=${event.bookingId} · ${event.locationType} — booked with no connected calendar${
+        event.locationType === 'video' ? ' (no join link sent)' : ''
+      }`;
+    case 'booking_event_push_failed':
+      return `user=${event.userId} · ${event.provider} status=${event.status} · booking=${event.bookingId}`;
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }
+}
+
+/**
+ * Mask any capability token on an event before it reaches the log sink.
+ *
+ * Several events carry a share token so a handler can build a link
+ * (`manageToken` on a new booking, `invoiceToken` on a payment event). The
+ * Slack line never prints them, but the structured log record is the whole
+ * event spread into a context object, which put live capability tokens into
+ * the platform logs. Anyone with log access could then open, reschedule or
+ * cancel the booking.
+ *
+ * The first 8 characters survive so a token can still be correlated across
+ * log lines during an incident. That prefix is far too short to guess the
+ * remaining 120 bits of a UUID.
+ */
+function redactTokens(event: AlertEvent): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...event };
+  for (const [key, value] of Object.entries(out)) {
+    if (/token$/i.test(key) && typeof value === 'string' && value.length > 8) {
+      out[key] = `${value.slice(0, 8)}…`;
+    }
+  }
+  return out;
 }
 
 /**
@@ -134,7 +166,7 @@ function describe(event: AlertEvent): string {
 export async function sendAlert(event: AlertEvent): Promise<void> {
   // Structured log first — happens regardless of Slack availability.
   const message = `alert: ${event.type}`;
-  const context: Record<string, unknown> = { ...event };
+  const context: Record<string, unknown> = redactTokens(event);
   if (event.severity === 'error') logger.error(message, undefined, context);
   else if (event.severity === 'warn') logger.warn(message, context);
   else logger.info(message, context);

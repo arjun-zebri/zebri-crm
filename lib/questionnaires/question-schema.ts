@@ -125,6 +125,16 @@ export const responsesSchema = z.record(z.string(), answerSchema)
 export type Responses = z.infer<typeof responsesSchema>
 
 /**
+ * What a couple sees when a required question has no answer yet.
+ *
+ * Phrased as the next step rather than as a rule being enforced: "This one is
+ * required" tells someone off without telling them what to do, and "this one"
+ * is vague when the message sits under the question it refers to. Shared by
+ * the one-at-a-time flow and the all-on-one-page form so the two cannot drift.
+ */
+export const REQUIRED_ANSWER_MESSAGE = 'Please answer this to continue.'
+
+/**
  * Returns the ids of required input questions that have no usable answer in
  * `responses`. An empty array means the questionnaire is ready to submit. Pure
  * and dependency-free so both the public page and tests can call it.

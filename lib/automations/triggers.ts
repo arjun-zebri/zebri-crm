@@ -1287,6 +1287,45 @@ const consultationNoShow: TriggerSpec<ConsultationConfig> = {
   ui: { category: 'consultation', label: 'Consultation no-show', description: 'When the couple misses the meeting', icon: 'CalendarOff' },
 }
 
+/**
+ * Config for the `booking_cancelled` trigger.
+ *
+ * Optional filter: match only cancellations made within N days of the booking's start time.
+ */
+interface BookingCancelledConfig {
+  withinDaysOfStart?: number | undefined
+}
+
+const bookingCancelled: TriggerSpec<BookingCancelledConfig> = {
+  type: 'booking_cancelled',
+  configSchema: z.object({
+    withinDaysOfStart: z.number().int().min(1).max(365).optional(),
+  }),
+  match: (event, config) => {
+    // No filter configured: match all.
+    if (config.withinDaysOfStart === undefined) return true
+
+    const payload = p(event)
+    const startsAtRaw = payload.starts_at
+    if (typeof startsAtRaw !== 'string') return false
+
+    // Parse both timestamps.
+    const startsAt = new Date(startsAtRaw)
+    const cancelledAt = new Date(event.created_at)
+
+    if (isNaN(startsAt.getTime()) || isNaN(cancelledAt.getTime())) return false
+
+    // Calculate days between cancellation and event start.
+    // Floor the result to get the number of complete days.
+    const msPerDay = 24 * 60 * 60 * 1000
+    const daysBetween = Math.floor((startsAt.getTime() - cancelledAt.getTime()) / msPerDay)
+
+    // Match when the cancellation occurred within the configured window before the event.
+    return daysBetween >= 0 && daysBetween <= config.withinDaysOfStart
+  },
+  ui: { category: 'consultation', label: 'Booking cancelled', description: 'When a consultation booking is cancelled. Optionally filter by how close the cancellation was to the booking', icon: 'CalendarX' },
+}
+
 // ── AU paperwork milestones ────────────────────────────────────
 
 const noimLodged: TriggerSpec<{
@@ -1710,6 +1749,7 @@ export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   consultation_booked: consultationBooked,
   consultation_completed: consultationCompleted,
   consultation_no_show: consultationNoShow,
+  booking_cancelled: bookingCancelled,
   rehearsal_scheduled: rehearsalScheduled,
   rehearsal_completed: rehearsalCompleted,
   // Compliance

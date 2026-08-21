@@ -354,6 +354,20 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     }
   }, [state.enabledSurfaces, surface])
 
+  // Support deep-linking to a specific surface via query parameter (e.g. ?surface=questionnaire).
+  // This allows the questionnaire builder modal to link directly to the questionnaire branding editor.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const requestedSurface = params.get('surface')
+    if (requestedSurface && state.enabledSurfaces.includes(requestedSurface as SurfaceTab)) {
+      setSurface(requestedSurface as SurfaceTab)
+    }
+    // Mount-only by design: re-running on enabledSurfaces changes would yank
+    // the user back to the query-param surface after they switch tabs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const setEditor = (patch: Partial<EditorState>, customize = true) => {
     setState((prev) => ({ ...prev, ...patch, themePreset: customize ? 'custom' : prev.themePreset }))
     flashAffectedBlocks(patch, state.blocks, docSurface, surface)

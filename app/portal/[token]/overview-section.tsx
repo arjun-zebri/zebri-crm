@@ -3,16 +3,17 @@
 import { Check, Loader2, Plus } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
-import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { createClient } from '@/lib/supabase/client'
 
 import { ContactDetailsCard, type ContactTriple } from './contact-details-card'
 import { EventsList } from './overview-events'
-import { PortalEvent } from './page'
+import { PackageSelector } from './package-selector'
+import { PortalEvent, type PortalPackage } from './page'
 import { PortalEventModal } from './portal-event-modal'
 
 interface OverviewSectionProps {
@@ -22,6 +23,8 @@ interface OverviewSectionProps {
   /** Persisted secondary partner contact triple. */
   secondary: ContactTriple
   events: PortalEvent[]
+  /** Package selection data: current choice + available packages, or null if no packages exist. */
+  packages: { selected_package_id: string | null; packages: PortalPackage[] } | null
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding
 }
@@ -38,7 +41,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
  * lightweight Saving / Saved / error affordance. Borderless throughout to
  * match the couple-modal Overview.
  */
-export function OverviewSection({ token, primary, secondary, events, branding }: OverviewSectionProps) {
+export function OverviewSection({ token, primary, secondary, events, packages, branding }: OverviewSectionProps) {
   const supabase = createClient()
   const [primaryTriple, setPrimaryTriple] = useState<ContactTriple>(primary)
   const [secondaryTriple, setSecondaryTriple] = useState<ContactTriple>(secondary)
@@ -137,6 +140,18 @@ export function OverviewSection({ token, primary, secondary, events, branding }:
           <ContactDetailsCard label="Secondary contact" value={secondaryTriple} onSave={saveSecondary} branding={branding} />
         </div>
       </div>
+
+      {/* Package selector: only shown if the MC has created packages. */}
+      {packages && packages.packages.length > 0 && (
+        <div>
+          <PackageSelector
+            token={token}
+            packages={packages.packages}
+            selectedPackageId={packages.selected_package_id}
+            branding={branding}
+          />
+        </div>
+      )}
 
       <div>
         <button

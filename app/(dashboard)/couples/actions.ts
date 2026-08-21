@@ -93,6 +93,8 @@ const coupleInputSchema = z.object({
   lead_source: z.string().trim().max(100).nullable().default(null),
   // "How did you hear about me" - free text, surfaced on the couple profile.
   referral_source: z.string().trim().max(200).nullable().default(null),
+  // Selected package — optional field set by the couple or MC in the add/edit flow.
+  selected_package_id: z.string().uuid().nullable().default(null),
   kanban_position: z.number().default(0),
 });
 

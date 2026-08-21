@@ -62,3 +62,9 @@ scripts/celebrants/out/
 .claude/worktrees/
 
 .claude/worktrees/
+
+# Ad-hoc debugging screenshots dropped at the repo root by browser-driven
+# verification runs. Two of them (debug-before-click / debug-after-click)
+# were tracked for months and re-committed every time someone re-ran the
+# check, which is churn in the diff and nothing anyone reads.
+/debug-*.png

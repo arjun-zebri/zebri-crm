@@ -61,10 +61,40 @@ export interface AdminUser {
   is_comped: boolean;
   created_at: string;
   last_sign_in_at: string | null;
+  /**
+   * When this user was last actually on Zebri, from `auth.sessions`.
+   * Null if they have no session rows at all.
+   *
+   * Distinct from {@link AdminUser.last_sign_in_at}, which GoTrue only
+   * stamps on a real credential exchange. Zebri sessions never expire and
+   * the login page redirects anyone already signed in, so a returning user
+   * never re-authenticates and `last_sign_in_at` freezes at their last
+   * password entry. This field moves whenever they open the app.
+   */
+  last_seen_at: string | null;
+}
+
+/**
+ * Last-activity timestamp per user id, from `auth.sessions` via the
+ * `admin_user_last_seen()` SECURITY DEFINER function.
+ *
+ * The RPC exists because the `auth` schema is not exposed to PostgREST, so
+ * the service-role client cannot read `auth.sessions` directly.
+ */
+async function loadLastSeen(admin: ReturnType<typeof adminClient>): Promise<Map<string, string>> {
+  const { data, error } = await admin.rpc("admin_user_last_seen");
+  if (error) throw new Error(error.message);
+  const out = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (row.last_seen) out.set(row.user_id, row.last_seen);
+  }
+  return out;
 }
 
 export async function listUsersWithSubscription(): Promise<AdminUser[]> {
   const admin = adminClient();
+  // Kicked off here so it overlaps the sequential listUsers pagination below.
+  const lastSeenPromise = loadLastSeen(admin);
   const all: AdminUser[] = [];
   // Paginate beyond the 1000-row API cap so MRR / counts don't silently
   // truncate as the platform grows.
@@ -97,12 +127,35 @@ export async function listUsersWithSubscription(): Promise<AdminUser[]> {
         is_comped: Boolean(am.is_comped),
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at ?? null,
+        // Filled in below, once the overlapping RPC resolves.
+        last_seen_at: null,
       });
     }
     if (users.length < 1000) break;
     page++;
   }
+  const lastSeen = await lastSeenPromise;
+  for (const u of all) {
+    // Fall back to (and never go older than) last_sign_in_at. Signing out
+    // DELETES the auth.sessions rows, so a user who logged out would
+    // otherwise read "never" despite a known sign-in date. Signing in is
+    // itself proof they were here, so the newest of the two is the honest
+    // answer.
+    u.last_seen_at = newestOf(lastSeen.get(u.id) ?? null, u.last_sign_in_at);
+  }
   return all;
+}
+
+/**
+ * The later of two nullable ISO timestamps, or null when both are null.
+ * Unparseable values are ignored rather than winning the comparison.
+ */
+function newestOf(a: string | null, b: string | null): string | null {
+  const at = a ? new Date(a).getTime() : Number.NaN;
+  const bt = b ? new Date(b).getTime() : Number.NaN;
+  if (Number.isNaN(at)) return Number.isNaN(bt) ? null : b;
+  if (Number.isNaN(bt)) return a;
+  return at >= bt ? a : b;
 }
 
 export interface UserAnalytics {

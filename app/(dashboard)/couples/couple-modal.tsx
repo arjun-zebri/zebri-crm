@@ -6,9 +6,11 @@ import { useState, useEffect } from "react";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
+import { MenuItem, MenuPanel } from "@/components/ui/menu";
 import { Modal } from "@/components/ui/modal";
 import { Couple, CoupleStatusRecord, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple';
 
+import { formatPrice, usePackages } from "./use-packages";
 import { VenueAutocomplete, EMPTY_VENUE, type VenueDetails } from "./venue-autocomplete";
 
 /** The first-event payload captured alongside the couple — the date and
@@ -52,6 +54,7 @@ export function CoupleModal({
   const [notes, setNotes] = useState("");
   const [leadSource, setLeadSource] = useState<string>("");
   const [referralSource, setReferralSource] = useState<string>("");
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [statusOpen, setStatusOpen] = useState(false);
   const [leadSourceOpen, setLeadSourceOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -77,6 +80,7 @@ export function CoupleModal({
       });
       setLeadSource(couple.lead_source || "");
       setReferralSource(couple.referral_source ?? "");
+      setSelectedPackageId(couple.selected_package_id ?? null);
       setNotes(couple.notes);
     } else {
       resetForm();
@@ -100,6 +104,7 @@ export function CoupleModal({
     setVenue(EMPTY_VENUE);
     setLeadSource("");
     setReferralSource("");
+    setSelectedPackageId(null);
     setNotes("");
   };
 
@@ -130,6 +135,7 @@ export function CoupleModal({
       status: status as any,
       lead_source: leadSource || null,
       referral_source: trim(referralSource),
+      selected_package_id: selectedPackageId ?? null,
       kanban_position: couple?.kanban_position ?? 0,
       notes,
     }, { date: eventDate || null, ...venue });
@@ -417,6 +423,16 @@ export function CoupleModal({
             </Popover.Root>
           </div>
           </div>
+
+          {/* Package selection — optional field for setting the couple's
+              default package from the add/edit flow. Mirrors Status/Lead
+              Source pattern but on its own row since it's optional. */}
+          <PackageSelector
+            selectedPackageId={selectedPackageId}
+            onSelect={setSelectedPackageId}
+            userId={couple?.user_id ?? ""}
+            inputClass={inputClass}
+          />
         </div>
 
         <div>
@@ -458,5 +474,98 @@ export function CoupleModal({
       loading={loading}
     />
     </>
+  );
+}
+
+/**
+ * Inline package selector, matching the modal's Status / Lead source pattern.
+ *
+ * Shows the MC's live packages with their required-items total. The dropdown
+ * body is the shared {@link MenuPanel} / {@link MenuItem} pair rather than
+ * hand-written rows, so the selected tint, hover and row density match every
+ * other menu in the app instead of picking their own greens and greys.
+ */
+interface PackageSelectorProps {
+  selectedPackageId: string | null;
+  onSelect: (packageId: string | null) => void;
+  /** The couple's owner. Empty on a new couple: the hook falls back to the session. */
+  userId: string;
+  inputClass: string;
+}
+
+function PackageSelector({
+  selectedPackageId,
+  onSelect,
+  userId,
+  inputClass,
+}: PackageSelectorProps) {
+  const { data: packages = [], isLoading } = usePackages(userId);
+  const [packagePopoverOpen, setPackagePopoverOpen] = useState(false);
+  const selectedPackage = packages.find((p) => p.id === selectedPackageId);
+  const selectedLabel = selectedPackage
+    ? `${selectedPackage.name} (${formatPrice(selectedPackage.total_amount)})`
+    : null;
+
+  const choose = (packageId: string | null) => {
+    onSelect(packageId);
+    setPackagePopoverOpen(false);
+  };
+
+  return (
+    <div>
+      <label className="block text-body text-text-muted mb-1">Package</label>
+      <Popover.Root open={packagePopoverOpen} onOpenChange={setPackagePopoverOpen}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={`${inputClass} flex items-center justify-between text-left`}
+          >
+            <span className={selectedLabel ? "text-text" : "text-text-subtle"}>
+              {selectedLabel || "Select package"}
+            </span>
+            <ChevronDown
+              size={14}
+              strokeWidth={1.5}
+              className="text-text-subtle shrink-0"
+            />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            className="z-[70] w-[var(--radix-popover-trigger-width)]"
+            sideOffset={4}
+            align="start"
+          >
+            {/* `width="auto"` (w-max) plus `min-w-full`: no two width
+                utilities compete, the panel never sits narrower than the
+                trigger, and a long package name can still grow past it. */}
+            <MenuPanel width="auto" className="min-w-full max-h-56 overflow-y-auto">
+              {isLoading ? (
+                <p className="px-3 py-2 text-body text-text-subtle">Loading packages...</p>
+              ) : packages.length === 0 ? (
+                <p className="px-3 py-2 text-body text-text-subtle">
+                  No packages yet. Create one under Payments.
+                </p>
+              ) : (
+                <>
+                  <MenuItem selected={!selectedPackageId} onClick={() => choose(null)}>
+                    None
+                  </MenuItem>
+                  {packages.map((pkg) => (
+                    <MenuItem
+                      key={pkg.id}
+                      selected={selectedPackageId === pkg.id}
+                      onClick={() => choose(pkg.id)}
+                    >
+                      {pkg.name} ({formatPrice(pkg.total_amount)})
+                    </MenuItem>
+                  ))}
+                </>
+              )}
+            </MenuPanel>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
   );
 }

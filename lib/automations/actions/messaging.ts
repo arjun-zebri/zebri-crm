@@ -35,14 +35,21 @@ import type { ActionSpec } from './index'
 // ────────────────────────────────────────────────────────────────
 
 /**
- * Load a saved email template's subject + body for the send_email
- * action. Uses the admin client (the runner has no user session) but
- * scopes the read to the run's owner so it can't reach another tenant.
+ * Load a saved email template's subject, body, and linked file IDs for
+ * the send_email action. Uses the admin client (the runner has no user
+ * session) but scopes all reads to the run's owner so it can't reach
+ * another tenant.
+ *
+ * Why: return the template file ids so the handler can download them
+ * alongside any config.attachFiles, deduplicated by file id.
  */
 async function loadTemplateParts(
   ctx: RunContext,
   templateId: string,
-): Promise<{ kind: 'ok'; tplSubject: string; tplContent: JSONContent } | Extract<ActionResult, { kind: 'error' }>> {
+): Promise<
+  | { kind: 'ok'; tplSubject: string; tplContent: JSONContent; templateFileIds: string[] }
+  | Extract<ActionResult, { kind: 'error' }>
+> {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('email_templates')
@@ -53,7 +60,22 @@ async function loadTemplateParts(
   if (error || !data) {
     return { kind: 'error', message: 'send_email: email template not found', recoverable: false }
   }
-  return { kind: 'ok', tplSubject: data.subject, tplContent: (data.content ?? {}) as JSONContent }
+
+  // Fetch file ids linked to this template via email_template_files.
+  // Unreadable files (deleted by the user) are skipped by the loader
+  // later rather than failing the send, so we only care about the ids.
+  const { data: files } = await admin
+    .from('email_template_files')
+    .select('id')
+    .eq('template_id', templateId)
+    .eq('user_id', ctx.userId)
+
+  return {
+    kind: 'ok',
+    tplSubject: data.subject,
+    tplContent: (data.content ?? {}) as JSONContent,
+    templateFileIds: (files ?? []).map((f: { id: string }) => f.id),
+  }
 }
 
 const recipientSpecSchema: z.ZodSchema<RecipientSpec> = z.object({
@@ -142,10 +164,12 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     // the runner turns into a paused run + Slack alert.
     let subject: string
     let html: string
+    let templateFileIds: string[] = []
     if (config.templateId) {
       const tplResult = await loadTemplateParts(ctx, config.templateId)
       if (tplResult.kind === 'error') return tplResult
-      const { tplSubject, tplContent } = tplResult
+      const { tplSubject, tplContent, templateFileIds: tplFileIds } = tplResult
+      templateFileIds = tplFileIds
       const missing = detectMissingVariables({ subject: tplSubject, content: tplContent }, ctx)
       if (missing.blocked) {
         return {
@@ -199,12 +223,16 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       sender = { transport: 'resend', from: DEFAULT_FROM }
     }
 
-    // Static attachments resolve once for every recipient. A file the
-    // MC has since deleted is skipped by the loader rather than
-    // failing the send — a missing PDF should not stop the email.
+    // Static attachments resolve once for every recipient. Files come
+    // from two sources: template-linked files (email_template_files) and
+    // explicitly configured attachFiles. Deduplicate by file id so a file
+    // attached both ways sends once. A missing file is skipped by the
+    // loader rather than failing the send, so a deleted attachment does
+    // not stop the email.
     let attachments: EmailAttachment[] = []
-    if (config.attachFiles?.length && supabase) {
-      attachments = await downloadStaticAttachments(supabase, config.attachFiles)
+    const allFileIds = [...new Set([...templateFileIds, ...(config.attachFiles ?? [])])]
+    if (allFileIds.length && supabase) {
+      attachments = await downloadStaticAttachments(supabase, allFileIds)
     }
 
     // Test run (manual "Test automation"): route the rendered email to

@@ -10,6 +10,7 @@ vi.mock('@/lib/alerts/slack', () => ({
   slackSuppressed: vi.fn().mockReturnValue(false),
 }));
 
+import { registerTransport, type LogContext } from '@/lib/alerts/logger';
 import { sendAlert, formatSlackMessage } from '@/lib/alerts/send-alert';
 import { sendSlackAlert } from '@/lib/alerts/slack';
 
@@ -38,6 +39,34 @@ describe('formatSlackMessage', () => {
     });
     expect(payload.text).toContain(':rotating_light:');
     expect(payload.text).toContain('card_declined');
+  });
+
+  it('names the missing join link for a video booking with no calendar', () => {
+    const payload = formatSlackMessage({
+      type: 'booking_created_without_calendar',
+      severity: 'warn',
+      userId: 'u1',
+      bookingId: 'b1',
+      locationType: 'video',
+    });
+    expect(payload.text).toContain('u1');
+    expect(payload.text).toContain('b1');
+    expect(payload.text).toContain('no connected calendar');
+    // Why: a video booking without a push is worse than the others, because
+    // the couple receives a "Video call" confirmation with nothing to click.
+    expect(payload.text).toContain('no join link sent');
+  });
+
+  it('omits the join-link note for a non-video booking with no calendar', () => {
+    const payload = formatSlackMessage({
+      type: 'booking_created_without_calendar',
+      severity: 'warn',
+      userId: 'u1',
+      bookingId: 'b1',
+      locationType: 'in_person',
+    });
+    expect(payload.text).toContain('no connected calendar');
+    expect(payload.text).not.toContain('no join link sent');
   });
 
   it('uses the warning emoji for warn severity', () => {
@@ -95,5 +124,73 @@ describe('sendAlert', () => {
       subject: 'Quote',
     });
     expect(console.warn).toHaveBeenCalled();
+  });
+});
+
+describe('sendAlert structured log', () => {
+  /** Capture every record the logger emits for the duration of one test. */
+  function captureLogs() {
+    const records: Array<{ message: string; context: LogContext }> = [];
+    const off = registerTransport((_level, message, context) => {
+      records.push({ message, context });
+    });
+    return { records, off };
+  }
+
+  it('masks a capability token before it reaches the log sink', async () => {
+    const { records, off } = captureLogs();
+    try {
+      await sendAlert({
+        type: 'booking_created',
+        severity: 'info',
+        userId: 'user-1',
+        email: 'mc@example.com',
+        bookerName: 'Alice',
+        manageToken: '11111111-2222-3333-4444-555555555555',
+      });
+    } finally {
+      off();
+    }
+
+    const record = records.find((r) => r.message === 'alert: booking_created');
+    expect(record).toBeDefined();
+    // A prefix survives so one token can be followed across log lines during
+    // an incident; the rest is gone, because the whole value cancels and
+    // reschedules the booking for anyone who can read the logs.
+    expect(record!.context.manageToken).toBe('11111111…');
+    expect(JSON.stringify(record!.context)).not.toContain('555555555555');
+  });
+
+  it('leaves non-token fields untouched', async () => {
+    const { records, off } = captureLogs();
+    try {
+      await sendAlert({
+        type: 'booking_created',
+        severity: 'info',
+        userId: 'user-1',
+        email: 'mc@example.com',
+        bookerName: 'Alice',
+        manageToken: '11111111-2222-3333-4444-555555555555',
+      });
+    } finally {
+      off();
+    }
+
+    const record = records.find((r) => r.message === 'alert: booking_created')!;
+    expect(record.context.email).toBe('mc@example.com');
+    expect(record.context.bookerName).toBe('Alice');
+    expect(record.context.userId).toBe('user-1');
+  });
+
+  it('never printed the token on the Slack line either', async () => {
+    const payload = formatSlackMessage({
+      type: 'booking_created',
+      severity: 'info',
+      userId: 'user-1',
+      email: 'mc@example.com',
+      bookerName: 'Alice',
+      manageToken: '11111111-2222-3333-4444-555555555555',
+    });
+    expect(payload.text).not.toContain('11111111');
   });
 });

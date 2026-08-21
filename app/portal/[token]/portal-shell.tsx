@@ -132,6 +132,7 @@ export function PortalShell({ token, initialData, branding, styles }: PortalShel
               phone: initialData.secondary_phone ?? '',
             }}
             events={initialData.events}
+            packages={initialData.packages}
             branding={branding}
           />
         )}

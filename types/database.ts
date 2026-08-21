@@ -429,6 +429,195 @@ export type Database = {
         }
         Relationships: []
       }
+      availability_overrides: {
+        Row: {
+          available: boolean
+          created_at: string
+          date: string
+          end_time: string | null
+          id: string
+          start_time: string | null
+          user_id: string
+        }
+        Insert: {
+          available: boolean
+          created_at?: string
+          date: string
+          end_time?: string | null
+          id?: string
+          start_time?: string | null
+          user_id: string
+        }
+        Update: {
+          available?: boolean
+          created_at?: string
+          date?: string
+          end_time?: string | null
+          id?: string
+          start_time?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      availability_rules: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          start_time: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          start_time: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          start_time?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
+      bookings: {
+        Row: {
+          cancelled_at: string | null
+          couple_id: string | null
+          created_at: string
+          email: string
+          ends_at: string
+          external_event_ids: Json
+          id: string
+          manage_token: string
+          meeting_type_id: string
+          name: string
+          notes: string | null
+          partner_name: string | null
+          phone: string | null
+          reminder_sent_at: string | null
+          starts_at: string
+          status: string
+          timezone: string
+          updated_at: string
+          user_id: string
+          video_join_url: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          couple_id?: string | null
+          created_at?: string
+          email: string
+          ends_at: string
+          external_event_ids?: Json
+          id?: string
+          manage_token?: string
+          meeting_type_id: string
+          name: string
+          notes?: string | null
+          partner_name?: string | null
+          phone?: string | null
+          reminder_sent_at?: string | null
+          starts_at: string
+          status?: string
+          timezone: string
+          updated_at?: string
+          user_id: string
+          video_join_url?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          couple_id?: string | null
+          created_at?: string
+          email?: string
+          ends_at?: string
+          external_event_ids?: Json
+          id?: string
+          manage_token?: string
+          meeting_type_id?: string
+          name?: string
+          notes?: string | null
+          partner_name?: string | null
+          phone?: string | null
+          reminder_sent_at?: string | null
+          starts_at?: string
+          status?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+          video_join_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_meeting_type_id_fkey"
+            columns: ["meeting_type_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_connections: {
+        Row: {
+          access_token_encrypted: string
+          account_email: string
+          calendar_id: string | null
+          connected_at: string
+          created_at: string
+          id: string
+          last_error: string | null
+          provider: string
+          refresh_token_encrypted: string
+          status: string
+          token_expires_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_encrypted: string
+          account_email: string
+          calendar_id?: string | null
+          connected_at?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          provider: string
+          refresh_token_encrypted: string
+          status?: string
+          token_expires_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_encrypted?: string
+          account_email?: string
+          calendar_id?: string | null
+          connected_at?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          provider?: string
+          refresh_token_encrypted?: string
+          status?: string
+          token_expires_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       connect_accounts: {
         Row: {
           account_id: string | null
@@ -845,6 +1034,7 @@ export type Database = {
           completed_at: string | null
           couple_id: string
           created_at: string
+          description: string | null
           display_mode: string
           id: string
           questions: Json
@@ -863,6 +1053,7 @@ export type Database = {
           completed_at?: string | null
           couple_id: string
           created_at?: string
+          description?: string | null
           display_mode?: string
           id?: string
           questions?: Json
@@ -881,6 +1072,7 @@ export type Database = {
           completed_at?: string | null
           couple_id?: string
           created_at?: string
+          description?: string | null
           display_mode?: string
           id?: string
           questions?: Json
@@ -1014,6 +1206,7 @@ export type Database = {
           secondary_name: string | null
           secondary_phone: string | null
           secondary_portal_token: string
+          selected_package_id: string | null
           status: string
           user_id: string
           venue: string | null
@@ -1038,6 +1231,7 @@ export type Database = {
           secondary_name?: string | null
           secondary_phone?: string | null
           secondary_portal_token?: string
+          selected_package_id?: string | null
           status?: string
           user_id: string
           venue?: string | null
@@ -1062,11 +1256,20 @@ export type Database = {
           secondary_name?: string | null
           secondary_phone?: string | null
           secondary_portal_token?: string
+          selected_package_id?: string | null
           status?: string
           user_id?: string
           venue?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "couples_selected_package_id_fkey"
+            columns: ["selected_package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_template_categories: {
         Row: {
@@ -1640,6 +1843,104 @@ export type Database = {
           target_status_slug?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      meeting_type_availability_rules: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          meeting_type_id: string
+          start_time: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          meeting_type_id: string
+          start_time: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          meeting_type_id?: string
+          start_time?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_type_availability_rules_meeting_type_id_fkey"
+            columns: ["meeting_type_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_types: {
+        Row: {
+          active: boolean
+          address: string | null
+          buffer_after_minutes: number
+          buffer_before_minutes: number
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          location_type: string
+          max_advance_days: number
+          min_notice_hours: number
+          name: string
+          reminder_enabled: boolean
+          share_token: string
+          updated_at: string
+          user_id: string
+          uses_custom_availability: boolean
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          buffer_after_minutes?: number
+          buffer_before_minutes?: number
+          created_at?: string
+          description?: string | null
+          duration_minutes: number
+          id?: string
+          location_type?: string
+          max_advance_days?: number
+          min_notice_hours?: number
+          name: string
+          reminder_enabled?: boolean
+          share_token?: string
+          updated_at?: string
+          user_id: string
+          uses_custom_availability?: boolean
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          buffer_after_minutes?: number
+          buffer_before_minutes?: number
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          location_type?: string
+          max_advance_days?: number
+          min_notice_hours?: number
+          name?: string
+          reminder_enabled?: boolean
+          share_token?: string
+          updated_at?: string
+          user_id?: string
+          uses_custom_availability?: boolean
         }
         Relationships: []
       }
@@ -2425,6 +2726,7 @@ export type Database = {
           oauth_token_expires_at: string | null
           subdomain: string | null
           time_categories_seeded: boolean
+          timezone: string | null
           updated_at: string
           user_id: string
         }
@@ -2443,6 +2745,7 @@ export type Database = {
           oauth_token_expires_at?: string | null
           subdomain?: string | null
           time_categories_seeded?: boolean
+          timezone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2461,6 +2764,7 @@ export type Database = {
           oauth_token_expires_at?: string | null
           subdomain?: string | null
           time_categories_seeded?: boolean
+          timezone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2544,6 +2848,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _owns_couple_or_null: { Args: { p_couple_id: string }; Returns: boolean }
+      _owns_meeting_type: {
+        Args: { p_meeting_type_id: string }
+        Returns: boolean
+      }
+      _owns_package_or_null: {
+        Args: { p_package_id: string }
+        Returns: boolean
+      }
       _resolve_portal_couple: {
         Args: { p_token: string }
         Returns: {
@@ -2557,7 +2870,16 @@ export type Database = {
         Args: { p_surface: string; p_user_id: string }
         Returns: Json
       }
+      admin_user_last_seen: {
+        Args: never
+        Returns: {
+          last_seen: string
+          user_id: string
+        }[]
+      }
       backfill_invoice_payment_stages: { Args: never; Returns: number }
+      bookings_due_for_reminder: { Args: never; Returns: Json[] }
+      cancel_booking: { Args: { p_manage_token: string }; Returns: Json }
       contracts_due_for_reminder: {
         Args: never
         Returns: {
@@ -2635,9 +2957,12 @@ export type Database = {
       expire_contracts: { Args: never; Returns: string[] }
       generate_contract_number: { Args: { p_user_id: string }; Returns: string }
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
+      get_booking_by_manage_token: { Args: { token: string }; Returns: Json }
       get_lead_form: { Args: { token: string }; Returns: Json }
       get_portal_data: { Args: { token: string }; Returns: Json }
+      get_portal_packages: { Args: { p_token: string }; Returns: Json }
       get_portal_questionnaires: { Args: { token: string }; Returns: Json }
+      get_public_booking_page: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
       get_public_invoice: { Args: { token: string }; Returns: Json }
       get_public_questionnaire: { Args: { token: string }; Returns: Json }
@@ -2646,9 +2971,17 @@ export type Database = {
       increment_ai_copilot_usage: { Args: never; Returns: number }
       is_own_couple: { Args: { couple_id_value: string }; Returns: boolean }
       is_valid_portal_token: { Args: { token_value: string }; Returns: boolean }
+      mark_booking_reminder_sent: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
       mark_contract_reminder_sent: {
         Args: { p_contract_id: string }
         Returns: undefined
+      }
+      reschedule_booking: {
+        Args: { p_ends_at: string; p_manage_token: string; p_starts_at: string }
+        Returns: Json
       }
       revoke_contract: { Args: { p_contract_id: string }; Returns: Json }
       save_portal_contact: {
@@ -2687,6 +3020,10 @@ export type Database = {
           p_token: string
         }
         Returns: string
+      }
+      save_portal_package: {
+        Args: { p_package_id: string; p_token: string }
+        Returns: undefined
       }
       save_portal_person:
         | {
@@ -2777,6 +3114,20 @@ export type Database = {
           p_signer_ip: string
           p_signer_name: string
           p_signer_user_agent: string
+          token: string
+        }
+        Returns: Json
+      }
+      submit_booking: {
+        Args: {
+          p_email: string
+          p_ends_at: string
+          p_name: string
+          p_notes?: string
+          p_partner_name?: string
+          p_phone?: string
+          p_starts_at: string
+          p_timezone: string
           token: string
         }
         Returns: Json

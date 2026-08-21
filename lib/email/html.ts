@@ -517,3 +517,362 @@ export function leadNotificationHtml(opts: LeadNotificationOpts): string {
     </table>`;
   return wrapTemplateHtml(body, opts.mcBusinessName);
 }
+
+/**
+ * Format a date and time in the specified timezone using Intl.DateTimeFormat.
+ * Returns a string like "Monday, 15 Sept 2026 at 8:30 PM AEST".
+ */
+function formatDateTimeInTimezone(date: Date, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat("en-AU", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+    timeZone: timezone,
+  });
+  const parts = formatter.formatToParts(date);
+  const mapped: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      mapped[part.type] = part.value;
+    }
+  }
+  return `${mapped.weekday}, ${mapped.day} ${mapped.month} ${mapped.year} at ${mapped.hour}:${mapped.minute} ${mapped.timeZoneName}`;
+}
+
+/**
+ * Couple-facing booking confirmation email. Renders the meeting date/time
+ * in the booker's timezone plus location info (link, video fallback, address,
+ * or phone).
+ */
+export function bookingConfirmationHtml(opts: {
+  bookerName: string;
+  meetingTypeName: string;
+  start: Date;
+  end: Date;
+  timezone: string;
+  locationType: "video" | "phone" | "in_person";
+  address: string | null;
+  joinUrl: string | null;
+  mcBusinessName: string;
+  manageUrl?: string;
+}): string {
+  const dateTime = formatDateTimeInTimezone(opts.start, opts.timezone);
+
+  let locationLine: string;
+  if (opts.locationType === "video" && opts.joinUrl) {
+    locationLine = `<a href="${escapeHtmlText(opts.joinUrl)}" style="color:#111827;font-weight:600;">${escapeHtmlText(opts.joinUrl)}</a>`;
+  } else if (opts.locationType === "video") {
+    locationLine = "Video call (link to follow)";
+  } else if (opts.locationType === "in_person" && opts.address) {
+    locationLine = escapeHtmlText(opts.address);
+  } else if (opts.locationType === "phone") {
+    locationLine = "Phone call";
+  } else {
+    locationLine = "";
+  }
+
+  const manageLink = opts.manageUrl
+    ? `<p style="margin:24px 0 0;font-size:14px;color:#6b7280;">
+        Need to change it? <a href="${escapeHtmlText(opts.manageUrl)}" style="color:#111827;font-weight:600;">Reschedule or cancel</a>
+      </p>`
+    : "";
+
+  const body = `
+    <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Booking confirmed</p>
+    <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${escapeHtmlText(opts.meetingTypeName)}</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+      Hi ${escapeHtmlText(opts.bookerName)},<br><br>
+      Your booking is confirmed. Here are the details.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 32px;">
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Date &amp; time</td><td style="padding:8px 0;color:#111827;font-size:13px;">${escapeHtmlText(dateTime)}</td></tr>
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Meeting type</td><td style="padding:8px 0;color:#111827;font-size:13px;">${escapeHtmlText(opts.meetingTypeName)}</td></tr>
+      ${locationLine ? `<tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Location</td><td style="padding:8px 0;color:#111827;font-size:13px;">${locationLine}</td></tr>` : ""}
+    </table>
+    <p style="margin:0;font-size:14px;color:#6b7280;">
+      If you need to reschedule, just let us know.
+    </p>${manageLink}`;
+
+  return wrapTemplateHtml(body, opts.mcBusinessName);
+}
+
+/**
+ * Ops notification email to the MC about a new booking.
+ * Uses a table layout mirroring {@link leadNotificationHtml},
+ * sent from DEFAULT_FROM with booker email as reply-to.
+ */
+export function bookingNotificationHtml(opts: {
+  mcBusinessName: string;
+  booking: {
+    bookerName: string;
+    bookerEmail: string;
+    meetingTypeName: string;
+    start: Date;
+    end: Date;
+    timezone: string;
+    locationType: "video" | "phone" | "in_person";
+    address: string | null;
+    joinUrl: string | null;
+  };
+}): string {
+  const b = opts.booking;
+  const dateTime = formatDateTimeInTimezone(b.start, b.timezone);
+
+  let location: string;
+  if (b.locationType === "video" && b.joinUrl) {
+    location = escapeHtmlText(b.joinUrl);
+  } else if (b.locationType === "video") {
+    location = "Video call (link to follow)";
+  } else if (b.locationType === "in_person" && b.address) {
+    location = escapeHtmlText(b.address);
+  } else if (b.locationType === "phone") {
+    location = "Phone call";
+  } else {
+    location = "";
+  }
+
+  const row = (label: string, value?: string) =>
+    value && value.trim()
+      ? `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px;vertical-align:top;">${escapeHtmlText(
+          label,
+        )}</td><td style="padding:4px 0;color:#111827;font-size:13px;">${escapeHtmlText(value)}</td></tr>`
+      : "";
+
+  const body = `
+    <p style="font-size:15px;color:#111827;margin:0 0 12px;">New booking</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+      ${row("Booker", b.bookerName)}
+      ${row("Email", b.bookerEmail)}
+      ${row("Meeting type", b.meetingTypeName)}
+      ${row("Date & time", dateTime)}
+      ${row("Location", location)}
+    </table>`;
+
+  return wrapTemplateHtml(body, opts.mcBusinessName);
+}
+
+/**
+ * Couple-facing booking rescheduled email. Shows the old time (struck through
+ * or labelled) and the new time in the booker's timezone, plus manage link.
+ */
+export function bookingRescheduledHtml(opts: {
+  bookerName: string;
+  meetingTypeName: string;
+  previousStart: Date;
+  start: Date;
+  end: Date;
+  timezone: string;
+  locationType: "video" | "phone" | "in_person";
+  address: string | null;
+  joinUrl: string | null;
+  mcBusinessName: string;
+  manageUrl: string;
+}): string {
+  const previousDateTime = formatDateTimeInTimezone(opts.previousStart, opts.timezone);
+  const newDateTime = formatDateTimeInTimezone(opts.start, opts.timezone);
+
+  let locationLine: string;
+  if (opts.locationType === "video" && opts.joinUrl) {
+    locationLine = `<a href="${escapeHtmlText(opts.joinUrl)}" style="color:#111827;font-weight:600;">${escapeHtmlText(opts.joinUrl)}</a>`;
+  } else if (opts.locationType === "video") {
+    locationLine = "Video call (link to follow)";
+  } else if (opts.locationType === "in_person" && opts.address) {
+    locationLine = escapeHtmlText(opts.address);
+  } else if (opts.locationType === "phone") {
+    locationLine = "Phone call";
+  } else {
+    locationLine = "";
+  }
+
+  const body = `
+    <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Booking rescheduled</p>
+    <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${escapeHtmlText(opts.meetingTypeName)}</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+      Hi ${escapeHtmlText(opts.bookerName)},<br><br>
+      Your booking has been rescheduled. Here are the updated details.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 32px;">
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Previous time</td><td style="padding:8px 0;color:#666;font-size:13px;"><strike>${escapeHtmlText(previousDateTime)}</strike></td></tr>
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">New date &amp; time</td><td style="padding:8px 0;color:#111827;font-size:13px;font-weight:600;">${escapeHtmlText(newDateTime)}</td></tr>
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Meeting type</td><td style="padding:8px 0;color:#111827;font-size:13px;">${escapeHtmlText(opts.meetingTypeName)}</td></tr>
+      ${locationLine ? `<tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Location</td><td style="padding:8px 0;color:#111827;font-size:13px;">${locationLine}</td></tr>` : ""}
+    </table>
+    <p style="margin:0 0 12px;font-size:14px;color:#6b7280;">
+      Questions? You can reschedule again or cancel from your booking page.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="margin-top:16px;">
+      <tr><td style="background:#111827;border-radius:8px;">
+        <a href="${escapeHtmlText(opts.manageUrl)}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Manage booking</a>
+      </td></tr>
+    </table>`;
+
+  return wrapTemplateHtml(body, opts.mcBusinessName);
+}
+
+/**
+ * Couple-facing booking cancelled email. Confirms the cancellation with the
+ * meeting type and cancelled time. No manage link (there is nothing left to manage).
+ */
+export function bookingCancelledHtml(opts: {
+  bookerName: string;
+  meetingTypeName: string;
+  start: Date;
+  end: Date;
+  timezone: string;
+  locationType: "video" | "phone" | "in_person";
+  address: string | null;
+  joinUrl: string | null;
+  mcBusinessName: string;
+}): string {
+  const dateTime = formatDateTimeInTimezone(opts.start, opts.timezone);
+
+  let locationLine: string;
+  if (opts.locationType === "video" && opts.joinUrl) {
+    locationLine = `<a href="${escapeHtmlText(opts.joinUrl)}" style="color:#111827;font-weight:600;">${escapeHtmlText(opts.joinUrl)}</a>`;
+  } else if (opts.locationType === "video") {
+    locationLine = "Video call (link to follow)";
+  } else if (opts.locationType === "in_person" && opts.address) {
+    locationLine = escapeHtmlText(opts.address);
+  } else if (opts.locationType === "phone") {
+    locationLine = "Phone call";
+  } else {
+    locationLine = "";
+  }
+
+  const body = `
+    <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Booking cancelled</p>
+    <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${escapeHtmlText(opts.meetingTypeName)}</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+      Hi ${escapeHtmlText(opts.bookerName)},<br><br>
+      Your booking has been cancelled.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 32px;">
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Meeting type</td><td style="padding:8px 0;color:#111827;font-size:13px;">${escapeHtmlText(opts.meetingTypeName)}</td></tr>
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Was scheduled for</td><td style="padding:8px 0;color:#111827;font-size:13px;">${escapeHtmlText(dateTime)}</td></tr>
+      ${locationLine ? `<tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Location</td><td style="padding:8px 0;color:#111827;font-size:13px;">${locationLine}</td></tr>` : ""}
+    </table>
+    <p style="margin:0;font-size:14px;color:#6b7280;">
+      If you would like to reschedule, please get in touch.
+    </p>`;
+
+  return wrapTemplateHtml(body, opts.mcBusinessName);
+}
+
+/**
+ * MC ops notification email for booking changes (reschedule or cancel).
+ * Sent from DEFAULT_FROM with booker email as reply-to.
+ * Shows times in the MC's timezone and differs by kind in subject and heading.
+ */
+export function bookingChangeNotificationHtml(opts: {
+  mcBusinessName: string;
+  kind: "rescheduled" | "cancelled";
+  booking: {
+    bookerName: string;
+    bookerEmail: string;
+    meetingTypeName: string;
+    start: Date;
+    end: Date;
+    timezone: string;
+    locationType: "video" | "phone" | "in_person";
+    address: string | null;
+    joinUrl: string | null;
+  };
+}): string {
+  const b = opts.booking;
+  const dateTime = formatDateTimeInTimezone(b.start, b.timezone);
+
+  let location: string;
+  if (b.locationType === "video" && b.joinUrl) {
+    location = escapeHtmlText(b.joinUrl);
+  } else if (b.locationType === "video") {
+    location = "Video call (link to follow)";
+  } else if (b.locationType === "in_person" && b.address) {
+    location = escapeHtmlText(b.address);
+  } else if (b.locationType === "phone") {
+    location = "Phone call";
+  } else {
+    location = "";
+  }
+
+  const heading = opts.kind === "rescheduled" ? "Booking rescheduled" : "Booking cancelled";
+
+  const row = (label: string, value?: string) =>
+    value && value.trim()
+      ? `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px;vertical-align:top;">${escapeHtmlText(
+          label,
+        )}</td><td style="padding:4px 0;color:#111827;font-size:13px;">${escapeHtmlText(value)}</td></tr>`
+      : "";
+
+  const body = `
+    <p style="font-size:15px;color:#111827;margin:0 0 12px;">${heading}</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+      ${row("Booker", b.bookerName)}
+      ${row("Email", b.bookerEmail)}
+      ${row("Meeting type", b.meetingTypeName)}
+      ${row("Date & time", dateTime)}
+      ${row("Location", location)}
+    </table>`;
+
+  return wrapTemplateHtml(body, opts.mcBusinessName);
+}
+
+/**
+ * Booker-facing reminder email sent the day before a confirmed booking.
+ * Time rendered in the booker's timezone; sent via the MC's connected mailbox
+ * (if available) or the shared Zebri address. Includes manage link for rescheduling.
+ */
+export function bookingReminderHtml(opts: {
+  bookerName: string;
+  meetingTypeName: string;
+  start: Date;
+  end: Date;
+  timezone: string;
+  locationType: "video" | "phone" | "in_person";
+  address: string | null;
+  joinUrl: string | null;
+  mcBusinessName: string;
+  manageUrl?: string;
+}): string {
+  const dateTime = formatDateTimeInTimezone(opts.start, opts.timezone);
+
+  let locationLine: string;
+  if (opts.locationType === "video" && opts.joinUrl) {
+    locationLine = `<a href="${escapeHtmlText(opts.joinUrl)}" style="color:#111827;font-weight:600;">${escapeHtmlText(opts.joinUrl)}</a>`;
+  } else if (opts.locationType === "video") {
+    locationLine = "Video call (link to follow)";
+  } else if (opts.locationType === "in_person" && opts.address) {
+    locationLine = escapeHtmlText(opts.address);
+  } else if (opts.locationType === "phone") {
+    locationLine = "Phone call";
+  } else {
+    locationLine = "";
+  }
+
+  const manageLink = opts.manageUrl
+    ? `<p style="margin:24px 0 0;font-size:14px;color:#6b7280;">
+        Need to reschedule? <a href="${escapeHtmlText(opts.manageUrl)}" style="color:#111827;font-weight:600;">Update your booking</a>
+      </p>`
+    : "";
+
+  const body = `
+    <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Reminder: meeting tomorrow</p>
+    <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${escapeHtmlText(opts.meetingTypeName)}</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+      Hi ${escapeHtmlText(opts.bookerName)},<br><br>
+      Your meeting with ${escapeHtmlText(opts.mcBusinessName)} is tomorrow. Here are the details.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 32px;">
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Date &amp; time</td><td style="padding:8px 0;color:#111827;font-size:13px;">${escapeHtmlText(dateTime)}</td></tr>
+      <tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Meeting type</td><td style="padding:8px 0;color:#111827;font-size:13px;">${escapeHtmlText(opts.meetingTypeName)}</td></tr>
+      ${locationLine ? `<tr><td style="padding:8px 12px 8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Location</td><td style="padding:8px 0;color:#111827;font-size:13px;">${locationLine}</td></tr>` : ""}
+    </table>
+    <p style="margin:0;font-size:14px;color:#6b7280;">
+      See you soon.
+    </p>${manageLink}`;
+
+  return wrapTemplateHtml(body, opts.mcBusinessName);
+}
