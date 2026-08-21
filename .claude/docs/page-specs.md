@@ -1878,10 +1878,9 @@ detail slide-over.
   churn rate, new signups; 12-week approximate series.
 - **Row 2 — Engagement:** activity strip (active last 7d / 30d, new
   this week) beside the **Gone quiet** list: paying or comped users
-  with no sign-in for 14+ days, highest tier first (`computeGoneQuiet`
-  in `user-value.ts`). Dormant = never started; gone quiet = revenue
-  at risk. Shadow mode refreshes the target's `last_sign_in_at`, so a
-  recently-shadowed user can look falsely active.
+  with no *activity* for 14+ days, highest tier first
+  (`computeGoneQuiet` in `user-value.ts`). Dormant = never started;
+  gone quiet = revenue at risk.
 - **Row 3 — operational lists:** upcoming renewals, past due, Connect
   issues.
 - **Row 4 — supporting lists:** dormant accounts, recent signups.
@@ -1892,16 +1891,42 @@ detail slide-over.
   searchable but not a column — it lives in the detail panel).
 - Columns: Name (+ admin badge), Business, Plan (effective plan today;
   cancelled ex-payers show Starter, comped users show their granted
-  plan with a "comped" suffix), Last sign-in (relative), Couples,
+  plan with a "comped" suffix), Last active (relative), Couples,
   Events, Invoices (count + $ collected from PAID invoices via the
   canonical `invoiceTotal()` math in `lib/payments/invoice-total.ts`),
   Templates (combined count across email / contract / invoice /
   questionnaire templates + packages), Automations, Signed up.
-- Default order: Max → Pro → Starter, then most recent sign-in
-  (`compareUsersByPlanThenSignIn`).
+- Default order: Max → Pro → Starter, then most recent activity
+  (`byPlanThenActivity(stats)`, a comparator factory, because the
+  activity timestamp lives in the stats map, not on `AdminUser`).
 - Per-user numbers come from `getAllUserStats()` — one paginated
   service-role pass over the activity tables, aggregated in TS (no
-  SQL migration required).
+  SQL migration required). It rides along on the `getAdminDashboard()`
+  result (`dashboard.userStats`) so the Users table and Gone quiet
+  read the same marks and the tables are scanned once, not twice.
+
+## Why "last active" is not "last sign-in"
+
+`auth.users.last_sign_in_at` is an **authentication-event** timestamp,
+not a last-seen one. GoTrue stamps it only when credentials are
+actually exchanged; a refresh-token rotation leaves it untouched
+(verified against GoTrue v2.189.0). Zebri sets neither `timebox` nor
+`inactivity_timeout` under `[auth.sessions]` in `supabase/config.toml`,
+and `middleware.ts` silently rotates the refresh token on every
+request, so a user who logged in once **never re-authenticates** and
+their `last_sign_in_at` freezes at their first-ever login.
+
+Reading it as an activity signal made the admin dashboard report the
+healthiest long-lived accounts as dormant. Both the Last active column
+and Gone quiet now read `UserStats.lastActiveAt`: the newest timestamp
+across the four activity surfaces (couples / events / invoices
+`created_at`, plus contracts `created_at` **and** `updated_at`), which
+is the same definition of "use" behind the active-7d / 30d strip.
+
+Tradeoff to remember: this measures **writes**. An MC who is fully
+booked and only ever reads their calendar will surface as gone quiet.
+Templates and automations deliberately do not count; owning a template
+is not using the product.
 
 ## Fixing a paying user who shows as free
 

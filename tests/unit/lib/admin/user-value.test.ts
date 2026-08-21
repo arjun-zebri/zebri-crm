@@ -5,16 +5,23 @@
  * paying tier first (a cancelled ex-Pro sorts as Starter), and the
  * gone-quiet list only ever contains paying or comped accounts —
  * a free user going quiet is not revenue at risk.
+ *
+ * Activity is measured from what a user has *written* (their most
+ * recent couple / event / invoice / contract), never from
+ * `auth.users.last_sign_in_at`. GoTrue only stamps that column on a
+ * real credential exchange, and Zebri sessions never expire, so a
+ * daily user's `last_sign_in_at` freezes at their first-ever login.
  */
 import { describe, expect, it } from 'vitest'
 
 import type { AdminUser } from '@/lib/admin/admin-analytics'
 import {
-  compareUsersByPlanThenSignIn,
+  byPlanThenActivity,
   computeGoneQuiet,
   effectivePlan,
   emptyUserStats,
   planRank,
+  type UserStats,
 } from '@/lib/admin/user-value'
 
 const NOW = new Date('2026-08-15T00:00:00Z').getTime()
@@ -61,6 +68,15 @@ const payingPro = (overrides: Partial<AdminUser> = {}) =>
     ...overrides,
   })
 
+/** Build the stats map the activity-aware helpers read from. */
+function statsMap(entries: Record<string, string | null>): Record<string, UserStats> {
+  const out: Record<string, UserStats> = {}
+  for (const [id, lastActiveAt] of Object.entries(entries)) {
+    out[id] = { ...emptyUserStats(), lastActiveAt }
+  }
+  return out
+}
+
 describe('effectivePlan / planRank', () => {
   it('ranks max above pro above starter', () => {
     expect(planRank(payingMax())).toBeLessThan(planRank(payingPro()))
@@ -82,71 +98,116 @@ describe('effectivePlan / planRank', () => {
   })
 })
 
-describe('compareUsersByPlanThenSignIn', () => {
-  it('orders by tier first, then most recent sign-in', () => {
-    const staleMax = payingMax({ id: 'stale-max', last_sign_in_at: daysAgo(60) })
-    const freshPro = payingPro({ id: 'fresh-pro', last_sign_in_at: daysAgo(1) })
-    const fresherPro = payingPro({ id: 'fresher-pro', last_sign_in_at: daysAgo(0) })
-    const starter = user({ id: 'starter', last_sign_in_at: daysAgo(0) })
+describe('emptyUserStats', () => {
+  it('reports no activity rather than pretending the user is fresh', () => {
+    expect(emptyUserStats().lastActiveAt).toBeNull()
+  })
+})
 
-    const sorted = [starter, freshPro, staleMax, fresherPro].sort(compareUsersByPlanThenSignIn)
+describe('byPlanThenActivity', () => {
+  it('orders by tier first, then most recent activity', () => {
+    const staleMax = payingMax({ id: 'stale-max' })
+    const freshPro = payingPro({ id: 'fresh-pro' })
+    const fresherPro = payingPro({ id: 'fresher-pro' })
+    const starter = user({ id: 'starter' })
+    const stats = statsMap({
+      'stale-max': daysAgo(60),
+      'fresh-pro': daysAgo(1),
+      'fresher-pro': daysAgo(0),
+      starter: daysAgo(0),
+    })
+
+    const sorted = [starter, freshPro, staleMax, fresherPro].sort(byPlanThenActivity(stats))
     expect(sorted.map((u) => u.id)).toEqual(['stale-max', 'fresher-pro', 'fresh-pro', 'starter'])
   })
 
-  it('puts never-signed-in users after signed-in ones within a tier', () => {
-    const never = payingPro({ id: 'never', last_sign_in_at: null })
-    const signed = payingPro({ id: 'signed', last_sign_in_at: daysAgo(300) })
-    expect([never, signed].sort(compareUsersByPlanThenSignIn).map((u) => u.id)).toEqual([
-      'signed',
+  it('puts never-active users after active ones within a tier', () => {
+    const never = payingPro({ id: 'never' })
+    const active = payingPro({ id: 'active' })
+    const stats = statsMap({ never: null, active: daysAgo(300) })
+    expect([never, active].sort(byPlanThenActivity(stats)).map((u) => u.id)).toEqual([
+      'active',
       'never',
+    ])
+  })
+
+  it('sorts a user with no stats entry at all as never-active', () => {
+    const missing = payingPro({ id: 'missing' })
+    const active = payingPro({ id: 'active' })
+    const stats = statsMap({ active: daysAgo(300) })
+    expect([missing, active].sort(byPlanThenActivity(stats)).map((u) => u.id)).toEqual([
+      'active',
+      'missing',
     ])
   })
 })
 
 describe('computeGoneQuiet', () => {
   it('includes only paying or comped users past the 14-day threshold', () => {
-    const quietPaying = payingPro({ id: 'quiet-paying', last_sign_in_at: daysAgo(20) })
-    const activePaying = payingPro({ id: 'active-paying', last_sign_in_at: daysAgo(2) })
-    const quietFree = user({ id: 'quiet-free', last_sign_in_at: daysAgo(90) })
+    const quietPaying = payingPro({ id: 'quiet-paying' })
+    const activePaying = payingPro({ id: 'active-paying' })
+    const quietFree = user({ id: 'quiet-free' })
     const quietComped = user({
       id: 'quiet-comped',
       subscription_status: 'active',
       subscription_plan: 'max',
       is_comped: true,
-      last_sign_in_at: daysAgo(30),
+    })
+    const stats = statsMap({
+      'quiet-paying': daysAgo(20),
+      'active-paying': daysAgo(2),
+      'quiet-free': daysAgo(90),
+      'quiet-comped': daysAgo(30),
     })
 
-    const quiet = computeGoneQuiet([quietPaying, activePaying, quietFree, quietComped], NOW)
+    const quiet = computeGoneQuiet(
+      [quietPaying, activePaying, quietFree, quietComped],
+      stats,
+      NOW,
+    )
     expect(quiet.map((r) => r.id)).toEqual(['quiet-comped', 'quiet-paying'])
-    expect(quiet[0]).toMatchObject({ plan: 'max', is_comped: true, daysSinceSignIn: 30 })
+    expect(quiet[0]).toMatchObject({ plan: 'max', is_comped: true, daysSinceActive: 30 })
   })
 
-  it('counts a paying user who never signed in as gone quiet', () => {
-    const never = payingMax({ id: 'never', last_sign_in_at: null })
-    const quiet = computeGoneQuiet([never], NOW)
+  it('does NOT flag a user whose sign-in is ancient but who is writing every day', () => {
+    // The original bug: this user logged in once in January and has
+    // never re-authenticated since (sessions never expire), so
+    // last_sign_in_at is 200 days stale — but they created a couple
+    // yesterday. They are the opposite of revenue at risk.
+    const workhorse = payingMax({ id: 'workhorse', last_sign_in_at: daysAgo(200) })
+    const quiet = computeGoneQuiet([workhorse], statsMap({ workhorse: daysAgo(1) }), NOW)
+    expect(quiet).toEqual([])
+  })
+
+  it('flags a user who signed in recently but has written nothing for a month', () => {
+    // The mirror case: a fresh sign-in is not evidence of use.
+    const lurker = payingMax({ id: 'lurker', last_sign_in_at: daysAgo(0) })
+    const quiet = computeGoneQuiet([lurker], statsMap({ lurker: daysAgo(30) }), NOW)
+    expect(quiet.map((r) => r.id)).toEqual(['lurker'])
+  })
+
+  it('counts a paying user who has never written anything as gone quiet', () => {
+    const never = payingMax({ id: 'never' })
+    const quiet = computeGoneQuiet([never], statsMap({ never: null }), NOW)
     expect(quiet).toHaveLength(1)
-    expect(quiet[0]).toMatchObject({ id: 'never', daysSinceSignIn: null })
+    expect(quiet[0]).toMatchObject({ id: 'never', daysSinceActive: null, lastActiveAt: null })
+  })
+
+  it('treats a user missing from the stats map as never active', () => {
+    const never = payingMax({ id: 'ghost' })
+    const quiet = computeGoneQuiet([never], {}, NOW)
+    expect(quiet.map((r) => r.id)).toEqual(['ghost'])
   })
 
   it('is exactly a 14-day boundary', () => {
-    const on = payingPro({ id: 'on-boundary', last_sign_in_at: daysAgo(14) })
-    const inside = payingPro({ id: 'inside', last_sign_in_at: daysAgo(13.9) })
-    const ids = computeGoneQuiet([on, inside], NOW).map((r) => r.id)
-    expect(ids).toEqual([])
-    const past = payingPro({ id: 'past', last_sign_in_at: daysAgo(14.1) })
-    expect(computeGoneQuiet([past], NOW).map((r) => r.id)).toEqual(['past'])
-  })
-})
+    const on = payingPro({ id: 'on-boundary' })
+    const inside = payingPro({ id: 'inside' })
+    const stats = statsMap({ 'on-boundary': daysAgo(14), inside: daysAgo(13.9) })
+    expect(computeGoneQuiet([on, inside], stats, NOW).map((r) => r.id)).toEqual([])
 
-describe('emptyUserStats', () => {
-  it('is all zeros', () => {
-    expect(emptyUserStats()).toEqual({
-      couples: 0,
-      events: 0,
-      invoices: 0,
-      paidTotal: 0,
-      templates: 0,
-      automations: 0,
-    })
+    const past = payingPro({ id: 'past' })
+    expect(
+      computeGoneQuiet([past], statsMap({ past: daysAgo(14.1) }), NOW).map((r) => r.id),
+    ).toEqual(['past'])
   })
 })

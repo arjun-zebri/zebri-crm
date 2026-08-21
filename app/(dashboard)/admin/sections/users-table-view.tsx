@@ -5,11 +5,7 @@ import { useMemo, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
 import type { AdminUser } from '@/lib/admin/admin-analytics';
-import {
-  compareUsersByPlanThenSignIn,
-  emptyUserStats,
-  type UserStats,
-} from '@/lib/admin/user-value';
+import { byPlanThenActivity, emptyUserStats, type UserStats } from '@/lib/admin/user-value';
 
 import { UsersTableRow } from './users-table-row';
 
@@ -18,7 +14,7 @@ import { UsersTableRow } from './users-table-row';
  * by email / business / display name (case-insensitive substring) as
  * the user types; email stays searchable even though it's no longer a
  * column (the detail panel shows it). Rows are ordered by plan tier
- * (Max → Pro → Starter), then most recent sign-in, so the highest
+ * (Max → Pro → Starter), then most recent activity, so the highest
  * value accounts sit at the top. Click a row → opens the user detail
  * panel.
  */
@@ -32,7 +28,7 @@ export function UsersTableView({
   onOpenUser: (userId: string) => void;
 }) {
   const [query, setQuery] = useState('');
-  // One clock reading per mount: relative "last sign-in" cells stay
+  // One clock reading per mount: relative "last active" cells stay
   // stable within a render and the render itself stays pure.
   const [now] = useState(() => Date.now());
   const filtered = useMemo(() => {
@@ -46,8 +42,8 @@ export function UsersTableView({
           );
         })
       : users;
-    return [...matched].sort(compareUsersByPlanThenSignIn);
-  }, [query, users]);
+    return [...matched].sort(byPlanThenActivity(stats));
+  }, [query, users, stats]);
 
   return (
     <div className="space-y-4">
@@ -73,7 +69,7 @@ export function UsersTableView({
                 <Th>Name</Th>
                 <Th>Business</Th>
                 <Th>Plan</Th>
-                <Th>Last sign-in</Th>
+                <Th>Last active</Th>
                 <Th align="right">Couples</Th>
                 <Th align="right">Events</Th>
                 <Th align="right">Invoices</Th>

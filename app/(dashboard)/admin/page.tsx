@@ -1,9 +1,5 @@
 import { PageHeader } from '@/components/ui/page-header';
-import {
-  getAdminDashboard,
-  getAllUserStats,
-  listUsersWithSubscription,
-} from '@/lib/admin/admin-analytics';
+import { getAdminDashboard, listUsersWithSubscription } from '@/lib/admin/admin-analytics';
 
 import { AdminDashboardView } from './admin-dashboard';
 
@@ -35,12 +31,16 @@ export const dynamic = 'force-dynamic';
  * still powers the email/business search bar and the per-user
  * detail panel). RLS-bypassing service-role queries inside both
  * helpers; the route is gated by middleware via `isAdmin(user)`.
+ *
+ * Per-user stats ride along on the dashboard result rather than
+ * being fetched separately: the Users table and the "gone quiet"
+ * list read the same `lastActiveAt` marks, so one pass keeps them
+ * consistent and halves the activity-table scanning.
  */
 export default async function AdminPage() {
-  const [users, dashboard, stats] = await Promise.all([
+  const [users, dashboard] = await Promise.all([
     listUsersWithSubscription(),
     getAdminDashboard(),
-    getAllUserStats(),
   ]);
 
   return (
@@ -49,7 +49,7 @@ export default async function AdminPage() {
         <PageHeader title="Admin" />
       </div>
 
-      <AdminDashboardView users={users} dashboard={dashboard} stats={stats} />
+      <AdminDashboardView users={users} dashboard={dashboard} stats={dashboard.userStats} />
     </div>
   );
 }

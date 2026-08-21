@@ -178,6 +178,26 @@ function statsFor(stats: Record<string, UserStats>, userId: string): UserStats {
 }
 
 /**
+ * Advance a user's `lastActiveAt` high-water mark.
+ *
+ * Compares parsed epoch values rather than raw strings: not every
+ * activity column is a `timestamptz`, so the serialised forms can
+ * differ in whether they carry an offset, which makes lexicographic
+ * comparison unsafe. Unparseable values are ignored rather than
+ * poisoning the mark with NaN.
+ */
+function markActive(entry: UserStats, ...timestamps: (string | null)[]): void {
+  for (const ts of timestamps) {
+    if (!ts) continue;
+    const ms = new Date(ts).getTime();
+    if (Number.isNaN(ms)) continue;
+    if (entry.lastActiveAt === null || ms > new Date(entry.lastActiveAt).getTime()) {
+      entry.lastActiveAt = ts;
+    }
+  }
+}
+
+/**
  * One service-role pass over every activity table, aggregated per
  * user in TypeScript (no SQL migration; mirrors the engagement-query
  * pattern above). Returned as a plain object keyed by user id so it
@@ -186,33 +206,56 @@ function statsFor(stats: Record<string, UserStats>, userId: string): UserStats {
 export async function getAllUserStats(): Promise<Record<string, UserStats>> {
   const admin = adminClient();
   const ownerRows = (table: OwnerCountTable) =>
-    fetchAllRows<{ user_id: string }>((from, to) =>
-      admin.from(table).select("user_id").range(from, to),
+    fetchAllRows<{ user_id: string; created_at: string | null }>((from, to) =>
+      admin.from(table).select("user_id, created_at").range(from, to),
     );
 
-  const [couples, events, invoices, automations, ...templateCounts] = await Promise.all([
-    ownerRows("couples"),
-    ownerRows("events"),
-    fetchAllRows<{
-      user_id: string;
-      paid_at: string | null;
-      subtotal: number;
-      tax_rate: number;
-      discount_type: string | null;
-      discount_value: number | null;
-    }>((from, to) =>
-      admin
-        .from("invoices")
-        .select("user_id, paid_at, subtotal, tax_rate, discount_type, discount_value")
-        .range(from, to),
-    ),
-    ownerRows("automations"),
-    ...TEMPLATE_TABLES.map((t) => ownerRows(t)),
-  ]);
+  const [couples, events, invoices, contracts, automations, ...templateCounts] =
+    await Promise.all([
+      ownerRows("couples"),
+      ownerRows("events"),
+      fetchAllRows<{
+        user_id: string;
+        created_at: string | null;
+        paid_at: string | null;
+        subtotal: number;
+        tax_rate: number;
+        discount_type: string | null;
+        discount_value: number | null;
+      }>((from, to) =>
+        admin
+          .from("invoices")
+          .select(
+            "user_id, created_at, paid_at, subtotal, tax_rate, discount_type, discount_value",
+          )
+          .range(from, to),
+      ),
+      // Contracts contribute no count column of their own, but they
+      // are one of the four activity surfaces, and (unlike couples /
+      // events / invoices) they carry `updated_at` — so re-signing or
+      // editing a contract registers as activity too.
+      fetchAllRows<{ user_id: string; created_at: string | null; updated_at: string | null }>(
+        (from, to) =>
+          admin.from("contracts").select("user_id, created_at, updated_at").range(from, to),
+      ),
+      ownerRows("automations"),
+      ...TEMPLATE_TABLES.map((t) => ownerRows(t)),
+    ]);
 
   const stats: Record<string, UserStats> = {};
-  for (const row of couples) statsFor(stats, row.user_id).couples++;
-  for (const row of events) statsFor(stats, row.user_id).events++;
+  for (const row of couples) {
+    const s = statsFor(stats, row.user_id);
+    s.couples++;
+    markActive(s, row.created_at);
+  }
+  for (const row of events) {
+    const s = statsFor(stats, row.user_id);
+    s.events++;
+    markActive(s, row.created_at);
+  }
+  for (const row of contracts) {
+    markActive(statsFor(stats, row.user_id), row.created_at, row.updated_at);
+  }
   for (const row of automations) statsFor(stats, row.user_id).automations++;
   for (const rows of templateCounts) {
     for (const row of rows) statsFor(stats, row.user_id).templates++;
@@ -220,6 +263,7 @@ export async function getAllUserStats(): Promise<Record<string, UserStats>> {
   for (const inv of invoices) {
     const s = statsFor(stats, inv.user_id);
     s.invoices++;
+    markActive(s, inv.created_at);
     if (inv.paid_at) {
       s.paidTotal += invoiceTotal({
         subtotal: inv.subtotal,
@@ -387,6 +431,13 @@ export interface AdminDashboard {
   connectIssues: ConnectIssue[];
   dormantUsers: DormantUser[];
   goneQuietUsers: GoneQuietUser[];
+  /**
+   * Per-user value stats, keyed by user id. Computed here rather than
+   * fetched separately by the page: `goneQuietUsers` is derived from
+   * the same `lastActiveAt` marks, so sharing one pass keeps the two
+   * consistent and avoids scanning every activity table twice.
+   */
+  userStats: Record<string, UserStats>;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -832,10 +883,11 @@ function computeRecentSignups(users: AdminUser[], limit = 6): RecentSignup[] {
  */
 export async function getAdminDashboard(): Promise<AdminDashboard> {
   const now = Date.now();
-  const [users, engagementCounts, connectIssues] = await Promise.all([
+  const [users, engagementCounts, connectIssues, userStats] = await Promise.all([
     listUsersWithSubscription(),
     loadEngagementSets(),
     loadConnectIssues(),
+    getAllUserStats(),
   ]);
   const buckets = weeklyBuckets(new Date(now));
   const signupsSeries = computeSignupsSeries(users, buckets);
@@ -862,6 +914,7 @@ export async function getAdminDashboard(): Promise<AdminDashboard> {
     pastDueUsers: computePastDue(users),
     connectIssues,
     dormantUsers: computeDormantUsers(users, engagementCounts, now),
-    goneQuietUsers: computeGoneQuiet(users, now),
+    goneQuietUsers: computeGoneQuiet(users, userStats, now),
+    userStats,
   };
 }

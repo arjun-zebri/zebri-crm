@@ -16,7 +16,7 @@ const PLAN_LABEL: Record<GoneQuietUser['plan'], string> = {
 /**
  * Engagement — who is actually using the product. An activity strip
  * (7d / 30d actives, dormant, new signups) next to the "gone quiet"
- * list: paying or comped users with no sign-in for 14+ days, highest
+ * list: paying or comped users with no activity for 14+ days, highest
  * tier first. Dormant = never started; gone quiet = revenue at risk.
  */
 export function EngagementSection({
@@ -54,7 +54,7 @@ export function EngagementSection({
         </div>
         {goneQuiet.length === 0 ? (
           <p className="text-body text-text-subtle py-4">
-            Every paying account has signed in within the last 14 days.
+            Every paying account has been active within the last 14 days.
           </p>
         ) : (
           <ul className="flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-1 space-y-2">
@@ -74,9 +74,9 @@ export function EngagementSection({
                   </p>
                 </div>
                 <span className="text-body text-text-subtle shrink-0">
-                  {row.last_sign_in_at
-                    ? formatRelativeTime(row.last_sign_in_at, now)
-                    : 'never signed in'}
+                  {row.lastActiveAt
+                    ? formatRelativeTime(row.lastActiveAt, now)
+                    : 'never active'}
                 </span>
               </li>
             ))}

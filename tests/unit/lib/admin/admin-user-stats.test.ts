@@ -7,6 +7,12 @@
  * `paidTotal` (using the canonical `invoiceTotal` math), and the
  * page loop drains tables past the 1000-row PostgREST response cap
  * instead of silently truncating.
+ *
+ * It also computes `lastActiveAt` — the high-water mark across the
+ * four activity surfaces (couples / events / invoices / contracts).
+ * That is what the admin dashboard reads as "last active"; GoTrue's
+ * `last_sign_in_at` is not an activity signal (it never moves on a
+ * token refresh, and Zebri sessions never expire).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,11 +34,15 @@ vi.mock('@supabase/supabase-js', () => ({
 
 import { getAllUserStats } from '@/lib/admin/admin-analytics'
 
-const owned = (userId: string) => ({ user_id: userId })
+const owned = (userId: string, created_at: string | null = null) => ({
+  user_id: userId,
+  created_at,
+})
 
 function invoice(
   userId: string,
   overrides: Partial<{
+    created_at: string | null
     paid_at: string | null
     subtotal: number
     tax_rate: number
@@ -42,6 +52,7 @@ function invoice(
 ) {
   return {
     user_id: userId,
+    created_at: null,
     paid_at: null,
     subtotal: 0,
     tax_rate: 0,
@@ -77,6 +88,7 @@ describe('getAllUserStats', () => {
       paidTotal: 0,
       templates: 4,
       automations: 0,
+      lastActiveAt: null,
     })
     expect(stats.b).toEqual({
       couples: 1,
@@ -85,6 +97,7 @@ describe('getAllUserStats', () => {
       paidTotal: 0,
       templates: 1,
       automations: 2,
+      lastActiveAt: null,
     })
   })
 
@@ -125,5 +138,51 @@ describe('getAllUserStats', () => {
     tables = { couples: Array.from({ length: 2500 }, () => owned('busy')) }
     const stats = await getAllUserStats()
     expect(stats.busy?.couples).toBe(2500)
+  })
+})
+
+describe('getAllUserStats — lastActiveAt', () => {
+  it('takes the newest timestamp across every activity surface', async () => {
+    tables = {
+      couples: [owned('a', '2026-01-01T00:00:00Z')],
+      events: [owned('a', '2026-06-05T00:00:00Z')],
+      invoices: [invoice('a', { created_at: '2026-03-01T00:00:00Z' })],
+      contracts: [{ user_id: 'a', created_at: '2026-02-01T00:00:00Z', updated_at: null }],
+    }
+    const stats = await getAllUserStats()
+    expect(stats.a?.lastActiveAt).toBe('2026-06-05T00:00:00Z')
+  })
+
+  it('counts a contract EDIT, not just its creation', async () => {
+    tables = {
+      couples: [owned('a', '2026-01-01T00:00:00Z')],
+      contracts: [
+        {
+          user_id: 'a',
+          created_at: '2026-01-02T00:00:00Z',
+          updated_at: '2026-07-30T00:00:00Z',
+        },
+      ],
+    }
+    const stats = await getAllUserStats()
+    expect(stats.a?.lastActiveAt).toBe('2026-07-30T00:00:00Z')
+  })
+
+  it('ignores template and automation rows — owning a template is not activity', async () => {
+    tables = {
+      couples: [owned('a', '2026-01-01T00:00:00Z')],
+      automations: [owned('a', '2026-09-01T00:00:00Z')],
+      email_templates: [owned('a', '2026-09-02T00:00:00Z')],
+    }
+    const stats = await getAllUserStats()
+    expect(stats.a?.lastActiveAt).toBe('2026-01-01T00:00:00Z')
+  })
+
+  it('ignores unparseable timestamps rather than poisoning the mark', async () => {
+    tables = {
+      couples: [owned('a', 'not-a-date'), owned('a', '2026-04-04T00:00:00Z')],
+    }
+    const stats = await getAllUserStats()
+    expect(stats.a?.lastActiveAt).toBe('2026-04-04T00:00:00Z')
   })
 })

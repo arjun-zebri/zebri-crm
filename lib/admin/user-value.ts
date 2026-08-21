@@ -28,11 +28,39 @@ export interface UserStats {
   /** Combined count across every template type (email / contract / invoice / questionnaire / package). */
   templates: number;
   automations: number;
+  /**
+   * ISO timestamp of this user's most recent write across the
+   * activity surfaces (couple / event / invoice / contract), or null
+   * if they have never written anything.
+   *
+   * This — not `AdminUser.last_sign_in_at` — is the admin dashboard's
+   * "are they still using Zebri?" signal. See
+   * {@link computeGoneQuiet} for why.
+   */
+  lastActiveAt: string | null;
 }
 
 /** All-zero stats for users with no rows in any activity table. */
 export function emptyUserStats(): UserStats {
-  return { couples: 0, events: 0, invoices: 0, paidTotal: 0, templates: 0, automations: 0 };
+  return {
+    couples: 0,
+    events: 0,
+    invoices: 0,
+    paidTotal: 0,
+    templates: 0,
+    automations: 0,
+    lastActiveAt: null,
+  };
+}
+
+/**
+ * This user's last-activity timestamp in epoch ms, or 0 when they
+ * have never been active (or have no stats row at all, which means
+ * the same thing: no rows in any activity table).
+ */
+function lastActiveMs(stats: Record<string, UserStats>, userId: string): number {
+  const iso = stats[userId]?.lastActiveAt;
+  return iso ? new Date(iso).getTime() : 0;
 }
 
 /**
@@ -75,16 +103,26 @@ export function planRank(
 
 /**
  * Default Users-table order: highest tier first, then most recent
- * sign-in (never-signed-in last), then newest signup as a stable
+ * activity (never-active last), then newest signup as a stable
  * tiebreak.
+ *
+ * Returns a comparator rather than being one, because the activity
+ * timestamp lives in the stats map keyed by user id, not on
+ * `AdminUser` itself.
+ *
+ * @param stats - per-user stats from `getAllUserStats()`.
  */
-export function compareUsersByPlanThenSignIn(a: AdminUser, b: AdminUser): number {
-  const tier = planRank(a) - planRank(b);
-  if (tier !== 0) return tier;
-  const aSignIn = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0;
-  const bSignIn = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0;
-  if (aSignIn !== bSignIn) return bSignIn - aSignIn;
-  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+export function byPlanThenActivity(
+  stats: Record<string, UserStats>,
+): (a: AdminUser, b: AdminUser) => number {
+  return (a, b) => {
+    const tier = planRank(a) - planRank(b);
+    if (tier !== 0) return tier;
+    const aActive = lastActiveMs(stats, a.id);
+    const bActive = lastActiveMs(stats, b.id);
+    if (aActive !== bActive) return bActive - aActive;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  };
 }
 
 export interface GoneQuietUser {
@@ -93,43 +131,67 @@ export interface GoneQuietUser {
   business_name: string;
   plan: "max" | "pro" | "starter";
   is_comped: boolean;
-  /** Null = never signed in at all. */
-  last_sign_in_at: string | null;
-  /** Whole days since the last sign-in; null when they never signed in. */
-  daysSinceSignIn: number | null;
+  /** Null = never wrote anything at all. */
+  lastActiveAt: string | null;
+  /** Whole days since the last write; null when they were never active. */
+  daysSinceActive: number | null;
 }
 
-/** Days without a sign-in before a paying user counts as "gone quiet". */
+/** Days without activity before a paying user counts as "gone quiet". */
 const GONE_QUIET_DAYS = 14;
 
 /**
- * Paying or comped users who haven't signed in for 14+ days —
- * revenue at risk. Distinct from dormant (dormant = never started;
- * gone quiet = was in, stopped coming back). Highest tier first so
- * the most valuable at-risk accounts surface at the top.
+ * Paying or comped users with no activity for 14+ days — revenue at
+ * risk. Distinct from dormant (dormant = never started; gone quiet =
+ * was in, stopped coming back). Highest tier first so the most
+ * valuable at-risk accounts surface at the top.
  *
- * Caveat: entering shadow mode signs the admin in AS the user via
- * OTP, which refreshes their `last_sign_in_at` — a recently-shadowed
- * user can look falsely active for a while.
+ * Activity means a **write** (their most recent couple / event /
+ * invoice / contract), deliberately *not* `last_sign_in_at`. GoTrue
+ * only stamps `last_sign_in_at` when credentials are actually
+ * exchanged; a refresh-token rotation leaves it untouched. Zebri sets
+ * neither `timebox` nor `inactivity_timeout` on sessions, so a user
+ * who logged in once never re-authenticates and their sign-in
+ * timestamp freezes at their first-ever login. Reading it as an
+ * activity signal filled this list with the healthiest long-lived
+ * accounts. It also removes the old shadow-mode caveat: shadowing a
+ * user signs them in via OTP, which used to make them look falsely
+ * active here.
+ *
+ * The tradeoff: a user who only ever *reads* (checking their calendar,
+ * say) writes nothing and will surface as gone quiet.
+ *
+ * @param users - every user from `listUsersWithSubscription()`.
+ * @param stats - per-user stats from `getAllUserStats()`; a missing
+ *   entry counts as never active.
+ * @param now - clock reading in epoch ms.
  */
-export function computeGoneQuiet(users: AdminUser[], now: number): GoneQuietUser[] {
+export function computeGoneQuiet(
+  users: AdminUser[],
+  stats: Record<string, UserStats>,
+  now: number,
+): GoneQuietUser[] {
   const cutoff = now - GONE_QUIET_DAYS * MS_PER_DAY;
   return users
     .filter((u) => {
       if (!isPayingActive(u) && !u.is_comped) return false;
-      if (!u.last_sign_in_at) return true;
-      return new Date(u.last_sign_in_at).getTime() < cutoff;
+      const active = lastActiveMs(stats, u.id);
+      if (!active) return true;
+      return active < cutoff;
     })
-    .sort(compareUsersByPlanThenSignIn)
-    .map((u) => ({
-      id: u.id,
-      email: u.email,
-      business_name: u.business_name,
-      plan: effectivePlan(u),
-      is_comped: u.is_comped,
-      last_sign_in_at: u.last_sign_in_at,
-      daysSinceSignIn: u.last_sign_in_at
-        ? Math.floor((now - new Date(u.last_sign_in_at).getTime()) / MS_PER_DAY)
-        : null,
-    }));
+    .sort(byPlanThenActivity(stats))
+    .map((u) => {
+      const lastActiveAt = stats[u.id]?.lastActiveAt ?? null;
+      return {
+        id: u.id,
+        email: u.email,
+        business_name: u.business_name,
+        plan: effectivePlan(u),
+        is_comped: u.is_comped,
+        lastActiveAt,
+        daysSinceActive: lastActiveAt
+          ? Math.floor((now - new Date(lastActiveAt).getTime()) / MS_PER_DAY)
+          : null,
+      };
+    });
 }

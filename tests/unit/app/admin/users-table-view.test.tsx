@@ -2,9 +2,14 @@
  * Admin Users table (`app/(dashboard)/admin/sections/users-table-view`).
  *
  * The redesign contracts: Email and Status are no longer columns
- * (email stays searchable), Last sign-in and the value-metric columns
+ * (email stays searchable), Last active and the value-metric columns
  * are, and rows order by plan tier (Max → Pro → Starter) with the
- * most recent sign-in first within a tier.
+ * most recent activity first within a tier.
+ *
+ * "Last active" comes from the stats map (their most recent write),
+ * never from `last_sign_in_at` — the fixtures below deliberately give
+ * every user a stale or absent sign-in timestamp so a regression back
+ * to that field shows up here.
  */
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
@@ -67,7 +72,15 @@ const USERS: AdminUser[] = [
 ]
 
 const STATS: Record<string, UserStats> = {
-  max: { couples: 12, events: 8, invoices: 5, paidTotal: 4300, templates: 3, automations: 2 },
+  max: {
+    couples: 12,
+    events: 8,
+    invoices: 5,
+    paidTotal: 4300,
+    templates: 3,
+    automations: 2,
+    lastActiveAt: daysAgo(2),
+  },
 }
 
 function renderTable(onOpenUser = vi.fn()) {
@@ -82,7 +95,7 @@ describe('UsersTableView', () => {
       'Name',
       'Business',
       'Plan',
-      'Last sign-in',
+      'Last active',
       'Couples',
       'Events',
       'Invoices',
@@ -96,7 +109,7 @@ describe('UsersTableView', () => {
     expect(screen.queryByRole('columnheader', { name: 'Status' })).not.toBeInTheDocument()
   })
 
-  it('orders rows Max → Pro → Starter regardless of sign-in recency', () => {
+  it('orders rows Max → Pro → Starter regardless of activity recency', () => {
     renderTable()
     const [, ...bodyRows] = screen.getAllByRole('row')
     const names = bodyRows.map((row) => within(row).getAllByRole('cell')[0]?.textContent)
@@ -112,6 +125,15 @@ describe('UsersTableView', () => {
     // Couples / Events / Invoices / Templates / Automations all zero.
     expect(starterCells.map((c) => c.textContent).slice(4, 9)).toEqual(['0', '0', '0', '0', '0'])
     expect(emptyUserStats().paidTotal).toBe(0)
+  })
+
+  it('reads Last active from the stats map, not from last_sign_in_at', () => {
+    renderTable()
+    const [, maxRow, , starterRow] = screen.getAllByRole('row')
+    // Mia's only activity mark is 2 days old; her sign-in is 30 days old.
+    expect(within(maxRow!).getAllByRole('cell')[3]).toHaveTextContent('2d ago')
+    // Sam signed in yesterday but has never written anything.
+    expect(within(starterRow!).getAllByRole('cell')[3]).toHaveTextContent('never')
   })
 
   it('still finds users by email through the search box', () => {
