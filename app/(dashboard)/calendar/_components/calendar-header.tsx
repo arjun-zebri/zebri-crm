@@ -14,6 +14,9 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MenuItem, MenuPanel } from "@/components/ui/menu";
 import { zonedDateParts } from "@/lib/scheduling/timezone";
+import type { CoupleStatusRecord } from "@/types/couple";
+
+import { CalendarStatusFilter } from "./calendar-status-filter";
 
 const MONTHS = [
   "January",
@@ -114,16 +117,24 @@ interface CalendarHeaderProps {
   isMobile: boolean;
   onSidebarOpen: () => void;
   timezone?: string;
+  /** The MC's couple statuses, for the Statuses filter. */
+  statuses: CoupleStatusRecord[];
+  /** Ticked status slugs, or `null` when no filter is applied. */
+  activeStatuses: Set<string> | null;
+  /** Toggle one status slug in the filter. */
+  onToggleStatus: (slug: string) => void;
 }
 
 /**
  * Header with navigation and view controls.
- * Desktop: today, prev/next, the date label and the view switcher.
- * Mobile: adds a hamburger button for the sidebar.
+ * Desktop: today, prev/next, the date label, the Statuses filter and the view
+ * switcher. Mobile: adds a hamburger button for the sidebar.
  *
  * There are no per-layer visibility toggles. Bookings, weddings and external
  * busy time are all things the MC has committed to, so hiding one is a way to
- * miss it; the three switches only offered new ways to be surprised.
+ * miss it; the three switches only offered new ways to be surprised. The
+ * Statuses filter is a different thing: it narrows the wedding pipeline layer
+ * to the stages the MC is working, and never hides a booking or a busy block.
  */
 export function CalendarHeader({
   currentDate,
@@ -135,6 +146,9 @@ export function CalendarHeader({
   isMobile,
   onSidebarOpen,
   timezone = 'UTC',
+  statuses,
+  activeStatuses,
+  onToggleStatus,
 }: CalendarHeaderProps) {
   const getHeaderLabel = (): string => {
     const tz = timezone || 'UTC';
@@ -256,8 +270,13 @@ export function CalendarHeader({
         </Button>
       </div>
 
-      {/* Right: Layer toggles + View dropdown */}
+      {/* Right: Status filter + View dropdown */}
       <div className="flex items-center gap-2">
+        <CalendarStatusFilter
+          statuses={statuses}
+          activeStatuses={activeStatuses}
+          onToggle={onToggleStatus}
+        />
         <ViewDropdown
           view={calendarView}
           onChange={onViewChange}

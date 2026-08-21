@@ -55,7 +55,15 @@ import { sendAlert } from '@/lib/alerts/send-alert';
 import { inMemoryLimiter, type Limiter } from './rate-limit';
 
 /** Surfaces gated by this limiter. Identifies the route in alerts. */
-export type PublicSurface = 'invoice' | 'quote' | 'portal' | 'contract' | 'lead' | 'slots';
+export type PublicSurface =
+  | 'invoice'
+  | 'quote'
+  | 'portal'
+  | 'contract'
+  | 'lead'
+  | 'slots'
+  | 'booking'
+  | 'manage';
 
 export interface RecordResult {
   /** True if the request is under both thresholds. */

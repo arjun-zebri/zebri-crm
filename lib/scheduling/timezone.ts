@@ -41,6 +41,23 @@ function tzOffsetMinutes(utcDate: Date, timeZone: string): number {
  * wrong side of a DST boundary, so the offset is re-read at the corrected
  * instant.
  */
+/**
+ * Add whole days to a YYYY-MM-DD date string with calendar arithmetic.
+ *
+ * Why this exists: "the next local day" must never be computed by adding
+ * 24 hours to a local-midnight instant. A DST fall-back day is 25 hours
+ * long, so midnight + 24h is still 23:00 on the SAME local date; calendar
+ * arithmetic on the date string is immune to offset changes.
+ *
+ * @param date - date string in YYYY-MM-DD form
+ * @param days - whole days to add (may be negative)
+ * @returns the shifted date string in YYYY-MM-DD form
+ */
+export function addDaysToDateString(date: string, days: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(Date.UTC(year!, month! - 1, day! + days)).toISOString().slice(0, 10);
+}
+
 export function zonedTimeToUtc(date: string, time: string, timeZone: string): Date {
   const [y, m, d] = date.split('-').map(Number);
   const [hh, mm] = time.split(':').map(Number);

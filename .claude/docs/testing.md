@@ -265,7 +265,7 @@ tests/e2e/
 ├── couple-profile.spec.ts    # Profile tabs: Overview, Events, Vendors, Tasks (12 tests)
 ├── vendors.spec.ts           # Vendor list, CRUD, keyboard shortcuts (15 tests)
 ├── kanban.spec.ts            # Board view columns, cards, drag-add (8 tests)
-├── calendar.spec.ts          # Calendar navigation, views, search (8 tests)
+├── calendar.spec.ts          # Calendar navigation, views, Statuses filter (8 tests)
 ├── navigation.spec.ts        # Dashboard, sidebar nav, sign out (10 tests)
 ├── mobile.spec.ts            # Pixel 5 + iPhone 12 layouts (12 tests)
 ├── branding-onboarding.spec.ts    # First-run wizard, surface tabs, preview (9 tests)

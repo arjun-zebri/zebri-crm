@@ -390,6 +390,69 @@ describe('Manage booking page', () => {
       )
     })
 
+    it('fires only one reschedule POST when submit is invoked again mid-flight', async () => {
+      const globalFetch = global.fetch as any
+      let rescheduleCalls = 0
+      let resolveReschedule: (() => void) | undefined
+      globalFetch.mockImplementation(async (url: string | URL) => {
+        const urlStr = typeof url === 'string' ? url : url.href
+        if (urlStr.includes('/api/booking/slots')) {
+          return jsonResponse(200, {
+            slots: mockSlots,
+            timezone: 'Australia/Sydney',
+            durationMinutes: 30,
+          })
+        }
+        if (urlStr.includes('/api/booking/reschedule')) {
+          rescheduleCalls += 1
+          // Hold the response open so the second invocation happens in flight.
+          return new Promise<Response>((resolve) => {
+            resolveReschedule = () => resolve(jsonResponse(200, { ok: true }))
+          })
+        }
+        return jsonResponse(200, { data: null })
+      })
+
+      const { result } = renderHook(() => useManageBooking('test-manage-token'))
+
+      await waitFor(() => {
+        expect(result.current.state).toBe('active')
+      })
+
+      act(() => {
+        result.current.openReschedule()
+      })
+
+      const newSlot = mockSlots[0]
+      if (!newSlot) return
+
+      act(() => {
+        result.current.selectNewSlot(newSlot)
+      })
+
+      let firstSubmit: Promise<void> | undefined
+      act(() => {
+        firstSubmit = result.current.submitReschedule()
+      })
+
+      expect(result.current.submitting).toBe(true)
+
+      // A re-render or effect re-run while the request is in flight must not
+      // fire a second POST (duplicate emails + calendar pushes).
+      await act(async () => {
+        await result.current.submitReschedule()
+      })
+
+      expect(rescheduleCalls).toBe(1)
+
+      resolveReschedule?.()
+      await act(async () => {
+        await firstSubmit
+      })
+
+      expect(result.current.state).toBe('rescheduled')
+    })
+
     it('should return to picker with notice on 409 slot_taken', async () => {
       let slotsFetchCount = 0
 

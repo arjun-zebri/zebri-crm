@@ -137,6 +137,110 @@ describe('RLS: bookings tenant isolation', () => {
     });
   });
 
+  // Foreign keys are checked with elevated privileges and ignore RLS, so
+  // owning the booking row is necessary but not sufficient: the couple and
+  // meeting type it points at have to be the writer's too. Without the
+  // WITH CHECK clauses userB could file a booking they own against userA's
+  // couple, which links across tenants and confirms the id exists.
+  describe('Parent ownership (FKs ignore RLS)', () => {
+    let meetingTypeBId: string;
+
+    beforeAll(async () => {
+      const { data, error } = await userB.client
+        .from('meeting_types')
+        .insert({ user_id: userB.id, name: 'Consultation', duration_minutes: 30 })
+        .select('id')
+        .single();
+      expect(error).toBeNull();
+      meetingTypeBId = data!.id;
+    });
+
+    it('rejects an own-user booking that references another tenant\'s couple', async () => {
+      const { error } = await userB.client.from('bookings').insert({
+        user_id: userB.id,
+        meeting_type_id: meetingTypeBId,
+        couple_id: coupleAId,
+        name: 'Cross tenant',
+        email: 'cross@example.com',
+        starts_at: '2027-01-05T10:00:00Z',
+        ends_at: '2027-01-05T10:30:00Z',
+        timezone: 'Australia/Sydney',
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('rejects an own-user booking that references another tenant\'s meeting type', async () => {
+      const { error } = await userB.client.from('bookings').insert({
+        user_id: userB.id,
+        meeting_type_id: meetingTypeAId,
+        name: 'Cross tenant',
+        email: 'cross@example.com',
+        starts_at: '2027-01-05T11:00:00Z',
+        ends_at: '2027-01-05T11:30:00Z',
+        timezone: 'Australia/Sydney',
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('rejects repointing an own booking onto another tenant\'s couple', async () => {
+      const { data: mine, error: insertError } = await userB.client
+        .from('bookings')
+        .insert({
+          user_id: userB.id,
+          meeting_type_id: meetingTypeBId,
+          name: 'Mine',
+          email: 'mine@example.com',
+          starts_at: '2027-01-06T10:00:00Z',
+          ends_at: '2027-01-06T10:30:00Z',
+          timezone: 'Australia/Sydney',
+        })
+        .select('id')
+        .single();
+      expect(insertError).toBeNull();
+
+      const { error } = await userB.client
+        .from('bookings')
+        .update({ couple_id: coupleAId })
+        .eq('id', mine!.id);
+      expect(error).not.toBeNull();
+    });
+
+    it('accepts a booking whose couple and meeting type are both the writer\'s', async () => {
+      const { data: coupleB, error: coupleError } = await userB.client
+        .from('couples')
+        .insert({ user_id: userB.id, name: 'B Couple', email: 'b@test.com', phone: '0400000000' })
+        .select('id')
+        .single();
+      expect(coupleError).toBeNull();
+
+      const { error } = await userB.client.from('bookings').insert({
+        user_id: userB.id,
+        meeting_type_id: meetingTypeBId,
+        couple_id: coupleB!.id,
+        name: 'Legit',
+        email: 'legit@example.com',
+        starts_at: '2027-01-07T10:00:00Z',
+        ends_at: '2027-01-07T10:30:00Z',
+        timezone: 'Australia/Sydney',
+      });
+      expect(error).toBeNull();
+    });
+
+    it('accepts a booking with no couple attached', async () => {
+      const { error } = await userB.client.from('bookings').insert({
+        user_id: userB.id,
+        meeting_type_id: meetingTypeBId,
+        couple_id: null,
+        name: 'No couple yet',
+        email: 'nocouple@example.com',
+        starts_at: '2027-01-08T10:00:00Z',
+        ends_at: '2027-01-08T10:30:00Z',
+        timezone: 'Australia/Sydney',
+      });
+      expect(error).toBeNull();
+    });
+  });
+
   describe('Exclusion constraint', () => {
     it('rejects overlapping confirmed bookings for the same user', async () => {
       const { error } = await serviceClient()

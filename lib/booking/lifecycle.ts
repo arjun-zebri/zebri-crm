@@ -53,6 +53,48 @@ async function mcDisplayTimezone(
 }
 
 /**
+ * The meeting type's location fields, for the cancel / reschedule emails.
+ *
+ * Scoped by id AND user_id. This used to match on `name` alone with the
+ * service-role client, which ignores RLS: `meeting_types.name` has no
+ * uniqueness constraint and "Consultation" is the default template name, so
+ * that read could pick up another tenant's row and put their venue address in
+ * a booker's inbox, or match several rows and silently fall back to a wrong
+ * "in person" with no address. Returns the fallback when the id is missing
+ * (an older RPC payload) or the row cannot be read.
+ */
+async function meetingTypeLocation(
+  admin: SupabaseClient<Database>,
+  userId: string,
+  meetingTypeId: string | undefined,
+): Promise<{ locationType: 'video' | 'phone' | 'in_person'; address: string | null }> {
+  const fallback = { locationType: 'in_person' as const, address: null };
+  if (!meetingTypeId) return fallback;
+  try {
+    const { data, error } = await admin
+      .from('meeting_types')
+      .select('location_type, address')
+      .eq('id', meetingTypeId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) {
+      logger.error('[booking/lifecycle] meeting type fetch failed', { message: error.message });
+      return fallback;
+    }
+    if (!data) return fallback;
+    return {
+      locationType: (data.location_type as 'video' | 'phone' | 'in_person') || 'in_person',
+      address: data.address || null,
+    };
+  } catch (err) {
+    logger.error('[booking/lifecycle] meeting type fetch unexpected error', {
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return fallback;
+  }
+}
+
+/**
  * Result shape from the `cancel_booking` RPC. Extracted for use by both
  * the public route and authenticated dashboard.
  */
@@ -68,6 +110,9 @@ export interface CancelRpcResult {
   email?: string;
   business_name?: string;
   external_event_ids?: Record<string, string>;
+  /** Resolves the meeting type without a cross-tenant name lookup. */
+  meeting_type_id?: string;
+  video_join_url?: string | null;
   meeting_type_name?: string;
 }
 
@@ -88,6 +133,9 @@ export interface RescheduleRpcResult {
   email?: string;
   business_name?: string;
   external_event_ids?: Record<string, string>;
+  /** Resolves the meeting type without a cross-tenant name lookup. */
+  meeting_type_id?: string;
+  video_join_url?: string | null;
   meeting_type_name?: string;
 }
 
@@ -141,24 +189,12 @@ export async function completeCancellation(
     }
   }
 
-  // Fetch meeting type location info for emails.
-  let locationType: 'video' | 'phone' | 'in_person' = 'in_person';
-  let address: string | null = null;
-
-  try {
-    const { data: meetingType } = await admin
-      .from('meeting_types')
-      .select('location_type, address')
-      .eq('name', meetingTypeName)
-      .single();
-
-    locationType = (meetingType?.location_type as 'video' | 'phone' | 'in_person') || 'in_person';
-    address = meetingType?.address || null;
-  } catch (err) {
-    logger.error('[booking/lifecycle] meeting type fetch failed', {
-      message: err instanceof Error ? err.message : String(err),
-    });
-  }
+  // Meeting type location info for the emails, scoped to this MC.
+  const { locationType, address } = await meetingTypeLocation(
+    admin,
+    userId,
+    result.meeting_type_id,
+  );
 
   // Send cancellation email to the booker. Non-blocking.
   try {
@@ -216,6 +252,7 @@ export async function completeCancellation(
           timezone: mcTimezone,
           locationType,
           address,
+          // Deliberately null on a cancellation: there is nothing left to join.
           joinUrl: null,
         },
       });
@@ -284,24 +321,17 @@ export async function completeReschedule(
     }
   }
 
-  // Fetch meeting type location info for emails.
-  let locationType: 'video' | 'phone' | 'in_person' = 'in_person';
-  let address: string | null = null;
+  // Meeting type location info for the emails, scoped to this MC.
+  const { locationType, address } = await meetingTypeLocation(
+    admin,
+    userId,
+    result.meeting_type_id,
+  );
 
-  try {
-    const { data: meetingType } = await admin
-      .from('meeting_types')
-      .select('location_type, address')
-      .eq('name', meetingTypeName)
-      .single();
-
-    locationType = (meetingType?.location_type as 'video' | 'phone' | 'in_person') || 'in_person';
-    address = meetingType?.address || null;
-  } catch (err) {
-    logger.error('[booking/lifecycle] meeting type fetch failed', {
-      message: err instanceof Error ? err.message : String(err),
-    });
-  }
+  // Rescheduling moves the times in place, so the meeting keeps whatever
+  // video link it was minted with. Passing null here told a couple whose Meet
+  // link had not changed that a link was still "to follow".
+  const joinUrl = result.video_join_url ?? null;
 
   // Send reschedule email to the booker. Non-blocking.
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -320,7 +350,7 @@ export async function completeReschedule(
       timezone,
       locationType,
       address,
-      joinUrl: null,
+      joinUrl,
       manageUrl: manageUrlValue,
     });
   } catch (err) {
@@ -364,7 +394,7 @@ export async function completeReschedule(
           timezone: mcTimezone,
           locationType,
           address,
-          joinUrl: null,
+          joinUrl,
         },
       });
     } catch (err) {

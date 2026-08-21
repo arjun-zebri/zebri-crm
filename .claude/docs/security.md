@@ -208,7 +208,7 @@ Backs the public `/book/manage/[manage_token]` page for booker self-service cont
 
 Two RPCs for the `/api/cron/booking-reminders` endpoint; neither is callable by anon:
 
-- **`bookings_due_for_reminder()`**: service_role only. Returns all confirmed bookings whose meeting type has `reminder_enabled = true`, whose `starts_at` is 0 to 36 hours away, and whose `reminder_sent_at` is null. Used by cron to batch-fetch remindable bookings.
+- **`bookings_due_for_reminder()`**: service_role only. Returns all confirmed bookings whose meeting type has `reminder_enabled = true`, whose `starts_at` is 0 to 36 hours away, and whose `reminder_sent_at` is null. Used by cron to batch-fetch remindable bookings. Returns `manage_token` alongside `booking_id`: the reminder email's reschedule link is `/book/manage/<manage_token>`, and building it from the booking id instead shipped a dead link in every reminder (fixed 20260821030000).
 - **`mark_booking_reminder_sent(p_booking_id uuid)`**: service_role only. Sets `reminder_sent_at = now()`. Called after sending the reminder email so the booking is not re-sent on the next tick.
 
 ### Cron auth gate: `/api/cron/booking-reminders` (Scheduler Phase D)
@@ -551,7 +551,7 @@ DELETE (sampled clean across the migrations).
 | `tasks` | ✅ | `user_id` | ✅ `tests/integration/rls/tasks.test.ts` (Phase 4B, 5 tests) | Tasks |
 | `invoices` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoice_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
-| `bookings` | ✅ | `user_id` | ✅ `tests/integration/rls/bookings.test.ts` (Phase C, 5 tests: cross-tenant read/insert/update/delete denial, manage_token uniqueness, couple-delete set-null) | Public Booking (Phase C) |
+| `bookings` | ✅ | `user_id` + `_owns_couple_or_null(couple_id)` + `_owns_meeting_type(meeting_type_id)` on write | ✅ `tests/integration/rls/bookings.test.ts` (Phase C: cross-tenant read/insert/update/delete denial, manage_token uniqueness, couple-delete set-null; parent-ownership: cross-tenant couple/meeting-type insert denial, repoint-on-update denial, null-couple allowed) | Public Booking (Phase C); parent guard 20260821040000 |
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
 | `contract_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/contract-templates.test.ts` (Phase 12, 6 tests) | Contracts |
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
@@ -597,15 +597,24 @@ DELETE (sampled clean across the migrations).
 | `automation_waits` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cancel consumes; resume reads — exercised via the control actions) | Automations |
 | `automation_audit_log` | ✅ (SELECT-only for owner; writes service-role) | `user_id` | ☐ (read RLS-scoped by the couple Automations feed) | Automations |
 
-**Two tables need more than `auth.uid() = user_id` in WITH CHECK.**
+**Four tables need more than `auth.uid() = user_id` in WITH CHECK.**
 Foreign keys are checked with elevated privileges and ignore RLS, so an
 owner-only policy still lets a user write a row that *references* another
-tenant's row. `couples.selected_package_id` hit this in 2026-08 (an MC could
-point their couple at another MC's package, which also confirms that package
-id exists); the fix is `_owns_package_or_null(selected_package_id)` in the
-couples INSERT and UPDATE policies, proved by
-`tests/integration/rls/couple-selected-package.test.ts`. The original
-instance follows.
+tenant's row. That both links across tenants and confirms the referenced id
+exists. Any new table with an FK to an owned parent has to carry the parent
+check too:
+
+| Table | Extra WITH CHECK | Migration |
+|---|---|---|
+| `couple_time_entries` | inline `exists` on `couples` | `20260730120000` |
+| `couples` | `_owns_package_or_null(selected_package_id)` | `20260820010000` |
+| `meeting_type_availability_rules` | `_owns_meeting_type(meeting_type_id)` | `20260821010000` |
+| `bookings` | `_owns_couple_or_null(couple_id)` and `_owns_meeting_type(meeting_type_id)` | `20260821040000` |
+
+`bookings` was missed when the table was created: the public booking RPCs are
+`security definer` and resolve both parents from the share token themselves,
+so nothing in the couple-facing flow depended on the policy and the gap only
+showed on a direct authenticated write. The original instance follows.
 
 **`couple_time_entries` WITH CHECK is not just `auth.uid() = user_id`.**
 Foreign keys ignore RLS, so an owner-only check still let a user insert a

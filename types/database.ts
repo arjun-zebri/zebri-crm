@@ -2848,6 +2848,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _owns_couple_or_null: { Args: { p_couple_id: string }; Returns: boolean }
       _owns_meeting_type: {
         Args: { p_meeting_type_id: string }
         Returns: boolean
@@ -2868,6 +2869,13 @@ export type Database = {
       _user_branding_blocks: {
         Args: { p_surface: string; p_user_id: string }
         Returns: Json
+      }
+      admin_user_last_seen: {
+        Args: never
+        Returns: {
+          last_seen: string
+          user_id: string
+        }[]
       }
       backfill_invoice_payment_stages: { Args: never; Returns: number }
       bookings_due_for_reminder: { Args: never; Returns: Json[] }

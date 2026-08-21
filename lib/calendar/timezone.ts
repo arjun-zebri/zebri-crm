@@ -11,7 +11,7 @@
  * @module lib/calendar/timezone
  */
 
-import { zonedDateParts, zonedTimeToUtc } from '@/lib/scheduling/timezone';
+import { addDaysToDateString, zonedDateParts, zonedTimeToUtc } from '@/lib/scheduling/timezone';
 
 /**
  * Get the local midnight (00:00) of a date in a given timezone.
@@ -39,6 +39,24 @@ export function getLocalDayStart(date: Date, timeZone: string): Date {
   const { date: localDate } = zonedDateParts(date, timeZone);
   // Return that date's local midnight as a UTC instant (DST-correct)
   return zonedTimeToUtc(localDate, '00:00', timeZone);
+}
+
+/**
+ * Get the exclusive end of a date's local day: the NEXT local midnight.
+ *
+ * Companion to getLocalDayStart. The pair brackets one full local calendar
+ * day as [start, end). The end is derived by calendar arithmetic on the
+ * local date, not by adding 24 hours, so DST changeover days keep their
+ * real length: a 25-hour fall-back day ends 25 elapsed hours after it
+ * starts, and a 23-hour spring-forward day ends after 23.
+ *
+ * @param date - UTC instant anywhere inside the local day
+ * @param timeZone - IANA timezone string (e.g., "Australia/Melbourne")
+ * @returns midnight (00:00) of the FOLLOWING local day, as a UTC Date
+ */
+export function getLocalDayEnd(date: Date, timeZone: string): Date {
+  const { date: localDate } = zonedDateParts(date, timeZone);
+  return zonedTimeToUtc(addDaysToDateString(localDate, 1), '00:00', timeZone);
 }
 
 /**

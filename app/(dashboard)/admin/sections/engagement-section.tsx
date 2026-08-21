@@ -54,7 +54,7 @@ export function EngagementSection({
         </div>
         {goneQuiet.length === 0 ? (
           <p className="text-body text-text-subtle py-4">
-            Every paying account has signed in within the last 14 days.
+            Every paying account has been on Zebri within the last 14 days.
           </p>
         ) : (
           <ul className="flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-1 space-y-2">
@@ -74,9 +74,9 @@ export function EngagementSection({
                   </p>
                 </div>
                 <span className="text-body text-text-subtle shrink-0">
-                  {row.last_sign_in_at
-                    ? formatRelativeTime(row.last_sign_in_at, now)
-                    : 'never signed in'}
+                  {row.last_seen_at
+                    ? formatRelativeTime(row.last_seen_at, now)
+                    : 'never seen'}
                 </span>
               </li>
             ))}

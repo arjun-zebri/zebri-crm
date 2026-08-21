@@ -65,6 +65,27 @@ describe('DayView booking query window', () => {
     expect(to.toISOString()).toBe('2026-08-21T14:00:00.000Z');
   });
 
+  it('spans the full 25-hour local day on a DST fall-back date', () => {
+    // Melbourne rewinds 03:00 to 02:00 on Sunday 2026-04-05, so that local
+    // day is 25 hours: 2026-04-04T13:00Z to 2026-04-05T14:00Z. A +24h window
+    // stops at 13:00Z and drops bookings in the last local hour of the day.
+    const currentDate = new Date('2026-04-05T00:00:00Z');
+
+    render(
+      <DayView
+        currentDate={currentDate}
+        eventsByDate={{}}
+        onSelectCouple={vi.fn()}
+        onSelectBooking={vi.fn()}
+      />
+    );
+
+    const [from, to] = useBookingsInRange.mock.calls[0]!;
+
+    expect(from.toISOString()).toBe('2026-04-04T13:00:00.000Z');
+    expect(to.toISOString()).toBe('2026-04-05T14:00:00.000Z');
+  });
+
   it('covers a booking sitting late in the local day', () => {
     // 16:30 Melbourne on the 21st is 06:30Z, which the old UTC window excluded.
     const currentDate = new Date('2026-08-21T06:30:00Z');

@@ -1265,12 +1265,12 @@ Enforces that no two confirmed bookings for the same user (user_id) can overlap 
 - EXCLUDE USING gist (user_id WITH =, tstzrange(starts_at, ends_at) WITH &&) WHERE (status = 'confirmed')
 This is the final arbiter of double-booking prevention. Requires the btree_gist extension (created in migration).
 
-RLS: Standard owner-only policy `auth.uid() = user_id` (SELECT/INSERT/UPDATE/DELETE). The submit_booking RPC is SECURITY DEFINER, so it bypasses RLS on insert.
+RLS: owner-only `auth.uid() = user_id` on all four verbs, plus a parent-ownership guard on writes: `with check (... and _owns_couple_or_null(couple_id) and _owns_meeting_type(meeting_type_id))`. Foreign keys are checked with elevated privileges and ignore RLS, so the plain owner check still accepted a booking referencing another MC's couple or meeting type, which links across tenants and confirms the id exists. `couple_id` is nullable so null stays allowed; `meeting_type_id` is not null so it is always checked. Same class of hole as the `couples.selected_package_id` and `couple_time_entries.couple_id` guards. The submit_booking RPC is SECURITY DEFINER and resolves both parents from the share token itself, so it bypasses RLS on insert and is unaffected. Proved by `tests/integration/rls/bookings.test.ts`. Migration: `20260821040000_bookings_parent_ownership_guard.sql`.
 
 Trigger: tg_bookings_emit_consultation_booked
 On INSERT, if status='confirmed', emits a consultation_booked automation event (feeds the automation trigger bus). See automations documentation.
 
-Migration: `20260820000000_create_bookings.sql`.
+Migrations: `20260820000000_create_bookings.sql`, `20260821040000_bookings_parent_ownership_guard.sql`.
 
 ## Public Booking RPCs (Scheduler Phase C)
 
@@ -1431,8 +1431,12 @@ Response (success):
   "email": "booker@example.com",
   "business_name": "MC Business Name",
   "external_event_ids": {...},
+  "meeting_type_id": "uuid",
+  "video_join_url": "https://meet.google.com/...",
   "meeting_type_name": "Consultation"
 }
+
+`meeting_type_id` is what callers resolve the meeting type on. `lib/booking/lifecycle.ts` needed the location fields for the cancel email and only had the NAME, so it read `meeting_types where name = <name>` on the service-role client: `meeting_types.name` has no uniqueness constraint and "Consultation" is the default template name, so that either matched several tenants (silently falling back to "in person" with no address) or matched one other MC and put their venue address in a booker's inbox. Added by `20260821030000_booking_lifecycle_meeting_type_id.sql`.
 
 Response (error):
 {
@@ -1482,8 +1486,16 @@ Response (success):
   "email": "booker@example.com",
   "business_name": "MC Business Name",
   "external_event_ids": {...},
+  "meeting_type_id": "uuid",
+  "video_join_url": "https://meet.google.com/...",
   "meeting_type_name": "Consultation"
 }
+
+`meeting_type_id` scopes the caller's meeting-type read (see cancel_booking
+above). `video_join_url` rides along because rescheduling moves the times in
+place and the meeting keeps its link: the reschedule email hard-coded null and
+told a couple whose Meet link had not changed that a link was "to follow".
+Both added by `20260821030000_booking_lifecycle_meeting_type_id.sql`.
 
 Response (error):
 {
@@ -1517,6 +1529,7 @@ Service-role only (cron). Returns confirmed bookings due for reminder notificati
 Returns array of jsonb objects (one per booking):
 {
   "booking_id": "uuid",
+  "manage_token": "uuid",
   "user_id": "mc's user_id",
   "name": "Booker Name",
   "email": "booker@example.com",
@@ -1529,6 +1542,11 @@ Returns array of jsonb objects (one per booking):
   "location_type": "video",
   "address": null
 }
+
+`manage_token` (added by `20260821030000`) is what the reminder email's
+reschedule link is built from. `/book/manage/[manage_token]` resolves through
+`get_booking_by_manage_token`, so the cron's earlier `/book/manage/<booking_id>`
+404d into the unavailable state and every reminder shipped a dead link.
 
 Selection criteria (all must match):
 - status = 'confirmed'

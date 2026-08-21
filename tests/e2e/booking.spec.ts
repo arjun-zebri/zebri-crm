@@ -32,6 +32,13 @@ import { serviceClient, createTestUser, type DbClient } from '../integration/hel
 test.describe('Public booking page', () => {
   let admin: DbClient
   let mcUser: Awaited<ReturnType<typeof createTestUser>>
+  // The share token for the meeting type seeded in `beforeEach`.
+  //
+  // Held in a describe-scoped `let` rather than hung off the imported `test`
+  // object behind an `as any` cast. Mutating a Playwright export is shared
+  // module state and unsafe once tests in this file run in parallel, and the
+  // cast defeated the type checking that would have caught it.
+  let meetingShareToken: string
 
   test.beforeAll(async () => {
     // Guard: ensure local Supabase and dev server are reachable.
@@ -91,10 +98,7 @@ test.describe('Public booking page', () => {
       })
       .throwOnError()
 
-    // Store the meeting type's share_token for test use.
-    // (In a real test, this would be passed through the test context or global setup.)
-    ;(test as any).meetingShareToken = meetingType.data.share_token
-    ;(test as any).mcUserId = mcUser.id
+    meetingShareToken = meetingType.data.share_token
   })
 
   test.afterEach(async () => {
@@ -105,8 +109,7 @@ test.describe('Public booking page', () => {
   })
 
   test('First visitor books a consultation and sees the confirmation screen', async ({ browser }) => {
-    const shareToken = (test as any).meetingShareToken
-    const bookingUrl = `/book/${shareToken}`
+    const bookingUrl = `/book/${meetingShareToken}`
 
     // Fresh browser context (no MC cookies).
     const visitor1Ctx = await browser.newContext()
@@ -145,8 +148,7 @@ test.describe('Public booking page', () => {
   })
 
   test('Second visitor sees slot-taken notice when trying to book the same time', async ({ browser }) => {
-    const shareToken = (test as any).meetingShareToken
-    const bookingUrl = `/book/${shareToken}`
+    const bookingUrl = `/book/${meetingShareToken}`
 
     // First visitor books a slot.
     {
@@ -209,8 +211,7 @@ test.describe('Public booking page', () => {
     test.skip(process.env.CI === 'true' && !process.env.PLAYWRIGHT_BASE_URL?.includes('3123'),
       'requires local Supabase or explicit isolated stack')
 
-    const shareToken = (test as any).meetingShareToken
-    const bookingUrl = `/book/${shareToken}`
+    const bookingUrl = `/book/${meetingShareToken}`
 
     const ctx = await browser.newContext()
     try {

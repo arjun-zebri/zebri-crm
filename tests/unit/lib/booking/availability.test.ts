@@ -405,6 +405,41 @@ describe('getBookableSlots', () => {
 
     expect(slots.length).toBeGreaterThan(0);
   });
+
+  it('generates slots across the whole 25-hour DST fall-back day', async () => {
+    const ctx: BookingContext = {
+      meetingType: fakeMeetingType({
+        duration_minutes: 30,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
+        min_notice_hours: 0,
+        max_advance_days: 60,
+      }),
+      userId: 'user-1',
+      timezone: 'Australia/Sydney',
+      rules: [{ weekday: 0, start_time: '09:00', end_time: '17:00' }],
+      overrides: [],
+    };
+
+    vi.mocked(getBusyIntervals).mockResolvedValue([]);
+
+    const db = fakeSupabase({ bookings: [] });
+
+    vi.mocked(createAdminClient).mockReturnValue(db as any);
+
+    // Sydney's local Sunday 2026-04-05 (fall-back day) spans
+    // 2026-04-04T13:00:00Z to 2026-04-05T14:00:00Z: 25 hours.
+    const slots = await getBookableSlots(
+      ctx,
+      { start: new Date('2026-04-04T13:00:00Z'), end: new Date('2026-04-05T14:00:00Z') },
+      new Date('2026-04-04T00:00:00Z'),
+    );
+
+    // 09:00 local is AEST (UTC+10) after the 03:00 rewind: 2026-04-04T23:00:00Z.
+    expect(slots.some((s) => s.start === '2026-04-04T23:00:00Z')).toBe(true);
+    // Last slot of a 09:00-17:00 window: 16:30 AEST = 2026-04-05T06:30:00Z.
+    expect(slots.some((s) => s.start === '2026-04-05T06:30:00Z')).toBe(true);
+  });
 });
 
 describe('isSlotBookable', () => {
@@ -439,6 +474,75 @@ describe('isSlotBookable', () => {
       new Date('2026-08-23T23:00:00Z'),
       new Date('2026-08-23T23:30:00Z'),
       new Date('2026-08-23T14:00:00Z'),
+    );
+
+    expect(isBookable).toBe(true);
+  });
+
+  it('returns true for an offered slot on a DST fall-back day (25-hour local day)', async () => {
+    const ctx: BookingContext = {
+      meetingType: fakeMeetingType({
+        duration_minutes: 30,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
+        min_notice_hours: 0,
+        max_advance_days: 60,
+      }),
+      userId: 'user-1',
+      timezone: 'Australia/Sydney',
+      rules: [{ weekday: 0, start_time: '09:00', end_time: '17:00' }],
+      overrides: [],
+    };
+
+    vi.mocked(getBusyIntervals).mockResolvedValue([]);
+
+    const db = fakeSupabase({ bookings: [] });
+
+    vi.mocked(createAdminClient).mockReturnValue(db as any);
+
+    // Sunday 2026-04-05 is Sydney's DST fall-back day: 03:00 AEDT rewinds to
+    // 02:00 AEST, so the local day is 25 hours long. Local midnight plus 24
+    // UTC hours is still 23:00 on the SAME local date, which used to collapse
+    // the recomputed day range to zero length and reject every slot that day.
+    // 2026-04-05T00:00:00Z is 10:00 AEST that Sunday, inside the 09:00-17:00 rule.
+    const isBookable = await isSlotBookable(
+      ctx,
+      new Date('2026-04-05T00:00:00Z'),
+      new Date('2026-04-05T00:30:00Z'),
+      new Date('2026-04-04T00:00:00Z'),
+    );
+
+    expect(isBookable).toBe(true);
+  });
+
+  it('returns true for an offered slot on a DST spring-forward day (23-hour local day)', async () => {
+    const ctx: BookingContext = {
+      meetingType: fakeMeetingType({
+        duration_minutes: 30,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
+        min_notice_hours: 0,
+        max_advance_days: 60,
+      }),
+      userId: 'user-1',
+      timezone: 'Australia/Sydney',
+      rules: [{ weekday: 0, start_time: '09:00', end_time: '17:00' }],
+      overrides: [],
+    };
+
+    vi.mocked(getBusyIntervals).mockResolvedValue([]);
+
+    const db = fakeSupabase({ bookings: [] });
+
+    vi.mocked(createAdminClient).mockReturnValue(db as any);
+
+    // Sunday 2026-10-04 is Sydney's DST start: 02:00 AEST jumps to 03:00 AEDT,
+    // a 23-hour local day. 2026-10-03T23:00:00Z is 10:00 AEDT that Sunday.
+    const isBookable = await isSlotBookable(
+      ctx,
+      new Date('2026-10-03T23:00:00Z'),
+      new Date('2026-10-03T23:30:00Z'),
+      new Date('2026-10-03T00:00:00Z'),
     );
 
     expect(isBookable).toBe(true);

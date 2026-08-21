@@ -117,36 +117,59 @@ describe('compareUsersByPlanThenLastSeen', () => {
 
 describe('computeGoneQuiet', () => {
   it('includes only paying or comped users past the 14-day threshold', () => {
-    const quietPaying = payingPro({ id: 'quiet-paying', last_sign_in_at: daysAgo(20) })
-    const activePaying = payingPro({ id: 'active-paying', last_sign_in_at: daysAgo(2) })
-    const quietFree = user({ id: 'quiet-free', last_sign_in_at: daysAgo(90) })
+    const quietPaying = payingPro({ id: 'quiet-paying', last_seen_at: daysAgo(20) })
+    const activePaying = payingPro({ id: 'active-paying', last_seen_at: daysAgo(2) })
+    const quietFree = user({ id: 'quiet-free', last_seen_at: daysAgo(90) })
     const quietComped = user({
       id: 'quiet-comped',
       subscription_status: 'active',
       subscription_plan: 'max',
       is_comped: true,
-      last_sign_in_at: daysAgo(30),
+      last_seen_at: daysAgo(30),
     })
 
     const quiet = computeGoneQuiet([quietPaying, activePaying, quietFree, quietComped], NOW)
     expect(quiet.map((r) => r.id)).toEqual(['quiet-comped', 'quiet-paying'])
-    expect(quiet[0]).toMatchObject({ plan: 'max', is_comped: true, daysSinceSignIn: 30 })
+    expect(quiet[0]).toMatchObject({ plan: 'max', is_comped: true, daysSinceSeen: 30 })
   })
 
-  it('counts a paying user who never signed in as gone quiet', () => {
-    const never = payingMax({ id: 'never', last_sign_in_at: null })
+  it('counts a paying user who has never been seen as gone quiet', () => {
+    const never = payingMax({ id: 'never', last_seen_at: null })
     const quiet = computeGoneQuiet([never], NOW)
     expect(quiet).toHaveLength(1)
-    expect(quiet[0]).toMatchObject({ id: 'never', daysSinceSignIn: null })
+    expect(quiet[0]).toMatchObject({ id: 'never', daysSinceSeen: null })
   })
 
   it('is exactly a 14-day boundary', () => {
-    const on = payingPro({ id: 'on-boundary', last_sign_in_at: daysAgo(14) })
-    const inside = payingPro({ id: 'inside', last_sign_in_at: daysAgo(13.9) })
+    const on = payingPro({ id: 'on-boundary', last_seen_at: daysAgo(14) })
+    const inside = payingPro({ id: 'inside', last_seen_at: daysAgo(13.9) })
     const ids = computeGoneQuiet([on, inside], NOW).map((r) => r.id)
     expect(ids).toEqual([])
-    const past = payingPro({ id: 'past', last_sign_in_at: daysAgo(14.1) })
+    const past = payingPro({ id: 'past', last_seen_at: daysAgo(14.1) })
     expect(computeGoneQuiet([past], NOW).map((r) => r.id)).toEqual(['past'])
+  })
+
+  it('does not flag a daily user whose last_sign_in_at has frozen', () => {
+    // The exact shape the last-seen work exists for: a permanently-logged-in
+    // MC opens Zebri every day, but GoTrue has not stamped a sign-in for them
+    // in six weeks. Filtering on last_sign_in_at put the most engaged paying
+    // accounts on the revenue-at-risk list.
+    const daily = payingPro({
+      id: 'daily',
+      last_sign_in_at: daysAgo(42),
+      last_seen_at: daysAgo(1),
+    })
+    expect(computeGoneQuiet([daily], NOW)).toEqual([])
+  })
+
+  it('flags a lapsed user who signed in recently only via shadow mode', () => {
+    // Inverse of the above: the sign-in column moved, the sessions did not.
+    const lapsed = payingPro({
+      id: 'lapsed',
+      last_sign_in_at: daysAgo(0),
+      last_seen_at: daysAgo(40),
+    })
+    expect(computeGoneQuiet([lapsed], NOW).map((r) => r.id)).toEqual(['lapsed'])
   })
 })
 

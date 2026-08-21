@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   // Load the booking context by manage token
   const ctxData = await loadBookingContextByManageToken(supabase, input.manageToken);
   if (!ctxData) {
-    await recordInvalidTokenAttempt({ ip, surface: 'slots' });
+    await recordInvalidTokenAttempt({ ip, surface: 'manage' });
     return NextResponse.json({ error: 'Booking not found.' }, { status: 404 });
   }
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
   // Handle RPC error responses
   if (result.error === 'not_found') {
-    await recordInvalidTokenAttempt({ ip, surface: 'slots' });
+    await recordInvalidTokenAttempt({ ip, surface: 'manage' });
     return NextResponse.json({ error: 'Booking not found.' }, { status: 404 });
   }
 

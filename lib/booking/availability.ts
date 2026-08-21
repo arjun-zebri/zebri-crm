@@ -14,7 +14,7 @@ import { getBusyIntervals } from '@/lib/calendar/free-busy';
 import type { BusyInterval } from '@/lib/calendar/intervals';
 import { subtractInterval } from '@/lib/calendar/intervals';
 import { computeSlots, type DateOverride, type Slot, type WeeklyRule } from '@/lib/scheduling/slots';
-import { zonedDateParts, zonedTimeToUtc } from '@/lib/scheduling/timezone';
+import { addDaysToDateString, zonedDateParts, zonedTimeToUtc } from '@/lib/scheduling/timezone';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { Database } from '@/types/database';
 
@@ -312,12 +312,11 @@ export async function isSlotBookable(
 
   // Compute range: local midnight to local midnight of next day
   const dayStart = zonedTimeToUtc(localDate, '00:00', ctx.timezone);
-  // Get next day's local date by finding the date 24 hours after dayStart in local time
-  const nextDayLocal = zonedDateParts(
-    new Date(dayStart.getTime() + 24 * 60 * 60 * 1000),
-    ctx.timezone,
-  ).date;
-  const dayEnd = zonedTimeToUtc(nextDayLocal, '00:00', ctx.timezone);
+  // Why: the next local date must come from calendar arithmetic, not from
+  // adding 24 hours to dayStart. A DST fall-back day is 25 hours long, so
+  // midnight + 24h is still 23:00 on the SAME local date, which would make
+  // dayEnd equal dayStart and reject every slot on that day.
+  const dayEnd = zonedTimeToUtc(addDaysToDateString(localDate, 1), '00:00', ctx.timezone);
 
   const slots = await getBookableSlots(
     ctx,

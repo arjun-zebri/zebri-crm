@@ -693,9 +693,14 @@ MC's calendar with multiple views and a detail panel for managing bookings.
 
 **Views:** Three view modes (day/week/month) selectable via dropdown or mobile letter buttons (D/W/M). Day and Week show hourly time grids; Month shows a date grid.
 
+**Header controls:** Today, prev/next, the period label, a **Statuses** filter and the view switcher.
+
+The Statuses filter narrows the **wedding** layer to couples in the ticked statuses. It never hides a booking or an external busy block: those are commitments the MC has already made, and hiding one is a way to double-book. Unticked state is `null` (no filter) rather than an empty set, so a fresh MC sees everything and unticking the last status shows nothing rather than silently resetting. The first toggle seeds the set from every configured status, so unticking one leaves the rest on.
+
+There are **no** per-layer visibility toggles (Bookings / Weddings / Busy). They were removed for the same reason: the three switches only offered new ways to miss something.
+
 **Sidebar:**
 - Mini-month navigator with clickable dates (moves the main view)
-- Layer toggles (Bookings, Weddings, Busy) to show/hide each data class
 - Selected day agenda: lists that day's bookings and weddings in time order; clicking a booking or wedding row opens the detail panel or couple profile respectively
 
 **Day View (24-hour grid):**
@@ -714,7 +719,7 @@ MC's calendar with multiple views and a detail panel for managing bookings.
 - All-day band at top (weddings only)
 - Same availability shading, busy blocks, and booking chips as Day view
 - Current-time indicator spans all columns
-- Legend and layer toggles visible at top
+- Legend visible at top
 
 **Month View (date grid):**
 - Six-week calendar grid (ISO week starting Monday if partial weeks included)
@@ -2136,11 +2141,15 @@ detail slide-over.
 - **Row 1  -  hero chart cards:** MRR (Pro/Max breakdown), active subs,
   churn rate, new signups; 12-week approximate series.
 - **Row 2  -  Engagement:** activity strip (active last 7d / 30d, new
-  this week) beside the **Gone quiet** list: paying or comped users
-  with no sign-in for 14+ days, highest tier first (`computeGoneQuiet`
-  in `user-value.ts`). Dormant = never started; gone quiet = revenue
-  at risk. Shadow mode refreshes the target's `last_sign_in_at`, so a
-  recently-shadowed user can look falsely active.
+  this week) beside the **Gone quiet** list: paying or comped users not
+  seen for 14+ days, highest tier first (`computeGoneQuiet` in
+  `user-value.ts`). Dormant = never started; gone quiet = revenue at
+  risk. The filter reads `last_seen_at`, the same column the list sorts
+  and renders on; it filtered on `last_sign_in_at` until 2026-08-21,
+  which meant the most engaged paying accounts on the platform (never
+  logged out, so never re-authenticated) sat on the revenue-at-risk
+  list. Shadow mode signs the admin in as the target and creates a
+  session for them, so a recently-shadowed user can look falsely active.
 - **Row 3  -  operational lists:** upcoming renewals, past due, Connect
   issues.
 - **Row 4  -  supporting lists:** dormant accounts, recent signups.

@@ -12,7 +12,7 @@ import { layoutOverlaps } from '@/lib/calendar/grid-layout';
 import { PX_PER_MINUTE } from '@/lib/calendar/grid-layout';
 import { computeGridWindow, toContentHours } from '@/lib/calendar/grid-window';
 import { excludeBookingMirrors } from '@/lib/calendar/intervals';
-import { getLocalDayStart } from '@/lib/calendar/timezone';
+import { getLocalDayEnd, getLocalDayStart } from '@/lib/calendar/timezone';
 import { zonedDateParts } from '@/lib/scheduling/timezone';
 
 import { useAvailability } from '../use-availability';
@@ -82,9 +82,11 @@ export function DayView({
   // is 20 August 14:00Z, so the view fetched the 20th and every one of the
   // day's bookings fell outside the window. The grid then showed only the
   // external calendar's copy of each booking, with no chip on top of it.
+  // getLocalDayEnd, not +24h: DST changeover days are 23 or 25 hours long,
+  // and a fixed 24h window drops the last local hour of a fall-back day.
   const dayEndLocal = useMemo(
-    () => new Date(dayStartLocal.getTime() + 24 * 60 * 60 * 1000),
-    [dayStartLocal],
+    () => getLocalDayEnd(currentDate, timezone),
+    [currentDate, timezone],
   );
 
   const { data: bookings = [], isLoading: bookingsLoading } = useBookingsInRange(

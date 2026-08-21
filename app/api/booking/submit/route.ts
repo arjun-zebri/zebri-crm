@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
   // Load the booking context (meeting type, availability rules, MC timezone)
   const ctx = await loadBookingContext(supabase, input.token);
   if (!ctx) {
-    await recordInvalidTokenAttempt({ ip, surface: 'slots' });
+    await recordInvalidTokenAttempt({ ip, surface: 'booking' });
     return NextResponse.json({ error: 'Booking not available.' }, { status: 404 });
   }
 
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 
   // Handle RPC error responses
   if (result.error === 'not_found') {
-    await recordInvalidTokenAttempt({ ip, surface: 'slots' });
+    await recordInvalidTokenAttempt({ ip, surface: 'booking' });
     return NextResponse.json({ error: 'Booking not available.' }, { status: 404 });
   }
 
@@ -169,7 +169,10 @@ export async function POST(request: NextRequest) {
     return new NextResponse('Too Many Requests', { status: 429 });
   }
 
-  if (!result.ok || !result.booking_id || !result.user_id) {
+  // manage_token is validated alongside the ids: the confirmation email
+  // builds its reschedule link from it, and a silent fallback would ship a
+  // dead /book/manage/ link to the booker.
+  if (!result.ok || !result.booking_id || !result.user_id || !result.manage_token) {
     logger.error('[booking/submit] unexpected RPC response', result);
     return NextResponse.json({ error: 'Could not complete booking' }, { status: 500 });
   }
@@ -182,9 +185,10 @@ export async function POST(request: NextRequest) {
 
   const bookingId = result.booking_id;
   const userId = result.user_id;
-  const manageToken = result.manage_token ?? '';
+  const manageToken = result.manage_token;
   const businessName = result.business_name || 'your business';
 
+  const admin = createAdminClient();
   let joinUrl: string | null = null;
   const eventIds: Record<string, string> = {};
 
@@ -242,7 +246,6 @@ export async function POST(request: NextRequest) {
 
   // Update the booking row with calendar event details (non-blocking)
   if (joinUrl || Object.keys(eventIds).length > 0) {
-    const admin = createAdminClient();
     const { error: updateErr } = await admin
       .from('bookings')
       .update({
@@ -280,7 +283,6 @@ export async function POST(request: NextRequest) {
   });
 
   // Fetch the MC's email for the notification (using admin client for security)
-  const admin = createAdminClient();
   const { data: mcUser, error: mcUserErr } = await admin.auth.admin.getUserById(userId);
 
   if (mcUserErr || !mcUser?.user?.email) {

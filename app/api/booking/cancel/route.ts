@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   // Handle RPC error responses
   if (result.error === 'not_found') {
-    await recordInvalidTokenAttempt({ ip, surface: 'slots' });
+    await recordInvalidTokenAttempt({ ip, surface: 'manage' });
     return NextResponse.json({ error: 'Booking not found.' }, { status: 404 });
   }
 

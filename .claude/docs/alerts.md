@@ -159,6 +159,20 @@ await sendAlert({
 })
 ```
 
+**Capability tokens are masked in the log record.** The Slack line is built
+by hand from `describe()`, so it only ever contains what that function
+prints. The structured log record is the whole event spread into a context
+object, which put live share tokens into the platform logs: `manageToken` on
+`booking_created` is enough to open, reschedule or cancel someone's booking,
+and `invoiceToken` had the same shape. `sendAlert` now masks any field whose
+name ends in `token` down to its first 8 characters before logging. That
+prefix still lets one token be followed across log lines during an incident
+and is far too short to guess the rest of a UUID.
+
+If you add an event that carries a secret under a name that does NOT end in
+`token`, mask it at the call site: the sweep is deliberately narrow rather
+than a guess at what looks sensitive.
+
 ### `lib/alerts/slack.ts`
 
 Low-level Slack transport. Never throws  -  failures are swallowed and

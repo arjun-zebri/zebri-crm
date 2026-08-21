@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { CalendarLegend } from '@/app/(dashboard)/calendar/_components/calendar-legend';
+import { GridAvailabilityBands } from '@/app/(dashboard)/calendar/_components/grid-availability-bands';
 import { GridCurrentTimeIndicator, type GridCurrentTimeIndicatorProps } from '@/app/(dashboard)/calendar/_components/grid-current-time-indicator';
 import { getLocalDayStart } from '@/lib/calendar/timezone';
 
@@ -150,5 +151,83 @@ describe('GridCurrentTimeIndicator', () => {
     expect(
       container.querySelector('[data-testid="grid-current-time-indicator"]'),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('GridAvailabilityBands', () => {
+  // Sydney is UTC+10 in August, so local midnight on 2026-08-21 (a Friday)
+  // is 2026-08-20T14:00:00Z. Override rows store the MC-local date string,
+  // so the lookup must resolve the date in the MC timezone; reading the UTC
+  // date from this instant lands on 2026-08-20 and misses the override.
+  const timezone = 'Australia/Sydney';
+  const sydneyMidnightAug21 = new Date('2026-08-20T14:00:00Z');
+  const gridConfig = {
+    startHour: 0,
+    endHour: 24,
+    pxPerMinute: 1,
+    timeZone: timezone,
+  };
+  const fridayRule = {
+    id: 'rule-1',
+    user_id: 'user-1',
+    weekday: 5,
+    start_time: '09:00:00',
+    end_time: '17:00:00',
+    created_at: '2026-01-01T00:00:00Z',
+  };
+
+  it('applies a block override for the MC-local date, not the UTC date', () => {
+    const { container } = render(
+      <GridAvailabilityBands
+        rulesForWeekday={[fridayRule]}
+        overridesForDate={[
+          {
+            id: 'ovr-1',
+            user_id: 'user-1',
+            date: '2026-08-21',
+            available: false,
+            start_time: null,
+            end_time: null,
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ]}
+        date={sydneyMidnightAug21}
+        dayStart={sydneyMidnightAug21}
+        gridConfig={gridConfig}
+        timezone={timezone}
+      />,
+    );
+
+    expect(
+      container.querySelectorAll('[data-testid="grid-availability-band"]'),
+    ).toHaveLength(0);
+  });
+
+  it('renders a custom-window override instead of the weekday rules', () => {
+    const { container } = render(
+      <GridAvailabilityBands
+        rulesForWeekday={[fridayRule, { ...fridayRule, id: 'rule-2', start_time: '18:00:00', end_time: '20:00:00' }]}
+        overridesForDate={[
+          {
+            id: 'ovr-1',
+            user_id: 'user-1',
+            date: '2026-08-21',
+            available: true,
+            start_time: '10:00:00',
+            end_time: '12:00:00',
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ]}
+        date={sydneyMidnightAug21}
+        dayStart={sydneyMidnightAug21}
+        gridConfig={gridConfig}
+        timezone={timezone}
+      />,
+    );
+
+    // One band for the override window, not two for the weekday rules.
+    expect(
+      container.querySelectorAll('[data-testid="grid-availability-band"]'),
+    ).toHaveLength(1);
   });
 });

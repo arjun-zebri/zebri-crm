@@ -19,7 +19,7 @@ import { PX_PER_MINUTE } from '@/lib/calendar/grid-layout';
 import { computeGridWindow, toContentHours } from '@/lib/calendar/grid-window';
 import { excludeBookingMirrors } from '@/lib/calendar/intervals';
 import { getLocalDayStart } from '@/lib/calendar/timezone';
-import { zonedDateParts, zonedTimeToUtc } from '@/lib/scheduling/timezone';
+import { addDaysToDateString, zonedDateParts, zonedTimeToUtc } from '@/lib/scheduling/timezone';
 
 import { useAvailability } from '../use-availability';
 import type { Booking } from '../use-bookings';
@@ -73,211 +73,22 @@ export function WeekView({
 
   // Get the week dates and query range in local time when timezone is available
   const { weekDates, weekStartUtc, weekEndUtc } = useMemo(() => {
-    // Fallback: compute week boundary using UTC timezone (same logic as the main path)
-    // This ensures consistency between the fallback and main paths
-    if (!availability) {
-      const fallbackTz = 'UTC';
-      const { date: localDate, weekday: localWeekday } = zonedDateParts(currentDate, fallbackTz);
-      const [yearStr, monthStr, dayStr] = localDate.split('-');
-      const year = Number(yearStr);
-      const month = Number(monthStr);
-      const day = Number(dayStr);
+    // Fall back to UTC until the MC's timezone is known; same shape as the
+    // main path so the fallback and final renders stay consistent.
+    const tz = availability ? timezone : 'UTC';
 
-      const daysToSunday = localWeekday;
-      const dayNum = day - daysToSunday;
-      let sundayYear: number = year;
-      let sundayMonth: number = month;
-      let sundayDay: number = dayNum;
-
-      if (sundayDay < 1) {
-        sundayMonth--;
-        if (sundayMonth < 1) {
-          sundayMonth = 12;
-          sundayYear--;
-        }
-        const daysInPrevMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        if (sundayMonth === 2 && ((sundayYear % 4 === 0 && sundayYear % 100 !== 0) || sundayYear % 400 === 0)) {
-          sundayDay += 29;
-        } else {
-          sundayDay += daysInPrevMonth[sundayMonth - 1]!;
-        }
-      }
-
-      const sundayDateStr = `${sundayYear}-${String(sundayMonth).padStart(2, '0')}-${String(sundayDay).padStart(2, '0')}`;
-      const localWeekStartUtc = zonedTimeToUtc(sundayDateStr, '00:00', fallbackTz);
-
-      let nextYear: number = sundayYear;
-      let nextMonth: number = sundayMonth;
-      let nextDay: number = sundayDay + 7;
-      const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-      if (nextMonth === 2 && ((nextYear % 4 === 0 && nextYear % 100 !== 0) || nextYear % 400 === 0)) {
-        if (nextDay > 29) {
-          nextDay -= 29;
-          nextMonth++;
-          if (nextMonth > 12) {
-            nextMonth = 1;
-            nextYear++;
-          }
-        }
-      } else {
-        if (nextDay > daysInMonth[nextMonth - 1]!) {
-          nextDay -= daysInMonth[nextMonth - 1]!;
-          nextMonth++;
-          if (nextMonth > 12) {
-            nextMonth = 1;
-            nextYear++;
-          }
-        }
-      }
-      const nextSundayDateStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(nextDay).padStart(2, '0')}`;
-      const localWeekEndUtc = zonedTimeToUtc(nextSundayDateStr, '00:00', fallbackTz);
-
-      const dates: Date[] = [];
-      let currentYear: number = sundayYear;
-      let currentMonth: number = sundayMonth;
-      let currentDay: number = sundayDay;
-
-      for (let i = 0; i < 7; i++) {
-        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
-        const utcInstant = zonedTimeToUtc(dateStr, '00:00', fallbackTz);
-        dates.push(utcInstant);
-
-        currentDay++;
-        const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        if (currentMonth === 2 && ((currentYear % 4 === 0 && currentYear % 100 !== 0) || currentYear % 400 === 0)) {
-          if (currentDay > 29) {
-            currentDay = 1;
-            currentMonth++;
-            if (currentMonth > 12) {
-              currentMonth = 1;
-              currentYear++;
-            }
-          }
-        } else {
-          if (currentDay > daysInMonth[currentMonth - 1]!) {
-            currentDay = 1;
-            currentMonth++;
-            if (currentMonth > 12) {
-              currentMonth = 1;
-              currentYear++;
-            }
-          }
-        }
-      }
-
-      return {
-        weekDates: dates,
-        weekStartUtc: localWeekStartUtc,
-        weekEndUtc: localWeekEndUtc,
-      };
-    }
-
-    // Compute week start in the MC's local timezone to ensure column boundaries are local
-    const { date: localDate, weekday: localWeekday } = zonedDateParts(
-      currentDate,
-      timezone,
-    );
-    const [yearStr, monthStr, dayStr] = localDate.split('-');
-    const year = Number(yearStr);
-    const month = Number(monthStr);
-    const day = Number(dayStr);
-
-    // Compute local Sunday by working with date strings (avoids timezone confusion)
-    // Subtract weekday days to get Sunday
-    const daysToSunday = localWeekday;
-    const dayNum = day - daysToSunday;
-    let sundayYear: number = year;
-    let sundayMonth: number = month;
-    let sundayDay: number = dayNum;
-
-    // Handle month wraparound
-    if (sundayDay < 1) {
-      sundayMonth--;
-      if (sundayMonth < 1) {
-        sundayMonth = 12;
-        sundayYear--;
-      }
-      // Days in previous month
-      const daysInPrevMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-      if (sundayMonth === 2 && ((sundayYear % 4 === 0 && sundayYear % 100 !== 0) || sundayYear % 400 === 0)) {
-        sundayDay += 29;
-      } else {
-        sundayDay += daysInPrevMonth[sundayMonth - 1]!;
-      }
-    }
-
-    const sundayDateStr = `${sundayYear}-${String(sundayMonth).padStart(2, '0')}-${String(sundayDay).padStart(2, '0')}`;
-
-    // Get UTC instant of local Sunday 00:00
-    const localWeekStartUtc = zonedTimeToUtc(sundayDateStr, '00:00', timezone);
-
-    // Compute next Sunday (7 days ahead) using date string arithmetic
-    let nextYear: number = sundayYear;
-    let nextMonth: number = sundayMonth;
-    let nextDay: number = sundayDay + 7;
-    const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    if (nextMonth === 2 && ((nextYear % 4 === 0 && nextYear % 100 !== 0) || nextYear % 400 === 0)) {
-      if (nextDay > 29) {
-        nextDay -= 29;
-        nextMonth++;
-        if (nextMonth > 12) {
-          nextMonth = 1;
-          nextYear++;
-        }
-      }
-    } else {
-      if (nextDay > daysInMonth[nextMonth - 1]!) {
-        nextDay -= daysInMonth[nextMonth - 1]!;
-        nextMonth++;
-        if (nextMonth > 12) {
-          nextMonth = 1;
-          nextYear++;
-        }
-      }
-    }
-    const nextSundayDateStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(nextDay).padStart(2, '0')}`;
-    const localWeekEndUtc = zonedTimeToUtc(nextSundayDateStr, '00:00', timezone);
-
-    // Generate 7 week dates in UTC starting from local week start
-    // Work with date strings to properly handle DST
-    const dates: Date[] = [];
-    let currentYear: number = sundayYear;
-    let currentMonth: number = sundayMonth;
-    let currentDay: number = sundayDay;
-
-    for (let i = 0; i < 7; i++) {
-      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
-      const utcInstant = zonedTimeToUtc(dateStr, '00:00', timezone);
-      dates.push(utcInstant);
-
-      // Advance to next day
-      currentDay++;
-      const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-      if (currentMonth === 2 && ((currentYear % 4 === 0 && currentYear % 100 !== 0) || currentYear % 400 === 0)) {
-        if (currentDay > 29) {
-          currentDay = 1;
-          currentMonth++;
-          if (currentMonth > 12) {
-            currentMonth = 1;
-            currentYear++;
-          }
-        }
-      } else {
-        if (currentDay > daysInMonth[currentMonth - 1]!) {
-          currentDay = 1;
-          currentMonth++;
-          if (currentMonth > 12) {
-            currentMonth = 1;
-            currentYear++;
-          }
-        }
-      }
-    }
+    // All boundaries are derived by calendar arithmetic on local date
+    // strings, then resolved to UTC instants with the DST-correct helpers.
+    // Instant arithmetic (+24h hops) drifts on 23/25-hour changeover days.
+    const { date: localDate, weekday: localWeekday } = zonedDateParts(currentDate, tz);
+    const sundayDateStr = addDaysToDateString(localDate, -localWeekday);
 
     return {
-      weekDates: dates,
-      weekStartUtc: localWeekStartUtc,
-      weekEndUtc: localWeekEndUtc,
+      weekDates: Array.from({ length: 7 }, (_, i) =>
+        zonedTimeToUtc(addDaysToDateString(sundayDateStr, i), '00:00', tz),
+      ),
+      weekStartUtc: zonedTimeToUtc(sundayDateStr, '00:00', tz),
+      weekEndUtc: zonedTimeToUtc(addDaysToDateString(sundayDateStr, 7), '00:00', tz),
     };
   }, [currentDate, availability, timezone]);
 

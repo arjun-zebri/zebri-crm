@@ -288,4 +288,94 @@ describe("CouplesCalendar (characterisation test)", () => {
       expect(eventLabels.length).toBeGreaterThan(0);
     }, { timeout: 2000 });
   });
+
+  // The Statuses filter was dropped when this component was split into
+  // per-view files: the dropdown disappeared from the header and
+  // `filteredEvents` became a pass-through, so an MC could no longer narrow
+  // the grid to the pipeline stages they were working.
+  describe("status filter", () => {
+    /** Two weddings for couples in different statuses, on the visible day. */
+    const bookedEvent = {
+      id: "event-booked",
+      user_id: "test-user-123",
+      couple_id: "couple-booked",
+      date: "2026-08-20",
+      status: "scheduled",
+      created_at: "2026-08-01T00:00:00Z",
+      venue: "Grand Hotel",
+      timeline_notes: null,
+      title: "Booked Wedding",
+      couples: { id: "couple-booked", name: "Booked Couple", status: "booked" },
+      event_contacts: [{ count: 0 }],
+      tasks: [{ count: 0 }],
+    };
+    const interestedEvent = {
+      ...bookedEvent,
+      id: "event-interested",
+      couple_id: "couple-interested",
+      title: "Interested Wedding",
+      couples: {
+        id: "couple-interested",
+        name: "Interested Couple",
+        status: "interested",
+      },
+    };
+
+    function renderWithBoth() {
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            not: vi
+              .fn()
+              .mockResolvedValue({ data: [bookedEvent, interestedEvent], error: null }),
+          }),
+        }),
+      });
+      return render(
+        <QueryClientProvider client={queryClient}>
+          <CouplesCalendar onSelectCouple={vi.fn()} />
+        </QueryClientProvider>
+      );
+    }
+
+    it("offers a Statuses control in the header", async () => {
+      renderWithBoth();
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /statuses/i })).toBeInTheDocument();
+      });
+    });
+
+    it("shows every wedding until a status is unticked", async () => {
+      renderWithBoth();
+      await waitFor(() => {
+        expect(
+          screen.queryAllByText(/Booked Couple – Booked Wedding/).length,
+        ).toBeGreaterThan(0);
+      });
+      expect(
+        screen.queryAllByText(/Interested Couple – Interested Wedding/).length,
+      ).toBeGreaterThan(0);
+    });
+
+    it("hides weddings whose couple status has been unticked", async () => {
+      renderWithBoth();
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /statuses/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /statuses/i }));
+      fireEvent.click(await screen.findByRole("checkbox", { name: "Interested" }));
+
+      await waitFor(() => {
+        expect(
+          screen.queryAllByText(/Interested Couple – Interested Wedding/),
+        ).toHaveLength(0);
+      });
+      // Unticking one status leaves the others on, rather than collapsing to
+      // a single-status filter.
+      expect(
+        screen.queryAllByText(/Booked Couple – Booked Wedding/).length,
+      ).toBeGreaterThan(0);
+    });
+  });
 });

@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     // Manage token mode: reschedule with self-exclusion
     const result = await loadBookingContextByManageToken(supabase, manageToken);
     if (!result) {
-      await recordInvalidTokenAttempt({ ip, surface: 'slots' });
+      await recordInvalidTokenAttempt({ ip, surface: 'manage' });
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
     ctx = result.ctx;
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     // takes an exclusive end instant, so the full final day is included by
     // advancing one day: a maximal request therefore spans 32 clock days
     // by design, which is what "31 bookable days" means here.
-    toDate.setDate(toDate.getDate() + 1);
+    toDate.setUTCDate(toDate.getUTCDate() + 1);
 
     // Why: getBookableSlots calls getBusyIntervals (anonymous free/busy only, no titles).
     // NEVER switch to getBusyEvents here. A couple browsing this public API endpoint must

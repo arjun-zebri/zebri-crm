@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
 
+import { useCoupleStatuses } from "@/app/(dashboard)/couples/use-couple-statuses";
 import { CalendarConnectNote } from "@/components/calendar/calendar-connect-prompt";
 import { useCalendarConnections } from "@/components/calendar/use-calendar-connections";
 import type { BusyEvent } from "@/lib/calendar/free-busy";
@@ -49,8 +50,12 @@ type CalendarView = "month" | "week" | "day";
  */
 export function CouplesCalendar({ onSelectCouple, onSelectBooking }: CouplesCalendarProps) {
   const supabase = createClient();
+  const { data: statuses } = useCoupleStatuses();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("week");
+  // `null` = no filter applied, so a fresh MC sees every wedding. An empty
+  // Set is a real state (everything unticked) and must not collapse to null.
+  const [activeStatuses, setActiveStatuses] = useState<Set<string> | null>(null);
   const [miniNavDate, setMiniNavDate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -117,10 +122,30 @@ export function CouplesCalendar({ onSelectCouple, onSelectBooking }: CouplesCale
     },
   });
 
+  // Weddings only. Bookings and external busy time are commitments already
+  // made, so the filter never hides them: it narrows the pipeline layer, not
+  // the diary.
   const filteredEvents = useMemo(() => {
     if (!events) return [];
-    return events;
-  }, [events]);
+    if (activeStatuses === null) return events;
+    return events.filter((event) =>
+      activeStatuses.has(event.couple?.status || "new"),
+    );
+  }, [events, activeStatuses]);
+
+  /**
+   * Flip one status slug. The first toggle seeds the set from every known
+   * status, so unticking one leaves the other four on rather than leaving a
+   * single-status filter behind.
+   */
+  const toggleStatus = (slug: string) => {
+    setActiveStatuses((current) => {
+      const next = new Set(current ?? statuses.map((s) => s.slug));
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
 
   // Bookings across the visible month, padded a week either side so the grid's
   // leading and trailing days from the neighbouring months are covered too.
@@ -284,6 +309,9 @@ export function CouplesCalendar({ onSelectCouple, onSelectBooking }: CouplesCale
           isMobile={isMobile}
           onSidebarOpen={() => setSidebarOpen(true)}
           timezone={timezone}
+          statuses={statuses}
+          activeStatuses={activeStatuses}
+          onToggleStatus={toggleStatus}
         />
 
         {noCalendarConnected && (

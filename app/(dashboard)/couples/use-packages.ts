@@ -29,7 +29,13 @@ export interface PackageOption {
  * Totals are calculated by summing required items (optional=false)
  * amount*quantity per package.
  *
- * @param userId The owner's user_id
+ * Pass an empty `userId` when there is no couple yet, as in the Add Couple
+ * modal: the owner is then resolved from the session instead. It used to be
+ * passed straight through, and PostgREST rejects `user_id=eq.` on a uuid
+ * column with a 22P02. React Query retried that three times and the chooser
+ * settled on "No packages available" for every new couple.
+ *
+ * @param userId The owner's user_id, or `''` to use the signed-in user
  * @param enabled Whether to run the query (default true)
  * @returns useQuery result with packages list
  */
@@ -37,14 +43,23 @@ export function usePackages(userId: string, enabled: boolean = true) {
   const supabase = createClient()
 
   return useQuery<PackageOption[]>({
-    queryKey: ['packages', userId],
+    // 'me' rather than '' so the session-scoped result cannot collide with a
+    // future explicit-id fetch for a different owner.
+    queryKey: ['packages', userId || 'me'],
     queryFn: async () => {
+      let ownerId = userId
+      if (!ownerId) {
+        const { data: auth, error: authError } = await supabase.auth.getUser()
+        if (authError || !auth.user) throw new Error('Not authenticated')
+        ownerId = auth.user.id
+      }
+
       // Items come back embedded rather than per-package: one round trip
       // instead of one query per package. RLS scopes the embedded rows.
       const { data, error } = await supabase
         .from('packages')
         .select('id, name, description, gst_inclusive, package_items(amount, quantity, optional)')
-        .eq('user_id', userId)
+        .eq('user_id', ownerId)
         .is('archived_at', null)
         .order('position', { ascending: true })
 

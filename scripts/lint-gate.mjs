@@ -214,7 +214,10 @@ const ERROR_BUDGET = 52;
 // Scheduler UI pass: import-order cleanups across the calendar tabs, the
 // settings sections and the toggle sweep → 106, then a further sweep while
 // wiring external event ids through the calendar → 97.
-const WARNING_BUDGET = 97;
+// Scheduler review fixes: calendar DST/timezone corrections with clean new code;
+// eslint --fix on the cron reminder test swept two pre-existing import-order
+// warnings along with the new one -> 97 -> 95.
+const WARNING_BUDGET = 95;
 
 function runEslintJson() {
   try {

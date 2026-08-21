@@ -74,29 +74,6 @@ export interface AdminUser {
   last_seen_at: string | null;
 }
 
-/** One row of the `admin_user_last_seen()` RPC. */
-interface LastSeenRow {
-  user_id: string;
-  last_seen: string | null;
-}
-
-/**
- * Minimal shape of the one RPC this module calls.
- *
- * `admin_user_last_seen()` post-dates the last `supabase gen types` run, so
- * it is absent from the generated `Database["public"]["Functions"]` union and
- * the typed client rejects the call. Declaring just this signature keeps the
- * result properly typed (no `any`, no widening of the shared client) until
- * types/database.ts is next regenerated, at which point this and the cast in
- * {@link loadLastSeen} can both go.
- */
-interface LastSeenRpcClient {
-  rpc(fn: "admin_user_last_seen"): PromiseLike<{
-    data: LastSeenRow[] | null;
-    error: { message: string } | null;
-  }>;
-}
-
 /**
  * Last-activity timestamp per user id, from `auth.sessions` via the
  * `admin_user_last_seen()` SECURITY DEFINER function.
@@ -105,9 +82,7 @@ interface LastSeenRpcClient {
  * the service-role client cannot read `auth.sessions` directly.
  */
 async function loadLastSeen(admin: ReturnType<typeof adminClient>): Promise<Map<string, string>> {
-  const { data, error } = await (admin as unknown as LastSeenRpcClient).rpc(
-    "admin_user_last_seen",
-  );
+  const { data, error } = await admin.rpc("admin_user_last_seen");
   if (error) throw new Error(error.message);
   const out = new Map<string, string>();
   for (const row of data ?? []) {

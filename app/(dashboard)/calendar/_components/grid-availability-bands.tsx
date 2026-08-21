@@ -54,8 +54,12 @@ export function GridAvailabilityBands({
   gridConfig,
   timezone,
 }: GridAvailabilityBandsProps) {
-  // Find override for this date (if any)
-  const dateStr = date.toISOString().split('T')[0];
+  // Find override for this date (if any).
+  // Why: override rows store the MC-local date string, and `date` is an
+  // instant (local midnight for week columns, the selected day for day view).
+  // toISOString() would read the UTC date, which is the PREVIOUS day for any
+  // timezone east of UTC, shifting every override by one column.
+  const dateStr = zonedDateParts(date, timezone).date;
   const override = overridesForDate.find((o) => o.date === dateStr);
 
   // Determine which windows to render

@@ -46,15 +46,33 @@ vi.mock('@/lib/alerts/logger', () => ({
   },
 }));
 
+/**
+ * Double for the meeting-type read, which is now
+ * `.select().eq('id', …).eq('user_id', …).maybeSingle()`.
+ *
+ * The second `eq` is the tenant scope. It used to be a single
+ * `.eq('name', …)` with the service-role client, which ignores RLS and could
+ * therefore return another MC's meeting type: `meeting_types.name` is not
+ * unique and "Consultation" is the default template name.
+ */
+function meetingTypeQuery(row: { location_type: string; address: string | null } | null) {
+  const terminal = { maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }) };
+  return { eq: vi.fn(() => ({ eq: vi.fn(() => terminal) })) };
+}
+
+/** The same double, for the "database is down" paths. */
+function meetingTypeQueryFailing() {
+  const terminal = {
+    maybeSingle: vi.fn().mockRejectedValue(new Error('database down')),
+  };
+  return { eq: vi.fn(() => ({ eq: vi.fn(() => terminal) })) };
+}
+
 // Mock admin client setup
 const mockAdminClient = () => {
   return {
     from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn(),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQuery(null)),
     })),
     auth: {
       admin: {
@@ -88,13 +106,9 @@ describe('audience-specific timezones', () => {
         };
       }
       return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({
-              data: { location_type: 'in_person', address: '123 Main St' },
-            }),
-          })),
-        })),
+        select: vi.fn(() =>
+          meetingTypeQuery({ location_type: 'in_person', address: '123 Main St' }),
+        ),
       };
     });
     (admin.auth.admin.getUserById as any).mockResolvedValue({
@@ -116,13 +130,13 @@ describe('audience-specific timezones', () => {
     email: 'jane@example.com',
     business_name: 'My Business',
     external_event_ids: {},
+    meeting_type_id: 'mt1',
     meeting_type_name: 'Consultation',
   };
 
-  it('mails the booker in their zone and the MC in the MC\'s own', async () => {
-    const { sendBookingCancelledEmail, sendBookingChangeNotificationEmail } = await import(
-      '@/lib/email/booking'
-    );
+  it("mails the booker in their zone and the MC in the MC's own", async () => {
+    const { sendBookingCancelledEmail, sendBookingChangeNotificationEmail } =
+      await import('@/lib/email/booking');
 
     await completeCancellation(adminWithMcTimezone('Australia/Sydney'), perthBooking);
 
@@ -159,22 +173,16 @@ describe('completeCancellation', () => {
   });
 
   it('deletes event and sends both emails on success', async () => {
-    const { deleteBookingEvent: deleteBookingEventMock } = await import('@/lib/calendar/event-push');
-    const { sendBookingCancelledEmail, sendBookingChangeNotificationEmail } = await import(
-      '@/lib/email/booking'
-    );
+    const { deleteBookingEvent: deleteBookingEventMock } =
+      await import('@/lib/calendar/event-push');
+    const { sendBookingCancelledEmail, sendBookingChangeNotificationEmail } =
+      await import('@/lib/email/booking');
 
     const admin = mockAdminClient();
 
     // Setup: meeting type fetch succeeds
     (admin.from as any).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { location_type: 'in_person', address: '123 Main St' },
-          }),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQuery({ location_type: 'in_person', address: '123 Main St' })),
     });
 
     // Setup: MC email fetch succeeds
@@ -194,6 +202,7 @@ describe('completeCancellation', () => {
       email: 'john@example.com',
       business_name: 'My Business',
       external_event_ids: { google: 'event-123' },
+      meeting_type_id: 'mt1',
       meeting_type_name: 'Consultation',
     };
 
@@ -221,13 +230,7 @@ describe('completeCancellation', () => {
 
     // Setup: meeting type fetch succeeds
     (admin.from as any).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { location_type: 'video', address: null },
-          }),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQuery({ location_type: 'video', address: null })),
     });
 
     // Setup: MC email fetch succeeds
@@ -247,6 +250,7 @@ describe('completeCancellation', () => {
       email: 'john@example.com',
       business_name: 'My Business',
       external_event_ids: { google: 'event-123' },
+      meeting_type_id: 'mt1',
       meeting_type_name: 'Consultation',
     };
 
@@ -265,21 +269,14 @@ describe('completeCancellation', () => {
 
   it('sends MC notification even when booker email fails', async () => {
     await import('@/lib/calendar/event-push');
-    const { sendBookingCancelledEmail, sendBookingChangeNotificationEmail } = await import(
-      '@/lib/email/booking'
-    );
+    const { sendBookingCancelledEmail, sendBookingChangeNotificationEmail } =
+      await import('@/lib/email/booking');
 
     const admin = mockAdminClient();
 
     // Setup: meeting type fetch succeeds
     (admin.from as any).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { location_type: 'in_person', address: null },
-          }),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQuery({ location_type: 'in_person', address: null })),
     });
 
     // Setup: booker email fails
@@ -302,6 +299,7 @@ describe('completeCancellation', () => {
       email: 'john@example.com',
       business_name: 'My Business',
       external_event_ids: {},
+      meeting_type_id: 'mt1',
       meeting_type_name: 'Consultation',
     };
 
@@ -315,25 +313,18 @@ describe('completeCancellation', () => {
 
   it('never throws even when all dependencies fail', async () => {
     const { deleteBookingEvent, EventPushError } = await import('@/lib/calendar/event-push');
-    const { sendBookingCancelledEmail, sendBookingChangeNotificationEmail } = await import(
-      '@/lib/email/booking'
-    );
+    const { sendBookingCancelledEmail, sendBookingChangeNotificationEmail } =
+      await import('@/lib/email/booking');
 
     const admin = mockAdminClient();
 
     // Setup: everything fails
     (deleteBookingEvent as any).mockRejectedValue(new EventPushError('google', 500));
     (admin.from as any).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockRejectedValue(new Error('database down')),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQueryFailing()),
     });
     (sendBookingCancelledEmail as any).mockRejectedValue(new Error('email service down'));
-    (sendBookingChangeNotificationEmail as any).mockRejectedValue(
-      new Error('email service down'),
-    );
+    (sendBookingChangeNotificationEmail as any).mockRejectedValue(new Error('email service down'));
     (admin.auth.admin.getUserById as any).mockRejectedValue(new Error('auth service down'));
 
     const result: CancelRpcResult = {
@@ -347,6 +338,7 @@ describe('completeCancellation', () => {
       email: 'john@example.com',
       business_name: 'My Business',
       external_event_ids: { google: 'event-123' },
+      meeting_type_id: 'mt1',
       meeting_type_name: 'Consultation',
     };
 
@@ -364,21 +356,14 @@ describe('completeReschedule', () => {
 
   it('updates event and sends both emails on success', async () => {
     const { updateBookingEvent } = await import('@/lib/calendar/event-push');
-    const { sendBookingRescheduledEmail, sendBookingChangeNotificationEmail } = await import(
-      '@/lib/email/booking'
-    );
+    const { sendBookingRescheduledEmail, sendBookingChangeNotificationEmail } =
+      await import('@/lib/email/booking');
 
     const admin = mockAdminClient();
 
     // Setup: meeting type fetch succeeds
     (admin.from as any).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { location_type: 'video', address: null },
-          }),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQuery({ location_type: 'video', address: null })),
     });
 
     // Setup: MC email fetch succeeds
@@ -399,6 +384,7 @@ describe('completeReschedule', () => {
       email: 'john@example.com',
       business_name: 'My Business',
       external_event_ids: { google: 'event-123' },
+      meeting_type_id: 'mt1',
       meeting_type_name: 'Consultation',
     };
 
@@ -434,13 +420,7 @@ describe('completeReschedule', () => {
 
     // Setup: meeting type fetch succeeds
     (admin.from as any).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { location_type: 'in_person', address: '456 Oak Ave' },
-          }),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQuery({ location_type: 'in_person', address: '456 Oak Ave' })),
     });
 
     // Setup: MC email fetch succeeds
@@ -481,21 +461,14 @@ describe('completeReschedule', () => {
 
   it('sends MC notification even when reschedule email fails', async () => {
     await import('@/lib/calendar/event-push');
-    const { sendBookingRescheduledEmail, sendBookingChangeNotificationEmail } = await import(
-      '@/lib/email/booking'
-    );
+    const { sendBookingRescheduledEmail, sendBookingChangeNotificationEmail } =
+      await import('@/lib/email/booking');
 
     const admin = mockAdminClient();
 
     // Setup: meeting type fetch succeeds
     (admin.from as any).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({
-            data: { location_type: 'phone', address: null },
-          }),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQuery({ location_type: 'phone', address: null })),
     });
 
     // Setup: reschedule email fails
@@ -534,25 +507,18 @@ describe('completeReschedule', () => {
 
   it('never throws even when all dependencies fail', async () => {
     const { updateBookingEvent, EventPushError } = await import('@/lib/calendar/event-push');
-    const { sendBookingRescheduledEmail, sendBookingChangeNotificationEmail } = await import(
-      '@/lib/email/booking'
-    );
+    const { sendBookingRescheduledEmail, sendBookingChangeNotificationEmail } =
+      await import('@/lib/email/booking');
 
     const admin = mockAdminClient();
 
     // Setup: everything fails
     (updateBookingEvent as any).mockRejectedValue(new EventPushError('microsoft', 500));
     (admin.from as any).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn().mockRejectedValue(new Error('database down')),
-        })),
-      })),
+      select: vi.fn(() => meetingTypeQueryFailing()),
     });
     (sendBookingRescheduledEmail as any).mockRejectedValue(new Error('email service down'));
-    (sendBookingChangeNotificationEmail as any).mockRejectedValue(
-      new Error('email service down'),
-    );
+    (sendBookingChangeNotificationEmail as any).mockRejectedValue(new Error('email service down'));
     (admin.auth.admin.getUserById as any).mockRejectedValue(new Error('auth service down'));
 
     const result: RescheduleRpcResult = {
@@ -574,5 +540,176 @@ describe('completeReschedule', () => {
     expect(async () => {
       await completeReschedule(admin, result, 'token');
     }).not.toThrow();
+  });
+});
+
+describe('meeting-type resolution (tenant scoping)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** Records the filters applied to the meeting_types read. */
+  function adminRecordingFilters(calls: Array<[string, unknown]>) {
+    const admin = mockAdminClient();
+    const terminal = {
+      maybeSingle: vi
+        .fn()
+        .mockResolvedValue({ data: { location_type: 'video', address: null }, error: null }),
+    };
+    (admin.from as any).mockImplementation((table: string) => {
+      if (table === 'user_public_settings') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ limit: vi.fn().mockResolvedValue({ data: [] }) })),
+          })),
+        };
+      }
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn((col: string, val: unknown) => {
+            calls.push([col, val]);
+            return {
+              eq: vi.fn((col2: string, val2: unknown) => {
+                calls.push([col2, val2]);
+                return terminal;
+              }),
+            };
+          }),
+        })),
+      };
+    });
+    (admin.auth.admin.getUserById as any).mockResolvedValue({
+      data: { user: { email: 'mc@test.com' } },
+      error: null,
+    });
+    return admin;
+  }
+
+  const cancelResult: CancelRpcResult = {
+    ok: true,
+    booking_id: 'b1',
+    user_id: 'u1',
+    starts_at: '2026-08-22T06:00:00Z',
+    ends_at: '2026-08-22T06:30:00Z',
+    timezone: 'UTC',
+    name: 'Jane',
+    email: 'jane@example.com',
+    business_name: 'My Business',
+    external_event_ids: {},
+    meeting_type_id: 'mt-1',
+    meeting_type_name: 'Consultation',
+  };
+
+  it('resolves the meeting type by id AND owner, never by name', async () => {
+    const calls: Array<[string, unknown]> = [];
+    await completeCancellation(adminRecordingFilters(calls), cancelResult);
+
+    // The name is not unique across tenants, and this read runs on the
+    // service-role client, which ignores RLS. Filtering on it could return
+    // another MC's row and put their venue address in a booker's inbox.
+    expect(calls).toEqual([
+      ['id', 'mt-1'],
+      ['user_id', 'u1'],
+    ]);
+    expect(calls.map(([col]) => col)).not.toContain('name');
+  });
+
+  it('falls back to in-person with no address when the id is absent', async () => {
+    const { sendBookingCancelledEmail } = await import('@/lib/email/booking');
+    const calls: Array<[string, unknown]> = [];
+    const admin = adminRecordingFilters(calls);
+
+    const { meeting_type_id: _omitted, ...withoutId } = cancelResult;
+    await completeCancellation(admin, withoutId);
+
+    // An older RPC payload still in flight across a deploy: no id to scope
+    // on, so we take the safe default rather than guessing by name.
+    expect(calls).toEqual([]);
+    expect(sendBookingCancelledEmail).toHaveBeenCalledWith(
+      admin,
+      expect.objectContaining({ locationType: 'in_person', address: null }),
+    );
+  });
+});
+
+describe('reschedule keeps the existing video link', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const rescheduleResult: RescheduleRpcResult = {
+    ok: true,
+    booking_id: 'b1',
+    user_id: 'u1',
+    previous_starts_at: '2026-08-22T04:00:00Z',
+    starts_at: '2026-08-22T06:00:00Z',
+    ends_at: '2026-08-22T06:30:00Z',
+    timezone: 'UTC',
+    name: 'Jane',
+    email: 'jane@example.com',
+    business_name: 'My Business',
+    external_event_ids: {},
+    meeting_type_id: 'mt-1',
+    meeting_type_name: 'Consultation',
+    video_join_url: 'https://meet.google.com/abc-defg-hij',
+  };
+
+  function adminWithVideoMeetingType() {
+    const admin = mockAdminClient();
+    (admin.from as any).mockImplementation((table: string) => {
+      if (table === 'user_public_settings') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ limit: vi.fn().mockResolvedValue({ data: [] }) })),
+          })),
+        };
+      }
+      return { select: vi.fn(() => meetingTypeQuery({ location_type: 'video', address: null })) };
+    });
+    (admin.auth.admin.getUserById as any).mockResolvedValue({
+      data: { user: { email: 'mc@test.com' } },
+      error: null,
+    });
+    return admin;
+  }
+
+  it('sends the booker the link they already have', async () => {
+    const { sendBookingRescheduledEmail } = await import('@/lib/email/booking');
+    const admin = adminWithVideoMeetingType();
+
+    await completeReschedule(admin, rescheduleResult, 'token-abc');
+
+    // Rescheduling moves the times in place, so the meeting keeps its link.
+    // Hard-coding null here told a couple whose Meet link had not changed
+    // that a link was still "to follow".
+    expect(sendBookingRescheduledEmail).toHaveBeenCalledWith(
+      admin,
+      expect.objectContaining({ joinUrl: 'https://meet.google.com/abc-defg-hij' }),
+    );
+  });
+
+  it('tells the MC the same link', async () => {
+    const { sendBookingChangeNotificationEmail } = await import('@/lib/email/booking');
+
+    await completeReschedule(adminWithVideoMeetingType(), rescheduleResult, 'token-abc');
+
+    expect(sendBookingChangeNotificationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        booking: expect.objectContaining({ joinUrl: 'https://meet.google.com/abc-defg-hij' }),
+      }),
+    );
+  });
+
+  it('still sends null when the booking has no video link', async () => {
+    const { sendBookingRescheduledEmail } = await import('@/lib/email/booking');
+    const admin = adminWithVideoMeetingType();
+    const { video_join_url: _none, ...noLink } = rescheduleResult;
+
+    await completeReschedule(admin, noLink, 'token-abc');
+
+    expect(sendBookingRescheduledEmail).toHaveBeenCalledWith(
+      admin,
+      expect.objectContaining({ joinUrl: null }),
+    );
   });
 });

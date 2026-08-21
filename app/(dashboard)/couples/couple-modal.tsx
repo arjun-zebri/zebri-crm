@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
+import { MenuItem, MenuPanel } from "@/components/ui/menu";
 import { Modal } from "@/components/ui/modal";
 import { Couple, CoupleStatusRecord, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple';
 
@@ -477,12 +478,17 @@ export function CoupleModal({
 }
 
 /**
- * Inline package selector using Popover, matching the modal's Status/Lead Source
- * pattern. Shows MC's available packages with calculated totals.
+ * Inline package selector, matching the modal's Status / Lead source pattern.
+ *
+ * Shows the MC's live packages with their required-items total. The dropdown
+ * body is the shared {@link MenuPanel} / {@link MenuItem} pair rather than
+ * hand-written rows, so the selected tint, hover and row density match every
+ * other menu in the app instead of picking their own greens and greys.
  */
 interface PackageSelectorProps {
   selectedPackageId: string | null;
   onSelect: (packageId: string | null) => void;
+  /** The couple's owner. Empty on a new couple: the hook falls back to the session. */
   userId: string;
   inputClass: string;
 }
@@ -500,23 +506,21 @@ function PackageSelector({
     ? `${selectedPackage.name} (${formatPrice(selectedPackage.total_amount)})`
     : null;
 
+  const choose = (packageId: string | null) => {
+    onSelect(packageId);
+    setPackagePopoverOpen(false);
+  };
+
   return (
     <div>
-      <label className="block text-body text-gray-600 mb-1">Package</label>
-      <Popover.Root
-        open={packagePopoverOpen}
-        onOpenChange={setPackagePopoverOpen}
-      >
+      <label className="block text-body text-text-muted mb-1">Package</label>
+      <Popover.Root open={packagePopoverOpen} onOpenChange={setPackagePopoverOpen}>
         <Popover.Trigger asChild>
           <button
             type="button"
             className={`${inputClass} flex items-center justify-between text-left`}
           >
-            <span
-              className={
-                selectedLabel ? "text-text" : "text-text-subtle"
-              }
-            >
+            <span className={selectedLabel ? "text-text" : "text-text-subtle"}>
               {selectedLabel || "Select package"}
             </span>
             <ChevronDown
@@ -528,53 +532,37 @@ function PackageSelector({
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
-            className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+            className="z-[70] w-[var(--radix-popover-trigger-width)]"
             sideOffset={4}
             align="start"
           >
-            {isLoading ? (
-              <div className="px-3 py-2 text-body text-text-muted">
-                Loading packages...
-              </div>
-            ) : packages.length === 0 ? (
-              <div className="px-3 py-2 text-body text-text-muted">
-                No packages available
-              </div>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelect(null);
-                    setPackagePopoverOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-body transition ${
-                    !selectedPackageId
-                      ? "bg-green-50 text-green-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  None
-                </button>
-                {packages.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    type="button"
-                    onClick={() => {
-                      onSelect(pkg.id);
-                      setPackagePopoverOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-body transition ${
-                      selectedPackageId === pkg.id
-                        ? "bg-green-50 text-green-700"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {pkg.name} ({formatPrice(pkg.total_amount)})
-                  </button>
-                ))}
-              </>
-            )}
+            {/* `width="auto"` (w-max) plus `min-w-full`: no two width
+                utilities compete, the panel never sits narrower than the
+                trigger, and a long package name can still grow past it. */}
+            <MenuPanel width="auto" className="min-w-full max-h-56 overflow-y-auto">
+              {isLoading ? (
+                <p className="px-3 py-2 text-body text-text-subtle">Loading packages...</p>
+              ) : packages.length === 0 ? (
+                <p className="px-3 py-2 text-body text-text-subtle">
+                  No packages yet. Create one under Payments.
+                </p>
+              ) : (
+                <>
+                  <MenuItem selected={!selectedPackageId} onClick={() => choose(null)}>
+                    None
+                  </MenuItem>
+                  {packages.map((pkg) => (
+                    <MenuItem
+                      key={pkg.id}
+                      selected={selectedPackageId === pkg.id}
+                      onClick={() => choose(pkg.id)}
+                    >
+                      {pkg.name} ({formatPrice(pkg.total_amount)})
+                    </MenuItem>
+                  ))}
+                </>
+              )}
+            </MenuPanel>
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>

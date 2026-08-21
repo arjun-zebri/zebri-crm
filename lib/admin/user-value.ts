@@ -96,23 +96,30 @@ export interface GoneQuietUser {
   business_name: string;
   plan: "max" | "pro" | "starter";
   is_comped: boolean;
-  /** Null = never signed in at all. */
-  last_sign_in_at: string | null;
-  /** Whole days since the last sign-in; null when they never signed in. */
-  daysSinceSignIn: number | null;
+  /** Null = never seen at all. */
+  last_seen_at: string | null;
+  /** Whole days since they were last on Zebri; null when never seen. */
+  daysSinceSeen: number | null;
 }
 
-/** Days without a sign-in before a paying user counts as "gone quiet". */
+/** Days away before a paying user counts as "gone quiet". */
 const GONE_QUIET_DAYS = 14;
 
 /**
- * Paying or comped users who haven't signed in for 14+ days —
+ * Paying or comped users who haven't been on Zebri for 14+ days,
  * revenue at risk. Distinct from dormant (dormant = never started;
  * gone quiet = was in, stopped coming back). Highest tier first so
  * the most valuable at-risk accounts surface at the top.
  *
+ * Reads `last_seen_at` (newest `auth.sessions` activity), not
+ * `last_sign_in_at`. GoTrue only stamps the latter on a real credential
+ * exchange, so a user who never gets logged out keeps a frozen sign-in
+ * date and this list filled up with the most engaged accounts on the
+ * platform. Sorting already used `last_seen_at`; the filter did not, which
+ * left the two disagreeing about the same row.
+ *
  * Caveat: entering shadow mode signs the admin in AS the user via
- * OTP, which refreshes their `last_sign_in_at` — a recently-shadowed
+ * OTP, which creates a session for them, so a recently-shadowed
  * user can look falsely active for a while.
  */
 export function computeGoneQuiet(users: AdminUser[], now: number): GoneQuietUser[] {
@@ -120,8 +127,8 @@ export function computeGoneQuiet(users: AdminUser[], now: number): GoneQuietUser
   return users
     .filter((u) => {
       if (!isPayingActive(u) && !u.is_comped) return false;
-      if (!u.last_sign_in_at) return true;
-      return new Date(u.last_sign_in_at).getTime() < cutoff;
+      if (!u.last_seen_at) return true;
+      return new Date(u.last_seen_at).getTime() < cutoff;
     })
     .sort(compareUsersByPlanThenLastSeen)
     .map((u) => ({
@@ -130,9 +137,9 @@ export function computeGoneQuiet(users: AdminUser[], now: number): GoneQuietUser
       business_name: u.business_name,
       plan: effectivePlan(u),
       is_comped: u.is_comped,
-      last_sign_in_at: u.last_sign_in_at,
-      daysSinceSignIn: u.last_sign_in_at
-        ? Math.floor((now - new Date(u.last_sign_in_at).getTime()) / MS_PER_DAY)
+      last_seen_at: u.last_seen_at,
+      daysSinceSeen: u.last_seen_at
+        ? Math.floor((now - new Date(u.last_seen_at).getTime()) / MS_PER_DAY)
         : null,
     }));
 }

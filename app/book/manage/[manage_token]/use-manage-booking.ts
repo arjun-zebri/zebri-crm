@@ -137,7 +137,13 @@ export function useManageBooking(manageToken: string) {
       })
 
       if (error || !data) {
-        console.warn(`[manage-booking] unavailable token=${manageToken} err=${error?.message ?? 'none'}`)
+        // Only the first 8 characters: the whole value is the capability
+        // that opens, reschedules and cancels this booking, and a console
+        // line survives in screen shares, bug reports and session replays.
+        // A prefix is still enough to tell two failing links apart.
+        console.warn(
+          `[manage-booking] unavailable token=${manageToken.slice(0, 8)}… err=${error?.message ?? 'none'}`,
+        )
         setS((prev) => ({ ...prev, state: 'notFound' }))
         return
       }
@@ -253,6 +259,13 @@ export function useManageBooking(manageToken: string) {
       return
     }
 
+    // Why: submission is fired by an effect on the 'rescheduling' transition,
+    // so an effect re-run (dependency change, dev StrictMode double-invoke)
+    // would POST twice, duplicating emails and calendar pushes. The flag makes
+    // any call while a request is in flight a no-op.
+    if (s.submitting) return
+    setS((prev) => ({ ...prev, submitting: true }))
+
     try {
       const res = await fetch('/api/booking/reschedule', {
         method: 'POST',
@@ -316,7 +329,7 @@ export function useManageBooking(manageToken: string) {
         submitting: false,
       }))
     }
-  }, [s.selectedSlot, s.timezone, s.currentFrom, s.currentTo, manageToken, loadSlots])
+  }, [s.selectedSlot, s.timezone, s.submitting, s.currentFrom, s.currentTo, manageToken, loadSlots])
 
   const loadNextFortnight = useCallback(async () => {
     if (!s.currentTo) return

@@ -24,7 +24,7 @@ import {
   setDefaultSchedule,
 } from '@/app/(dashboard)/payments/schedule-actions'
 import { resolveStages, toTemplateStages } from '@/lib/payments/resolve-stages'
-import type { InvoiceStage, TemplateStage } from '@/types/payment-schedule'
+import type { InvoiceStage, ResolvedStage, TemplateStage } from '@/types/payment-schedule'
 
 /** Human-readable text for a resolver validation failure. */
 function messageFor(code: string): string {
@@ -58,6 +58,19 @@ export function useInvoiceStages(input: {
   // Amounts are NOT stored here; see the `stages` memo below.
   const [draft, setDraft] = useState<InvoiceStage[]>(initialStages)
 
+  /**
+   * Manually set due dates, keyed by stage id.
+   *
+   * A stage's date is normally a pure function of its offset, so
+   * {@link resolveStages} recomputes it on every render and `persist` writes
+   * what the resolver produced. That silently threw away a date the MC had
+   * just typed into the row's DatePicker: the edit showed on screen (the
+   * display reads `draft`) and saved without error, then reverted on reopen.
+   * Overrides are held apart from `draft` so the resolver stays pure and the
+   * offset the stage came from is still round-tripped to the schedule modal.
+   */
+  const [dueDateOverrides, setDueDateOverrides] = useState<Record<string, string>>({})
+
   // Re-seed the draft when the invoice this hook is bound to changes. The
   // `useState` initializer only runs on mount, and on mount the invoice query
   // is still pending — so `initialStages` is [] and the draft would stay empty
@@ -69,6 +82,9 @@ export function useInvoiceStages(input: {
   if (invoiceId !== seededInvoiceId) {
     setSeededInvoiceId(invoiceId)
     setDraft(initialStages)
+    // A different invoice's stage ids can never match these, but clearing
+    // keeps the map from growing for the life of the modal.
+    setDueDateOverrides({})
   }
 
   const schedulesQuery = useQuery({ queryKey: ['payment-schedules'], queryFn: listSchedules })
@@ -82,6 +98,21 @@ export function useInvoiceStages(input: {
   )
 
   const validationError = resolved.ok ? null : messageFor(resolved.errors[0]?.code ?? '')
+
+  /**
+   * The resolved stages with any manual date edits laid back over the top.
+   *
+   * This is what gets persisted. Matching is positional because `resolved`
+   * is built from `draft` in order, so index i on one is index i on the other.
+   */
+  const resolvedForPersist = useMemo<ResolvedStage[]>(() => {
+    if (!resolved.ok) return []
+    return resolved.stages.map((stage, i) => {
+      const id = draft[i]?.id
+      const override = id ? dueDateOverrides[id] : undefined
+      return override ? { ...stage, dueDate: override } : stage
+    })
+  }, [resolved, draft, dueDateOverrides])
 
   /**
    * Stages with their amounts derived during render.
@@ -120,6 +151,10 @@ export function useInvoiceStages(input: {
           paidAt: null,
         })),
       )
+      // Reapplying a schedule recomputes every date from its offsets, which
+      // is the point of reapplying. Keeping the old overrides would pin dates
+      // to a shape the MC has just replaced.
+      setDueDateOverrides({})
     },
     [totalCents, issueDate, dueDate],
   )
@@ -128,13 +163,19 @@ export function useInvoiceStages(input: {
     setDraft(next.map((s, i) => ({ ...s, position: i + 1 })))
   }, [])
 
-  /** Update the due date of an unpaid stage. Manual overrides take precedence over
-   *  template-computed dates. Reapplying a template recomputes all dates, losing
-   *  manual edits (this is intentional: the MC can re-edit after reapply). */
+  /**
+   * Update the due date of an unpaid stage.
+   *
+   * Writes to both the draft (so the row shows it immediately) and the
+   * override map (so `persist` writes it instead of the offset-derived date).
+   * Reapplying a template clears overrides: that recomputes all dates, which
+   * is intentional, and the MC can re-edit afterwards.
+   */
   const updateStageDueDate = useCallback((stageId: string, newDueDate: string) => {
     setDraft((current) =>
       current.map((s) => (s.id === stageId ? { ...s, dueDate: newDueDate } : s)),
     )
+    setDueDateOverrides((current) => ({ ...current, [stageId]: newDueDate }))
   }, [])
 
   // Library writes take explicit stages from the modal, never the current
@@ -174,9 +215,9 @@ export function useInvoiceStages(input: {
       const id = overrideId ?? invoiceId
       if (!id) return
       if (!resolved.ok) throw new Error(validationError ?? 'Schedule is not valid')
-      await replaceInvoiceStages({ invoiceId: id, stages: resolved.stages })
+      await replaceInvoiceStages({ invoiceId: id, stages: resolvedForPersist })
     },
-    [invoiceId, resolved, validationError],
+    [invoiceId, resolved, resolvedForPersist, validationError],
   )
 
   return {
