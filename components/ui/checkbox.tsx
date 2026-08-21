@@ -13,6 +13,11 @@ import type { ReactNode } from 'react'
  * checked, white checkmark, gray border otherwise — but always
  * visible, since form contexts have no hover-reveal affordance.
  *
+ * The fill is the `success` token, the same green a `Toggle` uses when
+ * it is on. It was `bg-emerald-500` until 2026-08-21, one shade lighter
+ * than the token, which showed as two different greens whenever a
+ * checkbox and a switch sat in the same form.
+ *
  * @example
  * ```tsx
  * <Checkbox
@@ -70,7 +75,7 @@ export function Checkbox({
           : checked
             ? branded
               ? 'cursor-pointer'
-              : 'bg-emerald-500 border-emerald-500 cursor-pointer'
+              : 'bg-success border-success cursor-pointer'
             : 'bg-surface border-border-strong hover:border-gray-500 cursor-pointer'
       } ${label ? '' : (className ?? '')}`}
     >

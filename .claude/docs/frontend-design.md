@@ -109,9 +109,9 @@ treatment: the `Input` chrome. Two knock-ons, both intentional:
   and are now `h-8`.
 
 **`Textarea` is `Input`'s sibling for prose** (2026-08-15,
-`components/ui/textarea.tsx`). Same chrome — control radius, border
+`components/ui/textarea.tsx`). Same chrome  -  control radius, border
 darkening to `brand-fg` on focus, `danger` border on error, label /
-help / error linked by `aria-describedby` — with the one deliberate
+help / error linked by `aria-describedby`  -  with the one deliberate
 difference that height comes from `rows` rather than the 32px control
 height, and the field resizes vertically only. It exists because
 multi-line fields were being hand-rolled with a copied class string
@@ -139,7 +139,7 @@ Foundations → "State changes never resize":
   beside, and the label itself does not change. `Button` uses it, so
   `<Button loading={saving}>Save</Button>` is all a call site needs.
   Reach for `BusyLabel` directly only inside a button that cannot be a
-  `Button` — the public branded surfaces (portal, questionnaire,
+  `Button`  -  the public branded surfaces (portal, questionnaire,
   invoice, contract) style their buttons from the MC's brand kit via
   inline `style`.
 - **`CopyButton`** stacks its idle and confirmed labels in one CSS grid
@@ -171,7 +171,7 @@ in that layer so it lands after Tailwind's preflight (which sets
 deliberate `cursor-not-allowed` on a call site working.
 
 So: do **not** add `cursor-pointer` to a `<button>` or to `Button`.
-Do add it to non-button clickables — table rows, cards, and anything
+Do add it to non-button clickables  -  table rows, cards, and anything
 whose click handler is on a `div`.
 
 ### Colour: mind the Tailwind 4 palette shift
@@ -246,6 +246,16 @@ Stacking comes from `OVERLAY_Z`, keyed by `layer`:
 `Modal` takes `layer="nested" | "top"`. The older `nested` boolean still
 works and maps to `layer="nested"`.
 
+**A tier only means anything if the overlay escapes to the body.** `Modal`
+and `ConfirmDialog` both `createPortal` to `document.body` **during render**,
+not from an effect. A z-index is resolved inside the nearest ancestor that
+creates a stacking context, so an inline overlay rendered within a
+transformed, `overflow-hidden` modal panel is trapped and clipped there no
+matter how high its tier: `ConfirmDialog` carried `z-[130]` and still painted
+*behind* an invoice modal until it was portalled (2026-08-19). Portalling
+during render also keeps parent-before-child DOM order, which an
+effect-gated portal inverts because effects run child-first.
+
 Known gap: roughly a hundred call sites still hard-code raw `z-[…]`
 values across fifteen tiers, including a `z-[9999]` in
 `add-status-modal.tsx`. Point those at `OVERLAY_Z` as each page is
@@ -253,11 +263,11 @@ hardened rather than in one sweep.
 
 ------------------------------------------------------------------------
 
-## Design tokens (Phase 0.5) — source of truth
+## Design tokens (Phase 0.5)  -  source of truth
 
 Tokens live in `app/globals.css` as Tailwind 4 `@theme` CSS variables; each
 becomes a Tailwind utility automatically. **Always prefer the semantic
-token over a raw hex or arbitrary value** — ESLint warns on `bg-[#…]` etc.
+token over a raw hex or arbitrary value**  -  ESLint warns on `bg-[#…]` etc.
 The branding system in `lib/branding/*` is end-user-facing brand
 customisation, intentionally separate from these internal tokens.
 
@@ -307,7 +317,7 @@ Spacing uses the Tailwind default scale; no custom spacing tokens.
 ### Dark mode (Phase 0.5b)
 
 Class-based dark variant (`<html class="dark">`), scoped to the
-authenticated CRM. The token *names* don't change — the SAME utility
+authenticated CRM. The token *names* don't change  -  the SAME utility
 (`bg-surface`, `text-text`, …) resolves to a different colour per theme via
 the underlying CSS variables. No `dark:` modifier required at call sites.
 
@@ -337,7 +347,7 @@ Activation:
 
 Out of scope:
 - **Public surfaces** (portal / quote / invoice / contract / timeline) follow
-  each MC's brand kit, not the dashboard theme — they currently use raw
+  each MC's brand kit, not the dashboard theme  -  they currently use raw
   colours via `lib/branding/*` and remain visually unchanged.
 - **Auth pages** (login / signup / reset) use raw colours today; they pick
   up dark mode automatically only after migration to tokens.
@@ -401,12 +411,12 @@ Dense page section titles (e.g. settings): text-sm font-medium text-gray-900
 document is framed, so the branding builder, the previews, and the public
 pages stay in lockstep:
 
-- `DOC_MAX_WIDTH_PX = 720` — the shared content width. Used by the branding
+- `DOC_MAX_WIDTH_PX = 720`  -  the shared content width. Used by the branding
   builder canvas, the branding preview page, the builder-modal preview, and
   the public invoice / contract / run sheet / questionnaire pages. Apply it as
   `style={{ maxWidth: DOC_MAX_WIDTH_PX }}` with `mx-auto w-full`, not a
   `max-w-*` class, so there is one numeric source.
-- `DOC_CANVAS_BG = '#F4F4F1'` — the light-grey page canvas the white document
+- `DOC_CANVAS_BG = '#F4F4F1'`  -  the light-grey page canvas the white document
   card sits on. The public invoice and contract pages set their page
   background to this (the card keeps its own `surface_color`) so the card
   reads as a document, matching the builder backdrop. Run sheet and
@@ -447,6 +457,37 @@ Breakpoints follow Tailwind defaults: `sm` = 640px, `md` = 768px, `lg` = 1024px.
 **Calendar filter sidebar:**
 - Mobile: hidden, opens as overlay drawer via SlidersHorizontal button
 - Desktop (`md+`): always visible inline
+
+## Calendar Grid Layout Engine (Scheduler Phase E)
+
+`lib/calendar/grid-layout.ts` provides pure geometry for day and week hour grids:
+
+**`bandGeometry(rules, viewport)`**  -  computes pixel height and offset for a band (availability, busy block, or booking chip):
+- Takes start and end times relative to grid-window boundaries
+- Clamps bands to viewport (never extends past grid edges)
+- Enforces minimum height (5 minutes = 5px at 1px/minute density) at the grid bottom
+- Returns `{ top, height }` in pixels for absolute positioning
+
+**`layoutOverlaps(overlappingBands)`**  -  manages columns for simultaneous bookings:
+- Detects A-B-C transitive overlaps (if A overlaps B and B overlaps C, all three get columns)
+- Returns column assignments and computed column widths
+- Used so two simultaneous bookings render side-by-side; three or more overflow the right edge (visible with scrolling)
+
+**Grid window and viewport:**
+- `lib/calendar/grid-window.ts` defines the visible time slice (e.g. Monday 07:00 to 21:00)
+- Window is in the MC's local timezone; queries use overlap predicates (gt/lt on UTC instants, see security.md)
+- Day view: one column, 24-hour window
+- Week view: seven columns (one per local day), 24-hour window
+
+**Timezone handling:**
+- All grid start/end times are computed using `lib/scheduling/timezone.ts` helpers (`zonedDateParts`, `zonedTimeToUtc`)
+- Day start is the MC's local midnight expressed as a UTC instant (e.g. Australia/Sydney midnight = T14:00Z)
+- Column dates are derived in the MC's timezone, never UTC, so DST boundaries are correct
+- Public booking page derives available day states (circles) in MC's timezone, never hardcoding UTC
+
+**Rendering density:**
+- 1 pixel per minute vertically (e.g. 60 pixels = 1 hour, 5 pixels = 5 minutes)
+- Availability shading, busy blocks, booking chips, and current-time indicator all use the same density
 
 ------------------------------------------------------------------------
 
@@ -706,12 +747,12 @@ The **Website form** (`lead`) is a full branding surface with its own tab, edite
 
 The **Global styles** accordion exposes branding defaults applied to every surface:
 
-- **Corner radius** (px) — applied to blocks via BaseBlock border-radius
-- **Link colour** (hex) — default link text colour when no block override
-- **Button style** — variant (fill/outline), size (sm/md/lg), radius (px)
-- **Base line-height** (unitless) — fallback for body text when not overridden per block
-- **Section spacing** (px) — default space between blocks
-- **Page background** — colour (hex) or optional texture ID
+- **Corner radius** (px)  -  applied to blocks via BaseBlock border-radius
+- **Link colour** (hex)  -  default link text colour when no block override
+- **Button style**  -  variant (fill/outline), size (sm/md/lg), radius (px)
+- **Base line-height** (unitless)  -  fallback for body text when not overridden per block
+- **Section spacing** (px)  -  default space between blocks
+- **Page background**  -  colour (hex) or optional texture ID
 
 Density (cozy/compact) is read-only; the stored value is honoured on render but the control is removed. All new fields resolve in `_user_branding` and merge into public RPC payloads.
 
@@ -750,7 +791,7 @@ Use a custom `<button>` (not a native `<input type="checkbox">`) so the styling 
   onClick={toggle}
   className={`shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
     selected
-      ? 'bg-emerald-500 border-emerald-500'
+      ? 'bg-success border-success'
       : `border-gray-300 hover:border-gray-500 ${
           selectionActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         }`
@@ -761,7 +802,7 @@ Use a custom `<button>` (not a native `<input type="checkbox">`) so the styling 
 ```
 
 - Hidden until row hover by default; always visible when row is selected or any selection is active
-- Filled with `bg-emerald-500` when selected, with a white SVG checkmark inside
+- Filled with `bg-success` when selected, with a white SVG checkmark inside. That is the same green a `Toggle` shows when it is on: the two were `emerald-500` and `success` (emerald-600) until 2026-08-21, one shade apart, which showed as two greens whenever a checkbox and a switch shared a form
 - Header "select all" checkbox uses the same component, with a `<DashMark />` for the indeterminate state
 
 ## Page header layout
@@ -843,6 +884,23 @@ px-3\
 py-2\
 focus:ring-2\
 focus:ring-green-200
+
+------------------------------------------------------------------------
+
+# TimeSelect Primitive (Scheduler Phase B)
+
+**`<TimeSelect />`** (`components/ui/time-select.tsx`) is a 24-hour time picker for selecting a wall-clock time (HH:mm format). Renders as a control-height (32px) dropdown trigger with a time value displayed in 12-hour label format (e.g. "2:30 PM" for a 14:30 value).
+
+Props:
+- `value` (string, "HH:mm")  -  24-hour time value
+- `onChange(value: string)`  -  fired on selection, passes "HH:mm"
+- `minuteStep` (number, default 15)  -  minute granularity in the dropdown (5, 15, 30, 60)
+- `startHour` (number, default 0)  -  earliest hour to show (0-23)
+- `endHour` (number, default 23)  -  latest hour to show (0-23); generates times up to and including the final minute at this hour
+- `disabled` (boolean, default false)
+- `label` / `help` / `error` (text, optional)  -  linked to the input via `aria-describedby`
+
+Dropdown renders times as 12-hour format with AM/PM (e.g. "9:00 AM", "2:30 PM"). Never hand-roll a time dropdown; reach for TimeSelect.
 
 ------------------------------------------------------------------------
 

@@ -129,6 +129,14 @@ export interface PortalVow {
   content: string
 }
 
+export interface PortalPackage {
+  id: string
+  name: string
+  description: string | null
+  gst_inclusive: boolean
+  total_amount: number
+}
+
 export interface PortalData {
   couple_id: string
   couple_name: string
@@ -165,6 +173,10 @@ export interface PortalData {
   }
   contracts: PortalContract[]
   questionnaires: PortalQuestionnaire[]
+  packages: {
+    selected_package_id: string | null
+    packages: PortalPackage[]
+  } | null
   enabled_sections: string[] | null
   branding: PublicBranding | null
   branding_blocks: Block[] | null
@@ -215,6 +227,11 @@ export default async function PortalPage({
   // shell already consumes.
   const { data: qData } = await supabase.rpc('get_portal_questionnaires', { token })
   portal.questionnaires = (qData as PortalQuestionnaire[] | null) ?? []
+
+  // Packages (and current selection) live in their own RPC, following
+  // the questionnaires pattern.
+  const { data: pkgData } = await supabase.rpc('get_portal_packages', { p_token: token })
+  portal.packages = (pkgData as PortalData['packages']) ?? null
 
   // Resolve branding once at the page boundary. portal.branding comes from
   // get_portal_data which always returns a fully populated PublicBranding

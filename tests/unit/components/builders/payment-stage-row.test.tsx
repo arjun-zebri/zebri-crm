@@ -15,7 +15,7 @@ const paid: InvoiceStage = { ...unpaid, id: 's0', paidAt: '2026-07-02T00:00:00Z'
 function setup(stage: InvoiceStage, overrides = {}) {
   const props = {
     stage, canRecord: true, isNextUnpaid: true, markPending: false,
-    onMarkPaid: vi.fn(), ...overrides,
+    onMarkPaid: vi.fn(), onDueDateChange: vi.fn(), ...overrides,
   }
   render(<PaymentStageRow {...props} />)
   return props

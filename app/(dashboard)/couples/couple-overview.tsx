@@ -13,6 +13,7 @@ import {
 } from '@/types/couple';
 
 import { CoupleEvents, type CoupleEventsHandle } from "./couple-events";
+import { CouplePackageSelector } from "./couple-package-selector";
 import { CoupleTabShell } from "./couple-tab-shell";
 
 interface CoupleOverviewProps {
@@ -81,6 +82,8 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       notes: field === "notes" ? (value ?? "") : notes,
       event_date: couple.event_date,
       venue: couple.venue,
+      selected_package_id:
+        field === "selectedPackage" ? value : (couple.selected_package_id ?? null),
     });
   };
 
@@ -177,6 +180,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
           <span className="text-body text-gray-700 w-28 shrink-0">
             Lead source
           </span>
+
           {editingField === "leadSource" ? (
             <Popover.Root
               open={leadSourceOpen}
@@ -266,6 +270,12 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             </span>
           </div>
         ) : null}
+
+        {/* Package selector */}
+        <CouplePackageSelector
+          couple={couple}
+          onSelect={(packageId) => handleSaveField("selectedPackage", packageId)}
+        />
 
         {/* Notes */}
         <div className="group flex-1 flex flex-col py-3 rounded-control -mx-2 px-2 min-h-0">

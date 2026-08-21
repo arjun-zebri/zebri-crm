@@ -255,6 +255,7 @@ export function ExtendedTriggerFields({
     case 'consultation_booked':
     case 'consultation_completed':
     case 'consultation_no_show':
+    case 'booking_cancelled':
     case 'rehearsal_scheduled':
     case 'rehearsal_completed':
       return <ConsultationExtra triggerType={triggerType} config={config} setConfig={setConfig} />
@@ -406,6 +407,9 @@ function ConsultationExtra({
       <NumericComparison label="Days until event date" opField="daysUntilEventOp" valueField="daysUntilEventValue" config={config} setConfig={setConfig} />
       {triggerType === 'consultation_booked' && (
         <NumField label="Within N days of today (optional)" value={(config['dateWithinDays'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, dateWithinDays: v || undefined })} />
+      )}
+      {triggerType === 'booking_cancelled' && (
+        <NumField label="Within N days of event start (optional)" value={(config['withinDaysOfStart'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, withinDaysOfStart: v || undefined })} />
       )}
       {triggerType === 'consultation_completed' && (
         <SelectField label="Outcome (optional)" value={(config['outcome'] as string) ?? ''} onChange={(v) => setConfig({ ...config, outcome: v || undefined })} options={enumOptions(CONSULTATION_OUTCOMES, CONSULTATION_OUTCOME_LABELS, 'Any outcome')} />

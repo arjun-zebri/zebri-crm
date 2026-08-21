@@ -93,6 +93,9 @@ default emoji and routing.
 | `rls_denied_spike` | warn | Cluster of RLS denials in a window | logs aggregator (Phase 0.8) |
 | `lead_blocked_plan_limit` | warn | A website lead-capture submission was blocked by the MC's Starter couple cap; the MC is emailed to upgrade so the lead is not lost | `app/api/lead/submit/route.ts` (ZEB-2) |
 | `lead_new_enquiry` | info | A new website-form enquiry was received and a couple created; a Slack heads-up alongside the MC email so the team channel sees inbound leads | `app/api/lead/submit/route.ts` (Website form) |
+| `booking_created` | info | A new public booking was received (via /book/[token] form); includes booker name, time, couple match status | `app/api/booking/submit/route.ts` (Scheduler Phase C) |
+| `booking_created_without_calendar` | warn | A booking was confirmed while the MC has NO connected calendar: the slot was offered without checking their real calendar, the booking will never appear on it, and a `video` meeting type produced no join link for the couple. The booking stands | `app/api/booking/submit/route.ts` |
+| `booking_event_push_failed` | warn | The calendar event push (Google Calendar or Microsoft Graph) failed after a confirmed booking; the booking stands, the MC should add it to their calendar manually or reconnect the integration | `app/api/booking/submit/route.ts` (Scheduler Phase C) |
 | `app_error` | error | Catch-all / uncaught errors | global error boundaries |
 
 Wiring each row to its source happens during that surface's hardening
@@ -155,6 +158,20 @@ await sendAlert({
   errorMessage: err.message,
 })
 ```
+
+**Capability tokens are masked in the log record.** The Slack line is built
+by hand from `describe()`, so it only ever contains what that function
+prints. The structured log record is the whole event spread into a context
+object, which put live share tokens into the platform logs: `manageToken` on
+`booking_created` is enough to open, reschedule or cancel someone's booking,
+and `invoiceToken` had the same shape. `sendAlert` now masks any field whose
+name ends in `token` down to its first 8 characters before logging. That
+prefix still lets one token be followed across log lines during an incident
+and is far too short to guess the rest of a UUID.
+
+If you add an event that carries a secret under a name that does NOT end in
+`token`, mask it at the call site: the sweep is deliberately narrow rather
+than a guess at what looks sensitive.
 
 ### `lib/alerts/slack.ts`
 

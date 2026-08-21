@@ -202,6 +202,14 @@ function ScheduleModalBody({
     setName(schedule.name)
   }
 
+  const createNew = (newName: string) => {
+    // Seed the modal with the typed name and an empty draft (user can add stages).
+    setName(newName)
+    // Keep any paid stages that already exist, start fresh with unpaid.
+    const paid = draft.filter((s) => s.paidAt)
+    setDraft(paid.length > 0 ? paid : [])
+  }
+
   const template = draftToTemplate(draft)
   const resolved = resolveStages(template, totalCents, issueDate, dueDate)
   const applyReason = resolved.ok ? null : reason(resolved.errors[0]?.code ?? '')
@@ -239,6 +247,7 @@ function ScheduleModalBody({
           onPick={loadSchedule}
           onSetDefault={onSetDefaultSchedule}
           onDelete={onDeleteSchedule}
+          onCreateNew={createNew}
         />
       </div>
 

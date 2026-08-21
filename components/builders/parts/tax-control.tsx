@@ -5,23 +5,22 @@
  * The chip stays minimal, and reads as one of four states:
  * - "Tax" — nothing configured.
  * - "GST 10%" — a rate applies and is added on top.
- * - "GST 10% incl." — a rate applies and the couple is also told the
- *   prices include GST.
- * - "GST incl." — no rate line, just the note. This is the common
- *   case for an MC whose advertised prices are GST-inclusive, and
- *   it's what applying a GST-inclusive package now produces.
+ * - "GST incl.", no rate, just the note. This is the common case for
+ *   MCs whose advertised prices are GST-inclusive.
+ *
+ * The rate and "Prices include GST" checkbox are mutually exclusive to
+ * prevent double-charging: if a rate is set, the checkbox is disabled
+ * and cannot be ticked. If the checkbox is ticked, the rate input is
+ * disabled and the rate is cleared. This prevents an invoice from both
+ * adding GST as a line item and claiming prices already include it.
  *
  * The popover lets the user change the rate (default 10% but
  * configurable for users in other jurisdictions / non-standard
  * scenarios).
  *
- * `gstInclusive` is a DISPLAY flag: it never changes a total, it only
- * decides whether surfaces render a "Prices include GST" note under
- * the total. Because it's independent of `rate`, an MC can technically
- * set a rate AND tick the box, which produces a document that both
- * adds GST and says prices include it. The popover hint spells that
- * out rather than blocking the combination, since a rate of 0 with the
- * note is the far more common intent.
+ * `gstInclusive` is a DISPLAY flag: it never changes the total, it
+ * only decides whether surfaces render a "Prices include GST" note
+ * under the total.
  *
  * API: `rate` is `null` when no GST applies. A positive number is
  * the percentage. `onChange` carries the new rate (or `null` to
@@ -70,7 +69,19 @@ export function TaxControl({
   // The placeholder still advertises 10 as the expected value.
   const [draft, setDraft] = useState<string>(rate != null ? String(rate) : '');
 
+  // Committed state: whether a rate is currently saved (shown on the chip).
   const applied = rate !== null;
+
+  // Draft state: whether the MC is typing a rate that would be committed on Done.
+  // Parse the draft to see if there's a valid positive number. We use this for
+  // the checkbox's disabled state and helper text so the checkbox responds LIVE
+  // as the MC types or clears the field, even though the actual rate value only
+  // commits when Done is clicked. The chip and "Remove" button still key off the
+  // committed `applied` flag so they show the saved state, not the in-flight draft.
+  const draftHasRate = (() => {
+    const parsed = parseFloat(draft);
+    return !Number.isNaN(parsed) && parsed > 0;
+  })();
 
   function handleOpenChange(next: boolean) {
     if (next) setDraft(rate != null ? String(rate) : '');
@@ -82,9 +93,30 @@ export function TaxControl({
     if (Number.isNaN(parsed) || parsed <= 0) {
       onChange(null);
     } else {
-      onChange(Math.min(100, parsed));
+      const newRate = Math.min(100, parsed);
+      onChange(newRate);
+      // If gstInclusive is true and we just set a rate, uncheck the box to
+      // prevent double-charging (prices cannot both include GST and have a
+      // separate tax line added on top).
+      if (gstInclusive && onGstInclusiveChange) {
+        onGstInclusiveChange(false);
+      }
     }
     setOpen(false);
+  }
+
+  function handleGstInclusiveToggle(next: boolean) {
+    onGstInclusiveChange?.(next);
+    // If checking the box, clear both the committed rate and the typed draft
+    // to prevent double-charging. Prices cannot both include GST and have GST
+    // added on top. Clear the draft so no stale number remains in the input
+    // that would re-commit if Done is pressed later.
+    if (next) {
+      if (rate !== null && onChange) {
+        onChange(null);
+      }
+      setDraft('');
+    }
   }
 
   return (
@@ -138,7 +170,8 @@ export function TaxControl({
                 step="0.5"
                 placeholder={String(DEFAULT_RATE)}
                 aria-label="Tax rate percentage"
-                className="w-full rounded-control border border-border bg-surface px-3 py-1.5 pr-8 text-body text-text focus:outline-none focus:border-border-strong [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                disabled={gstInclusive}
+                className="w-full rounded-control border border-border bg-surface px-3 py-1.5 pr-8 text-body text-text focus:outline-none focus:border-border-strong [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                 autoFocus
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-body text-text-subtle">
@@ -146,7 +179,9 @@ export function TaxControl({
               </span>
             </div>
             <span className="mt-1.5 block text-body text-text-subtle">
-              Australian GST is 10%. Leave blank for none.
+              {gstInclusive
+                ? 'Leave blank when prices already include GST.'
+                : 'Australian GST is 10%. Leave blank for none.'}
             </span>
           </label>
 
@@ -154,12 +189,14 @@ export function TaxControl({
             <div className="mb-3 border-t border-border pt-3">
               <Checkbox
                 checked={gstInclusive}
-                onChange={onGstInclusiveChange}
+                onChange={handleGstInclusiveToggle}
                 label="Prices include GST"
+                disabled={draftHasRate}
               />
               <span className="mt-1.5 block text-body text-text-subtle">
-                Tells the couple the price already covers GST. Any rate set
-                above is still added on top.
+                {draftHasRate
+                  ? 'GST is being added on top, so prices cannot also include it.'
+                  : 'Tells the couple the price already covers GST.'}
               </span>
             </div>
           ) : null}

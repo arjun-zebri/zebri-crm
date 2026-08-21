@@ -20,6 +20,8 @@ import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toast'
+import { useCurrentBranding } from '@/lib/branding/use-current-branding'
+import { displayModeFromBlocks, displayModeLabel } from '@/lib/questionnaires/display-mode'
 import { toDisplayMode, type Question, type QuestionnaireDisplayMode } from '@/lib/questionnaires/question-schema'
 import { STARTER_QUESTIONNAIRES } from '@/lib/questionnaires/starter-questionnaires'
 import { createClient } from '@/lib/supabase/client'
@@ -63,6 +65,13 @@ export function QuestionnaireTemplateManager() {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
+
+  // The answer style is a branding decision, so the detail preview reads it
+  // from the MC's branding blocks rather than the template's legacy
+  // display_mode column, which would let this preview disagree with the page
+  // the couple actually gets.
+  const { blocks: brandingBlocks } = useCurrentBranding('questionnaire')
+  const brandingDisplayMode = displayModeFromBlocks(brandingBlocks)
 
   const [editing, setEditing] = useState<QuestionnaireTemplateRow | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -256,7 +265,7 @@ export function QuestionnaireTemplateManager() {
               <div className="flex h-full min-h-0 flex-col gap-4">
                 <TemplatePreviewHeader
                   title={selectedQ.name}
-                  subtitle={selectedQ.display_mode === 'form' ? 'All questions on one page' : 'One question at a time'}
+                  subtitle={`Couples answer ${displayModeLabel(brandingDisplayMode)}`}
                   editLabel="Edit questionnaire"
                   onEdit={() => setEditing(selectedQ)}
                   onDuplicate={() => duplicateTemplate.mutate(selectedQ)}
@@ -264,8 +273,9 @@ export function QuestionnaireTemplateManager() {
                 />
                 <QuestionnaireExperiencePreview
                   title={selectedQ.name}
+                  description={selectedQ.description}
                   questions={selectedQ.questions}
-                  displayMode={selectedQ.display_mode}
+                  displayMode={brandingDisplayMode}
                   heightClass="min-h-0 flex-1"
                 />
               </div>

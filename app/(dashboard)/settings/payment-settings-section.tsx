@@ -35,8 +35,8 @@
 // is identical, the script loads on first call to
 // `loadConnectAndInitialize`. See
 // https://github.com/stripe/connect-js#importing-loadconnect-without-side-effects
-import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
 import type { StripeConnectInstance } from '@stripe/connect-js';
+import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
 import {
   ConnectAccountManagement,
   ConnectAccountOnboarding,

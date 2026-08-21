@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { AdminUser } from '@/lib/admin/admin-analytics'
 import {
-  compareUsersByPlanThenSignIn,
+  compareUsersByPlanThenLastSeen,
   computeGoneQuiet,
   effectivePlan,
   emptyUserStats,
@@ -41,6 +41,7 @@ function user(overrides: Partial<AdminUser>): AdminUser {
     is_comped: false,
     created_at: daysAgo(100),
     last_sign_in_at: null,
+    last_seen_at: null,
     ...overrides,
   }
 }
@@ -82,59 +83,93 @@ describe('effectivePlan / planRank', () => {
   })
 })
 
-describe('compareUsersByPlanThenSignIn', () => {
-  it('orders by tier first, then most recent sign-in', () => {
-    const staleMax = payingMax({ id: 'stale-max', last_sign_in_at: daysAgo(60) })
-    const freshPro = payingPro({ id: 'fresh-pro', last_sign_in_at: daysAgo(1) })
-    const fresherPro = payingPro({ id: 'fresher-pro', last_sign_in_at: daysAgo(0) })
-    const starter = user({ id: 'starter', last_sign_in_at: daysAgo(0) })
+describe('compareUsersByPlanThenLastSeen', () => {
+  it('orders by tier first, then most recently seen', () => {
+    const staleMax = payingMax({ id: 'stale-max', last_seen_at: daysAgo(60) })
+    const freshPro = payingPro({ id: 'fresh-pro', last_seen_at: daysAgo(1) })
+    const fresherPro = payingPro({ id: 'fresher-pro', last_seen_at: daysAgo(0) })
+    const starter = user({ id: 'starter', last_seen_at: daysAgo(0) })
 
-    const sorted = [starter, freshPro, staleMax, fresherPro].sort(compareUsersByPlanThenSignIn)
+    const sorted = [starter, freshPro, staleMax, fresherPro].sort(compareUsersByPlanThenLastSeen)
     expect(sorted.map((u) => u.id)).toEqual(['stale-max', 'fresher-pro', 'fresh-pro', 'starter'])
   })
 
-  it('puts never-signed-in users after signed-in ones within a tier', () => {
-    const never = payingPro({ id: 'never', last_sign_in_at: null })
-    const signed = payingPro({ id: 'signed', last_sign_in_at: daysAgo(300) })
-    expect([never, signed].sort(compareUsersByPlanThenSignIn).map((u) => u.id)).toEqual([
-      'signed',
+  it('puts never-seen users after seen ones within a tier', () => {
+    const never = payingPro({ id: 'never', last_seen_at: null })
+    const seen = payingPro({ id: 'seen', last_seen_at: daysAgo(300) })
+    expect([never, seen].sort(compareUsersByPlanThenLastSeen).map((u) => u.id)).toEqual([
+      'seen',
       'never',
+    ])
+  })
+
+  it('ignores last_sign_in_at: a daily user who never re-authenticates sorts first', () => {
+    // The production case (Sarah Joel): signed in once weeks ago, on the app
+    // yesterday. A sign-in-based sort buried her below dormant accounts.
+    const active = payingPro({ id: 'active', last_sign_in_at: daysAgo(29), last_seen_at: daysAgo(1) })
+    const lapsed = payingPro({ id: 'lapsed', last_sign_in_at: daysAgo(0), last_seen_at: daysAgo(40) })
+    expect([lapsed, active].sort(compareUsersByPlanThenLastSeen).map((u) => u.id)).toEqual([
+      'active',
+      'lapsed',
     ])
   })
 })
 
 describe('computeGoneQuiet', () => {
   it('includes only paying or comped users past the 14-day threshold', () => {
-    const quietPaying = payingPro({ id: 'quiet-paying', last_sign_in_at: daysAgo(20) })
-    const activePaying = payingPro({ id: 'active-paying', last_sign_in_at: daysAgo(2) })
-    const quietFree = user({ id: 'quiet-free', last_sign_in_at: daysAgo(90) })
+    const quietPaying = payingPro({ id: 'quiet-paying', last_seen_at: daysAgo(20) })
+    const activePaying = payingPro({ id: 'active-paying', last_seen_at: daysAgo(2) })
+    const quietFree = user({ id: 'quiet-free', last_seen_at: daysAgo(90) })
     const quietComped = user({
       id: 'quiet-comped',
       subscription_status: 'active',
       subscription_plan: 'max',
       is_comped: true,
-      last_sign_in_at: daysAgo(30),
+      last_seen_at: daysAgo(30),
     })
 
     const quiet = computeGoneQuiet([quietPaying, activePaying, quietFree, quietComped], NOW)
     expect(quiet.map((r) => r.id)).toEqual(['quiet-comped', 'quiet-paying'])
-    expect(quiet[0]).toMatchObject({ plan: 'max', is_comped: true, daysSinceSignIn: 30 })
+    expect(quiet[0]).toMatchObject({ plan: 'max', is_comped: true, daysSinceSeen: 30 })
   })
 
-  it('counts a paying user who never signed in as gone quiet', () => {
-    const never = payingMax({ id: 'never', last_sign_in_at: null })
+  it('counts a paying user who has never been seen as gone quiet', () => {
+    const never = payingMax({ id: 'never', last_seen_at: null })
     const quiet = computeGoneQuiet([never], NOW)
     expect(quiet).toHaveLength(1)
-    expect(quiet[0]).toMatchObject({ id: 'never', daysSinceSignIn: null })
+    expect(quiet[0]).toMatchObject({ id: 'never', daysSinceSeen: null })
   })
 
   it('is exactly a 14-day boundary', () => {
-    const on = payingPro({ id: 'on-boundary', last_sign_in_at: daysAgo(14) })
-    const inside = payingPro({ id: 'inside', last_sign_in_at: daysAgo(13.9) })
+    const on = payingPro({ id: 'on-boundary', last_seen_at: daysAgo(14) })
+    const inside = payingPro({ id: 'inside', last_seen_at: daysAgo(13.9) })
     const ids = computeGoneQuiet([on, inside], NOW).map((r) => r.id)
     expect(ids).toEqual([])
-    const past = payingPro({ id: 'past', last_sign_in_at: daysAgo(14.1) })
+    const past = payingPro({ id: 'past', last_seen_at: daysAgo(14.1) })
     expect(computeGoneQuiet([past], NOW).map((r) => r.id)).toEqual(['past'])
+  })
+
+  it('does not flag a daily user whose last_sign_in_at has frozen', () => {
+    // The exact shape the last-seen work exists for: a permanently-logged-in
+    // MC opens Zebri every day, but GoTrue has not stamped a sign-in for them
+    // in six weeks. Filtering on last_sign_in_at put the most engaged paying
+    // accounts on the revenue-at-risk list.
+    const daily = payingPro({
+      id: 'daily',
+      last_sign_in_at: daysAgo(42),
+      last_seen_at: daysAgo(1),
+    })
+    expect(computeGoneQuiet([daily], NOW)).toEqual([])
+  })
+
+  it('flags a lapsed user who signed in recently only via shadow mode', () => {
+    // Inverse of the above: the sign-in column moved, the sessions did not.
+    const lapsed = payingPro({
+      id: 'lapsed',
+      last_sign_in_at: daysAgo(0),
+      last_seen_at: daysAgo(40),
+    })
+    expect(computeGoneQuiet([lapsed], NOW).map((r) => r.id)).toEqual(['lapsed'])
   })
 })
 

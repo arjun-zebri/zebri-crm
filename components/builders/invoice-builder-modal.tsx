@@ -72,6 +72,7 @@ import { useInvoiceStages } from '@/components/builders/parts/use-invoice-stages
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
+import { Toggle } from '@/components/ui/toggle';
 import { stripeConnectEnabled } from '@/lib/auth/entitlements';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import { resolveCoupleEmail } from '@/lib/couples/email';
@@ -971,6 +972,10 @@ export function InvoiceBuilderModal({
             canRecordPayments={canRecordPayments}
             markPendingStageId={invoiceStages.markPendingStageId}
             onMarkPaid={invoiceStages.markPaid}
+            onDueDateChange={(stageId, newDate) => {
+              invoiceStages.updateStageDueDate(stageId, newDate);
+              setDirty(true);
+            }}
             onApplyTemplate={(template) => {
               invoiceStages.applyTemplate(template);
               setDirty(true);
@@ -990,24 +995,15 @@ export function InvoiceBuilderModal({
                 Adds a Pay with card button on the public invoice page.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setStripePaymentEnabled((v) => !v);
+            <Toggle
+              checked={stripePaymentEnabled}
+              onChange={(next) => {
+                setStripePaymentEnabled(next);
                 setDirty(true);
               }}
-              role="switch"
-              aria-checked={stripePaymentEnabled}
-              className={`inline-flex h-6 w-11 items-center rounded-pill transition-colors cursor-pointer ${
-                stripePaymentEnabled ? 'bg-success' : 'bg-surface-emphasis border border-border'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-pill bg-surface shadow transition-transform ${
-                  stripePaymentEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
+              ariaLabel="Accept card payment on the public invoice page"
+              className="shrink-0"
+            />
           </div>
         ) : null}
 

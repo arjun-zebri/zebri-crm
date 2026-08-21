@@ -21,9 +21,13 @@ function formatDate(iso: string | null) {
 }
 
 /**
- * One row of the admin Users table: identity, effective plan, last
- * sign-in, and the per-user value metrics (couples / events /
- * invoices + $ collected / templates / automations).
+ * One row of the admin Users table: identity, effective plan, when
+ * they were last on Zebri, and the per-user value metrics (couples /
+ * events / invoices + $ collected / templates / automations).
+ *
+ * "Last seen" is `last_seen_at` (newest `auth.sessions` activity), not
+ * `last_sign_in_at` - the latter only moves on a real credential
+ * exchange, which a permanently-logged-in user never performs.
  */
 export function UsersTableRow({
   user,
@@ -59,7 +63,7 @@ export function UsersTableRow({
         {user.is_comped && <span className="ml-1.5 text-text-subtle">comped</span>}
       </td>
       <td className="px-4 py-3 text-text-muted whitespace-nowrap">
-        {user.last_sign_in_at ? formatRelativeTime(user.last_sign_in_at, now) : 'never'}
+        {user.last_seen_at ? formatRelativeTime(user.last_seen_at, now) : 'never'}
       </td>
       <NumberCell value={stats.couples} />
       <NumberCell value={stats.events} />

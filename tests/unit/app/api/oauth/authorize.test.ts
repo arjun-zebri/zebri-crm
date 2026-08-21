@@ -34,8 +34,19 @@ async function loadRoute() {
   return await import('@/app/api/oauth/authorize/route');
 }
 
-function req(provider: string): NextRequest {
-  return new NextRequest(`http://localhost/api/oauth/authorize?provider=${provider}`);
+function req(provider: string, query = ''): NextRequest {
+  return new NextRequest(
+    `http://localhost/api/oauth/authorize?provider=${provider}${query}`,
+  );
+}
+
+/** Read one cookie's value off a redirect response. */
+function cookie(res: Response, name: string): string | undefined {
+  return res.headers
+    .getSetCookie()
+    .find((c) => c.startsWith(`${name}=`))
+    ?.split(';')[0]
+    ?.split('=')[1];
 }
 
 const user = { id: 'u1', email: 'mc@test', app_metadata: {} };
@@ -76,5 +87,35 @@ describe('GET /api/oauth/authorize', () => {
     const location = res.headers.get('location') ?? '';
     expect(location).toContain('accounts.google.com');
     expect(location).toContain('gmail.send');
+  });
+
+  describe('return destination', () => {
+    beforeEach(() => {
+      vi.stubEnv('GOOGLE_OAUTH_CLIENT_ID', 'client-id');
+      vi.stubEnv('GOOGLE_OAUTH_CLIENT_SECRET', 'client-secret');
+      getUserMock.mockResolvedValue({ data: { user } });
+    });
+
+    it('stores an allowlisted return destination for the callback to read', async () => {
+      const { GET, OAUTH_RETURN_COOKIE } = await loadRoute();
+      const res = await GET(req('google', '&purpose=calendar&return=calendar'));
+      expect(cookie(res, OAUTH_RETURN_COOKIE)).toBe('calendar');
+    });
+
+    it('defaults to settings when no return destination is given', async () => {
+      const { GET, OAUTH_RETURN_COOKIE } = await loadRoute();
+      const res = await GET(req('google', '&purpose=calendar'));
+      expect(cookie(res, OAUTH_RETURN_COOKIE)).toBe('settings');
+    });
+
+    it('falls back to settings rather than echoing an off-list destination', async () => {
+      const { GET, OAUTH_RETURN_COOKIE } = await loadRoute();
+      // Why: this value survives a round trip through a third-party consent
+      // screen, so echoing it back would be an open redirect.
+      const res = await GET(
+        req('google', `&purpose=calendar&return=${encodeURIComponent('https://evil.test')}`),
+      );
+      expect(cookie(res, OAUTH_RETURN_COOKIE)).toBe('settings');
+    });
   });
 });

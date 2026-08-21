@@ -9,6 +9,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { deriveInvoiceStatusFromStages } from '@/lib/payments/invoice-status';
 import {
   _resetReplayCounterForTest,
   HANDLED_EVENT_TYPES,
@@ -16,7 +17,6 @@ import {
   readPeriodEndIso,
   recordReplayAttempt,
 } from '@/lib/payments/webhook-events';
-import { deriveInvoiceStatusFromStages } from '@/lib/payments/invoice-status';
 
 afterEach(() => {
   _resetReplayCounterForTest();

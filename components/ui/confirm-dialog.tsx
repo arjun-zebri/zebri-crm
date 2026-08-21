@@ -1,5 +1,7 @@
 'use client';
 
+import { createPortal } from 'react-dom';
+
 import { Button } from './button';
 import { OVERLAY_Z, useBackdropDismiss, useOverlay } from './use-overlay';
 
@@ -64,12 +66,12 @@ export function ConfirmDialog({
   useOverlay({ isOpen: open, onClose: onCancel });
   const dismiss = useBackdropDismiss(onCancel);
 
-  // The dialog is fixed-position but still a DOM descendant of whatever
-  // opened it, so its clicks bubble into that ancestor. Opened from a
-  // clickable table row, confirming a delete also fired the row's
-  // onClick and navigated to the record that had just been deleted.
-  // Stopping on the bubble (never capture) leaves the dialog's own
-  // buttons working and only blocks the leak upward.
+  // The dialog portals to the body, but clicks still bubble through the
+  // React component tree to a clickable ancestor (e.g. an automations
+  // table row). Confirming a delete must not fire the row's onClick and
+  // navigate to a record that has just been deleted. Stopping on the
+  // bubble (never capture) leaves the dialog's own buttons working and
+  // only blocks the leak upward through React's event system.
   const surfaceHandlers = {
     onMouseDown: dismiss.onMouseDown,
     onClick: (e: React.MouseEvent) => {
@@ -85,7 +87,24 @@ export function ConfirmDialog({
   const titleId = 'confirm-dialog-title';
   const descId = 'confirm-dialog-description';
 
-  return (
+  // Portal to the body. When ConfirmDialog renders inline (not portalled),
+  // it becomes a DOM descendant of whatever opened it. A modal that portals
+  // to the body (e.g. BuilderModalShell) creates a nested z-stacking context,
+  // trapping the dialog's z-[130] underneath the modal's z-[80] or z-[75].
+  // Portalling during render keeps parent-before-child in the DOM and breaks
+  // the dialog free, so it renders above all ancestors.
+  //
+  // Guarded on `document` rather than a mounted-state effect: effects run
+  // child-first, so an effect-gated portal let nested overlays attach in the
+  // wrong order, inverting z-tier relationships. This render-phase guard
+  // preserves parent-before-child.
+  //
+  // The dialog's click-stopPropagation guard stays in place: even after
+  // portalling, React still bubbles events through the component tree, so
+  // clicks can leak into a clickable ancestor row (e.g. automations table).
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <>
       <div
         className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${OVERLAY_Z.top.backdrop}`}
@@ -128,6 +147,7 @@ export function ConfirmDialog({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

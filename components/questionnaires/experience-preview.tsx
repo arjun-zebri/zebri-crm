@@ -21,6 +21,7 @@ import { TypeformFlow } from './typeform-flow'
 
 interface ExperiencePreviewProps {
   title: string
+  description?: string | null
   questions: Question[]
   displayMode: QuestionnaireDisplayMode
   /** Constrain the page frame to a phone-ish width or let it breathe. */
@@ -29,7 +30,7 @@ interface ExperiencePreviewProps {
   heightClass?: string
 }
 
-export function QuestionnaireExperiencePreview({ title, questions, displayMode, frame = 'desktop', heightClass = 'h-[560px]' }: ExperiencePreviewProps) {
+export function QuestionnaireExperiencePreview({ title, description, questions, displayMode, frame = 'desktop', heightClass = 'h-[560px]' }: ExperiencePreviewProps) {
   const { branding, loading } = useCurrentBranding('questionnaire')
   const theme = themeFromBranding(branding)
   const [responses, setResponses] = useState<Responses>({})
@@ -51,36 +52,67 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
     // preview moves between questions; the page scrolls internally, exactly
     // like a phone viewport would.
     <div
-      className={`flex ${heightClass} flex-col overflow-y-auto rounded-control p-6 sm:p-8`}
+      className={`flex ${heightClass} flex-col rounded-control p-6 sm:p-8 ${displayMode === 'form' ? 'overflow-y-auto' : ''}`}
       style={{ background: theme.pageBg, color: theme.textColor, fontFamily: theme.bodyStack }}
     >
-      {/* The live typeform page centres the question vertically in the
-          viewport; `my-auto` mirrors that here (and still scrolls when a
-          question is taller than the frame). The classic form reads top-down,
-          so it stays top-aligned. */}
-      <div className={`mx-auto w-full ${displayMode === 'typeform' ? 'my-auto' : ''} ${frame === 'mobile' ? 'max-w-sm' : 'max-w-xl'}`}>
-        {/* Brand header — logo + business name, as on the live page. */}
-        <div className="mb-8 flex items-center gap-3">
-          {theme.logoUrl ? (
-            // User-uploaded brand asset, not a next/image source.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-pill object-cover" />
-          ) : null}
-          <span style={{ fontSize: `${theme.bodyFontSize}px`, fontWeight: 500, color: theme.mutedColor }}>
-            {theme.businessName}
-          </span>
-        </div>
+      {displayMode === 'typeform' ? (
+        // Typeform mode: the content sizes to its own height and sits at the
+        // top of the frame, so brand, title, question and nav stay grouped
+        // and read in order. Stretching it with a flex-1 chain pushed the
+        // progress bar into the middle of the frame and the Next button off
+        // the bottom, with a dead gap under every short question; centring it
+        // instead just moved that gap above the title. The flow still handles
+        // its own internal scroll when a step outgrows its space.
+        <div className={`mx-auto w-full ${frame === 'mobile' ? 'max-w-sm' : 'max-w-xl'}`}>
+          {/* Brand header: logo + business name, as on the live page. */}
+          <div className="mb-8 flex items-center gap-3">
+            {theme.logoUrl ? (
+              // User-uploaded brand asset, not a next/image source.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-pill object-cover" />
+            ) : null}
+            <span style={{ fontSize: `${theme.bodyFontSize}px`, fontWeight: 500, color: theme.mutedColor }}>
+              {theme.businessName}
+            </span>
+          </div>
 
-        <h1 className="mb-8 font-semibold" style={{ fontSize: `${theme.docTitleFontSize}px`, color: theme.textColor, fontFamily: theme.headingStack }}>
-          {title || 'Untitled questionnaire'}
-        </h1>
-
-        {displayMode === 'form' ? (
-          <ClassicForm questions={questions} responses={responses} onAnswer={onAnswer} theme={theme} mode="preview" branding={branding!} />
-        ) : (
+          <h1 className="mb-8 font-semibold" style={{ fontSize: `${theme.docTitleFontSize}px`, color: theme.textColor, fontFamily: theme.headingStack }}>
+            {title || 'Untitled questionnaire'}
+          </h1>
+          {description && (
+            <p className="mb-8" style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>
+              {description}
+            </p>
+          )}
           <TypeformFlow questions={questions} responses={responses} onAnswer={onAnswer} theme={theme} mode="preview" branding={branding!} />
-        )}
-      </div>
+        </div>
+      ) : (
+        // Form mode: classic all-on-one-page layout that scrolls internally.
+        <div className={`mx-auto w-full ${frame === 'mobile' ? 'max-w-sm' : 'max-w-xl'}`}>
+          {/* Brand header: logo + business name, as on the live page. */}
+          <div className="mb-8 flex items-center gap-3">
+            {theme.logoUrl ? (
+              // User-uploaded brand asset, not a next/image source.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-pill object-cover" />
+            ) : null}
+            <span style={{ fontSize: `${theme.bodyFontSize}px`, fontWeight: 500, color: theme.mutedColor }}>
+              {theme.businessName}
+            </span>
+          </div>
+
+          <h1 className="mb-8 font-semibold" style={{ fontSize: `${theme.docTitleFontSize}px`, color: theme.textColor, fontFamily: theme.headingStack }}>
+            {title || 'Untitled questionnaire'}
+          </h1>
+          {description && (
+            <p className="mb-8" style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>
+              {description}
+            </p>
+          )}
+
+          <ClassicForm questions={questions} responses={responses} onAnswer={onAnswer} theme={theme} mode="preview" branding={branding!} />
+        </div>
+      )}
     </div>
   )
 }

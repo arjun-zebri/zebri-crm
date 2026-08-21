@@ -244,6 +244,28 @@ or 2 above.
 
 ---
 
+## Cron Routes (Vercel Crons)
+
+Scheduled jobs run via `vercel.json` cron configuration. Each route is guarded by `isCronAuthorized(request)` (constant-time comparison of `Authorization: Bearer CRON_SECRET`).
+
+| Route | Schedule | Purpose | Auth |
+|---|---|---|---|
+| `/api/cron/expire-contracts` | `0 22 * * *` (10 PM UTC) | Flip contract status from sent to expired if `expires_at < now()`, emit automation events | CRON_SECRET |
+| `/api/email/send-contract-reminders` | `15 22 * * *` (10:15 PM UTC) | Fetch contracts due for reminder (5 days before expiry), send reminders | CRON_SECRET |
+| `/api/cron/prune-stripe-events` | `0 3 * * *` (3 AM UTC) | Delete archived Stripe webhook events older than 90 days to keep ledger size bounded | CRON_SECRET |
+| `/api/cron/booking-reminders` | `22 30 * * *` (10:30 PM UTC, Scheduler Phase D) | Fetch confirmed bookings due for reminder (0 36 hours before starts_at, reminder not yet sent), send reminder emails, mark `reminder_sent_at` | CRON_SECRET |
+
+**Setup:**
+1. Add `CRON_SECRET` to `.env.production` in Vercel dashboard (project Settings → Environment Variables → Production). Generate a secure random string; same value across all cron routes.
+2. The schedule format is standard cron (5 fields: minute hour dayofmonth month dayofweek, UTC).
+3. Each cron route must call `isCronAuthorized(request)` at the start and respond with `401` if the bearer token is invalid.
+
+**Testing locally:**
+Cron routes are not triggered by `npm run dev`. To test: manually send a request with the `Authorization: Bearer <CRON_SECRET>` header:
+```bash
+curl -H "Authorization: Bearer your-secret" http://localhost:3000/api/cron/booking-reminders
+```
+
 ## Why no Sentry release tagging / source-map upload
 
 Sentry was deferred in Phase 0.6 (roadmap §1, amended). When/if Sentry

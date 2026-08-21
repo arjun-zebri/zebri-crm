@@ -15,6 +15,7 @@ import type { Question, Responses } from '@/lib/questionnaires/question-schema'
 export interface PublicQuestionnaire extends PublicBranding {
   id: string
   title: string
+  description: string | null
   status: string
   /** 'typeform' (one question at a time) or 'form' (all on one page). */
   display_mode: string

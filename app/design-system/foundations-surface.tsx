@@ -8,6 +8,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { Skeleton, SkeletonRegion, SkeletonText } from '@/components/ui/skeleton';
 
 import { CodeBlock, Demo, DemoGrid, DemoRow, Example, Rule, Spec } from './showroom';
 
@@ -156,6 +157,16 @@ export function FoundationsSurface() {
           of the content that is coming, so the layout does not jump when it arrives. A centred
           spinner tells the user nothing about what they are waiting for and reflows the page when
           it resolves.
+          <br />
+          <strong>Build it from <code>Skeleton</code>, not by hand.</strong> The primitive owns the
+          surface token, the radius and the pulse. Wrap a group in{' '}
+          <code>SkeletonRegion</code> so the wait is announced once in words: the shapes themselves
+          are hidden from screen readers, which gain nothing from a list of empty boxes.
+          <br />
+          <strong>On a branded surface, pass <code>tone=&quot;inherit&quot;</code>.</strong> The
+          public pages carry the MC&apos;s own palette, and the default grey either vanishes into a
+          dark background or fights a light one. <code>inherit</code> tints from the page&apos;s
+          text colour instead, so one skeleton works for every brand.
         </Rule>
         <Example
           label="In-flight action"
@@ -185,6 +196,46 @@ export function FoundationsSurface() {
 
         <Example
           label="Whole surface waiting: skeleton, shaped like the content"
+          code={`<SkeletonRegion label="Loading couples" className="space-y-3">\n  {Array.from({ length: 4 }).map((_, i) => (\n    <div key={i} className="flex items-center justify-between">\n      <div className="space-y-1.5">\n        <Skeleton className="h-4 w-48" />\n        <Skeleton className="h-4 w-24" />\n      </div>\n      <Skeleton shape="pill" className="h-6 w-16" />\n    </div>\n  ))}\n</SkeletonRegion>`}
+        >
+          <Card>
+            <SkeletonRegion label="Loading couples" className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton shape="pill" className="h-6 w-16" />
+                </div>
+              ))}
+            </SkeletonRegion>
+          </Card>
+        </Example>
+
+        <Example
+          label="Paragraph placeholder"
+          code={`<SkeletonText lines={3} />`}
+        >
+          <Card>
+            <SkeletonText lines={3} />
+          </Card>
+        </Example>
+
+        <Example
+          label="Branded surface: tone=&quot;inherit&quot; tints from the page colour"
+          code={`<SkeletonRegion label="Loading booking page">\n  <Skeleton tone="inherit" className="h-5 w-36" />\n  <SkeletonText tone="inherit" lines={2} />\n</SkeletonRegion>`}
+        >
+          <div className="rounded-control p-6 bg-text text-text-inverse">
+            <SkeletonRegion label="Loading booking page" className="space-y-3">
+              <Skeleton tone="inherit" className="h-5 w-36" />
+              <SkeletonText tone="inherit" lines={2} />
+            </SkeletonRegion>
+          </div>
+        </Example>
+
+        <Example
+          label="Superseded: the same thing written by hand"
           code={`{isLoading ? (\n  <Card>\n    <div className="animate-pulse space-y-3">\n      {Array.from({ length: 4 }).map((_, i) => (\n        <div key={i} className="flex items-center justify-between">\n          <div className="space-y-1.5">\n            <div className="h-4 w-48 rounded-control bg-surface-emphasis" />\n            <div className="h-4 w-24 rounded-control bg-surface-emphasis" />\n          </div>\n          <div className="h-4 w-16 rounded-control bg-surface-emphasis" />\n        </div>\n      ))}\n    </div>\n  </Card>\n) : (\n  <CoupleList couples={couples} />\n)}`}
         >
           <Card>

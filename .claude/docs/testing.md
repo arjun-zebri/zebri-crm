@@ -12,7 +12,7 @@ Never skip a test or suppress a failure without understanding why it's failing. 
 
 ---
 
-## Test Stack (3 layers — added Phase 0.3)
+## Test Stack (3 layers  -  added Phase 0.3)
 
 | Layer | Tool | Location | Env | Run |
 |---|---|---|---|---|
@@ -24,7 +24,7 @@ Never skip a test or suppress a failure without understanding why it's failing. 
   separate (`test:e2e`) and is **not** picked up by Vitest.
 - Config: `vitest.config.ts` (two projects), `playwright.config.ts`.
 - Unit setup: `vitest.setup.ts` (jest-dom matchers + RTL cleanup).
-- `@/…` resolves via `vite-tsconfig-paths` (matches tsconfig — no drift).
+- `@/…` resolves via `vite-tsconfig-paths` (matches tsconfig  -  no drift).
 
 ### Unit tests
 Pure functions and React components. Fast, isolated, no I/O. Prefer testing
@@ -37,8 +37,8 @@ Run against the **local** Supabase stack only (never cloud). Helpers in
 - `createTestUser(metadata)` → isolated confirmed auth user + a client
   signed in as them (RLS applies as the app sees it). Always `cleanup()`
   (use `afterAll`).
-- `serviceClient()` bypasses RLS — setup/teardown only.
-- `anonClient()` — unauthenticated RLS checks.
+- `serviceClient()` bypasses RLS  -  setup/teardown only.
+- `anonClient()`  -  unauthenticated RLS checks.
 - Connection auto-discovered via `supabase status` (env override for CI).
 
 **Every owned table's hardening phase must add a tenant-isolation test**
@@ -52,12 +52,12 @@ seed). The integration project runs serially in one process (shared DB).
 
 - Unit: `tests/unit/lib/crypto/secret-box.test.ts` (AES-GCM round-trip +
   tamper rejection); `tests/unit/lib/oauth/tokens.test.ts` (code exchange,
-  refresh, userinfo — `fetch` mocked); `tests/unit/lib/settings/public-page.test.ts`
+  refresh, userinfo  -  `fetch` mocked); `tests/unit/lib/settings/public-page.test.ts`
   (subdomain helpers + `from`-header composer);
   `tests/unit/lib/email/sender-identity.test.ts` (`resolveSender` fail-safe
-  — OAuth only when connected + tokens usable, refresh-on-expiry, Resend
+   -  OAuth only when connected + tokens usable, refresh-on-expiry, Resend
   otherwise, never throws); `tests/unit/lib/email/dispatch.test.ts`
-  (transport routing — Gmail API / Graph / Resend, with `fetch` + Resend
+  (transport routing  -  Gmail API / Graph / Resend, with `fetch` + Resend
   mocked).
 - Integration: `tests/integration/rls/user-public-settings.test.ts`
   (cross-tenant denial incl. the encrypted OAuth tokens, + global
@@ -71,42 +71,42 @@ seed). The integration project runs serially in one process (shared DB).
 ### Branding E2E specs (Phase 11 + Document Blocks Phase C)
 
 **Phase 11 (stable):**
-- `tests/e2e/branding-onboarding.spec.ts` — first-run wizard flow: fresh user sees wizard → completes business/look/documents steps → editor shows tabs + no wizard on reload.
-- `tests/e2e/branding-editor-locks.spec.ts` — lock model: required blocks cannot be deleted (line-items on invoice, etc.); non-required text blocks can be deleted with undo.
-- `tests/e2e/branding-mobile-overflow.spec.ts` — mobile responsive: canvas scales at <md breakpoint, toolbar scrolls without overflow.
+- `tests/e2e/branding-onboarding.spec.ts`  -  first-run wizard flow: fresh user sees wizard → completes business/look/documents steps → editor shows tabs + no wizard on reload.
+- `tests/e2e/branding-editor-locks.spec.ts`  -  lock model: required blocks cannot be deleted (line-items on invoice, etc.); non-required text blocks can be deleted with undo.
+- `tests/e2e/branding-mobile-overflow.spec.ts`  -  mobile responsive: canvas scales at <md breakpoint, toolbar scrolls without overflow.
 
 **Document Blocks Phase C (deferred to CI):**
-- `tests/e2e/branding-block-readiness.spec.ts` — readiness validation: deleting a required block shows "Not ready to send" panel with plain-language missing items; panel clears when block is re-added.
-- `tests/integration/branding/blocks-repair.test.ts` — repair/migration: `repairBlocks` maps legacy `headerBanner` → Image and old `action` → CTA blocks; sweep migrates all user rows idempotently.
-- `tests/integration/branding/account-readiness.test.ts` — Layer B validation: Stripe Connect, bank details, contract template prerequisites gate "ready to send" per surface.
-- `tests/integration/branding/social-urls-rpc.test.ts` — `_user_branding()` exposes twitter_url, pinterest_url, website_url from `raw_user_meta_data`.
+- `tests/e2e/branding-block-readiness.spec.ts`  -  readiness validation: deleting a required block shows "Not ready to send" panel with plain-language missing items; panel clears when block is re-added.
+- `tests/integration/branding/blocks-repair.test.ts`  -  repair/migration: `repairBlocks` maps legacy `headerBanner` → Image and old `action` → CTA blocks; sweep migrates all user rows idempotently.
+- `tests/integration/branding/account-readiness.test.ts`  -  Layer B validation: Stripe Connect, bank details, contract template prerequisites gate "ready to send" per surface.
+- `tests/integration/branding/social-urls-rpc.test.ts`  -  `_user_branding()` exposes twitter_url, pinterest_url, website_url from `raw_user_meta_data`.
 
 ### Payment schedule modal specs (2026-07-31 redesign)
 
 Unit (`tests/unit/`), all with semantic selectors:
-- `lib/payments/resolve-stages.test.ts` — resolution + validation, the
+- `lib/payments/resolve-stages.test.ts`  -  resolution + validation, the
   `<value> <unit>` offsets (day / week / month, month-end clamping), and the
   `issue` / `due` timing anchor (before-due dates backward from the due date;
   `no_due_date` when the invoice has none).
-- `lib/payments/describe-schedule.test.ts` — `describeSchedule` across
+- `lib/payments/describe-schedule.test.ts`  -  `describeSchedule` across
   remainder, single-stage, fixed, and percentage combinations.
-- `components/builders/schedule-stage-row.test.tsx` — label / share / offset
+- `components/builders/schedule-stage-row.test.tsx`  -  label / share / offset
   edits, the % vs $ unit, "rest" for a remainder, a paid row locks. The unit
   `Select` is a Radix control (not drivable in jsdom), so state is asserted by
   rendering.
-- `components/builders/schedule-modal.test.tsx` — seeds from the default, the
+- `components/builders/schedule-modal.test.tsx`  -  seeds from the default, the
   running total, Add payment (before the remainder), Apply fires the resolved
   template + closes, Save to library, the Amount %/$ toggle, the remainder
   checkbox, "Before due" disabled without a due date, and Apply disabled with a
   warning for an unresolvable schedule.
-- `components/builders/payment-schedule.test.tsx` — empty state offers one "Add
+- `components/builders/payment-schedule.test.tsx`  -  empty state offers one "Add
   schedule" button that opens the modal; applied state shows the running total
   and "Change" reopens it.
 - The v1 library specs (`schedule-library-modal` / `schedule-library-list` /
   `schedule-editor` / `schedule-template-row` / `schedule-picker`) were
   **removed** with those retired parts.
 
-E2E: `tests/e2e/payment-schedule-modal.spec.ts` — one flow across desktop +
+E2E: `tests/e2e/payment-schedule-modal.spec.ts`  -  one flow across desktop +
 Mobile Chrome/Safari: Add schedule opens the modal pre-loaded with the default,
 Apply writes the timeline, then Change edits an offset and re-applies. Self-
 contained (no invoice save, no library mutation). **Deferred to CI / isolated
@@ -126,11 +126,59 @@ and `20260731010000`) until the CI deploy. Integration coverage stays in
 
 **Isolated-stack guard:** Phase 11 tests require either `BRANDING_E2E=1` OR `PLAYWRIGHT_BASE_URL` including `3123` (local Supabase on port 3123). Phase C tests (integration + new e2e) require `supabase start` locally; they are skipped on the remote dev server. Test helpers in `tests/e2e/helpers.ts`.
 
+### Public booking e2e specs (Scheduler Phase C)
+
+E2E: `tests/e2e/booking.spec.ts` covers the public booking flow end to end. Covers:
+- Slot picker: fetches available times, groups by booker's local day, renders times with timezone
+- Form submission: fills required fields (name, email) + optional fields (partner name, phone, notes)
+- Confirmation screen: shows meeting name, time, join URL (if video + event-push populated it)
+- Slot-taken recovery: first visitor books a slot, second visitor sees "That time was just taken" notice and can pick a different time
+- Mobile (Pixel 5): all steps responsive with full form visibility
+
+**Seeding:** Service client (SECURITY DEFINER RPC bypass) creates:
+- Test MC user with `account_type: 'vendor'` in app_metadata
+- Meeting type (Consultation, 30 min, video) with active=true
+- User timezone (user_public_settings.timezone = 'Australia/Sydney')
+- Availability rule for tomorrow (9am-6pm in MC's timezone)
+
+**Important:** Tests use `browser.newContext()` to create genuinely logged-out visitors, **not** `context.newPage()` (which shares the MC's auth cookies). This is critical for testing the public booking page as an unauthenticated surface.
+
+**Isolated-stack guard:** Tests require `supabase start` locally + dev server on http://localhost:3000. The migrations (`20260819000000_create_scheduling_tables.sql`, `20260820000000_create_bookings.sql`, `20260820001000_booking_rpcs.sql`) must be deployed locally; they are skipped on the remote dev server. If local Supabase is unavailable (service client throws), the suite skips with a clear message.
+
+**Key selectors:**
+| Element | Selector |
+|---------|----------|
+| Slot buttons | `page.locator('button').filter({ has: page.getByText(/\d{1,2}:\d{2}/) })` (matches time format) |
+| Slot-taken notice | `page.getByText('That time was just taken...')` |
+| Back button | `page.getByRole('button', { name: 'Back' })` |
+| Name field | `page.getByLabel('Your name')` |
+| Partner name field | `page.getByLabel("Partner's name (optional)")` |
+| Email field | `page.getByLabel('Email')` |
+| Phone field | `page.getByLabel('Phone (optional)')` |
+| Notes field | `page.getByLabel('Notes (optional)')` |
+| Submit button | `page.getByRole('button', { name: 'Confirm booking' })` |
+| Confirmation heading | `page.getByText('Booking confirmed')` |
+
+### Calendar tests (Scheduler Phase E)
+
+**Unit tests:** `tests/unit/lib/calendar/` and `tests/unit/app/calendar/`
+- `grid-layout.test.ts`: bandGeometry clamping at both edges, minimum height guard at grid bottom, A-B-C transitive overlaps
+- `grid-window.test.ts`: viewport slicing in local timezone
+- `day-grid.test.tsx`: day view rendering with availability shading, busy blocks, booking chips; positional assertions; Melbourne and UTC timezone variants prove timezone correctness
+- `week-grid.test.tsx`: week view column matching and overlap layout; bookings straddling window edges; one intentionally skipped DST test (see note below)
+- `layer-toggles.test.tsx`: layer visibility toggling
+- `bookings-tab.test.tsx`: bookings list rendering
+
+**Critical fixture requirement:** All calendar tests must include a NON-UTC timezone case (Australia/Melbourne is the standard). Six timezone bugs were found during Phase E; all were invisible to code review and hidden by UTC-only fixtures where wrong and right coincide.
+
+**Known open issue  -  DST changeover in week view:**
+`tests/unit/app/calendar/week-grid.test.tsx:36` contains an intentionally skipped DST test. During Sydney's daylight-saving changeover week (2026-10-03, local day is 23 hours long), no booking renders in any column despite the query returning rows. This is a suspected real defect in the week view's column matching logic, not a test artifact. When bookings are fetched, their local-day derivation may drift across the transition boundary, causing column mismatches. Until fixed, the defect means the week view may silently drop or mis-place bookings during the two DST transition weeks each year. Unblock requires fresh investigation of per-column dayStart derivation and the booking-to-column equality check.
+
 ### Welcome onboarding e2e specs (Phase 14, metadata-gated features)
 
 E2E tests for the welcome wizard use per-test users created via the local GoTrue admin API with `email_confirm: true`. The once-only gate is reset by sending a user metadata update with `{"user_metadata": {"welcome_onboarded_at": null}}` (GoTrue admin update MERGES metadata; keys are deleted only by explicit null). Tests are guarded to the isolated server on port 3123 (local Supabase); they do not run on the remote dev server.
 
-Environment variable: `LOCAL_SUPABASE_SERVICE_ROLE_KEY` — the service role key for admin API calls. Injected by the test harness when running on `:3123`. See `tests/e2e/welcome-onboarding.spec.ts`.
+Environment variable: `LOCAL_SUPABASE_SERVICE_ROLE_KEY`  -  the service role key for admin API calls. Injected by the test harness when running on `:3123`. See `tests/e2e/welcome-onboarding.spec.ts`.
 
 ### Grant repair after local DB reset
 
@@ -199,8 +247,8 @@ All features must work on both:
 ### Branding e2e specs (isolated-stack guard)
 
 Branding tests run against an isolated Supabase instance to test block-tree mutations without interfering with other tests. Guard with env vars:
-- `BRANDING_E2E=1` — signals that the branding test suite is running
-- `PLAYWRIGHT_BASE_URL` includes `:3123` — runs the app against the isolated stack (port 3123 is the isolated dev server's Supabase instance)
+- `BRANDING_E2E=1`  -  signals that the branding test suite is running
+- `PLAYWRIGHT_BASE_URL` includes `:3123`  -  runs the app against the isolated stack (port 3123 is the isolated dev server's Supabase instance)
 
 After `supabase db reset` locally, run `scripts/repair-auth-grants.sql` to restore DML grants on the auth schema tables; the stale CLI v2.65.5 leaves them stripped on PG17.
 
@@ -217,7 +265,7 @@ tests/e2e/
 ├── couple-profile.spec.ts    # Profile tabs: Overview, Events, Vendors, Tasks (12 tests)
 ├── vendors.spec.ts           # Vendor list, CRUD, keyboard shortcuts (15 tests)
 ├── kanban.spec.ts            # Board view columns, cards, drag-add (8 tests)
-├── calendar.spec.ts          # Calendar navigation, views, search (8 tests)
+├── calendar.spec.ts          # Calendar navigation, views, Statuses filter (8 tests)
 ├── navigation.spec.ts        # Dashboard, sidebar nav, sign out (10 tests)
 ├── mobile.spec.ts            # Pixel 5 + iPhone 12 layouts (12 tests)
 ├── branding-onboarding.spec.ts    # First-run wizard, surface tabs, preview (9 tests)
@@ -284,7 +332,7 @@ Avoid `nth()`, index-based selectors, or brittle CSS class selectors.
 ### Responsive dual-render: filter on visibility, not `.first()`
 
 Several list components render **both** layouts into the DOM and hide one
-with a responsive class — `payments-table.tsx` emits a mobile card stack
+with a responsive class  -  `payments-table.tsx` emits a mobile card stack
 *and* a `<table>`, for example. Two consequences bite e2e tests:
 
 - `getByText('…').first()` can resolve to the node the current viewport has
@@ -312,7 +360,7 @@ search box) so the visible match is unambiguous.
 A UI that holds a skeleton until several queries resolve can exceed the 5s
 default `expect` timeout, especially on WebKit. Put an explicit
 `{ timeout: 30_000 }` on the **first** assertion that waits for the reveal
-and leave the assertions after it at the tight default — that still pins
+and leave the assertions after it at the tight default  -  that still pins
 "these appear together" without making the test a latency benchmark. See
 `tests/e2e/invoice-gst-inclusive.spec.ts`.
 
@@ -399,6 +447,50 @@ The dev server starts automatically when running tests (`webServer` in `playwrig
 | Tasks | Create task, mark complete, due date display |
 | Calendar | Events appear, view switching (day/week/month) |
 | Mobile | Sidebar collapse, modals fit screen, tables scroll |
+
+### Booking lifecycle integration tests (Scheduler Phase D)
+
+Integration: `tests/integration/booking/booking-lifecycle.test.ts` covers the booking manage page RPC lifecycle end to end. Covers:
+- `get_booking_by_manage_token`: fetches booking detail, strips user_id, validates branding merge
+- `cancel_booking`: transitions status to cancelled, emits booking_cancelled event, denies past/already-cancelled
+- `reschedule_booking`: updates times, clears reminder_sent_at, catches exclusion violations (slot-taken), handles duration validation
+- Cross-tenant denial: another MC's manage_token does not resolve
+
+**Seeding:** Service client creates test MC, meeting type, bookings in various states (confirmed, cancelled, past).
+
+**Key assertions:**
+- Cancelled booking emits automation_events row with booking_cancelled type
+- Reschedule clears reminder_sent_at for next tick to send reminder
+- Slot-taken returns error; booking unchanged
+- Past booking denies reschedule + cancel
+
+### Booking manage page unit tests (Scheduler Phase D)
+
+Unit: `tests/unit/app/book/manage-booking.test.tsx` covers the manage page UI component. Covers:
+- Loading state: spinner visible until RPC returns
+- Active state: shows booking details, buttons enabled
+- Cancelled state: read-only view, callout shown
+- Past state: read-only, reschedule/cancel disabled
+- Cancel modal: confirmation checkbox required, calls RPC on confirm
+- Reschedule modal: slot picker reuses booking form slot logic, calls RPC on select
+- Slot-taken recovery: banner displayed, user re-selects time
+- Error handling: failed RPC shows inline banner, no state transition
+
+### Consultation completed emitter unit tests (Scheduler Phase D)
+
+Unit: `tests/unit/lib/automations/consultation-completed-emitter.test.ts` covers the time-based emitter. Covers:
+- Past confirmed booking: status flipped to completed, event emitted
+- Future booking: not selected, no action
+- Already-completed booking: not re-selected (status guard is idempotency)
+- Cancelled booking: ignored by query filter
+- Emit failure on one row: batch continues, Slack alert sent, remaining rows processed
+
+### Time-interval subtraction helper tests
+
+Unit: Tests for duration/buffer subtraction utility used by slot picker. Covers:
+- Buffer overlap detection (15-min buffer on each side)
+- Same-day multi-slot rendering (9am-6pm availability, 30-min slots + buffers)
+- Timezone edge cases (buffer spans calendar day boundary)
 
 ## What NOT to Test
 - Supabase internals or DB queries

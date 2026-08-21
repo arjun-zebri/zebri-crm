@@ -92,6 +92,7 @@ export type TriggerType =
   | 'consultation_booked'
   | 'consultation_completed'
   | 'consultation_no_show'
+  | 'booking_cancelled'
   // AU paperwork / compliance milestones
   | 'noim_lodged'
   | 'noim_overdue'

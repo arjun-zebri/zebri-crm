@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+
 import { login } from './helpers'
 
 test.describe('Calendar View', () => {

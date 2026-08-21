@@ -60,7 +60,7 @@ export async function sendCoupleQuestionnaireAction(
 
   // Load the template (RLS scopes it to this MC) and the couple together.
   const [{ data: template }, { data: couple }] = await Promise.all([
-    supabase.from('questionnaire_templates').select('name, questions, display_mode').eq('id', templateId).single(),
+    supabase.from('questionnaire_templates').select('name, description, questions, display_mode').eq('id', templateId).single(),
     supabase.from('couples').select('name, email, primary_email').eq('id', coupleId).single(),
   ])
   if (!template) return { ok: false, error: 'Questionnaire template not found.' }
@@ -75,6 +75,7 @@ export async function sendCoupleQuestionnaireAction(
       couple_id: coupleId,
       template_id: templateId,
       title: resolvedTitle,
+      description: template.description,
       questions: template.questions as Database['public']['Tables']['couple_questionnaires']['Row']['questions'],
       // Snapshot the display style with the questions, for the same reason.
       display_mode: template.display_mode,

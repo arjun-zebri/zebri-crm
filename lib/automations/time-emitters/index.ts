@@ -46,6 +46,7 @@ import type { TriggerType } from '@/types/automations'
 import type { Database } from '@/types/database'
 
 import { anniversaryOfEventEmitter } from './anniversary-of-event'
+import { consultationCompletedEmitter } from './consultation-completed'
 import { invoiceDueEmitter } from './invoice-due'
 import { invoiceOverdueEmitter } from './invoice-overdue'
 import { taskOverdueEmitter } from './task-overdue'
@@ -80,6 +81,7 @@ const registry: readonly TimeEmitter[] = [
   timeBeforeEventEmitter,
   timeAfterEventEmitter,
   anniversaryOfEventEmitter,
+  consultationCompletedEmitter,
 ]
 
 export interface TimeEmittersResult {
