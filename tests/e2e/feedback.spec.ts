@@ -65,7 +65,7 @@ test.describe('Feedback pill', () => {
     await expect(page.getByRole('option', { name: 'An idea for something new' })).toBeVisible()
   })
 
-  test('will not send until there is something worth reading', async ({ page }) => {
+  test('needs a summary and any description at all', async ({ page }) => {
     await page.goto('/couples', { waitUntil: 'domcontentloaded' })
     const dialog = await openFeedback(page)
 
@@ -75,8 +75,13 @@ test.describe('Feedback pill', () => {
     await dialog.getByLabel('Summary').fill('Contract emails are not sending')
     await expect(send).toBeDisabled()
 
-    await dialog.getByLabel('What happened?').fill('Pressed send and nothing arrived.')
+    // One character is enough. A longer minimum only ever blocked someone
+    // whose whole report was "it crashed", which is still worth having.
+    await dialog.getByLabel('What happened?').fill('x')
     await expect(send).toBeEnabled()
+
+    await dialog.getByLabel('What happened?').fill('   ')
+    await expect(send).toBeDisabled()
   })
 
   test('captures the page behind the form', async ({ page }) => {

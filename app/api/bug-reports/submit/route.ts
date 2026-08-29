@@ -29,7 +29,7 @@ const limiter = inMemoryLimiter(BUG_REPORT_RATE_LIMITS.submit);
  */
 const bodySchema = z.object({
   title: z.string().trim().min(3).max(120),
-  description: z.string().trim().min(10).max(5000),
+  description: z.string().trim().min(1).max(5000),
   reportType: z.enum(['Bug', 'Feature', 'Improvement']),
   pageUrl: z.string().trim().url().max(2000),
   routePath: z.string().trim().min(1).max(500),

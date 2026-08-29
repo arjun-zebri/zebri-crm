@@ -41,7 +41,9 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
 
-  const canSend = title.trim().length >= 3 && description.trim().length >= 10;
+  // Any non-empty description will do. A minimum only ever blocked someone
+  // whose whole report was "it crashed", which is still worth having.
+  const canSend = title.trim().length >= 3 && description.trim().length >= 1;
 
   function reset() {
     setTitle('');
