@@ -3,6 +3,7 @@
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { isChromePress } from '@/components/ui/use-overlay'
 import { Couple, CoupleStatusRecord } from '@/types/couple'
 
 interface CouplesToolbarProps {
@@ -39,7 +40,7 @@ export function CouplesToolbar({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (filtersRef.current && !filtersRef.current.contains(e.target as Node)) {
+      if (filtersRef.current && !filtersRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setFiltersOpen(false)
       }
     }

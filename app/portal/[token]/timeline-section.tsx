@@ -20,6 +20,7 @@ import { Plus, ChevronDown, GripVertical } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 
 import { Modal } from "@/components/ui/modal";
+import { isChromePress } from '@/components/ui/use-overlay';
 import { getRgb } from "@/lib/branding/contrast";
 import { FONT_STACKS } from "@/lib/branding/fonts";
 import type { PublicBranding } from "@/lib/branding/public-surface";
@@ -97,7 +98,7 @@ function TimePicker({
     const handler = (e: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(e.target as Node) && !isChromePress(e.target)
       ) {
         setOpen(false);
       }
@@ -543,7 +544,7 @@ function DaySelector({
     const handler = (e: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(e.target as Node) && !isChromePress(e.target)
       ) {
         setOpen(false);
       }

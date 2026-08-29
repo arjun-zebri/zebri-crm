@@ -27,7 +27,10 @@ export function PaymentsFooter({ tab, count, total }: PaymentsFooterProps) {
   const noun = count === 1 ? singular : `${singular}s`;
 
   return (
-    <div className="fixed bottom-0 left-0 md:left-[68px] right-0 z-30 bg-surface border-t border-gray-100 px-6 py-5 flex items-center justify-between">
+    // `pr-40` rather than `px-6`: the Feedback pill floats in the bottom-right
+    // corner and sat directly on top of the total. The extra right padding
+    // parks the total clear of it.
+    <div className="fixed bottom-0 left-0 md:left-[68px] right-0 z-30 bg-surface border-t border-gray-100 pl-6 pr-40 py-5 flex items-center justify-between">
       <p className="text-body text-text-subtle">
         {count} {noun}
       </p>

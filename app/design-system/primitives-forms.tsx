@@ -52,6 +52,9 @@ export function PrimitivesForms() {
           and mismatched heights were the most common visual bug in the app. Nothing sets
           <code> cursor-pointer</code> either: a base rule in <code>globals.css</code> gives every{' '}
           <code>button</code> the hand cursor, including raw ones this primitive does not own.
+          Reach for <code>shape=&quot;pill&quot;</code> only when the button floats free of the
+          layout, like the Feedback pill; a pill sitting in a form row next to an input reads as a
+          third radius the system does not have.
         </Rule>
         <div className="space-y-6">
           <Demo label="Variants">
@@ -70,6 +73,15 @@ export function PrimitivesForms() {
                   <X width={14} height={14} strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               ))}
+            </DemoRow>
+          </Demo>
+          <Demo label="Shape (control is the default; pill is for floating controls only)">
+            <DemoRow>
+              <Button>Control</Button>
+              <Button shape="pill">Pill</Button>
+              <Button shape="pill" variant="secondary">
+                Pill
+              </Button>
             </DemoRow>
           </Demo>
           <Demo label="States">

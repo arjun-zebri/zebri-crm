@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { MenuPanel } from '@/components/ui/menu'
+import { isChromePress } from '@/components/ui/use-overlay'
 import type { CoupleStatusRecord } from '@/types/couple'
 
 /** Props for {@link CalendarStatusFilter}. */
@@ -48,7 +49,7 @@ export function CalendarStatusFilter({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node) && !isChromePress(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)

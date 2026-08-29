@@ -1228,9 +1228,41 @@ timezone (text, nullable)  -  IANA timezone (e.g. 'Australia/Sydney', 'America/N
 
 Times in availability_rules and availability_overrides are wall-clock in this timezone. Migration: `20260819000000_create_scheduling_tables.sql`.
 
+## bug_reports (in-app Feedback pill)
+
+Feedback submitted from the Feedback pill on every dashboard page. This table is the source of truth, not Notion: the row is written before the Notion push runs, so an outage, a revoked token or a rate-limit never loses a report. The Notion task in Tasks Tracker is a mirror.
+
+Columns:
+id (uuid, primary key)
+user_id (uuid, not null, FK auth.users cascade)  -  RLS key (the MC who filed it)
+title (text, not null)  -  the MC's one-line summary; becomes the Notion Task name
+description (text, not null)  -  the MC's own words; becomes "Concern (as raised)" in the page body
+report_type (text, not null, check in: Bug | Feature | Improvement)  -  maps to the Notion Type select
+screenshot_filename (text, nullable)  -  filename only; the image is relayed straight into Notion and never stored by us
+page_url (text, not null)  -  absolute URL they were on
+route_path (text, not null)  -  pathname, for grouping reports by surface
+user_agent (text, nullable)  -  raw header, read server-side so it cannot be forged
+viewport_width, viewport_height (integer, nullable)  -  browser-reported
+build_sha (text, nullable)  -  VERCEL_GIT_COMMIT_SHA, or 'local'
+notion_page_id (text, nullable)  -  set once the Notion task exists
+notion_page_url (text, nullable)  -  deep link to the task
+notion_ticket_ref (text, nullable)  -  human reference, e.g. 'ZEB-42'; echoed back to the MC in the success toast
+notion_sync_status (text, not null, default 'pending', check in: pending | synced | failed)
+notion_sync_error (text, nullable)  -  why Notion refused it; there is no retry, the Slack alert carries the full text for manual re-filing
+created_at, updated_at (timestamptz)
+
+Indices:
+- (user_id) for owner lookups
+- (created_at) partial, where notion_sync_status <> 'synced'  -  the only query that scans across owners
+
+RLS: owner-scoped SELECT, INSERT and UPDATE (auth.uid() = user_id). Deliberately no DELETE policy: a filed report is a record, not a draft the reporter can withdraw.
+
+Migration: `20260828007000_create_bug_reports.sql`
+
 ## bookings (Scheduler Phase C)
 
 Public booking records created by the submit_booking RPC (never inserted via normal SQL). Stores the booker's details, slot timing, and manage/external event tokens.
+
 
 Columns:
 id (uuid, primary key)

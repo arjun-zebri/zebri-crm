@@ -568,9 +568,11 @@ DELETE (sampled clean across the migrations).
 | `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
 | `couple_time_entries` | ✅ (owner, and the couple must be the writer's own; see the note below) | `user_id` | ✅ `tests/integration/couples/time-actions.test.ts` (10 tests: cross-tenant read/insert/update/delete denial, one-running-timer index, couple-delete cascade, category-delete set-null) | Couples & Events |
 | `time_categories` | ✅ | `user_id` | ✅ `tests/integration/couples/time-actions.test.ts` (case-insensitive uniqueness plus cross-tenant denial) | Couples & Events |
+| `bug_reports` | ✅ (owner SELECT/INSERT/UPDATE; no DELETE policy) | `user_id` | ✅ `tests/integration/rls/bug-reports.test.ts` (6 tests — cross-tenant read/update denial, forged `user_id` insert rejected, delete is a no-op, anon locked out) | Feedback |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `lead_capture_forms` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/rpc.test.ts` (10 tests — RLS isolation + `get_lead_form`/`submit_lead` token gating, cross-tenant ingest, status resolution, plan-limit) | Lead capture (ZEB-2) |
 | `form_submissions` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/form-submissions.test.ts` (3 tests — cross-tenant read denial, submission↔couple link, custom-field folding + `get_lead_form` block tree) | Website form (block-based) |
+
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |

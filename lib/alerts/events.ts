@@ -352,6 +352,43 @@ export type AlertEvent =
       bookingId: string;
     })
 
+  // ───── In-app feedback ─────────────────────────────────────────────
+  | (BaseEvent & {
+      type: 'bug_report_submitted';
+      severity: 'info';
+      /** Notion reference, e.g. 'ZEB-42'. Null when Notion gave us no number. */
+      ticketRef: string | null;
+      /** What the MC titled it. */
+      title: string;
+      /** Report kind the MC picked. */
+      reportType: 'Bug' | 'Feature' | 'Improvement';
+      /** Who filed it. */
+      reporter: string;
+      /** The page they were on when they hit the pill. */
+      routePath: string;
+      /** Deep link to the Notion ticket. */
+      notionUrl: string;
+    })
+  | (BaseEvent & {
+      type: 'bug_report_notion_sync_failed';
+      severity: 'error';
+      /** Row id in `bug_reports`, which still holds the full report. */
+      reportId: string;
+      /** Repeated in full so the ticket can be re-filed from Slack alone. */
+      title: string;
+      description: string;
+      reporter: string;
+      /** Why Notion refused it. */
+      reason: string;
+    })
+  | (BaseEvent & {
+      type: 'bug_report_screenshot_upload_failed';
+      severity: 'warn';
+      /** Row id in `bug_reports`. The ticket was still filed, without the image. */
+      reportId: string;
+      reason: string;
+    })
+
   // ───── Catch-all ──────────────────────────────────────────────────
   | (BaseEvent & {
       type: 'app_error';

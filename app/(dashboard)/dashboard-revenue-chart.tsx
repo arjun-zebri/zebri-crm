@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 import { Card } from '@/components/ui/card'
+import { isChromePress } from '@/components/ui/use-overlay'
 
 import { useRevenueChart, useLeadsChart, DashboardPeriod } from './use-dashboard'
 
@@ -44,7 +45,7 @@ export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (modeRef.current && !modeRef.current.contains(e.target as Node)) {
+      if (modeRef.current && !modeRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setModeOpen(false)
       }
     }

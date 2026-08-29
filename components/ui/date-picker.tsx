@@ -4,6 +4,8 @@ import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
+import { isChromePress } from './use-overlay'
+
 interface DatePickerProps {
   value: string
   onChange: (v: string) => void
@@ -148,7 +150,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
-      const inContainer = containerRef.current?.contains(e.target as Node)
+      const inContainer = containerRef.current?.contains(e.target as Node) || isChromePress(e.target)
       if (!inContainer) setOpen(false)
     }
     if (inline && open) {
@@ -160,7 +162,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
   useEffect(() => {
     if (inline) return
     const handleMouseDown = (e: MouseEvent) => {
-      const inTrigger = containerRef.current?.contains(e.target as Node)
+      const inTrigger = containerRef.current?.contains(e.target as Node) || isChromePress(e.target)
       const inDropdown = dropdownRef.current?.contains(e.target as Node)
       if (!inTrigger && !inDropdown) setOpen(false)
     }

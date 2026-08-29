@@ -214,11 +214,15 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: 
 function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => void }) {
   const pct = Math.round(zoom * 100)
   return (
-    <div className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 bg-surface border border-border rounded-pill shadow-[0_4px_18px_-4px_rgba(15,23,42,0.18)] pl-1 pr-1 py-1">
+    // Sized and positioned to sit in line with the Feedback pill, which is
+    // fixed at `bottom-6 right-6` on every dashboard page and was covering
+    // these controls: `right-40` clears its footprint, `bottom-6` puts the two
+    // on the same baseline, and `h-8` gives them the same height.
+    <div className="absolute bottom-6 right-40 z-20 flex items-center gap-1.5 bg-surface border border-border rounded-pill shadow-[0_4px_18px_-4px_rgba(15,23,42,0.18)] h-8 px-1">
       <button
         type="button"
         onClick={() => setZoom(zoom - 0.1)}
-        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
+        className="w-6 h-6 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
         aria-label="Zoom out"
         title="Zoom out"
       >
@@ -230,7 +234,7 @@ function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => v
       <button
         type="button"
         onClick={() => setZoom(zoom + 0.1)}
-        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
+        className="w-6 h-6 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
         aria-label="Zoom in"
         title="Zoom in"
       >
@@ -240,7 +244,7 @@ function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => v
       <button
         type="button"
         onClick={() => setZoom(1)}
-        className="w-7 h-7 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
+        className="w-6 h-6 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
         aria-label="Fit to width"
         title="Reset zoom"
       >

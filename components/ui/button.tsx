@@ -24,6 +24,13 @@ import { BusyLabel } from './busy-label';
 /** Visual variant. */
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
 
+/**
+ * Corner treatment. `'control'` is the default 6px radius every form control
+ * shares; `'pill'` is for a button that floats free of a form row, where the
+ * fully round shape reads as "this is not part of the layout".
+ */
+export type ButtonShape = 'control' | 'pill';
+
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Visual style. Defaults to `'primary'`. */
   variant?: ButtonVariant;
@@ -37,6 +44,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    * to announce.
    */
   iconOnly?: boolean;
+  /**
+   * Corner treatment. Defaults to `'control'`, matching Input and Select.
+   *
+   * Only reach for `'pill'` when the button floats over the page rather than
+   * sitting in a row with other controls.
+   */
+  shape?: ButtonShape;
   /** Optional ref to the underlying `<button>`. */
   ref?: Ref<HTMLButtonElement>;
 }
@@ -78,15 +92,22 @@ const ICON_SIZE_CLASSES = 'h-8 w-8 text-body';
 // here too would put it in the utilities layer, where it would fight any
 // deliberate `cursor-not-allowed` a caller passes through `className`.
 const BASE_CLASSES =
-  'inline-flex items-center justify-center rounded-control font-medium transition-colors ' +
+  'inline-flex items-center justify-center font-medium transition-colors ' +
   'focus-visible:outline-none focus-visible:ring-offset-2 focus-visible:ring-offset-surface ' +
   'disabled:opacity-50 disabled:pointer-events-none';
+
+/** The two radii the design system has. There is no third. */
+const SHAPE_CLASSES: Record<ButtonShape, string> = {
+  control: 'rounded-control',
+  pill: 'rounded-pill',
+};
 
 /** Token-driven button. See {@link ButtonProps}. */
 export function Button({
   variant = 'primary',
   loading = false,
   iconOnly = false,
+  shape = 'control',
   disabled,
   type = 'button',
   className,
@@ -95,7 +116,7 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const sizeCls = iconOnly ? ICON_SIZE_CLASSES : SIZE_CLASSES;
-  const cls = `${BASE_CLASSES} ${VARIANT_CLASSES[variant]} ${sizeCls}${
+  const cls = `${BASE_CLASSES} ${SHAPE_CLASSES[shape]} ${VARIANT_CLASSES[variant]} ${sizeCls}${
     className ? ` ${className}` : ''
   }`;
   return (

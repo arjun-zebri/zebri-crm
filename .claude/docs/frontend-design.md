@@ -196,6 +196,10 @@ Known divergences the showroom still reports:
 - **Buttons.** The CLAUDE.md "buttons are `rounded-xl`" rule contradicts
   the `Button` primitive, which is `rounded-control` (6px). The
   primitive is the intended look; the rule is stale.
+  `Button` also takes `shape="pill"`, which swaps `rounded-control` for
+  `rounded-pill`. It is for a button that floats free of the layout (the
+  Feedback pill); a pill sitting in a form row beside an input reads as a
+  third radius the system does not have.
 - **Status chips.** Four implementations coexist: `StatePill` (tokens,
   keep), `Badge` (21 raw-palette variants), `StatBadge` inside
   `dashboard-stats.tsx`, and the vendor badges.
@@ -240,11 +244,47 @@ Stacking comes from `OVERLAY_Z`, keyed by `layer`:
 | `base` | `z-50` / `z-[60]` | `Modal` (default), `SidePanel` |
 | `nested` | `z-[75]` / `z-[80]` | a modal opened from another modal |
 | (popover) | `z-[90]` | `Select` dropdown and other popovers |
-| `top` | `z-[120]` / `z-[130]` | `ConfirmDialog` |
+| `top` | `z-[120]` / `z-[130]` | `ConfirmDialog`. Note this is ABOVE the popover tier, so a `Select` inside a `top` modal opens behind it. Use `nested` for any modal with a dropdown in it |
+| (feedback) | `z-[150]` | `FeedbackPill`, above every overlay so it stays clickable with a modal open |
 | (toast) | `z-[200]` | `Toast`, above everything by design |
 
 `Modal` takes `layer="nested" | "top"`. The older `nested` boolean still
 works and maps to `layer="nested"`.
+
+The Feedback pill sits between the overlay ladder and toasts on purpose: a
+modal is exactly where a bug tends to show itself, so the pill has to stay
+usable over one. Two consequences to keep in mind:
+
+- The toast stack is offset to `bottom-20` (rather than `bottom-6`) so a toast
+  never lands on the pill. This applies on public pages too, where toasts
+  therefore float slightly high.
+- Anything else anchored bottom-right has to clear the pill's roughly 140px
+  footprint. Already moved: the payments footer total (`pr-40`) and the
+  branding canvas zoom widget (`right-40`). Add to that list rather than
+  nudging the pill.
+
+**`data-capture-hide` marks app chrome.** Two things read it, and both mean
+the same thing: this element is chrome, not page content.
+
+1. The feedback screenshot (`modern-screenshot`) leaves it out of the shot.
+   Excluding a node skips its whole subtree.
+2. `isChromePress()` in `use-overlay` treats a press on it as *not* an outside
+   press, so dropdowns and panels stay open when the MC reaches for the pill.
+
+The Feedback pill and the toast stack set it directly; the feedback form gets
+it from `<Modal chrome>`. Nothing else should. An ordinary modal is usually the
+very thing being reported, so it has to appear in the screenshot and behave
+like page content: an earlier version excluded every `[data-overlay]`, which
+meant a shot taken from inside the couple modal showed the page beneath rather
+than the modal and its nested Add-event dialog.
+
+Any new dismiss-on-outside-press handler needs the guard:
+
+```ts
+if (ref.current && !ref.current.contains(e.target as Node) && !isChromePress(e.target)) {
+  setOpen(false);
+}
+```
 
 **A tier only means anything if the overlay escapes to the body.** `Modal`
 and `ConfirmDialog` both `createPortal` to `document.body` **during render**,

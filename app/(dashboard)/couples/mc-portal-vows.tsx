@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Heart, History, RotateCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { isChromePress } from '@/components/ui/use-overlay'
 import { createClient } from '@/lib/supabase/client'
 
 import { CoupleTabEmpty, CoupleTabShell } from './couple-tab-shell'
@@ -71,7 +72,7 @@ function HistoryPopover({
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node) && !isChromePress(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)

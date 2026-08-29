@@ -570,6 +570,72 @@ export type Database = {
           },
         ]
       }
+      bug_reports: {
+        Row: {
+          build_sha: string | null
+          created_at: string
+          description: string
+          id: string
+          notion_page_id: string | null
+          notion_page_url: string | null
+          notion_sync_error: string | null
+          notion_sync_status: string
+          notion_ticket_ref: string | null
+          page_url: string
+          report_type: string
+          route_path: string
+          screenshot_filename: string | null
+          title: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+          viewport_height: number | null
+          viewport_width: number | null
+        }
+        Insert: {
+          build_sha?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          notion_page_id?: string | null
+          notion_page_url?: string | null
+          notion_sync_error?: string | null
+          notion_sync_status?: string
+          notion_ticket_ref?: string | null
+          page_url: string
+          report_type: string
+          route_path: string
+          screenshot_filename?: string | null
+          title: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+          viewport_height?: number | null
+          viewport_width?: number | null
+        }
+        Update: {
+          build_sha?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          notion_page_id?: string | null
+          notion_page_url?: string | null
+          notion_sync_error?: string | null
+          notion_sync_status?: string
+          notion_ticket_ref?: string | null
+          page_url?: string
+          report_type?: string
+          route_path?: string
+          screenshot_filename?: string | null
+          title?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+          viewport_height?: number | null
+          viewport_width?: number | null
+        }
+        Relationships: []
+      }
       calendar_connections: {
         Row: {
           access_token_encrypted: string

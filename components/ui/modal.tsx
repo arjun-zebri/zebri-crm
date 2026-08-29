@@ -47,6 +47,15 @@ interface ModalProps {
    *  to the modal's rounded bottom edge. Used by full-bleed tables
    *  (e.g. plan-comparison) so column tints reach the bottom. */
   flushBottom?: boolean;
+  /**
+   * Marks this modal as app chrome rather than page content.
+   *
+   * Chrome is left out of the feedback screenshot and does not count as an
+   * "outside press" for the dropdowns underneath. Only the feedback form
+   * itself sets this: an ordinary modal IS the thing an MC wants to report,
+   * so it has to appear in the shot.
+   */
+  chrome?: boolean;
   /** Skip the header band entirely and float the close button in the
    *  top-right corner, so the body's own content starts at the very top.
    *  Used by the welcome tour, whose per-step title should sit flush at
@@ -79,6 +88,7 @@ export function Modal({
   layer,
   nested = false,
   flushBottom = false,
+  chrome = false,
   floatingClose = false,
 }: ModalProps) {
   // Auto-tier: a base backdrop (z-50) opened from inside a fullscreen
@@ -106,6 +116,10 @@ export function Modal({
   useOverlay({ isOpen, onClose });
   const backdropHandlers = useBackdropDismiss(onClose);
 
+  // Applied to both halves so a press on the dimmed backdrop counts the same
+  // as one on the panel.
+  const chromeAttrs = chrome ? { 'data-capture-hide': '' } : {};
+
   // Portal to the body. The panel is `position: fixed`, which resolves
   // against the nearest transformed ancestor rather than the viewport —
   // so a modal opened from inside a React Flow node (every node carries
@@ -128,10 +142,12 @@ export function Modal({
           (notably the bottom edge of the compare-plans modal —
           regression caught during Phase 2B UI verification). */}
       <div
+        {...chromeAttrs}
         className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${z.backdrop}`}
         {...backdropHandlers}
       />
       <div
+        {...chromeAttrs}
         role="dialog"
         aria-modal="true"
         className={`fixed inset-0 flex items-center justify-center p-4 ${z.panel}`}

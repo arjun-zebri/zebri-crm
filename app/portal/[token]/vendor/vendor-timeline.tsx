@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
 import type { TextStyle } from '@/app/(dashboard)/branding/blocks/types'
+import { isChromePress } from '@/components/ui/use-overlay'
 import { getRgb } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
@@ -117,7 +118,7 @@ function DaySelector({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setOpen(false)
       }
     }

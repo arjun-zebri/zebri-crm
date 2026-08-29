@@ -96,6 +96,9 @@ default emoji and routing.
 | `booking_created` | info | A new public booking was received (via /book/[token] form); includes booker name, time, couple match status | `app/api/booking/submit/route.ts` (Scheduler Phase C) |
 | `booking_created_without_calendar` | warn | A booking was confirmed while the MC has NO connected calendar: the slot was offered without checking their real calendar, the booking will never appear on it, and a `video` meeting type produced no join link for the couple. The booking stands | `app/api/booking/submit/route.ts` |
 | `booking_event_push_failed` | warn | The calendar event push (Google Calendar or Microsoft Graph) failed after a confirmed booking; the booking stands, the MC should add it to their calendar manually or reconnect the integration | `app/api/booking/submit/route.ts` (Scheduler Phase C) |
+| `bug_report_submitted` | info | An MC sent feedback from the in-app pill; carries the ZEB- reference, title, type, reporter, the page they were on, and a link to the Notion task | `lib/bug-reports/submit.ts` |
+| `bug_report_notion_sync_failed` | error | The `bug_reports` row saved but the Notion push failed. There is no retry, so this alert repeats the full title and description: it is the only copy anyone will read when re-filing the ticket by hand | `lib/bug-reports/submit.ts` |
+| `bug_report_screenshot_upload_failed` | warn | The Notion File Upload step failed. The ticket was still filed, just without its screenshot | `lib/bug-reports/submit.ts` |
 | `app_error` | error | Catch-all / uncaught errors | global error boundaries |
 
 Wiring each row to its source happens during that surface's hardening
