@@ -41,20 +41,51 @@ async function handle(request: NextRequest) {
 
   let sent = 0
   for (const row of (rows as ReminderRow[]) || []) {
-    const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/contract/${row.share_token}`
+    // Chase only the people who still owe a signature, each on their own link.
+    // Nudging a partner who has already signed reads as though their signature
+    // did not register, and the shared link cannot identify who is outstanding.
+    const { data: pending } = await admin
+      .from('contract_signers')
+      .select('name, email, sign_token')
+      .eq('contract_id', row.id)
+      .eq('role', 'client')
+      .is('signed_at', null)
+      .is('declined_at', null)
+      .order('signing_order')
 
-    const res = await sendContractReminderEmail({
-      coupleEmail: row.couple_email,
-      coupleName: row.couple_name,
-      contractNumber: row.contract_number,
-      contractTitle: row.title,
-      expiresAt: row.expires_at,
-      shareUrl,
-      mcBusinessName: row.mc_business_name,
-      sender: await resolveSender(admin, row.user_id, row.mc_business_name),
-    })
+    const targets =
+      pending && pending.length > 0
+        ? pending.map((s) => ({
+            email: s.email || row.couple_email,
+            name: s.name || row.couple_name,
+            token: s.sign_token,
+          }))
+        : [{ email: row.couple_email, name: row.couple_name, token: row.share_token }]
 
-    if (res.ok) {
+    const sender = await resolveSender(admin, row.user_id, row.mc_business_name)
+    const seen = new Set<string>()
+    let anyDelivered = false
+
+    for (const target of targets) {
+      if (!target.email || seen.has(target.email.toLowerCase())) continue
+      seen.add(target.email.toLowerCase())
+
+      const res = await sendContractReminderEmail({
+        coupleEmail: target.email,
+        coupleName: target.name,
+        contractNumber: row.contract_number,
+        contractTitle: row.title,
+        expiresAt: row.expires_at,
+        shareUrl: `${process.env.NEXT_PUBLIC_APP_URL}/contract/${target.token}`,
+        mcBusinessName: row.mc_business_name,
+        sender,
+      })
+      if (res.ok) anyDelivered = true
+    }
+
+    // The reminder counter is per contract, not per signer: it caps how many
+    // times we chase, and one round of chasing is one reminder.
+    if (anyDelivered) {
       await supabase.rpc('mark_contract_reminder_sent', { p_contract_id: row.id })
       sent += 1
     }

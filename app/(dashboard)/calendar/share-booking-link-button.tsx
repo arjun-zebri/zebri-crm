@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { MenuItem, MenuPanel } from '@/components/ui/menu';
 import { useToast } from '@/components/ui/toast';
+import { isChromePress } from '@/components/ui/use-overlay';
 import { buildHostedUrl } from '@/lib/booking/snippets';
 
 import { useMeetingTypes } from './use-meeting-types';
@@ -34,7 +35,7 @@ export function ShareBookingLinkButton() {
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!wrapperRef.current?.contains(event.target as Node) && !isChromePress(event.target)) setOpen(false);
     };
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);

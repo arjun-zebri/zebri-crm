@@ -16,7 +16,7 @@
  *
  * @module app/contract/[token]/_components/contract-sign-actions
  */
-import { Check, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 
@@ -216,11 +216,9 @@ export function ContractSignActions({
           }}
           className="px-5 py-2.5 inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default hover:opacity-90 transition"
         >
-          {actionLoading ? (
-            <Loader2 size={14} className="animate-spin" strokeWidth={1.5} />
-          ) : (
-            <Check size={14} strokeWidth={2} />
-          )}
+          {/* BusyLabel overlays the spinner on the label; swapping the icon
+              for a second spinner put two on the button. */}
+          <Check size={14} strokeWidth={2} />
           <BusyLabel busy={actionLoading}>{primaryLabel}</BusyLabel>
         </button>
         <button

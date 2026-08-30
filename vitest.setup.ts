@@ -21,3 +21,12 @@ import { cleanup } from '@testing-library/react'
 afterEach(() => {
   cleanup()
 })
+
+// jsdom has no layout, so `document.elementFromPoint` does not exist.
+// prosemirror-tables' column-resize plugin calls it on every mousemove over
+// a table, which turns a `userEvent.hover(cell)` in the rich-text table tests
+// into an uncaught TypeError that vitest reports as an unhandled error (exit
+// code 1 with every test passing). Answer "nothing under the pointer".
+if (typeof document !== 'undefined' && typeof document.elementFromPoint !== 'function') {
+  document.elementFromPoint = () => null
+}

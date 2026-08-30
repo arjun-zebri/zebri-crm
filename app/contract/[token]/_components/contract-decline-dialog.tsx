@@ -15,6 +15,7 @@ import type { PublicBranding } from '@/lib/branding/public-branding';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
 import { STATUS_COLORS } from '@/lib/branding/status-colors';
 import { roleDefaults } from '@/lib/branding/type-defaults';
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role';
 
 /**
  * Confirmation dialog for declining a contract.
@@ -107,8 +108,10 @@ export function ContractDeclineDialog({
                 lineHeight: bodyDefaults.lineHeight,
               }}
             >
-              Let {htmlToPlainText(businessName ?? '') || 'your MC'} know why,
-              or leave blank.
+              Let{' '}
+              {htmlToPlainText(businessName ?? '') ||
+                `your ${branding.vendor_role || DEFAULT_VENDOR_ROLE}`}{' '}
+              know why, or leave blank.
             </p>
             <textarea
               value={reason}

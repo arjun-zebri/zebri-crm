@@ -128,6 +128,14 @@ function describe(event: AlertEvent): string {
       }`;
     case 'booking_event_push_failed':
       return `user=${event.userId} · ${event.provider} status=${event.status} · booking=${event.bookingId}`;
+    case 'bug_report_submitted':
+      return `${event.ticketRef ?? 'new ticket'} · ${event.reportType} · "${event.title}" — ${event.reporter} on ${event.routePath}\n${event.notionUrl}`;
+    case 'bug_report_notion_sync_failed':
+      // The full text rides along on purpose: with no retry path, this Slack
+      // message is the only copy anyone will look at when re-filing by hand.
+      return `report=${event.reportId} — ${event.reason}\n*${event.title}* (${event.reporter})\n${event.description}`;
+    case 'bug_report_screenshot_upload_failed':
+      return `report=${event.reportId} — ticket filed without its screenshot: ${event.reason}`;
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }

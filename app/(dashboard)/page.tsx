@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 import { PageHeader } from "@/components/ui/page-header";
+import { isChromePress } from '@/components/ui/use-overlay';
 import { Couple } from '@/types/couple';
 
 import { CoupleProfile } from "./couples/couple-profile";
@@ -35,7 +36,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (periodRef.current && !periodRef.current.contains(e.target as Node)) {
+      if (periodRef.current && !periodRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setPeriodOpen(false);
       }
     };

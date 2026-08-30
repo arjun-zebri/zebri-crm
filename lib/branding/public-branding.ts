@@ -23,6 +23,7 @@ import type { TextCase } from './text-case'
 import type { Density } from './themes'
 import { THEME_PRESETS } from './themes'
 import { roleSizePx } from './type-scale'
+import { resolveVendorRole } from './vendor-role'
 
 /** The resolved branding shape every branded surface renders from. */
 export interface PublicBranding {
@@ -49,6 +50,8 @@ export interface PublicBranding {
   secondary_color: string
   secondary_text_color: string
   business_name: string | null
+  /** Client-facing role noun ("MC", "DJ", "Celebrant"). See lib/branding/vendor-role. */
+  vendor_role: string | null
   tagline: string | null
   abn: string | null
   phone: string | null
@@ -127,6 +130,8 @@ export interface UserMetadata {
   secondary_color?: string
   secondary_text_color?: string
   business_name?: string
+  vendor_role?: string
+  business_type?: string | string[]
   tagline?: string
   abn?: string
   phone?: string
@@ -224,6 +229,7 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     // secondary button label sits ON the secondary fill; contrast-derived.
     secondary_text_color: getTextColor(metadata.secondary_color ?? '#6B7280'),
     business_name: metadata.business_name ?? null,
+    vendor_role: resolveVendorRole(metadata as Record<string, unknown>),
     tagline: metadata.tagline ?? null,
     abn: metadata.abn ?? null,
     phone: metadata.phone ?? null,

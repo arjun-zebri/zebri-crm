@@ -1,27 +1,22 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Info } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
 import { AddressAutocomplete, type AddressValue } from '@/components/ui/address-autocomplete'
 import { useToast } from '@/components/ui/toast'
+import { Tooltip } from '@/components/ui/tooltip'
+import {
+  VENDOR_ROLE_PRESETS,
+  derivedVendorRole,
+  parseBusinessTypes,
+} from '@/lib/branding/vendor-role'
 import { createClient } from '@/lib/supabase/client'
 
 import { AutoSaveStatus, type SaveState } from './auto-save-status'
 
-
-const businessTypeOptions = [
-  { value: 'mc', label: 'MC' },
-  { value: 'celebrant', label: 'Celebrant' },
-  { value: 'dj', label: 'DJ' },
-]
-
-function parseBusinessTypes(value: string | string[]): string[] {
-  if (Array.isArray(value)) return value
-  if (!value) return []
-  return [value]
-}
+const businessTypeOptions = VENDOR_ROLE_PRESETS
 
 interface PersonalInfoSectionProps {
   initialData: {
@@ -35,6 +30,7 @@ interface PersonalInfoSectionProps {
     twitterUrl: string
     pinterestUrl: string
     businessType: string | string[]
+    vendorRole: string
     mcSignatureName: string
     addressText: string
     addressLat: number | null
@@ -56,6 +52,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [pinterestUrl, setPinterestUrl] = useState(initialData.pinterestUrl)
   const [businessTypes, setBusinessTypes] = useState<string[]>(parseBusinessTypes(initialData.businessType))
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false)
+  const [vendorRole, setVendorRole] = useState(initialData.vendorRole)
   const [mcSignatureName, setMcSignatureName] = useState(initialData.mcSignatureName)
   const [addressText, setAddressText] = useState(initialData.addressText)
   const [addressLat, setAddressLat] = useState<number | null>(initialData.addressLat)
@@ -84,6 +81,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     twitterUrl: initialData.twitterUrl,
     pinterestUrl: initialData.pinterestUrl,
     businessTypes: initialBusinessTypes,
+    vendorRole: initialData.vendorRole,
     mcSignatureName: initialData.mcSignatureName,
     addressText: initialData.addressText,
     addressLat: initialData.addressLat,
@@ -104,6 +102,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       twitterUrl !== s.twitterUrl ||
       pinterestUrl !== s.pinterestUrl ||
       JSON.stringify([...businessTypes].sort()) !== JSON.stringify([...s.businessTypes].sort()) ||
+      vendorRole !== s.vendorRole ||
       mcSignatureName !== s.mcSignatureName ||
       addressText !== s.addressText ||
       addressLat !== s.addressLat ||
@@ -154,6 +153,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
         twitter_url: twitterUrl,
         pinterest_url: pinterestUrl,
         business_type: businessTypes,
+        vendor_role: vendorRole,
         mc_signature_name: mcSignatureName,
         address_text: addressText,
         address_lat: addressLat,
@@ -193,6 +193,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       twitterUrl,
       pinterestUrl,
       businessTypes,
+      vendorRole,
       mcSignatureName,
       addressText,
       addressLat,
@@ -216,6 +217,21 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
 
   const inputClass =
     'w-full border border-border rounded-control px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
+
+  // Placeholder shows what Business Type alone would produce, so the field
+  // reads as an override rather than a required entry.
+  const derivedRole = derivedVendorRole({ business_type: businessTypes })
+  const placeholderRole = derivedRole.charAt(0).toUpperCase() + derivedRole.slice(1)
+  // Explain the field first, then show the sentence it lands in, built from
+  // this account's real business name and role. An example on its own does not
+  // tell you what the field is for, and the fallback behaviour is not
+  // guessable from an empty box.
+  const effectiveRole = vendorRole.trim() || derivedRole
+  const roleExample =
+    "The word clients see you called, on contracts and in their portal. " +
+    'Leave blank to follow Business Type.\n\n' +
+    `Example: "This agreement is made between ${businessName.trim() || 'your business'} ` +
+    `(the ${effectiveRole}) and the Couple."`
 
   const selectedLabel = businessTypeOptions
     .filter((o) => businessTypes.includes(o.value))
@@ -260,7 +276,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               className={inputClass}
-              placeholder="Your MC business name"
+              placeholder="Your business name"
             />
           </div>
 
@@ -287,7 +303,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-50 w-[var(--radix-popover-trigger-width)]"
+                  className="bg-surface border border-border rounded-control shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -320,6 +336,60 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
+          </div>
+
+          <div className="sm:col-span-2">
+            <AddressAutocomplete
+              value={addressText}
+              tooltip="Used to calculate drive time to each event."
+              onChange={(next: AddressValue) => {
+                setAddressText(next.text)
+                setAddressLat(next.lat)
+                setAddressLng(next.lng)
+              }}
+              onSelect={(next: AddressValue) => {
+                setAddressText(next.text)
+                setAddressLat(next.lat)
+                setAddressLng(next.lng)
+                // Persist after this render commits so autoSave reads the
+                // freshly-set coordinates rather than a stale closure.
+                setSaveSignal((n) => n + 1)
+              }}
+            />
+          </div>
+
+          <div>
+            {/* Backs the `{{vendor_role}}` contract variable and the wording on
+                every client-facing surface ("Signed by your DJ"). Left blank it
+                follows Business Type; typed it wins, for anyone whose title
+                isn't one of the three presets. */}
+            <div className="flex items-center gap-1.5 mb-1">
+              <label className="block text-body font-medium text-gray-700">
+                What clients call you
+              </label>
+              <Tooltip
+                // A worked example, not an abstract description: the field is
+                // meaningless until you see the sentence it lands in.
+                label={roleExample}
+                side="top"
+                multiline
+              >
+                <Info
+                  size={12}
+                  strokeWidth={1.5}
+                  className="text-text-subtle cursor-help"
+                  aria-hidden
+                />
+              </Tooltip>
+            </div>
+            <input
+              type="text"
+              value={vendorRole}
+              onChange={(e) => setVendorRole(e.target.value)}
+              className={inputClass}
+              placeholder={placeholderRole}
+              maxLength={40}
+            />
           </div>
 
           <div>
@@ -405,7 +475,17 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-body font-medium text-gray-700 mb-1">Signature name</label>
+            <div className="flex items-center gap-1.5 mb-1">
+              <label className="block text-body font-medium text-gray-700">Signature name</label>
+              <Tooltip label="Used as your typed signature on contracts you send." side="top">
+                <Info
+                  size={12}
+                  strokeWidth={1.5}
+                  className="text-text-subtle cursor-help"
+                  aria-hidden
+                />
+              </Tooltip>
+            </div>
             <input
               type="text"
               value={mcSignatureName}
@@ -413,9 +493,6 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               className={inputClass}
               placeholder="Your full legal name"
             />
-            <p className="text-body text-text-subtle mt-1.5">
-              Used as your typed signature on contracts you send.
-            </p>
             {mcSignatureName && (
               <div className="mt-2 border border-gray-100 bg-gray-50 rounded-control p-3">
                 <p className="text-body text-text-muted mb-1">Preview</p>
@@ -424,26 +501,6 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                 </p>
               </div>
             )}
-          </div>
-
-          <div className="sm:col-span-2">
-            <AddressAutocomplete
-              value={addressText}
-              help="Used to calculate drive time to each event."
-              onChange={(next: AddressValue) => {
-                setAddressText(next.text)
-                setAddressLat(next.lat)
-                setAddressLng(next.lng)
-              }}
-              onSelect={(next: AddressValue) => {
-                setAddressText(next.text)
-                setAddressLat(next.lat)
-                setAddressLng(next.lng)
-                // Persist after this render commits so autoSave reads the
-                // freshly-set coordinates rather than a stale closure.
-                setSaveSignal((n) => n + 1)
-              }}
-            />
           </div>
         </div>
 

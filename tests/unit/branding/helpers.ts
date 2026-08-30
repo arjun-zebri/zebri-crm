@@ -26,6 +26,7 @@ export function makeBranding(overrides?: Partial<PublicBranding>): PublicBrandin
     secondary_color: '#eeeeee',
     secondary_text_color: '#111111',
     business_name: 'Test Business',
+    vendor_role: 'MC',
     tagline: 'Test tagline',
     abn: null,
     phone: null,

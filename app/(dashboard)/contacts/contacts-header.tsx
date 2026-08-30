@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { MenuItem, MenuPanel, MenuSeparator } from '@/components/ui/menu'
 import { PageHeader } from '@/components/ui/page-header'
+import { isChromePress } from '@/components/ui/use-overlay'
 import {
   Contact,
   ContactCategory,
@@ -70,10 +71,10 @@ export function ContactsHeader({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (filtersRef.current && !filtersRef.current.contains(e.target as Node)) {
+      if (filtersRef.current && !filtersRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setFiltersOpen(false)
       }
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setSortOpen(false)
       }
     }

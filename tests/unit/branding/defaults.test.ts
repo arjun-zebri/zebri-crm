@@ -30,7 +30,7 @@ describe('defaultBlocksFor', () => {
     expect(blockTemplate('contractSign')).toMatchObject({ type: 'contractSign', locked: true })
   })
 
-  it('contract default seeds a header (expires off), the body marker, then the sign marker, no CTA', () => {
+  it('contract default seeds a header (ref + ABN on, expires off), the body marker, then the sign marker, no CTA', () => {
     const blocks = defaultBlocksFor('contract')
     const t = types(blocks)
     expect(t).toEqual(['businessName', 'title', 'contractBody', 'contractSign'])
@@ -38,9 +38,16 @@ describe('defaultBlocksFor', () => {
     // The sign marker is last, right after the body marker.
     expect(t[t.length - 1]).toBe('contractSign')
     const header = blocks.find((b) => b.type === 'title')
-    // A contract is signed, not quoted or billed: no "Expires" date and no
-    // customer-facing reference number on its header.
-    expect(header).toMatchObject({ type: 'title', showExpires: false, showRef: false })
+    // Ref and ABN identify the document and the supplier as a legal party, so
+    // an agreement carries both. Expiry stays off: `contracts.expires_at` is a
+    // signing deadline, not a term, and "Expires" reads as the agreement
+    // lapsing.
+    expect(header).toMatchObject({
+      type: 'title',
+      showRef: true,
+      showAbn: true,
+      showExpires: false,
+    })
     const body = blocks.find((b) => b.type === 'contractBody')
     expect(body).toMatchObject({ type: 'contractBody', locked: true })
     const sign = blocks.find((b) => b.type === 'contractSign')
@@ -70,7 +77,14 @@ describe('defaultBlocksFor', () => {
   })
 
   it('title template is surface-aware: contract turns Expires + Ref off, invoice keeps them on', () => {
-    expect(blockTemplate('title', 'contract')).toMatchObject({ showExpires: false, showRef: false })
+    // Ref and ABN identify the document and the supplier as a legal party, so
+    // both belong on an agreement. Expiry stays off: `contracts.expires_at` is
+    // a signing deadline, not a term.
+    expect(blockTemplate('title', 'contract')).toMatchObject({
+      showRef: true,
+      showAbn: true,
+      showExpires: false,
+    })
     expect(blockTemplate('title', 'invoice')).toMatchObject({ showExpires: true, showRef: true })
     // No surface passed → the generic default (Expires + Ref on).
     expect(blockTemplate('title')).toMatchObject({ showExpires: true, showRef: true })

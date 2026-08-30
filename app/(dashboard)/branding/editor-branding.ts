@@ -24,6 +24,8 @@ export function publicBrandingFromEditorState(state: BrandPreviewState): PublicB
     secondary_color: state.secondaryColor,
     secondary_text_color: getTextColor(state.secondaryColor),
     business_name: state.businessName || null,
+    // Not part of the visual preview state; the editor never renders it.
+    vendor_role: null,
     tagline: state.tagline || null,
     abn: state.abn || null,
     phone: state.phone || null,

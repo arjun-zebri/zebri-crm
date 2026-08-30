@@ -210,3 +210,18 @@ export const PUBLIC_PAGE_RATE_LIMITS = {
 } as const satisfies Record<string, LimiterOptions>;
 
 export type PublicPageRateLimitKey = keyof typeof PUBLIC_PAGE_RATE_LIMITS;
+
+/**
+ * In-app feedback rate-limits.
+ *
+ * - **submit**: 10/hour/user. An MC hitting a genuinely bad afternoon might
+ *   file three or four reports; ten is well clear of that and still stops a
+ *   stuck submit button from filling the Notion queue. Keyed per user rather
+ *   than per IP because the route is authenticated, so the limit follows the
+ *   account rather than the coffee shop.
+ */
+export const BUG_REPORT_RATE_LIMITS = {
+  submit: { windowMs: 3_600_000, max: 10 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type BugReportRateLimitKey = keyof typeof BUG_REPORT_RATE_LIMITS;

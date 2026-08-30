@@ -103,6 +103,45 @@ export async function parseJsonBody<T>(
   return { ok: true, data: parsed.data };
 }
 
+/**
+ * Parse & validate a multipart `FormData` request body.
+ *
+ * The route-handler sibling of {@link parseJsonBody}. {@link parseFormData}
+ * already covers `FormData`, but it returns the server-action shape (inline
+ * field errors) rather than a `NextResponse`, so a route handler using it has
+ * to build its own 400.
+ *
+ * `File` entries are passed through untouched so a Zod schema can validate
+ * them with `z.instanceof(File)`; only empty *strings* collapse to undefined,
+ * matching {@link parseFormData}.
+ */
+export async function parseFormDataBody<T>(
+  request: Request,
+  schema: ZodType<T>,
+): Promise<ParseResult<T>> {
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Invalid form body' }, { status: 400 }),
+    };
+  }
+  const raw: Record<string, FormDataEntryValue | FormDataEntryValue[] | undefined> = {};
+  for (const key of new Set(form.keys())) {
+    const all = form.getAll(key);
+    if (all.length === 0) raw[key] = undefined;
+    else if (all.length === 1) {
+      const v = all[0];
+      raw[key] = typeof v === 'string' && v === '' ? undefined : v;
+    } else raw[key] = all;
+  }
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) return { ok: false, response: badRequest(parsed.error, 'form body') };
+  return { ok: true, data: parsed.data };
+}
+
 /** Parse & validate URL search params (`?a=1&b=foo`). */
 export function parseSearchParams<T>(
   request: Request,

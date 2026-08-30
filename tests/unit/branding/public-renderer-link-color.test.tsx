@@ -20,6 +20,7 @@ const createMockBranding = (linkColor: string): PublicBranding => ({
   secondary_color: '#EEE',
   secondary_text_color: '#000',
   business_name: null,
+  vendor_role: null,
   tagline: null,
   abn: null,
   phone: null,

@@ -2,6 +2,32 @@
 
 This document defines every page in the CRM.
 
+## Feedback pill (global to the dashboard)
+
+Every page inside `app/(dashboard)` renders a fixed "Feedback" pill in the
+bottom-right corner, on desktop and mobile alike. It is mounted once in
+`app/(dashboard)/layout.tsx` as `<FeedbackLauncher />`, so no page opts in or
+out.
+
+- Opens a modal with three fields (kind, summary, what happened) plus an
+  optional screenshot. Everything else a ticket needs is captured by the API
+  route, so an MC never describes their own environment.
+- Two ways to attach an image: **Take screenshot** rasterises the page behind
+  the form (the modal excludes itself, so there is no flicker and no dimmed
+  backdrop in the shot), or **Attach an image** for one they already have.
+  Either shows a thumbnail that opens full size, because a capture sweeps up
+  whatever couple names and amounts were on screen and the MC should be able
+  to check that before sending.
+- Files a Notion task in Tasks Tracker under the `User submitted tickets`
+  sprint at status `Triage`, and confirms with a toast naming the ticket, e.g.
+  "Thanks, logged as ZEB-42".
+- Hidden entirely while an admin is in Shadow mode, and rejected server-side
+  too, so a ticket can never look like an MC raised it when they did not.
+- Sits at `z-[150]`, above the overlay ladder, so it stays usable with a modal
+  open. It hides itself while its own modal is open.
+
+Public surfaces (portal, contract signing, public invoice) have no pill.
+
 ## Mobile Layout Notes
 
 All pages are fully responsive. Key patterns:

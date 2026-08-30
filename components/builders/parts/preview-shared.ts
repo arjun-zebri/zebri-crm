@@ -4,12 +4,15 @@
  *
  * The parent modal collects this object from local form state on every
  * render; each tab projects it into the format its renderer expects
- * (PdfDocumentData, PublicDocData, email-template opts, etc.).
+ * (PublicContract, PublicInvoice, PublicDocData, email-template opts, etc.).
  *
  * @module components/builders/parts/preview-shared
  */
 
-import type { PdfDocumentData } from '@/lib/pdf/generate-pdf';
+import type { Block } from '@/app/(dashboard)/branding/blocks/types';
+import type { PublicContract } from '@/app/contract/[token]/_components/public-contract';
+import type { PublicInvoice } from '@/app/invoice/[token]/_components/public-invoice';
+import type { PublicBranding } from '@/lib/branding/public-branding';
 
 export interface PreviewLineItem {
   id: string;
@@ -78,69 +81,106 @@ export interface PreviewDoc {
   mcSignatureName?: string | null;
 }
 
-/**
- * Project a live `PreviewDoc` into the shape the PDF renderer takes.
- *
- * Shared by the PDF preview tab and the builder modals' Download PDF
- * action, so the downloaded file is byte-identical to the preview the
- * MC was looking at when they clicked.
- *
- * Totals are recomputed here rather than read off the form: the modal
- * keeps discount/tax as inputs, and the PDF needs the resolved money.
- *
- * @param doc Live builder state.
- * @returns   `PdfDocumentData` for `buildPdfHtml` / `generateAndPrintPdf`.
- */
-export function toPdfDocumentData(doc: PreviewDoc): PdfDocumentData {
-  const subtotal = doc.items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const discountAmount =
-    doc.discount && doc.discount.value > 0
-      ? doc.discount.type === 'percentage'
-        ? (subtotal * doc.discount.value) / 100
-        : doc.discount.value
-      : 0;
-  const taxableAmount = subtotal - discountAmount;
-  const tax = taxableAmount * ((doc.taxRate ?? 0) / 100);
-  const total = taxableAmount + tax;
 
+/**
+ * Project a builder `PreviewDoc` into the `PublicContract` shape the public
+ * page renders from, so the modal's print and PDF preview go through the same
+ * `ContractBrandedCard` as the signed link. One projection, not one per
+ * consumer, so the two cannot disagree about a field.
+ *
+ * Fields the modal cannot know (signer roster, viewer) are empty: a draft has
+ * no signatures to show, and a sent contract's roster only means something on
+ * the public page.
+ */
+export function toPublicContract(
+  doc: PreviewDoc,
+  branding: PublicBranding,
+  blocks: Block[],
+  extra: {
+    id: string;
+    expiresAt: string | null;
+    declinedAt: string | null;
+    declinedReason: string | null;
+    emailSentAt: string | null;
+    eventDate: string | null;
+    venue: string | null;
+  },
+): PublicContract {
   return {
-    type: doc.kind,
-    documentNumber: doc.documentNumber,
+    ...branding,
+    id: extra.id,
+    title: doc.title,
+    contract_number: doc.documentNumber,
+    status: doc.status,
+    locked_content_html: doc.lockedHtml || doc.contractHtml || null,
+    expires_at: extra.expiresAt,
+    signed_at: doc.signedAt ?? null,
+    signer_name: doc.signerName ?? null,
+    signer_ip: doc.signerIp ?? null,
+    signer_user_agent: doc.signerUserAgent ?? null,
+    declined_at: extra.declinedAt,
+    declined_reason: extra.declinedReason,
+    mc_signature_name: doc.mcSignatureName ?? null,
+    email_sent_at: extra.emailSentAt,
+    couple_name: doc.coupleName ?? '',
+    event_date: extra.eventDate,
+    venue: extra.venue,
+    branding_blocks: blocks,
+    signers: [],
+    viewer_signer_id: null,
+  };
+}
+
+/**
+ * Project a builder `PreviewDoc` into the `PublicInvoice` shape the public
+ * page renders from. Same rationale as {@link toPublicContract}.
+ */
+export function toPublicInvoice(
+  doc: PreviewDoc,
+  branding: PublicBranding,
+  blocks: Block[],
+  extra: { id: string; paidAt: string | null; eventDate: string | null; venue: string | null },
+): PublicInvoice {
+  const subtotal = doc.items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  return {
+    ...branding,
+    id: extra.id,
+    invoice_number: doc.documentNumber,
     title: doc.title,
     status: doc.status,
-    coupleName: doc.coupleName ?? '',
-    ...(doc.businessName ? { businessName: doc.businessName } : {}),
-    items: doc.items.map((item) => ({
-      description: item.description,
-      amount: item.amount,
-    })),
     subtotal,
-    discountType: doc.discount?.type ?? null,
-    discountValue: doc.discount?.value ?? null,
-    taxRate: doc.taxRate,
-    ...(doc.gstInclusive ? { gstInclusive: true } : {}),
-    total,
+    tax_rate: doc.taxRate ?? 0,
+    gst_inclusive: doc.gstInclusive ?? false,
+    due_date: doc.dueDate ?? null,
     notes: doc.notes,
-    ...(doc.kind === 'invoice' ? { dueDate: doc.dueDate ?? null } : {}),
-    ...(doc.kind === 'invoice' && doc.bankAccountName
-      ? { bankAccountName: doc.bankAccountName }
-      : {}),
-    ...(doc.kind === 'invoice' && doc.bankBsb ? { bankBsb: doc.bankBsb } : {}),
-    ...(doc.kind === 'invoice' && doc.bankAccountNumber
-      ? { bankAccountNumber: doc.bankAccountNumber }
-      : {}),
-    // Contract-only: thread the body HTML (locked snapshot wins
-    // when present, otherwise the live editor render), plus signer
-    // info so the PDF includes the audit trail.
-    ...(doc.kind === 'contract'
-      ? {
-          contractHtml: doc.lockedHtml || doc.contractHtml || '',
-          signerName: doc.signerName ?? null,
-          signedAt: doc.signedAt ?? null,
-          signerIp: doc.signerIp ?? null,
-          signerUserAgent: doc.signerUserAgent ?? null,
-          mcSignatureName: doc.mcSignatureName ?? null,
-        }
-      : {}),
+    paid_at: extra.paidAt,
+    couple_name: doc.coupleName ?? '',
+    event_date: extra.eventDate,
+    venue: extra.venue,
+    bank_account_name: doc.bankAccountName ?? null,
+    bank_bsb: doc.bankBsb ?? null,
+    bank_account_number: doc.bankAccountNumber ?? null,
+    items: doc.items.map((item, i) => ({
+      id: item.id,
+      description: item.description,
+      // The builder tracks a flat amount per line; the public shape also
+      // carries qty/unit for tax invoices that itemise them. One-of-one.
+      quantity: 1,
+      unit_price: item.amount,
+      amount: item.amount,
+      position: i,
+    })),
+    stages: (doc.paymentSchedule?.stages ?? []).map((s, i) => ({
+      id: `stage-${i}`,
+      position: i,
+      label: s.label,
+      amount_cents: s.amountCents,
+      due_date: s.dueDate,
+      paid_at: s.paidAt,
+    })),
+    stripe_payment_enabled: false,
+    stripe_connect_enabled: false,
+    share_token: '',
+    branding_blocks: blocks,
   };
 }

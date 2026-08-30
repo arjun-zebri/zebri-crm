@@ -27,6 +27,7 @@
  */
 
 import Mention from '@tiptap/extension-mention'
+import { TableKit } from '@tiptap/extension-table'
 import { generateHTML } from '@tiptap/html'
 import type { JSONContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -102,9 +103,17 @@ const SANITIZE_OPTS: sanitizeHtml.IOptions = {
   allowedTags: [
     'p', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li',
     'strong', 'em', 'u', 's', 'br', 'a', 'blockquote', 'hr',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'code', 'pre', 'span',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'colgroup', 'col',
+    'code', 'pre', 'span',
   ],
-  allowedAttributes: { '*': ['href', 'target', 'rel', 'class'] },
+  allowedAttributes: {
+    '*': ['href', 'target', 'rel', 'class'],
+    // Without these the sanitiser silently drops merged cells and column
+    // widths, so a table survives the round trip visually mangled.
+    td: ['colspan', 'rowspan', 'colwidth'],
+    th: ['colspan', 'rowspan', 'colwidth'],
+    col: ['width', 'span'],
+  },
   // Keep our sentinels out of sanitiser entity-escaping by leaving
   // text alone; they're plain private-use chars, not markup.
   textFilter: (text) => text,
@@ -183,6 +192,10 @@ const CHIP_CLASS = 'inline-block rounded-control bg-blue-50 px-1.5 py-0.5 text-b
 export function renderTemplateChips(content: JSONContent): string {
   const raw = generateHTML(content, [
     StarterKit,
+    // Contract templates may contain tables. generateHTML throws on any node
+    // whose extension is absent, so the preview would fail outright without
+    // this. Harmless for email templates, which have no table nodes.
+    TableKit,
     Mention.configure({
       HTMLAttributes: { class: CHIP_CLASS },
       renderHTML({ node }) {

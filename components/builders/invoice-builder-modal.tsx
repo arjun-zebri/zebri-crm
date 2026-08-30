@@ -57,8 +57,7 @@ import {
 } from '@/components/builders/parts/line-items-table';
 import { NotesField } from '@/components/builders/parts/notes-field';
 import { PaymentSchedule } from '@/components/builders/parts/payment-schedule';
-import { previewPdfBrandingOpts } from '@/components/builders/parts/preview-pdf';
-import { toPdfDocumentData, type PreviewDoc } from '@/components/builders/parts/preview-shared';
+import { toPublicInvoice, type PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { TaxControl } from '@/components/builders/parts/tax-control';
 import { TemplatePicker } from '@/components/builders/parts/template-picker';
@@ -69,6 +68,7 @@ import {
   type ApplySource,
 } from '@/components/builders/parts/use-apply-sources';
 import { useInvoiceStages } from '@/components/builders/parts/use-invoice-stages';
+import { printInvoice } from '@/components/print/print-invoice';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
@@ -77,7 +77,6 @@ import { stripeConnectEnabled } from '@/lib/auth/entitlements';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import { resolveCoupleEmail } from '@/lib/couples/email';
 import { weekendLoadingLine } from '@/lib/payments/package-math';
-import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentUser } from '@/lib/supabase/current-user';
 import { isPastDue } from '@/lib/utils';
@@ -234,7 +233,7 @@ export function InvoiceBuilderModal({
   // Branding is fetched here purely so the skeleton gate below can wait
   // on it. The preview pane calls the same hook and hits the shared
   // cache, so this costs no extra request.
-  const { branding, loading: brandingLoading } = useCurrentBranding('invoice');
+  const { branding, blocks, loading: brandingLoading } = useCurrentBranding('invoice');
 
   const { data: couples, isPending: couplesLoading } = useQuery({
     queryKey: ['all-couples-for-invoice'],
@@ -798,10 +797,16 @@ export function InvoiceBuilderModal({
   // Prints exactly what the PDF tab shows: same projection, same
   // branding, so there is no second code path to drift.
   const downloadPdf = () => {
-    generateAndPrintPdf(
-      toPdfDocumentData(previewDoc),
-      previewPdfBrandingOpts(branding),
-      branding ?? undefined,
+    if (!branding) return;
+    // Prints the same `InvoiceBrandedCard` the public link renders. The old
+    // PDF was a hand-built layout that ignored the branding block tree.
+    printInvoice(
+      toPublicInvoice(previewDoc, branding, blocks, {
+        id: invoice?.id ?? 'draft',
+        paidAt: invoice?.paid_at ?? null,
+        eventDate: null,
+        venue: null,
+      }),
     );
   };
 

@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { MenuItem, MenuPanel } from "@/components/ui/menu";
+import { isChromePress } from '@/components/ui/use-overlay';
 import { zonedDateParts } from "@/lib/scheduling/timezone";
 import type { CoupleStatusRecord } from "@/types/couple";
 
@@ -69,7 +70,7 @@ function ViewDropdown({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (ref.current && !ref.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setOpen(false);
       }
     }

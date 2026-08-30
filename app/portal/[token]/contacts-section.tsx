@@ -12,6 +12,7 @@ import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS, CATEGORIES } from '@/types/contact'
 
@@ -460,7 +461,7 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any notes for the MC..."
+              placeholder={`Any notes for the ${branding.vendor_role || DEFAULT_VENDOR_ROLE}...`}
               rows={3}
               style={{
                 ...getInputStyles(branding),

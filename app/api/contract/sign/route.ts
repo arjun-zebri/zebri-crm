@@ -27,6 +27,10 @@ import { z } from 'zod';
 import { logger } from '@/lib/alerts/logger';
 import { inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
+import { sendContractSignedEmail } from '@/lib/email';
+import { emailBrandingForUser } from '@/lib/email/branding';
+import { resolveSender } from '@/lib/email/sender-identity';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 // 3 / min / IP — signing is a one-shot event the couple performs
@@ -46,6 +50,83 @@ const bodySchema = z.object({
     .min(2, 'Signer name is too short')
     .max(100, 'Signer name is too long'),
 });
+
+
+/**
+ * Email every signer, and the account holder, a copy of the executed contract.
+ *
+ * Runs with the service-role client because the caller here is an anonymous
+ * signer: the contract and its roster are not readable under their session.
+ *
+ * @param contractId - The contract that just completed.
+ */
+async function sendExecutedCopies(contractId: string): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: contract } = await admin
+    .from('contracts')
+    .select('id, user_id, title, contract_number, share_token, signed_at, couple_id')
+    .eq('id', contractId)
+    .single();
+  if (!contract) return;
+
+  const { data: signers } = await admin
+    .from('contract_signers')
+    .select('name, email, role, sign_token, signed_at, signing_order')
+    .eq('contract_id', contractId)
+    .order('signing_order');
+  if (!signers) return;
+
+  const { data: userRow } = await admin.auth.admin.getUserById(contract.user_id);
+  const meta = (userRow?.user?.user_metadata ?? {}) as Record<string, unknown>;
+  const mcBusinessName =
+    (meta.business_name as string | undefined) ||
+    (meta.display_name as string | undefined) ||
+    'Your supplier';
+
+  const branding = await emailBrandingForUser(admin, contract.user_id);
+  const sender = await resolveSender(admin, contract.user_id, mcBusinessName);
+  const signerNames = signers.filter((s) => s.signed_at).map((s) => s.name);
+  const signedAt = contract.signed_at
+    ? new Date(contract.signed_at).toLocaleDateString('en-AU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+
+  // Each signer keeps their own link so the page can still identify them;
+  // the account holder gets the canonical share link.
+  const recipients: Array<{ email: string; name: string; token: string }> = [];
+  for (const s of signers) {
+    if (s.email) recipients.push({ email: s.email, name: s.name, token: s.sign_token });
+  }
+  if (userRow?.user?.email) {
+    recipients.push({
+      email: userRow.user.email,
+      name: mcBusinessName,
+      token: contract.share_token,
+    });
+  }
+
+  const seen = new Set<string>();
+  for (const r of recipients) {
+    if (seen.has(r.email.toLowerCase())) continue;
+    seen.add(r.email.toLowerCase());
+    await sendContractSignedEmail({
+      recipientEmail: r.email,
+      recipientName: r.name,
+      contractNumber: contract.contract_number,
+      contractTitle: contract.title ?? `Contract ${contract.contract_number}`,
+      signerNames,
+      signedAt,
+      shareUrl: `${process.env.NEXT_PUBLIC_APP_URL}/contract/${r.token}`,
+      mcBusinessName,
+      sender,
+      branding,
+    });
+  }
+}
 
 export async function POST(request: NextRequest) {
   const { allowed, retryAfter } = await limiter.check(ipOf(request));
@@ -91,6 +172,9 @@ export async function POST(request: NextRequest) {
     error?: string;
     contract_id?: string;
     invoice_id?: string;
+    /** False while other required signers are still outstanding. */
+    complete?: boolean;
+    outstanding?: number;
   };
   if (result.error) {
     // Surface the typed RPC errors verbatim — these are by-design
@@ -105,8 +189,21 @@ export async function POST(request: NextRequest) {
   // notifications, the in-product dashboard surfaces the audit
   // trail.
 
+  // Once the last required signature lands, give every party a copy of the
+  // executed agreement. Failures here must not fail the request: the
+  // signature is already recorded and is not retractable.
+  if (result.complete && result.contract_id) {
+    await sendExecutedCopies(result.contract_id).catch((err: unknown) => {
+      logger.error('[contract/sign] executed-copy delivery failed', err, {
+        contractId: result.contract_id,
+      });
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     invoice_id: result.invoice_id ?? null,
+    complete: result.complete ?? true,
+    outstanding: result.outstanding ?? 0,
   });
 }

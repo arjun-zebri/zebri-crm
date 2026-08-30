@@ -26,6 +26,7 @@
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import { contractPrintElement, printContract } from '@/components/print/print-contract';
 import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import {
@@ -33,15 +34,11 @@ import {
   DENSITY_PAD,
   useBrandingHead,
 } from '@/lib/branding/public-surface';
-import { htmlToPlainText } from '@/lib/branding/sanitize';
 import { roleDefaults } from '@/lib/branding/type-defaults';
 import { repairBlocks } from '@/lib/branding/validate-blocks';
-import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 
-import { ContractBrandedCard } from './_components/contract-branded-card';
 import { ContractDeclineDialog } from './_components/contract-decline-dialog';
-import { ContractFallbackCard } from './_components/contract-fallback-card';
 import { ContractLoading } from './_components/contract-loading';
 import { ContractSignSection } from './_components/contract-sign-section';
 import { ContractUnavailable } from './_components/contract-unavailable';
@@ -80,6 +77,17 @@ export default function PublicContractPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Log the first open per signer. Fire-and-forget: an audit beacon must never
+  // block or break the page the couple came here to read.
+  useEffect(() => {
+    void fetch('/api/contract/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: params.token }),
+    }).catch(() => undefined);
+  }, [params.token]);
+
   useBrandingHead(contract);
 
   const handleSign = async () => {
@@ -126,28 +134,8 @@ export default function PublicContractPage() {
 
   const downloadPdf = () => {
     if (!contract) return;
-    generateAndPrintPdf(
-      {
-        type: 'contract',
-        documentNumber: contract.contract_number,
-        title: contract.title,
-        status: contract.status,
-        coupleName: contract.couple_name,
-        businessName: htmlToPlainText(contract.business_name ?? ''),
-        items: [],
-        subtotal: 0,
-        total: 0,
-        contractHtml: contract.locked_content_html ?? '',
-        signerName: contract.signer_name,
-        signedAt: contract.signed_at,
-        signerIp: contract.signer_ip,
-        signerUserAgent: contract.signer_user_agent,
-        mcSignatureName: contract.mc_signature_name,
-      },
-      // Pass the contract's branding directly (it extends PublicBranding).
-      publicBrandingToPdfOpts(contract),
-      contract,
-    );
+    // Prints this same page's branded card, so the file matches the link.
+    printContract(contract);
   };
 
   /* ─── Branding-derived values ─── */
@@ -157,7 +145,6 @@ export default function PublicContractPage() {
   const brand = contract?.brand_color || '#A7F3D0';
   const radius = contract?.corner_radius ?? 16;
   const bodyStack = contract ? bodyFontFamily(contract) : undefined;
-  const headingWeight = contract?.font_weight ?? 600;
   const pad = DENSITY_PAD[contract?.density ?? 'cozy'];
 
   // Repair block tree when present so all required blocks are available.
@@ -171,7 +158,6 @@ export default function PublicContractPage() {
     pageState !== 'loading' &&
     pageState !== 'not_found';
 
-  const hasBlockTree = !!repairedBlocks;
 
   // The sign section (status banner or live sign form, plus the MC
   // countersignature). Rendered at the `contractSign` marker inside whichever
@@ -227,32 +213,12 @@ export default function PublicContractPage() {
           />
         ) : null}
 
-        {contract && pageState !== 'not_found' && pageState !== 'loading' ? (
-          hasBlockTree ? (
-            <ContractBrandedCard
-              contract={{
-                ...contract,
-                branding_blocks: repairedBlocks || [],
-              }}
-              pageState={pageState}
-              textColor={textColor}
-              mutedColor={mutedColor}
-              radius={radius}
-              signSlot={signSlot}
-            />
-          ) : (
-            <ContractFallbackCard
-              contract={contract}
-              pageState={pageState}
-              textColor={textColor}
-              mutedColor={mutedColor}
-              brand={brand}
-              radius={radius}
-              headingWeight={headingWeight}
-              signSlot={signSlot}
-            />
-          )
-        ) : null}
+        {contract && pageState !== 'not_found' && pageState !== 'loading'
+          ? // The SAME composition the builder preview and the PDF render, so
+            // the link the couple opens is exactly what was previewed. Only
+            // the sign slot differs: here it is the live form.
+            contractPrintElement(contract, { signSlot })
+          : null}
 
         {contract ? (
           <p

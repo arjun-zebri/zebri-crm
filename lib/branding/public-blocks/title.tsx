@@ -7,6 +7,7 @@ import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/te
 // eslint-disable-next-line no-restricted-imports
 import type { TitleBlock } from '@/app/(dashboard)/branding/blocks/types'
 
+import { documentHeading } from '../document-heading'
 import type { PublicBranding } from '../public-surface'
 import { roleDefaults } from '../type-defaults'
 
@@ -47,18 +48,36 @@ export function RenderTitle({
   const metaAlign = block.metaStyle?.align ?? block.titleStyle?.align ?? 'left'
   const subtitleAlign = block.subtitleStyle?.align ?? 'left'
 
+  // The header owns the document's heading, which is what the block model was
+  // built for: `blockTemplate('title', 'contract')` ships `title: 'Contract'`
+  // and its comment reads "the header then reads as the contract title +
+  // couple name". `block.title` was never actually rendered publicly, so a
+  // title typed in the Branding editor silently did nothing.
+  //
+  // The per-document title still wins when one is set, so a single contract
+  // can be retitled without touching branding. With neither, no <h1> renders
+  // at all rather than an empty one holding its line height and margin.
+  // `slots.title` is the editor's own editable placeholder, so it always wins.
+  const heading = documentHeading([block], doc.title)
+  const titleNode =
+    slots?.title ?? (heading ? caseText(heading, block.titleStyle, titleDefaults) : null)
+
   return (
     <div className={p.blockY}>
       <div>
         {/* No leading or tracking classes: resolveTextStyle always emits both
             inline from the global settings, so utilities here would be dead
             CSS that reads as if it were in charge. */}
-        <h1 style={titleCss}>
-          {slots?.title ?? caseText(doc.title, block.titleStyle, titleDefaults)}
-        </h1>
+        {titleNode ? <h1 style={titleCss}>{titleNode}</h1> : null}
         {/* Subtitle is the couple's real name (a variable): a chip in the editor,
             the resolved name on the sent document. Tagged so clicking it in the
-            editor targets the couple-name line for styling. */}
+            editor targets the couple-name line for styling.
+
+            Deliberately NOT gated on the title: `showCoupleName` is an explicit
+            branding toggle, and suppressing it on an untitled draft made the
+            whole header block render empty, which reads as the block being
+            ignored. A sent contract always has a title (the send path requires
+            one), so the name only ever stands alone in a draft preview. */}
         {block.showCoupleName && (variablePreview || doc.coupleName) ? (
           // Wrapper aligns; inner <p> hugs its content so the click-to-style
           // outline wraps just the couple name, not the full width.
@@ -68,7 +87,14 @@ export function RenderTitle({
           >
             <p data-subtarget="subtitle" style={subtitleCss}>
               {variablePreview ? (
-                <VarChip label="Couple name" hint="Filled with the couple's name when the document is sent." />
+                <VarChip
+                  label="Both partner names"
+                  hint={
+                    "Filled when the document is sent with both partners' full names, " +
+                    'as in "Arjun Punekar and Anita Punekar". Falls back to whichever ' +
+                    "partner is on file, then to the couple's short name."
+                  }
+                />
               ) : (
                 caseText(doc.coupleName ?? '', block.subtitleStyle, subtitleDefaults)
               )}

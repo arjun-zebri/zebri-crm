@@ -519,9 +519,9 @@ function TitleControls({
 }) {
   // Which element the style controls target comes from what the user clicked in
   // the preview (a `data-subtarget`-tagged element), defaulting to the title.
-  // The ActiveTargetLabel names it; there is no toolbar switcher. "Couple name"
-  // is the subtitle line; "Meta" is the reference / date / ABN row. Visibility of
-  // each still lives in the Include dropdown.
+  // The ActiveTargetLabel names it; there is no toolbar switcher. "Both partner
+  // names" is the subtitle line; "Meta" is the reference / date / ABN row.
+  // Visibility of each still lives in the Include dropdown.
   const target: 'title' | 'subtitle' | 'meta' =
     activeSubTarget === 'subtitle' ? 'subtitle' : activeSubTarget === 'meta' ? 'meta' : 'title'
   const style = target === 'title' ? block.titleStyle : target === 'subtitle' ? block.subtitleStyle : block.metaStyle
@@ -565,7 +565,9 @@ function TitleControls({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <ActiveTargetLabel label={target === 'title' ? 'Title' : target === 'subtitle' ? 'Couple name' : 'Meta'} />
+      <ActiveTargetLabel
+        label={target === 'title' ? 'Title' : target === 'subtitle' ? 'Both partner names' : 'Meta'}
+      />
       <Divider />
       <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />} />
       <Divider />
@@ -592,7 +594,9 @@ function TitleIncludeDropdown({
 }) {
   const isInvoice = surface === 'invoice'
   const rows: { label: string; active: boolean; set: (v: boolean) => void }[] = [
-    { label: 'Couple name', active: block.showCoupleName ?? false, set: (v) => updateBlock<TitleBlock>(block.id, { showCoupleName: v }) },
+    // Named for what it renders: both partners in full, not the couple's
+    // short list label.
+    { label: 'Both partner names', active: block.showCoupleName ?? false, set: (v) => updateBlock<TitleBlock>(block.id, { showCoupleName: v }) },
     ...(isInvoice
       ? []
       : [{ label: 'Reference', active: block.showRef, set: (v: boolean) => updateBlock<TitleBlock>(block.id, { showRef: v }) }]),

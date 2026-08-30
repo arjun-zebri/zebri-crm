@@ -1,5 +1,9 @@
 /**
- * Client-side "generate PDF" for couple documents (vows + run sheet).
+ * Client-side "generate PDF" for a partner's vows.
+ *
+ * Deliberately unbranded: vows are the couple's private words, not the
+ * supplier's document. (The run sheet, which IS the supplier's document,
+ * prints through `lib/pdf/print-run-sheet` with full branding.)
  *
  * There's no server PDF renderer, so — like the rest of the app's PDF
  * paths — this opens a print window with formatted HTML and triggers the
@@ -57,47 +61,5 @@ export async function printVowPdf(coupleId: string, who: string, name: string): 
     `<h1>Vows</h1><h2>${escapeHtml(name)}</h2><p>${
       content ? escapeHtml(content) : '<span class="muted">No vows written.</span>'
     }</p>`,
-  )
-}
-
-/** Print the couple's run sheet (the timeline of their earliest event). */
-export async function printTimelinePdf(coupleId: string, coupleName: string): Promise<void> {
-  const supabase = createClient()
-  const { data: ev } = await supabase
-    .from('events')
-    .select('id')
-    .eq('couple_id', coupleId)
-    .order('date', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-  const eventId = (ev as { id: string } | null)?.id
-
-  let rows = ''
-  if (eventId) {
-    const { data: items } = await supabase
-      .from('timeline_items')
-      .select('start_time, title, description, duration_min')
-      .eq('event_id', eventId)
-      .order('start_time', { ascending: true })
-    rows = ((items ?? []) as Array<{
-      start_time: string | null
-      title: string
-      description: string | null
-      duration_min: number | null
-    }>)
-      .map(
-        (it) =>
-          `<tr><td>${it.start_time ? escapeHtml(it.start_time.slice(0, 5)) : ''}</td>` +
-          `<td><strong>${escapeHtml(it.title)}</strong>${it.description ? `<br/><span class="muted">${escapeHtml(it.description)}</span>` : ''}</td>` +
-          `<td>${it.duration_min ? `${it.duration_min} min` : ''}</td></tr>`,
-      )
-      .join('')
-  }
-
-  openPrint(
-    'Run sheet',
-    `<h1>Run sheet — ${escapeHtml(coupleName)}</h1><table><tbody>${
-      rows || '<tr><td colspan="3" class="muted">No timeline items yet.</td></tr>'
-    }</tbody></table>`,
   )
 }

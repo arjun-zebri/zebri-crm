@@ -32,11 +32,14 @@ export interface Invoice {
 export interface Contract {
   id: string;
   contract_number: string;
-  title: string;
+  /** Null until the sender titles it. Never auto-generated. */
+  title: string | null;
   status: string;
   signed_at: string | null;
   created_at: string;
   couple: { id: string; name: string };
+  /** Signing progress, so a part-signed contract is visible at a glance. */
+  contract_signers: { signed_at: string | null; required: boolean }[];
 }
 
 /** Invoices owned by the current user, newest first. */
@@ -71,7 +74,7 @@ export function useContracts() {
       const { data, error } = await supabase
         .from('contracts')
         .select(
-          'id, contract_number, title, status, signed_at, created_at, couple:couple_id(id, name)',
+          'id, contract_number, title, status, signed_at, created_at, couple:couple_id(id, name), contract_signers(signed_at, required)',
         )
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });

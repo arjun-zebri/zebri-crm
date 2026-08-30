@@ -14,11 +14,12 @@
  * @module app/contract/[token]/_components/contract-fallback-card
  */
 import { getTextColor } from '@/lib/branding/contrast';
-import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import { Html } from '@/lib/branding/public-blocks/html';
 import { DENSITY_PAD } from '@/lib/branding/public-surface';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { roleDefaults } from '@/lib/branding/type-defaults';
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role';
 
 import { ContractBodySection } from './contract-body-section';
 import { formatDate, type PageState, type PublicContract } from './public-contract';
@@ -56,7 +57,7 @@ export function ContractFallbackCard({
 
   return (
     <div
-      className="border overflow-hidden shadow-sm"
+      className="overflow-hidden"
       style={{
         backgroundColor: contract.surface_color,
         borderRadius: radius,
@@ -91,7 +92,7 @@ export function ContractFallbackCard({
               {contract.business_name ? (
                 <Html value={contract.business_name} allowLists={false} />
               ) : (
-                'Your MC'
+                `Your ${contract.vendor_role || DEFAULT_VENDOR_ROLE}`
               )}
             </p>
             {contract.tagline ? (
@@ -121,7 +122,8 @@ export function ContractFallbackCard({
         >
           {applyCase(`Contract ${contract.contract_number}`, labelDefaults.textTransform)}
         </p>
-        <h1
+        {contract.title ? (
+          <h1
           style={{
             color: brandText,
             fontFamily: FONT_STACKS[titleDefaults.fontFamily as never],
@@ -132,6 +134,7 @@ export function ContractFallbackCard({
         >
           {contract.title}
         </h1>
+        ) : null}
         {contract.expires_at && pageState === 'active' ? (
           <p
             className="mt-3"

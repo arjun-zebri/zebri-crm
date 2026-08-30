@@ -398,6 +398,85 @@ export function contractHtml(
 </html>`;
 }
 
+/**
+ * "Your contract is signed" email, sent to every party once the last required
+ * signature lands.
+ *
+ * Closes a real gap: nothing used to be sent after signing, so neither side
+ * held a copy of the executed agreement. Australia's Electronic Transactions
+ * Act contemplates the document being retained in a form accessible for later
+ * reference, and it is ordinary practice for each signatory to receive one.
+ *
+ * @param opts.signerNames - Everyone who signed, in signing order.
+ * @param opts.shareUrl - Link to the signed contract, which renders the frozen
+ * `locked_content_html` plus the audit trail and offers a PDF.
+ */
+export function contractSignedHtml(
+  opts: {
+    recipientName: string;
+    contractNumber: string;
+    contractTitle: string;
+    signerNames: string[];
+    signedAt: string | null;
+    shareUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
+  const {
+    recipientName,
+    contractNumber,
+    contractTitle,
+    signerNames,
+    signedAt,
+    shareUrl,
+    mcBusinessName,
+  } = opts;
+
+  const signedLine = signedAt
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#374151;">Completed on <strong>${signedAt}</strong>.</p>`
+    : "";
+  const parties = signerNames.length
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#374151;">Signed by ${signerNames.join(", ")}.</p>`
+    : "";
+
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Contract ${contractNumber}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${contractTitle}</h1>
+          ${signedLine}
+          ${parties}
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${recipientName},<br><br>
+            This contract is now fully signed. Keep this email for your records &mdash; the link below opens your copy, including the signing audit trail, and lets you download a PDF.
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">View signed contract</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>`;
+
+  if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding);
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <tr><td style="padding:40px 40px 32px;">${bodyHtml}</td></tr>
+        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
+          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 export function contractReminderHtml(
   opts: {
     coupleName: string;
