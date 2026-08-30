@@ -1,12 +1,15 @@
+import { Info } from 'lucide-react';
 import { useId } from 'react';
 import type { InputHTMLAttributes, Ref } from 'react';
+
+import { Tooltip } from '@/components/ui/tooltip';
 
 /**
  * Canonical text-input primitive.
  *
- * Wraps `<input>` with a label, optional help text, and an optional error
- * message — all wired with `aria-describedby` so screen readers announce
- * them correctly. Use this everywhere instead of bare `<input>` markup so
+ * Wraps `<input>` with a label, optional help text or a label tooltip, and an
+ * optional error message. Help and error are wired with `aria-describedby` so
+ * screen readers announce them correctly. Use this everywhere instead of bare `<input>` markup so
  * inputs share token-driven styling and dark-mode behaviour.
  *
  * @example
@@ -31,6 +34,15 @@ export interface InputProps
   label?: string;
   /** Helper text below the input. Hidden when `error` is set. */
   help?: string;
+  /**
+   * Explanation shown on hover from an info glyph beside the label. Use this
+   * instead of {@link InputProps.help} when the note explains *why* a field
+   * exists rather than how to fill it in: help text costs permanent vertical
+   * space in a dense form, a tooltip costs none. Requires `label`.
+   */
+  tooltip?: string;
+  /** Let a long {@link InputProps.tooltip} wrap. See {@link Tooltip}. */
+  tooltipMultiline?: boolean;
   /** Error message rendered in place of `help`. Role=alert. */
   error?: string;
   /** Optional ref to the underlying `<input>`. */
@@ -57,6 +69,8 @@ export function Input({
   id,
   label,
   help,
+  tooltip,
+  tooltipMultiline = false,
   error,
   className,
   ref,
@@ -76,9 +90,21 @@ export function Input({
   return (
     <div className={`space-y-1${className ? ` ${className}` : ''}`}>
       {label ? (
-        <label htmlFor={inputId} className="block text-body font-medium text-text">
-          {label}
-        </label>
+        <div className="flex items-center gap-1.5">
+          <label htmlFor={inputId} className="block text-body font-medium text-text">
+            {label}
+          </label>
+          {tooltip ? (
+            <Tooltip label={tooltip} side="top" multiline={tooltipMultiline}>
+              <Info
+                size={12}
+                strokeWidth={1.5}
+                className="text-text-subtle cursor-help"
+                aria-hidden
+              />
+            </Tooltip>
+          ) : null}
+        </div>
       ) : null}
       <input
         id={inputId}

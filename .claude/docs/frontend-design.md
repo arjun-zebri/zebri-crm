@@ -245,6 +245,7 @@ Stacking comes from `OVERLAY_Z`, keyed by `layer`:
 | `nested` | `z-[75]` / `z-[80]` | a modal opened from another modal |
 | (popover) | `z-[90]` | `Select` dropdown and other popovers |
 | `top` | `z-[120]` / `z-[130]` | `ConfirmDialog`. Note this is ABOVE the popover tier, so a `Select` inside a `top` modal opens behind it. Use `nested` for any modal with a dropdown in it |
+| (tooltip) | `z-[140]` | `Tooltip`. Above every modal and popover tier so a hint inside a popover (the contract Copy link rows) is not painted behind it |
 | (feedback) | `z-[150]` | `FeedbackPill`, above every overlay so it stays clickable with a modal open |
 | (toast) | `z-[200]` | `Toast`, above everything by design |
 

@@ -270,7 +270,7 @@ export async function saveContractAction(
         .from('contracts')
         .update({
           couple_id: coupleId,
-          title: title || 'Untitled contract',
+          title: title.trim() || null,
           content: contentJson,
           expires_at: expiresAt,
         })
@@ -292,7 +292,7 @@ export async function saveContractAction(
       .insert({
         user_id: user.id,
         couple_id: coupleId,
-        title: title || 'Untitled contract',
+        title: title.trim() || null,
         contract_number: numData as string,
         status: 'draft',
         content: contentJson,

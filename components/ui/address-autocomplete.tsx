@@ -26,6 +26,8 @@ export interface AddressAutocompleteProps {
   onSelect?: (next: AddressValue) => void
   label?: string
   help?: string
+  /** Hover explanation on an info glyph beside the label. See {@link Input}. */
+  tooltip?: string
   placeholder?: string
 }
 
@@ -42,6 +44,7 @@ export function AddressAutocomplete({
   onSelect,
   label = 'Home address',
   help,
+  tooltip,
   placeholder = 'Start typing your address...',
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
@@ -109,7 +112,8 @@ export function AddressAutocomplete({
     <div className="relative">
       <Input
         label={label}
-        help={help}
+        {...(help ? { help } : {})}
+        {...(tooltip ? { tooltip } : {})}
         value={internalValue}
         onChange={(e) => handleChange(e.target.value)}
         // Delay the close so a mousedown on a suggestion still registers.

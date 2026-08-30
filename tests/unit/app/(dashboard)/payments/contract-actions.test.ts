@@ -176,6 +176,41 @@ describe('saveContractAction', () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
+  it('stores an empty title as null rather than inventing one', async () => {
+    // Regression: this action substituted 'Untitled contract' and the builder
+    // modal substituted `Contract for <couple>`. Neither was ever shown in the
+    // title box, yet both were persisted and printed as the document h1 on the
+    // public signing page and in the PDF, above the agreement's own heading.
+    getUserMock.mockResolvedValue({ data: { user: proUser } });
+    const { saveContractAction } = await loadActions();
+    await saveContractAction({
+      contractId: null,
+      coupleId,
+      title: '   ',
+      content: validContent,
+      expiresAt: null,
+    });
+    expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({ title: null }));
+    const [payload] = insertMock.mock.calls[0] as [Record<string, unknown>];
+    expect(JSON.stringify(payload)).not.toContain('Untitled contract');
+    expect(JSON.stringify(payload)).not.toContain('Contract for');
+  });
+
+  it('keeps a title the sender actually wrote', async () => {
+    getUserMock.mockResolvedValue({ data: { user: proUser } });
+    const { saveContractAction } = await loadActions();
+    await saveContractAction({
+      contractId: null,
+      coupleId,
+      title: '  Wedding Service Agreement  ',
+      content: validContent,
+      expiresAt: null,
+    });
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Wedding Service Agreement' }),
+    );
+  });
+
   it('refuses a create that would exceed the Starter couple cap', async () => {
     getUserMock.mockResolvedValue({ data: { user: starterUser } });
     // Five distinct couples already have contracts; this is a sixth.

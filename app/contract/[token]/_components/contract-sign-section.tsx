@@ -18,10 +18,18 @@ import type { ContractSignBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
 import { roleDefaults } from '@/lib/branding/type-defaults';
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role';
 
 import { ContractSignActions } from './contract-sign-actions';
+import { ContractSignersList } from './contract-signers-list';
 import { ContractStatusBanner } from './contract-status-banner';
-import { formatDate, type PageState, type PublicContract } from './public-contract';
+import {
+  formatDate,
+  outstandingSigners,
+  viewerSigner,
+  type PageState,
+  type PublicContract,
+} from './public-contract';
 
 export interface ContractSignSectionProps {
   contract: PublicContract;
@@ -70,6 +78,14 @@ export function ContractSignSection({
   // `contractSign` marker block. It is absent on legacy contracts (sent before
   // the block existed); ContractSignActions then falls back to its historical
   // labels + fine-print typography, so those contracts render identically.
+  // The signer this link belongs to, and who else is still outstanding.
+  const me = viewerSigner(contract);
+  const alreadySigned = Boolean(me?.signed_at || me?.declined_at);
+  const waitingOn = outstandingSigners(contract);
+  // Prefer the specific signer's name: on a two-partner contract the couple
+  // name is not who this particular link belongs to.
+  const signerLabel = me?.name || contract.couple_name;
+
   const signBlock = contract.branding_blocks?.find(
     (b): b is ContractSignBlock => b.type === 'contractSign',
   );
@@ -90,7 +106,7 @@ export function ContractSignSection({
             fontWeight: labelDefaults.fontWeight,
           }}
         >
-          Signed by MC
+          Signed by the {contract.vendor_role || DEFAULT_VENDOR_ROLE}
         </p>
         <p
           style={{
@@ -102,7 +118,7 @@ export function ContractSignSection({
         >
           {contract.mc_signature_name ||
             htmlToPlainText(contract.business_name) ||
-            'Your MC'}
+            `Your ${contract.vendor_role || DEFAULT_VENDOR_ROLE}`}
         </p>
         <p
           className="mt-1"
@@ -144,7 +160,49 @@ export function ContractSignSection({
           branding={contract}
         />
       ) : null}
-      {pageState === 'active' ? (
+      <ContractSignersList
+        contract={contract}
+        textColor={textColor}
+        mutedColor={mutedColor}
+      />
+
+      {/* This link's signer has already signed, but the contract is still
+          open because someone else has not. Showing the form again would
+          invite a pointless second attempt that the RPC rejects. */}
+      {pageState === 'active' && alreadySigned ? (
+        <div
+          className="border-t pt-6"
+          style={{ borderTopColor: contract.border_color }}
+        >
+          <p
+            style={{
+              color: textColor,
+              fontSize: `${sectionHeadingDefaults.fontSize}px`,
+              fontFamily: FONT_STACKS[sectionHeadingDefaults.fontFamily as never],
+              lineHeight: sectionHeadingDefaults.lineHeight,
+            }}
+          >
+            Thanks, {me?.name}. Your signature is recorded.
+          </p>
+          <p
+            className="mt-1"
+            style={{
+              color: mutedColor,
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
+            {waitingOn.length > 0
+              ? `The contract is complete once ${waitingOn
+                  .map((s) => s.name)
+                  .join(' and ')} ${waitingOn.length === 1 ? 'has' : 'have'} signed.`
+              : 'Nothing further is needed from you.'}
+          </p>
+        </div>
+      ) : null}
+
+      {pageState === 'active' && !alreadySigned ? (
         <ContractSignActions
           signerName={signerName}
           onSignerNameChange={onSignerNameChange}
@@ -154,7 +212,7 @@ export function ContractSignSection({
           onDecline={onDecline}
           actionLoading={actionLoading}
           actionError={actionError}
-          coupleName={contract.couple_name}
+          coupleName={signerLabel}
           textColor={textColor}
           mutedColor={mutedColor}
           radius={radius}

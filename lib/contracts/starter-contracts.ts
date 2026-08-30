@@ -3,17 +3,17 @@
  *
  * Mirrors `lib/email/starter-templates.ts` and the line-item starters:
  * nothing here is auto-added (the legacy single default still seeds on
- * signup via `seed_default_contract_template`), but an MC can browse and
+ * signup via `seed_default_contract_template`), but a user can browse and
  * add these from the Templates page. Added rows are flagged `is_starter`
  * and stay fully editable.
  *
  * Bodies are TipTap JSON whose mention nodes carry the same contract
  * variable keys the signing/preview pipeline resolves (`today`,
- * `mc_business_name`, `couple_name`, `event_date`, `venue`,
+ * `mc_business_name`, `vendor_role`, `couple_name`, `event_date`, `venue`,
  * `couple_email`): see
  * `supabase/migrations/20260421000001_seed_default_contract_template.sql`.
  *
- * This is scaffolding, not legal advice: an MC should have a lawyer in
+ * This is scaffolding, not legal advice: a user should have a lawyer in
  * their jurisdiction review a template once before using it in paid work.
  *
  * @module lib/contracts/starter-contracts
@@ -75,16 +75,19 @@ function doc(...blocks: JSONContent[]): JSONContent {
  */
 export const STARTER_CONTRACTS: readonly StarterContract[] = [
   {
-    name: 'Wedding MC Service Agreement',
+    name: 'Wedding Service Agreement',
     description: 'A full service agreement covering services, fees, payment and cancellation.',
+    // No leading heading: the Contract header block in Branding owns the
+    // document's title, so one here would print a second heading under it.
     content: doc(
-      h(1, 'Wedding MC Service Agreement'),
       p(
         'This agreement is made on ',
         v('today'),
         ' between ',
         v('mc_business_name'),
-        ' (the MC) and ',
+        ' (the ',
+        v('vendor_role'),
+        ') and ',
         v('couple_name'),
         ' (the Couple).',
       ),
@@ -92,10 +95,14 @@ export const STARTER_CONTRACTS: readonly StarterContract[] = [
       h(2, 'Event'),
       p('Event date: ', v('event_date')),
       p('Venue: ', v('venue')),
-      p('The final call time, set-up time and run sheet will be confirmed in writing by the MC no later than 14 days before the event.'),
+      p(
+        'The final call time, set-up time and run sheet will be confirmed in writing by the ',
+        v('vendor_role'),
+        ' no later than 14 days before the event.',
+      ),
 
       h(2, 'Services'),
-      p('The MC agrees to provide the following services at the event:'),
+      p('The ', v('vendor_role'), ' agrees to provide the following services at the event:'),
       bullets(
         'Reception hosting, emceeing and formal announcements as agreed in the run sheet.',
         'A pre-event planning consultation and preparation of a detailed run sheet with the Couple.',
@@ -115,11 +122,21 @@ export const STARTER_CONTRACTS: readonly StarterContract[] = [
         '31 to 59 days before the event: 50% of the remaining balance becomes payable.',
         '30 days or less before the event: the full remaining balance becomes payable.',
       ),
-      p('If the MC is unable to perform the services, the MC will use reasonable endeavours to arrange a suitable substitute acceptable to the Couple, or refund all amounts paid including the deposit.'),
+      p(
+        'If the ',
+        v('vendor_role'),
+        ' is unable to perform the services, the ',
+        v('vendor_role'),
+        ' will use reasonable endeavours to arrange a suitable substitute acceptable to the Couple, or refund all amounts paid including the deposit.',
+      ),
 
       h(2, 'Responsibilities'),
       p('The Couple will provide accurate names, pronunciations, song titles and run-sheet details in good time, and ensure the venue provides a suitable PA system, microphone input and mains power.'),
-      p('The MC will perform the services with due care and skill, arrive at the agreed call time appropriately attired, and remain on site for the duration of the agreed formalities.'),
+      p(
+        'The ',
+        v('vendor_role'),
+        ' will perform the services with due care and skill, arrive at the agreed call time appropriately attired, and remain on site for the duration of the agreed formalities.',
+      ),
 
       h(2, 'Acceptance'),
       p(
@@ -133,7 +150,6 @@ export const STARTER_CONTRACTS: readonly StarterContract[] = [
     name: 'Deposit & Cancellation Terms',
     description: 'A short policy add-on covering deposits, balances and cancellation windows.',
     content: doc(
-      h(1, 'Deposit & Cancellation Terms'),
       p(
         'These terms apply to the booking between ',
         v('mc_business_name'),
@@ -148,7 +164,11 @@ export const STARTER_CONTRACTS: readonly StarterContract[] = [
       p('A non-refundable deposit, as set out in the accompanying invoice, is payable within 7 days of signing. The date is held only once the deposit is received in cleared funds.'),
 
       h(2, 'Balance'),
-      p('The balance, as set out in the accompanying invoice, is payable no later than 14 days before the event. Late payment may, at the discretion of the MC, result in suspension of the services, with the Couple remaining liable for the full fee.'),
+      p(
+        'The balance, as set out in the accompanying invoice, is payable no later than 14 days before the event. Late payment may, at the discretion of the ',
+        v('vendor_role'),
+        ', result in suspension of the services, with the Couple remaining liable for the full fee.',
+      ),
 
       h(2, 'Cancellation'),
       p('If the Couple cancels:'),

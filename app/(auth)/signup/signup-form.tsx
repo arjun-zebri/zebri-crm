@@ -60,7 +60,7 @@ export function SignupForm() {
           type="text"
           autoComplete="organization"
           required
-          placeholder="Your MC business"
+          placeholder="Your business name"
           defaultValue={state.values?.businessName ?? ''}
           {...(state.fieldErrors?.businessName ? { error: state.fieldErrors.businessName } : {})}
         />

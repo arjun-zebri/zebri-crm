@@ -6,6 +6,7 @@ import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
 import { isPastDue } from '@/lib/utils'
 
 import { PortalInvoice } from './page'
@@ -50,7 +51,7 @@ export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
             lineHeight: bodyDefaults.lineHeight,
           }}
         >
-          Nothing here yet. Your MC will send invoices here.
+          Nothing here yet. Your {branding.vendor_role || DEFAULT_VENDOR_ROLE} will send invoices here.
         </p>
       </div>
     )

@@ -18,9 +18,10 @@
 
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, FileText } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { findUnknownVariables } from '@/lib/contracts/contract-variables';
 
 import type { JSONContent } from './contract-types';
 
@@ -50,6 +51,11 @@ export function ContractBodyEditor({
   onApplyTemplate,
 }: ContractBodyEditorProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Merge fields with no backing variable render as the literal "{{id}}" in
+  // the snapshot the couple signs, and that snapshot is immutable once sent,
+  // so flag them in the editor rather than letting them reach the document.
+  const unknownVars = useMemo(() => findUnknownVariables(content), [content]);
 
   if (!canEdit) {
     return (
@@ -117,15 +123,25 @@ export function ContractBodyEditor({
         </div>
       ) : null}
 
-      <RichTextEditor value={content} onChange={onChange} editable={canEdit} />
+      <RichTextEditor value={content} onChange={onChange} editable={canEdit} tables />
 
-      <p className="text-body text-text-subtle">
-        Variables like{' '}
-        <span className="font-mono bg-surface-muted px-1 py-0.5 rounded-control text-text-muted">
-          {'{{couple_name}}'}
-        </span>{' '}
-        are replaced with real data when you send the contract.
-      </p>
+      {unknownVars.length > 0 ? (
+        <p className="text-body text-danger">
+          {unknownVars.length === 1 ? 'This field is' : 'These fields are'} no
+          longer available and{' '}
+          {unknownVars.length === 1 ? 'will print' : 'will print'} as raw text
+          on the signed contract:{' '}
+          {unknownVars.map((id, i) => (
+            <span key={id}>
+              {i > 0 ? ', ' : ''}
+              <span className="font-mono bg-surface-muted px-1 py-0.5 rounded-control">
+                {`{{${id}}}`}
+              </span>
+            </span>
+          ))}
+          . Remove {unknownVars.length === 1 ? 'it' : 'them'} before sending.
+        </p>
+      ) : null}
     </div>
   );
 }

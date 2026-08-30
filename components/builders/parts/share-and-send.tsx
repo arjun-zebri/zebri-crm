@@ -22,10 +22,13 @@
  */
 'use client';
 
-import { Check, CheckCheck, ExternalLink, Link2, Loader2 } from 'lucide-react';
+import { Check, CheckCheck, ExternalLink, Link2, Loader2, FileDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
+import type { SignerLink } from '@/lib/contracts/signer-links';
+
+import { SignerLinksPopover } from './signer-links-popover';
 
 export interface ShareAndSendProps {
   /** Whether anything has been edited since the last save. */
@@ -52,6 +55,26 @@ export interface ShareAndSendProps {
   /** Send email to the couple. The share link is already live
    *  pre-send; this triggers the email + flips the status. */
   onSend: () => void;
+  /**
+   * When set, replaces the live-link status label ("Share link live" /
+   * "Sent <date>") with a Download PDF action. Contracts pass this: an MC
+   * looking at a live contract wants the file, not a status pill. Invoices
+   * leave it unset and keep the labels.
+   */
+  onDownloadPdf?: () => void;
+  /**
+   * Per-contact signing links. When set, "Copy link" opens a popover with
+   * one link per contact instead of copying the single share URL, in every
+   * state (an MC lines up links before sending), and there is no "Open":
+   * each link is one person's, and the MC opening it would log a 'viewed'
+   * audit event in that person's name. Invoices have one link and leave
+   * this unset.
+   */
+  signerLinks?: SignerLink[];
+  /** A line under the per-contact links, e.g. that they go live on send. */
+  signerLinksNote?: string;
+  /** Fired when the per-contact popover opens (used to save an unsaved draft). */
+  onSignerLinksOpen?: () => void;
   /** Whether the "Mark as sent" affordance applies — i.e. the doc is
    *  still a draft. Lets an MC who shared the link out-of-band (copied
    *  it, texted it) flip the status to "sent" without firing an email. */
@@ -83,10 +106,15 @@ export function ShareAndSend({
   canMarkSent = false,
   markingSent = false,
   onMarkSent,
+  onDownloadPdf,
+  signerLinks,
+  signerLinksNote,
+  onSignerLinksOpen,
 }: ShareAndSendProps) {
 
   const sendLabel = lastSentAt ? 'Resend' : 'Send to couple';
   const isLive = shareEnabled && !!shareUrl;
+  const perContact = !!signerLinks?.length;
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -98,9 +126,36 @@ export function ShareAndSend({
         key={isLive ? 'live' : 'draft'}
         className="flex flex-wrap items-center gap-3 text-body text-text-muted animate-fade-in"
       >
+        {/* Download PDF is about the document, not the link, so it is
+            offered in every state, including a draft whose link is not
+            live yet. */}
+        {onDownloadPdf ? (
+          <button
+            type="button"
+            onClick={onDownloadPdf}
+            className="inline-flex items-center gap-1.5 text-text hover:opacity-70 transition"
+          >
+            <FileDown size={12} strokeWidth={1.5} className="text-text-subtle" />
+            Download PDF
+          </button>
+        ) : null}
+        {perContact ? (
+          <>
+            {onDownloadPdf ? (
+              <span aria-hidden className="text-text-subtle">
+                ·
+              </span>
+            ) : null}
+            <SignerLinksPopover
+              links={signerLinks!}
+              {...(signerLinksNote ? { note: signerLinksNote } : {})}
+              {...(onSignerLinksOpen ? { onOpen: onSignerLinksOpen } : {})}
+            />
+          </>
+        ) : null}
         {isLive ? (
           <>
-            {lastSentAt ? (
+            {onDownloadPdf ? null : lastSentAt ? (
               <span className="inline-flex items-center gap-1.5 text-text">
                 <span
                   className="inline-flex h-4 w-4 items-center justify-center rounded-pill bg-success/10"
@@ -117,27 +172,31 @@ export function ShareAndSend({
               </span>
             )}
 
-            <span aria-hidden className="text-text-subtle">
-              ·
-            </span>
+            {perContact ? null : (
+              <>
+                <span aria-hidden className="text-text-subtle">
+                  ·
+                </span>
 
-            <CopyButton
-              plain
-              value={shareUrl ?? ''}
-              label="Copy link"
-              copiedLabel="Copied"
-              aria-label="Copy share link"
-            />
+                <CopyButton
+                  plain
+                  value={shareUrl ?? ''}
+                  label="Copy link"
+                  copiedLabel="Copied"
+                  aria-label="Copy share link"
+                />
 
-            <a
-              href={shareUrl ?? '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-text-muted hover:text-text transition-colors"
-            >
-              <ExternalLink size={12} strokeWidth={1.5} />
-              Open
-            </a>
+                <a
+                  href={shareUrl ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-text-muted hover:text-text transition-colors"
+                >
+                  <ExternalLink size={12} strokeWidth={1.5} />
+                  Open
+                </a>
+              </>
+            )}
 
             {/* Out-of-band send: the MC copied the link and sent it
                 themselves (text, their own email client). Lets them

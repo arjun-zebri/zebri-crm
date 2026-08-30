@@ -18,7 +18,7 @@ const branding: PublicBranding = {
   brand_color: '#000', heading_color: '#000', subheading_color: '#666', accent_color: '#000',
   surface_color: '#fff', text_color: '#333', muted_color: '#666',
   secondary_color: '#EEE', secondary_text_color: '#000',
-  business_name: 'Acme Weddings', tagline: null, abn: '12 345 678 901',
+  business_name: 'Acme Weddings', vendor_role: 'MC', tagline: null, abn: '12 345 678 901',
   phone: '0400000000', website: 'acme.example',
   instagram_url: null, facebook_url: null, twitter_url: null, pinterest_url: null, website_url: null,
   show_contact_on_documents: true,

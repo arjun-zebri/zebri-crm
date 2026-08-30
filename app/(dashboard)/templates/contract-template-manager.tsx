@@ -21,6 +21,15 @@ import { TemplatePreviewHeader } from './template-preview-header'
 import { TemplatesActions } from './templates-actions-slot'
 import { TemplatesTwoPane } from './templates-two-pane'
 
+/**
+ * A template being edited. `id` is null for a draft that has never been
+ * written: New opens the editor without inserting a row, so backing out
+ * leaves nothing behind.
+ */
+type EditableTemplate = Omit<ContractTemplate, 'id' | 'is_default' | 'position'> & {
+  id: string | null
+}
+
 interface ContractTemplate {
   id: string
   name: string
@@ -40,7 +49,7 @@ export function ContractTemplateManager() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
-  const [editing, setEditing] = useState<ContractTemplate | null>(null)
+  const [editing, setEditing] = useState<EditableTemplate | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [showStarters, setShowStarters] = useState(false)
   const [search, setSearch] = useState('')
@@ -63,33 +72,32 @@ export function ContractTemplateManager() {
     ? (templates ?? []).filter((t) => t.name.toLowerCase().includes(search.trim().toLowerCase()))
     : templates ?? []
 
-  const createTemplate = useMutation({
-    mutationFn: async () => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('Not authenticated')
-      const { data, error } = await supabase
-        .from('contract_templates')
-        .insert({
-          user_id: user.user.id,
-          name: 'New template',
-          description: null,
-          content: EMPTY_DOC,
-          position: (templates?.length ?? 0),
-        })
-        .select('*')
-        .single()
-      if (error) throw error
-      return data as ContractTemplate
-    },
-    onSuccess: (tpl) => {
-      queryClient.invalidateQueries({ queryKey: ['contract-templates'] })
-      setEditing(tpl)
-    },
-    onError: () => toast('Failed to create template', 'error'),
-  })
+  /**
+   * Open the editor on an unsaved draft.
+   *
+   * Clicking New used to INSERT a row immediately, so backing out left an
+   * empty "New template" in the list. The row is now written on save.
+   */
+  const startNewTemplate = () => {
+    setEditing({ id: null, name: '', description: null, content: EMPTY_DOC })
+  }
 
   const saveTemplate = useMutation({
-    mutationFn: async (t: ContractTemplate) => {
+    mutationFn: async (t: EditableTemplate) => {
+      // A draft with no id has never been written; save creates it.
+      if (!t.id) {
+        const { data: user } = await supabase.auth.getUser()
+        if (!user.user) throw new Error('Not authenticated')
+        const { error: insertError } = await supabase.from('contract_templates').insert({
+          user_id: user.user.id,
+          name: t.name.trim() || 'Untitled template',
+          description: t.description,
+          content: t.content,
+          position: templates?.length ?? 0,
+        })
+        if (insertError) throw insertError
+        return
+      }
       const { error } = await supabase
         .from('contract_templates')
         .update({
@@ -146,15 +154,13 @@ export function ContractTemplateManager() {
         <Button
           variant="outline"
           onClick={() => setShowStarters(true)}
-          disabled={createTemplate.isPending}
           className="gap-1.5"
         >
           <Library size={14} strokeWidth={1.5} />
           Browse starters
         </Button>
         <Button
-          onClick={() => createTemplate.mutate()}
-          disabled={createTemplate.isPending}
+          onClick={startNewTemplate}
           className="gap-1.5"
         >
           <Plus size={14} strokeWidth={1.5} />
@@ -273,10 +279,10 @@ export function ContractTemplateManager() {
 }
 
 interface TemplateEditorProps {
-  template: ContractTemplate
+  template: EditableTemplate
   saving: boolean
   onCancel: () => void
-  onSave: (t: ContractTemplate) => void
+  onSave: (t: EditableTemplate) => void
 }
 
 function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorProps) {
@@ -285,7 +291,13 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
   const [content, setContent] = useState<JSONContent>(template.content ?? EMPTY_DOC)
 
   return (
-    <Modal isOpen={true} onClose={onCancel} title="Edit contract template" size="lg">
+    <Modal
+      isOpen={true}
+      onClose={onCancel}
+      // A draft has no id yet: the modal creates rather than edits.
+      title={template.id ? 'Edit contract template' : 'Add contract template'}
+      size="2xl"
+    >
       <div className="space-y-4">
         <div>
           <label className="block text-body font-medium text-text mb-2">Name</label>
@@ -306,7 +318,7 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
         </div>
         <div>
           <label className="block text-body font-medium text-text mb-2">Content</label>
-          <RichTextEditor value={content} onChange={setContent} />
+          <RichTextEditor value={content} onChange={setContent} tables />
         </div>
         <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
           <Button onClick={onCancel} variant="outline">

@@ -77,7 +77,7 @@ export default function PaymentsPage() {
     const s = contractSearch.toLowerCase();
     return list.filter(
       (c) =>
-        c.title.toLowerCase().includes(s) ||
+        (c.title ?? '').toLowerCase().includes(s) ||
         c.contract_number.toLowerCase().includes(s) ||
         c.couple.name.toLowerCase().includes(s) ||
         c.status.toLowerCase().includes(s),

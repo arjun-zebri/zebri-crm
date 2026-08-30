@@ -9,6 +9,7 @@ import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-r
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
 
 import {
   VendorTimeline,
@@ -83,7 +84,7 @@ export default async function VendorPage({
         <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
         <p className="text-sm" style={{ color: mutedColor }}>{/* gate-allow: pre-branding state */}This link is not active.</p>
         <p className="text-xs text-center max-w-xs" style={{ color: mutedColor }}>{/* gate-allow: pre-branding state */}
-          Contact the MC to activate the run sheet link.
+          Contact the person who sent you this link to activate it.
         </p>
       </div>
     )
@@ -113,7 +114,8 @@ export default async function VendorPage({
             fontFamily: FONT_STACKS[roleDefaults(branding, 'finePrint').fontFamily as never],
           }}
         >
-          The run sheet will appear here once the MC adds an event for this couple.
+          The run sheet will appear here once the{' '}
+          {branding.vendor_role || DEFAULT_VENDOR_ROLE} adds an event for this couple.
         </p>
       </div>
     )

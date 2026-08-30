@@ -555,6 +555,7 @@ DELETE (sampled clean across the migrations).
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
 | `contract_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/contract-templates.test.ts` (Phase 12, 6 tests) | Contracts |
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
+| `contract_signers` | ✅ (+ parent-ownership `with check` via `_owns_contract`) | `user_id` | ✅ `tests/integration/rls/contract-signers.test.ts` (6 tests, incl. cross-tenant parent write) | Contracts |
 | `email_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/email-templates.test.ts` (7 tests — incl. starter seeding) | Email Templates |
 | `email_template_files` | ✅ | `user_id` | ☐ (added with static-upload flow) | Email Templates |
 | `email_template_categories` | ✅ | `user_id` | ✅ `tests/integration/rls/email-template-categories.test.ts` (6 tests — cross-tenant read/rename/delete/insert denial + category-delete set-null keeps templates) | Email Templates |
@@ -572,7 +573,6 @@ DELETE (sampled clean across the migrations).
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `lead_capture_forms` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/rpc.test.ts` (10 tests — RLS isolation + `get_lead_form`/`submit_lead` token gating, cross-tenant ingest, status resolution, plan-limit) | Lead capture (ZEB-2) |
 | `form_submissions` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/form-submissions.test.ts` (3 tests — cross-tenant read denial, submission↔couple link, custom-field folding + `get_lead_form` block tree) | Website form (block-based) |
-
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |

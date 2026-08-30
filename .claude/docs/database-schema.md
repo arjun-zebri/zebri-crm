@@ -640,6 +640,38 @@ RLS: SELECT-only for the owner. No INSERT/UPDATE/DELETE policies —
 writes only via service-role webhook handler + disconnect server
 action. Migration: `20260524000000_create_connect_accounts.sql`.
 
+## contract_signers
+
+One row per party who must sign a contract, so a couple can each sign
+their own copy. Added by
+`20260828003000_create_contract_signers.sql`.
+
+Columns: `id`, `contract_id` (FK contracts, cascade), `user_id` (FK
+auth.users, cascade, the RLS owner), `role` (`'client' | 'vendor'`),
+`name`, `email`, `signing_order`, `required`, `sign_token` (uuid,
+unique, the per-signer capability URL), `signed_at`,
+`signer_name_typed`, `signer_ip`, `signer_user_agent`, `declined_at`,
+`declined_reason`, `created_at`, `updated_at`.
+
+- **Seeded automatically** by the `contracts_seed_signers` AFTER INSERT
+  trigger on `contracts`, from the couple's `primary_name`/`primary_email`
+  and `secondary_name`/`secondary_email`. Seeding in the DB rather than
+  the app guarantees the invariant the signing RPCs rely on.
+- **RLS:** `contract_signers_user_isolation`, `using (auth.uid() =
+  user_id)` **and** `with check (auth.uid() = user_id and
+  _owns_contract(contract_id))`. The parent-ownership half is required,
+  not belt-and-braces: foreign keys are validated with elevated
+  privileges and ignore RLS, so an owner-only `with check` still lets a
+  user file a signer row against another tenant's contract. That is the same
+  class closed for `bookings.couple_id` in `20260821040000`. Covered by
+  `tests/integration/rls/contract-signers.test.ts`, which fails if the
+  predicate is removed.
+- `contracts.signer_*` columns are **kept** as a denormalised fast path
+  (the PDF generator and public status banner read them) and take the
+  most recent client signature.
+- `sign_token` is a bearer credential and is never returned by
+  `get_public_contract`.
+
 ## contract_audit_log (Phase 3.2)
 
 Durable trail of every state change on a contract. The existing
@@ -1262,7 +1294,6 @@ Migration: `20260828007000_create_bug_reports.sql`
 ## bookings (Scheduler Phase C)
 
 Public booking records created by the submit_booking RPC (never inserted via normal SQL). Stores the booker's details, slot timing, and manage/external event tokens.
-
 
 Columns:
 id (uuid, primary key)

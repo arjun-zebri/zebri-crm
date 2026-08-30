@@ -41,6 +41,7 @@ import {
 import { useState } from 'react';
 import { PiWhatsappLogoLight } from 'react-icons/pi';
 
+import { printRunSheet } from '@/components/print/print-run-sheet';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 
@@ -48,7 +49,7 @@ import {
   CoupleTimerControl,
   useCoupleTimerControl,
 } from './couple-timer-control';
-import { printTimelinePdf, printVowPdf } from './print-couple-docs';
+import { printVowPdf } from './print-couple-docs';
 
 export interface CoupleProfileHeaderProps {
   couple: Couple;
@@ -404,7 +405,7 @@ export function CoupleProfileHeader({
                   </button>
                   <button
                     onClick={() => {
-                      void printTimelinePdf(couple.id, couple.name);
+                      if (couple.portal_token) void printRunSheet(couple.portal_token, couple.name);
                       setActionsOpen(false);
                     }}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2 text-body text-gray-700 hover:bg-gray-50 transition cursor-pointer"
@@ -576,7 +577,7 @@ export function CoupleProfileHeader({
                 </button>
                 <button
                   onClick={() => {
-                    void printTimelinePdf(couple.id, couple.name);
+                    if (couple.portal_token) void printRunSheet(couple.portal_token, couple.name);
                     setPdfOpen(false);
                   }}
                   className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"

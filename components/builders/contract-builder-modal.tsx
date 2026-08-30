@@ -33,7 +33,9 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Check, Clock, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+
 
 import {
   deleteContractAction,
@@ -51,23 +53,27 @@ import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-
 import { ContractBodyEditor } from '@/components/builders/parts/contract-body-editor';
 import { ContractSignatureDisplay } from '@/components/builders/parts/contract-signature-display';
 import type { JSONContent } from '@/components/builders/parts/contract-types';
-import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
+import { toPublicContract, type PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
+import { printContract } from '@/components/print/print-contract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
-import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding';
+import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import {
   buildContractVariables,
+  findUnknownVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
+import { pendingSignerLinks, signerLinks } from '@/lib/contracts/signer-links';
+import { coupleDisplayName } from '@/lib/couples/display-name';
 import { resolveCoupleEmail } from '@/lib/couples/email';
-import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 
 interface Contract {
   id: string;
-  title: string;
+  /** Null until the sender titles it; never auto-generated. */
+  title: string | null;
   contract_number: string;
   status: string;
   content: JSONContent;
@@ -110,19 +116,20 @@ const STATE_PILL: Record<string, StatePillProps> = {
 const DEFAULT_TEMPLATE: JSONContent = {
   type: 'doc',
   content: [
-    {
-      type: 'heading',
-      attrs: { level: 1 },
-      content: [{ type: 'text', text: 'Wedding MC Service Agreement' }],
-    },
+    // No leading heading: the Contract header block in Branding owns the
+    // document's title. A heading here would print a second one under it.
     {
       type: 'paragraph',
       content: [
         { type: 'text', text: 'This agreement is between ' },
         { type: 'mention', attrs: { id: 'mc_business_name', label: 'Your business name' } },
-        { type: 'text', text: ' ("the MC") and ' },
+        { type: 'text', text: ' ("the ' },
+        { type: 'mention', attrs: { id: 'vendor_role', label: 'Your role' } },
+        { type: 'text', text: '") and ' },
         { type: 'mention', attrs: { id: 'couple_name', label: 'Couple name' } },
-        { type: 'text', text: ' ("the Couple") for wedding MC services on ' },
+        { type: 'text', text: ' ("the Couple") for wedding ' },
+        { type: 'mention', attrs: { id: 'vendor_role', label: 'Your role' } },
+        { type: 'text', text: ' services on ' },
         { type: 'mention', attrs: { id: 'event_date', label: 'Event date' } },
         { type: 'text', text: ' at ' },
         { type: 'mention', attrs: { id: 'venue', label: 'Venue' } },
@@ -211,17 +218,38 @@ export function ContractBuilderModal({
   // The address the send route will mail. Fetched separately from the
   // picker list because that list is only loaded while the contract is
   // still a draft, and the preview needs the recipient at every stage.
-  const { data: coupleEmail } = useQuery({
-    queryKey: ['couple-email', coupleId],
+  const { data: coupleDetails } = useQuery({
+    queryKey: ['couple-contract-details', coupleId],
     enabled: isOpen && !!coupleId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('couples')
-        .select('primary_email, email')
+        .select('primary_email, email, primary_name, secondary_name')
         .eq('id', coupleId!)
         .single();
       if (error) throw error;
-      return resolveCoupleEmail(data);
+      return {
+        email: resolveCoupleEmail(data),
+        primaryName: data.primary_name,
+        secondaryName: data.secondary_name,
+      };
+    },
+  });
+  const coupleEmail = coupleDetails?.email;
+
+  // Signing roster. Only meaningful once a contract exists and has been sent;
+  // on a draft the signers are seeded but nobody has been asked yet.
+  const { data: signers } = useQuery({
+    queryKey: ['contract-signers', effectiveId],
+    enabled: isOpen && !!effectiveId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contract_signers')
+        .select('id, name, role, required, signed_at, declined_at, sign_token')
+        .eq('contract_id', effectiveId!)
+        .order('signing_order');
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -258,7 +286,9 @@ export function ContractBuilderModal({
   /* ─── hydrate state from DB ─────────────────────────────────── */
   useEffect(() => {
     if (!contract) return;
-    setTitle(contract.title);
+    // `contracts.title` is nullable now that nothing auto-generates one; the
+    // title input is controlled, so null would make React drop to uncontrolled.
+    setTitle(contract.title ?? '');
     setContent(
       contract.content && Object.keys(contract.content).length > 0
         ? contract.content
@@ -307,15 +337,37 @@ export function ContractBuilderModal({
   // whatever we can resolve client-side (couple + event + quote +
   // user_metadata) so the preview reflects the real document.
   const [userMeta, setUserMeta] = useState<Record<string, unknown>>({});
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   useEffect(() => {
     const fetchUser = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       setUserMeta((user?.user_metadata ?? {}) as Record<string, unknown>);
+      setUserEmail(user?.email ?? null);
     };
     void fetchUser();
   }, [supabase]);
+
+  // Both partners in full, for the preview header, the PDF and the
+  // {{couple_name}} variable alike. Derived once: when this was inlined at
+  // each call site, one of them kept the couple's short list label.
+  // The Contract header block supplies the heading when a contract has no
+  // title of its own; the PDF needs the same tree the page renders from.
+  const { branding, blocks: brandingBlocks } = useCurrentBranding('contract');
+
+  const coupleFullName = coupleDisplayName({
+    name: coupleName,
+    primary_name: coupleDetails?.primaryName,
+    secondary_name: coupleDetails?.secondaryName,
+  });
+
+  // Merge fields in the body that no variable resolves. Drives both the
+  // pre-send block and the inline warning under the editor.
+  const unknownVars = useMemo(
+    () => (canEdit ? findUnknownVariables(content) : []),
+    [canEdit, content],
+  );
 
   const previewHtml = useMemo(() => {
     // Locked snapshot wins when present — that's the legally-binding
@@ -325,12 +377,27 @@ export function ContractBuilderModal({
     }
 
     const vars = buildContractVariables({
-      couple: { name: coupleName ?? '', email: null },
+      couple: {
+        name: coupleName ?? '',
+        email: coupleDetails?.email ?? null,
+        primary_name: coupleDetails?.primaryName ?? null,
+        secondary_name: coupleDetails?.secondaryName ?? null,
+      },
       firstEvent: firstEvent ?? null,
       userMeta,
+      userEmail,
     });
     return renderContractHtml(content, vars);
-  }, [canEdit, contract?.locked_content_html, content, coupleName, firstEvent, userMeta]);
+  }, [
+    canEdit,
+    contract?.locked_content_html,
+    content,
+    coupleName,
+    coupleDetails,
+    firstEvent,
+    userMeta,
+    userEmail,
+  ]);
 
   /* ─── mutations ─────────────────────────────────────────────── */
   const save = useMutation({
@@ -339,7 +406,7 @@ export function ContractBuilderModal({
       const input: SaveContractInput = {
         contractId: effectiveId,
         coupleId,
-        title: title || `Contract for ${coupleName ?? 'couple'}`,
+        title,
         content,
         expiresAt: expiresAt,
       };
@@ -356,6 +423,7 @@ export function ContractBuilderModal({
         onCreated?.(id);
       }
       queryClient.invalidateQueries({ queryKey: ['contract', id] });
+      queryClient.invalidateQueries({ queryKey: ['contract-signers', id] });
       queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
       queryClient.invalidateQueries({ queryKey: ['contracts-couple-limit'] });
       queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
@@ -367,6 +435,17 @@ export function ContractBuilderModal({
   const send = async () => {
     if (!coupleId) {
       toast('Pick a couple for this contract first', 'error');
+      return;
+    }
+    // Catch unresolvable merge fields here as well as server-side, so the MC
+    // is told which field to remove before the save/send round trip rather
+    // than after it. The send route enforces the same rule authoritatively.
+    if (unknownVars.length > 0) {
+      toast(
+        `Remove ${unknownVars.map((v) => `{{${v}}}`).join(', ')} from the body ` +
+          'before sending. Those merge fields no longer exist.',
+        'error',
+      );
       return;
     }
     // A never-saved draft has no row (and so no share token) for the
@@ -450,32 +529,19 @@ export function ContractBuilderModal({
 
   /* ─── PDF download ──────────────────────────────────────────── */
   const downloadPdf = () => {
-    if (!contract) return;
-    // Convert user metadata to PublicBranding, then to PDF options.
-    // This ensures the PDF uses the same branded styling as the web preview.
-    const branding = buildPublicBranding(userMeta as UserMetadata);
-    const pdfBranding = publicBrandingToPdfOpts(branding);
-
-    generateAndPrintPdf(
-      {
-        type: 'contract',
-        documentNumber: contract.contract_number,
-        title: contract.title,
-        status: contract.status,
-        coupleName: coupleName ?? '',
-        businessName: (userMeta.business_name as string | undefined) ?? '',
-        items: [],
-        subtotal: 0,
-        total: 0,
-        contractHtml: previewHtml,
-        signerName: contract.signer_name,
-        signedAt: contract.signed_at,
-        signerIp: contract.signer_ip,
-        signerUserAgent: contract.signer_user_agent,
-        mcSignatureName: contract.mc_signature_name,
-      },
-      pdfBranding,
-      branding,
+    if (!contract || !branding) return;
+    // Prints the same `ContractBrandedCard` the public link renders, so the
+    // PDF cannot drift from what the couple signed.
+    printContract(
+      toPublicContract(previewDoc, branding, brandingBlocks, {
+        id: contract.id,
+        expiresAt: contract.expires_at,
+        declinedAt: contract.declined_at,
+        declinedReason: contract.declined_reason,
+        emailSentAt: contract.email_sent_at,
+        eventDate: firstEvent?.date ?? null,
+        venue: firstEvent?.venue ?? null,
+      }),
     );
   };
 
@@ -503,15 +569,36 @@ export function ContractBuilderModal({
       ? `${window.location.origin}/contract/${contract.share_token}`
       : null;
 
+  // One link per contact for the footer's Copy link popover, offered in every
+  // state so the MC can line links up before sending. Tokens are seeded when
+  // the contract row is inserted, so an unsaved draft shows the contacts by
+  // name and saves itself when the popover opens; the public RPC refuses
+  // drafts, so the note says the links go live on send.
+  const contactLinks = !coupleId
+    ? undefined
+    : typeof window !== 'undefined' && signers?.length
+      ? signerLinks(signers, window.location.origin)
+      : pendingSignerLinks(coupleDetails?.primaryName, coupleDetails?.secondaryName);
+  const contactLinksNote = save.isPending
+    ? 'Saving the contract to create the links.'
+    : status === 'draft'
+      ? 'These links go live when you send the contract.'
+      : undefined;
+  const onContactLinksOpen = () => {
+    if (isNew && !save.isPending) save.mutate();
+  };
+
   // PreviewDoc fed to the shared BuilderPreviewPane. Contract-only
   // fields (contractHtml / lockedHtml / signer info) flow through;
   // the unused quote/invoice slots stay at defaults.
   const previewDoc: PreviewDoc = {
     kind: 'contract',
     documentNumber: contract?.contract_number ?? 'CTR-…',
-    title: title || `Contract for ${coupleName ?? 'couple'}`,
+    // Empty until the sender writes one; the preview then shows no heading,
+    // which is what the couple would actually receive.
+    title,
     status,
-    coupleName: coupleName ?? '',
+    coupleName: coupleFullName,
     businessName: (userMeta.business_name as string | undefined) ?? null,
     items: [],
     taxRate: 0,
@@ -549,7 +636,7 @@ export function ContractBuilderModal({
           setTitle(v);
           setDirty(true);
         }}
-        titlePlaceholder={coupleName ? `Contract for ${coupleName}` : 'Wedding MC contract'}
+        titlePlaceholder="Optional: override the heading from Branding" 
         titleReadOnly={!canEdit}
         previewPane={
           <BuilderPreviewPane doc={previewDoc} surface="contract" coupleEmail={coupleEmail} />
@@ -557,7 +644,9 @@ export function ContractBuilderModal({
         footer={
           <ShareAndSend
             dirty={dirty}
-            shareEnabled={contract?.share_token_enabled ?? false}
+            // A contract has no body for the couple until send freezes it, so
+            // the link (and the public RPC behind it) is live only from 'sent'.
+            shareEnabled={(contract?.share_token_enabled ?? false) && contract?.status !== 'draft'}
             shareUrl={shareUrl}
             lastSentAt={contract?.email_sent_at ?? null}
             locked={!canEdit}
@@ -566,6 +655,10 @@ export function ContractBuilderModal({
             hasCouple={!!coupleId}
             onSave={() => save.mutate()}
             onSend={() => void send()}
+            onDownloadPdf={downloadPdf}
+            {...(contactLinks ? { signerLinks: contactLinks } : {})}
+            {...(contactLinksNote ? { signerLinksNote: contactLinksNote } : {})}
+            onSignerLinksOpen={onContactLinksOpen}
           />
         }
       >
@@ -614,6 +707,39 @@ export function ContractBuilderModal({
             }}
           />
         </div>
+
+        {/* Who still owes a signature. Hidden on a draft (nobody has been
+            asked yet) and on a single-signer contract, where the terminal
+            signature block below already says everything. */}
+        {status !== 'draft' && (signers?.filter((s) => s.required).length ?? 0) > 1 ? (
+          <div className="mt-6 pt-5 border-t border-border">
+            <p className="text-body text-text-subtle mb-2">Signatures</p>
+            <ul className="space-y-1.5">
+              {signers?.map((signer) => (
+                <li key={signer.id} className="flex items-center gap-2">
+                  {signer.declined_at ? (
+                    <X size={14} strokeWidth={1.5} className="text-danger shrink-0" />
+                  ) : signer.signed_at ? (
+                    <Check size={14} strokeWidth={1.5} className="text-success shrink-0" />
+                  ) : (
+                    <Clock size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
+                  )}
+                  <span className="text-body text-text">{signer.name}</span>
+                  <span className="text-body text-text-subtle">
+                    {signer.declined_at
+                      ? 'Declined'
+                      : signer.signed_at
+                        ? `Signed ${new Date(signer.signed_at).toLocaleDateString('en-AU', {
+                            day: 'numeric',
+                            month: 'short',
+                          })}`
+                        : 'Awaiting signature'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {/* Signature / decline state (terminal states only). */}
         {isSigned ? (

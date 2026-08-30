@@ -8,6 +8,7 @@ import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
 
 import type { PortalVow } from './page'
 
@@ -103,7 +104,8 @@ export function VowsSection({
           lineHeight: bodyDefaults.lineHeight,
         }}
       >
-        These autosave as you type. Only you and your MC can see them.
+        These autosave as you type. Only you and your{' '}
+        {branding.vendor_role || DEFAULT_VENDOR_ROLE} can see them.
       </p>
 
       <div

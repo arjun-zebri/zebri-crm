@@ -217,7 +217,11 @@ const ERROR_BUDGET = 52;
 // Scheduler review fixes: calendar DST/timezone corrections with clean new code;
 // eslint --fix on the cron reminder test swept two pre-existing import-order
 // warnings along with the new one -> 97 -> 95.
-const WARNING_BUDGET = 95;
+// Contracts audit remediation (vendor-role phase): eslint --fix swept one
+// pre-existing import-order warning while ordering the new vendor-role
+// imports across the contract/portal surfaces, and another while ordering
+// the table-extension import in the rich-text editor (95 → 93).
+const WARNING_BUDGET = 93;
 
 function runEslintJson() {
   try {
