@@ -72,7 +72,11 @@ import { execSync } from 'node:child_process';
 // condensation cleared one more (265 -> 264). Moving the send_email
 // config out of the card and into the composer modal cleared two more
 // (264 -> 262). Locking in.
-const STRICT_BUDGET = 262;
+// Contracts audit remediation: AddressAutocomplete now spreads `help` and
+// `tooltip` conditionally rather than passing an explicit undefined into an
+// optional prop, clearing one long-standing violation (262 -> 261).
+// PDF renderer replaced by printing the public branded cards (261 -> 260).
+const STRICT_BUDGET = 260;
 
 function runTscStrict() {
   try {

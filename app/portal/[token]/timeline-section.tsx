@@ -20,11 +20,13 @@ import { Plus, ChevronDown, GripVertical } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 
 import { Modal } from "@/components/ui/modal";
+import { isChromePress } from '@/components/ui/use-overlay';
 import { getRgb } from "@/lib/branding/contrast";
 import { FONT_STACKS } from "@/lib/branding/fonts";
 import type { PublicBranding } from "@/lib/branding/public-surface";
 import { STATUS_COLORS } from "@/lib/branding/status-colors";
 import { roleDefaults } from "@/lib/branding/type-defaults";
+import { DEFAULT_VENDOR_ROLE } from "@/lib/branding/vendor-role";
 
 import type { PortalEvent, PortalTimelineItem } from "./page";
 
@@ -97,7 +99,7 @@ function TimePicker({
     const handler = (e: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(e.target as Node) && !isChromePress(e.target)
       ) {
         setOpen(false);
       }
@@ -359,7 +361,7 @@ function ItemModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            placeholder="Any details for your MC..."
+            placeholder={`Any details for your ${branding.vendor_role || DEFAULT_VENDOR_ROLE}...`}
             className="w-full border border-border rounded-control px-3 py-2 text-sm bg-surface text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-border/50 focus:border-border resize-none"
           />
         </div>
@@ -543,7 +545,7 @@ function DaySelector({
     const handler = (e: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(e.target as Node) && !isChromePress(e.target)
       ) {
         setOpen(false);
       }
@@ -724,7 +726,7 @@ export function TimelineSection({
   if (!hasEvent) {
     return (
       <p className="py-2" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: bodyDefaults.color, fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never] }}>
-        Your MC will set up a timeline for your event. Check back soon.
+        Your {branding.vendor_role || DEFAULT_VENDOR_ROLE} will set up a timeline for your event. Check back soon.
       </p>
     );
   }
@@ -756,7 +758,7 @@ export function TimelineSection({
             lineHeight: bodyDefaults.lineHeight,
           }}
         >
-          Add moments to suggest timing for your event. Moments you add will be reviewed by your MC before appearing on the official timeline.
+          Add moments to suggest timing for your event. Moments you add will be reviewed by your {branding.vendor_role || DEFAULT_VENDOR_ROLE} before appearing on the official timeline.
         </p>
         <p
           style={{
@@ -775,7 +777,7 @@ export function TimelineSection({
           >
             Pending
           </strong>{' '}
-          means your MC is reviewing your suggestion.
+          means your {branding.vendor_role || DEFAULT_VENDOR_ROLE} is reviewing your suggestion.
         </p>
       </div>
 
@@ -830,7 +832,7 @@ export function TimelineSection({
                       lineHeight: bodyDefaults.lineHeight,
                     }}
                   >
-                    Added by your MC
+                    Added by your {branding.vendor_role || DEFAULT_VENDOR_ROLE}
                   </p>
                 )}
                 {mcItems.map((item) => (

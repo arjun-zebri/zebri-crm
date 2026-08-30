@@ -33,6 +33,23 @@ function pill(status: string, opts?: { wrap?: boolean }): ReactNode {
   return <span className={className}>{status}</span>;
 }
 
+
+/**
+ * Signing progress for a contract nobody has fully signed yet.
+ *
+ * A contract with two partners sits at 'sent' until both have signed, so the
+ * status pill alone cannot distinguish "nobody has looked at it" from "waiting
+ * on one more signature". Returns the dash placeholder when there is only one
+ * signer, where a count would just be noise.
+ */
+function signingProgress(contract: Contract): string {
+  const required = (contract.contract_signers ?? []).filter((s) => s.required);
+  if (required.length < 2) return ' - ';
+  const signed = required.filter((s) => s.signed_at).length;
+  if (signed === 0) return ' - ';
+  return `${signed} of ${required.length}`;
+}
+
 export interface ContractsListProps {
   loading: boolean;
   contracts: Contract[];
@@ -64,7 +81,7 @@ export function ContractsList({ loading, contracts, searching, onOpen }: Contrac
             coupleName: contract.couple.name,
           }),
         number: contract.contract_number,
-        title: contract.title,
+        title: contract.title || 'Untitled contract',
         coupleName: contract.couple.name,
         statusPill: pill(contract.status),
         valueCell: (
@@ -74,7 +91,7 @@ export function ContractsList({ loading, contracts, searching, onOpen }: Contrac
                   day: 'numeric',
                   month: 'short',
                 })
-              : ' - '}
+              : signingProgress(contract)}
           </span>
         ),
         lastCell: (

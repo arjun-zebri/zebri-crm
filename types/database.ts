@@ -570,6 +570,72 @@ export type Database = {
           },
         ]
       }
+      bug_reports: {
+        Row: {
+          build_sha: string | null
+          created_at: string
+          description: string
+          id: string
+          notion_page_id: string | null
+          notion_page_url: string | null
+          notion_sync_error: string | null
+          notion_sync_status: string
+          notion_ticket_ref: string | null
+          page_url: string
+          report_type: string
+          route_path: string
+          screenshot_filename: string | null
+          title: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+          viewport_height: number | null
+          viewport_width: number | null
+        }
+        Insert: {
+          build_sha?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          notion_page_id?: string | null
+          notion_page_url?: string | null
+          notion_sync_error?: string | null
+          notion_sync_status?: string
+          notion_ticket_ref?: string | null
+          page_url: string
+          report_type: string
+          route_path: string
+          screenshot_filename?: string | null
+          title: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+          viewport_height?: number | null
+          viewport_width?: number | null
+        }
+        Update: {
+          build_sha?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          notion_page_id?: string | null
+          notion_page_url?: string | null
+          notion_sync_error?: string | null
+          notion_sync_status?: string
+          notion_ticket_ref?: string | null
+          page_url?: string
+          report_type?: string
+          route_path?: string
+          screenshot_filename?: string | null
+          title?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+          viewport_height?: number | null
+          viewport_width?: number | null
+        }
+        Relationships: []
+      }
       calendar_connections: {
         Row: {
           access_token_encrypted: string
@@ -761,6 +827,74 @@ export type Database = {
           },
         ]
       }
+      contract_signers: {
+        Row: {
+          contract_id: string
+          created_at: string
+          declined_at: string | null
+          declined_reason: string | null
+          email: string | null
+          id: string
+          name: string
+          required: boolean
+          role: string
+          sign_token: string
+          signed_at: string | null
+          signer_ip: string | null
+          signer_name_typed: string | null
+          signer_user_agent: string | null
+          signing_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          declined_at?: string | null
+          declined_reason?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          required?: boolean
+          role: string
+          sign_token?: string
+          signed_at?: string | null
+          signer_ip?: string | null
+          signer_name_typed?: string | null
+          signer_user_agent?: string | null
+          signing_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          declined_at?: string | null
+          declined_reason?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          required?: boolean
+          role?: string
+          sign_token?: string
+          signed_at?: string | null
+          signer_ip?: string | null
+          signer_name_typed?: string | null
+          signer_user_agent?: string | null
+          signing_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signers_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_templates: {
         Row: {
           content: Json
@@ -824,7 +958,7 @@ export type Database = {
           signer_name: string | null
           signer_user_agent: string | null
           status: string
-          title: string
+          title: string | null
           updated_at: string
           user_id: string
           version: number
@@ -852,7 +986,7 @@ export type Database = {
           signer_name?: string | null
           signer_user_agent?: string | null
           status?: string
-          title: string
+          title?: string | null
           updated_at?: string
           user_id: string
           version?: number
@@ -880,7 +1014,7 @@ export type Database = {
           signer_name?: string | null
           signer_user_agent?: string | null
           status?: string
-          title?: string
+          title?: string | null
           updated_at?: string
           user_id?: string
           version?: number
@@ -2848,6 +2982,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _contract_strip_money_mentions: { Args: { node: Json }; Returns: Json }
+      _contract_tokenise_role: { Args: { node: Json }; Returns: Json }
+      _owns_contract: { Args: { p_contract_id: string }; Returns: boolean }
       _owns_couple_or_null: { Args: { p_couple_id: string }; Returns: boolean }
       _owns_meeting_type: {
         Args: { p_meeting_type_id: string }
@@ -2856,6 +2993,14 @@ export type Database = {
       _owns_package_or_null: {
         Args: { p_package_id: string }
         Returns: boolean
+      }
+      _resolve_contract_token: {
+        Args: { p_token: string }
+        Returns: {
+          contract_id: string
+          is_legacy: boolean
+          signer_id: string
+        }[]
       }
       _resolve_portal_couple: {
         Args: { p_token: string }
@@ -2870,6 +3015,7 @@ export type Database = {
         Args: { p_surface: string; p_user_id: string }
         Returns: Json
       }
+      _vendor_role_label: { Args: { meta: Json }; Returns: string }
       admin_user_last_seen: {
         Args: never
         Returns: {
@@ -2978,6 +3124,14 @@ export type Database = {
       mark_contract_reminder_sent: {
         Args: { p_contract_id: string }
         Returns: undefined
+      }
+      record_contract_view: {
+        Args: {
+          p_actor_ip?: string
+          p_actor_user_agent?: string
+          token: string
+        }
+        Returns: Json
       }
       reschedule_booking: {
         Args: { p_ends_at: string; p_manage_token: string; p_starts_at: string }

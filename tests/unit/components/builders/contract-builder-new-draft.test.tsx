@@ -28,8 +28,12 @@ vi.mock('@/components/builders/parts/contract-body-editor', () => ({
   ContractBodyEditor: () => <div data-testid="body-editor" />,
 }));
 
+const previewDocs: Array<Record<string, unknown>> = [];
 vi.mock('@/components/builders/parts/builder-preview-pane', () => ({
-  BuilderPreviewPane: () => <div data-testid="preview-pane" />,
+  BuilderPreviewPane: (props: { doc: Record<string, unknown> }) => {
+    previewDocs.push(props.doc);
+    return <div data-testid="preview-pane" />;
+  },
 }));
 
 const couples = [
@@ -57,7 +61,19 @@ vi.mock('@/lib/supabase/client', () => ({
         chain[method] = () => chain;
       }
       chain.maybeSingle = () => Promise.resolve({ data: null, error: null });
-      chain.single = () => Promise.resolve({ data: null, error: null });
+      chain.single = () =>
+        Promise.resolve({
+          data:
+            table === 'couples'
+              ? {
+                  primary_email: 'amy@example.com',
+                  email: 'amy@example.com',
+                  primary_name: 'Amy Adams',
+                  secondary_name: 'Ben Brown',
+                }
+              : null,
+          error: null,
+        });
       return chain;
     },
   }),
@@ -90,6 +106,7 @@ describe('ContractBuilderModal — new draft', () => {
       data: { id: '33333333-3333-4333-9333-333333333333' },
     });
     toast.mockReset();
+    previewDocs.length = 0;
   });
 
   it('opens with no couple selected and an enabled picker', async () => {
@@ -109,6 +126,28 @@ describe('ContractBuilderModal — new draft', () => {
     expect(await screen.findByRole('button', { name: /Send to couple/ })).toBeDisabled();
     await pickCouple('Amy & Ben');
     expect(screen.getByRole('button', { name: /Send to couple/ })).toBeEnabled();
+  });
+
+  it('never hands the title input a null value', async () => {
+    // `contracts.title` became nullable when auto-generated titles were
+    // removed. The input is controlled, so a null makes React switch it to
+    // uncontrolled and log a warning.
+    renderNewDraft();
+    const titleInput = await screen.findByPlaceholderText(/override the heading/i);
+    expect((titleInput as HTMLInputElement).value).toBe('');
+  });
+
+  it('shows both partners in full on the preview, not the couple list label', async () => {
+    // Regression: the display name was inlined at two call sites and only the
+    // PDF one was updated, so the preview header kept rendering the couple's
+    // short label ("Amy & Ben") instead of "Amy Adams and Ben Brown".
+    renderNewDraft();
+    await pickCouple('Amy & Ben');
+
+    await waitFor(() => {
+      const latest = previewDocs[previewDocs.length - 1];
+      expect(latest?.coupleName).toBe('Amy Adams and Ben Brown');
+    });
   });
 
   it('saves as a create — null contractId with the chosen coupleId', async () => {
@@ -138,3 +177,20 @@ describe('ContractBuilderModal — new draft', () => {
     );
   });
 });
+
+describe('the new-draft default template', () => {
+  it('names no role of its own, so a DJ is not called an MC', async () => {
+    // The SQL seed and the starter catalogue were de-MC'd, but this inline
+    // template is what a brand-new draft actually opens with.
+    const src = await import('node:fs').then((fs) =>
+      fs.readFileSync('components/builders/contract-builder-modal.tsx', 'utf8'),
+    )
+    const start = src.indexOf('const DEFAULT_TEMPLATE')
+    const body = src.slice(start, src.indexOf('\n};', start))
+    expect(body).not.toMatch(/\bMC\b/)
+    expect(body).toContain('vendor_role')
+    // The Contract header block in Branding owns the heading, so a leading
+    // h1 here would print a second one directly under it.
+    expect(body).not.toContain("attrs: { level: 1 }")
+  })
+})

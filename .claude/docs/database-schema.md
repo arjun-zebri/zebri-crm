@@ -640,6 +640,38 @@ RLS: SELECT-only for the owner. No INSERT/UPDATE/DELETE policies —
 writes only via service-role webhook handler + disconnect server
 action. Migration: `20260524000000_create_connect_accounts.sql`.
 
+## contract_signers
+
+One row per party who must sign a contract, so a couple can each sign
+their own copy. Added by
+`20260828003000_create_contract_signers.sql`.
+
+Columns: `id`, `contract_id` (FK contracts, cascade), `user_id` (FK
+auth.users, cascade, the RLS owner), `role` (`'client' | 'vendor'`),
+`name`, `email`, `signing_order`, `required`, `sign_token` (uuid,
+unique, the per-signer capability URL), `signed_at`,
+`signer_name_typed`, `signer_ip`, `signer_user_agent`, `declined_at`,
+`declined_reason`, `created_at`, `updated_at`.
+
+- **Seeded automatically** by the `contracts_seed_signers` AFTER INSERT
+  trigger on `contracts`, from the couple's `primary_name`/`primary_email`
+  and `secondary_name`/`secondary_email`. Seeding in the DB rather than
+  the app guarantees the invariant the signing RPCs rely on.
+- **RLS:** `contract_signers_user_isolation`, `using (auth.uid() =
+  user_id)` **and** `with check (auth.uid() = user_id and
+  _owns_contract(contract_id))`. The parent-ownership half is required,
+  not belt-and-braces: foreign keys are validated with elevated
+  privileges and ignore RLS, so an owner-only `with check` still lets a
+  user file a signer row against another tenant's contract. That is the same
+  class closed for `bookings.couple_id` in `20260821040000`. Covered by
+  `tests/integration/rls/contract-signers.test.ts`, which fails if the
+  predicate is removed.
+- `contracts.signer_*` columns are **kept** as a denormalised fast path
+  (the PDF generator and public status banner read them) and take the
+  most recent client signature.
+- `sign_token` is a bearer credential and is never returned by
+  `get_public_contract`.
+
 ## contract_audit_log (Phase 3.2)
 
 Durable trail of every state change on a contract. The existing
@@ -1227,6 +1259,37 @@ Column added to the existing user_public_settings table:
 timezone (text, nullable)  -  IANA timezone (e.g. 'Australia/Sydney', 'America/New_York'). Null until the MC first saves availability. The availability editor seeds it from the browser's local timezone.
 
 Times in availability_rules and availability_overrides are wall-clock in this timezone. Migration: `20260819000000_create_scheduling_tables.sql`.
+
+## bug_reports (in-app Feedback pill)
+
+Feedback submitted from the Feedback pill on every dashboard page. This table is the source of truth, not Notion: the row is written before the Notion push runs, so an outage, a revoked token or a rate-limit never loses a report. The Notion task in Tasks Tracker is a mirror.
+
+Columns:
+id (uuid, primary key)
+user_id (uuid, not null, FK auth.users cascade)  -  RLS key (the MC who filed it)
+title (text, not null)  -  the MC's one-line summary; becomes the Notion Task name
+description (text, not null)  -  the MC's own words; becomes "Concern (as raised)" in the page body
+report_type (text, not null, check in: Bug | Feature | Improvement)  -  maps to the Notion Type select
+screenshot_filename (text, nullable)  -  filename only; the image is relayed straight into Notion and never stored by us
+page_url (text, not null)  -  absolute URL they were on
+route_path (text, not null)  -  pathname, for grouping reports by surface
+user_agent (text, nullable)  -  raw header, read server-side so it cannot be forged
+viewport_width, viewport_height (integer, nullable)  -  browser-reported
+build_sha (text, nullable)  -  VERCEL_GIT_COMMIT_SHA, or 'local'
+notion_page_id (text, nullable)  -  set once the Notion task exists
+notion_page_url (text, nullable)  -  deep link to the task
+notion_ticket_ref (text, nullable)  -  human reference, e.g. 'ZEB-42'; echoed back to the MC in the success toast
+notion_sync_status (text, not null, default 'pending', check in: pending | synced | failed)
+notion_sync_error (text, nullable)  -  why Notion refused it; there is no retry, the Slack alert carries the full text for manual re-filing
+created_at, updated_at (timestamptz)
+
+Indices:
+- (user_id) for owner lookups
+- (created_at) partial, where notion_sync_status <> 'synced'  -  the only query that scans across owners
+
+RLS: owner-scoped SELECT, INSERT and UPDATE (auth.uid() = user_id). Deliberately no DELETE policy: a filed report is a record, not a draft the reporter can withdraw.
+
+Migration: `20260828007000_create_bug_reports.sql`
 
 ## bookings (Scheduler Phase C)
 

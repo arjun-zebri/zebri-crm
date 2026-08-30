@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
+import { isChromePress } from '@/components/ui/use-overlay'
 import { TimelineItem } from '@/types/event'
 
 interface EventTimelineModalProps {
@@ -55,7 +56,7 @@ export function TimePicker({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setOpen(false)
       }
     }

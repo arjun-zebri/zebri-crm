@@ -29,6 +29,45 @@ export interface PublicContract extends PublicBranding {
   event_date: string | null;
   venue: string | null;
   branding_blocks: Block[] | null;
+  /** Everyone who must sign. Never carries sign tokens. */
+  signers: ContractSigner[];
+  /** Which signer opened this link; null on a legacy share link. */
+  viewer_signer_id: string | null;
+}
+
+/** One party on a contract, as returned by `get_public_contract`. */
+export interface ContractSigner {
+  id: string;
+  role: 'client' | 'vendor';
+  name: string;
+  signing_order: number;
+  required: boolean;
+  signed_at: string | null;
+  declined_at: string | null;
+}
+
+/**
+ * The signer whose link this is.
+ *
+ * @returns The viewer's signer row, or null on a legacy share link (or once
+ * every signer is done).
+ */
+export function viewerSigner(contract: PublicContract | null): ContractSigner | null {
+  if (!contract?.viewer_signer_id) return null;
+  return contract.signers?.find((s) => s.id === contract.viewer_signer_id) ?? null;
+}
+
+/**
+ * Required signers who have not signed yet, excluding the viewer.
+ *
+ * Drives the "waiting on Alex" line after one partner signs, so nobody is left
+ * wondering whether their signature registered.
+ */
+export function outstandingSigners(contract: PublicContract | null): ContractSigner[] {
+  if (!contract) return [];
+  return (contract.signers ?? []).filter(
+    (s) => s.required && !s.signed_at && !s.declined_at && s.id !== contract.viewer_signer_id,
+  );
 }
 
 /**

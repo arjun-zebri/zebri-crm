@@ -76,6 +76,71 @@ describe('ShareAndSend', () => {
     expect(open).toHaveAttribute('target', '_blank');
   });
 
+  it('offers per-contact Copy link on a draft, with the go-live note', async () => {
+    const user = userEvent.setup();
+    render(
+      <ShareAndSend
+        {...base()}
+        shareEnabled={false}
+        shareUrl="https://x/y"
+        signerLinks={[{ label: 'Primary contact', name: 'Alex', url: 'https://x/contract/a' }]}
+        signerLinksNote="These links go live when you send the contract."
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Copy link' }));
+    expect(screen.getByText('These links go live when you send the contract.')).toBeInTheDocument();
+  });
+
+  it('reports the per-contact popover opening, so an unsaved draft can save itself', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    render(
+      <ShareAndSend
+        {...base()}
+        signerLinks={[{ label: 'Primary contact', name: 'Alex', url: null, unavailableReason: 'Created when the contract is saved.' }]}
+        onSignerLinksOpen={onOpen}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Copy link' }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Copy link for primary contact' })).toBeDisabled();
+  });
+
+  it('offers Download PDF on a draft whose link is not live', () => {
+    // The PDF is about the document, not the link. Gating the contract link
+    // on send must not take the PDF away with it.
+    render(<ShareAndSend {...base()} shareEnabled={false} shareUrl="https://x/y" onDownloadPdf={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Download PDF' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy link' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open' })).not.toBeInTheDocument();
+  });
+
+  it('opens a per-contact popover from Copy link, greying out a missing secondary', async () => {
+    const user = userEvent.setup();
+    render(
+      <ShareAndSend
+        {...base()}
+        shareEnabled
+        shareUrl="https://x/share"
+        signerLinks={[
+          { label: 'Primary contact', name: 'Alex Rivera', url: 'https://x/contract/a' },
+          { label: 'Secondary contact', name: null, url: null, unavailableReason: 'No secondary contact.' },
+        ]}
+      />,
+    );
+    // No Open with per-contact links: the MC opening one would log a
+    // 'viewed' event in that contact's name.
+    expect(screen.queryByRole('link', { name: 'Open' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Copy link' }));
+    expect(screen.getByText('Alex Rivera')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy link for primary contact' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Copy link for secondary contact' })).toBeDisabled();
+
+    await user.hover(screen.getByText('Not set'));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('No secondary contact.');
+  });
+
   it('calls onSave when Save is clicked', async () => {
     const p = base();
     p.dirty = true;

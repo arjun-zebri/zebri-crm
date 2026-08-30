@@ -77,7 +77,7 @@ export function InvoiceFallbackCard({
 
   return (
     <div
-      className="overflow-hidden shadow-sm border"
+      className="overflow-hidden"
       style={{ borderRadius: radius, backgroundColor: branding.surface_color, borderColor }}
     >
       {/* Header */}

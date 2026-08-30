@@ -304,6 +304,19 @@
 .contract-content .ProseMirror li::marker { color: #9ca3af; }
 .contract-content li > p,
 .contract-content .ProseMirror li > p { margin: 0 !important; }
+
+/* A blank line the MC typed with Enter, and an empty table cell, are both an
+   empty `<p>` in the rendered HTML. The editor keeps them visible because
+   ProseMirror injects a trailing `<br>` (so `:empty` never matches inside
+   `.ProseMirror`), but the preview, the public page and the emailed PDF render
+   the bare `<p></p>`, which collapses to zero height: pressing Enter changed
+   nothing in the preview and empty rows came out shorter than the editor's.
+   A zero-width inline-block forces a line box so the paragraph takes exactly
+   one line of its own line-height, matching the editor. */
+.contract-content p:empty::before {
+  content: '';
+  display: inline-block;
+}
 .contract-content li > p + ul,
 .contract-content li > p + ol,
 .contract-content .ProseMirror li > p + ul,
@@ -324,6 +337,71 @@
 .contract-content .ProseMirror a { color: #2563eb; text-decoration: underline; }
 .contract-content hr,
 .contract-content .ProseMirror hr { margin: 1.25rem 0; border: 0; border-top: 1px solid #e5e7eb; }
+
+/* Contract-body TABLES. Same rules serve the editor (.ProseMirror), the live
+   preview, the public /contract/[token] page and the printed PDF, so a fee
+   schedule looks identical wherever it is read. Colours are literal greys to
+   match the surrounding list/blockquote rules above, which predate tokens on
+   this surface. */
+.contract-content table,
+.contract-content .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+  table-layout: fixed;
+  overflow: hidden;
+}
+.contract-content th,
+.contract-content td,
+.contract-content .ProseMirror th,
+.contract-content .ProseMirror td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.625rem;
+  vertical-align: top;
+  text-align: left;
+  position: relative;
+}
+.contract-content th,
+.contract-content .ProseMirror th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #111827;
+}
+/* Cells wrap paragraphs; the default paragraph margin would double the
+   padding and make every row too tall. */
+.contract-content th > p,
+.contract-content td > p,
+.contract-content .ProseMirror th > p,
+.contract-content .ProseMirror td > p { margin: 0 !important; }
+
+/* A wide fee table must scroll inside its own box rather than forcing the
+   whole page sideways on a phone. */
+.contract-content .tableWrapper { overflow-x: auto; max-width: 100%; }
+
+/* Column-resize affordance, editor only. */
+.contract-content .ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #93c5fd;
+  pointer-events: none;
+}
+.contract-content .ProseMirror.resize-cursor { cursor: col-resize; }
+.contract-content .ProseMirror .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(59, 130, 246, 0.12);
+  pointer-events: none;
+}
+
+/* Keep rows off page breaks in the printed contract. */
+@media print {
+  .contract-content tr { page-break-inside: avoid; }
+  .contract-content thead { display: table-header-group; }
+}
 
 /* Always-visible thin scrollbar */
 .scrollbar-thin {

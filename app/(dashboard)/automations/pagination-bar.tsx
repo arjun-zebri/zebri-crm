@@ -13,6 +13,8 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { isChromePress } from '@/components/ui/use-overlay'
+
 interface Props {
   total: number
   pageSize: number
@@ -40,7 +42,7 @@ export function PaginationBar({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (pageSizeRef.current && !pageSizeRef.current.contains(e.target as Node)) {
+      if (pageSizeRef.current && !pageSizeRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setPageSizeOpen(false)
       }
     }

@@ -6,6 +6,7 @@ import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
 
 import type { PortalQuestionnaire } from './page'
 
@@ -53,7 +54,7 @@ export function QuestionnairesSection({ questionnaires, branding }: Questionnair
             lineHeight: bodyDefaults.lineHeight,
           }}
         >
-          No questionnaires yet. Your MC will send them here.
+          No questionnaires yet. Your {branding.vendor_role || DEFAULT_VENDOR_ROLE} will send them here.
         </p>
       </div>
     )

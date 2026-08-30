@@ -44,9 +44,11 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
     case 'tagline':
       return { id: newId('tg'), type: 'tagline' }
     case 'title':
-      // A contract is signed, not quoted or billed: it carries no
-      // customer-facing "Expires" date and no reference number the way an
-      // invoice/quote does, so both default off on the contract surface.
+      // A contract is signed, not quoted or billed, so no customer-facing
+      // "Expires" date: `contracts.expires_at` is a signing deadline, not a
+      // term, and labelling it "Expires" reads as the agreement lapsing.
+      // The reference and ABN DO belong on an agreement: the ref identifies
+      // the document and the ABN identifies the supplier as a legal party.
       // The header then reads as the contract title + couple name.
       if (surface === 'contract') {
         return {
@@ -54,9 +56,9 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
           type: 'title',
           title: 'Contract',
           showCoupleName: true,
-          showRef: false,
+          showRef: true,
           showExpires: false,
-          showAbn: false,
+          showAbn: true,
         }
       }
       return {
@@ -228,9 +230,9 @@ export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'v
       type: 'title',
       title: 'Contract',
       showCoupleName: true,
-      showRef: false,
+      showRef: true,
       showExpires: false,
-      showAbn: false,
+      showAbn: true,
     },
     { id: newId('cb'), type: 'contractBody', locked: true },
     { id: newId('cs'), type: 'contractSign', locked: true },

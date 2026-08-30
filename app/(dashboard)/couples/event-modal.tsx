@@ -345,7 +345,11 @@ export function EventModal({
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content
-                    className="bg-surface border border-border rounded-control shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                    // `z-[90]`, the popover tier. At `z-[70]` this rendered
+                    // behind the modal: opened from inside the couple profile
+                    // overlay, Modal auto-tiers to `nested`, whose panel is
+                    // `z-[80]`. The dropdown was in the DOM and invisible.
+                    className="bg-surface border border-border rounded-control shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
                     sideOffset={4}
                     align="start"
                   >

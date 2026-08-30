@@ -24,7 +24,7 @@ function mentionIds(node: JSONContent, out: string[] = []): string[] {
 describe('STARTER_CONTRACTS', () => {
   it('ships the two agreed agreements', () => {
     const names = STARTER_CONTRACTS.map((c) => c.name)
-    expect(names).toEqual(['Wedding MC Service Agreement', 'Deposit & Cancellation Terms'])
+    expect(names).toEqual(['Wedding Service Agreement', 'Deposit & Cancellation Terms'])
   })
 
   it('has unique names and non-empty fields with valid TipTap bodies', () => {
@@ -34,6 +34,12 @@ describe('STARTER_CONTRACTS', () => {
       expect(c.description.trim().length).toBeGreaterThan(0)
       expect(c.content.type).toBe('doc')
       expect((c.content.content ?? []).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('names no role of its own, so a DJ is not called an MC', () => {
+    for (const c of STARTER_CONTRACTS) {
+      expect(JSON.stringify(c.content), c.name).not.toMatch(/\bMC\b/)
     }
   })
 
@@ -48,7 +54,7 @@ describe('STARTER_CONTRACTS', () => {
 
 describe('starterContractsByName', () => {
   it('resolves requested names and ignores unknown ones', () => {
-    const result = starterContractsByName(['Wedding MC Service Agreement', 'bogus'])
-    expect(result.map((c) => c.name)).toEqual(['Wedding MC Service Agreement'])
+    const result = starterContractsByName(['Wedding Service Agreement', 'bogus'])
+    expect(result.map((c) => c.name)).toEqual(['Wedding Service Agreement'])
   })
 })

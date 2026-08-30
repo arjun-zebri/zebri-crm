@@ -1126,10 +1126,13 @@ export function RenderContractSign({ state, block }: { state: BrandPreviewState;
           </div>
         </div>
 
-        {/* MC countersignature — mirrors what renders on the sent contract. */}
+        {/* Countersignature, mirroring what renders on the sent contract. The
+            live page says "Signed by the DJ/MC/Celebrant" from the account's
+            role; the editor preview has no role in its state, so it addresses
+            the owner directly rather than guessing a noun. */}
         <div className="mt-6 pt-5 border-t" style={{ borderColor: muted + '30' }}>
           <p className="text-body mb-1" style={{ color: muted }}>
-            Signed by MC
+            Signed by you
           </p>
           <p
             className="text-2xl leading-none"

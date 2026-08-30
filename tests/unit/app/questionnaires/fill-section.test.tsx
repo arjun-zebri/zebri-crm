@@ -46,6 +46,7 @@ const mockQuestionnaire: PublicQuestionnaire = {
   secondary_color: '#6B7280',
   secondary_text_color: '#6B7280',
   business_name: 'Test MC',
+  vendor_role: 'MC',
   tagline: '',
   abn: '',
   phone: '',

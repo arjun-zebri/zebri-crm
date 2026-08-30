@@ -8,6 +8,7 @@ import type { TextStyle } from '@/app/(dashboard)/branding/blocks/types'
 import { PortalSectionNav } from '@/app/(dashboard)/couples/portal-section-nav'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { roleDefaults } from '@/lib/branding/type-defaults'
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
 
 import { ContactsSection } from './contacts-section'
 import { ContractsSection } from './contracts-section'
@@ -20,7 +21,7 @@ import { SongsSection } from './songs-section'
 import { TimelineSection } from './timeline-section'
 import { VowsSection } from './vows-section'
 
-const ALL_SECTIONS = [
+const ALL_SECTIONS_BASE = [
   { id: 'overview', label: 'Overview', icon: <LayoutDashboard />, subtitle: 'Your details and upcoming events' },
   { id: 'timeline', label: 'Timeline', icon: <Clock />, subtitle: 'Key moments and timing for your day' },
   { id: 'contacts', label: 'Contacts', icon: <Users2 />, subtitle: 'Your wedding party and vendor contacts' },
@@ -28,7 +29,7 @@ const ALL_SECTIONS = [
   { id: 'contracts', label: 'Contracts', icon: <FileSignature />, subtitle: 'Review and sign your agreements' },
   { id: 'questionnaires', label: 'Questionnaires', icon: <ClipboardList />, subtitle: 'A few questions to help plan your day' },
   { id: 'songs', label: 'Songs', icon: <Music />, subtitle: 'Music for each part of your ceremony and reception' },
-  { id: 'files', label: 'Files', icon: <FileText />, subtitle: 'Contracts, seating charts, photos. Anything your MC needs.' },
+  { id: 'files', label: 'Files', icon: <FileText />, subtitle: null },
   { id: 'vows', label: 'Vows', icon: <Heart />, subtitle: 'Write your vows for the ceremony' },
 ]
 
@@ -74,6 +75,15 @@ export function PortalShell({ token, initialData, branding, styles }: PortalShel
   // enabled-sections list yet. Surface it whenever the couple actually has one
   // so a sent questionnaire is never hidden.
   const hasQuestionnaires = (initialData.questionnaires?.length ?? 0) > 0
+  // `files` carries no static subtitle: it names the supplier's role, which is
+  // per-account ("Anything your DJ needs"), so it is filled in here.
+  const role = branding.vendor_role || DEFAULT_VENDOR_ROLE
+  const ALL_SECTIONS = ALL_SECTIONS_BASE.map((s) =>
+    s.subtitle === null
+      ? { ...s, subtitle: `Contracts, seating charts, photos. Anything your ${role} needs.` }
+      : s,
+  )
+
   const SECTIONS = enabledSections === null || enabledSections === undefined
     ? ALL_SECTIONS
     : ALL_SECTIONS.filter(

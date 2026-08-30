@@ -28,7 +28,8 @@ export function ContractUnavailable({
         Contract unavailable
       </p>
       <p className="text-sm" style={{ color: mutedColor }}>
-        This link may be invalid or has been revoked. Please contact your MC.
+        This link may be invalid or has been revoked. Please contact the
+        person who sent it to you.
       </p>
     </div>
   );

@@ -1,10 +1,11 @@
 'use client'
 
 import { ChevronDown, Clock } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
 import type { TextStyle } from '@/app/(dashboard)/branding/blocks/types'
+import { isChromePress } from '@/components/ui/use-overlay'
 import { getRgb } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
@@ -117,7 +118,7 @@ function DaySelector({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setOpen(false)
       }
     }
@@ -180,6 +181,12 @@ function DaySelector({
 interface VendorTimelineProps {
   events: VendorEvent[]
   items: VendorTimelineItem[]
+  /**
+   * Print mode: render every day in sequence with no day picker. The picker
+   * is interactive chrome that has no meaning on paper, and a single day
+   * would drop the rest of a multi-day event from the PDF.
+   */
+  static?: boolean
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding
   /**
@@ -220,9 +227,25 @@ const PROVISIONAL = (() => {
   }
 })()
 
-export function VendorTimeline({ events, items, branding, styles }: VendorTimelineProps) {
+export function VendorTimeline({ events, items, branding, styles, static: isStatic }: VendorTimelineProps) {
   const days = useMemo(() => buildDays(events), [events])
   const [pickedDay, setPickedDay] = useState<string | null>(null)
+
+  if (isStatic) {
+    return (
+      <>
+        {days.map((day) => (
+          <VendorTimelineDay
+            key={day.date}
+            day={day}
+            items={items.filter((i) => day.eventIds.includes(i.event_id))}
+            branding={branding}
+            {...(styles ? { styles } : {})}
+          />
+        ))}
+      </>
+    )
+  }
 
   // Derive the day in view from render: the vendor's pick if still valid,
   // else the soonest upcoming day.
@@ -232,18 +255,74 @@ export function VendorTimeline({ events, items, branding, styles }: VendorTimeli
       : defaultDay(days)
 
   const activeDay = days.find((d) => d.date === selectedDay) ?? null
-  const dayEventIds = new Set(activeDay?.eventIds ?? [])
-  const dayItems = items.filter((i) => dayEventIds.has(i.event_id))
+  // Read by the day-picker row below; the per-day render derives its own.
+  const sectionLabelDefaults = roleDefaults(branding, 'sectionLabel')
+  const hCol = branding.heading_color
+  const borderCol = branding.brand_color + '20'
+  const dayItems = activeDay ? items.filter((i) => activeDay.eventIds.includes(i.event_id)) : []
+  return (
+    <>
+      {activeDay ? (
+        <VendorTimelineDay
+          day={activeDay}
+          items={dayItems}
+          branding={branding}
+          picker={
+            days.length > 1 && selectedDay ? (
+        <div className="pt-6 flex items-center gap-2">
+          <span
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              fontWeight: sectionLabelDefaults.fontWeight,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              lineHeight: sectionLabelDefaults.lineHeight,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
+              letterSpacing: sectionLabelDefaults.letterSpacing,
+            }}
+          >
+            {applyCase('Day', sectionLabelDefaults.textTransform)}
+          </span>
+          <DaySelector days={days} value={selectedDay} onChange={setPickedDay} borderColor={borderCol} textColor={hCol} />
+        </div>
+            ) : null
+          }
+          {...(styles ? { styles } : {})}
+        />
+      ) : null}
+    </>
+  )
+}
+
+/**
+ * One day of the run sheet: its header (date, venues) and its items.
+ *
+ * Pure, so it serves both the interactive page (one day at a time, chosen
+ * with the picker) and print (every day in sequence). Extracted from the
+ * interactive render rather than duplicated, so the two cannot drift.
+ */
+function VendorTimelineDay({
+  day,
+  items,
+  branding,
+  styles,
+  picker,
+}: {
+  day: VendorDay
+  items: VendorTimelineItem[]
+  branding: PublicBranding
+  styles?: VendorTimelineProps['styles']
+  /** The interactive day picker, slotted between header and items. Absent in print. */
+  picker?: ReactNode
+}) {
 
   // Type scale from branding.
   const docTitleDefaults = roleDefaults(branding, 'docTitle')
   const bodyDefaults = roleDefaults(branding, 'body')
   const finePrintDefaults = roleDefaults(branding, 'finePrint')
-  const sectionLabelDefaults = roleDefaults(branding, 'sectionLabel')
 
   // Derived colors from branding; helper for softened variants.
   const hCol = branding.heading_color
-  const borderCol = branding.brand_color + '20'
   const mutedCol = branding.text_color
   const softBorder = branding.border_color
 
@@ -290,38 +369,21 @@ export function VendorTimeline({ events, items, branding, styles }: VendorTimeli
         <h1 data-subtarget="title" className="font-semibold mb-1" style={titleCss}>
           Run Sheet
         </h1>
-        {selectedDay && (
+        {day.date && (
           <p data-subtarget="subtitle" style={subtitleCss}>
-            {formatEventDate(selectedDay)}
-            {activeDay && activeDay.venues.length > 0
-              ? ` · ${activeDay.venues.join(', ').replace(/\s*-\s*/g, ', ')}`
+            {formatEventDate(day.date)}
+            {day.venues.length > 0
+              ? ` · ${day.venues.join(', ').replace(/\s*-\s*/g, ', ')}`
               : ''}
           </p>
         )}
       </div>
 
-      {days.length > 1 && selectedDay && (
-        <div className="pt-6 flex items-center gap-2">
-          <span
-            style={{
-              fontSize: `${sectionLabelDefaults.fontSize}px`,
-              fontWeight: sectionLabelDefaults.fontWeight,
-              color: sectionLabelDefaults.color,
-              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
-              lineHeight: sectionLabelDefaults.lineHeight,
-              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
-              letterSpacing: sectionLabelDefaults.letterSpacing,
-            }}
-          >
-            {applyCase('Day', sectionLabelDefaults.textTransform)}
-          </span>
-          <DaySelector days={days} value={selectedDay} onChange={setPickedDay} borderColor={borderCol} textColor={hCol} />
-        </div>
-      )}
+      {picker}
 
       {/* Timeline */}
       <div className="pt-8 space-y-2">
-        {dayItems.length === 0 ? (
+        {items.length === 0 ? (
           <p
             className="py-4"
             style={{
@@ -335,7 +397,7 @@ export function VendorTimeline({ events, items, branding, styles }: VendorTimeli
             No items yet.
           </p>
         ) : (
-          dayItems.map((item) => (
+          items.map((item) => (
             <div
               key={item.id}
               className="flex items-start gap-4 rounded-control px-4 py-3"

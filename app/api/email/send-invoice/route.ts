@@ -21,6 +21,7 @@ import { sendAlert } from '@/lib/alerts';
 import { logger } from '@/lib/alerts/logger';
 import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
+import { resolveVendorRole } from '@/lib/branding/vendor-role';
 import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendInvoiceEmail } from '@/lib/email';
 import { emailBrandingForUser } from '@/lib/email/branding';
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
   const mcBusinessName =
     (user.user_metadata?.business_name as string | undefined) ||
     (user.user_metadata?.display_name as string | undefined) ||
-    'Your MC';
+    `Your ${resolveVendorRole(user.user_metadata)}`;
 
   const dueDate = invoice.due_date
     ? new Date(invoice.due_date).toLocaleDateString('en-AU', {

@@ -52,6 +52,9 @@ export function PrimitivesForms() {
           and mismatched heights were the most common visual bug in the app. Nothing sets
           <code> cursor-pointer</code> either: a base rule in <code>globals.css</code> gives every{' '}
           <code>button</code> the hand cursor, including raw ones this primitive does not own.
+          Reach for <code>shape=&quot;pill&quot;</code> only when the button floats free of the
+          layout, like the Feedback pill; a pill sitting in a form row next to an input reads as a
+          third radius the system does not have.
         </Rule>
         <div className="space-y-6">
           <Demo label="Variants">
@@ -72,6 +75,15 @@ export function PrimitivesForms() {
               ))}
             </DemoRow>
           </Demo>
+          <Demo label="Shape (control is the default; pill is for floating controls only)">
+            <DemoRow>
+              <Button>Control</Button>
+              <Button shape="pill">Pill</Button>
+              <Button shape="pill" variant="secondary">
+                Pill
+              </Button>
+            </DemoRow>
+          </Demo>
           <Demo label="States">
             <DemoRow>
               <Button loading>Loading</Button>
@@ -85,13 +97,35 @@ export function PrimitivesForms() {
       </Spec>
 
       <Spec name="Input" file="components/ui/input.tsx"
-        importPath="@/components/ui/input" description="One height. Label, help text and error are wired with aria-describedby.">
+        importPath="@/components/ui/input" description="One height. Label, help text and error are wired with aria-describedby; a label tooltip explains a field without costing vertical space.">
         <DemoGrid cols={3}>
           <Demo label="Default">
             <Input label="Couple name" placeholder="Alex and Sam" />
           </Demo>
           <Demo label="With help text">
             <Input label="Email" type="email" help="We send the quote copy here." />
+          </Demo>
+          <Demo label="With label tooltip">
+            {/* Prefer over `help` in a dense form: help text takes a permanent
+                row, a tooltip takes none. Hover the info glyph. */}
+            <Input
+              label="Home address"
+              placeholder="Start typing your address..."
+              tooltip="Used to calculate drive time to each event."
+            />
+          </Demo>
+          <Demo label="Tooltip with a worked example">
+            {/* `tooltipMultiline` wraps and clamps to the viewport. Use it when
+                a field is only clear once you see the output it produces. */}
+            <Input
+              label="What clients call you"
+              placeholder="MC"
+              tooltipMultiline
+              tooltip={
+                'The word clients see you called, on contracts and in their portal.\n\n' +
+                'Example: "This agreement is made between Zebri (the MC) and the Couple."'
+              }
+            />
           </Demo>
           <Demo label="Error">
             <Input label="Email" error="That email is not valid." defaultValue="not-an-email" />

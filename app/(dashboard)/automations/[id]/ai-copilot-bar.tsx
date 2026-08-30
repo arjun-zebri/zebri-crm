@@ -23,6 +23,7 @@
 import { ArrowUp, ChevronDown, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { isChromePress } from '@/components/ui/use-overlay'
 import type { AutomationStatus } from '@/types/automations'
 
 import { CopilotConversation } from './copilot-conversation'
@@ -56,7 +57,7 @@ export function AiCopilotBar({ automationId, automationStatus, onWorkflowChanged
   useEffect(() => {
     if (!showTranscript) return
     function onPressOutside(e: MouseEvent) {
-      if (panelRef.current?.contains(e.target as Node)) return
+      if (panelRef.current?.contains(e.target as Node) || isChromePress(e.target)) return
       setTranscriptOpen(false)
     }
     document.addEventListener('mousedown', onPressOutside, true)

@@ -23,6 +23,22 @@ interface Contract {
   signed_at: string | null
   email_sent_at: string | null
   created_at: string
+  contract_signers: { signed_at: string | null; required: boolean }[]
+}
+
+/**
+ * "Waiting on N" line for a contract some but not all signers have signed.
+ *
+ * A two-partner contract stays 'sent' until both sign, so the status pill on
+ * its own cannot tell the MC whether anyone has signed yet.
+ */
+function outstandingLabel(c: Contract): string | null {
+  if (c.signed_at) return null
+  const required = (c.contract_signers ?? []).filter((s) => s.required)
+  if (required.length < 2) return null
+  const outstanding = required.filter((s) => !s.signed_at).length
+  if (outstanding === 0 || outstanding === required.length) return null
+  return `Waiting on ${outstanding} of ${required.length}`
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -59,7 +75,7 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
       if (!user.user) throw new Error('Not authenticated')
       const { data, error } = await supabase
         .from('contracts')
-        .select('id, contract_number, title, status, signed_at, email_sent_at, created_at')
+        .select('id, contract_number, title, status, signed_at, email_sent_at, created_at, contract_signers(signed_at, required)')
         .eq('couple_id', coupleId)
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false })
@@ -155,31 +171,26 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
             />
           )
         ) : (
-          <div>
-            <div className="space-y-1 mb-3">
-              {all.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => openContract(c.id)}
-                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-control hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
-                >
-                  <FileSignature size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body text-text truncate">{c.title}</p>
-                    <p className="text-body text-text-subtle">{c.contract_number}</p>
-                  </div>
-                  <span className={`shrink-0 text-body font-medium px-2 py-0.5 rounded-pill capitalize ${STATUS_STYLES[c.status] || STATUS_STYLES.draft}`}>
-                    {c.status}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => openContract(null)}
-              className="text-body text-text-subtle hover:text-gray-600 transition cursor-pointer px-2"
-            >
-              + New Contract
-            </button>
+          <div className="space-y-1">
+            {all.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => openContract(c.id)}
+                className="w-full flex items-center gap-3 px-2 py-2.5 rounded-control hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
+              >
+                <FileSignature size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-body text-text truncate">{c.title || 'Untitled contract'}</p>
+                  <p className="text-body text-text-subtle">
+                    {c.contract_number}
+                    {outstandingLabel(c) ? ` · ${outstandingLabel(c)}` : ''}
+                  </p>
+                </div>
+                <span className={`shrink-0 text-body font-medium px-2 py-0.5 rounded-pill capitalize ${STATUS_STYLES[c.status] || STATUS_STYLES.draft}`}>
+                  {c.status}
+                </span>
+              </button>
+            ))}
           </div>
         )}
       </CoupleTabShell>

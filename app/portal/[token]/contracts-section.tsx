@@ -6,6 +6,7 @@ import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
 
 import { PortalContract } from './page'
 
@@ -60,7 +61,7 @@ export function ContractsSection({ contracts, branding }: ContractsSectionProps)
             lineHeight: bodyDefaults.lineHeight,
           }}
         >
-          No contracts yet. Your MC will send them here.
+          No contracts yet. Your {branding.vendor_role || DEFAULT_VENDOR_ROLE} will send them here.
         </p>
       </div>
     )
@@ -183,7 +184,7 @@ export function ContractsSection({ contracts, branding }: ContractsSectionProps)
                     opacity: 0.75,
                   }}
                 >
-                  Ask your MC to send this contract
+                  Ask your {branding.vendor_role || DEFAULT_VENDOR_ROLE} to send this contract
                 </p>
               </div>
             )}

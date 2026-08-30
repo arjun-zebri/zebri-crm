@@ -3,17 +3,19 @@
 import * as Popover from '@radix-ui/react-popover'
 import Mention, { type MentionOptions } from '@tiptap/extension-mention'
 import Placeholder from '@tiptap/extension-placeholder'
+import { TableKit } from '@tiptap/extension-table'
 import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import type { JSONContent, NodeViewProps } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import {
   Bold, Italic, List, ListOrdered, Heading1, Heading2, Link2,
-  Undo, Redo, AtSign,
+  Undo, Redo, AtSign, Table as TableIcon,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { TableHoverControls } from '@/components/ui/rich-text-table-controls'
 import { buildVariableSuggestion } from '@/components/ui/variable-suggestion'
 import { variableLabel } from '@/lib/automations/variables'
 import { CONTRACT_VARIABLES } from '@/lib/contracts/contract-variables'
@@ -64,6 +66,12 @@ interface RichTextEditorProps {
    * padding and a lower min-height than the contract-length default.
    */
   dense?: boolean
+  /**
+   * Enable table editing. Opt-in: only surfaces whose renderer and sanitiser
+   * handle table nodes may turn this on. Contracts do
+   * (`renderContractHtml`); the email pipeline does not.
+   */
+  tables?: boolean
 }
 
 /** The variable path that injects the MC's email signature. */
@@ -125,6 +133,7 @@ export function RichTextEditor({
   mentionDisplay = 'token',
   signatureHtml,
   dense = false,
+  tables = false,
 }: RichTextEditorProps) {
   // When a signature is supplied (compose editor), the mention extension
   // gets a React NodeView so `{{mc.signature}}` renders inline as the rich
@@ -172,6 +181,8 @@ export function RichTextEditor({
             : {}),
         })
 
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
   const editor = useEditor({
     extensions: [
       // StarterKit v3 bundles Link; keep clicks from navigating while
@@ -179,6 +190,9 @@ export function RichTextEditor({
       StarterKit.configure({ link: { openOnClick: false } }),
       Placeholder.configure({ placeholder }),
       mentionExtension,
+      // Opt-in: a table node reaching a renderer that has not registered the
+      // extension throws "Unknown node type: table" at generateHTML time.
+      ...(tables ? [TableKit.configure({ table: { resizable: true } })] : []),
     ],
     content: value && Object.keys(value).length > 0 ? value : { type: 'doc', content: [{ type: 'paragraph' }] },
     editable,
@@ -187,7 +201,13 @@ export function RichTextEditor({
     // React Server Action serialisation silently drops (the variable id is
     // lost, saving `{{null}}`). Normalise to plain objects on the way out.
     onUpdate: ({ editor }) => onChange(toPlainJSON(editor.getJSON())),
-  })
+  // `useEditor` builds the editor once and ignores later changes to the
+  // extensions array, so flipping `tables` on an already-mounted editor leaves
+  // an instance with no Table extension while the toolbar (plain React)
+  // re-renders with the button. Clicking it then throws "insertTable is not a
+  // function". A constant prop never trips this in production; it bites in dev
+  // whenever HMR swaps the flag under a live editor.
+  }, [tables])
 
   // Sync external value changes (e.g. when a template is applied)
   const lastValueRef = useRef<string>('')
@@ -220,13 +240,19 @@ export function RichTextEditor({
     // focus-within mirrors the Input primitive's focus treatment (border
     // darkens to brand-fg) so clicking into the body reads like clicking
     // into any other field.
-    <div className={`border border-border rounded-control overflow-hidden bg-surface transition-colors focus-within:border-brand-fg ${className}`}>
+    // `relative` positions the table hover controls, which are measured
+    // against this box.
+    <div
+      ref={containerRef}
+      className={`relative border border-border rounded-control overflow-hidden bg-surface transition-colors focus-within:border-brand-fg ${className}`}
+    >
       {editable && (
         <ToolbarRow
           editor={editor}
           onInsertVariable={insertVariable}
           variables={variables}
           showVariableInserter={showVariableInserter}
+          tables={tables}
         />
       )}
       <EditorContent
@@ -237,6 +263,9 @@ export function RichTextEditor({
             : 'p-4 min-h-[320px] [&_.ProseMirror]:min-h-[280px]'
         }`}
       />
+      {tables && editor ? (
+        <TableHoverControls editor={editor} containerRef={containerRef} />
+      ) : null}
     </div>
   )
 }
@@ -246,8 +275,11 @@ function ToolbarButton({
   active,
   title,
   children,
+  ...rest
 }: {
-  onClick: () => void
+  /** Optional: omitted when the button is a Radix `asChild` trigger, which
+      supplies its own handler and ARIA props through `rest`. */
+  onClick?: () => void
   active?: boolean
   title: string
   children: React.ReactNode
@@ -257,6 +289,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       title={title}
+      {...rest}
       className={`p-1.5 rounded-control transition cursor-pointer ${
         active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-surface-emphasis'
       }`}
@@ -272,6 +305,28 @@ function ToolbarButton({
  * selected it inserts the URL itself as a link. A bare domain gets
  * `https://` prepended so `example.com` still works.
  */
+/**
+ * Inserts a 3x3 table with a header row.
+ *
+ * Deliberately a plain button, not a menu: inserting is the only thing you
+ * want from the toolbar. Rows and columns are added from the hover controls on
+ * the table itself (see {@link TableHoverControls}), which is where your
+ * attention already is when you need one.
+ */
+function TableButton({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>> }) {
+  return (
+    <ToolbarButton
+      onClick={() =>
+        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+      }
+      active={editor.isActive('table')}
+      title="Insert table"
+    >
+      <TableIcon size={16} strokeWidth={1.5} />
+    </ToolbarButton>
+  )
+}
+
 function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>> }) {
   const [open, setOpen] = useState(false)
   const [url, setUrl] = useState('')
@@ -356,11 +411,13 @@ function ToolbarRow({
   onInsertVariable,
   variables,
   showVariableInserter,
+  tables,
 }: {
   editor: ReturnType<typeof useEditor>
   onInsertVariable: (id: string) => void
   variables: readonly EditorVariable[]
   showVariableInserter: boolean
+  tables: boolean
 }) {
   const [open, setOpen] = useState(false)
   if (!editor) return null
@@ -411,6 +468,7 @@ function ToolbarRow({
         <ListOrdered size={16} strokeWidth={1.5} />
       </ToolbarButton>
       <LinkButton editor={editor} />
+      {tables && <TableButton editor={editor} />}
       <div className="w-px h-5 bg-gray-200 mx-1" />
       <ToolbarButton
         onClick={() => editor.chain().focus().undo().run()}

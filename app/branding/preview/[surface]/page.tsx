@@ -29,9 +29,10 @@ import { googleFontsHref } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead, type PublicBranding } from '@/lib/branding/public-surface'
 import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
-import type { Answer, Question, Responses } from '@/lib/questionnaires/question-schema'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
+import type { Answer, Question, Responses } from '@/lib/questionnaires/question-schema'
 
 /**
  * Validates a surface string and returns true if it is a valid BuilderSurface.
@@ -342,7 +343,7 @@ function PreviewContractSign({
         </span>
       </div>
       <div className="border-t pt-6" style={{ borderTopColor: branding.border_color }}>
-        <p className="mb-1" style={{ color: muted, fontSize: 12 }}>Signed by MC</p>
+        <p className="mb-1" style={{ color: muted, fontSize: 12 }}>Signed by {branding.vendor_role || DEFAULT_VENDOR_ROLE}</p>
         <p style={{ fontSize: 28, lineHeight: 1, color: roleDefaults(branding, 'body').color, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
           Your name
         </p>

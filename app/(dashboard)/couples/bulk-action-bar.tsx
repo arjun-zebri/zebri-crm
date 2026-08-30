@@ -3,6 +3,7 @@
 import { X, Trash2, Download, ChevronDown } from 'lucide-react'
 import { useRef, useEffect, useState } from 'react'
 
+import { isChromePress } from '@/components/ui/use-overlay'
 import { CoupleStatusRecord, getStatusClasses } from '@/types/couple'
 
 interface BulkActionBarProps {
@@ -29,7 +30,7 @@ export function BulkActionBar({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) && !isChromePress(e.target)) {
         setStatusDropdownOpen(false)
       }
     }

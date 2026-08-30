@@ -61,6 +61,37 @@ export function getScrollLockCount(): number {
   return scrollLockCount;
 }
 
+/**
+ * Chrome that floats over the page and must not count as an "outside press".
+ *
+ * Opted into by the Feedback pill, the feedback form (`Modal chrome`) and the
+ * toast stack. Ordinary modals are not chrome: they are page content an MC
+ * may well be reporting on.
+ */
+const CHROME_SELECTOR = '[data-capture-hide]';
+
+/**
+ * True when a press landed on floating chrome rather than the page.
+ *
+ * Every dropdown and panel in the app closes itself on a press outside its
+ * own ref. That is right for a press on the page, and wrong for a press on
+ * the Feedback pill: an MC reporting a bug about an open panel had it fold
+ * away the instant they reached for the report button, so the thing they
+ * wanted to screenshot was gone. The same holds for clicking a toast action.
+ *
+ * Use it to guard an outside-press handler:
+ *
+ * ```ts
+ * if (ref.current && !ref.current.contains(e.target as Node) && !isChromePress(e.target)) {
+ *   setOpen(false);
+ * }
+ * ```
+ */
+export function isChromePress(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest(CHROME_SELECTOR));
+}
+
 /** Stacking tier. Each maps to a backdrop and panel z-index. */
 export type OverlayLayer = 'base' | 'nested' | 'top';
 

@@ -4,6 +4,7 @@ import { dispatchEmail, type DispatchResult, type EmailAttachment } from "./disp
 import {
   contractHtml,
   contractReminderHtml,
+  contractSignedHtml,
   invoiceHtml,
   type LeadNotificationOpts,
   leadNotificationHtml,
@@ -138,6 +139,32 @@ export async function sendContractReminderEmail(opts: {
     to: opts.coupleEmail,
     subject: `Reminder: please sign your contract - ${opts.contractNumber}`,
     html: contractReminderHtml(opts, opts.branding),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
+}
+
+/**
+ * Deliver the executed contract to one party once every required signature is
+ * in. Called for each signer and for the account holder.
+ */
+export async function sendContractSignedEmail(opts: {
+  recipientEmail: string;
+  recipientName: string;
+  contractNumber: string;
+  contractTitle: string;
+  signerNames: string[];
+  signedAt: string | null;
+  shareUrl: string;
+  mcBusinessName: string;
+  /** Resolved transport. Defaults to the shared Zebri address (Resend). */
+  sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
+    to: opts.recipientEmail,
+    subject: `Signed: ${opts.contractTitle} - ${opts.contractNumber}`,
+    html: contractSignedHtml(opts, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }

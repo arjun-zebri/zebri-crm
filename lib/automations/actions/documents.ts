@@ -83,7 +83,7 @@ const sendContract: ActionSpec<z.infer<typeof sendContractSchema>> = {
       coupleEmail: ctx.couple.email,
       coupleName: ctx.couple.name,
       contractNumber: contract.contract_number,
-      contractTitle: contract.title,
+      contractTitle: contract.title ?? `Contract ${contract.contract_number}`,
       shareUrl: url,
       mcBusinessName: ctx.mc.businessName,
       expiresAt: contract.expires_at ?? null,

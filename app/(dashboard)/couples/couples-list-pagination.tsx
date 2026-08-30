@@ -14,6 +14,7 @@ import type { Table } from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { isChromePress } from '@/components/ui/use-overlay';
 import type { Couple } from '@/types/couple';
 
 export interface CouplesListPaginationProps {
@@ -46,7 +47,7 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
     const handleClickOutside = (e: MouseEvent) => {
       if (
         pageSizeRef.current &&
-        !pageSizeRef.current.contains(e.target as Node)
+        !pageSizeRef.current.contains(e.target as Node) && !isChromePress(e.target)
       ) {
         setPageSizeOpen(false);
       }

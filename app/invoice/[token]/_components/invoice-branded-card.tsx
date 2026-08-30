@@ -94,8 +94,8 @@ export function InvoiceBrandedCard({
 
   return (
     <div
-      className="overflow-hidden shadow-sm border"
-      style={{ borderRadius: radius, backgroundColor: branding.surface_color, borderColor }}
+      className="overflow-hidden"
+      style={{ borderRadius: radius, backgroundColor: branding.surface_color }}
     >
       <PublicBlockRenderer
         blocks={renderBlocks}

@@ -52,6 +52,7 @@ export interface UserMetadata {
   twitter_url?: string;
   pinterest_url?: string;
   business_type?: string | string[];
+  vendor_role?: string;
   email_preferences?: EmailPreferencesData;
   bank_account_name?: string;
   bank_bsb?: string;
@@ -120,6 +121,7 @@ export function SettingsBody({ activeTab, data }: SettingsBodyProps) {
               twitterUrl: metadata?.twitter_url || '',
               pinterestUrl: metadata?.pinterest_url || '',
               businessType: metadata?.business_type || '',
+              vendorRole: metadata?.vendor_role || '',
               mcSignatureName: metadata?.mc_signature_name || '',
               addressText: metadata?.address_text || '',
               addressLat: metadata?.address_lat ?? null,

@@ -672,6 +672,38 @@ durable audit trail for every state change. Closes Phase 3.
 - **Gates ratcheted:** strict typecheck 286 → 285. Lint warnings
   522 → 505. Errors 78/78 unchanged.
 
+
+### Contracts audit remediation (Phase 3.3, 2026-08-30)
+
+Off real user feedback (each partner could not sign, no tables, "MC"
+hard-coded). Branch `feature/contracts-audit-remediation`, staging only per
+the batch rule. Full model in `contracts.md`; manual run-through in
+`contracts-e2e-test.md`.
+
+- **`contract_signers`** (migrations `20260828003000`/`004000`): one bearer
+  `sign_token` per signer, seeded from the couple on insert, contract
+  completes only when every required signer has signed. RLS with-check
+  includes `_owns_contract()` (FK-ignores-RLS class). Legacy `share_token`
+  still honoured for contracts in flight.
+- `{{vendor_role}}` (`001000`/`002000`): Settings "What clients call you"
+  drives every "MC" in documents, the signing page, portal and emails.
+- Seeded template repair (`000000`): `{{total_amount}}`/`{{deposit_amount}}`
+  were printing literally; stripped, and `findUnknownVariables()` blocks a
+  send carrying an unknown merge field.
+- Audit trail: `viewed` event per signer (`005000`), vendor countersignature
+  recorded as a real signer row at send, executed copies emailed on completion.
+- Header block owns the document heading (`006000`/`007000`); both partner
+  names by default (`009000`); revoke disables the link (`010000`); draft links
+  refused server-side (`011000`).
+- One renderer for link, preview and PDF: `lib/pdf/print-document.tsx` prints
+  the public card itself. `generate-pdf.ts` and `pdf-styles.ts` deleted.
+- TipTap tables (editor + `renderContractHtml` + email chips), row/column hover
+  controls.
+- Tests: `tests/integration/contracts/multi-signer-flow.test.ts` (12),
+  `tests/integration/rls/contract-signers.test.ts` (6) + unit coverage.
+  Still open: Playwright e2e for the signing flow; lawyer review of template
+  wording (ACL unfair-terms exposure in cancellation/deposit clauses).
+
 ### Public payment surfaces hardening (Phase 2D.2)
 
 Couple-facing public surfaces (`/invoice/[token]`, `/quote/[token]`,
