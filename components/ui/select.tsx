@@ -44,6 +44,20 @@ export interface SelectProps {
   /** Visible label rendered above the trigger. */
   label?: string;
   /**
+   * Accessible name for the trigger when there is no visible `label`: a
+   * select sitting in a toolbar or a header row where a label above it
+   * would break the row. Forwarded as `aria-label`.
+   */
+  ariaLabel?: string;
+  /**
+   * Put focus back on the trigger when the menu closes. On by default (a
+   * form select). Turn off for a toolbar select that drives an editor: the
+   * caller focuses the editor in `onValueChange` and Radix's restore would
+   * steal it back, so the next keystrokes typeahead the closed select
+   * instead of landing in the document.
+   */
+  restoreFocus?: boolean;
+  /**
    * Explanation shown from a help icon beside the label.
    *
    * For settings whose name does not carry its own meaning. Prefer `help`
@@ -95,6 +109,8 @@ const TRIGGER_BASE =
 /** Token-driven, accessible select. See {@link SelectProps}. */
 export function Select({
   label,
+  ariaLabel,
+  restoreFocus = true,
   tooltip,
   help,
   error,
@@ -153,6 +169,7 @@ export function Select({
       >
         <RadixSelect.Trigger
           id={autoId}
+          {...(ariaLabel !== undefined && { 'aria-label': ariaLabel })}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={`${TRIGGER_BASE} ${SIZE_CLASSES} ${borderClass}`}
@@ -173,6 +190,7 @@ export function Select({
           <RadixSelect.Content
             position="popper"
             sideOffset={4}
+            {...(!restoreFocus && { onCloseAutoFocus: (e: Event) => e.preventDefault() })}
             // contentClassName defaults to z-[90] (popover tier) so the panel
             // renders ABOVE modals (z-[60]) and nested modals / dialogs
             // (z-[80]); at z-50 it opened *behind* any modal it was used in.

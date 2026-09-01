@@ -178,6 +178,12 @@ export function useOverlay({ isOpen, onClose }: UseOverlayOptions): void {
     const myDepth = openOverlayDepth;
 
     const handleEscape = (e: KeyboardEvent) => {
+      // A Radix popover / select / menu open inside this overlay handles
+      // Escape first (capture phase) and marks the event default-prevented
+      // when it dismissed itself. Without this check the same keypress also
+      // closed the overlay underneath: Esc on a colour picker inside the
+      // script modal closed the whole script.
+      if (e.defaultPrevented) return;
       if (e.key === 'Escape' && openOverlayDepth === myDepth) onCloseRef.current();
     };
 

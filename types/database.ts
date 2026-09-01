@@ -2503,6 +2503,50 @@ export type Database = {
         }
         Relationships: []
       }
+      scripts: {
+        Row: {
+          content: Json
+          couple_id: string
+          created_at: string
+          font: string
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json
+          couple_id: string
+          created_at?: string
+          font?: string
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          couple_id?: string
+          created_at?: string
+          font?: string
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scripts_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stripe_customers: {
         Row: {
           created_at: string | null

@@ -38,10 +38,30 @@ export interface PrintDocumentOptions {
    * a stray grey border.
    */
   canvas?: boolean
+  /**
+   * Draw a thin border around the page when the canvas is off. The builder
+   * preview iframe wants it (the frame sits inside a card); a plain printed
+   * document such as a couple script does not. Defaults to `!canvas`.
+   */
+  frame?: boolean
+  /**
+   * Suppress the browser's own print header and footer (date, title, URL,
+   * page count). Browsers draw those in the page margin, so this sets the
+   * `@page` margin to zero and puts the same 14mm back as body padding. On
+   * for plain documents such as a couple script, where nothing outside the
+   * text belongs on the page.
+   */
+  bare?: boolean
   /** The document, as the public page renders it. Must be hook-free. */
   element: ReactElement
   /** Branding, for the page canvas, body font and the Google Fonts link. */
   branding: PublicBranding | null | undefined
+  /**
+   * Unbranded documents (a couple script) carry their own fonts: a
+   * stylesheet href for the shell's `<link>` and the CSS stack for `<body>`.
+   * Both take precedence over the branding pair when given.
+   */
+  fonts?: { href: string; bodyStack: string }
 }
 
 /**
@@ -53,7 +73,10 @@ export interface PrintDocumentOptions {
  */
 function stylesheetLinks(): string {
   if (typeof document === 'undefined') return ''
-  const links = [...document.querySelectorAll('link[rel="stylesheet"]')]
+  // The script editor mounts its own Google Fonts link (`data-script-fonts`);
+  // the shell adds the fonts it needs itself, so skip it here rather than
+  // load the same stylesheet twice.
+  const links = [...document.querySelectorAll('link[rel="stylesheet"]:not([data-script-fonts])')]
     .map((l) => (l as HTMLLinkElement).href)
     .filter(Boolean)
     .map((href) => `<link rel="stylesheet" href="${href}">`)
@@ -79,16 +102,18 @@ function escapeHtml(s: string): string {
  * Exported separately from {@link printDocument} so the builder modals' PDF
  * preview tab can show exactly what will print, in an iframe.
  */
-export function buildPrintHtml({ title, element, branding, canvas = true }: PrintDocumentOptions): string {
+export function buildPrintHtml({ title, element, branding, canvas = true, frame = !canvas, bare = false, fonts: fontOverride }: PrintDocumentOptions): string {
   const canvasBg = canvas ? DOC_CANVAS_BG : '#fff'
   const body = renderToStaticMarkup(element)
-  const fonts =
-    branding?.font_heading && branding?.font_body
-      ? `<link rel="stylesheet" href="${googleFontsHref([branding.font_heading, branding.font_body])}">`
-      : ''
+  const fontHref = fontOverride
+    ? fontOverride.href
+    : branding?.font_heading && branding?.font_body
+      ? googleFontsHref([branding.font_heading, branding.font_body])
+      : null
+  const fonts = fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ''
   const pad = DENSITY_PADDING[branding?.density ?? 'cozy']
   const textColor = branding?.text_color ?? '#111827'
-  const bodyStack = branding ? bodyFontFamily(branding) : 'system-ui, sans-serif'
+  const bodyStack = fontOverride ? fontOverride.bodyStack : branding ? bodyFontFamily(branding) : 'system-ui, sans-serif'
 
   return `<!doctype html>
 <html>
@@ -110,7 +135,7 @@ export function buildPrintHtml({ title, element, branding, canvas = true }: Prin
        to the same face as the link instead of the browser default stack. */
     body { font-family: ${bodyStack}; color: ${textColor}; }
     @media print {
-      @page { margin: 14mm; }
+      ${bare ? '@page { margin: 0; } body { padding: 14mm; }' : '@page { margin: 14mm; }'}
       html, body { background: #fff; }
       /* The on-screen canvas tint and card shadow are screen chrome. */
       .print-canvas { background: #fff !important; padding-top: 0 !important; }
@@ -119,11 +144,16 @@ export function buildPrintHtml({ title, element, branding, canvas = true }: Prin
       tr { page-break-inside: avoid; }
       thead { display: table-header-group; }
       h1, h2, h3 { page-break-after: avoid; }
+      /* Couple scripts only (scoped, so contract and invoice pagination is
+         untouched): a page-break node prints as a real page break, and
+         paragraphs never leave a single line stranded. */
+      .script-document hr[data-page-break] { break-before: page; border: 0; height: 0; margin: 0; visibility: hidden; }
+      .script-document p { orphans: 2; widows: 2; }
     }
   </style>
 </head>
 <body>
-  <div class="print-canvas min-h-screen ${pad.page}${canvas ? '' : ' rounded-control border border-border'}">
+  <div class="print-canvas min-h-screen ${pad.page}${frame ? ' rounded-control border border-border' : ''}">
     <div class="mx-auto w-full @container/doc" style="max-width:${DOC_MAX_WIDTH_PX}px">
       ${body}
     </div>
@@ -135,9 +165,11 @@ export function buildPrintHtml({ title, element, branding, canvas = true }: Prin
 /**
  * Open a print window for a branded document and trigger print-to-PDF.
  *
- * Waits for the external stylesheets to load before printing: firing on a
- * fixed timer can beat them and produce an unstyled page. A fallback timer
- * guarantees the user is never left staring at a page that will not print.
+ * Waits for the external stylesheets and then the web fonts to load before
+ * printing: firing on a fixed timer can beat them and produce an unstyled
+ * page, or one set in the fallback face (a script's Vietnamese and CJK
+ * text depends on the Noto files arriving). A fallback timer guarantees the
+ * user is never left staring at a page that will not print.
  */
 export function printDocument(opts: PrintDocumentOptions): void {
   const html = buildPrintHtml(opts)
@@ -153,10 +185,15 @@ export function printDocument(opts: PrintDocumentOptions): void {
     printed = true
     win.print()
   }
-  if (win.document.readyState === 'complete') {
-    setTimeout(fire, 400)
-  } else {
-    win.addEventListener('load', () => setTimeout(fire, 150))
-    setTimeout(fire, 3000)
+  const afterFonts = () => {
+    const fonts = win.document.fonts
+    if (fonts && typeof fonts.ready?.then === 'function') void fonts.ready.then(() => setTimeout(fire, 150))
+    else setTimeout(fire, 150)
   }
+  if (win.document.readyState === 'complete') {
+    afterFonts()
+  } else {
+    win.addEventListener('load', afterFonts)
+  }
+  setTimeout(fire, 5000)
 }

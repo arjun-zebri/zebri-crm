@@ -193,6 +193,20 @@ After any migration: `supabase gen types typescript --local --schema public > ty
 
 ---
 
+### Couple scripts specs (Scripts tab)
+
+`tests/e2e/couple-scripts.spec.ts` types a line with Vietnamese
+diacritics, CJK and Greek into the script editor, keeps typing after the
+autosave lands (the caret must not move), changes the font from the
+toolbar select and undoes / redoes it, builds a numbered and a bullet list
+across Enter, closes the modal with Esc, reloads, and checks the print
+window (`context.waitForEvent('page')`) carries the text. The editor is `.script-document .ProseMirror`; the title is
+the textbox named "Script title"; toolbar buttons are found by their
+tooltip / `aria-label` names. Needs the `scripts` migrations on the target
+DB (see the dev-server DB note above). `tests/unit/components/ui/modal.test.tsx`
+style tests for `useOverlay`: an Escape that is already `defaultPrevented`
+(a Radix layer handled it) must not close the overlay.
+
 ## Running Tests
 
 ```bash

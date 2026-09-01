@@ -22,6 +22,10 @@ const TAG_ATTRS: Record<string, 'style' | 'variable' | 'link' | 'none'> = {
   a: 'link',
   strong: 'none', b: 'none', em: 'none', i: 'none', u: 'none', s: 'none',
   ul: 'none', ol: 'none', li: 'none', br: 'none',
+  // Couple scripts only: a page break serialises to `<hr data-page-break>`.
+  // The attribute is boolean, so it is re-emitted verbatim rather than
+  // parsed; a plain `<hr>` from any other source is kept as a bare rule.
+  hr: 'none',
 }
 
 const SAFE_COLOR = /^#[0-9a-f]{3,8}$|^rgba?\(\s*[\d.,%\s]+\)$/i
@@ -132,6 +136,10 @@ export function sanitizeRichHtml(input: string): string {
     const tag = (m[2] ?? '').toLowerCase()
     if (!(tag in TAG_ATTRS)) continue // strip disallowed tag, keep its text
     if (tag === 'br') { if (!closing) out += '<br>'; continue }
+    if (tag === 'hr') {
+      if (!closing) out += /\bdata-page-break\b/i.test(m[3] ?? '') ? '<hr data-page-break="">' : '<hr>'
+      continue
+    }
     if (closing) {
       const at = stack.lastIndexOf(tag)
       if (at === -1) continue

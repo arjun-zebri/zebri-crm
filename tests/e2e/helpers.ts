@@ -75,7 +75,12 @@ export async function addCouple(
 
 /** Open the manual "Add Couple" modal via the New-couple split menu. */
 export async function openAddCoupleModal(page: Page) {
-  await page.locator('button:has-text("New couple")').first().click()
+  // By role + name: the desktop trigger is a text button, the mobile one an
+  // icon button with `aria-label="New couple"`; a text locator only ever
+  // found the desktop one (hidden below `sm`) and timed out on the phone
+  // projects. Hidden elements are excluded from the role query, so this
+  // resolves to the one visible trigger at either breakpoint.
+  await page.getByRole('button', { name: 'New couple' }).first().click()
   await page.locator('button:has-text("Add manually")').click()
   await page.waitForSelector('h2:has-text("Add Couple")')
 }
@@ -117,7 +122,13 @@ export async function deleteCouple(page: Page, name: string) {
   // the popover is open, so on desktop the click waited on an element
   // that was never in the DOM. The name matches the header icon and the
   // popover item, so this works at both breakpoints.
-  await page.getByRole('button', { name: 'Delete couple' }).first().click()
+  // Below `sm` the header collapses its actions into a ⋯ popover (accessible
+  // name "Actions"), so the Delete item only exists once that is open.
+  const deleteBtn = page.getByRole('button', { name: 'Delete couple' }).first()
+  if (!(await deleteBtn.isVisible())) {
+    await page.locator('[data-testid="couple-profile-panel"]').getByRole('button', { name: 'Actions' }).click()
+  }
+  await deleteBtn.click()
   // ConfirmDialog appears — click the Delete confirm button
   await page.locator('button:has-text("Delete")').last().click()
   await page.waitForSelector('[data-testid="couple-profile-panel"]', { state: 'hidden' })
@@ -126,7 +137,7 @@ export async function deleteCouple(page: Page, name: string) {
 
 export async function navigateToProfileTab(
   page: Page,
-  tab: 'Overview' | 'Tasks' | 'Time' | 'Payments' | 'Names' | 'Timeline' | 'Songs' | 'Files'
+  tab: 'Overview' | 'Tasks' | 'Time' | 'Payments' | 'Names' | 'Timeline' | 'Songs' | 'Files' | 'Vows' | 'Scripts'
 ) {
   // Exact accessible name, not a substring match. The panel also renders
   // the couple-name button and a Timeline tab, so `has-text("Time")`
