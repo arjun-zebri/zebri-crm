@@ -1,8 +1,10 @@
 'use client';
 
-import type { JSONContent } from '@tiptap/react';
+import type { Editor, JSONContent } from '@tiptap/react';
 import { useState } from 'react';
 
+import { ScriptEditor } from '@/components/documents/script-editor';
+import { ScriptToolbar } from '@/components/documents/script-toolbar';
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
 import { AudioPlayButton } from '@/components/ui/audio-play-button';
 import { ColorPopover } from '@/components/ui/color-popover';
@@ -112,6 +114,43 @@ export function PrimitivesEditors() {
           </span>
         </div>
       </Spec>
+
+      <Spec name="ScriptEditor + ScriptToolbar" file="components/documents/script-editor.tsx"
+        importPath="@/components/documents/script-editor"
+        description="The couple-script writing surface: TipTap on the branding schema plus a page-break block, driven by the fixed Word-style toolbar. Base font is Noto Serif with the Noto CJK fallbacks, so diacritics and CJK text render. The font Select (restoreFocus off, each face shown in itself) applies a per-selection family; colours are ColorPopover with a colour bar under the glyph; size steps A-/A+ through a ladder; the omega menu inserts accented letters. No block-style menu: a heading is bigger, bolder text. Every control has a tooltip.">
+        <ScriptEditorDemo />
+      </Spec>
     </>
+  );
+}
+
+/** A short bilingual ceremony fragment: heading, chip, highlight, page break, Greek and Cyrillic. */
+const SCRIPT_DOC: JSONContent = {
+  type: 'doc',
+  content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'The asking' }] },
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'Do you, Nguyễn Thị Ánh, take Đặng Văn Minh (阮氏映) to be your ' },
+        { type: 'text', text: 'lawful wedded partner', marks: [{ type: 'highlight', attrs: { color: '#FEF08A' } }] },
+        { type: 'text', text: '?' },
+      ],
+    },
+    { type: 'pageBreak' },
+    { type: 'paragraph', content: [{ type: 'text', text: 'Ελένη, Дмитрий: pause, then the rings.' }] },
+  ],
+};
+
+function ScriptEditorDemo() {
+  const [value, setValue] = useState<JSONContent>(SCRIPT_DOC);
+  const [editor, setEditor] = useState<Editor | null>(null);
+  return (
+    <div className="flex flex-col gap-3">
+      {editor ? <ScriptToolbar editor={editor} /> : null}
+      <div className="max-h-72 overflow-y-auto rounded-control border border-border bg-surface px-4 py-3">
+        <ScriptEditor value={value} onChange={setValue} font="noto_serif" onEditorReady={setEditor} />
+      </div>
+    </div>
   );
 }

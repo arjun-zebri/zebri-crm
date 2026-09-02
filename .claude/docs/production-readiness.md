@@ -673,6 +673,30 @@ durable audit trail for every state change. Closes Phase 3.
   522 → 505. Errors 78/78 unchanged.
 
 
+### Couple scripts (2026-08-30)
+
+Off feedback from a bilingual MC/celebrant: a Word-style ceremony /
+reception script per couple, with Unicode that survives to print. Spec in
+`docs/superpowers/specs/2026-08-30-scripts-tab-design.md`. Same branch,
+staging only per the batch rule.
+
+- **`scripts`** (migration `20260830000000`): TipTap JSON per script,
+  base font, RLS with the parent-ownership clause, 10 RLS integration
+  tests.
+- Scripts tab in the couple profile: list, script opens in a modal with a
+  Word-style toolbar on a shared editor (`lib/documents/`), autosave, Print
+  through `printDocument()` with the script's own fonts.
+- Fonts: Noto Serif base plus Noto CJK fallbacks on every stack
+  (`script-fonts.ts`); an insert-accented-character menu for names
+  (`script-characters.ts`).
+- Rounds two and three (same day, off the user's passes): dropped the
+  perform view, merge variables, the block-style menu and a language
+  picker whose effects were invisible; fixed the autosave echo resetting the
+  editor (jsonb key order vs string compare) and Radix Select stealing focus
+  after a pick (`Select restoreFocus`); A-/A+ size steps, tooltips
+  everywhere, font menu previews, Esc inside a popover no longer closes the
+  modal. RTL, portal sharing and `.docx` export stay out of scope.
+
 ### Contracts audit remediation (Phase 3.3, 2026-08-30)
 
 Off real user feedback (each partner could not sign, no tables, "MC"

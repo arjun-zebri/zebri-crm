@@ -18,6 +18,7 @@ import { CoupleOverview } from './couple-overview';
 import { CouplePayments } from './couple-payments';
 import type { CoupleProfileSection } from './couple-profile-types';
 import { CoupleQuestionnaires } from './couple-questionnaires';
+import { CoupleScripts } from './couple-scripts';
 import { CoupleTasks } from './couple-tasks';
 import { CoupleTime } from './couple-time';
 import { CoupleTimeline } from './couple-timeline';
@@ -96,6 +97,8 @@ export function CoupleProfileBody({
           secondaryName={couple.secondary_name ?? null}
         />
       )}
+
+      {activeSection === 'scripts' && <CoupleScripts couple={couple} />}
 
       {activeSection === 'automations' && (
         <CoupleAutomations coupleId={couple.id} />

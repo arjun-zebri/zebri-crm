@@ -91,3 +91,11 @@ describe('sanitizeRichHtml — attacks are neutralised', () => {
     expect(sanitizeRichHtml('1 < 2 && 3 > 2')).toBe('1 &lt; 2 &amp;&amp; 3 &gt; 2')
   })
 })
+
+describe('sanitizeRichHtml page breaks', () => {
+  it('keeps a page-break rule and reduces any other hr to a bare rule', async () => {
+    const { sanitizeRichHtml } = await import('@/lib/branding/rich-text-sanitize')
+    expect(sanitizeRichHtml('<p>a</p><hr data-page-break=""><p>b</p>')).toBe('<p>a</p><hr data-page-break=""><p>b</p>')
+    expect(sanitizeRichHtml('<hr onclick="x()" style="color:red">')).toBe('<hr>')
+  })
+})

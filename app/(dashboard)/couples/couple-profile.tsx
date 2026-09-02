@@ -4,7 +4,7 @@
  * is clicked in the list/kanban.
  *
  * Tabs nesting every per-couple feature: Overview, Tasks, Contacts,
- * Timeline, Songs, Files, Vows, Payments, Contracts, Questionnaires,
+ * Timeline, Songs, Files, Vows, Scripts, Payments, Contracts, Questionnaires,
  * Automations, Emails. Contracts
  * is available on every plan; the Starter-plan cap (5 distinct
  * couples) is enforced at contract creation inside `CoupleContracts`,
@@ -31,6 +31,7 @@ import {
   Music,
   Paperclip,
   Receipt,
+  ScrollText,
   Sparkles,
   Timer,
   Users,
@@ -101,6 +102,11 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'vows',
     label: 'Vows',
     icon: <Heart size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'scripts',
+    label: 'Scripts',
+    icon: <ScrollText size={18} strokeWidth={1.5} />,
   },
   {
     key: 'payments',

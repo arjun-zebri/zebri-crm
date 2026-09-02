@@ -466,3 +466,34 @@
   background-color: transparent !important;
   box-shadow: none !important;
 }
+
+/* ── Couple scripts ────────────────────────────────────────────────────
+   Typography for a script wherever it renders: the editor
+   (`.script-document .ProseMirror`), the perform overlay and the print
+   window (`.script-document` around sanitized HTML). Sizes are in `em` so
+   the perform view's A-/A+ scales everything together. The font family is
+   set inline on the wrapper (the script's chosen face plus CJK fallbacks);
+   per-selection font-family / size / colour marks are inline `style` on
+   spans, so nothing here is `!important`. */
+.script-document { line-height: 1.6; }
+/* The editor's base size; the toolbar's size readout shows 16 for unmarked text. */
+.script-document .ProseMirror { font-size: 16px; }
+.script-document h1 { font-size: 1.75em; font-weight: 600; line-height: 1.25; margin: 1.2em 0 0.5em; }
+.script-document h2 { font-size: 1.375em; font-weight: 600; line-height: 1.3; margin: 1.2em 0 0.4em; }
+.script-document h3 { font-size: 1.125em; font-weight: 600; line-height: 1.35; margin: 1em 0 0.3em; }
+.script-document h1:first-child,
+.script-document h2:first-child,
+.script-document h3:first-child,
+.script-document .ProseMirror > :first-child { margin-top: 0; }
+.script-document p { margin: 0 0 0.75em; }
+.script-document ul { list-style: disc; margin: 0.5em 0 0.75em 1.5em; }
+.script-document ol { list-style: decimal; margin: 0.5em 0 0.75em 1.5em; }
+.script-document li { margin: 0.2em 0; }
+.script-document li > p { margin: 0; }
+.script-document strong { font-weight: 600; }
+.script-document em { font-style: italic; }
+.script-document u { text-decoration: underline; }
+.script-document mark { padding: 0 0.1em; border-radius: 2px; }
+.script-document a { text-decoration: underline; }
+/* A page break outside the editor is a hairline on screen and a real break in print. */
+.script-document hr[data-page-break] { border: 0; border-top: 1px dashed var(--color-border-strong, #d1d5db); margin: 1.5em 0; }

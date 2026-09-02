@@ -1103,6 +1103,38 @@ Written by `app/(dashboard)/couples/time-actions.ts`. Migration:
 
 ------------------------------------------------------------------------
 
+## scripts (Couple profile, Scripts tab)
+
+Per-couple ceremony / reception scripts: the words an MC or celebrant
+reads on the day, written as a rich document. Several named scripts per
+couple. MC-only: no portal RPC exposes them, the couple never sees them.
+
+Columns: id (uuid pk), user_id (uuid, not null, fk auth.users, cascade),
+couple_id (uuid, not null, fk couples, cascade), title (text, not null,
+default 'Untitled script', 1..120 chars via Zod), **content (jsonb, not
+null; a TipTap document, default an empty paragraph)**, font (text, not
+null, default 'noto_serif'; a `ScriptFontId` from
+`lib/documents/script-fonts.ts`, validated by Zod so a new face never
+needs a migration; always the default today, the toolbar applies
+per-selection faces as marks instead), sort_order (integer, not null,
+default 0),
+created_at, updated_at (trigger `scripts_set_updated_at`).
+
+`content` is stored as UTF-8 JSON, so names with diacritics and CJK text
+round-trip untouched; rendering goes through
+`lib/documents/script-extensions.ts` (`generateHTML` with the controlled
+extension set, then `sanitizeRichHtml`, then variable resolution).
+
+Indexes: `scripts_couple_id_idx (couple_id)`, `scripts_user_id_idx (user_id)`.
+
+RLS: owner-only on every verb (`auth.uid() = user_id`). The insert and
+update `with check` clauses also require `exists (select 1 from couples c
+where c.id = couple_id and c.user_id = auth.uid())`: a foreign key ignores
+RLS, so without it a user could attach a script to another MC's couple.
+Proven by `tests/integration/rls/scripts.test.ts` (10 tests).
+
+Migration: `20260830000000_add_scripts_feature.sql`.
+
 ## ai_copilot_usage (AI copilot Phase A)
 
 Per-user daily message counter backing the automations AI copilot's

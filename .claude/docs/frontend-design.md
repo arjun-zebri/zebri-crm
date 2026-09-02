@@ -696,6 +696,31 @@ p-6
 - **GOOGLE_FONT_FAMILIES**: Google Fonts API family descriptor (with weight axis)
 - **HeadingFont / BodyFont**: type aliases for FontId (backward compatible; both roles share one list)
 
+## Couple script documents
+
+`lib/documents/script-fonts.ts` is a second, coverage-first font
+catalogue used only by the Scripts tab: `noto_serif` (default) and
+`noto_sans` ahead of the branding faces, and every stack ends with the
+four Noto CJK families so a CJK passage inside an English script never
+renders as tofu. `useScriptFonts()` mounts one `<link data-script-fonts>`
+for a set of faces; the print shell inlines the same href through
+`PrintDocumentOptions.fonts` (with `frame: false` for an unframed page).
+
+Typography for a script (`.script-document` in `globals.css`) is in `em`
+over a 16px editor base. The toolbar
+(`components/documents/script-toolbar.tsx`) is the one always-visible
+Word-style toolbar in the app: its font select is the shared `Select`
+with `restoreFocus={false}` (so the caret goes back to the editor, not
+the closed trigger) and a sentinel "inherit" option, each face rendered
+in itself; its colour pickers are `ColorPopover` behind a
+glyph-with-colour-bar trigger; font size is a readout with A- / A+ steps
+rather than a dropdown; and every control is wrapped in `Tooltip`. Shown
+under Editors on `/design-system`.
+
+`useOverlay` ignores an Escape keydown that is already `defaultPrevented`:
+a Radix popover, select or menu open inside a Modal handles Esc in the
+capture phase and marks it, so the Modal underneath stays open.
+
 ## Type role defaults
 
 `lib/branding/type-defaults.ts` resolves global type rules for each role (heading / body):

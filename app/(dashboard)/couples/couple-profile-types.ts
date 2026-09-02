@@ -15,6 +15,7 @@ import type {
   Music,
   Paperclip,
   Receipt,
+  ScrollText,
   Users,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ export type CoupleProfileSection =
   | 'songs'
   | 'files'
   | 'vows'
+  | 'scripts'
   | 'payments'
   | 'contracts'
   | 'questionnaires'
@@ -48,6 +50,7 @@ export const SECTION_KEYS: readonly CoupleProfileSection[] = [
   'songs',
   'files',
   'vows',
+  'scripts',
   'payments',
   'contracts',
   'questionnaires',
@@ -93,4 +96,5 @@ export type LucideIcon =
   | typeof Music
   | typeof Paperclip
   | typeof Receipt
+  | typeof ScrollText
   | typeof Users;

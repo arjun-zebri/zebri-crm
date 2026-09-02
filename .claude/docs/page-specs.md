@@ -382,7 +382,56 @@ hiding the active tab falls the body back to the first visible tab. Derive logic
 tolerates drift (unknown stored keys dropped, newly added tabs appended).
 
 **Tabs:** Overview, Pulse, Tasks, **Time**, Contacts, Timeline, Songs, Files,
-Vows, Payments, Contracts, Automations, **Templates**.
+Vows, **Scripts**, Payments, Contracts, Automations, **Templates**.
+
+### Scripts tab
+
+The ceremony / reception scripts the MC or celebrant reads from on the day.
+Built from feedback by a bilingual celebrant: the script lives on the couple
+instead of in a Word file, and names like "Nguyễn" or a passage in Chinese
+render correctly on screen and in print. The end goal is printing; scripts
+are not templates (no merge variables) and there is no separate reading
+mode.
+
+- **List:** `CoupleTabShell title="Scripts"` with the count stat and a
+  **New script** action. Rows show title + "Updated 3m ago"; the row menu
+  offers Rename (inline `Input`), Duplicate and Delete (`ConfirmDialog`).
+  Empty state: "No scripts yet". Loading skeleton; `ErrorState` with retry.
+- **Editor** (`couple-script-modal.tsx`): clicking a script opens a
+  fullscreen `Modal` over the profile (backdrop, X or Esc close it, flushing
+  any pending autosave; an Esc that a popover inside already handled is
+  ignored by `useOverlay`). Header: the editable title `Input` on the left,
+  the save label ("Saving…" / "Saved 2m ago" / "Not saved" with Retry) and
+  the primary **Print** button on the right. Body: the fixed `ScriptToolbar`
+  and the `ScriptEditor` (TipTap, `lib/documents/script-extensions.ts`).
+  Content autosaves 800 ms after the last edit (`useAutosave`) and flushes
+  on close.
+- **Toolbar** (every control has a tooltip): font family (each face listed
+  in itself; `Select restoreFocus={false}` so the caret returns to the
+  editor), size readout with **A- / A+** stepping through the size ladder
+  (Word's grow / shrink, no dropdown), B/I/U, text colour and highlight
+  (each a glyph with a colour bar underneath), alignment, bullet and
+  numbered lists, page break, insert accented character (Ω: Vietnamese tone
+  letters, Latin accents, Māori macrons, Greek; abc/ABC toggle), undo and
+  redo (disabled when nothing to undo / redo). No block-style menu: a
+  heading is bigger, bolder text.
+- **Fonts:** `lib/documents/script-fonts.ts`. The document's base face is
+  Noto Serif (`scripts.font`, no UI to change it today); the catalogue for
+  per-selection faces is Noto Serif / Noto Sans plus the branding faces.
+  Every stack ends with the four Noto CJK families. `useScriptFonts` mounts
+  one Google Fonts `<link>`: the modal loads the whole catalogue (the font
+  menu previews each face), print loads only the faces the script uses.
+- **Print:** `components/print/print-script.tsx` through `printDocument()`
+  with the script's own fonts, unbranded and unframed
+  (`frame: false`; the performer's working copy). A page-break node prints
+  as a real page break.
+- **Editor state rule:** the editor is seeded from the row once (modal keyed
+  by script id); refetched rows are never pushed into a live editor, and any
+  comparison is structural (`scriptDocEquals`), because `jsonb` returns the
+  document with keys reordered. Pushing it back reset the caret, dropped the
+  selection and cleared redo after every autosave.
+- Data: `scripts` table, `use-couple-scripts.ts` (React Query) for reads,
+  `script-actions.ts` (Zod, RLS client) for writes.
 
 ### Time tracking (couple timer)
 
