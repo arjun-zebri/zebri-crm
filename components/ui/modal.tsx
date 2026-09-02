@@ -169,6 +169,7 @@ export function Modal({
             // the very top instead of below an otherwise-empty header band.
             <button
               onClick={onClose}
+              aria-label="Close"
               className="absolute top-3 right-3 z-10 p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
             >
               <X size={18} strokeWidth={1.5} />
@@ -198,6 +199,7 @@ export function Modal({
                 )}
                 <button
                   onClick={onClose}
+                  aria-label="Close"
                   className="p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
                 >
                   <X size={18} strokeWidth={1.5} />

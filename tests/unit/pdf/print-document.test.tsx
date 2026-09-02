@@ -159,3 +159,25 @@ describe('print shell', () => {
     expect(html).not.toMatch(/\*\s*\{[^}]*padding:\s*0/)
   })
 })
+
+describe('buildPrintHtml options for plain documents', () => {
+  it('bare suppresses the browser header/footer by zeroing the page margin and padding the body', () => {
+    const el = <article className="script-document">Do you, Nguyễn Thị Ánh</article>
+    const html = buildPrintHtml({ title: 'Ceremony', element: el, branding: null, canvas: false, frame: false, bare: true, fonts: { href: 'https://fonts.googleapis.com/css2?family=Noto+Serif', bodyStack: '"Noto Serif", serif' } })
+    expect(html).toContain('@page { margin: 0; } body { padding: 14mm; }')
+    expect(html).not.toContain('@page { margin: 14mm; }')
+    expect(html).not.toContain('border border-border')
+    expect(html).toContain('href="https://fonts.googleapis.com/css2?family=Noto+Serif"')
+    expect(html).toContain('body { font-family: "Noto Serif", serif;')
+    // Script-only print rules stay scoped, so contract/invoice pagination
+    // is byte-identical to before the Scripts feature.
+    expect(html).toContain('.script-document p { orphans: 2; widows: 2; }')
+    expect(html).not.toMatch(/\n\s*p \{ orphans/)
+  })
+
+  it('keeps the branded defaults when bare is off', () => {
+    const html = buildPrintHtml({ title: 'x', element: <div />, branding: null, canvas: false })
+    expect(html).toContain('@page { margin: 14mm; }')
+    expect(html).toContain('border border-border')
+  })
+})

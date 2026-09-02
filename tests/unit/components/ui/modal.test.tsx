@@ -18,6 +18,24 @@ function backdropEl(): HTMLElement {
 }
 
 describe('<Modal />', () => {
+  it('ignores an Escape a popover inside it already handled (defaultPrevented)', () => {
+    const onClose = vi.fn();
+    render(
+      <Modal isOpen onClose={onClose} title="Test">
+        <input aria-label="field" />
+      </Modal>,
+    );
+    // Radix DismissableLayer dismisses in the capture phase and marks the
+    // event; the modal underneath must leave it alone.
+    const handled = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    handled.preventDefault();
+    document.dispatchEvent(handled);
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('closes when the backdrop is clicked (press and release on the backdrop)', () => {
     const onClose = vi.fn();
     render(
