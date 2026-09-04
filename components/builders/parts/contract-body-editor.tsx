@@ -123,7 +123,16 @@ export function ContractBodyEditor({
         </div>
       ) : null}
 
-      <RichTextEditor value={content} onChange={onChange} editable={canEdit} tables />
+      {/* `scrollBody` caps the typing area so the formatting toolbar stays
+          visible on a long contract. The builder's left pane already scrolls,
+          so without it the editor grew until the toolbar left the viewport. */}
+      <RichTextEditor
+        value={content}
+        onChange={onChange}
+        editable={canEdit}
+        tables
+        scrollBody
+      />
 
       {unknownVars.length > 0 ? (
         <p className="text-body text-danger">

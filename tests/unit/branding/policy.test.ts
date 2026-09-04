@@ -12,6 +12,9 @@ describe('policy', () => {
     expect(isMarker('couplePortal')).toBe(true)
     expect(isMarker('contractBody')).toBe(true)
     expect(isMarker('contractSign')).toBe(true)
+    expect(isMarker('contractSignVendor')).toBe(true)
+    expect(isMarker('contractSignPrimary')).toBe(true)
+    expect(isMarker('contractSignSecondary')).toBe(true)
     expect(isMarker('vendorTimelineBody')).toBe(true)
     expect(isMarker('questionnaireOneAtATime')).toBe(true)
     expect(isMarker('questionnaireAllOnePage')).toBe(true)
@@ -22,8 +25,14 @@ describe('policy', () => {
   it('clearable markers include the contract/run-sheet/portal bodies + both questionnaire form blocks + the website form submit', () => {
     expect([...CLEARABLE_MARKERS].sort()).toEqual(
       [
-        'contractBody', 'contractSign', 'vendorTimelineBody', 'couplePortal',
+        'contractBody', 'vendorTimelineBody', 'couplePortal',
         'questionnaireOneAtATime', 'questionnaireAllOnePage', 'formSubmit',
+        // The three per-party signature panels, plus the deprecated
+        // all-in-one block they replaced. It stays clearable because block
+        // trees are read live, so MCs who have not opted into the split still
+        // have one and must be able to remove it.
+        'contractSign',
+        'contractSignVendor', 'contractSignPrimary', 'contractSignSecondary',
       ].sort(),
     )
     // Every clearable marker is also a marker.
@@ -53,13 +62,29 @@ describe('policy', () => {
     expect(exactlyOneForSurface('invoice')).toBeNull()
   })
 
-  it('contract requires title/contractBody/contractSign (no generic action block)', () => {
+  it('contract requires title/body/both signatures (no generic action block)', () => {
     expect(requiredTypesForSurface('contract').sort()).toEqual(
-      ['contractBody', 'contractSign', 'title'].sort(),
+      ['contractBody', 'contractSignPrimary', 'contractSignVendor', 'title'].sort(),
     )
-    expect(isRequired('contractSign', 'contract')).toBe(true)
+    // An agreement needs BOTH sides: without the primary panel nobody can sign
+    // at all, and without the supplier panel only one party is shown
+    // committing.
+    expect(isRequired('contractSignPrimary', 'contract')).toBe(true)
+    expect(isRequired('contractSignVendor', 'contract')).toBe(true)
+    // The second contact stays optional: plenty of couples name only one.
+    expect(isRequired('contractSignSecondary', 'contract')).toBe(false)
     expect(isRequired('action', 'contract')).toBe(false)
     expect(isRequired('footer', 'contract')).toBe(false)
+  })
+
+  it('keeps the deprecated all-in-one sign block a working marker', () => {
+    // Block trees are read live rather than snapshotted per contract, so an MC
+    // who has not opted into the per-party split still renders through this
+    // block and it must keep working.
+    expect(isMarker('contractSign')).toBe(true)
+    expect(CLEARABLE_MARKERS.has('contractSign')).toBe(true)
+    // But it is no longer required, since the split replaces it.
+    expect(isRequired('contractSign', 'contract')).toBe(false)
   })
 
   it('invoice requires header/lineItems/totals; bank-or-pay is at-least-one', () => {

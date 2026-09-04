@@ -225,3 +225,42 @@ export const BUG_REPORT_RATE_LIMITS = {
 } as const satisfies Record<string, LimiterOptions>;
 
 export type BugReportRateLimitKey = keyof typeof BUG_REPORT_RATE_LIMITS;
+
+/**
+ * Contract surface rate-limits.
+ *
+ * The public contract routes are unauthenticated and token-gated, so every
+ * limit here is keyed by IP or by a hash of the capability token, never by
+ * user. The first four values are lifted unchanged from the literals that were
+ * previously inlined in each route; collecting them here makes the whole
+ * surface's posture reviewable in one place.
+ *
+ * - **sign** / **decline**: 3/min/IP. Signing is a once-ever act; three
+ *   attempts covers a fat-fingered name and a retry after a flaky connection.
+ * - **view**: 20/min/IP. A passive beacon fired on page load, so this only
+ *   catches a reload loop. The route swallows its own 429.
+ * - **send**: 10/min/IP on the authenticated MC-side send.
+ * - **otpRequestIp**: 10 per 10 min/IP. The coarse net.
+ * - **otpRequestToken**: 1/min, and **otpRequestTokenHour** 5/hour, both keyed
+ *   on a hash of the sign token. This pair is what actually protects a
+ *   signer's inbox from being used as a mail cannon: a per-IP limit alone does
+ *   nothing against rotating addresses, because the attacker's target is a
+ *   fixed mailbox, not a fixed source.
+ * - **otpVerify**: 10/min/IP as a network-level brake only. The real control
+ *   on guessing is the per-row attempt counter and lockout, which no amount of
+ *   IP rotation can evade.
+ * - **verifyHash**: 20/min/IP on the public document-fingerprint lookup.
+ */
+export const CONTRACT_RATE_LIMITS = {
+  sign: { windowMs: 60_000, max: 3 },
+  decline: { windowMs: 60_000, max: 3 },
+  view: { windowMs: 60_000, max: 20 },
+  send: { windowMs: 60_000, max: 10 },
+  otpRequestIp: { windowMs: 600_000, max: 10 },
+  otpRequestToken: { windowMs: 60_000, max: 1 },
+  otpRequestTokenHour: { windowMs: 3_600_000, max: 5 },
+  otpVerify: { windowMs: 60_000, max: 10 },
+  verifyHash: { windowMs: 60_000, max: 20 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type ContractRateLimitKey = keyof typeof CONTRACT_RATE_LIMITS;

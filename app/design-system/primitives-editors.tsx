@@ -10,6 +10,7 @@ import { AudioPlayButton } from '@/components/ui/audio-play-button';
 import { ColorPopover } from '@/components/ui/color-popover';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { SignatureEditor } from '@/components/ui/signature-editor';
+import { SignaturePad } from '@/components/ui/signature-pad';
 
 import { Demo, DemoGrid, Spec } from './showroom';
 
@@ -115,6 +116,12 @@ export function PrimitivesEditors() {
         </div>
       </Spec>
 
+      <Spec name="SignaturePad" file="components/ui/signature-pad.tsx"
+        importPath="@/components/ui/signature-pad"
+        description="Canvas a person draws their signature on, exported as a base64 PNG data URL. Pointer events with setPointerCapture (a stroke that leaves the canvas keeps tracking) and touch-action:none (a finger draws instead of scrolling the page) are what make it usable on a phone, which is where most couples sign. A gesture under 24px of total travel counts as empty, so a stray tap cannot pass as a signature. Appearance is injectable: omit it in-app to get the tokens below, or pass the MC's brand colours on the public contract page.">
+        <SignaturePadDemo />
+      </Spec>
+
       <Spec name="ScriptEditor + ScriptToolbar" file="components/documents/script-editor.tsx"
         importPath="@/components/documents/script-editor"
         description="The couple-script writing surface: TipTap on the branding schema plus a page-break block, driven by the fixed Word-style toolbar. Base font is Noto Serif with the Noto CJK fallbacks, so diacritics and CJK text render. The font Select (restoreFocus off, each face shown in itself) applies a per-selection family; colours are ColorPopover with a colour bar under the glyph; size steps A-/A+ through a ladder; the omega menu inserts accented letters. No block-style menu: a heading is bigger, bolder text. Every control has a tooltip.">
@@ -151,6 +158,21 @@ function ScriptEditorDemo() {
       <div className="max-h-72 overflow-y-auto rounded-control border border-border bg-surface px-4 py-3">
         <ScriptEditor value={value} onChange={setValue} font="noto_serif" onEditorReady={setEditor} />
       </div>
+    </div>
+  );
+}
+
+/** SignaturePad wired to local state, with a readout of what it exports. */
+function SignaturePadDemo() {
+  const [signature, setSignature] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-3">
+      <SignaturePad value={signature} onChange={setSignature} />
+      <p className="text-body text-text-subtle">
+        {signature
+          ? `exports a PNG data URL, ${(signature.length / 1024).toFixed(1)}KB of base64 (cap 128KB)`
+          : 'draw above — a tap alone stays empty'}
+      </p>
     </div>
   );
 }

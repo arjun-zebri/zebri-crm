@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { isCronAuthorized } from '@/lib/api/cron-auth'
+import { groupRecipientsByAddress } from '@/lib/contracts/signer-recipients'
 import { sendContractReminderEmail } from '@/lib/email'
 import { resolveSender } from '@/lib/email/sender-identity'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -46,16 +47,34 @@ async function handle(request: NextRequest) {
     // did not register, and the shared link cannot identify who is outstanding.
     const { data: pending } = await admin
       .from('contract_signers')
-      .select('name, email, sign_token')
+      .select('name, email, sign_token, signing_order')
       .eq('contract_id', row.id)
       .eq('role', 'client')
       .is('signed_at', null)
       .is('declined_at', null)
       .order('signing_order')
 
+    // `contracts_due_for_reminder` returns a fixed column set that predates
+    // signing modes. One tiny lookup per due contract is cheaper than dropping
+    // and recreating that function's signature, and this cron runs over a
+    // handful of rows.
+    const { data: modeRow } = await admin
+      .from('contracts')
+      .select('signing_mode')
+      .eq('id', row.id)
+      .maybeSingle()
+
+    // On a sequential contract only the signer whose turn it is gets chased.
+    // Nudging a held partner for a signature the RPC would reject reads as the
+    // system being broken.
+    const outstanding =
+      modeRow?.signing_mode === 'sequential' && pending && pending.length > 0
+        ? pending.filter((s) => s.signing_order === pending[0]!.signing_order)
+        : pending;
+
     const targets =
-      pending && pending.length > 0
-        ? pending.map((s) => ({
+      outstanding && outstanding.length > 0
+        ? outstanding.map((s) => ({
             email: s.email || row.couple_email,
             name: s.name || row.couple_name,
             token: s.sign_token,
@@ -63,21 +82,27 @@ async function handle(request: NextRequest) {
         : [{ email: row.couple_email, name: row.couple_name, token: row.share_token }]
 
     const sender = await resolveSender(admin, row.user_id, row.mc_business_name)
-    const seen = new Set<string>()
+
+    // Group rather than de-duplicate by address. When both partners share an
+    // inbox, dropping the duplicate dropped partner 2's link from every
+    // reminder round as well as the initial send, so they were never given a
+    // way to sign at all.
+    const groups = groupRecipientsByAddress(
+      targets,
+      (token) => `${process.env.NEXT_PUBLIC_APP_URL}/contract/${token}`,
+    )
     let anyDelivered = false
 
-    for (const target of targets) {
-      if (!target.email || seen.has(target.email.toLowerCase())) continue
-      seen.add(target.email.toLowerCase())
-
+    for (const group of groups) {
       const res = await sendContractReminderEmail({
-        coupleEmail: target.email,
-        coupleName: target.name,
+        coupleEmail: group.email,
+        coupleName: group.name,
         contractNumber: row.contract_number,
         contractTitle: row.title,
         expiresAt: row.expires_at,
-        shareUrl: `${process.env.NEXT_PUBLIC_APP_URL}/contract/${target.token}`,
+        shareUrl: `${process.env.NEXT_PUBLIC_APP_URL}/contract/${group.token}`,
         mcBusinessName: row.mc_business_name,
+        links: group.links,
         sender,
       })
       if (res.ok) anyDelivered = true

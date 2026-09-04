@@ -41,7 +41,10 @@ export type BlockType =
   | 'couplePortal'
   | 'paymentSchedule'
   | 'contractBody'
-  | 'contractSign'
+  | 'contractSign'          // deprecated: superseded by the three per-party blocks
+  | 'contractSignVendor'
+  | 'contractSignPrimary'
+  | 'contractSignSecondary'
   | 'vendorTimelineBody'
   | 'questionnaireOneAtATime'
   | 'questionnaireAllOnePage'
@@ -157,6 +160,9 @@ export interface LineItemsBlock extends BaseBlock {
   rowStyle?: 'lines' | 'stripes' | 'plain'
   headerStyle?: TextStyle
   itemStyle?: TextStyle
+  /** Styling for a line item's optional note. Falls back to the fine-print
+   *  role, which is what the quantity sub-line already uses. */
+  noteStyle?: TextStyle
   /** When true, description is left and amount is right (justify-between). Default false = both columns share the same alignment. */
   colSpread?: boolean
 }
@@ -487,6 +493,17 @@ export interface ContractBodyBlock extends BaseBlock {
  * body (its historical placement), so those contracts stay byte-identical and
  * always signable. `migrateBlocks` therefore never force-adds this marker.
  */
+/**
+ * @deprecated Superseded by the three per-party signature blocks
+ * ({@link ContractSignVendorBlock}, {@link ContractSignPrimaryBlock},
+ * {@link ContractSignSecondaryBlock}), which let the MC place and style each
+ * party's signature independently.
+ *
+ * Kept on the type, in the palette policy's marker sets, and rendered by the
+ * public card because block trees are NOT snapshotted per contract: a contract
+ * sent months ago still renders through the MC's live tree. An MC who has not
+ * opted into the split keeps this block, and it must keep working.
+ */
 export interface ContractSignBlock extends BaseBlock {
   type: 'contractSign'
   /** Prompt heading above the form (e.g. "Sign to accept"). */
@@ -501,6 +518,66 @@ export interface ContractSignBlock extends BaseBlock {
   headingStyle?: TextStyle
   /** Typography override for the field / agreement labels (over the body role). */
   labelStyle?: TextStyle
+}
+
+/**
+ * Shared shape for the three per-party signature marker blocks.
+ *
+ * The single `contractSign` block stacked three things in a fixed order: the
+ * supplier's countersignature, the roster of who had signed, and the live
+ * sign form. Splitting it per party lets the MC place each signature where it
+ * belongs on their document (side by side, at the foot of a clause, after a
+ * schedule) and style each one, which is what a signature page normally looks
+ * like.
+ *
+ * Which party a block represents is its `type`. Each renders that party's own
+ * panel (role label, signature, name, date, and awaiting/declined state) and
+ * nothing at all when the contract has no such party, so a solo-signatory
+ * contract simply does not show a second-partner slot.
+ *
+ * The live sign form renders inside whichever block belongs to the person
+ * viewing the link. The form's BEHAVIOUR is never configurable here — only its
+ * labels, button colour and typography.
+ */
+interface ContractSignPartyBlockBase extends BaseBlock {
+  /** Prompt heading above this party's panel (e.g. "Sign to accept"). */
+  heading?: string
+  /** Label for the primary sign button. Absent ⇒ "Sign contract". */
+  primaryLabel?: string
+  /** Label for the secondary decline button. Absent ⇒ "Decline". */
+  secondaryLabel?: string
+  /** Sign-button background colour. Absent ⇒ the brand colour. */
+  buttonColor?: string
+  /** Typography override for the prompt heading (over the section-heading role). */
+  headingStyle?: TextStyle
+  /** Typography override for the field / agreement labels (over the body role). */
+  labelStyle?: TextStyle
+  /** Typography override for the rendered signature itself (the cursive line). */
+  signatureStyle?: TextStyle
+  /** Show the date beneath the signature. Defaults to shown. */
+  showDate?: boolean
+}
+
+/**
+ * The supplier's own signature (the MC / celebrant / DJ). Filled at send time
+ * from their Settings signature, so it is already signed when the couple opens
+ * the document.
+ */
+export interface ContractSignVendorBlock extends ContractSignPartyBlockBase {
+  type: 'contractSignVendor'
+}
+
+/** The primary contact's signature (client signer at `signing_order` 1). */
+export interface ContractSignPrimaryBlock extends ContractSignPartyBlockBase {
+  type: 'contractSignPrimary'
+}
+
+/**
+ * The secondary contact's signature (client signer at `signing_order` 2).
+ * Renders nothing when the couple has only one named contact.
+ */
+export interface ContractSignSecondaryBlock extends ContractSignPartyBlockBase {
+  type: 'contractSignSecondary'
 }
 
 /**
@@ -606,6 +683,9 @@ export type Block =
   | PaymentScheduleBlock
   | ContractBodyBlock
   | ContractSignBlock
+  | ContractSignVendorBlock
+  | ContractSignPrimaryBlock
+  | ContractSignSecondaryBlock
   | VendorTimelineBodyBlock
   | QuestionnaireOneAtATimeBlock
   | QuestionnaireAllOnePageBlock
@@ -632,6 +712,9 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   paymentSchedule: 'Payment schedule',
   contractBody: 'Contract body',
   contractSign: 'Sign contract',
+  contractSignVendor: 'Your signature',
+  contractSignPrimary: 'Primary contact signature',
+  contractSignSecondary: 'Secondary contact signature',
   vendorTimelineBody: 'Run sheet',
   questionnaireOneAtATime: 'One at a time',
   questionnaireAllOnePage: 'All on one page',
@@ -688,6 +771,9 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   paymentSchedule: 'Payment stages (live invoice data)',
   contractBody: 'The contract body (fixed, edited per couple)',
   contractSign: 'Signature + sign / decline form (fixed)',
+  contractSignVendor: 'Where you sign the agreement',
+  contractSignPrimary: 'Where the primary contact signs',
+  contractSignSecondary: 'Where the second contact signs (hidden if there is none)',
   vendorTimelineBody: 'The vendor run sheet (live timeline data)',
   questionnaireOneAtATime: 'Questions one at a time (Typeform-style)',
   questionnaireAllOnePage: 'All questions on one page',

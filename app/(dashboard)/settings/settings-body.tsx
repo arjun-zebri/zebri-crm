@@ -87,6 +87,8 @@ export interface PublicSettingsData {
   oauthProvider: 'google' | 'microsoft' | null;
   oauthEmail: string | null;
   oauthStatus: 'none' | 'connected' | 'failed';
+  /** The MC's drawn signature (PNG data URL), stamped on contracts they send. */
+  mcSignatureImage: string | null;
 }
 
 export interface SettingsData {
@@ -123,6 +125,7 @@ export function SettingsBody({ activeTab, data }: SettingsBodyProps) {
               businessType: metadata?.business_type || '',
               vendorRole: metadata?.vendor_role || '',
               mcSignatureName: metadata?.mc_signature_name || '',
+              mcSignatureImage: data.publicSettings?.mcSignatureImage ?? null,
               addressText: metadata?.address_text || '',
               addressLat: metadata?.address_lat ?? null,
               addressLng: metadata?.address_lng ?? null,

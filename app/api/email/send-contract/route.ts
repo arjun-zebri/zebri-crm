@@ -23,7 +23,7 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
 import { sendSlackAlert } from '@/lib/alerts/slack';
-import { inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
+import { CONTRACT_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
 import { resolveVendorRole } from '@/lib/branding/vendor-role';
 import {
@@ -31,6 +31,7 @@ import {
   findUnknownVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
+import { groupRecipientsByAddress } from '@/lib/contracts/signer-recipients';
 import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendContractEmail } from '@/lib/email';
 import { emailBrandingForUser } from '@/lib/email/branding';
@@ -41,10 +42,24 @@ import { createClient } from '@/lib/supabase/server';
 // flips contract state — looser than the public sign/decline limit
 // because legitimate MCs do send batches, but tight enough to cap
 // runaway retry loops.
-const limiter = inMemoryLimiter({ windowMs: 60_000, max: 10 });
+const limiter = inMemoryLimiter(CONTRACT_RATE_LIMITS.send);
 
 const bodySchema = z.object({
   contractId: z.uuid('contractId must be a UUID'),
+  /**
+   * Whether to email the couple. Default true, which is the historical
+   * behaviour.
+   *
+   * `false` makes the contract live WITHOUT sending anything, so the MC can
+   * hand the link over themselves (in a text, a DM, in person). It is the same
+   * lock either way: the body is frozen, the token is enabled, the supplier
+   * countersignature is stamped and the audit row is written. Only the email
+   * is skipped. Sharing the flag with the send path rather than adding a
+   * second route is deliberate: the lock has real rules (merge-field
+   * validation, the countersignature, the audit event) and two copies of it
+   * would drift.
+   */
+  deliver: z.boolean().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -66,12 +81,12 @@ export async function POST(request: NextRequest) {
 
   const parsed = await parseJsonBody(request, bodySchema);
   if (!parsed.ok) return parsed.response;
-  const { contractId } = parsed.data;
+  const { contractId, deliver = true } = parsed.data;
 
   const { data: contract, error: contractError } = await supabase
     .from('contracts')
     .select(
-      'id, title, contract_number, content, status, share_token, expires_at, couple_id, couples(name, email, primary_email, primary_name, secondary_name)',
+      'id, title, contract_number, content, status, share_token, expires_at, couple_id, signing_mode, couples(name, email, primary_email, primary_name, secondary_name)',
     )
     .eq('id', contractId)
     .eq('user_id', user.id)
@@ -203,11 +218,23 @@ export async function POST(request: NextRequest) {
     .eq('role', 'vendor')
     .maybeSingle();
 
+  // The MC's drawn signature, snapshotted at send. This is the immutability
+  // property: the contract carries the signature as it was when executed, so
+  // redrawing it in Settings later never alters a document already sent.
+  const { data: mcSettings } = await supabase
+    .from('user_public_settings')
+    .select('mc_signature_image')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  const mcSignatureImage = mcSettings?.mc_signature_image ?? null;
+
   const vendorSignature = {
     signed_at: new Date().toISOString(),
     signer_name_typed: mcSignatureName,
     signer_ip: ipOf(request),
     signer_user_agent: request.headers.get('user-agent') ?? '',
+    signature_mode: mcSignatureImage ? 'drawn' : 'typed',
+    signature_image: mcSignatureImage,
   };
 
   const { error: vendorError } = vendorRow
@@ -262,16 +289,24 @@ export async function POST(request: NextRequest) {
   // first to open it would consume the other's signature slot.
   const { data: signers } = await supabase
     .from('contract_signers')
-    .select('id, name, email, sign_token')
+    .select('id, name, email, sign_token, signing_order')
     .eq('contract_id', contractId)
     .eq('role', 'client')
     .order('signing_order');
 
   // Fall back to the legacy shared link if the roster is somehow empty, so a
   // send never silently delivers nothing.
+  // On a sequential contract only the first signer is invited now; the rest
+  // are held until it is their turn (sendNextSignerInvite does that). Emailing
+  // everyone up front would defeat the ordering the MC asked for.
+  const invited =
+    contract.signing_mode === 'sequential' && signers && signers.length > 0
+      ? signers.filter((s) => s.signing_order === signers[0]!.signing_order)
+      : signers;
+
   const recipients =
-    signers && signers.length > 0
-      ? signers.map((s) => ({
+    invited && invited.length > 0
+      ? invited.map((s) => ({
           email: s.email || coupleEmail,
           name: s.name || coupleName,
           token: s.sign_token,
@@ -283,31 +318,42 @@ export async function POST(request: NextRequest) {
   const branding = await emailBrandingForUser(supabase, user.id);
   const sender = await resolveSender(supabase, user.id, mcBusinessName);
 
-  // De-duplicate by address: partners often share one inbox, and two
-  // identical-looking emails with different links invites signing the wrong one.
-  const seen = new Set<string>();
-  const failures: string[] = [];
-  for (const recipient of recipients) {
-    if (!recipient.email || seen.has(recipient.email.toLowerCase())) continue;
-    seen.add(recipient.email.toLowerCase());
+  // Group by address rather than de-duplicating it. Partners often share one
+  // inbox; dropping the duplicate used to drop the second partner's link with
+  // it, leaving them unable to sign and the contract unable to complete. One
+  // email per mailbox, one named button per signer in it, keeps both partners
+  // reachable without inviting either to sign the wrong link.
+  const groups = groupRecipientsByAddress(
+    recipients,
+    (token) => `${process.env.NEXT_PUBLIC_APP_URL}/contract/${token}`,
+  );
 
+  // Activation without delivery stops here: the contract is locked, live and
+  // signable, and the MC sends the link however they like.
+  if (!deliver) {
+    return NextResponse.json({ ok: true, delivered: false });
+  }
+
+  const failures: string[] = [];
+  for (const group of groups) {
     const result = await sendContractEmail({
-      coupleEmail: recipient.email,
-      coupleName: recipient.name,
+      coupleEmail: group.email,
+      coupleName: group.name,
       contractNumber: contract.contract_number,
       contractTitle,
       expiresAt: contract.expires_at,
-      shareUrl: `${process.env.NEXT_PUBLIC_APP_URL}/contract/${recipient.token}`,
+      shareUrl: `${process.env.NEXT_PUBLIC_APP_URL}/contract/${group.token}`,
       mcBusinessName,
+      links: group.links,
       sender,
       branding,
     });
-    if (!result.ok) failures.push(recipient.email);
+    if (!result.ok) failures.push(group.email);
   }
 
   // The contract is already locked and live at this point, so a partial
   // delivery is reported rather than rolled back.
-  if (failures.length === recipients.length) {
+  if (groups.length > 0 && failures.length === groups.length) {
     logger.error('[email/send-contract] sendContractEmail failed', null, {
       contractId,
       failures,
@@ -322,5 +368,5 @@ export async function POST(request: NextRequest) {
     text: `📝 Contract sent to ${coupleName} - ${contract.title} (${contract.contract_number})`,
   }).catch(() => undefined);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, delivered: true });
 }

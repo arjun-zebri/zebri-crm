@@ -72,6 +72,21 @@ interface RichTextEditorProps {
    * (`renderContractHtml`); the email pipeline does not.
    */
   tables?: boolean
+  /**
+   * Cap the typing area's height and scroll inside it, instead of letting the
+   * editor grow without bound.
+   *
+   * By default the editor box grows with its content. That is right for a
+   * short field, but wrong inside a scrolling pane: a long contract pushed the
+   * whole editor down the page, so the formatting toolbar scrolled out of
+   * reach exactly when a long document needed it most. Capping the body keeps
+   * the box a fixed size, which keeps the toolbar pinned at its top and moves
+   * the scrolling inside the text area where it belongs.
+   *
+   * Opt-in, because a short editor (an email body) should still size to its
+   * content rather than reserve a fixed block of empty space.
+   */
+  scrollBody?: boolean
 }
 
 /** The variable path that injects the MC's email signature. */
@@ -134,6 +149,7 @@ export function RichTextEditor({
   signatureHtml,
   dense = false,
   tables = false,
+  scrollBody = false,
 }: RichTextEditorProps) {
   // When a signature is supplied (compose editor), the mention extension
   // gets a React NodeView so `{{mc.signature}}` renders inline as the rich
@@ -261,6 +277,10 @@ export function RichTextEditor({
           dense
             ? 'p-3 min-h-[200px] [&_.ProseMirror]:min-h-[170px]'
             : 'p-4 min-h-[320px] [&_.ProseMirror]:min-h-[280px]'
+        }${
+          // The cap keeps the editor box a fixed height so the toolbar above
+          // it stays put; overflow moves the scrollbar inside the text area.
+          scrollBody ? ' max-h-[55vh] overflow-y-auto' : ''
         }`}
       />
       {tables && editor ? (

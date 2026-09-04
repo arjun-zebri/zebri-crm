@@ -25,17 +25,18 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
-import { inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
+import { CONTRACT_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
-import { sendContractSignedEmail } from '@/lib/email';
-import { emailBrandingForUser } from '@/lib/email/branding';
-import { resolveSender } from '@/lib/email/sender-identity';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { sendExecutedCopies, sendNextSignerInvite } from '@/lib/contracts/notify';
+import {
+  isValidSignatureDataUrl,
+  SIGNATURE_MAX_BYTES,
+} from '@/lib/contracts/signature-image';
 import { createClient } from '@/lib/supabase/server';
 
 // 3 / min / IP — signing is a one-shot event the couple performs
 // once per contract. Higher caps would only protect abuse loops.
-const limiter = inMemoryLimiter({ windowMs: 60_000, max: 3 });
+const limiter = inMemoryLimiter(CONTRACT_RATE_LIMITS.sign);
 
 const bodySchema = z.object({
   token: z.uuid('Token must be a UUID'),
@@ -49,84 +50,20 @@ const bodySchema = z.object({
     .trim()
     .min(2, 'Signer name is too short')
     .max(100, 'Signer name is too long'),
+  // How the signer chose to sign. Absent means typed, which is what every
+  // client sent before drawn signatures existed.
+  signature_mode: z.enum(['typed', 'drawn']).optional(),
+  // The drawn mark, as a base64 PNG data URL. PNG only and size-capped here as
+  // well as at the database, because sign_contract_v2 is SECURITY DEFINER and
+  // granted to anon: this route is not the only way in, so neither check alone
+  // is sufficient. See lib/contracts/signature-image.
+  signature_image: z
+    .string()
+    .max(SIGNATURE_MAX_BYTES, 'Signature image is too large')
+    .refine(isValidSignatureDataUrl, 'Signature must be a PNG data URL')
+    .optional(),
 });
 
-
-/**
- * Email every signer, and the account holder, a copy of the executed contract.
- *
- * Runs with the service-role client because the caller here is an anonymous
- * signer: the contract and its roster are not readable under their session.
- *
- * @param contractId - The contract that just completed.
- */
-async function sendExecutedCopies(contractId: string): Promise<void> {
-  const admin = createAdminClient();
-
-  const { data: contract } = await admin
-    .from('contracts')
-    .select('id, user_id, title, contract_number, share_token, signed_at, couple_id')
-    .eq('id', contractId)
-    .single();
-  if (!contract) return;
-
-  const { data: signers } = await admin
-    .from('contract_signers')
-    .select('name, email, role, sign_token, signed_at, signing_order')
-    .eq('contract_id', contractId)
-    .order('signing_order');
-  if (!signers) return;
-
-  const { data: userRow } = await admin.auth.admin.getUserById(contract.user_id);
-  const meta = (userRow?.user?.user_metadata ?? {}) as Record<string, unknown>;
-  const mcBusinessName =
-    (meta.business_name as string | undefined) ||
-    (meta.display_name as string | undefined) ||
-    'Your supplier';
-
-  const branding = await emailBrandingForUser(admin, contract.user_id);
-  const sender = await resolveSender(admin, contract.user_id, mcBusinessName);
-  const signerNames = signers.filter((s) => s.signed_at).map((s) => s.name);
-  const signedAt = contract.signed_at
-    ? new Date(contract.signed_at).toLocaleDateString('en-AU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
-    : null;
-
-  // Each signer keeps their own link so the page can still identify them;
-  // the account holder gets the canonical share link.
-  const recipients: Array<{ email: string; name: string; token: string }> = [];
-  for (const s of signers) {
-    if (s.email) recipients.push({ email: s.email, name: s.name, token: s.sign_token });
-  }
-  if (userRow?.user?.email) {
-    recipients.push({
-      email: userRow.user.email,
-      name: mcBusinessName,
-      token: contract.share_token,
-    });
-  }
-
-  const seen = new Set<string>();
-  for (const r of recipients) {
-    if (seen.has(r.email.toLowerCase())) continue;
-    seen.add(r.email.toLowerCase());
-    await sendContractSignedEmail({
-      recipientEmail: r.email,
-      recipientName: r.name,
-      contractNumber: contract.contract_number,
-      contractTitle: contract.title ?? `Contract ${contract.contract_number}`,
-      signerNames,
-      signedAt,
-      shareUrl: `${process.env.NEXT_PUBLIC_APP_URL}/contract/${r.token}`,
-      mcBusinessName,
-      sender,
-      branding,
-    });
-  }
-}
 
 export async function POST(request: NextRequest) {
   const { allowed, retryAfter } = await limiter.check(ipOf(request));
@@ -139,22 +76,34 @@ export async function POST(request: NextRequest) {
 
   const parsed = await parseJsonBody(request, bodySchema);
   if (!parsed.ok) return parsed.response;
-  const { token, signer_name: signerName } = parsed.data;
+  const {
+    token,
+    signer_name: signerName,
+    signature_mode: signatureMode,
+    signature_image: signatureImage,
+  } = parsed.data;
 
   const supabase = await createClient();
   const ip = ipOf(request);
   const userAgent = request.headers.get('user-agent');
 
-  const { data, error } = await supabase.rpc('sign_contract', {
-    token,
-    p_signer_name: signerName,
-    // SQL accepts null for both; we explicitly cast through the
-    // generated types' string requirement.
-    p_signer_ip: ip,
-    p_signer_user_agent: userAgent ?? '',
+  // The v2 payload RPC, so new inputs are keys rather than new parameters.
+  // The 4-arg `sign_contract` name still exists as a forwarder for callers
+  // that have not moved over.
+  const { data, error } = await supabase.rpc('sign_contract_v2', {
+    p_token: token,
+    p_payload: {
+      signer_name: signerName,
+      // IP and user agent are read server-side: the client cannot be trusted
+      // to report them.
+      signer_ip: ip,
+      signer_user_agent: userAgent ?? '',
+      signature_mode: signatureMode ?? 'typed',
+      ...(signatureImage ? { signature_image: signatureImage } : {}),
+    },
   });
   if (error) {
-    logger.error('[contract/sign] sign_contract RPC failed', error, {
+    logger.error('[contract/sign] sign_contract_v2 RPC failed', error, {
       token,
     });
     // Don't return the raw DB error message — could leak schema
@@ -175,6 +124,8 @@ export async function POST(request: NextRequest) {
     /** False while other required signers are still outstanding. */
     complete?: boolean;
     outstanding?: number;
+    /** Set on a sequential contract when someone's turn has just begun. */
+    next_signer_id?: string | null;
   };
   if (result.error) {
     // Surface the typed RPC errors verbatim — these are by-design
@@ -188,6 +139,13 @@ export async function POST(request: NextRequest) {
   // on every signature would be noise. If the MC team wants
   // notifications, the in-product dashboard surfaces the audit
   // trail.
+
+  // On a sequential contract the next signer has been held back until now, so
+  // this is the only way they hear it is their turn. Fire-and-forget for the
+  // same reason as the copies below: the signature is already recorded.
+  if (result.next_signer_id && result.contract_id) {
+    void sendNextSignerInvite(result.contract_id, result.next_signer_id).catch(() => undefined);
+  }
 
   // Once the last required signature lands, give every party a copy of the
   // executed agreement. Failures here must not fail the request: the

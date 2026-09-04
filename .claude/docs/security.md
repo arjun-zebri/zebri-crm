@@ -326,8 +326,37 @@ used in server routes / server actions / server-side lib modules:
 
 - `app/admin/actions.ts`
 - `app/api/portal/upload/route.ts`
+- `app/api/contract/otp/{request,verify}/route.ts`
 - `app/api/stripe/{checkout,webhook,invoice-payment,connect/callback}/route.ts`
 - `lib/admin/admin-analytics.ts`
+- `lib/contracts/notify.ts`
+
+**Why the two contract OTP routes need it** (2026-09-03). The signer
+verification RPCs (`issue_signer_otp`, `peek_signer_otp`,
+`fail_signer_otp`, `consume_signer_otp`) are granted to `service_role`
+ONLY, with `anon` and `authenticated` explicitly revoked. That is
+load-bearing, not incidental:
+
+- `issue_signer_otp` accepts a caller-supplied **hash**. If `anon`
+  could reach it, whoever holds a sign link would POST the hash of a
+  code they chose and then "verify" that code, defeating the entire
+  check. The point of the OTP is to distinguish the link holder from
+  the mailbox owner.
+- `peek_signer_otp` returns the stored `code_hash` and salt, which
+  must never be reachable through an anon-granted path.
+- The obvious alternative (SQL generates the code and returns the
+  plaintext to an anon caller) is strictly worse: it hands the code
+  straight to the link holder.
+
+The plaintext code is never stored. Only a salted SHA-256 is, and the
+comparison happens in Node with `timingSafeEqual`, so Postgres never
+sees the code at all. SHA-256 rather than a slow KDF is deliberate:
+the secret is a 6-digit code with a 10-minute TTL and a 5-attempt
+lockout, so the offline-cracking threat a KDF defends against does not
+exist, and the attempt cap is the real control. See `lib/contracts/otp.ts`.
+
+`lib/contracts/notify.ts` uses it because the caller is an anonymous
+signer who cannot read the contract roster under RLS.
 
 ### Input validation — `@/lib/api/validate`
 

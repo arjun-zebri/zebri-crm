@@ -16,8 +16,13 @@ import type { Block, BlockType } from './types'
 /** Render-split markers: the generic public renderer emits null for these and
  *  each surface injects the live content at the marker position. */
 export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
-  'couplePortal', 'contractBody', 'contractSign', 'vendorTimelineBody',
+  'couplePortal', 'contractBody', 'vendorTimelineBody',
   'questionnaireOneAtATime', 'questionnaireAllOnePage', 'formSubmit',
+  // `contractSign` is deprecated but still a marker: block trees are not
+  // snapshotted per contract, so an MC who has not opted into the per-party
+  // split still has one and it must keep rendering.
+  'contractSign',
+  'contractSignVendor', 'contractSignPrimary', 'contractSignSecondary',
 ] as const)
 
 /**
@@ -31,6 +36,7 @@ export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
 export const CLEARABLE_MARKERS: ReadonlySet<BlockType> = new Set([
   'contractBody', 'contractSign', 'vendorTimelineBody', 'couplePortal',
   'questionnaireOneAtATime', 'questionnaireAllOnePage', 'formSubmit',
+  'contractSignVendor', 'contractSignPrimary', 'contractSignSecondary',
 ] as const)
 
 /**
@@ -59,7 +65,13 @@ const DATA_BOUND: ReadonlySet<BlockType> = new Set([
  *  body instead (see contract-branded-card's absent-marker fallback). */
 export const REQUIRED_BY_SURFACE: Readonly<Record<SurfaceTab, readonly BlockType[]>> = {
   invoice: ['title', 'lineItems', 'totals'],
-  contract: ['title', 'contractBody', 'contractSign'],
+  // A contract needs BOTH parties' signatures to be an agreement: the supplier
+  // and the primary contact. Without the primary panel nobody can sign at all,
+  // and without the supplier panel the document shows only one side committing.
+  // The secondary panel stays optional, since plenty of couples have a single
+  // named contact. A tree still carrying the deprecated `contractSign`
+  // satisfies both (see readiness).
+  contract: ['title', 'contractBody', 'contractSignVendor', 'contractSignPrimary'],
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
   // The questionnaire's form style is governed by the exactly-one rule below,

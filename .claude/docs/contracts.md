@@ -237,3 +237,145 @@ on contracts being Pro-only.
 - `lib/auth/entitlements.ts` (`hasContractsAccess`)
 - `lib/generate-pdf.ts` (`'contract'` branch)
 - `vercel.json`  -  cron schedules
+
+---
+
+## Signing: per-party blocks, drawn signatures, order, verification, certificate (2026-09-03)
+
+Five changes to how a contract is signed and evidenced. Every one of
+them defaults to the behaviour that existed before it, so no contract
+already in the field changes without an explicit MC action.
+
+### Per-party signature blocks
+
+The single `contractSign` block stacked three things in a fixed order:
+the supplier's countersignature, the roster of who had signed, and the
+live sign form. It is replaced by three markers the MC places and
+styles independently:
+
+| Block | Renders |
+|---|---|
+| `contractSignVendor` | The supplier's countersignature |
+| `contractSignPrimary` | Client signer at `signing_order` 1 |
+| `contractSignSecondary` | Client signer at `signing_order` 2 |
+
+The live sign form appears inside whichever block belongs to the person
+viewing the link. A block renders nothing when the contract has no such
+party, so a couple with one named contact never shows an empty slot.
+
+**`contractSign` is deprecated but still fully supported**, and this is
+the important part: block trees are **not** snapshotted per contract.
+`get_public_contract` reads `_user_branding_blocks(user_id, 'contract')`
+live, so a contract sent months ago re-renders through whatever the MC's
+branding says today. Auto-migrating the old block would therefore
+restructure the signature section of every live contract the next time
+anyone opened it. So it is not migrated; `contract-card-layout.ts`
+supports both shapes and picks per tree. The stray legacy block is
+dropped only once the MC has explicitly added a per-party one.
+
+A contract with **no signer rows at all** (predating `contract_signers`)
+forces legacy mode regardless of blocks: the per-party panels resolve
+from those rows, so honouring the blocks would print a blank signature
+page.
+
+### Drawn signatures
+
+The signer picks Type (the default, unchanged) or Draw. The typed name
+is required in **both** modes: it identifies the signer, the drawing is
+the mark. The MC draws theirs once in Settings; it is snapshotted onto
+`contract_signers` at send time, so redrawing it never alters a contract
+already sent.
+
+Stored as a base64 PNG data URL in a column, not a Storage object. The
+print path (`lib/pdf/print-document.tsx`) waits on `document.fonts.ready`
+but **never on images**, so a Storage URL can lose the race and produce
+a signed PDF with a missing signature and no error. A data URL is
+already inside the serialised markup. Capped at 128KB and validated in
+three places (client, route Zod schema, column CHECK plus an RPC guard),
+because `sign_contract_v2` is `security definer` and granted to `anon`.
+
+### Signing order
+
+`contracts.signing_mode`, default `'parallel'` (the historical
+behaviour). `'sequential'` holds each client signer until every lower
+`signing_order` client has signed. Enforced in `sign_contract_v2` as a
+DB predicate so it cannot be bypassed by POSTing at the route; the page
+mirrors it only to explain the wait. The next signer's invite is sent
+from `lib/contracts/notify.ts` — Postgres must not make outbound HTTP,
+so the RPC returns `next_signer_id` and the route acts on it.
+
+### Signer verification
+
+`contracts.require_signer_otp`, default false. A 6-digit code emailed
+to that signer's own address. Gate details and the service-role
+rationale are in `security.md`.
+
+Two product decisions worth remembering: a signer with **no email on
+file is never gated** (nobody should be locked out of a contract because
+the MC left the field blank), and **declines are not gated** either
+(declining is the safe direction, and gating it could trap a signer who
+cannot receive their code).
+
+### Certificate of completion
+
+`contract_audit_log` has recorded everything since May 2026 and, until
+now, nothing ever read it. The executed contract gains a certificate
+listing every event, plus a document fingerprint.
+
+**IPs are redacted to a /24 (or /48) on the public payload.** DocuSign
+prints full IPs and delivers the certificate to every party, which is
+defensible there because envelope recipients are identified parties. A
+Zebri link is a **bearer capability**: anyone the couple forwards it to
+becomes a link holder. The prefix keeps the evidentiary point anyone
+actually uses (same household vs different networks) without publishing
+a precise identifier. The MC sees full IPs in the in-app Activity panel,
+under the table's owner-only SELECT policy. Signer emails are never
+printed on the certificate, and the trail appears only once the contract
+reaches a final status.
+
+**The hash covers the executed facts, not the rendered page**: the
+agreement text plus each signer's name, mark and timestamp. Hashing the
+page would change every time the MC edited their branding, which is
+worse than no hash because it would look like tampering. Computed inside
+`sign_contract_v2` at the instant of completion. Already-signed
+contracts were backfilled, dated to `signed_at`.
+
+`GET /api/contract/verify?hash=…` looks a fingerprint up by hash only
+and returns no document content, so a venue or tribunal holding just the
+PDF can confirm it matches a record Zebri holds.
+
+> **Honest limitation.** The hash proves the record Zebri stores matches
+> the PDF you hold. It does **not** prove Zebri did not alter both,
+> because Zebri holds both. Real tamper-evidence would require
+> publishing digests to an external transparency log, which is out of
+> scope. Do not let this be described as tamper-proof in marketing copy.
+
+### Also fixed here
+
+- **Shared-inbox delivery.** Both the send route and the reminder cron
+  de-duplicated recipients by email address, so when partners shared an
+  inbox the second partner's link was dropped from the initial send AND
+  every reminder round. They could never sign and the contract could
+  never complete. Both now group by address and send one email with a
+  named button per signer (`lib/contracts/signer-recipients.ts`).
+- **A stale `decline_contract(uuid, text)` overload**, granted to `anon`
+  and predating the audit log, was dropped. PostgREST selects an
+  overload by argument names, so a body of exactly `{token, p_reason}`
+  deterministically hit the old one, which wrote no audit row and never
+  marked the signer.
+- **Caveat was never actually loaded.** Every "cursive signature" in the
+  product was falling back to Brush Script MT. Now registered in the app
+  shell and, separately, in the print window (a different document where
+  `var(--font-signature)` does not resolve). See
+  `lib/branding/signature-font.ts`.
+
+### RPC signature policy
+
+`sign_contract` and `decline_contract` are now thin forwarders onto
+`sign_contract_v2(uuid, jsonb)` / `decline_contract_v2(uuid, jsonb)`.
+**Add payload keys, never parameters.** Adding a defaulted parameter
+with `create or replace` does not replace a function: it creates a
+second overload and leaves the old body live and still anon-granted, so
+every guard in the new version becomes bypassable by calling the old
+signature. That is not hypothetical — it is exactly what had already
+happened to `decline_contract`.

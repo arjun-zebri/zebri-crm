@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from 'react'
 import { AddressAutocomplete, type AddressValue } from '@/components/ui/address-autocomplete'
 import { useToast } from '@/components/ui/toast'
 import { Tooltip } from '@/components/ui/tooltip'
+import { SIGNATURE_FONT_STACK } from '@/lib/branding/signature-font'
 import {
   VENDOR_ROLE_PRESETS,
   derivedVendorRole,
@@ -15,6 +16,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 
 import { AutoSaveStatus, type SaveState } from './auto-save-status'
+import { SignatureDrawField } from './signature-draw-field'
 
 const businessTypeOptions = VENDOR_ROLE_PRESETS
 
@@ -32,6 +34,8 @@ interface PersonalInfoSectionProps {
     businessType: string | string[]
     vendorRole: string
     mcSignatureName: string
+    /** The MC's drawn signature (PNG data URL) from user_public_settings. */
+    mcSignatureImage?: string | null
     addressText: string
     addressLat: number | null
     addressLng: number | null
@@ -496,12 +500,17 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
             {mcSignatureName && (
               <div className="mt-2 border border-gray-100 bg-gray-50 rounded-control p-3">
                 <p className="text-body text-text-muted mb-1">Preview</p>
-                <p className="text-2xl text-text" style={{ fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+                <p className="text-2xl text-text" style={{ fontFamily: SIGNATURE_FONT_STACK }}>
                   {mcSignatureName}
                 </p>
               </div>
             )}
           </div>
+
+          {/* The drawn signature sits beside the typed name rather than
+              replacing it: the typed name identifies the supplier and is the
+              fallback for anyone who has not drawn one. */}
+          <SignatureDrawField value={initialData.mcSignatureImage ?? null} />
         </div>
 
         <div className="flex items-center gap-3 pt-2 h-5">

@@ -1664,3 +1664,71 @@ Parameters:
 Grant: service_role (cron only).
 
 Migration: `20260821000000_booking_lifecycle.sql`.
+
+## Contract signing + money-surface columns (2026-09-03)
+
+Six migrations, `20260903000000` through `20260903005000`. Every column
+added defaults to the behaviour that existed before it, so no existing
+row changes meaning.
+
+### `contracts`
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `signing_mode` | text | `'parallel'` | `'sequential'` holds each client signer until lower `signing_order` clients have signed |
+| `require_signer_otp` | boolean | false | Gate signing behind an emailed 6-digit code |
+| `document_hash` | text | null | Hex SHA-256 over the executed facts, set once at completion |
+| `document_hash_algo` | text | null | Recipe version (`zebri-sha256-v1`) so a v2 can coexist |
+| `document_hash_at` | timestamptz | null | When the hash was taken |
+
+### `contract_signers`
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `signature_mode` | text | `'typed'` | `'drawn'` means `signature_image` holds the mark |
+| `signature_image` | text | null | Base64 PNG data URL, CHECK-capped at 128KB |
+| `otp_verified_at` | timestamptz | null | Last successful code verification; `sign_contract_v2` requires it within 30 minutes |
+
+### `contract_signer_otps` (new)
+One-time codes. Stores `code_hash` + `code_salt` only, never the code.
+RLS: owner SELECT only (an MC asking "did their code go out?" is a real
+support need, and the row exposes only a hash). **No insert/update/delete
+policy** — the only writers are the definer RPCs, granted to
+`service_role` alone. See `security.md`.
+
+### `user_public_settings`
+| Column | Type | Purpose |
+|---|---|---|
+| `mc_signature_image` | text | The MC's drawn signature, snapshotted onto `contract_signers` at send |
+
+Deliberately **not** on `user_metadata`: `_user_branding` reads
+`raw_user_meta_data` onto every public surface, and `user_metadata` is
+serialised into the JWT and is user-writable. A 100KB access token is
+not acceptable.
+
+### `invoice_items` / `invoice_template_items`
+| Column | Type | Purpose |
+|---|---|---|
+| `note` | text | Optional per-line note, rendered under the description on the public invoice and PDF |
+
+### `packages`
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `pricing_mode` | text | `'itemised'` | `'single'` makes line items unpriced inclusions |
+| `fixed_price` | numeric(10,2) | null | The whole base price in `single` mode |
+
+### `contract_audit_log`
+`event_type` CHECK gained `'invite_sent'` and `'identity_verified'`.
+
+### Functions
+- `sign_contract_v2(uuid, jsonb)` / `decline_contract_v2(uuid, jsonb)` —
+  the canonical entry points. The old positional names are forwarders.
+  **Add payload keys, never parameters** (see `contracts.md`).
+- `issue_signer_otp` / `peek_signer_otp` / `fail_signer_otp` /
+  `consume_signer_otp` — `service_role` ONLY, anon and authenticated
+  explicitly revoked.
+- `_ip_prefix(text)` — /24 or /48 redaction for the public audit trail.
+  No anon grant; called only inside the definer function.
+- `_contract_canonical_payload(uuid)` — the deterministic string the
+  document hash is taken over.
+- `verify_contract_hash(text)` — public fingerprint lookup, by hash only,
+  returning no document content.
+- Dropped: the stale `decline_contract(uuid, text)` overload.

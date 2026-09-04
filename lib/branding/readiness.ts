@@ -79,7 +79,20 @@ export function evaluateSurface(
   // Layer A: Required blocks
   const required = requiredTypesForSurface(surface)
   const blockTypes = new Set(blocks.map((b) => b.type))
-  const missing = required.filter((type) => !blockTypes.has(type))
+  // The deprecated all-in-one `contractSign` block still provides a way to
+  // sign, so a tree that has not been split into per-party panels is READY,
+  // not broken. Without this every MC who had not opted into the split would
+  // be told their contract could not be sent.
+  const legacySignSatisfies =
+    surface === 'contract' && blockTypes.has('contractSign')
+  const missing = required.filter(
+    (type) =>
+      !blockTypes.has(type) &&
+      !(
+        legacySignSatisfies &&
+        (type === 'contractSignPrimary' || type === 'contractSignVendor')
+      ),
+  )
 
   if (missing.length > 0) {
     layerAReady = false

@@ -19,7 +19,13 @@ export const GENERAL_BLOCKS: BlockType[] = [
 /** Document-specific blocks per surface (spec §2.2). */
 export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
   invoice: ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action'],
-  contract: ['title', 'contractBody', 'contractSign'],
+  // `contractSign` is deliberately absent: it is deprecated and must not be
+  // addable to a new tree, but existing trees that still carry one keep
+  // rendering it (see policy.MARKER_TYPES).
+  contract: [
+    'title', 'contractBody',
+    'contractSignVendor', 'contractSignPrimary', 'contractSignSecondary',
+  ],
   portal: ['couplePortal'],
   vendorTimeline: ['vendorTimelineBody'],
   questionnaire: ['questionnaireOneAtATime', 'questionnaireAllOnePage'],
