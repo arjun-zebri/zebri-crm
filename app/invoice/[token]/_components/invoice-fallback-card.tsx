@@ -268,6 +268,22 @@ export function InvoiceFallbackCard({
                     {item.quantity} × {formatCurrency(item.unit_price)}
                   </span>
                 ) : null}
+                {/* Per-line note, styled as fine print like the qty line above
+                    it. `whitespace-pre-line` preserves the MC's line breaks. */}
+                {item.note ? (
+                  <span
+                    className="block whitespace-pre-line"
+                    style={{
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                    }}
+                  >
+                    {item.note}
+                  </span>
+                ) : null}
               </div>
               <span
                 className="font-medium tabular-nums shrink-0"

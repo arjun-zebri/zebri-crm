@@ -53,6 +53,7 @@ import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-
 import { DiscountControl } from '@/components/builders/parts/discount-control';
 import {
   type LineItem,
+  type LineItemField,
   LineItemsTable,
 } from '@/components/builders/parts/line-items-table';
 import { NotesField } from '@/components/builders/parts/notes-field';
@@ -216,7 +217,7 @@ export function InvoiceBuilderModal({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoice_items')
-        .select('id, description, amount, position')
+        .select('id, description, note, amount, position')
         .eq('invoice_id', effectiveId!)
         .order('position', { ascending: true });
       if (error) throw error;
@@ -428,7 +429,7 @@ export function InvoiceBuilderModal({
     setDirty(true);
   }
 
-  function updateItem(id: string, field: 'description' | 'amount', value: string | number) {
+  function updateItem(id: string, field: LineItemField, value: string | number) {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
     );
@@ -467,9 +468,14 @@ export function InvoiceBuilderModal({
       source.package?.weekendLoadingPercent,
     );
     setItems(
-      [...lines, ...(loading ? [loading] : [])].map((item, idx) => ({
+      // The weekend-loading line is a FlattenedLineItem (no note), which is
+      // structurally an ApplyItem since `note` is optional.
+      ([...lines, ...(loading ? [loading] : [])] as ApplyItem[]).map((item, idx) => ({
         id: `new-${crypto.randomUUID()}`,
         description: item.description,
+        // Present on invoice-template lines and on a single-price package's
+        // folded inclusions; absent elsewhere.
+        note: item.note ?? null,
         amount: item.amount,
         position: idx,
       })),
@@ -510,6 +516,7 @@ export function InvoiceBuilderModal({
         items: items.map((item, idx) => ({
           id: item.id,
           description: item.description,
+          note: item.note ?? null,
           amount: Number(item.amount || 0),
           position: idx,
         })),
@@ -768,6 +775,7 @@ export function InvoiceBuilderModal({
     items: items.map((item) => ({
       id: item.id,
       description: item.description,
+      note: item.note ?? null,
       amount: Number(item.amount || 0),
     })),
     taxRate: effectiveTaxRate,

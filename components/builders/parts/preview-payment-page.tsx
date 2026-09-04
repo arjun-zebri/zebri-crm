@@ -75,6 +75,9 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
     items: doc.items.map((item) => ({
       id: item.id,
       description: item.description,
+      // Carried through so the right-pane preview shows the same per-line note
+      // the sent invoice and the PDF will print.
+      note: item.note ?? null,
       amount: item.amount,
     })),
     subtotal: doc.items.reduce((sum, item) => sum + Number(item.amount || 0), 0),
