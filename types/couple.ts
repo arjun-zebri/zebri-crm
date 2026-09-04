@@ -47,6 +47,12 @@ export interface Couple {
   lead_source: string | null
   /** "How did you hear about me" - captured by the lead-capture form or edited inline. */
   referral_source?: string | null
+  /**
+   * The site an API or embed enquiry was posted from (an origin such as
+   * https://www.mc-site.com). Server-set by the lead submit route; null for
+   * the hosted form, server-side posts, and every couple created any other way.
+   */
+  source_origin?: string | null
   kanban_position: number
   created_at: string
   portal_token?: string

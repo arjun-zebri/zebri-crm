@@ -126,6 +126,13 @@ and `20260731010000`) until the CI deploy. Integration coverage stays in
 
 **Isolated-stack guard:** Phase 11 tests require either `BRANDING_E2E=1` OR `PLAYWRIGHT_BASE_URL` including `3123` (local Supabase on port 3123). Phase C tests (integration + new e2e) require `supabase start` locally; they are skipped on the remote dev server. Test helpers in `tests/e2e/helpers.ts`.
 
+### Lead capture e2e specs (ZEB-2 + Public API 2026-09-03)
+
+- `tests/e2e/lead-capture.spec.ts`  -  the hosted `/lead/[token]` flow: MC copies the hosted link from Settings, Lead Capture, a logged-out visitor fills and submits it, sees the branded success state, and the lead appears in the MC's pipeline.
+- `tests/e2e/lead-capture-api.spec.ts`  -  the public API a third-party site posts to. The spec starts a plain `http.Server` on `127.0.0.1` inside itself (`node:http`, ephemeral port) and serves a tiny third-party page from it, because that is a genuinely different origin from the app's own `localhost` (a page opened via `context.newPage()` or a relative path would still be same-origin, so the CORS allowlist would never actually be exercised). It allowlists that origin from Settings, confirms a browser post from it lands (and the couple shows "Enquiry from" with the `127.0.0.1:<port>` host), then removes the origin and confirms the browser now refuses the post.
+
+**The 2000ms minimum-fill spam check applies to both specs.** The submit route silently drops (200, nothing stored) any submission faster than `MIN_FILL_MS` after the form rendered, so both specs `waitForTimeout(2200)` before clicking submit. Playwright fills a form fast enough that without this wait the submission is treated as a bot and the test's "lead appears" assertion times out with no error to explain why.
+
 ### Public booking e2e specs (Scheduler Phase C)
 
 E2E: `tests/e2e/booking.spec.ts` covers the public booking flow end to end. Covers:

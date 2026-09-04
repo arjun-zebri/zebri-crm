@@ -19,6 +19,13 @@ export interface LeadFormProps {
   token: string;
   /** The full RPC payload (branding + business name + the saved block tree). */
   form: PublicLeadForm;
+  /**
+   * True inside the iframe embed. The form then reports `document.referrer`
+   * (the host page) so the lead records which site it came from. Off on the
+   * hosted page, where the referrer is wherever the couple browsed from, not
+   * the site the form lived on.
+   */
+  embed?: boolean;
 }
 
 type SubmitState = 'ready' | 'submitting' | 'success' | 'error';
@@ -40,16 +47,26 @@ const EMPTY = {
  * {@link BlockLeadForm}; otherwise it falls back to the fixed field set below so
  * forms published before the block editor existed keep working unchanged.
  */
-export function LeadForm({ token, form }: LeadFormProps) {
+export function LeadForm({ token, form, embed }: LeadFormProps) {
   const blocks = form.blocks;
   if (blocks && blocks.length > 0) {
-    return <BlockLeadForm token={token} form={form} blocks={blocks} />;
+    return <BlockLeadForm token={token} form={form} blocks={blocks} embed={embed ?? false} />;
   }
-  return <FixedLeadForm token={token} businessName={form.business_name || 'us'} />;
+  return (
+    <FixedLeadForm token={token} businessName={form.business_name || 'us'} embed={embed ?? false} />
+  );
 }
 
 /** The fixed-field fallback form, used when the MC has not customised the tree. */
-function FixedLeadForm({ token, businessName }: { token: string; businessName: string }) {
+function FixedLeadForm({
+  token,
+  businessName,
+  embed,
+}: {
+  token: string;
+  businessName: string;
+  embed?: boolean;
+}) {
   const [state, setState] = useState<SubmitState>('ready');
   // Stamped on mount (client only) so the submit route can measure fill time.
   // Date.now() during render trips the react-hooks purity rule.
@@ -77,7 +94,13 @@ function FixedLeadForm({ token, businessName }: { token: string; businessName: s
       const res = await fetch('/api/lead/submit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token, ...fields, hp, rendered_at: renderedAt.current }),
+        body: JSON.stringify({
+          token,
+          ...fields,
+          hp,
+          rendered_at: renderedAt.current,
+          ...(embed ? { referrer: document.referrer } : {}),
+        }),
       });
       setState(res.ok ? 'success' : 'error');
     } catch {

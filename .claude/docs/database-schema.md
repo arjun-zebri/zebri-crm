@@ -128,6 +128,8 @@ referral_source (text, nullable)
 
 "How did you hear about me" answer. Free text captured by the lead-capture form (ZEB-2) and editable on the couple modal; distinct from lead_source.
 
+source_origin (text, nullable), added by the Lead Capture API migration (2026-09-03, `20260903100000_lead_capture_api.sql`). The browser origin (scheme://host[:port]) the enquiry was posted from. Server-computed by `POST /api/lead/submit`: the request's `Origin` header for a third-party site's post, or the embed's own referrer reduced to an origin when the post is same-origin (hosted page, iframe embed). Null for server-side posts. Read-only in the app; the couple Overview shows it as an "Enquiry from" row (`couple-source-origin-row.tsx`) only when set.
+
 created_at (timestamp)
 
 ------------------------------------------------------------------------
@@ -154,9 +156,16 @@ Each user has their own set of custom statuses. The slug is stored in couples.st
 
 One embeddable lead-capture form per MC. The capture_token is the public
 capability for the /lead/[token] surface (mirrors couples.portal_token).
-RLS: single owner-isolation policy (auth.uid() = user_id). Public access
-is only via the security-definer RPCs get_lead_form / submit_lead, both
-granted to anon; the anon client never touches the table directly.
+RLS: single owner-isolation policy (auth.uid() = user_id). The hosted
+/lead/[token] page reads via the security-definer get_lead_form RPC
+(anon-granted); submissions write through the security-definer
+submit_lead RPC (also anon-granted). The public Lead Capture API routes
+(`POST /api/lead/submit`, `GET /api/lead/config`, 2026-09-03) instead
+read this table directly with the service-role admin client
+(`lib/lead-capture/load-config.ts`) to reach `enabled`, `allowed_origins`
+and the block tree without granting any of that to anon; the anon client
+itself still never touches this table directly, and the mutation still
+goes through submit_lead.
 
 Columns:
 
@@ -165,6 +174,8 @@ id (uuid) user_id (uuid, not null, unique) capture_token (uuid, not null, unique
 enabled (boolean, not null, default true)
 
 target_status_slug (text, nullable) — couple_statuses.slug the lead lands in; null falls back to the MC's first status by position
+
+allowed_origins (text[], not null, default '{}'), added 2026-09-03 (`20260903100000_lead_capture_api.sql`). Per-form CORS allowlist for browser posts to `POST /api/lead/submit`, stored exactly as a browser sends an `Origin` header (scheme://host[:port], lowercase host, no path). GIN index `lead_capture_forms_allowed_origins_idx` backs both the per-form `contains` check and the token-less CORS preflight lookup (`isOriginRegistered`, "is this origin registered on any form"). Same-origin posts (the hosted page, the iframe embed) need no entry here; posts with no `Origin` header at all skip CORS logic entirely. MC-edited from Settings > Lead Capture (`allowed-domains.tsx`), capped at 20 origins.
 
 created_at (timestamp) updated_at (timestamp)
 
@@ -176,13 +187,19 @@ that block tree. Fields are `formField` blocks whose `role` maps each
 answer to a couple column (name/partnerName/email/phone/weddingDate/
 venue/message/referral) or, for `role='custom'`, into the couple notes.
 
-Ingest (submit_lead): validates the token, stores a form_submissions row
-FIRST (so a lead is never lost), resolves the landing status, and inserts
-a couple owned by the token issuer with lead_source='website' and
-referral_source from the "how did you hear" field. Custom answers +
-message fold into couple notes as "Label: value" lines; the new couple id
-is linked back onto the submission. A Starter couple-cap block returns
-{error:'plan_limit'} and keeps the stored submission (couple_id null).
+Ingest: `submit_lead(token uuid, p_payload jsonb, p_source_origin text
+default null)`. The two-argument overload (`submit_lead(uuid, jsonb)`)
+was dropped 2026-09-03 rather than kept alongside it, because a
+defaulted third argument would make the two-argument call ambiguous for
+PostgREST. The function validates the token, stores a form_submissions
+row FIRST (so a lead is never lost), resolves the landing status, and
+inserts a couple owned by the token issuer with lead_source='website',
+referral_source from the "how did you hear" field, and source_origin
+from the third argument (capped to 200 characters; null when omitted).
+Custom answers + message fold into couple notes as "Label: value" lines;
+the new couple id is linked back onto the submission. A Starter
+couple-cap block returns {error:'plan_limit'} and keeps the stored
+submission (couple_id null).
 
 ------------------------------------------------------------------------
 
@@ -204,6 +221,11 @@ created from this submission; null when the plan cap blocked creation
 
 payload (jsonb, not null) — the full submitted payload (canonical fields
 + custom array)
+
+source_origin (text, nullable), added 2026-09-03
+(`20260903100000_lead_capture_api.sql`), mirrors couples.source_origin.
+Recorded even when the plan cap blocked couple creation (couple_id
+null), so the site a blocked lead came from is not lost.
 
 created_at (timestamp)
 

@@ -26,7 +26,7 @@ test.describe('Lead capture', () => {
     await page.goto('/settings?tab=lead-capture', { waitUntil: 'networkidle' });
     await expect(page.getByRole('heading', { name: /lead capture/i })).toBeVisible();
 
-    const hostedField = page.getByLabel('Hosted link');
+    const hostedField = page.getByRole('textbox', { name: 'Hosted link' });
     await expect(hostedField).toBeVisible();
     const hostedUrl = await hostedField.inputValue();
     expect(hostedUrl).toContain('/lead/');
@@ -41,6 +41,10 @@ test.describe('Lead capture', () => {
       .getByRole('textbox', { name: /email/i })
       .fill(`${leadName.replace(/\s+/g, '.').toLowerCase()}@example.test`);
 
+    // Clears the documented 2000ms minimum-fill spam check so the
+    // submission is not treated as a bot and silently discarded.
+    await visitor.waitForTimeout(2200);
+
     // ── 3. Submit -> branded success state ─────────────────────────────────
     await visitor.getByRole('button', { name: /send enquiry/i }).click();
     await expect(visitor.getByText(/thank you/i)).toBeVisible();
@@ -54,7 +58,7 @@ test.describe('Lead capture', () => {
   test('embed mode renders the form without page chrome', async ({ page, context }) => {
     await login(page);
     await page.goto('/settings?tab=lead-capture', { waitUntil: 'networkidle' });
-    const hostedUrl = await page.getByLabel('Hosted link').inputValue();
+    const hostedUrl = await page.getByRole('textbox', { name: 'Hosted link' }).inputValue();
 
     const embed = await context.newPage();
     await embed.goto(`${hostedUrl}?embed=1`, { waitUntil: 'networkidle' });
@@ -72,7 +76,7 @@ test.describe('Lead capture', () => {
     // The MC session is only needed to read the embed URL from Settings.
     await login(page);
     await page.goto('/settings?tab=lead-capture', { waitUntil: 'networkidle' });
-    const hostedUrl = await page.getByLabel('Hosted link').inputValue();
+    const hostedUrl = await page.getByRole('textbox', { name: 'Hosted link' }).inputValue();
     const embedUrl = `${hostedUrl}?embed=1`;
 
     // A genuinely unauthenticated visitor needs a FRESH browser context, so

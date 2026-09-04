@@ -549,7 +549,7 @@ point moved here off the Overview's General section.)
 
 **Overview tab (default):**
 - Two-column grid on `lg+` (`grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16`), stacks to 1-col on mobile
-- Left: General info (Phone, Email, Lead Source inline editable fields) + Package (inline editable Popover of the MC's non-archived packages with name + price, mirroring the Lead Source row; shows what the couple picked in the portal and lets the MC set/override/clear it via a plain RLS update to `couples.selected_package_id`, added 2026-08-19; `couple-package-selector.tsx` on the shared `use-packages` hook). The Package row is **always rendered**, reading "None selected" when the MC has packages but this couple has none, and "No packages yet" only when there are none to choose from: a field that hides itself is undiscoverable. A package can also be chosen up front in the Add/Edit Couple modal, so it does not have to be set as an after-the-fact override. The row is presentational: it reports the chosen id and the couple's single update path persists it, the same as Lead Source.
+- Left: General info (Phone, Email, Lead Source inline editable fields) + Package (inline editable Popover of the MC's non-archived packages with name + price, mirroring the Lead Source row; shows what the couple picked in the portal and lets the MC set/override/clear it via a plain RLS update to `couples.selected_package_id`, added 2026-08-19; `couple-package-selector.tsx` on the shared `use-packages` hook). The Package row is **always rendered**, reading "None selected" when the MC has packages but this couple has none, and "No packages yet" only when there are none to choose from: a field that hides itself is undiscoverable. A package can also be chosen up front in the Add/Edit Couple modal, so it does not have to be set as an after-the-fact override. The row is presentational: it reports the chosen id and the couple's single update path persists it, the same as Lead Source. Below Lead Source, an "Enquiry from" row (`couple-source-origin-row.tsx`, added 2026-09-03) is **read-only** (server-computed, no edit affordance) and renders **only when `couples.source_origin` is set**: the host the enquiry was posted from, via the Lead Capture API or an embed, e.g. `www.example.com`.
 
 **Adding a new editable column to `couples` means adding it to `useUpdateCouple`'s payload too.** That mutation sends an explicit field whitelist, and `updateCoupleAction`'s schema defaults any missing field to null and writes it, so an omitted column is erased rather than left alone. `selected_package_id` shipped missing from that list and every save silently cleared the package the MC had just picked. + Notes textarea (4 rows default, 6 rows when focused)
 - Right: Events list + Vendors/Contacts list
@@ -1377,6 +1377,40 @@ Controls:
   (`<script src="{origin}/lead-embed.js" data-zebri-form="{token}">`  -  a
   static loader in `public/lead-embed.js` that injects the iframe and
   auto-resizes it from the form's `postMessage` height).
+
+**API access (2026-09-03).** A fourth block below the copy blocks, for
+MCs who want to build their own form on their own site rather than
+embed the hosted one: `app/(dashboard)/settings/lead-capture/api-access-section.tsx`.
+- **Endpoint**  -  `{origin}/api/lead/submit`, a `CopyField` (read-only
+  input + Copy button).
+- **Form token**  -  the same `capture_token` as the copy blocks, with
+  a line noting it is safe to put in public code (it identifies the
+  form; it does not grant account access).
+- **Allowed domains**  -  `allowed-domains.tsx`: an editable list of
+  browser origins backing `lead_capture_forms.allowed_origins`. Add
+  validates and normalises the origin (`parseAllowedOrigin` in
+  `lib/lead-capture/cors.ts`  -  must start with `http(s)://`, no path,
+  query, hash or trailing slash, no credentials in the URL) inline
+  before saving; each add or remove autosaves immediately through
+  `onChange`, matching the toggle/select autosave feel above it. Empty
+  state reads "No domains yet. Browser posts will be refused until you
+  add one." and explains posts from your own server need nothing here.
+- **Copy AI prompt**  -  a `CopyButton` that copies `buildAiPrompt()`
+  (`lib/lead-capture/api-reference.ts`), a full plain-text prompt
+  (endpoint, token, fields, error contract) an MC can paste into an AI
+  coding tool to have it build a matching form against this API.
+- **Docs link**  -  "Read the API docs", opens `/docs/lead-capture-api`
+  in a new tab.
+
+**Public API docs  -  `/docs/lead-capture-api`** (`app/docs/lead-capture-api/`).
+A public, logged-out reference page for the same contract the Copy AI
+prompt and `GET /api/lead/config` describe (single source:
+`lib/lead-capture/api-reference.ts`), so the three can never disagree.
+Also served machine-readable at `/llms.txt`
+(`app/llms.txt/route.ts`, the llms.txt convention, `text/plain`, 1 hour
+cache). Both routes are on the middleware `PUBLIC_ROUTES` allowlist
+(`/docs`, `/llms.txt`) so a logged-out visitor is not bounced to
+`/login`.
 
 **Public form  -  `/lead/[token]`** (`app/lead/[token]/page.tsx`, client
 orchestrator). Loads `get_lead_form` via the anon client, applies the

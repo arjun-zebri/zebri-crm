@@ -10,8 +10,6 @@
 
 import { useEffect, useState } from 'react';
 
-import { CopyButton } from '@/components/ui/copy-button';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Toggle } from '@/components/ui/toggle';
 import {
@@ -21,7 +19,9 @@ import {
 } from '@/lib/lead-capture/snippets';
 import { createClient } from '@/lib/supabase/client';
 
-import { ensureLeadForm, saveLeadCaptureSettings } from './lead-capture/actions';
+import { ensureLeadForm, saveAllowedOrigins, saveLeadCaptureSettings } from './lead-capture/actions';
+import { ApiAccessSection } from './lead-capture/api-access-section';
+import { CopyField } from './lead-capture/copy-field';
 import { LeadCaptureSkeleton } from './lead-capture-skeleton';
 
 /** Sentinel for "let leads land in the first pipeline status". */
@@ -32,25 +32,6 @@ interface StatusOption {
   name: string;
 }
 
-function CopyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      {/* The label is rendered here rather than passed to `Input` so the
-          monospace treatment applies to the snippet only, not the label. */}
-      <p className="mb-1 text-body font-medium text-text">{label}</p>
-      <div className="flex items-center gap-2">
-        <Input
-          aria-label={label}
-          readOnly
-          value={value}
-          className="min-w-0 flex-1 font-mono"
-        />
-        <CopyButton value={value} aria-label={`Copy ${label}`} className="shrink-0" />
-      </div>
-    </div>
-  );
-}
-
 export function LeadCaptureSection() {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
@@ -59,6 +40,7 @@ export function LeadCaptureSection() {
   const [targetSlug, setTargetSlug] = useState<string>(DEFAULT_STATUS);
   const [statuses, setStatuses] = useState<StatusOption[]>([]);
   const [origin, setOrigin] = useState('');
+  const [allowedOrigins, setAllowedOrigins] = useState<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -71,6 +53,7 @@ export function LeadCaptureSection() {
       setEnabled(form.enabled);
       setTargetSlug(form.targetStatusSlug ?? DEFAULT_STATUS);
       setStatuses(statusRows.data ?? []);
+      setAllowedOrigins(form.allowedOrigins);
       setLoading(false);
     };
     void load();
@@ -81,6 +64,13 @@ export function LeadCaptureSection() {
       enabled: next.enabled,
       targetStatusSlug: next.targetSlug === DEFAULT_STATUS ? null : next.targetSlug,
     });
+  };
+
+  const changeAllowedOrigins = async (next: string[]) => {
+    const res = await saveAllowedOrigins(next);
+    if (!res.ok) return res.error;
+    setAllowedOrigins(res.origins);
+    return null;
   };
 
   const options = [
@@ -131,11 +121,45 @@ export function LeadCaptureSection() {
             className="max-w-xs"
           />
 
+          {/* Three ways to publish the same form. They looked like three
+              things to do rather than a choice, so the heading says pick one
+              and each row explains who it is for on hover. */}
           <div className="space-y-4">
-            <CopyField label="Hosted link" value={buildHostedUrl(origin, token)} />
-            <CopyField label="Embed (iframe)" value={buildIframeSnippet(origin, token)} />
-            <CopyField label="Embed (script)" value={buildScriptSnippet(origin, token)} />
+            <div>
+              <h3 className="text-body font-semibold text-text">Share your form</h3>
+              <p className="mt-1 text-body text-text-muted">
+                Pick whichever suits your site. They all lead to the same form.
+              </p>
+            </div>
+            <CopyField
+              label="Hosted link"
+              value={buildHostedUrl(origin, token)}
+              tooltip={
+                'A ready-made page on Zebri.\nSend it to couples, or link to it from your site. Nothing to install.'
+              }
+            />
+            <CopyField
+              label="Embed (iframe)"
+              value={buildIframeSnippet(origin, token)}
+              tooltip={
+                'Paste into your own page to show the form inside it.\nUse this if your site builder accepts HTML.'
+              }
+            />
+            <CopyField
+              label="Embed (script)"
+              value={buildScriptSnippet(origin, token)}
+              tooltip={
+                'Same form as the iframe, but it resizes itself to fit your page.\nUse this if you can add a script tag.'
+              }
+            />
           </div>
+
+          <ApiAccessSection
+            origin={origin}
+            token={token}
+            allowedOrigins={allowedOrigins}
+            onAllowedOriginsChange={changeAllowedOrigins}
+          />
         </>
       )}
     </div>

@@ -245,6 +245,50 @@ describe('submit_lead', () => {
       .eq('user_id', user.id);
     expect(count).toBe(5); // unchanged
   });
+
+  it('records p_source_origin on the submission and the couple', async () => {
+    const { user, token } = await arrangeForm();
+    cleanupQueue.push(user.cleanup);
+    const { data, error } = await anonClient().rpc('submit_lead', {
+      token,
+      p_payload: { name: 'Origin Test', email: 'origin@example.test' },
+      p_source_origin: 'https://www.example.com',
+    });
+    expect(error).toBeNull();
+    expect((data as { ok?: boolean }).ok).toBe(true);
+
+    const admin = serviceClient();
+    const couple = await admin
+      .from('couples')
+      .select('source_origin, lead_source')
+      .eq('user_id', user.id)
+      .single();
+    expect(couple.data?.source_origin).toBe('https://www.example.com');
+    expect(couple.data?.lead_source).toBe('website');
+
+    const submission = await admin
+      .from('form_submissions')
+      .select('source_origin')
+      .eq('user_id', user.id)
+      .single();
+    expect(submission.data?.source_origin).toBe('https://www.example.com');
+  });
+
+  it('stores null source_origin when the argument is omitted', async () => {
+    const { user, token } = await arrangeForm();
+    cleanupQueue.push(user.cleanup);
+    const { error } = await anonClient().rpc('submit_lead', {
+      token,
+      p_payload: { name: 'No Origin', email: 'none@example.test' },
+    });
+    expect(error).toBeNull();
+    const couple = await serviceClient()
+      .from('couples')
+      .select('source_origin')
+      .eq('user_id', user.id)
+      .single();
+    expect(couple.data?.source_origin).toBeNull();
+  });
 });
 
 describe('lead_capture_forms RLS', () => {
