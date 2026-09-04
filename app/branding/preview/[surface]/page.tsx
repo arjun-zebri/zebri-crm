@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react'
 import { CouplePortalSample } from '@/app/(dashboard)/branding/blocks/couple-portal-sample'
 import { SAMPLE_RUN_SHEET_EVENT, SAMPLE_RUN_SHEET_ITEMS } from '@/app/(dashboard)/branding/blocks/sample-run-sheet'
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
-import type { Block, ContractBodyBlock, ContractSignBlock, CouplePortalBlock, VendorTimelineBodyBlock, QuestionnaireOneAtATimeBlock, QuestionnaireAllOnePageBlock } from '@/app/(dashboard)/branding/blocks/types'
+import type { Block, ContractBodyBlock, ContractSignBlock, ContractSignVendorBlock, ContractSignPrimaryBlock, ContractSignSecondaryBlock, CouplePortalBlock, VendorTimelineBodyBlock, QuestionnaireOneAtATimeBlock, QuestionnaireAllOnePageBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { VendorTimeline } from '@/app/portal/[token]/vendor/vendor-timeline'
 import { ClassicForm } from '@/components/questionnaires/classic-form'
 import { themeFromBranding } from '@/components/questionnaires/theme'
@@ -29,6 +29,7 @@ import { googleFontsHref } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead, type PublicBranding } from '@/lib/branding/public-surface'
 import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
+import { SIGNATURE_FONT_STACK } from '@/lib/branding/signature-font'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
@@ -245,6 +246,13 @@ function ContractPreview({
       nodes.push(
         <PreviewContractSign key="sign" branding={branding} {...(contractSignBlock ? { block: contractSignBlock } : {})} />,
       )
+    } else if (
+      b.type === 'contractSignVendor' ||
+      b.type === 'contractSignPrimary' ||
+      b.type === 'contractSignSecondary'
+    ) {
+      flush()
+      nodes.push(<PreviewContractSignParty key={b.id} branding={branding} block={b} />)
     } else {
       buffer.push(b)
     }
@@ -344,10 +352,46 @@ function PreviewContractSign({
       </div>
       <div className="border-t pt-6" style={{ borderTopColor: branding.border_color }}>
         <p className="mb-1" style={{ color: muted, fontSize: 12 }}>Signed by {branding.vendor_role || DEFAULT_VENDOR_ROLE}</p>
-        <p style={{ fontSize: 28, lineHeight: 1, color: roleDefaults(branding, 'body').color, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+        <p style={{ fontSize: 28, lineHeight: 1, color: roleDefaults(branding, 'body').color, fontFamily: SIGNATURE_FONT_STACK }}>
           Your name
         </p>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Standalone preview of one per-party signature panel.
+ *
+ * Mirrors what `ContractSignParty` renders on the live page: the role label,
+ * the signature line and the date, plus the sign form on the primary panel
+ * (the only party whose form an MC is likely to be laying out).
+ */
+function PreviewContractSignParty({
+  branding,
+  block,
+}: {
+  branding: PublicBranding
+  block: ContractSignVendorBlock | ContractSignPrimaryBlock | ContractSignSecondaryBlock
+}) {
+  const labelCss = resolveTextStyle(block.labelStyle, roleDefaults(branding, 'body'))
+  const signatureCss = resolveTextStyle(block.signatureStyle, roleDefaults(branding, 'sectionHeading'))
+  const muted = roleDefaults(branding, 'finePrint').color
+
+  return (
+    <div className="space-y-1.5 border-t pt-8 mt-8" style={{ borderTopColor: branding.border_color }}>
+      <div className="max-w-[260px] border-b pb-1" style={{ borderBottomColor: branding.border_color }}>
+        <span
+          className="inline-block"
+          style={{ ...signatureCss, fontFamily: SIGNATURE_FONT_STACK, opacity: 0.35 }}
+        >
+          Signature
+        </span>
+      </div>
+      <p style={{ ...labelCss, color: muted }}>Name</p>
+      {(block.showDate ?? true) ? (
+        <p style={{ color: muted, fontSize: 12 }}>Date and time signed</p>
+      ) : null}
     </div>
   )
 }

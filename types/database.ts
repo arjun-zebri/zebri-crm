@@ -827,6 +827,63 @@ export type Database = {
           },
         ]
       }
+      contract_signer_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          code_salt: string
+          consumed_at: string | null
+          contract_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          locked_until: string | null
+          signer_id: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          code_salt: string
+          consumed_at?: string | null
+          contract_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          locked_until?: string | null
+          signer_id: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          code_salt?: string
+          consumed_at?: string | null
+          contract_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          locked_until?: string | null
+          signer_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signer_otps_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_signer_otps_signer_id_fkey"
+            columns: ["signer_id"]
+            isOneToOne: false
+            referencedRelation: "contract_signers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_signers: {
         Row: {
           contract_id: string
@@ -836,9 +893,12 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          otp_verified_at: string | null
           required: boolean
           role: string
           sign_token: string
+          signature_image: string | null
+          signature_mode: string
           signed_at: string | null
           signer_ip: string | null
           signer_name_typed: string | null
@@ -855,9 +915,12 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          otp_verified_at?: string | null
           required?: boolean
           role: string
           sign_token?: string
+          signature_image?: string | null
+          signature_mode?: string
           signed_at?: string | null
           signer_ip?: string | null
           signer_name_typed?: string | null
@@ -874,9 +937,12 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          otp_verified_at?: string | null
           required?: boolean
           role?: string
           sign_token?: string
+          signature_image?: string | null
+          signature_mode?: string
           signed_at?: string | null
           signer_ip?: string | null
           signer_name_typed?: string | null
@@ -942,6 +1008,9 @@ export type Database = {
           created_at: string
           declined_at: string | null
           declined_reason: string | null
+          document_hash: string | null
+          document_hash_algo: string | null
+          document_hash_at: string | null
           email_sent_at: string | null
           expires_at: string | null
           id: string
@@ -951,12 +1020,14 @@ export type Database = {
           mc_signature_name: string | null
           notes: string | null
           reminder_count: number
+          require_signer_otp: boolean
           share_token: string
           share_token_enabled: boolean
           signed_at: string | null
           signer_ip: string | null
           signer_name: string | null
           signer_user_agent: string | null
+          signing_mode: string
           status: string
           title: string | null
           updated_at: string
@@ -970,6 +1041,9 @@ export type Database = {
           created_at?: string
           declined_at?: string | null
           declined_reason?: string | null
+          document_hash?: string | null
+          document_hash_algo?: string | null
+          document_hash_at?: string | null
           email_sent_at?: string | null
           expires_at?: string | null
           id?: string
@@ -979,12 +1053,14 @@ export type Database = {
           mc_signature_name?: string | null
           notes?: string | null
           reminder_count?: number
+          require_signer_otp?: boolean
           share_token?: string
           share_token_enabled?: boolean
           signed_at?: string | null
           signer_ip?: string | null
           signer_name?: string | null
           signer_user_agent?: string | null
+          signing_mode?: string
           status?: string
           title?: string | null
           updated_at?: string
@@ -998,6 +1074,9 @@ export type Database = {
           created_at?: string
           declined_at?: string | null
           declined_reason?: string | null
+          document_hash?: string | null
+          document_hash_algo?: string | null
+          document_hash_at?: string | null
           email_sent_at?: string | null
           expires_at?: string | null
           id?: string
@@ -1007,12 +1086,14 @@ export type Database = {
           mc_signature_name?: string | null
           notes?: string | null
           reminder_count?: number
+          require_signer_otp?: boolean
           share_token?: string
           share_token_enabled?: boolean
           signed_at?: string | null
           signer_ip?: string | null
           signer_name?: string | null
           signer_user_agent?: string | null
+          signing_mode?: string
           status?: string
           title?: string | null
           updated_at?: string
@@ -1341,6 +1422,7 @@ export type Database = {
           secondary_phone: string | null
           secondary_portal_token: string
           selected_package_id: string | null
+          source_origin: string | null
           status: string
           user_id: string
           venue: string | null
@@ -1366,6 +1448,7 @@ export type Database = {
           secondary_phone?: string | null
           secondary_portal_token?: string
           selected_package_id?: string | null
+          source_origin?: string | null
           status?: string
           user_id: string
           venue?: string | null
@@ -1391,6 +1474,7 @@ export type Database = {
           secondary_phone?: string | null
           secondary_portal_token?: string
           selected_package_id?: string | null
+          source_origin?: string | null
           status?: string
           user_id?: string
           venue?: string | null
@@ -1657,6 +1741,7 @@ export type Database = {
           created_at: string
           id: string
           payload: Json
+          source_origin: string | null
           user_id: string
         }
         Insert: {
@@ -1664,6 +1749,7 @@ export type Database = {
           created_at?: string
           id?: string
           payload: Json
+          source_origin?: string | null
           user_id: string
         }
         Update: {
@@ -1671,6 +1757,7 @@ export type Database = {
           created_at?: string
           id?: string
           payload?: Json
+          source_origin?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1690,6 +1777,7 @@ export type Database = {
           description: string
           id: string
           invoice_id: string
+          note: string | null
           position: number
           quantity: number
           unit_price: number
@@ -1701,6 +1789,7 @@ export type Database = {
           description: string
           id?: string
           invoice_id: string
+          note?: string | null
           position: number
           quantity?: number
           unit_price: number
@@ -1712,6 +1801,7 @@ export type Database = {
           description?: string
           id?: string
           invoice_id?: string
+          note?: string | null
           position?: number
           quantity?: number
           unit_price?: number
@@ -1793,6 +1883,7 @@ export type Database = {
           description: string
           id: string
           invoice_template_id: string
+          note: string | null
           position: number
           user_id: string
         }
@@ -1802,6 +1893,7 @@ export type Database = {
           description: string
           id?: string
           invoice_template_id: string
+          note?: string | null
           position: number
           user_id: string
         }
@@ -1811,6 +1903,7 @@ export type Database = {
           description?: string
           id?: string
           invoice_template_id?: string
+          note?: string | null
           position?: number
           user_id?: string
         }
@@ -1952,6 +2045,7 @@ export type Database = {
       }
       lead_capture_forms: {
         Row: {
+          allowed_origins: string[]
           capture_token: string
           created_at: string
           enabled: boolean
@@ -1961,6 +2055,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          allowed_origins?: string[]
           capture_token?: string
           created_at?: string
           enabled?: boolean
@@ -1970,6 +2065,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          allowed_origins?: string[]
           capture_token?: string
           created_at?: string
           enabled?: boolean
@@ -2158,6 +2254,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string | null
+          fixed_price: number | null
           gst_inclusive: boolean
           id: string
           is_popular: boolean
@@ -2165,6 +2262,7 @@ export type Database = {
           name: string
           notes: string | null
           position: number
+          pricing_mode: string
           updated_at: string
           user_id: string
           weekend_loading_percent: number | null
@@ -2174,6 +2272,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          fixed_price?: number | null
           gst_inclusive?: boolean
           id?: string
           is_popular?: boolean
@@ -2181,6 +2280,7 @@ export type Database = {
           name: string
           notes?: string | null
           position?: number
+          pricing_mode?: string
           updated_at?: string
           user_id: string
           weekend_loading_percent?: number | null
@@ -2190,6 +2290,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          fixed_price?: number | null
           gst_inclusive?: boolean
           id?: string
           is_popular?: boolean
@@ -2197,6 +2298,7 @@ export type Database = {
           name?: string
           notes?: string | null
           position?: number
+          pricing_mode?: string
           updated_at?: string
           user_id?: string
           weekend_loading_percent?: number | null
@@ -2893,6 +2995,7 @@ export type Database = {
           couple_profile_tabs_config: Json
           created_at: string
           email_mode: string
+          mc_signature_image: string | null
           oauth_access_token_encrypted: string | null
           oauth_connected_at: string | null
           oauth_email: string | null
@@ -2912,6 +3015,7 @@ export type Database = {
           couple_profile_tabs_config?: Json
           created_at?: string
           email_mode?: string
+          mc_signature_image?: string | null
           oauth_access_token_encrypted?: string | null
           oauth_connected_at?: string | null
           oauth_email?: string | null
@@ -2931,6 +3035,7 @@ export type Database = {
           couple_profile_tabs_config?: Json
           created_at?: string
           email_mode?: string
+          mc_signature_image?: string | null
           oauth_access_token_encrypted?: string | null
           oauth_connected_at?: string | null
           oauth_email?: string | null
@@ -3026,8 +3131,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _contract_canonical_payload: {
+        Args: { p_contract_id: string }
+        Returns: string
+      }
       _contract_strip_money_mentions: { Args: { node: Json }; Returns: Json }
       _contract_tokenise_role: { Args: { node: Json }; Returns: Json }
+      _ip_prefix: { Args: { p_ip: string }; Returns: string }
       _owns_contract: { Args: { p_contract_id: string }; Returns: boolean }
       _owns_couple_or_null: { Args: { p_couple_id: string }; Returns: boolean }
       _owns_meeting_type: {
@@ -3070,6 +3180,14 @@ export type Database = {
       backfill_invoice_payment_stages: { Args: never; Returns: number }
       bookings_due_for_reminder: { Args: never; Returns: Json[] }
       cancel_booking: { Args: { p_manage_token: string }; Returns: Json }
+      consume_signer_otp: {
+        Args: {
+          p_actor_ip?: string
+          p_actor_user_agent?: string
+          p_otp_id: string
+        }
+        Returns: Json
+      }
       contracts_due_for_reminder: {
         Args: never
         Returns: {
@@ -3088,17 +3206,19 @@ export type Database = {
           user_id: string
         }[]
       }
-      decline_contract:
-        | { Args: { p_reason: string; token: string }; Returns: Json }
-        | {
-            Args: {
-              p_actor_ip?: string
-              p_actor_user_agent?: string
-              p_reason: string
-              token: string
-            }
-            Returns: Json
-          }
+      decline_contract: {
+        Args: {
+          p_actor_ip?: string
+          p_actor_user_agent?: string
+          p_reason: string
+          token: string
+        }
+        Returns: Json
+      }
+      decline_contract_v2: {
+        Args: { p_payload: Json; p_token: string }
+        Returns: Json
+      }
       delete_portal_file: {
         Args: { p_id: string; p_token: string }
         Returns: undefined
@@ -3145,6 +3265,10 @@ export type Database = {
         Returns: undefined
       }
       expire_contracts: { Args: never; Returns: string[] }
+      fail_signer_otp: {
+        Args: { p_max_attempts: number; p_otp_id: string }
+        Returns: Json
+      }
       generate_contract_number: { Args: { p_user_id: string }; Returns: string }
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
       get_booking_by_manage_token: { Args: { token: string }; Returns: Json }
@@ -3161,6 +3285,15 @@ export type Database = {
       increment_ai_copilot_usage: { Args: never; Returns: number }
       is_own_couple: { Args: { couple_id_value: string }; Returns: boolean }
       is_valid_portal_token: { Args: { token_value: string }; Returns: boolean }
+      issue_signer_otp: {
+        Args: {
+          p_code_hash: string
+          p_code_salt: string
+          p_token: string
+          p_ttl_seconds: number
+        }
+        Returns: Json
+      }
       mark_booking_reminder_sent: {
         Args: { p_booking_id: string }
         Returns: undefined
@@ -3169,6 +3302,7 @@ export type Database = {
         Args: { p_contract_id: string }
         Returns: undefined
       }
+      peek_signer_otp: { Args: { p_token: string }; Returns: Json }
       record_contract_view: {
         Args: {
           p_actor_ip?: string
@@ -3316,6 +3450,10 @@ export type Database = {
         }
         Returns: Json
       }
+      sign_contract_v2: {
+        Args: { p_payload: Json; p_token: string }
+        Returns: Json
+      }
       submit_booking: {
         Args: {
           p_email: string
@@ -3330,11 +3468,15 @@ export type Database = {
         }
         Returns: Json
       }
-      submit_lead: { Args: { p_payload: Json; token: string }; Returns: Json }
+      submit_lead: {
+        Args: { p_payload: Json; p_source_origin?: string; token: string }
+        Returns: Json
+      }
       submit_questionnaire: {
         Args: { p_responses: Json; token: string }
         Returns: Json
       }
+      verify_contract_hash: { Args: { p_hash: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

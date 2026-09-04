@@ -100,7 +100,7 @@ export default function PublicLeadPage() {
                 {form.business_name || 'Enquire'}
               </h1>
             )}
-            <LeadForm token={params.token} form={form} />
+            <LeadForm token={params.token} form={form} embed={embed} />
           </>
         )}
       </div>

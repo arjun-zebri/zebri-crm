@@ -58,6 +58,10 @@ interface Package {
   position: number
   updated_at: string | null
   gst_inclusive: boolean | null
+  /** 'itemised' (default) or 'single'. See PackageDraft.pricing_mode. */
+  pricing_mode: string | null
+  /** The whole base price when pricing_mode is 'single'. */
+  fixed_price: number | null
   archived_at: string | null
   weekend_loading_percent: number | null
   is_popular: boolean | null
@@ -231,7 +235,17 @@ export function PackagesManager() {
         packages.map((p) => {
           const items = allItems?.[p.id] || []
           // The list row shows the base price; add-ons are extras.
-          return { ...p, item_count: items.length, total: packageTotals(items).base }
+          // The list total has to respect the pricing mode too, or a
+          // single-price package would advertise the sum of its (zero-priced)
+          // inclusions instead of the price the MC actually set.
+          return {
+            ...p,
+            item_count: items.length,
+            total: packageTotals(items, {
+              pricingMode: p.pricing_mode === 'single' ? 'single' : 'itemised',
+              fixedPrice: p.fixed_price,
+            }).base,
+          }
         }),
       )
     }
@@ -266,6 +280,8 @@ export function PackagesManager() {
           notes: draft.notes,
           description: draft.description,
           category_id: draft.category_id,
+          pricing_mode: draft.pricing_mode,
+          fixed_price: draft.fixed_price,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
           is_popular: draft.is_popular,
@@ -300,6 +316,8 @@ export function PackagesManager() {
           notes: draft.notes,
           description: draft.description,
           category_id: draft.category_id,
+          pricing_mode: draft.pricing_mode,
+          fixed_price: draft.fixed_price,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
           is_popular: draft.is_popular,
@@ -430,6 +448,8 @@ export function PackagesManager() {
     notes: pkg.notes,
     description: pkg.description,
     category_id: pkg.category_id,
+    pricing_mode: pkg.pricing_mode === 'single' ? 'single' : 'itemised',
+    fixed_price: pkg.fixed_price,
     gst_inclusive: pkg.gst_inclusive ?? true,
     weekend_loading_percent: pkg.weekend_loading_percent,
     is_popular: pkg.is_popular ?? false,
@@ -470,6 +490,8 @@ export function PackagesManager() {
     notes: null,
     description: null,
     category_id: null,
+    pricing_mode: 'itemised',
+    fixed_price: null,
     gst_inclusive: true,
     weekend_loading_percent: null,
     is_popular: false,
@@ -667,6 +689,8 @@ export function PackagesManager() {
                 }
                 items={allItems?.[selectedPkg.id] ?? []}
                 description={selectedPkg.description}
+                pricingMode={selectedPkg.pricing_mode === 'single' ? 'single' : 'itemised'}
+                fixedPrice={selectedPkg.fixed_price}
                 gstInclusive={selectedPkg.gst_inclusive ?? true}
                 weekendLoadingPercent={selectedPkg.weekend_loading_percent}
               />

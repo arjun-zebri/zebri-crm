@@ -14,6 +14,7 @@ import {
 
 import { CoupleEvents, type CoupleEventsHandle } from "./couple-events";
 import { CouplePackageSelector } from "./couple-package-selector";
+import { CoupleSourceOriginRow } from "./couple-source-origin-row";
 import { CoupleTabShell } from "./couple-tab-shell";
 
 interface CoupleOverviewProps {
@@ -259,6 +260,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             </div>
           )}
         </div>
+        <CoupleSourceOriginRow sourceOrigin={couple.source_origin} />
 
         {/* How did you hear about me - captured by the lead-capture form.
             Read-only here; edited via the couple modal. */}

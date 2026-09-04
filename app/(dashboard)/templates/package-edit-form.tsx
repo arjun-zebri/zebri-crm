@@ -16,12 +16,15 @@
  */
 'use client'
 
+import { Info } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
+import { Toggle } from '@/components/ui/toggle'
+import { Tooltip } from '@/components/ui/tooltip'
 import { formatAUD } from '@/lib/payments/format'
 import { packageTotals } from '@/lib/payments/package-math'
 
@@ -34,6 +37,10 @@ export interface PackageDraft {
   notes: string | null
   description: string | null
   category_id: string | null
+  /** 'single' hides per-item prices and quotes {@link fixed_price} instead. */
+  pricing_mode: 'itemised' | 'single'
+  /** The whole base price in single mode; null when itemised. */
+  fixed_price: number | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
   /** Marketing flag: highlights this package as "Most popular". */
@@ -48,6 +55,8 @@ export interface PackageFormValue {
   notes: string | null
   description: string | null
   category_id: string | null
+  pricing_mode: 'itemised' | 'single'
+  fixed_price: number | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
   is_popular: boolean
@@ -89,13 +98,24 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
   const [baseItems, setBaseItems] = useState<EditableItem[]>(value.items.filter((i) => !i.optional))
   const [addOns, setAddOns] = useState<EditableItem[]>(value.items.filter((i) => i.optional))
   const [weekendLoading, setWeekendLoading] = useState(value.weekend_loading_percent?.toString() ?? '')
+  const [singlePrice, setSinglePrice] = useState(value.pricing_mode === 'single')
+  const [fixedPrice, setFixedPrice] = useState(
+    value.fixed_price != null ? String(value.fixed_price) : '',
+  )
   const [gstInclusive, setGstInclusive] = useState(value.gst_inclusive)
   const [isPopular, setIsPopular] = useState(value.is_popular)
 
-  const totals = packageTotals([
-    ...baseItems.map((i) => ({ ...i, optional: false })),
-    ...addOns.map((i) => ({ ...i, optional: true })),
-  ])
+  const parsedFixedPrice = parseFloat(fixedPrice)
+  const fixedPriceValue = Number.isFinite(parsedFixedPrice) && parsedFixedPrice >= 0
+    ? parsedFixedPrice
+    : null
+  const totals = packageTotals(
+    [
+      ...baseItems.map((i) => ({ ...i, optional: false })),
+      ...addOns.map((i) => ({ ...i, optional: true })),
+    ],
+    { pricingMode: singlePrice ? 'single' : 'itemised', fixedPrice: fixedPriceValue },
+  )
 
   const handleSave = () => {
     if (!name.trim()) return
@@ -104,6 +124,10 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
       notes: notes.trim() || null,
       description: description.trim() || null,
       category_id: categoryId,
+      pricing_mode: singlePrice ? 'single' : 'itemised',
+      // Only persisted in single mode; itemised packages keep it null so the
+      // column can never disagree with a price the MC is not quoting.
+      fixed_price: singlePrice ? fixedPriceValue : null,
       gst_inclusive: gstInclusive,
       weekend_loading_percent: parsePercent(weekendLoading),
       is_popular: isPopular,
@@ -191,19 +215,63 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
         </div>
 
         <div>
-          <SectionLabel label="Line items" hint="What's included in the base price" />
+          <SectionLabel
+            label="Line items"
+            hint={singlePrice ? "What's included, without prices" : "What's included in the base price"}
+          />
           <div className="rounded-control border border-border px-4 pt-2 pb-1.5">
+            {/* In single-price mode the per-item price and quantity columns go
+                away entirely, rather than being shown as zeroes: the couple is
+                being quoted one figure, and a column of $0.00 beside every
+                inclusion reads as "these are free" rather than "not itemised". */}
             <LineItemsEditor
               items={baseItems}
               onChange={setBaseItems}
               disabled={isSaving}
               descriptionPlaceholder="e.g., MC Ceremony"
               addLabel="Add line item"
-              showQuantity
+              showQuantity={!singlePrice}
+              showAmount={!singlePrice}
               amountHeader="Unit price"
               compact
             />
           </div>
+          <Toggle
+            className="mt-3"
+            checked={singlePrice}
+            onChange={setSinglePrice}
+            disabled={isSaving}
+            label="Price as a single figure"
+            description={
+              singlePrice
+                ? 'Line items are listed as inclusions and the couple sees one price.'
+                : 'The package total is the sum of the line items above.'
+            }
+          />
+          {singlePrice && (
+            <div className="mt-3 max-w-[220px]">
+              <label
+                htmlFor="package-fixed-price"
+                className="block text-body font-medium text-text"
+              >
+                Package price
+              </label>
+              <div className="mt-1 flex h-8 items-center rounded-control border border-border bg-surface px-2.5 transition-colors focus-within:border-brand-fg">
+                <span className="pr-1 text-body text-text-muted">$</span>
+                <input
+                  id="package-fixed-price"
+                  type="number"
+                  value={fixedPrice}
+                  onChange={(e) => setFixedPrice(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  disabled={isSaving}
+                  className={`w-full bg-transparent text-body tabular-nums text-text placeholder:text-text-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${noArrowsClass}`}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
@@ -241,17 +309,28 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
           />
         </div>
 
-        <div>
-          <SectionLabel
-            label="Highlight"
-            hint="Marks this package as your most popular option"
-          />
+        {/* No section label: "Highlight" said nothing the checkbox did not,
+            and a whole section heading for one checkbox made the modal read as
+            longer than it is. The explanation moves into a tooltip beside the
+            control it describes. */}
+        <div className="flex items-center gap-1.5">
           <Checkbox
             checked={isPopular}
             onChange={setIsPopular}
             disabled={isSaving}
             label="Mark as most popular"
           />
+          <Tooltip
+            label="Marks this package as your most popular option."
+            side="top"
+          >
+            <Info
+              size={12}
+              strokeWidth={1.5}
+              className="text-text-subtle cursor-help"
+              aria-hidden
+            />
+          </Tooltip>
         </div>
       </div>
     </Modal>

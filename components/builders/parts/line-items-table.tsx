@@ -25,25 +25,34 @@ import {
 import {
   arrayMove,
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+
+import { LineItemRow } from './line-item-row';
 
 export interface LineItem {
   id: string;
   description: string;
+  /**
+   * Optional note shown under this line on the public invoice and the PDF.
+   * A single trailing note on the document cannot say which charge it
+   * qualifies, which is why it lives per line.
+   */
+  note?: string | null;
   amount: number;
   position: number;
 }
+
+/** Fields of a {@link LineItem} the table can edit in place. */
+export type LineItemField = 'description' | 'amount' | 'note';
 
 export interface LineItemsTableProps {
   items: LineItem[];
   /** Whether fields can be edited. Locked invoices / accepted quotes
    *  pass `false`; the table renders as read-only. */
   canEdit: boolean;
-  onUpdate: (id: string, field: 'description' | 'amount', value: string | number) => void;
+  onUpdate: (id: string, field: LineItemField, value: string | number) => void;
   onRemove: (id: string) => void;
   onReorder: (next: LineItem[]) => void;
   onAdd: () => void;
@@ -106,7 +115,7 @@ export function LineItemsTable({
     return (
       <div>
         {headerAccessory}
-        <div className="grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 pb-1 text-body text-text-subtle">
+        <div className="grid grid-cols-[1fr_96px_48px] sm:grid-cols-[16px_1fr_96px_48px] items-center gap-2 pb-1 text-body text-text-subtle">
           <span className="hidden sm:block" />
           <span />
           <span className="text-right">Amount</span>
@@ -115,7 +124,7 @@ export function LineItemsTable({
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
             {items.map((item) => (
-              <SortableRow
+              <LineItemRow
                 key={item.id}
                 item={item}
                 canEdit={canEdit}
@@ -145,7 +154,7 @@ export function LineItemsTable({
       {headerAccessory}
       <div className="rounded-control border border-border overflow-hidden">
         {/* Column header */}
-        <div className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 bg-surface-muted text-body font-medium uppercase tracking-wide text-text-muted">
+        <div className="grid grid-cols-[1fr_120px_60px] sm:grid-cols-[24px_1fr_120px_60px] gap-2 sm:gap-3 px-3 py-2 bg-surface-muted text-body font-medium uppercase tracking-wide text-text-muted">
           <span className="hidden sm:block" />
           <span>Description</span>
           <span className="text-right">Amount</span>
@@ -158,7 +167,7 @@ export function LineItemsTable({
             strategy={verticalListSortingStrategy}
           >
             {items.map((item) => (
-              <SortableRow
+              <LineItemRow
                 key={item.id}
                 item={item}
                 canEdit={canEdit}
@@ -180,94 +189,6 @@ export function LineItemsTable({
           </button>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-/* ─── Row ───────────────────────────────────────────────────────── */
-
-interface SortableRowProps {
-  item: LineItem;
-  canEdit: boolean;
-  compact?: boolean;
-  onUpdate: LineItemsTableProps['onUpdate'];
-  onRemove: LineItemsTableProps['onRemove'];
-}
-
-function SortableRow({ item, canEdit, compact = false, onUpdate, onRemove }: SortableRowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition ? transition.replace('all', 'transform') : undefined,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const rowClass = compact
-    ? 'grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 border-b border-border'
-    : 'grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 border-t border-border items-center bg-surface';
-  const textClass = compact ? 'text-body' : 'text-body';
-  const fieldPad = compact ? 'py-1.5' : '';
-
-  return (
-    <div ref={setNodeRef} style={style} className={rowClass}>
-      {/* Drag handle — desktop only */}
-      {canEdit ? (
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="hidden sm:flex cursor-grab active:cursor-grabbing text-text-subtle hover:text-text-muted touch-none"
-          aria-label="Drag to reorder"
-        >
-          <GripVertical size={14} strokeWidth={1.5} />
-        </button>
-      ) : (
-        <span className="hidden sm:block" />
-      )}
-
-      <input
-        type="text"
-        value={item.description}
-        onChange={(e) => onUpdate(item.id, 'description', e.target.value)}
-        placeholder="Description"
-        readOnly={!canEdit}
-        disabled={!canEdit}
-        className={`min-w-0 bg-transparent ${fieldPad} ${textClass} text-text placeholder:text-text-subtle focus:outline-none disabled:opacity-70`}
-      />
-
-      <div className="relative">
-        <span
-          className={`absolute left-0 top-1/2 -translate-y-1/2 ${textClass} text-text-subtle pointer-events-none`}
-        >
-          $
-        </span>
-        <input
-          type="number"
-          value={item.amount || ''}
-          onChange={(e) => onUpdate(item.id, 'amount', parseFloat(e.target.value) || 0)}
-          placeholder="0.00"
-          min="0"
-          step="0.01"
-          readOnly={!canEdit}
-          disabled={!canEdit}
-          className={`w-full bg-transparent pl-4 text-right ${fieldPad} ${textClass} text-text placeholder:text-text-subtle tabular-nums focus:outline-none disabled:opacity-70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-        />
-      </div>
-
-      {canEdit ? (
-        <button
-          type="button"
-          onClick={() => onRemove(item.id)}
-          className={`${compact ? '' : 'p-1 '}text-text-subtle hover:text-danger transition cursor-pointer justify-self-center`}
-          aria-label="Remove item"
-        >
-          <Trash2 size={14} strokeWidth={1.5} />
-        </button>
-      ) : (
-        <span />
-      )}
     </div>
   );
 }

@@ -121,7 +121,13 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'couplePortal': return null
     case 'paymentSchedule': return <RenderPaymentSchedule block={block} branding={branding} doc={doc} />
     case 'contractBody': return null
-    case 'contractSign': return null
+    // Every signature marker renders nothing generically: the public contract
+    // card injects the real panel at each marker's position.
+    case 'contractSign':
+    case 'contractSignVendor':
+    case 'contractSignPrimary':
+    case 'contractSignSecondary':
+      return null
     case 'vendorTimelineBody': return null
     case 'questionnaireOneAtATime': return null
     case 'questionnaireAllOnePage': return null

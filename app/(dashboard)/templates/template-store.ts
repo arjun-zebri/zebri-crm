@@ -41,6 +41,8 @@ export interface TemplateRecord {
 export interface StoredItem {
   id: string
   description: string
+  /** Optional per-line note, copied onto the invoice when applied. */
+  note?: string | null
   amount: number
 }
 
@@ -49,7 +51,7 @@ export interface TemplateDraft {
   name: string
   notes: string | null
   description: string | null
-  items: { description: string; amount: number }[]
+  items: { description: string; note?: string | null; amount: number }[]
 }
 
 type Client = SupabaseClient<Database>
@@ -67,6 +69,9 @@ async function insertItems(
       invoice_template_id: templateId,
       user_id: uid,
       description: item.description,
+      // Blank notes are stored as NULL so the renderers' "no note" check is a
+      // single null test rather than a whitespace test.
+      note: item.note?.trim() ? item.note.trim() : null,
       amount: item.amount,
       position: (i + 1) * 1000,
     })),
@@ -103,7 +108,7 @@ export function createTemplateStore(client: Client, kind: TemplateKind = 'invoic
       const grouped: Record<string, StoredItem[]> = {}
       const { data, error } = await client
         .from('invoice_template_items')
-        .select('id, invoice_template_id, description, amount')
+        .select('id, invoice_template_id, description, note, amount')
         .eq('user_id', uid)
         .order('position', { ascending: true })
       if (error) throw error
@@ -111,6 +116,7 @@ export function createTemplateStore(client: Client, kind: TemplateKind = 'invoic
         ;(grouped[item.invoice_template_id] ??= []).push({
           id: item.id,
           description: item.description,
+          note: item.note,
           amount: item.amount,
         })
       }

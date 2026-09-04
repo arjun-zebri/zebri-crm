@@ -47,9 +47,14 @@ export interface PrintDocumentOptions {
   /**
    * Suppress the browser's own print header and footer (date, title, URL,
    * page count). Browsers draw those in the page margin, so this sets the
-   * `@page` margin to zero and puts the same 14mm back as body padding. On
-   * for plain documents such as a couple script, where nothing outside the
-   * text belongs on the page.
+   * `@page` margin to zero and puts the same 14mm back inside the document.
+   *
+   * Body padding alone cannot do that job: it pads the body box once, so only
+   * the first page gets a top edge and only the last gets a bottom one, and
+   * every page break in between lands hard against the sheet. The vertical
+   * space therefore comes from a `thead`/`tfoot` spacer pair, which the print
+   * layout repeats on every page. On for plain documents such as a couple
+   * script, where nothing outside the text belongs on the page.
    */
   bare?: boolean
   /** The document, as the public page renders it. Must be hook-free. */
@@ -62,6 +67,16 @@ export interface PrintDocumentOptions {
    * Both take precedence over the branding pair when given.
    */
   fonts?: { href: string; bodyStack: string }
+  /**
+   * Extra Google Fonts family specs (e.g. `'Caveat:wght@400;600'`) to append
+   * to the stylesheet link, beyond the brand's heading and body pair.
+   *
+   * The print window is a separate document from the app, so a face the app
+   * self-hosts through `next/font` is not automatically available here. A
+   * contract needs its signature face; nothing else does, which is why this
+   * is opt-in per caller rather than always loaded.
+   */
+  extraFontFamilies?: string[]
 }
 
 /**
@@ -102,14 +117,36 @@ function escapeHtml(s: string): string {
  * Exported separately from {@link printDocument} so the builder modals' PDF
  * preview tab can show exactly what will print, in an iframe.
  */
-export function buildPrintHtml({ title, element, branding, canvas = true, frame = !canvas, bare = false, fonts: fontOverride }: PrintDocumentOptions): string {
+export function buildPrintHtml({ title, element, branding, canvas = true, frame = !canvas, bare = false, fonts: fontOverride, extraFontFamilies }: PrintDocumentOptions): string {
   const canvasBg = canvas ? DOC_CANVAS_BG : '#fff'
   const body = renderToStaticMarkup(element)
-  const fontHref = fontOverride
+  const baseHref = fontOverride
     ? fontOverride.href
     : branding?.font_heading && branding?.font_body
       ? googleFontsHref([branding.font_heading, branding.font_body])
       : null
+  // Extras are appended as raw `family=` specs rather than routed through
+  // googleFontsHref, whose FontId map is deliberately limited to the faces an
+  // MC may pick for their brand. When there is no base href (an unbranded
+  // document) the extras still need a well-formed request of their own.
+  const extras = extraFontFamilies?.length
+    ? extraFontFamilies.map((f) => `family=${f}`).join('&')
+    : null
+  // The css2 API requires every `family` parameter to come BEFORE `display`.
+  // Appending the extras to the end of a base href that already ends in
+  // `&display=swap` produces a request Google rejects, so the face silently
+  // never arrives and the signature prints in the body font. Splice them in
+  // ahead of `display` instead, and keep the raw `:` `@` `;` of the family
+  // spec rather than routing it through URLSearchParams, which escapes them.
+  const spliceBeforeDisplay = (base: string, families: string): string => {
+    const at = base.indexOf('&display=')
+    return at === -1 ? `${base}&${families}` : `${base.slice(0, at)}&${families}${base.slice(at)}`
+  }
+  const fontHref = extras
+    ? baseHref
+      ? spliceBeforeDisplay(baseHref, extras)
+      : `https://fonts.googleapis.com/css2?${extras}&display=swap`
+    : baseHref
   const fonts = fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ''
   const pad = DENSITY_PADDING[branding?.density ?? 'cozy']
   const textColor = branding?.text_color ?? '#111827'
@@ -128,6 +165,10 @@ export function buildPrintHtml({ title, element, branding, canvas = true, frame 
        specificity, so a blanket reset here would silently defeat every
        px-/py- class in the document. Preflight already covers the reset. */
     html, body { background: ${canvasBg}; }
+    /* On screen the sheet wrapper must not lay out as a table: it collapses to
+       plain blocks and its print-only spacers stay hidden. */
+    .print-sheet, .print-sheet > tbody, .print-sheet > tbody > tr, .print-sheet > tbody > tr > td { display: block; }
+    .print-sheet > thead, .print-sheet > tfoot { display: none; }
     /* The app applies its base font through next/font's hashed class on
        <body>, which this document never carries. Set the brand body font on
        <body> here, exactly where the app does, so the blocks that inherit
@@ -135,7 +176,17 @@ export function buildPrintHtml({ title, element, branding, canvas = true, frame 
        to the same face as the link instead of the browser default stack. */
     body { font-family: ${bodyStack}; color: ${textColor}; }
     @media print {
-      ${bare ? '@page { margin: 0; } body { padding: 14mm; }' : '@page { margin: 14mm; }'}
+      ${bare ? '@page { margin: 0; } body { padding: 0 14mm; }' : '@page { margin: 14mm; }'}
+      /* The sheet wrapper only exists to carry the repeating vertical space,
+         so in print it becomes a real table and its header and footer groups
+         reserve that space at the top and bottom of EVERY page. */
+      .print-sheet { display: table; width: 100%; border-collapse: collapse; }
+      .print-sheet > thead { display: table-header-group; }
+      .print-sheet > tfoot { display: table-footer-group; }
+      .print-sheet > tbody { display: table-row-group; }
+      .print-sheet > tbody > tr { display: table-row; }
+      .print-sheet > tbody > tr > td { display: table-cell; padding: 0; }
+      .print-vpad { height: 14mm; }
       html, body { background: #fff; }
       /* The on-screen canvas tint and card shadow are screen chrome. */
       .print-canvas { background: #fff !important; padding-top: 0 !important; }
@@ -149,15 +200,20 @@ export function buildPrintHtml({ title, element, branding, canvas = true, frame 
          paragraphs never leave a single line stranded. */
       .script-document hr[data-page-break] { break-before: page; border: 0; height: 0; margin: 0; visibility: hidden; }
       .script-document p { orphans: 2; widows: 2; }
+      /* A contract's certificate of completion starts its own sheet, so the
+         evidence is not squeezed onto the end of the terms. */
+      .certificate-page { break-before: page; }
     }
   </style>
 </head>
 <body>
+  ${bare ? '<table class="print-sheet"><thead><tr><td><div class="print-vpad"></div></td></tr></thead><tbody><tr><td>' : ''}
   <div class="print-canvas min-h-screen ${pad.page}${frame ? ' rounded-control border border-border' : ''}">
     <div class="mx-auto w-full @container/doc" style="max-width:${DOC_MAX_WIDTH_PX}px">
       ${body}
     </div>
   </div>
+  ${bare ? '</td></tr></tbody><tfoot><tr><td><div class="print-vpad"></div></td></tr></tfoot></table>' : ''}
 </body>
 </html>`
 }

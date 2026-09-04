@@ -269,10 +269,16 @@ describe('multi-signer contract signing', () => {
     expect(byNewSigner).toBeNull();
   });
 
-  it('serves nothing for a draft: the body does not exist until send', async () => {
-    // Fresh drafts are share-enabled by default (20260527000000), but their
-    // body is only frozen at send. Before this gate the public page rendered
-    // the header, "No content." and a sign form that sign_contract refused.
+  it("serves a draft's link, but refuses to sign one with no body yet", async () => {
+    // A contract's link is live from creation (20260903006000): an MC who
+    // wants to hand the link over themselves should not have to email the
+    // couple first. The body is rendered on save, so a draft that HAS been
+    // saved reads normally.
+    //
+    // This row is inserted straight into the table, so it never went through
+    // the save action and has no rendered body. It must still be readable
+    // (the couple sees the chrome) but must NOT be signable: agreeing to a
+    // blank page is the one outcome worth refusing.
     const { data: draft, error } = await user.client
       .from('contracts')
       .insert({
@@ -289,10 +295,55 @@ describe('multi-signer contract signing', () => {
 
     const publicView = await anonClient().rpc('get_public_contract', { token: draft!.share_token });
     expect(publicView.error).toBeNull();
-    expect(publicView.data).toBeNull();
+    expect(publicView.data).not.toBeNull();
+    expect(publicView.data).toMatchObject({ status: 'draft' });
 
+    // A view of a draft is still a view, and the trail should say so.
     const viewed = await anonClient().rpc('record_contract_view', { token: draft!.share_token });
-    expect(viewed.data).toMatchObject({ ok: false });
+    expect(viewed.data).toMatchObject({ ok: true });
+
+    const signers = await signersOf(draft!.id);
+    const attempt = await anonClient().rpc('sign_contract', {
+      token: signers[0]!.sign_token,
+      p_signer_name: 'Sam Rivera',
+      p_signer_ip: '203.0.113.9',
+      p_signer_user_agent: 'vitest',
+    });
+    expect(attempt.data).toMatchObject({ error: 'not_found_or_not_sent' });
+  });
+
+  it('signs a draft that has a body, flipping it out of draft', async () => {
+    // The MC handed the link over themselves. Once somebody signs, the terms
+    // are settled and the contract must stop being editable.
+    const { data: draft } = await user.client
+      .from('contracts')
+      .insert({
+        user_id: user.id,
+        couple_id: coupleId,
+        contract_number: 'CTR-MS-DRAFT-2',
+        status: 'draft',
+        content: { type: 'doc', content: [] },
+        locked_content_html: '<p>The agreed terms.</p>',
+        share_token_enabled: true,
+      })
+      .select('id, share_token')
+      .single();
+
+    const signers = await signersOf(draft!.id);
+    const signed = await anonClient().rpc('sign_contract', {
+      token: signers[0]!.sign_token,
+      p_signer_name: 'Sam Rivera',
+      p_signer_ip: '203.0.113.9',
+      p_signer_user_agent: 'vitest',
+    });
+    expect(signed.data).toMatchObject({ ok: true });
+
+    const { data: after } = await user.client
+      .from('contracts')
+      .select('status')
+      .eq('id', draft!.id)
+      .single();
+    expect(after!.status).not.toBe('draft');
   });
 
   it('writes one audit row per signature', async () => {

@@ -29,6 +29,7 @@
 import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
+import { publishContractSnapshot } from '@/lib/contracts/publish';
 import { contractCoupleLimit } from '@/lib/payments/subscription';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/types/database';
@@ -52,6 +53,10 @@ const lineItemSchema = z.object({
    *  client-side sentinel that the action drops before insert. */
   id: z.string(),
   description: z.string().max(500),
+  /** Optional per-line note shown under the description on the sent invoice.
+   *  Nullish-coalesced rather than defaulted so an older client bundle that
+   *  omits the key leaves the column alone instead of blanking it. */
+  note: z.string().max(2000).nullable().optional(),
   amount: z.number().min(0),
   position: z.number().int(),
 });
@@ -165,6 +170,9 @@ export async function saveInvoiceAction(
         invoice_id: effectiveId,
         user_id: user.id,
         description: item.description,
+        // Empty string is stored as NULL: the renderers treat NULL as "no
+        // note", and a row of whitespace would print an empty line.
+        note: item.note?.trim() ? item.note.trim() : null,
         quantity: 1,
         unit_price: item.amount,
         amount: item.amount,
@@ -227,6 +235,13 @@ const saveContractSchema = z.object({
   title: z.string().max(200),
   content: z.record(z.string(), z.unknown()),
   expiresAt: z.string().nullable(),
+  /**
+   * Signing protocol. Both are optional so an older client bundle that omits
+   * them leaves the stored values alone rather than resetting them to the
+   * default — the pattern that has bitten couple updates before.
+   */
+  signingMode: z.enum(['parallel', 'sequential']).optional(),
+  requireOtp: z.boolean().optional(),
 });
 
 export type SaveContractInput = z.infer<typeof saveContractSchema>;
@@ -244,6 +259,52 @@ export type SaveContractInput = z.infer<typeof saveContractSchema>;
  * only in the UI: it's an entitlement, so the client can't be the one
  * enforcing it.
  */
+/**
+ * Re-render the contract's public snapshot after a save.
+ *
+ * Deliberately non-fatal. The MC's edit is the thing they asked to keep; the
+ * snapshot is derived from it and is regenerated on the next save, so a
+ * failure here must never surface as "could not save the contract" and lose
+ * their work. It is logged instead.
+ */
+async function republish(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  contractId: string,
+  user: { id: string; email?: string | undefined; user_metadata?: Record<string, unknown> | undefined },
+): Promise<void> {
+  try {
+    await publishContractSnapshot(supabase, contractId, user);
+  } catch (err) {
+    logger.error('[payments/actions] contract snapshot publish failed', {
+      contractId,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Render a contract's public snapshot without otherwise changing it.
+ *
+ * For contracts created before saving started publishing: their link resolves
+ * but has no body to show. The builder calls this when it opens one, so the
+ * link is correct without the MC having to know to press Save.
+ */
+export async function publishContractAction(
+  contractId: string,
+): Promise<ActionResult<Record<string, never>>> {
+  if (!z.uuid().safeParse(contractId).success) {
+    return { ok: false, error: 'Invalid contract.' };
+  }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Session expired. Please log in again.' };
+
+  await republish(supabase, contractId, user);
+  return { ok: true, data: {} };
+}
+
 export async function saveContractAction(
   input: SaveContractInput,
 ): Promise<ActionResult<{ id: string }>> {
@@ -251,7 +312,8 @@ export async function saveContractAction(
   if (!parsed.success) {
     return { ok: false, error: 'Invalid contract data.' };
   }
-  const { contractId, coupleId, title, content, expiresAt } = parsed.data;
+  const { contractId, coupleId, title, content, expiresAt, signingMode, requireOtp } =
+    parsed.data;
 
   const supabase = await createClient();
   const {
@@ -273,9 +335,14 @@ export async function saveContractAction(
           title: title.trim() || null,
           content: contentJson,
           expires_at: expiresAt,
+          // Spread rather than assigned: an omitted key must leave the column
+          // untouched, not overwrite it with a default.
+          ...(signingMode !== undefined ? { signing_mode: signingMode } : {}),
+          ...(requireOtp !== undefined ? { require_signer_otp: requireOtp } : {}),
         })
         .eq('id', contractId);
       if (error) throw error;
+      await republish(supabase, contractId, user);
       return { ok: true, data: { id: contractId } };
     }
 
@@ -297,10 +364,14 @@ export async function saveContractAction(
         status: 'draft',
         content: contentJson,
         expires_at: expiresAt,
+        ...(signingMode !== undefined ? { signing_mode: signingMode } : {}),
+        ...(requireOtp !== undefined ? { require_signer_otp: requireOtp } : {}),
       })
       .select('id')
       .single();
     if (insertErr || !inserted) throw insertErr ?? new Error('contract insert returned no row');
+
+    await republish(supabase, inserted.id, user);
 
     return { ok: true, data: { id: inserted.id } };
   } catch (err) {

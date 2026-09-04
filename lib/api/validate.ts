@@ -84,10 +84,17 @@ function badRequest(error: z.ZodError, label: string): NextResponse {
   );
 }
 
-/** Parse & validate a JSON request body. Returns a tagged result. */
+/**
+ * Parse & validate a JSON request body. Returns a tagged result.
+ *
+ * `onInvalid` lets a route with its own documented error contract shape the
+ * 400 itself; it receives the ZodError, or `null` when the body was not JSON.
+ * Without it the generic `{ error, issues }` 400 is returned as before.
+ */
 export async function parseJsonBody<T>(
   request: Request,
   schema: ZodType<T>,
+  onInvalid?: (error: z.ZodError | null) => NextResponse,
 ): Promise<ParseResult<T>> {
   let raw: unknown;
   try {
@@ -95,11 +102,18 @@ export async function parseJsonBody<T>(
   } catch {
     return {
       ok: false,
-      response: NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }),
+      response: onInvalid
+        ? onInvalid(null)
+        : NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }),
     };
   }
   const parsed = schema.safeParse(raw);
-  if (!parsed.success) return { ok: false, response: badRequest(parsed.error, 'request body') };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      response: onInvalid ? onInvalid(parsed.error) : badRequest(parsed.error, 'request body'),
+    };
+  }
   return { ok: true, data: parsed.data };
 }
 

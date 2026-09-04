@@ -1,48 +1,53 @@
 /**
- * Branded-card variant — rendered when the MC has a customised
- * block tree on `contract.branding_blocks`. The block tree wraps
- * the contract body + sign form: chrome blocks render above / below /
- * between the markers, the locked HTML body renders at the
- * `contractBody` marker, and the sign / decline form + MC
- * countersignature render at the `contractSign` marker.
+ * Branded-card variant — rendered when the MC has a customised block tree on
+ * `contract.branding_blocks`. Chrome blocks render above / below / between the
+ * markers, the locked HTML body renders at the `contractBody` marker, and the
+ * signature content renders at each signature marker.
  *
- * Two-marker split: blocks render in their saved order, with the body
- * section injected at the `contractBody` marker and the sign slot at
- * the `contractSign` marker, so the MC's arrangement is respected.
- *
- * Legacy fallback (critical): contracts sent before the sign block
- * existed carry a `contractBody` marker but NO `contractSign` marker.
- * For those, the sign slot is injected right after the body section in
- * the same card section — exactly today's placement — so they render
- * identically and stay signable. A tree with no `contractBody` marker
- * (very old / fully cleared) still falls back to the body section after
- * all chrome.
+ * The ordering decision lives in `contract-card-layout`, which is pure and
+ * tested; this component only turns its nodes into sections. In particular, see
+ * that module for why BOTH the deprecated all-in-one `contractSign` block and
+ * the three per-party blocks are supported rather than one being migrated into
+ * the other.
  *
  * @module app/contract/[token]/_components/contract-branded-card
  */
 import type { ReactNode } from 'react';
 
-import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer';
 import { DENSITY_PAD } from '@/lib/branding/public-surface';
 
 import { ContractBodySection } from './contract-body-section';
+import { layoutContractCard } from './contract-card-layout';
+import { partySigner, type SignParty } from './contract-parties';
 import type { PageState, PublicContract } from './public-contract';
 
 export interface ContractBrandedCardProps {
   contract: PublicContract;
-  /** Reserved for variant-specific behaviour. Currently unused by
-   *  the branded card — the block-tree handles its own state-aware
-   *  visibility via the renderer — but kept on the API so the
-   *  branded/fallback signatures stay symmetric. */
+  /** Reserved for variant-specific behaviour; the block tree handles its own
+   *  state-aware visibility via the renderer. Kept so the branded/fallback
+   *  signatures stay symmetric. */
   pageState: PageState;
   textColor: string;
   mutedColor: string;
   radius: number;
-  /** Sign/decline form + MC countersignature (see ContractSignSection).
-   *  Rendered at the `contractSign` marker, or — on legacy contracts with no
-   *  such marker — right after the body section. */
+  /**
+   * The legacy all-in-one sign section (MC countersignature + roster + form).
+   * Rendered at a `contractSign` marker, or as the fallback when a tree has no
+   * signature marker at all.
+   */
   signSlot?: ReactNode;
+  /**
+   * One party's signature panel. Called per per-party marker. Absent when the
+   * caller only supports the legacy slot (the print element passes both).
+   */
+  signSlotFor?: (party: SignParty) => ReactNode;
+  /**
+   * Document-level status banner (signed / declined / expired + the PDF
+   * download). Rendered once, above the first signature panel. Only used in
+   * per-party mode: the legacy section carries its own banner.
+   */
+  statusBanner?: ReactNode;
 }
 
 export function ContractBrandedCard({
@@ -53,11 +58,17 @@ export function ContractBrandedCard({
   mutedColor,
   radius,
   signSlot,
+  signSlotFor,
+  statusBanner,
 }: ContractBrandedCardProps) {
   const pad = DENSITY_PAD[contract.density ?? 'cozy'];
-  const allBlocks = contract.branding_blocks ?? [];
-  const bodyMarkerIndex = allBlocks.findIndex((b) => b.type === 'contractBody');
-  const signMarkerIndex = allBlocks.findIndex((b) => b.type === 'contractSign');
+  // A contract with no signer rows predates `contract_signers`; its signature
+  // lives in the denormalised columns the legacy section reads, so the layout
+  // falls back rather than rendering empty per-party panels.
+  const nodes = layoutContractCard(
+    contract.branding_blocks ?? [],
+    (contract.signers?.length ?? 0) > 0,
+  );
 
   const doc = {
     title: contract.title,
@@ -71,88 +82,57 @@ export function ContractBrandedCard({
     taxRate: 0,
   };
 
-  const chrome = (blocks: Block[], key: string): ReactNode =>
-    blocks.length > 0 ? (
-      <PublicBlockRenderer key={key} blocks={blocks} branding={contract} doc={doc} hideAction />
-    ) : null;
-
-  const bodySection = (
-    <ContractBodySection contract={contract} textColor={textColor} mutedColor={mutedColor} />
-  );
-
-  const section = (children: ReactNode, key: string, spaced = false): ReactNode => (
+  const section = (children: ReactNode, key: string): ReactNode => (
     <div
       key={key}
-      className={`${pad.cardSection} ${spaced ? 'space-y-8 ' : ''}border-t`}
+      className={`${pad.cardSection} border-t`}
       style={{ borderTopColor: contract.border_color }}
     >
       {children}
     </div>
   );
 
-  let inner: ReactNode;
-
-  if (bodyMarkerIndex >= 0 && signMarkerIndex >= 0) {
-    // Both markers present — walk the tree, flushing chrome runs and injecting
-    // each marker's content at its position so the MC's arrangement is honoured.
-    const nodes: ReactNode[] = [];
-    let buffer: Block[] = [];
-    let bufKey = 0;
-    const flush = () => {
-      if (buffer.length > 0) {
-        nodes.push(chrome(buffer, `chrome-${bufKey++}`));
-        buffer = [];
-      }
-    };
-    for (const b of allBlocks) {
-      if (b.type === 'contractBody') {
-        flush();
-        nodes.push(section(bodySection, 'body'));
-      } else if (b.type === 'contractSign') {
-        flush();
-        nodes.push(section(signSlot, 'sign'));
-      } else {
-        buffer.push(b);
+  const inner = nodes.map((node, i) => {
+    switch (node.kind) {
+      case 'chrome':
+        return (
+          <PublicBlockRenderer
+            key={`chrome-${i}`}
+            blocks={node.blocks}
+            branding={contract}
+            doc={doc}
+            hideAction
+          />
+        );
+      case 'body':
+        return section(
+          <ContractBodySection
+            contract={contract}
+            textColor={textColor}
+            mutedColor={mutedColor}
+          />,
+          `body-${i}`,
+        );
+      case 'sign-legacy':
+        return section(signSlot, `sign-${i}`);
+      case 'sign-party': {
+        const banner = node.first && statusBanner ? statusBanner : null;
+        // Ask the DATA whether this party exists, not the element: the slot
+        // returns a component that renders null, which is still truthy. A
+        // couple with one named contact has no secondary signer, and without
+        // this the section wrapper drew its padding and top border anyway,
+        // leaving an empty bordered box where the second signature would go.
+        if (!partySigner(contract, node.party) && !banner) return null;
+        return section(
+          <>
+            {banner ? <div className="mb-6">{banner}</div> : null}
+            {signSlotFor?.(node.party)}
+          </>,
+          `sign-${node.party}-${i}`,
+        );
       }
     }
-    flush();
-    inner = nodes;
-  } else if (bodyMarkerIndex >= 0) {
-    // Legacy: body marker only. Inject the sign slot right after the body
-    // section, in the same card section — today's exact placement.
-    const preBlocks = allBlocks.slice(0, bodyMarkerIndex);
-    const postBlocks = allBlocks.slice(bodyMarkerIndex + 1);
-    inner = (
-      <>
-        {chrome(preBlocks, 'pre')}
-        {section(
-          <>
-            {bodySection}
-            {signSlot}
-          </>,
-          'body',
-          true,
-        )}
-        {chrome(postBlocks, 'post')}
-      </>
-    );
-  } else {
-    // No body marker (very old / fully cleared) — render all chrome, then the
-    // body section fallback followed by the sign slot.
-    inner = (
-      <>
-        {chrome(allBlocks, 'all')}
-        {section(
-          <>
-            {bodySection}
-            {signSlot}
-          </>,
-          'body',
-          true,
-        )}
-      </>
-    );
-  }
+  });
 
   return (
     <div

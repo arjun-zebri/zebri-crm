@@ -31,6 +31,12 @@ export function pad(branding: PublicBranding) {
 export interface PublicDocItem {
   id: string
   description: string
+  /**
+   * Optional qualifying note rendered beneath the description ("includes the
+   * rehearsal and a site visit"). A single trailing note on the invoice cannot
+   * say which charge it applies to, which is why this is per-line.
+   */
+  note?: string | null
   quantity?: number
   unit_price?: number
   amount: number

@@ -21,17 +21,35 @@ describe('blocks-by-surface', () => {
     expect(groups[1]!.entries.map((e) => e.type)).toEqual(expect.arrayContaining(['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action']))
   })
 
-  it('contract doc-specific palette includes body + sign markers', () => {
+  it('contract doc-specific palette includes the body + the three signature panels', () => {
     const contract = blocksForSurface('contract')
-    expect(contract).toEqual(expect.arrayContaining(['title', 'contractBody', 'contractSign']))
+    expect(contract).toEqual(
+      expect.arrayContaining([
+        'title',
+        'contractBody',
+        'contractSignVendor',
+        'contractSignPrimary',
+        'contractSignSecondary',
+      ]),
+    )
   })
 
-  it('contract palette always lists the clearable markers (body + sign)', () => {
+  it('never offers the deprecated all-in-one sign block', () => {
+    // Existing trees keep rendering theirs, but it must not be addable to a
+    // new one: the per-party panels replace it.
+    expect(blocksForSurface('contract')).not.toContain('contractSign')
+    const entries = paletteGroupsForSurface('contract')[1]!.entries.map((e) => e.type)
+    expect(entries).not.toContain('contractSign')
+  })
+
+  it('contract palette always lists the clearable markers (body + signatures)', () => {
     // They stay in the palette even once inserted so the MC always sees the full
     // set of contract blocks; addBlock guards against inserting a duplicate.
     const contract = paletteGroupsForSurface('contract')[1]!.entries.map((e) => e.type)
     expect(contract).toContain('contractBody')
-    expect(contract).toContain('contractSign')
+    expect(contract).toContain('contractSignVendor')
+    expect(contract).toContain('contractSignPrimary')
+    expect(contract).toContain('contractSignSecondary')
   })
 
   it('run sheet palette always lists the clearable run sheet body', () => {

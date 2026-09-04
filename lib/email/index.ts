@@ -1,18 +1,22 @@
 import type { PublicBranding } from "@/lib/branding/public-branding";
+import { OTP_TTL_SECONDS } from "@/lib/contracts/otp";
 
 import { dispatchEmail, type DispatchResult, type EmailAttachment } from "./dispatch";
 import {
   contractHtml,
+  contractOtpHtml,
   contractReminderHtml,
   contractSignedHtml,
   invoiceHtml,
   type LeadNotificationOpts,
   leadNotificationHtml,
   questionnaireHtml,
+  type SignerLink,
 } from "./html";
 import { DEFAULT_FROM, type ResolvedSender } from "./sender-identity";
 
 export type { EmailAttachment } from "./dispatch";
+export type { SignerLink } from "./html";
 // Re-export the pure HTML builders so existing server callers keep importing
 // them from `@/lib/email`. Client code (e.g. the email preview) must import
 // them from `@/lib/email/html` directly to avoid bundling the transport
@@ -109,6 +113,13 @@ export async function sendContractEmail(opts: {
   expiresAt: string | null;
   shareUrl: string;
   mcBusinessName: string;
+  /**
+   * Every signer who shares this address, each with their own link. Partners
+   * often share one inbox, and each holds a distinct capability token, so one
+   * email has to carry both named links. Omit for a single signer, which keeps
+   * `shareUrl` as the only CTA.
+   */
+  links?: SignerLink[];
   /** Resolved transport. Defaults to the shared Zebri address (Resend). */
   sender?: ResolvedSender;
   /** Optional sender's branding for branded emails. */
@@ -122,6 +133,29 @@ export async function sendContractEmail(opts: {
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
 
+/**
+ * Email a signer their one-time verification code.
+ *
+ * The code is in the body only; the subject deliberately carries just the
+ * contract number, so it does not appear in a lock-screen preview.
+ */
+export async function sendContractOtpEmail(opts: {
+  recipientEmail: string;
+  recipientName: string;
+  code: string;
+  contractNumber: string;
+  mcBusinessName: string;
+  sender?: ResolvedSender;
+  branding?: PublicBranding | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
+    to: opts.recipientEmail,
+    subject: `Your code to sign ${opts.contractNumber}`,
+    html: contractOtpHtml({ ...opts, minutes: Math.round(OTP_TTL_SECONDS / 60) }, opts.branding),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: res.error ?? 'Send failed' };
+}
+
 export async function sendContractReminderEmail(opts: {
   coupleEmail: string;
   coupleName: string;
@@ -130,6 +164,8 @@ export async function sendContractReminderEmail(opts: {
   expiresAt: string | null;
   shareUrl: string;
   mcBusinessName: string;
+  /** Every outstanding signer at this address. See {@link sendContractEmail}. */
+  links?: SignerLink[];
   /** Resolved transport. Defaults to the shared Zebri address (Resend). */
   sender?: ResolvedSender;
   /** Optional sender's branding for branded emails. */

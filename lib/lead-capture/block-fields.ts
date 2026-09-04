@@ -14,8 +14,19 @@
 // eslint-disable-next-line no-restricted-imports
 import type { Block, FormFieldBlock, FormSubmitBlock } from '@/app/(dashboard)/branding/blocks/types'
 
+/** The canonical submit keys a field role can map to. */
+export type LeadPayloadKey =
+  | 'name'
+  | 'partner_name'
+  | 'email'
+  | 'phone'
+  | 'wedding_date'
+  | 'venue'
+  | 'referral_source'
+  | 'message'
+
 /** The canonical (non-custom) submit keys a field role maps to. */
-const ROLE_TO_KEY: Partial<Record<FormFieldBlock['role'], string>> = {
+const ROLE_TO_KEY: Partial<Record<FormFieldBlock['role'], LeadPayloadKey>> = {
   name: 'name',
   partnerName: 'partner_name',
   email: 'email',
@@ -24,6 +35,11 @@ const ROLE_TO_KEY: Partial<Record<FormFieldBlock['role'], string>> = {
   venue: 'venue',
   message: 'message',
   referral: 'referral_source',
+}
+
+/** The submit payload key for a role, or null for `custom` / unmapped roles. */
+export function payloadKeyForRole(role: FormFieldBlock['role']): LeadPayloadKey | null {
+  return ROLE_TO_KEY[role] ?? null
 }
 
 /** The `formField` blocks of a lead block tree, in document order. */
@@ -94,7 +110,7 @@ export function buildLeadPayload(blocks: Block[], values: Record<string, string>
     if (value === '') continue
     const key = ROLE_TO_KEY[field.role]
     if (key) {
-      payload[key as keyof Omit<LeadPayload, 'custom'>] = value
+      payload[key] = value
     } else {
       // role === 'custom' (or an unmapped role): keep the answer under its label.
       payload.custom.push({ label: field.label, value })

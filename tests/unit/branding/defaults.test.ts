@@ -30,13 +30,24 @@ describe('defaultBlocksFor', () => {
     expect(blockTemplate('contractSign')).toMatchObject({ type: 'contractSign', locked: true })
   })
 
-  it('contract default seeds a header (ref + ABN on, expires off), the body marker, then the sign marker, no CTA', () => {
+  it('contract default seeds a header (ref + ABN on, expires off), the body marker, then one signature panel per party, no CTA', () => {
     const blocks = defaultBlocksFor('contract')
     const t = types(blocks)
-    expect(t).toEqual(['businessName', 'title', 'contractBody', 'contractSign'])
+    expect(t).toEqual([
+      'businessName',
+      'title',
+      'contractBody',
+      // A signature page reads in this order: the supplier has already signed
+      // by sending, then each partner.
+      'contractSignVendor',
+      'contractSignPrimary',
+      'contractSignSecondary',
+    ])
     expect(t).not.toContain('action')
-    // The sign marker is last, right after the body marker.
-    expect(t[t.length - 1]).toBe('contractSign')
+    // New trees never seed the deprecated all-in-one block.
+    expect(t).not.toContain('contractSign')
+    // The signature panels come after the body marker.
+    expect(t.indexOf('contractSignVendor')).toBeGreaterThan(t.indexOf('contractBody'))
     const header = blocks.find((b) => b.type === 'title')
     // Ref and ABN identify the document and the supplier as a legal party, so
     // an agreement carries both. Expiry stays off: `contracts.expires_at` is a
@@ -50,8 +61,44 @@ describe('defaultBlocksFor', () => {
     })
     const body = blocks.find((b) => b.type === 'contractBody')
     expect(body).toMatchObject({ type: 'contractBody', locked: true })
-    const sign = blocks.find((b) => b.type === 'contractSign')
-    expect(sign).toMatchObject({ type: 'contractSign', locked: true })
+    // Each panel is locked so it cannot be duplicated (two "partner 1" slots
+    // would print the same signature twice), while staying deletable and
+    // re-addable from the palette like every other clearable marker.
+    for (const type of [
+      'contractSignVendor',
+      'contractSignPrimary',
+      'contractSignSecondary',
+    ] as const) {
+      expect(blocks.find((b) => b.type === type)).toMatchObject({ type, locked: true })
+    }
+  })
+
+  it('drops a stray all-in-one sign block once per-party panels exist', () => {
+    // Only fires after the MC explicitly adds a per-party block, at which point
+    // the old block has already stopped rendering; leaving it would show a
+    // block in the editor that does nothing on the document.
+    const migrated = migrateBlocks(
+      [
+        { id: 'cb', type: 'contractBody', locked: true },
+        { id: 'cs', type: 'contractSign', locked: true },
+        { id: 'csp', type: 'contractSignPrimary', locked: true },
+      ],
+      'contract',
+    )
+    expect(types(migrated)).toEqual(['contractBody', 'contractSignPrimary'])
+  })
+
+  it('leaves an untouched legacy tree alone', () => {
+    // The guarantee: no already-sent contract changes shape without an
+    // explicit MC action.
+    const migrated = migrateBlocks(
+      [
+        { id: 'cb', type: 'contractBody', locked: true },
+        { id: 'cs', type: 'contractSign', locked: true },
+      ],
+      'contract',
+    )
+    expect(types(migrated)).toEqual(['contractBody', 'contractSign'])
   })
 
   it('migrates a legacy questionnaireBody block by its mode, preserving id + styling', () => {

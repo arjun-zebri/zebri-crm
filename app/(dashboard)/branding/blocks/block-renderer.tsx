@@ -36,6 +36,7 @@ import {
   RenderBusinessName,
   RenderContractBody,
   RenderContractSign,
+  RenderContractSignParty,
   RenderCouplePortal,
   RenderFormField,
   RenderFormSubmit,
@@ -465,6 +466,10 @@ function renderBlock(
       return <RenderContractBody state={state} block={block} />
     case 'contractSign':
       return <RenderContractSign state={state} block={block} />
+    case 'contractSignVendor':
+    case 'contractSignPrimary':
+    case 'contractSignSecondary':
+      return <RenderContractSignParty state={state} block={block} />
     case 'vendorTimelineBody':
       return <RenderVendorTimelineBody state={state} block={block} />
     case 'questionnaireOneAtATime':

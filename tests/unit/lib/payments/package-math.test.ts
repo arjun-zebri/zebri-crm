@@ -85,3 +85,57 @@ describe('weekendLoadingLine', () => {
     expect(weekendLoadingLine(0, 15)).toBeNull()
   })
 })
+
+describe('packageTotals — single-price mode', () => {
+  // An MC selling "the Gold package, $2,400" should not have to invent
+  // per-line figures that add up to it. In single mode the line items are
+  // unpriced inclusions and `fixedPrice` is the base.
+  const inclusions = [
+    { description: 'MC Ceremony', amount: 0, quantity: 1 },
+    { description: 'Reception hosting', amount: 0, quantity: 1 },
+    { description: 'Rehearsal', amount: 250, quantity: 1, optional: true },
+  ]
+
+  it('uses the fixed price as the base, ignoring item amounts', () => {
+    expect(packageTotals(inclusions, { pricingMode: 'single', fixedPrice: 2400 })).toEqual({
+      base: 2400,
+      addOns: 250,
+      full: 2650,
+    })
+  })
+
+  it('still prices add-ons individually in single mode', () => {
+    // "One total" is about the base package the couple is quoted; an add-on is
+    // a discrete extra and has to carry its own price to be worth offering.
+    const { addOns } = packageTotals(inclusions, { pricingMode: 'single', fixedPrice: 2400 })
+    expect(addOns).toBe(250)
+  })
+
+  it('ignores stray item prices that a mode switch left behind', () => {
+    // Switching an itemised package to single must not double-count: the old
+    // per-item figures stay in the DB but stop contributing.
+    const leftovers = [
+      { description: 'MC Ceremony', amount: 900, quantity: 1 },
+      { description: 'Reception hosting', amount: 1100, quantity: 1 },
+    ]
+    expect(packageTotals(leftovers, { pricingMode: 'single', fixedPrice: 2400 }).base).toBe(2400)
+  })
+
+  it('treats a missing fixed price as zero rather than falling back to the sum', () => {
+    // A half-configured single-price package should read as $0, which is
+    // visibly wrong to the MC, rather than silently quoting the item sum they
+    // deliberately stopped maintaining.
+    expect(packageTotals(inclusions, { pricingMode: 'single', fixedPrice: null }).base).toBe(0)
+  })
+
+  it('is unchanged for itemised packages and when no pricing is passed', () => {
+    const priced = [
+      { description: 'MC Ceremony', amount: 900, quantity: 1 },
+      { description: 'Rehearsal', amount: 250, quantity: 1, optional: true },
+    ]
+    const withoutPricing = packageTotals(priced)
+    expect(packageTotals(priced, { pricingMode: 'itemised' })).toEqual(withoutPricing)
+    expect(packageTotals(priced, { pricingMode: null, fixedPrice: 9999 })).toEqual(withoutPricing)
+    expect(withoutPricing.base).toBe(900)
+  })
+})

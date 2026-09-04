@@ -55,4 +55,28 @@ describe('LeadForm', () => {
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument(),
     );
   });
+
+  it('sends document.referrer as referrer only in embed mode', async () => {
+    Object.defineProperty(document, 'referrer', { value: 'https://host.example/contact', configurable: true });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const fill = () => {
+      fireEvent.change(screen.getByRole('textbox', { name: /your name/i }), { target: { value: 'Jamie' } });
+      fireEvent.change(screen.getByRole('textbox', { name: /email/i }), { target: { value: 'jamie@example.test' } });
+      fireEvent.click(screen.getByRole('button', { name: /send enquiry/i }));
+    };
+
+    const { unmount } = render(<LeadForm token={token} form={fixedForm} embed />);
+    fill();
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(fetchSpy.mock.calls[0]![1]!.body as string).referrer).toBe('https://host.example/contact');
+    unmount();
+
+    render(<LeadForm token={token} form={fixedForm} />);
+    fill();
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(fetchSpy.mock.calls[1]![1]!.body as string).referrer).toBeUndefined();
+  });
 });

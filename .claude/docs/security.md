@@ -170,11 +170,35 @@ so token existence never leaks.
 - **Route hardening (`app/api/lead/submit/route.ts`):** Zod-validated
   (`leadSubmitSchema`), `inMemoryLimiter` 5/min/IP, honeypot + min-fill
   timing (silent success so bots learn nothing), and
-  `recordInvalidTokenAttempt({ surface: 'lead' })` on a bad token. No
-  service-role key on the path (RLS server client → RPC).
+  `recordInvalidTokenAttempt({ surface: 'lead' })` on a bad token. The
+  mutation itself still goes through the anon-granted `submit_lead` RPC,
+  scoped by token. The config lookup ahead of it (form existence,
+  enabled state, allowed origins, block tree) now uses the service-role
+  admin client instead (see Config read below), so the earlier "no
+  service-role key on this path" note no longer holds.
 - **Plan limit:** a Starter couple-cap block returns a generic success
   to the visitor and fires `lead_blocked_plan_limit` + an upgrade email
   to the MC, so inbound leads are never silently dropped.
+- **CORS (2026-09-03):** per-form `allowed_origins`. `OPTIONS` echoes an
+  origin registered on any form (a preflight has no token to scope by);
+  `POST` enforces this form's list and returns `403 origin_not_allowed`
+  with no CORS headers otherwise. Same-origin requests are always allowed
+  (hosted page, iframe embed, preview hosts). No `Origin` header means no
+  CORS logic at all. Never a wildcard on submit, never
+  `allow-credentials`, always `vary: origin`.
+- **Error contract:** 400 `validation_failed` (+`fields`), 403, 404
+  `form_not_found`, 409 `form_disabled` (deliberately reveals that a
+  disabled form exists; the token is public), 429 `rate_limited`, 500.
+  Bot hits stay a silent 200.
+- **Config read:** the route reads `enabled`, `allowed_origins` and the
+  block tree with the service-role client (`lib/lead-capture/load-config`),
+  so nothing new is granted to anon. Required fields are enforced from
+  the block tree server-side (`missingRequiredFields`).
+- **`GET /api/lead/config`:** public, wildcard CORS, returns exactly
+  `{ enabled, fields }`; an integration test asserts the key set.
+- **`source_origin`:** server-computed (request `Origin`, or the embed's
+  referrer reduced to an origin and trusted only on same-origin
+  requests). Never visitor-settable.
 
 ### Public booking ingest: `get_public_booking_page` / `submit_booking` (Scheduler Phase C)
 
@@ -326,8 +350,37 @@ used in server routes / server actions / server-side lib modules:
 
 - `app/admin/actions.ts`
 - `app/api/portal/upload/route.ts`
+- `app/api/contract/otp/{request,verify}/route.ts`
 - `app/api/stripe/{checkout,webhook,invoice-payment,connect/callback}/route.ts`
 - `lib/admin/admin-analytics.ts`
+- `lib/contracts/notify.ts`
+
+**Why the two contract OTP routes need it** (2026-09-03). The signer
+verification RPCs (`issue_signer_otp`, `peek_signer_otp`,
+`fail_signer_otp`, `consume_signer_otp`) are granted to `service_role`
+ONLY, with `anon` and `authenticated` explicitly revoked. That is
+load-bearing, not incidental:
+
+- `issue_signer_otp` accepts a caller-supplied **hash**. If `anon`
+  could reach it, whoever holds a sign link would POST the hash of a
+  code they chose and then "verify" that code, defeating the entire
+  check. The point of the OTP is to distinguish the link holder from
+  the mailbox owner.
+- `peek_signer_otp` returns the stored `code_hash` and salt, which
+  must never be reachable through an anon-granted path.
+- The obvious alternative (SQL generates the code and returns the
+  plaintext to an anon caller) is strictly worse: it hands the code
+  straight to the link holder.
+
+The plaintext code is never stored. Only a salted SHA-256 is, and the
+comparison happens in Node with `timingSafeEqual`, so Postgres never
+sees the code at all. SHA-256 rather than a slow KDF is deliberate:
+the secret is a 6-digit code with a 10-minute TTL and a 5-attempt
+lockout, so the offline-cracking threat a KDF defends against does not
+exist, and the attempt cap is the real control. See `lib/contracts/otp.ts`.
+
+`lib/contracts/notify.ts` uses it because the caller is an anonymous
+signer who cannot read the contract roster under RLS.
 
 ### Input validation — `@/lib/api/validate`
 
@@ -571,8 +624,8 @@ DELETE (sampled clean across the migrations).
 | `time_categories` | ✅ | `user_id` | ✅ `tests/integration/couples/time-actions.test.ts` (case-insensitive uniqueness plus cross-tenant denial) | Couples & Events |
 | `bug_reports` | ✅ (owner SELECT/INSERT/UPDATE; no DELETE policy) | `user_id` | ✅ `tests/integration/rls/bug-reports.test.ts` (6 tests — cross-tenant read/update denial, forged `user_id` insert rejected, delete is a no-op, anon locked out) | Feedback |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
-| `lead_capture_forms` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/rpc.test.ts` (10 tests — RLS isolation + `get_lead_form`/`submit_lead` token gating, cross-tenant ingest, status resolution, plan-limit) | Lead capture (ZEB-2) |
-| `form_submissions` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/form-submissions.test.ts` (3 tests — cross-tenant read denial, submission↔couple link, custom-field folding + `get_lead_form` block tree) | Website form (block-based) |
+| `lead_capture_forms` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/rpc.test.ts` (12 tests, RLS isolation + `get_lead_form`/`submit_lead` token gating, cross-tenant ingest, status resolution, plan-limit, `p_source_origin` storage) + `tests/integration/lead-capture/route.test.ts` (16 tests, full `POST /api/lead/submit` error contract and per-form CORS allowlist, `OPTIONS` preflight) + `tests/integration/lead-capture/config-route.test.ts` (5 tests, `GET /api/lead/config` exact key set, disabled form, unknown/malformed token, wildcard CORS) + `tests/integration/lead-capture/load-config.test.ts` (4 tests, `loadLeadFormConfig` + `isOriginRegistered`; these two run against the service-role admin client, not the RLS-scoped anon client, so they exercise the config-read path rather than an RLS boundary) | Lead capture (ZEB-2 + Public API 2026-09-03) |
+| `form_submissions` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/form-submissions.test.ts` (3 tests, cross-tenant read denial, submission-to-couple link, custom-field folding + `get_lead_form` block tree). `source_origin` (added 2026-09-03) is exercised by the `p_source_origin` tests in `rpc.test.ts` above rather than a dedicated test in this file | Website form (block-based) |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |

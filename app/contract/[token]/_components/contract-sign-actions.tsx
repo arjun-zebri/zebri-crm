@@ -21,13 +21,21 @@ import type { CSSProperties } from 'react';
 
 
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
-import type { ContractSignBlock } from '@/app/(dashboard)/branding/blocks/types';
+import type {
+  ContractSignBlock,
+  ContractSignPrimaryBlock,
+  ContractSignSecondaryBlock,
+  ContractSignVendorBlock,
+} from '@/app/(dashboard)/branding/blocks/types';
 import { BusyLabel } from '@/components/ui/busy-label';
 import { getRgb, getTextColor } from '@/lib/branding/contrast';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import type { PublicBranding } from '@/lib/branding/public-branding';
 import { STATUS_COLORS } from '@/lib/branding/status-colors';
 import { roleDefaults } from '@/lib/branding/type-defaults';
+import type { SignatureMode } from '@/lib/contracts/signature-image';
+
+import { ContractSignatureTabs } from './contract-signature-tabs';
 
 /**
  * Sign / Decline action form rendered on active contracts.
@@ -64,7 +72,28 @@ export interface ContractSignActionsProps {
   radius: number;
   branding: PublicBranding;
   brand: string;
-  signBlock?: ContractSignBlock;
+  /** How the signer chose to sign. Defaults to typed. */
+  signatureMode: SignatureMode;
+  onSignatureModeChange: (next: SignatureMode) => void;
+  /** The drawn mark as a PNG data URL, or null. */
+  drawnImage: string | null;
+  onDrawnImageChange: (next: string | null) => void;
+  /**
+   * Block config for labels, button colour and typography. Either the
+   * deprecated all-in-one block or one of the three per-party panels: they
+   * share every field this form reads.
+   */
+  /**
+   * Drop the heading and the section rule. The signing dialog supplies its own
+   * title, so rendering them again produced two headings ("Sign this contract"
+   * then "Sign to accept") and a stray divider under the dialog header.
+   */
+  chromeless?: boolean;
+  signBlock?:
+    | ContractSignBlock
+    | ContractSignVendorBlock
+    | ContractSignPrimaryBlock
+    | ContractSignSecondaryBlock;
 }
 
 export function ContractSignActions({
@@ -82,9 +111,18 @@ export function ContractSignActions({
   radius,
   branding,
   brand,
+  signatureMode,
+  onSignatureModeChange,
+  drawnImage,
+  onDrawnImageChange,
+  chromeless = false,
   signBlock,
 }: ContractSignActionsProps) {
-  const canSign = signerName.trim().length > 0 && agreed && !actionLoading;
+  // The typed name is required in BOTH modes: it identifies the signer, and
+  // the drawing is the mark. A drawn signature additionally needs actual ink,
+  // so a signer cannot submit an empty pad.
+  const hasMark = signatureMode === 'typed' || Boolean(drawnImage);
+  const canSign = signerName.trim().length > 0 && agreed && hasMark && !actionLoading;
   const bodyDefaults = roleDefaults(branding, 'body');
   const finePrintDefaults = roleDefaults(branding, 'finePrint');
 
@@ -130,8 +168,28 @@ export function ContractSignActions({
     : 'transparent';
 
   return (
-    <div className="border-t pt-6 space-y-4" style={{ borderTopColor: branding.border_color }}>
-      <p style={headingStyle}>{heading}</p>
+    <div
+      className={chromeless ? 'space-y-4' : 'border-t pt-6 space-y-4'}
+      style={chromeless ? undefined : { borderTopColor: branding.border_color }}
+    >
+      {chromeless ? null : <p style={headingStyle}>{heading}</p>}
+
+      {/* How you sign comes FIRST: it decides what the rest of the form is.
+          Choosing it underneath the name field meant reading the whole form
+          before discovering drawing was an option. */}
+      <ContractSignatureTabs
+        mode={signatureMode}
+        onModeChange={onSignatureModeChange}
+        drawnImage={drawnImage}
+        onDrawnImageChange={onDrawnImageChange}
+        signerName={signerName}
+        branding={branding}
+        textColor={textColor}
+        mutedColor={mutedColor}
+        radius={radius}
+        previewBackground={previewBackground}
+      />
+
       <div>
         <label className="block mb-1.5" style={labelStyle ?? finePrintStyle}>
           Your full legal name
@@ -150,37 +208,6 @@ export function ContractSignActions({
           }}
         />
       </div>
-      {signerName.trim().length > 0 ? (
-        <div
-          className="border p-4"
-          style={{
-            borderRadius: radius,
-            borderColor: branding.border_color,
-            backgroundColor: previewBackground,
-          }}
-        >
-          <p
-            className="mb-1"
-            style={{
-              color: mutedColor,
-              fontSize: `${finePrintDefaults.fontSize}px`,
-              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-            }}
-          >
-            Your signature will appear as
-          </p>
-          <p
-            style={{
-              color: textColor,
-              fontSize: `${roleDefaults(branding, 'sectionHeading').fontSize}px`,
-              fontFamily: 'Caveat, "Brush Script MT", cursive',
-              lineHeight: roleDefaults(branding, 'sectionHeading').lineHeight,
-            }}
-          >
-            {signerName}
-          </p>
-        </div>
-      ) : null}
       <label className="flex items-start gap-3 cursor-pointer">
         <input
           type="checkbox"

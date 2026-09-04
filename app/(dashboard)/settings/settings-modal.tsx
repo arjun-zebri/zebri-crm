@@ -76,7 +76,9 @@ export function SettingsModal() {
         // the client never needs (or should see) them.
         const { data: row } = await supabase
           .from('user_public_settings')
-          .select('subdomain, email_mode, oauth_provider, oauth_email, oauth_status')
+          .select(
+            'subdomain, email_mode, oauth_provider, oauth_email, oauth_status, mc_signature_image',
+          )
           .eq('user_id', user.id)
           .maybeSingle();
         if (row) {
@@ -86,6 +88,7 @@ export function SettingsModal() {
             oauthProvider: (row.oauth_provider as PublicSettingsData['oauthProvider']) ?? null,
             oauthEmail: row.oauth_email,
             oauthStatus: (row.oauth_status as PublicSettingsData['oauthStatus']) ?? 'none',
+            mcSignatureImage: row.mc_signature_image,
           };
         }
       }

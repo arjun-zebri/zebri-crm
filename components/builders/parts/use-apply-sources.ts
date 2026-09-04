@@ -33,6 +33,8 @@ import type { QuoteTemplate } from './template-picker'
 /** A single line item pulled from a source. */
 export interface ApplyItem {
   description: string
+  /** Optional per-line note, rendered under the description on the invoice. */
+  note?: string | null
   amount: number
 }
 
@@ -96,12 +98,12 @@ export function useApplySources({
           ? supabase.from('invoice_templates').select('id, name, description').eq('user_id', uid).order('position')
           : Promise.resolve({ data: [] as { id: string; name: string; description: string | null }[] }),
         includeInvoiceTemplates
-          ? supabase.from('invoice_template_items').select('invoice_template_id, description, amount, position').eq('user_id', uid).order('position')
-          : Promise.resolve({ data: [] as { invoice_template_id: string; description: string; amount: number }[] }),
+          ? supabase.from('invoice_template_items').select('invoice_template_id, description, note, amount, position').eq('user_id', uid).order('position')
+          : Promise.resolve({ data: [] as { invoice_template_id: string; description: string; note: string | null; amount: number }[] }),
       ])
 
       const byInvTpl: Record<string, ApplyItem[]> = {}
-      for (const it of invTplItems.data ?? []) (byInvTpl[it.invoice_template_id] ??= []).push({ description: it.description, amount: it.amount })
+      for (const it of invTplItems.data ?? []) (byInvTpl[it.invoice_template_id] ??= []).push({ description: it.description, note: it.note, amount: it.amount })
 
       const byPkg: Record<string, { base: ApplyItem[]; addOns: ApplyItem[] }> = {}
       for (const it of pkgItems.data ?? []) {
@@ -126,6 +128,30 @@ export function useApplySources({
         // Only the package's customer-facing prose is applied; its
         // `notes` subtitle is internal to the Templates list.
         const notes = p.description ?? null
+
+        // A single-price package applies as ONE priced line, with its
+        // inclusions listed in that line's note.
+        //
+        // The alternative (one line per inclusion, each at $0) prints a column
+        // of "$0.00" beside every inclusion on the couple's invoice, which
+        // reads as "these are free" rather than "not itemised" — the exact
+        // impression the single-price mode exists to avoid. Folding them into
+        // the note keeps the inclusions visible while quoting one figure.
+        const baseItems: ApplyItem[] =
+          p.pricing_mode === 'single'
+            ? [
+                {
+                  description: p.name,
+                  note:
+                    bucket.base
+                      .map((i) => i.description.trim())
+                      .filter(Boolean)
+                      .join('\n') || null,
+                  amount: Number(p.fixed_price) || 0,
+                },
+              ]
+            : bucket.base
+
         options.push({
           id: key,
           name: p.name,
@@ -135,7 +161,7 @@ export function useApplySources({
         })
         applyMap[key] = {
           notes,
-          items: bucket.base,
+          items: baseItems,
           addOns: bucket.addOns,
           package: {
             id: p.id,

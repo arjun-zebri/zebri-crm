@@ -38,6 +38,9 @@ import type {
   PaymentScheduleBlock,
   ContractBodyBlock,
   ContractSignBlock,
+  ContractSignVendorBlock,
+  ContractSignPrimaryBlock,
+  ContractSignSecondaryBlock,
   CouplePortalBlock,
   VendorTimelineBodyBlock,
   QuestionnaireOneAtATimeBlock,
@@ -231,6 +234,9 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
     case 'contractBody':
       return <ContractBodyControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'contractSign':
+    case 'contractSignVendor':
+    case 'contractSignPrimary':
+    case 'contractSignSecondary':
       return <ContractSignControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'vendorTimelineBody':
       return <VendorTimelineBodyControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
@@ -1355,7 +1361,7 @@ function PaymentDetailsControls({
 
 // ── Line items ────────────────────────────────────────────────────────────────
 
-type LineItemsTarget = 'rows' | 'header' | 'item'
+type LineItemsTarget = 'rows' | 'header' | 'item' | 'note'
 
 function LineItemsControls({
   block,
@@ -1370,11 +1376,15 @@ function LineItemsControls({
   activeSubTarget: string | null
   expanded?: boolean
 }) {
-  // Clicking the header row or an item row targets its text style; clicking
-  // elsewhere falls back to 'rows' (the structural view: row style, header
-  // toggle, column layout).
+  // Clicking the header row, an item row or a line's note targets its text
+  // style; clicking elsewhere falls back to 'rows' (the structural view: row
+  // style, header toggle, column layout).
   const target: LineItemsTarget =
-    activeSubTarget === 'header' || activeSubTarget === 'item' ? activeSubTarget : 'rows'
+    activeSubTarget === 'header' ||
+    activeSubTarget === 'item' ||
+    activeSubTarget === 'note'
+      ? activeSubTarget
+      : 'rows'
 
   if (target === 'rows') {
     return (
@@ -1414,31 +1424,51 @@ function LineItemsControls({
     )
   }
 
-  const isHeader = target === 'header'
-  const style = isHeader ? block.headerStyle : block.itemStyle
-  const defaults: TextStyleDefaults = isHeader
-    ? {
-        fontFamily: state.fontBody,
-        fontSize: 11,
-        fontWeight: 500,
-        color: '#9CA3AF',
-        align: 'left',
-        lineHeight: 1.4,
-        letterSpacing: 0.06,
-      }
-    : {
-        fontFamily: state.fontBody,
-        fontSize: 14,
-        fontWeight: 400,
-        color: '#111827',
-        align: 'left',
-        lineHeight: 1.4,
-        letterSpacing: 0,
-      }
+  const style =
+    target === 'header'
+      ? block.headerStyle
+      : target === 'note'
+        ? block.noteStyle
+        : block.itemStyle
+
+  const defaults: TextStyleDefaults =
+    target === 'header'
+      ? {
+          fontFamily: state.fontBody,
+          fontSize: 11,
+          fontWeight: 500,
+          color: '#9CA3AF',
+          align: 'left',
+          lineHeight: 1.4,
+          letterSpacing: 0.06,
+        }
+      : target === 'note'
+        ? {
+            // Fine-print role, matching the quantity sub-line the note sits
+            // beside, so an unstyled note is visually consistent with it.
+            fontFamily: state.fontBody,
+            fontSize: 12,
+            fontWeight: state.fontBodyWeight ?? 400,
+            color: state.textColor || '#6B7280',
+            align: 'left',
+            lineHeight: 1.5,
+            letterSpacing: 0,
+          }
+        : {
+            fontFamily: state.fontBody,
+            fontSize: 14,
+            fontWeight: 400,
+            color: '#111827',
+            align: 'left',
+            lineHeight: 1.4,
+            letterSpacing: 0,
+          }
+
+  const label = target === 'header' ? 'Header' : target === 'note' ? 'Note' : 'Items'
 
   return (
     <div className="flex items-center gap-2">
-      <ActiveTargetLabel label={isHeader ? 'Header' : 'Items'} />
+      <ActiveTargetLabel label={label} />
       <Divider />
       <TextStyleControls
         style={style}
@@ -1447,7 +1477,11 @@ function LineItemsControls({
           const merged = { ...(style ?? {}), ...patch }
           updateBlock<LineItemsBlock>(
             block.id,
-            isHeader ? { headerStyle: merged } : { itemStyle: merged },
+            target === 'header'
+              ? { headerStyle: merged }
+              : target === 'note'
+                ? { noteStyle: merged }
+                : { itemStyle: merged },
           )
         }}
         {...(expanded !== undefined ? { expanded } : {})}
@@ -2159,6 +2193,19 @@ function ContractBodyControls({
  * single-field change preserves the MC's prior edits, matching every sibling
  * *Controls.
  */
+/**
+ * Every signature-block shape the controls drive: the deprecated all-in-one
+ * block plus the three per-party panels. They share their editable fields, so
+ * one control set serves all four rather than four near-identical copies.
+ */
+type AnySignBlock = ContractSignBlock | AnyPartyBlock
+
+/** Just the three per-party panels, which carry the signature-specific fields. */
+type AnyPartyBlock =
+  | ContractSignVendorBlock
+  | ContractSignPrimaryBlock
+  | ContractSignSecondaryBlock
+
 function ContractSignControls({
   block,
   state,
@@ -2166,20 +2213,63 @@ function ContractSignControls({
   activeSubTarget,
   expanded,
 }: {
-  block: ContractSignBlock
+  block: AnySignBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   activeSubTarget: string | null
   expanded?: boolean
 }) {
-  // Three click-to-target parts (like every other multi-target block): the
-  // prompt heading, the couple-facing label text, and the sign/decline button.
-  // Clicking a part in the preview focuses the toolbar to just that part's
-  // controls, so the button gets its own dedicated labels + fill styling rather
-  // than everything showing at once.
-  const target: 'heading' | 'label' | 'button' =
-    activeSubTarget === 'heading' ? 'heading' : activeSubTarget === 'button' ? 'button' : 'label'
+  // Click-to-target parts (like every other multi-target block): the prompt
+  // heading, the couple-facing label text, the rendered signature, and the
+  // sign/decline button. Clicking a part in the preview focuses the toolbar to
+  // just that part's controls rather than showing everything at once.
+  //
+  // The supplier's panel is already signed by the time anyone sees it, so it
+  // has no buttons and the button target is unreachable there.
+  const isVendor = block.type === 'contractSignVendor'
+  const requested =
+    activeSubTarget === 'heading' || activeSubTarget === 'button' || activeSubTarget === 'signature'
+      ? activeSubTarget
+      : 'label'
+  // The deprecated all-in-one block has no separate signature element to
+  // style, so the signature target only exists on the per-party panels.
+  const partyBlock = block.type === 'contractSign' ? null : block
+  const target: 'heading' | 'label' | 'button' | 'signature' =
+    requested === 'button' && isVendor
+      ? 'label'
+      : requested === 'signature' && !partyBlock
+        ? 'label'
+        : requested
   const buttonColor = block.buttonColor ?? state.brandColor
+
+  if (target === 'signature' && partyBlock) {
+    const sigDefaults: TextStyleDefaults = {
+      ...roleDefaults(publicBrandingFromEditorState(state), 'sectionHeading'),
+      align: 'left',
+    }
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <ActiveTargetLabel label="Signature" />
+        <Divider />
+        <Toggle
+          label="Date"
+          active={partyBlock.showDate ?? true}
+          onChange={(v) => updateBlock<AnyPartyBlock>(partyBlock.id, { showDate: v })}
+        />
+        <Divider />
+        <TextStyleControls
+          style={partyBlock.signatureStyle}
+          defaults={sigDefaults}
+          onChange={(patch) =>
+            updateBlock<AnyPartyBlock>(partyBlock.id, {
+              signatureStyle: { ...(partyBlock.signatureStyle ?? {}), ...patch },
+            })
+          }
+          {...(expanded !== undefined ? { expanded } : {})}
+        />
+      </div>
+    )
+  }
 
   if (target === 'button') {
     return (
@@ -2190,17 +2280,17 @@ function ContractSignControls({
           label="Sign"
           value={block.primaryLabel ?? ''}
           placeholder="Sign contract"
-          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { primaryLabel: v })}
+          onChange={(v) => updateBlock<AnySignBlock>(block.id, { primaryLabel: v })}
         />
         <TextField
           label="Decline"
           value={block.secondaryLabel ?? ''}
           placeholder="Decline"
-          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { secondaryLabel: v })}
+          onChange={(v) => updateBlock<AnySignBlock>(block.id, { secondaryLabel: v })}
         />
         <ColorPopover
           value={buttonColor}
-          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { buttonColor: v })}
+          onChange={(v) => updateBlock<AnySignBlock>(block.id, { buttonColor: v })}
           swatches={COLOR_PALETTE}
           trigger={
             <button
@@ -2228,7 +2318,7 @@ function ContractSignControls({
   }
   const onStyleChange = (patch: TextStyle) => {
     const merged = { ...(style ?? {}), ...patch }
-    updateBlock<ContractSignBlock>(
+    updateBlock<AnySignBlock>(
       block.id,
       target === 'heading' ? { headingStyle: merged } : { labelStyle: merged },
     )
@@ -2242,7 +2332,7 @@ function ContractSignControls({
           label="Text"
           value={block.heading ?? ''}
           placeholder="Sign to accept"
-          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { heading: v })}
+          onChange={(v) => updateBlock<AnySignBlock>(block.id, { heading: v })}
         />
       ) : null}
       <Divider />
@@ -2253,6 +2343,44 @@ function ContractSignControls({
         onChange={onStyleChange}
         {...(expanded !== undefined ? { expanded } : {})}
       />
+
+      {/* The per-party preview shows the signature slot, not a mock sign form,
+          so there is no button in it to click. The sign / decline labels and
+          fill still need to be editable, so they live here whenever a CLIENT
+          signature block is selected. The supplier signs by sending and never
+          sees these buttons, so their block omits them. */}
+      {partyBlock && !isVendor && target !== 'heading' ? (
+        <>
+          <Divider />
+          <TextField
+            label="Sign"
+            value={block.primaryLabel ?? ''}
+            placeholder="Sign contract"
+            onChange={(v) => updateBlock<AnySignBlock>(block.id, { primaryLabel: v })}
+          />
+          <TextField
+            label="Decline"
+            value={block.secondaryLabel ?? ''}
+            placeholder="Decline"
+            onChange={(v) => updateBlock<AnySignBlock>(block.id, { secondaryLabel: v })}
+          />
+          <ColorPopover
+            value={buttonColor}
+            onChange={(v) => updateBlock<AnySignBlock>(block.id, { buttonColor: v })}
+            swatches={COLOR_PALETTE}
+            trigger={
+              <button
+                type="button"
+                title="Sign button fill"
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-control hover:bg-surface-emphasis cursor-pointer border border-border text-body text-gray-600"
+              >
+                <span className="w-4 h-4 rounded-control ring-1 ring-black/10" style={{ background: buttonColor }} />
+                Fill
+              </button>
+            }
+          />
+        </>
+      ) : null}
     </div>
   )
 }

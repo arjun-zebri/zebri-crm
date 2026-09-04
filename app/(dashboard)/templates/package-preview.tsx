@@ -34,6 +34,10 @@ interface PackagePreviewProps {
   /** Actions rendered top-right of the card (e.g. Edit + overflow menu). */
   actions?: ReactNode
   items: PackagePricedItem[]
+  /** 'single' lists the base items as unpriced inclusions under one price. */
+  pricingMode?: 'itemised' | 'single' | null
+  /** The whole base price in single mode. */
+  fixedPrice?: number | null
   gstInclusive?: boolean
   weekendLoadingPercent?: number | null
 }
@@ -62,12 +66,18 @@ export function PackagePreview({
   meta,
   actions,
   items,
+  pricingMode,
+  fixedPrice,
   gstInclusive = true,
   weekendLoadingPercent,
 }: PackagePreviewProps) {
   const baseItems = items.filter((i) => !i.optional)
   const addOns = items.filter((i) => i.optional)
-  const totals = packageTotals(items)
+  const isSinglePrice = pricingMode === 'single'
+  const totals = packageTotals(items, {
+    pricingMode: isSinglePrice ? 'single' : 'itemised',
+    fixedPrice: fixedPrice ?? null,
+  })
 
   const terms: string[] = [gstInclusive ? 'prices include GST' : 'GST added at invoice']
   if (weekendLoadingPercent) terms.push(`weekend rate +${String(weekendLoadingPercent)}%`)
@@ -127,9 +137,13 @@ export function PackagePreview({
                         <span className="text-text-subtle">Untitled item</span>
                       )}
                     </span>
-                    <span className="shrink-0 text-body tabular-nums text-text">
-                      {formatAUD(flat.amount)}
-                    </span>
+                    {/* Single-price packages list inclusions, not charges, so
+                        the per-line figure is omitted rather than shown as $0. */}
+                    {isSinglePrice ? null : (
+                      <span className="shrink-0 text-body tabular-nums text-text">
+                        {formatAUD(flat.amount)}
+                      </span>
+                    )}
                   </li>
                 )
               })}

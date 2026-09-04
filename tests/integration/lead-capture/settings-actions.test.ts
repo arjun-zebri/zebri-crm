@@ -24,6 +24,7 @@ vi.mock('@/lib/supabase/server', () => ({
 // eslint-disable-next-line import/order
 import {
   ensureLeadForm,
+  saveAllowedOrigins,
   saveLeadCaptureSettings,
 } from '@/app/(dashboard)/settings/lead-capture/actions';
 
@@ -95,7 +96,88 @@ describe('saveLeadCaptureSettings', () => {
   });
 });
 
+describe('saveAllowedOrigins', () => {
+  it('normalises, dedupes and persists the list, and ensureLeadForm returns it', async () => {
+    const user = await createTestUser({}, pro);
+    cleanup.push(user.cleanup);
+    activeUser = user;
+    await ensureLeadForm();
+
+    const saved = await saveAllowedOrigins(['HTTPS://WWW.Example.com', 'https://www.example.com', 'http://localhost:3000']);
+    expect(saved).toEqual({ ok: true, origins: ['https://www.example.com', 'http://localhost:3000'] });
+
+    const state = await ensureLeadForm();
+    expect(state.allowedOrigins).toEqual(['https://www.example.com', 'http://localhost:3000']);
+    expect(state.fields.map((f) => f.key)).toContain('name');
+  });
+
+  it('rejects an entry with a path and leaves the saved list untouched', async () => {
+    const user = await createTestUser({}, pro);
+    cleanup.push(user.cleanup);
+    activeUser = user;
+    await ensureLeadForm();
+    await saveAllowedOrigins(['https://keep.example']);
+
+    const result = await saveAllowedOrigins(['https://keep.example', 'https://bad.example/contact']);
+    expect(result.ok).toBe(false);
+    const row = await serviceClient().from('lead_capture_forms').select('allowed_origins').eq('user_id', user.id).single();
+    expect(row.data?.allowed_origins).toEqual(['https://keep.example']);
+  });
+
+  it('cannot touch another user’s form', async () => {
+    const a = await createTestUser({}, pro);
+    const b = await createTestUser({}, pro);
+    cleanup.push(a.cleanup, b.cleanup);
+    activeUser = a;
+    await ensureLeadForm();
+    activeUser = b;
+    await ensureLeadForm();
+    await saveAllowedOrigins(['https://b.example']);
+    const rowA = await serviceClient().from('lead_capture_forms').select('allowed_origins').eq('user_id', a.id).single();
+    expect(rowA.data?.allowed_origins).toEqual([]);
+  });
+});
+
 // Registered here so afterEach clears activeUser before teardown runs.
 afterEach(async () => {
   await Promise.all(cleanup.splice(0).map((f) => f().catch(() => undefined)));
+});
+
+describe('allowed-domain seeding from the MC website', () => {
+  it('fills an empty allowlist from the website in Personal Info', async () => {
+    const user = await createTestUser({ website: 'www.mc-site.com/' }, pro);
+    cleanup.push(user.cleanup);
+    activeUser = user;
+
+    const state = await ensureLeadForm();
+    // Both forms: a browser sends whichever host the site actually serves.
+    expect(state.allowedOrigins).toEqual(['https://www.mc-site.com', 'https://mc-site.com']);
+
+    const row = await serviceClient()
+      .from('lead_capture_forms')
+      .select('allowed_origins')
+      .eq('user_id', user.id)
+      .single();
+    expect(row.data?.allowed_origins).toEqual([
+      'https://www.mc-site.com',
+      'https://mc-site.com',
+    ]);
+  });
+
+  it('never overwrites a list the MC has already set', async () => {
+    const user = await createTestUser({ website: 'https://www.mc-site.com' }, pro);
+    cleanup.push(user.cleanup);
+    activeUser = user;
+    await ensureLeadForm();
+    await saveAllowedOrigins(['https://chosen.example']);
+
+    expect((await ensureLeadForm()).allowedOrigins).toEqual(['https://chosen.example']);
+  });
+
+  it('leaves the list empty when there is no website', async () => {
+    const user = await createTestUser({}, pro);
+    cleanup.push(user.cleanup);
+    activeUser = user;
+    expect((await ensureLeadForm()).allowedOrigins).toEqual([]);
+  });
 });

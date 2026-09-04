@@ -48,8 +48,41 @@ export function lineTotal(item: PackagePricedItem): number {
   return roundCents(safeQuantity(item.quantity) * (Number(item.amount) || 0))
 }
 
-/** Base (required), add-on (optional), and combined totals for a package. */
-export function packageTotals(items: readonly PackagePricedItem[]): {
+/**
+ * How a package arrives at its base price.
+ *
+ * `itemised` (the default, and every package created before this existed) sums
+ * the required line items. `single` ignores those amounts entirely: the items
+ * are unpriced inclusions and {@link PackagePricing.fixedPrice} is the price.
+ *
+ * The distinction exists because an MC selling "the Gold package, $2,400"
+ * otherwise had to invent per-line figures that add to 2400, and the couple
+ * then saw a breakdown the MC never meant to quote.
+ */
+export type PackagePricingMode = 'itemised' | 'single'
+
+/** The package-level pricing fields `packageTotals` needs. */
+export interface PackagePricing {
+  /** Missing or null is treated as `itemised`, so old rows are unaffected. */
+  pricingMode?: PackagePricingMode | null
+  /** The whole base price in `single` mode. Ignored when itemised. */
+  fixedPrice?: number | null
+}
+
+/**
+ * Base (required), add-on (optional), and combined totals for a package.
+ *
+ * Add-ons stay individually priced in BOTH modes: "a single total" is about
+ * the base package the couple is quoted, while an add-on is a discrete extra
+ * the MC ticks on, and it has to carry its own price to be worth offering.
+ *
+ * @param items - Every package item, base and optional.
+ * @param pricing - Package-level pricing. Omit for itemised (the default).
+ */
+export function packageTotals(
+  items: readonly PackagePricedItem[],
+  pricing?: PackagePricing,
+): {
   base: number
   addOns: number
   full: number
@@ -59,6 +92,9 @@ export function packageTotals(items: readonly PackagePricedItem[]): {
   for (const item of items) {
     if (item.optional) addOns += lineTotal(item)
     else base += lineTotal(item)
+  }
+  if (pricing?.pricingMode === 'single') {
+    base = Number(pricing.fixedPrice) || 0
   }
   return { base: roundCents(base), addOns: roundCents(addOns), full: roundCents(base + addOns) }
 }
