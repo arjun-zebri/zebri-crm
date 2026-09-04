@@ -128,6 +128,8 @@ referral_source (text, nullable)
 
 "How did you hear about me" answer. Free text captured by the lead-capture form (ZEB-2) and editable on the couple modal; distinct from lead_source.
 
+source_origin (text, nullable), added by the Lead Capture API migration (2026-09-03, `20260903100000_lead_capture_api.sql`). The browser origin (scheme://host[:port]) the enquiry was posted from. Server-computed by `POST /api/lead/submit`: the request's `Origin` header for a third-party site's post, or the embed's own referrer reduced to an origin when the post is same-origin (hosted page, iframe embed). Null for server-side posts. Read-only in the app; the couple Overview shows it as an "Enquiry from" row (`couple-source-origin-row.tsx`) only when set.
+
 created_at (timestamp)
 
 ------------------------------------------------------------------------
@@ -154,9 +156,16 @@ Each user has their own set of custom statuses. The slug is stored in couples.st
 
 One embeddable lead-capture form per MC. The capture_token is the public
 capability for the /lead/[token] surface (mirrors couples.portal_token).
-RLS: single owner-isolation policy (auth.uid() = user_id). Public access
-is only via the security-definer RPCs get_lead_form / submit_lead, both
-granted to anon; the anon client never touches the table directly.
+RLS: single owner-isolation policy (auth.uid() = user_id). The hosted
+/lead/[token] page reads via the security-definer get_lead_form RPC
+(anon-granted); submissions write through the security-definer
+submit_lead RPC (also anon-granted). The public Lead Capture API routes
+(`POST /api/lead/submit`, `GET /api/lead/config`, 2026-09-03) instead
+read this table directly with the service-role admin client
+(`lib/lead-capture/load-config.ts`) to reach `enabled`, `allowed_origins`
+and the block tree without granting any of that to anon; the anon client
+itself still never touches this table directly, and the mutation still
+goes through submit_lead.
 
 Columns:
 
@@ -165,6 +174,8 @@ id (uuid) user_id (uuid, not null, unique) capture_token (uuid, not null, unique
 enabled (boolean, not null, default true)
 
 target_status_slug (text, nullable) — couple_statuses.slug the lead lands in; null falls back to the MC's first status by position
+
+allowed_origins (text[], not null, default '{}'), added 2026-09-03 (`20260903100000_lead_capture_api.sql`). Per-form CORS allowlist for browser posts to `POST /api/lead/submit`, stored exactly as a browser sends an `Origin` header (scheme://host[:port], lowercase host, no path). GIN index `lead_capture_forms_allowed_origins_idx` backs both the per-form `contains` check and the token-less CORS preflight lookup (`isOriginRegistered`, "is this origin registered on any form"). Same-origin posts (the hosted page, the iframe embed) need no entry here; posts with no `Origin` header at all skip CORS logic entirely. MC-edited from Settings > Lead Capture (`allowed-domains.tsx`), capped at 20 origins.
 
 created_at (timestamp) updated_at (timestamp)
 
@@ -176,13 +187,19 @@ that block tree. Fields are `formField` blocks whose `role` maps each
 answer to a couple column (name/partnerName/email/phone/weddingDate/
 venue/message/referral) or, for `role='custom'`, into the couple notes.
 
-Ingest (submit_lead): validates the token, stores a form_submissions row
-FIRST (so a lead is never lost), resolves the landing status, and inserts
-a couple owned by the token issuer with lead_source='website' and
-referral_source from the "how did you hear" field. Custom answers +
-message fold into couple notes as "Label: value" lines; the new couple id
-is linked back onto the submission. A Starter couple-cap block returns
-{error:'plan_limit'} and keeps the stored submission (couple_id null).
+Ingest: `submit_lead(token uuid, p_payload jsonb, p_source_origin text
+default null)`. The two-argument overload (`submit_lead(uuid, jsonb)`)
+was dropped 2026-09-03 rather than kept alongside it, because a
+defaulted third argument would make the two-argument call ambiguous for
+PostgREST. The function validates the token, stores a form_submissions
+row FIRST (so a lead is never lost), resolves the landing status, and
+inserts a couple owned by the token issuer with lead_source='website',
+referral_source from the "how did you hear" field, and source_origin
+from the third argument (capped to 200 characters; null when omitted).
+Custom answers + message fold into couple notes as "Label: value" lines;
+the new couple id is linked back onto the submission. A Starter
+couple-cap block returns {error:'plan_limit'} and keeps the stored
+submission (couple_id null).
 
 ------------------------------------------------------------------------
 
@@ -204,6 +221,11 @@ created from this submission; null when the plan cap blocked creation
 
 payload (jsonb, not null) — the full submitted payload (canonical fields
 + custom array)
+
+source_origin (text, nullable), added 2026-09-03
+(`20260903100000_lead_capture_api.sql`), mirrors couples.source_origin.
+Recorded even when the plan cap blocked couple creation (couple_id
+null), so the site a blocked lead came from is not lost.
 
 created_at (timestamp)
 
@@ -1664,3 +1686,71 @@ Parameters:
 Grant: service_role (cron only).
 
 Migration: `20260821000000_booking_lifecycle.sql`.
+
+## Contract signing + money-surface columns (2026-09-03)
+
+Six migrations, `20260903000000` through `20260903005000`. Every column
+added defaults to the behaviour that existed before it, so no existing
+row changes meaning.
+
+### `contracts`
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `signing_mode` | text | `'parallel'` | `'sequential'` holds each client signer until lower `signing_order` clients have signed |
+| `require_signer_otp` | boolean | false | Gate signing behind an emailed 6-digit code |
+| `document_hash` | text | null | Hex SHA-256 over the executed facts, set once at completion |
+| `document_hash_algo` | text | null | Recipe version (`zebri-sha256-v1`) so a v2 can coexist |
+| `document_hash_at` | timestamptz | null | When the hash was taken |
+
+### `contract_signers`
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `signature_mode` | text | `'typed'` | `'drawn'` means `signature_image` holds the mark |
+| `signature_image` | text | null | Base64 PNG data URL, CHECK-capped at 128KB |
+| `otp_verified_at` | timestamptz | null | Last successful code verification; `sign_contract_v2` requires it within 30 minutes |
+
+### `contract_signer_otps` (new)
+One-time codes. Stores `code_hash` + `code_salt` only, never the code.
+RLS: owner SELECT only (an MC asking "did their code go out?" is a real
+support need, and the row exposes only a hash). **No insert/update/delete
+policy** — the only writers are the definer RPCs, granted to
+`service_role` alone. See `security.md`.
+
+### `user_public_settings`
+| Column | Type | Purpose |
+|---|---|---|
+| `mc_signature_image` | text | The MC's drawn signature, snapshotted onto `contract_signers` at send |
+
+Deliberately **not** on `user_metadata`: `_user_branding` reads
+`raw_user_meta_data` onto every public surface, and `user_metadata` is
+serialised into the JWT and is user-writable. A 100KB access token is
+not acceptable.
+
+### `invoice_items` / `invoice_template_items`
+| Column | Type | Purpose |
+|---|---|---|
+| `note` | text | Optional per-line note, rendered under the description on the public invoice and PDF |
+
+### `packages`
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `pricing_mode` | text | `'itemised'` | `'single'` makes line items unpriced inclusions |
+| `fixed_price` | numeric(10,2) | null | The whole base price in `single` mode |
+
+### `contract_audit_log`
+`event_type` CHECK gained `'invite_sent'` and `'identity_verified'`.
+
+### Functions
+- `sign_contract_v2(uuid, jsonb)` / `decline_contract_v2(uuid, jsonb)` —
+  the canonical entry points. The old positional names are forwarders.
+  **Add payload keys, never parameters** (see `contracts.md`).
+- `issue_signer_otp` / `peek_signer_otp` / `fail_signer_otp` /
+  `consume_signer_otp` — `service_role` ONLY, anon and authenticated
+  explicitly revoked.
+- `_ip_prefix(text)` — /24 or /48 redaction for the public audit trail.
+  No anon grant; called only inside the definer function.
+- `_contract_canonical_payload(uuid)` — the deterministic string the
+  document hash is taken over.
+- `verify_contract_hash(text)` — public fingerprint lookup, by hash only,
+  returning no document content.
+- Dropped: the stale `decline_contract(uuid, text)` overload.

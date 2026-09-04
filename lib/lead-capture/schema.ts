@@ -9,8 +9,14 @@
  */
 import { z } from 'zod';
 
-/** Minimum time a genuine human takes to fill the form, in ms. */
-const MIN_FILL_MS = 2_000;
+/**
+ * Minimum time a genuine human takes to fill the form, in ms.
+ *
+ * Exported so `lib/lead-capture/api-reference.ts` derives its documented
+ * threshold (`MIN_FILL_SECONDS`) from this value instead of duplicating it -
+ * the enforced number and the documented one can never drift apart.
+ */
+export const MIN_FILL_MS = 2_000;
 
 /** Trimmed optional text, with empty strings coerced to `undefined`. */
 const optionalText = (max: number) =>
@@ -29,10 +35,14 @@ export const leadSubmitSchema = z.object({
   token: z.uuid(),
   name: z.string().trim().min(1).max(120),
   partner_name: optionalText(120),
-  email: z.preprocess(
-    (v) => (typeof v === 'string' ? v.trim() : v),
-    z.email().max(200),
-  ),
+  // Required-ness is decided by the form config in the submit route, so an
+  // empty email is valid here; a non-empty one must still be a real address.
+  email: z
+    .preprocess(
+      (v) => (typeof v === 'string' ? v.trim() : v),
+      z.union([z.email().max(200), z.literal('')]).optional(),
+    )
+    .transform((v) => (v ? v : undefined)),
   phone: optionalText(40),
   wedding_date: z
     .union([isoDate, z.literal('')])
@@ -54,6 +64,9 @@ export const leadSubmitSchema = z.object({
     .optional(),
   hp: z.string().max(200).optional(),
   rendered_at: z.number().int().nonnegative(),
+  // Sent by our own embed (document.referrer of the iframe). The route only
+  // honours it on a same-origin request and reduces it to an origin.
+  referrer: z.string().max(2000).optional(),
 });
 
 export type LeadSubmitInput = z.infer<typeof leadSubmitSchema>;

@@ -1,6 +1,11 @@
 /**
- * Inline banner at the top of the contract card body — `signed`,
- * `declined`, or `expired`.
+ * Inline banner at the top of the contract card body: `declined` or `expired`.
+ *
+ * There was a third, `signed`: a green box reading "Signed by X on <date>" with
+ * the signer's IP beneath it. It is gone. It restated what the signature panels
+ * below it already say, per party, and the signer had just been told the same
+ * thing in the dialog they signed from. Declined and expired survive because
+ * neither state has anywhere else to announce itself.
  *
  * Phase 3.2: public surface branding — uses fixed STATUS_COLORS
  * (green for signed, red for declined, amber for expired) so signal
@@ -9,12 +14,12 @@
  * via getRgb to avoid Zebri app-chrome tokens on a couple-facing
  * document.
  *
- * The signed banner doubles as the "Download PDF" affordance.
+ * The banner is status only. The download affordance sits at the top of the
+ * page instead: a button buried mid-document, inside a green box, is not where
+ * anyone looks for it once the contract is executed.
  *
  * @module app/contract/[token]/_components/contract-status-banner
  */
-import { Download, ShieldCheck } from 'lucide-react';
-
 import { getRgb } from '@/lib/branding/contrast';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import type { PublicBranding } from '@/lib/branding/public-branding';
@@ -29,11 +34,7 @@ import { formatDate, formatDateTime } from './public-contract';
  * Status banner for signed, declined, and expired contract states.
  * All branding colors are required to ensure consistent styling from the MC's kit.
  *
- * @param kind - Which state to render (signed, declined, or expired)
- * @param signerName - Name of the signer (for signed state)
- * @param signedAt - ISO timestamp when the contract was signed
- * @param signerIp - IP address of the signer (for signed state)
- * @param onDownloadPdf - Callback to download PDF (signed state only)
+ * @param kind - Which state to render (declined or expired)
  * @param declinedAt - ISO timestamp when the contract was declined
  * @param declinedReason - Optional reason provided by the couple
  * @param expiresAt - ISO date when the contract expires (expired state only)
@@ -41,12 +42,7 @@ import { formatDate, formatDateTime } from './public-contract';
  * @param branding - MC's branding configuration
  */
 export interface ContractStatusBannerProps {
-  kind: 'signed' | 'declined' | 'expired';
-  /** Signed-variant fields. */
-  signerName?: string | null;
-  signedAt?: string | null;
-  signerIp?: string | null;
-  onDownloadPdf?: () => void;
+  kind: 'declined' | 'expired';
   /** Declined-variant fields. */
   declinedAt?: string | null;
   declinedReason?: string | null;
@@ -60,10 +56,6 @@ export interface ContractStatusBannerProps {
 
 export function ContractStatusBanner({
   kind,
-  signerName,
-  signedAt,
-  signerIp,
-  onDownloadPdf,
   declinedAt,
   declinedReason,
   expiresAt,
@@ -71,80 +63,6 @@ export function ContractStatusBanner({
   branding,
 }: ContractStatusBannerProps) {
   const bodyDefaults = roleDefaults(branding, 'body');
-
-  if (kind === 'signed') {
-    // Soft tinted background from success colour: 8% opacity.
-    const bgRgb = getRgb(STATUS_COLORS.success);
-    const backgroundColor = bgRgb
-      ? `rgba(${bgRgb[0]}, ${bgRgb[1]}, ${bgRgb[2]}, 0.08)`
-      : STATUS_COLORS.success;
-
-    // Subtle border from success colour: 20% opacity.
-    const borderColor = bgRgb
-      ? `rgba(${bgRgb[0]}, ${bgRgb[1]}, ${bgRgb[2]}, 0.2)`
-      : STATUS_COLORS.success;
-
-    // The PDF affordance sits on the already-tinted banner, so it needs a
-    // slightly stronger border and fill to stay legible against it.
-    const pdfBorderColor = bgRgb
-      ? `rgba(${bgRgb[0]}, ${bgRgb[1]}, ${bgRgb[2]}, 0.3)`
-      : STATUS_COLORS.success;
-    const pdfBackgroundColor = bgRgb
-      ? `rgba(${bgRgb[0]}, ${bgRgb[1]}, ${bgRgb[2]}, 0.15)`
-      : STATUS_COLORS.success;
-
-    return (
-      <div
-        className="p-4 border flex items-start gap-3"
-        style={{
-          borderRadius: branding.corner_radius,
-          backgroundColor,
-          borderColor,
-        }}
-      >
-        <ShieldCheck
-          size={20}
-          strokeWidth={1.5}
-          className="shrink-0 mt-0.5"
-          style={{ color: STATUS_COLORS.success }}
-        />
-        <div className="flex-1" style={{ fontSize: `${bodyDefaults.fontSize}px` }}>
-          <p style={{ color: STATUS_COLORS.success }}>
-            Signed by <strong>{signerName ?? 'the couple'}</strong>
-            {signedAt ? ` on ${formatDateTime(signedAt)}` : ''}.
-          </p>
-          {signerIp ? (
-            <p
-              style={{
-                color: STATUS_COLORS.success,
-                opacity: 0.8,
-                marginTop: '0.25rem',
-                fontSize: `${Math.round(bodyDefaults.fontSize * 0.875)}px`,
-              }}
-            >
-              IP {signerIp}
-            </p>
-          ) : null}
-        </div>
-        {onDownloadPdf ? (
-          <button
-            onClick={onDownloadPdf}
-            className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 border cursor-pointer hover:opacity-80"
-            style={{
-              fontSize: `${Math.round(bodyDefaults.fontSize * 0.875)}px`,
-              fontWeight: 500,
-              color: STATUS_COLORS.success,
-              borderColor: pdfBorderColor,
-              borderRadius: branding.corner_radius,
-              backgroundColor: pdfBackgroundColor,
-            }}
-          >
-            <Download size={13} strokeWidth={1.5} /> PDF
-          </button>
-        ) : null}
-      </div>
-    );
-  }
 
   if (kind === 'declined') {
     // Soft tinted background from error colour: 8% opacity.

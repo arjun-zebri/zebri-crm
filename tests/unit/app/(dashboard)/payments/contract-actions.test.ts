@@ -258,9 +258,12 @@ describe('saveContractAction', () => {
       content: validContent,
       expiresAt: null,
     });
-    // Only the insert's `.select('id')`, never a couple_id count.
-    expect(selectMock).toHaveBeenCalledTimes(1);
+    // The point is that no couple_id cap count ran. Asserted by shape rather
+    // than by call count: a save also re-renders the contract's public
+    // snapshot, which reads rows of its own, and counting every select would
+    // make this test fail for reasons that have nothing to do with the cap.
     expect(selectMock).toHaveBeenCalledWith('id');
+    expect(selectMock).not.toHaveBeenCalledWith('couple_id');
   });
 });
 

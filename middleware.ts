@@ -32,6 +32,10 @@ const PUBLIC_ROUTES = [
   // script (`/lead-embed.js`), and the submit endpoint (`/api/lead/*`).
   "/lead",
   "/api/lead",
+  // Public API docs + llms.txt for AI coding tools. Static content, no
+  // session; the matcher only skips image extensions, so `.txt` needs this.
+  "/docs",
+  "/llms.txt",
   // Public booking surfaces: the share token is the capability,
   // no session expected. Covers the booking page + embed variant (`/book/<token>`),
   // the embed loader script (`/book-embed.js`), and the submit endpoint (`/api/booking/*`).

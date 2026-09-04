@@ -26,6 +26,17 @@ describe('leadSubmitSchema', () => {
     expect(leadSubmitSchema.safeParse({ ...base, wedding_date: '2027-05-01' }).success).toBe(true);
     expect(leadSubmitSchema.safeParse({ ...base, wedding_date: 'someday' }).success).toBe(false);
   });
+  it('accepts an empty or absent email (required-ness comes from the form config)', () => {
+    expect(leadSubmitSchema.safeParse({ ...base, email: '' }).success).toBe(true);
+    const noEmail = Object.fromEntries(Object.entries(base).filter(([k]) => k !== 'email'));
+    expect(leadSubmitSchema.safeParse(noEmail).success).toBe(true);
+  });
+
+  it('accepts an optional referrer string', () => {
+    const parsed = leadSubmitSchema.safeParse({ ...base, referrer: 'https://host.example/page' });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.referrer).toBe('https://host.example/page');
+  });
 });
 
 describe('isLikelyBot', () => {

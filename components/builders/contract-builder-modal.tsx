@@ -34,11 +34,12 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Clock, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 
 import {
   deleteContractAction,
+  publishContractAction,
   revokeContractAction,
   saveContractAction,
   type SaveContractInput,
@@ -50,8 +51,10 @@ import {
   type OverflowMenuItem,
 } from '@/components/builders/parts/builder-modal-shell';
 import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
+import { ContractAuditPanel } from '@/components/builders/parts/contract-audit-panel';
 import { ContractBodyEditor } from '@/components/builders/parts/contract-body-editor';
-import { ContractSignatureDisplay } from '@/components/builders/parts/contract-signature-display';
+import { ContractDeclineNotice } from '@/components/builders/parts/contract-decline-notice';
+import { ContractSendOptions } from '@/components/builders/parts/contract-send-options';
 import type { JSONContent } from '@/components/builders/parts/contract-types';
 import { toPublicContract, type PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
@@ -60,6 +63,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role';
 import {
   buildContractVariables,
   findUnknownVariables,
@@ -90,6 +94,10 @@ interface Contract {
   mc_signature_name: string | null;
   locked_content_html: string | null;
   email_sent_at: string | null;
+  /** 'parallel' (default) or 'sequential'. */
+  signing_mode: string | null;
+  /** Whether client signers must verify an emailed code. */
+  require_signer_otp: boolean | null;
 }
 
 interface ContractTemplate {
@@ -177,6 +185,10 @@ export function ContractBuilderModal({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState<JSONContent>(DEFAULT_TEMPLATE);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  // Signing protocol. Both default to the historical behaviour, and both lock
+  // once the contract leaves draft.
+  const [signingMode, setSigningMode] = useState<'parallel' | 'sequential'>('parallel');
+  const [requireOtp, setRequireOtp] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
@@ -224,14 +236,18 @@ export function ContractBuilderModal({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('couples')
-        .select('primary_email, email, primary_name, secondary_name')
+        .select('primary_email, email, name, primary_name, secondary_name')
         .eq('id', coupleId!)
         .single();
       if (error) throw error;
       return {
         email: resolveCoupleEmail(data),
-        primaryName: data.primary_name,
-        secondaryName: data.secondary_name,
+        // Mirrors seed_contract_signers: the primary signer is the couple's
+        // first contact, falling back to the couple record's own name. The
+        // COMBINED display name ("Michael Smith and Tara Rahman") is
+        // deliberately not used, since that is two people in one slot.
+        primaryName: data.primary_name?.trim() || data.name?.trim() || null,
+        secondaryName: data.secondary_name?.trim() || null,
       };
     },
   });
@@ -245,7 +261,9 @@ export function ContractBuilderModal({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contract_signers')
-        .select('id, name, role, required, signed_at, declined_at, sign_token')
+        .select(
+          'id, name, role, required, signed_at, declined_at, sign_token, signer_name_typed, signing_order',
+        )
         .eq('contract_id', effectiveId!)
         .order('signing_order');
       if (error) throw error;
@@ -295,6 +313,8 @@ export function ContractBuilderModal({
         : DEFAULT_TEMPLATE,
     );
     setExpiresAt(contract.expires_at);
+    setSigningMode(contract.signing_mode === 'sequential' ? 'sequential' : 'parallel');
+    setRequireOtp(Boolean(contract.require_signer_otp));
     setCoupleId(contract.couple_id);
     setDirty(false);
   }, [contract]);
@@ -321,6 +341,8 @@ export function ContractBuilderModal({
     setTitle('');
     setContent(DEFAULT_TEMPLATE);
     setExpiresAt(null);
+    setSigningMode('parallel');
+    setRequireOtp(false);
     setDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset on close only
   }, [isOpen]);
@@ -409,6 +431,8 @@ export function ContractBuilderModal({
         title,
         content,
         expiresAt: expiresAt,
+        signingMode,
+        requireOtp,
       };
       const result = await saveContractAction(input);
       if (!result.ok) throw new Error(result.error);
@@ -416,6 +440,9 @@ export function ContractBuilderModal({
     },
     onSuccess: (id) => {
       setDirty(false);
+      // A save publishes the snapshot and stamps the supplier countersignature,
+      // so the roster the preview reads has changed.
+      queryClient.invalidateQueries({ queryKey: ['contract-signers', id] });
       // First save of a fresh draft: adopt the new id so the detail
       // query hydrates and the send/share actions become available.
       if (!effectiveId) {
@@ -432,7 +459,15 @@ export function ContractBuilderModal({
       toast(err instanceof Error ? err.message : 'Failed to save contract', 'error'),
   });
 
-  const send = async () => {
+  /**
+   * Lock the contract and, optionally, email it.
+   *
+   * `deliver: false` is the "I'll send the link myself" path: the contract
+   * becomes live and signable, but nothing is emailed. Both go through the
+   * same route so the lock (frozen body, countersignature, audit row) is
+   * identical either way.
+   */
+  const send = async (deliver = true) => {
     if (!coupleId) {
       toast('Pick a couple for this contract first', 'error');
       return;
@@ -465,13 +500,13 @@ export function ContractBuilderModal({
       const res = await fetch('/api/email/send-contract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contractId: idToSend }),
+        body: JSON.stringify({ contractId: idToSend, deliver }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast(data.error || 'Failed to send contract', 'error');
       } else {
-        toast('Contract sent');
+        toast(deliver ? 'Contract sent' : 'Link is live. Nothing was emailed.');
         queryClient.invalidateQueries({ queryKey: ['contract', idToSend] });
         queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
         queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
@@ -545,6 +580,21 @@ export function ContractBuilderModal({
     );
   };
 
+  // Contracts created before saving started publishing have no rendered body,
+  // so their public link would read "No content." Heal it on open rather than
+  // making the MC discover that pressing Save fixes their link.
+  const healedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!effectiveId || !contract) return;
+    if (contract.locked_content_html) return;
+    if (healedRef.current === effectiveId) return;
+    healedRef.current = effectiveId;
+    void publishContractAction(effectiveId).then(() => {
+      queryClient.invalidateQueries({ queryKey: ['contract', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['contract-signers', effectiveId] });
+    });
+  }, [effectiveId, contract, queryClient]);
+
   /* ─── chrome wiring ─────────────────────────────────────────── */
   const pillKey = (status in STATE_PILL ? status : 'draft') as keyof typeof STATE_PILL;
 
@@ -599,6 +649,31 @@ export function ContractBuilderModal({
     title,
     status,
     coupleName: coupleFullName,
+    // Real signers, so the right-pane preview and the PDF render the same
+    // signature page. `role` is a plain text column in the generated types and
+    // `sign_token` is a bearer credential, so the rows are mapped rather than
+    // spread through.
+    ...(signers
+      ? {
+          signers: signers.map((s) => ({
+            id: s.id,
+            role: s.role === 'vendor' ? ('vendor' as const) : ('client' as const),
+            name: s.name,
+            signer_name_typed: s.signer_name_typed,
+            signing_order: s.signing_order,
+            required: s.required,
+            signed_at: s.signed_at,
+            declined_at: s.declined_at,
+          })),
+        }
+      : {}),
+    primaryName: coupleDetails?.primaryName ?? null,
+    secondaryName: coupleDetails?.secondaryName ?? null,
+    eventDate: firstEvent?.date ?? null,
+    venue: firstEvent?.venue ?? null,
+    declinedAt: contract?.declined_at ?? null,
+    declinedReason: contract?.declined_reason ?? null,
+    emailSentAt: contract?.email_sent_at ?? null,
     businessName: (userMeta.business_name as string | undefined) ?? null,
     items: [],
     taxRate: 0,
@@ -646,7 +721,7 @@ export function ContractBuilderModal({
             dirty={dirty}
             // A contract has no body for the couple until send freezes it, so
             // the link (and the public RPC behind it) is live only from 'sent'.
-            shareEnabled={(contract?.share_token_enabled ?? false) && contract?.status !== 'draft'}
+            shareEnabled={contract?.share_token_enabled ?? false}
             shareUrl={shareUrl}
             lastSentAt={contract?.email_sent_at ?? null}
             locked={!canEdit}
@@ -686,6 +761,27 @@ export function ContractBuilderModal({
           canEdit={canEdit}
         />
 
+        {/* Signing protocol. Sits with the other pre-send decisions rather
+            than below the body: it is a property of how the contract goes
+            out, not of writing it, and an MC should not have to scroll past
+            a long agreement to find it. */}
+        <div className="mt-5">
+          <ContractSendOptions
+            signingMode={signingMode}
+            onSigningModeChange={(v) => {
+              setSigningMode(v);
+              setDirty(true);
+            }}
+            requireOtp={requireOtp}
+            onRequireOtpChange={(v) => {
+              setRequireOtp(v);
+              setDirty(true);
+            }}
+            canEdit={canEdit}
+            multipleSigners={(signers?.filter((s) => s.required).length ?? 0) > 1}
+          />
+        </div>
+
         {/* Body */}
         <div className="mt-6">
           <ContractBodyEditor
@@ -707,6 +803,21 @@ export function ContractBuilderModal({
             }}
           />
         </div>
+
+        {/* Activity. Only once the contract has left draft: a draft has
+            nothing to show, and an empty panel reads as broken. This is the
+            first thing in the product ever to READ contract_audit_log. */}
+        {status !== 'draft' && effectiveId ? (
+          <div className="mt-6 pt-5 border-t border-border">
+            <p className="text-body font-medium uppercase tracking-wide text-text-muted mb-2">
+              Activity
+            </p>
+            <ContractAuditPanel
+              contractId={effectiveId}
+              vendorRole={branding?.vendor_role || DEFAULT_VENDOR_ROLE}
+            />
+          </div>
+        ) : null}
 
         {/* Who still owes a signature. Hidden on a draft (nobody has been
             asked yet) and on a single-signer contract, where the terminal
@@ -741,27 +852,12 @@ export function ContractBuilderModal({
           </div>
         ) : null}
 
-        {/* Signature / decline state (terminal states only). */}
-        {isSigned ? (
-          <div className="mt-6">
-            <ContractSignatureDisplay
-              kind="signed"
-              signerName={contract?.signer_name ?? null}
-              signedAt={contract?.signed_at ?? null}
-              signerIp={contract?.signer_ip ?? null}
-              declinedReason={null}
-            />
-          </div>
-        ) : null}
+        {/* Decline notice. There is deliberately no signed counterpart: the
+            Activity panel above already carries the signer, the time and the
+            IP, and a green box repeating them was a second source of truth. */}
         {isDeclined ? (
           <div className="mt-6">
-            <ContractSignatureDisplay
-              kind="declined"
-              signerName={null}
-              signedAt={null}
-              signerIp={null}
-              declinedReason={contract?.declined_reason ?? null}
-            />
+            <ContractDeclineNotice declinedReason={contract?.declined_reason ?? null} />
           </div>
         ) : null}
       </BuilderModalShell>

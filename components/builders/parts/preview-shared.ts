@@ -10,13 +10,18 @@
  */
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
-import type { PublicContract } from '@/app/contract/[token]/_components/public-contract';
+import type {
+  ContractSigner,
+  PublicContract,
+} from '@/app/contract/[token]/_components/public-contract';
 import type { PublicInvoice } from '@/app/invoice/[token]/_components/public-invoice';
 import type { PublicBranding } from '@/lib/branding/public-branding';
 
 export interface PreviewLineItem {
   id: string;
   description: string;
+  /** Optional per-line note, shown under the description on the preview. */
+  note?: string | null;
   amount: number;
 }
 
@@ -79,6 +84,30 @@ export interface PreviewDoc {
   signerUserAgent?: string | null;
   /** MC's typed countersignature name (Caveat cursive). */
   mcSignatureName?: string | null;
+  /**
+   * The contract's real signers. Put on the DOC rather than passed per call
+   * site because there are two of them (the right-pane preview and the PDF),
+   * and when only one was given the roster they rendered different documents.
+   */
+  signers?: ContractSigner[];
+  /**
+   * The couple's two contacts, for the fallback roster on a contract whose
+   * signer rows have not loaded. Kept separate from `coupleName`, which is the
+   * COMBINED display name: using that put both people in one signature slot.
+   */
+  primaryName?: string | null;
+  secondaryName?: string | null;
+  /**
+   * Contract meta the signature page and title block read. On the doc so the
+   * right-pane preview and the PDF show identical values; the preview used to
+   * hardcode nulls here while the PDF passed the real ones, which is why the
+   * two documents did not match.
+   */
+  eventDate?: string | null;
+  venue?: string | null;
+  declinedAt?: string | null;
+  declinedReason?: string | null;
+  emailSentAt?: string | null;
 }
 
 
@@ -104,8 +133,76 @@ export function toPublicContract(
     emailSentAt: string | null;
     eventDate: string | null;
     venue: string | null;
+    /**
+     * The contract's real signers, when the builder has loaded them. Without
+     * these the per-party signature panels have nobody to render and the
+     * preview would show an empty signature page, which is precisely the part
+     * the MC is trying to lay out.
+     */
+    signers?: ContractSigner[];
+    primaryName?: string | null;
+    secondaryName?: string | null;
   },
 ): PublicContract {
+  // Fill the roster PER PARTY rather than all-or-nothing.
+  //
+  // A draft has client signer rows from creation but no supplier row until it
+  // is published, so an all-or-nothing fallback made the MC's own signature
+  // block vanish from the preview the moment the real client rows loaded.
+  // Every party the contract will eventually have is represented here, using
+  // the real row wherever one exists.
+  const emailSentAt = doc.emailSentAt ?? extra.emailSentAt
+  const realSigners = doc.signers ?? extra.signers
+  const primaryName = doc.primaryName ?? extra.primaryName
+  const secondaryName = doc.secondaryName ?? extra.secondaryName
+
+  const clients = (realSigners ?? [])
+    .filter((s) => s.role === 'client')
+    .slice()
+    .sort((a, b) => a.signing_order - b.signing_order);
+
+  const previewSigner = (
+    id: string,
+    role: 'vendor' | 'client',
+    name: string,
+    signingOrder: number,
+    signedAt: string | null = null,
+  ): ContractSigner => ({
+    id,
+    role,
+    name,
+    signer_name_typed: null,
+    signing_order: signingOrder,
+    required: true,
+    signed_at: signedAt,
+    declined_at: null,
+  });
+
+  // The supplier commits when the contract is issued, so the preview shows
+  // that signature already in place.
+  const vendorSigner =
+    (realSigners ?? []).find((s) => s.role === 'vendor') ??
+    previewSigner('preview-vendor', 'vendor', doc.mcSignatureName || 'You', 0, emailSentAt);
+
+  // The couple's FIRST contact, never the combined display name.
+  const primarySigner =
+    clients[0] ??
+    previewSigner('preview-primary', 'client', primaryName?.trim() || 'Primary contact', 1);
+
+  // Only when the couple actually names a second contact, matching what
+  // seed_contract_signers does on a real contract.
+  const secondarySigner =
+    clients[1] ??
+    (secondaryName?.trim()
+      ? previewSigner('preview-secondary', 'client', secondaryName.trim(), 2)
+      : null);
+
+  const signers: ContractSigner[] = [
+    vendorSigner,
+    primarySigner,
+    ...(secondarySigner ? [secondarySigner] : []),
+  ];
+
   return {
     ...branding,
     id: extra.id,
@@ -118,15 +215,15 @@ export function toPublicContract(
     signer_name: doc.signerName ?? null,
     signer_ip: doc.signerIp ?? null,
     signer_user_agent: doc.signerUserAgent ?? null,
-    declined_at: extra.declinedAt,
-    declined_reason: extra.declinedReason,
+    declined_at: doc.declinedAt ?? extra.declinedAt,
+    declined_reason: doc.declinedReason ?? extra.declinedReason,
     mc_signature_name: doc.mcSignatureName ?? null,
-    email_sent_at: extra.emailSentAt,
+    email_sent_at: emailSentAt,
     couple_name: doc.coupleName ?? '',
-    event_date: extra.eventDate,
-    venue: extra.venue,
+    event_date: doc.eventDate ?? extra.eventDate,
+    venue: doc.venue ?? extra.venue,
     branding_blocks: blocks,
-    signers: [],
+    signers,
     viewer_signer_id: null,
   };
 }
@@ -163,6 +260,7 @@ export function toPublicInvoice(
     items: doc.items.map((item, i) => ({
       id: item.id,
       description: item.description,
+      note: item.note ?? null,
       // The builder tracks a flat amount per line; the public shape also
       // carries qty/unit for tax invoices that itemise them. One-of-one.
       quantity: 1,

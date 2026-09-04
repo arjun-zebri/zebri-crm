@@ -20,6 +20,7 @@ import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/brandin
 import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
 import { VarChip } from '@/lib/branding/public-blocks/var-chip'
 import { SAMPLE_CONTRACT_CLAUSES } from '@/lib/branding/sample-contract-body'
+import { SIGNATURE_FONT_STACK } from '@/lib/branding/signature-font'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
@@ -49,6 +50,9 @@ import type {
   PaymentScheduleBlock,
   ContractBodyBlock,
   ContractSignBlock,
+  ContractSignVendorBlock,
+  ContractSignPrimaryBlock,
+  ContractSignSecondaryBlock,
   CouplePortalBlock,
   VendorTimelineBodyBlock,
   FormFieldBlock,
@@ -1136,11 +1140,73 @@ export function RenderContractSign({ state, block }: { state: BrandPreviewState;
           </p>
           <p
             className="text-2xl leading-none"
-            style={{ color: text, fontFamily: 'Caveat, "Brush Script MT", cursive' }}
+            style={{ color: text, fontFamily: SIGNATURE_FONT_STACK }}
           >
             Your name
           </p>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Editor preview for one per-party signature panel.
+ *
+ * Shows what that party's slot looks like on the sent document: the role label,
+ * the signature line, and the date. For the party whose link is being opened
+ * the live page also renders the sign form, so the primary panel's preview
+ * includes the form mock; the supplier's panel never does, because the supplier
+ * signs by sending and their signature is already in place when the couple
+ * arrives.
+ *
+ * Sub-targets (`heading`, `label`, `signature`, `button`) drive the toolbar's
+ * click-to-style focus, matching every other multi-target block.
+ */
+export function RenderContractSignParty({
+  state,
+  block,
+}: {
+  state: BrandPreviewState
+  block: ContractSignVendorBlock | ContractSignPrimaryBlock | ContractSignSecondaryBlock
+}) {
+  const pad = PAD(state)
+  const muted = state.textColor || '#6B7280'
+  const pub = publicBrandingFromEditorState(state)
+  const labelCss = resolveTextStyle(block.labelStyle, roleDefaults(pub, 'body'))
+  const signatureCss = resolveTextStyle(block.signatureStyle, roleDefaults(pub, 'sectionHeading'))
+
+  // What the slot is FOR, not a pretend signature: the mark, who made it, and
+  // when. Which party a block represents is already on the block frame in the
+  // editor, so there is no role caption inside the block itself.
+  return (
+    <div className="border-t border-gray-100">
+      {/* Horizontal (docX) inset comes from BlockFrame; only vertical rhythm here. */}
+      <div className={pad.blockY}>
+        {/* The signature rule. Empty on purpose: the mark is made by the person
+            signing, and the editor's job is to show where it lands and how it
+            will be styled. */}
+        <div
+          data-subtarget="signature"
+          className="max-w-[260px] border-b pb-1"
+          style={{ borderBottomColor: pub.border_color }}
+        >
+          <span
+            className="inline-block"
+            style={{ ...signatureCss, fontFamily: SIGNATURE_FONT_STACK, opacity: 0.35 }}
+          >
+            Signature
+          </span>
+        </div>
+
+        <p data-subtarget="label" className="mt-1.5" style={{ ...labelCss, color: muted }}>
+          Name
+        </p>
+        {(block.showDate ?? true) ? (
+          <p className="text-body" style={{ color: muted }}>
+            Date and time signed
+          </p>
+        ) : null}
       </div>
     </div>
   )

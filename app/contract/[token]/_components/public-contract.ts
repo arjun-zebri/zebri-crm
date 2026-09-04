@@ -33,6 +33,29 @@ export interface PublicContract extends PublicBranding {
   signers: ContractSigner[];
   /** Which signer opened this link; null on a legacy share link. */
   viewer_signer_id: string | null;
+  /**
+   * 'sequential' holds each client signer until every lower `signing_order`
+   * client has signed. Absent on payloads predating the toggle, which means
+   * parallel.
+   */
+  signing_mode?: 'parallel' | 'sequential' | null;
+  /** Whether a client signer must verify an emailed code before signing. */
+  require_signer_otp?: boolean | null;
+  /**
+   * Whether THIS link's signer has verified recently enough to sign. Computed
+   * for the viewer only: other signers' verification state is not the link
+   * holder's business.
+   */
+  viewer_otp_verified?: boolean | null;
+  /**
+   * Every audit event on the contract, present ONLY once it reaches a final
+   * status. IPs in it are network prefixes, never full addresses.
+   */
+  audit_trail?: unknown[] | null;
+  /** Hex SHA-256 over the executed facts. Set at completion. */
+  document_hash?: string | null;
+  document_hash_algo?: string | null;
+  document_hash_at?: string | null;
 }
 
 /** One party on a contract, as returned by `get_public_contract`. */
@@ -40,6 +63,16 @@ export interface ContractSigner {
   id: string;
   role: 'client' | 'vendor';
   name: string;
+  /**
+   * The name this signer actually typed when signing. Null until they sign.
+   * Distinct from `name`, which is the roster name the MC entered beforehand;
+   * a signature line must print the mark the person made, not the label.
+   */
+  signer_name_typed?: string | null;
+  /** How they signed. Absent on payloads predating drawn signatures. */
+  signature_mode?: 'typed' | 'drawn' | null;
+  /** The drawn mark as a PNG data URL, when signature_mode is 'drawn'. */
+  signature_image?: string | null;
   signing_order: number;
   required: boolean;
   signed_at: string | null;

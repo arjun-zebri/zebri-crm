@@ -20,14 +20,15 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
-import { inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
+import { recordInvalidTokenAttempt } from '@/lib/api/public-token-limiter';
+import { CONTRACT_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
 import { createClient } from '@/lib/supabase/server';
 
 // Looser than signing: opening a contract is a normal, repeatable act and
 // both partners may sit behind one household IP. The RPC de-duplicates, so
 // the cap is only about abuse volume.
-const limiter = inMemoryLimiter({ windowMs: 60_000, max: 20 });
+const limiter = inMemoryLimiter(CONTRACT_RATE_LIMITS.view);
 
 const bodySchema = z.object({ token: z.uuid('Token must be a UUID') });
 
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.ok) return parsed.response;
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc('record_contract_view', {
+  const { data, error } = await supabase.rpc('record_contract_view', {
     token: parsed.data.token,
     p_actor_ip: ipOf(request),
     p_actor_user_agent: request.headers.get('user-agent') ?? '',
@@ -52,6 +53,20 @@ export async function POST(request: NextRequest) {
     logger.error('[contract/view] record_contract_view failed', error, {
       token: parsed.data.token,
     });
+  }
+
+  // This beacon fires on every page load, which makes it the earliest and
+  // broadest signal that someone is spraying tokens at the contract surface,
+  // so it is where the enumeration counter is wired rather than on sign or
+  // decline (a probe never reaches those).
+  //
+  // Only `unknown_token` counts. A token that resolves but points at a draft
+  // or revoked contract is a real link arriving late, usually a couple
+  // reloading a bookmark after the MC revoked it; counting that would alert on
+  // ordinary use.
+  const result = data as { ok?: boolean; reason?: string } | null;
+  if (result?.reason === 'unknown_token') {
+    await recordInvalidTokenAttempt({ ip: ipOf(request), surface: 'contract' });
   }
 
   return NextResponse.json({ ok: true });

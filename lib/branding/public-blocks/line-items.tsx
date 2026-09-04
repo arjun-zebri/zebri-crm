@@ -45,6 +45,9 @@ export function RenderLineItems({
   const headerCss = resolveTextStyle(block.headerStyle, headerDefaults)
   const itemCss = resolveTextStyle(block.itemStyle, itemDefaults)
   const fineCss = resolveTextStyle({}, fineDefaults)
+  // Notes default to the fine-print role, so a block that never sets noteStyle
+  // renders them exactly like the existing quantity sub-line.
+  const noteCss = resolveTextStyle(block.noteStyle, fineDefaults)
   const rowBorder = rowStyle === 'lines' ? 'border-b last:border-b-0' : ''
 
   if (!variablePreview && (!doc.items || doc.items.length === 0)) {
@@ -81,6 +84,15 @@ export function RenderLineItems({
                 <span style={itemCss}>
                   <VarChip label="Item" hint="Line items are filled from the document when it's sent." />
                 </span>
+                {/* One placeholder note, on the first row only. Repeating it on
+                    every row would imply notes are mandatory; showing it once
+                    keeps the style target clickable without misrepresenting
+                    what a real invoice looks like. */}
+                {i === 0 ? (
+                  <span data-subtarget="note" className="block" style={noteCss}>
+                    <VarChip label="Note" hint="An optional note under a line item, filled from the invoice." />
+                  </span>
+                ) : null}
               </div>
               <span className="shrink-0 tabular-nums" style={{ ...itemCss, textAlign: 'right' }}>
                 <VarChip label="Amount" hint="Each line item's amount, filled from the document." />
@@ -96,6 +108,14 @@ export function RenderLineItems({
                     {item.quantity} × {fmt(item.unit_price)}
                   </span>
                 )}
+                {/* Per-line note. `whitespace-pre-line` so an MC who typed a
+                    short list across several lines gets it back as written;
+                    the field is a textarea, not a single-line input. */}
+                {item.note ? (
+                  <span data-subtarget="note" className="block whitespace-pre-line" style={noteCss}>
+                    {item.note}
+                  </span>
+                ) : null}
               </div>
               <span
                 className="shrink-0 tabular-nums"

@@ -23,10 +23,13 @@
  */
 'use client';
 
+import { Download } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import { SignThanks } from '@/components/contracts/sign-thanks';
 import { contractPrintElement, printContract } from '@/components/print/print-contract';
+import { Modal } from '@/components/ui/modal';
 import { DOC_CANVAS_BG, DOC_MAX_WIDTH_PX } from '@/lib/branding/document-frame';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import {
@@ -36,14 +39,24 @@ import {
 } from '@/lib/branding/public-surface';
 import { roleDefaults } from '@/lib/branding/type-defaults';
 import { repairBlocks } from '@/lib/branding/validate-blocks';
+import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role';
+import type { SignatureMode } from '@/lib/contracts/signature-image';
 import { createClient } from '@/lib/supabase/client';
 
 import { ContractDeclineDialog } from './_components/contract-decline-dialog';
 import { ContractLoading } from './_components/contract-loading';
+import { type SignParty } from './_components/contract-parties';
+import { partyBlockFrom } from './_components/contract-party-block';
+import { ContractSignButton } from './_components/contract-sign-button';
+import { ContractSignForm, viewerPartyOf } from './_components/contract-sign-form';
+import { ContractSignParty } from './_components/contract-sign-party';
 import { ContractSignSection } from './_components/contract-sign-section';
+import { ContractStatusSlot } from './_components/contract-status-slot';
 import { ContractUnavailable } from './_components/contract-unavailable';
 import {
   deriveState,
+  outstandingSigners,
+  viewerSigner,
   type PageState,
   type PublicContract,
 } from './_components/public-contract';
@@ -58,7 +71,16 @@ export default function PublicContractPage() {
   const [agreed, setAgreed] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Typed is the default: it is what the flow has always done and works on
+  // every device. Drawing is opt-in per signer, chosen in the form's tabs.
+  const [signatureMode, setSignatureMode] = useState<SignatureMode>('typed');
+  const [drawnImage, setDrawnImage] = useState<string | null>(null);
+  const [signOpen, setSignOpen] = useState(false);
   const [declineOpen, setDeclineOpen] = useState(false);
+  // Shown once, on the signature landing. Deliberately not derived from
+  // pageState: a returning visitor must not be greeted by a confirmation of
+  // something they did last week.
+  const [thanksOpen, setThanksOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
 
   const load = useCallback(async () => {
@@ -92,12 +114,20 @@ export default function PublicContractPage() {
 
   const handleSign = async () => {
     if (!signerName.trim() || !agreed) return;
+    // A drawn signature needs actual ink. The form disables Sign without it,
+    // so this only guards a programmatic call.
+    if (signatureMode === 'drawn' && !drawnImage) return;
     setActionLoading(true);
     setActionError(null);
     const res = await fetch('/api/contract/sign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: params.token, signer_name: signerName }),
+      body: JSON.stringify({
+        token: params.token,
+        signer_name: signerName,
+        signature_mode: signatureMode,
+        ...(signatureMode === 'drawn' && drawnImage ? { signature_image: drawnImage } : {}),
+      }),
     });
     const data = (await res.json()) as { ok?: boolean; error?: string };
     setActionLoading(false);
@@ -111,7 +141,11 @@ export default function PublicContractPage() {
       }
       return;
     }
+    setSignOpen(false);
+    // Reload first: the thanks copy names whoever is still outstanding, and
+    // that roster is only correct once the server has recorded this signature.
     await load();
+    setThanksOpen(true);
   };
 
   const handleDecline = async () => {
@@ -177,11 +211,59 @@ export default function PublicContractPage() {
         onDecline={() => setDeclineOpen(true)}
         actionLoading={actionLoading}
         actionError={actionError}
-        onDownloadPdf={downloadPdf}
+        signatureMode={signatureMode}
+        onSignatureModeChange={setSignatureMode}
+        drawnImage={drawnImage}
+        onDrawnImageChange={setDrawnImage}
         textColor={textColor}
         mutedColor={mutedColor}
         brand={brand}
         radius={radius}
+      />
+    ) : null;
+
+  // The live per-party slot: the same components print uses, but with the real
+  // handlers, so the person holding this link gets the sign form inside their
+  // own signature panel.
+  const vendorRole = contract?.vendor_role || DEFAULT_VENDOR_ROLE;
+  // Who this link belongs to, and whether they still have something to do.
+  const viewerParty = contract ? viewerPartyOf(contract) : null;
+  const me = contract ? viewerSigner(contract) : null;
+  const canActNow =
+    contract !== null &&
+    pageState === 'active' &&
+    me !== null &&
+    !me.signed_at &&
+    !me.declined_at;
+
+  const signSlotFor = (party: SignParty) =>
+    contract ? (
+      <ContractSignParty
+        contract={contract}
+        party={party}
+        vendorRole={vendorRole}
+        textColor={textColor}
+        mutedColor={mutedColor}
+        {...(partyBlockFrom(repairedBlocks, party)
+          ? { block: partyBlockFrom(repairedBlocks, party)! }
+          : {})}
+        {...(canActNow && party === viewerParty
+          ? {
+              // The action sits IN the signature slot, which is where a person
+              // looks for it on a document they have been asked to sign.
+              action: (
+                <ContractSignButton
+                  contract={contract}
+                  onClick={() => setSignOpen(true)}
+                  brand={brand}
+                  radius={radius}
+                  label={
+                    partyBlockFrom(repairedBlocks, party)?.primaryLabel ?? 'Sign here'
+                  }
+                />
+              ),
+            }
+          : {})}
       />
     ) : null;
 
@@ -203,6 +285,25 @@ export default function PublicContractPage() {
           </div>
         ) : null}
 
+        {contract && pageState === 'signed' ? (
+          <div className="mb-3 flex justify-end">
+            <button
+              onClick={downloadPdf}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border cursor-pointer hover:opacity-80"
+              style={{
+                fontSize: `${roleDefaults(contract, 'finePrint').fontSize}px`,
+                fontWeight: 500,
+                color: textColor,
+                borderColor: contract.border_color,
+                borderRadius: radius,
+                backgroundColor: '#fff',
+              }}
+            >
+              <Download size={14} strokeWidth={1.5} /> Download PDF
+            </button>
+          </div>
+        ) : null}
+
         {pageState === 'loading' ? <ContractLoading radius={radius} /> : null}
 
         {pageState === 'not_found' ? (
@@ -217,7 +318,20 @@ export default function PublicContractPage() {
           ? // The SAME composition the builder preview and the PDF render, so
             // the link the couple opens is exactly what was previewed. Only
             // the sign slot differs: here it is the live form.
-            contractPrintElement(contract, { signSlot })
+            contractPrintElement(contract, {
+              // Screen only: the certificate of completion is evidence the
+              // downloaded PDF carries, not something the couple needs to
+              // scroll past on the page they just signed.
+              certificate: false,
+              signSlot,
+              signSlotFor,
+              statusBanner: (
+                <ContractStatusSlot
+                  contract={contract}
+                  pageState={pageState}
+                          />
+              ),
+            })
           : null}
 
         {contract ? (
@@ -236,6 +350,57 @@ export default function PublicContractPage() {
           </p>
         ) : null}
       </div>
+
+      {contract ? (
+        <Modal
+          isOpen={signOpen}
+          onClose={() => setSignOpen(false)}
+          size="md"
+          title="Sign this contract"
+        >
+          <ContractSignForm
+            contract={contract}
+            pageState={pageState}
+            signerName={signerName}
+            onSignerNameChange={setSignerName}
+            agreed={agreed}
+            onAgreedChange={setAgreed}
+            onSign={handleSign}
+            onDecline={() => {
+              setSignOpen(false);
+              setDeclineOpen(true);
+            }}
+            actionLoading={actionLoading}
+            actionError={actionError}
+            signatureMode={signatureMode}
+            onSignatureModeChange={setSignatureMode}
+            drawnImage={drawnImage}
+            onDrawnImageChange={setDrawnImage}
+            textColor={textColor}
+            mutedColor={mutedColor}
+            token={params.token}
+            onVerified={() => void load()}
+            {...(viewerParty && partyBlockFrom(repairedBlocks, viewerParty)
+              ? { block: partyBlockFrom(repairedBlocks, viewerParty)! }
+              : {})}
+          />
+        </Modal>
+      ) : null}
+
+      {contract ? (
+        <Modal
+          isOpen={thanksOpen}
+          onClose={() => setThanksOpen(false)}
+          size="sm"
+          title="Signature recorded"
+        >
+          <SignThanks
+            signerName={signerName}
+            waitingOn={outstandingSigners(contract).map((s) => s.name)}
+            onClose={() => setThanksOpen(false)}
+          />
+        </Modal>
+      ) : null}
 
       {contract ? (
         <ContractDeclineDialog

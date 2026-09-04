@@ -18,6 +18,8 @@ import { isPastDue } from '@/lib/utils';
 export interface InvoiceItem {
   id: string;
   description: string;
+  /** Optional qualifying note rendered under the description. */
+  note?: string | null;
   quantity: number;
   unit_price: number;
   amount: number;

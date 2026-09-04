@@ -17,8 +17,10 @@
 import type { ContractSignBlock } from '@/app/(dashboard)/branding/blocks/types';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
+import { SIGNATURE_FONT_STACK } from '@/lib/branding/signature-font';
 import { roleDefaults } from '@/lib/branding/type-defaults';
 import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role';
+import type { SignatureMode } from '@/lib/contracts/signature-image';
 
 import { ContractSignActions } from './contract-sign-actions';
 import { ContractSignersList } from './contract-signers-list';
@@ -42,7 +44,10 @@ export interface ContractSignSectionProps {
   onDecline: () => void;
   actionLoading: boolean;
   actionError: string | null;
-  onDownloadPdf: () => void;
+  signatureMode: SignatureMode;
+  onSignatureModeChange: (next: SignatureMode) => void;
+  drawnImage: string | null;
+  onDrawnImageChange: (next: string | null) => void;
   textColor: string;
   mutedColor: string;
   brand: string;
@@ -64,7 +69,10 @@ export function ContractSignSection({
   onDecline,
   actionLoading,
   actionError,
-  onDownloadPdf,
+  signatureMode,
+  onSignatureModeChange,
+  drawnImage,
+  onDrawnImageChange,
   textColor,
   mutedColor,
   brand,
@@ -112,7 +120,7 @@ export function ContractSignSection({
           style={{
             color: textColor,
             fontSize: `${sectionHeadingDefaults.fontSize}px`,
-            fontFamily: 'Caveat, "Brush Script MT", cursive',
+            fontFamily: SIGNATURE_FONT_STACK,
             lineHeight: sectionHeadingDefaults.lineHeight,
           }}
         >
@@ -134,16 +142,6 @@ export function ContractSignSection({
         </p>
       </div>
 
-      {pageState === 'signed' ? (
-        <ContractStatusBanner
-          kind="signed"
-          signerName={contract.signer_name}
-          signedAt={contract.signed_at}
-          signerIp={contract.signer_ip}
-          onDownloadPdf={onDownloadPdf}
-          branding={contract}
-        />
-      ) : null}
       {pageState === 'declined' ? (
         <ContractStatusBanner
           kind="declined"
@@ -212,6 +210,10 @@ export function ContractSignSection({
           onDecline={onDecline}
           actionLoading={actionLoading}
           actionError={actionError}
+          signatureMode={signatureMode}
+          onSignatureModeChange={onSignatureModeChange}
+          drawnImage={drawnImage}
+          onDrawnImageChange={onDrawnImageChange}
           coupleName={signerLabel}
           textColor={textColor}
           mutedColor={mutedColor}

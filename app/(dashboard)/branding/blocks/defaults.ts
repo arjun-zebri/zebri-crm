@@ -94,6 +94,15 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
       return { id: newId('cb'), type: 'contractBody', locked: true }
     case 'contractSign':
       return { id: newId('cs'), type: 'contractSign', locked: true }
+    // The three per-party signature markers. Locked so they cannot be
+    // duplicated (two "partner 1" panels would render the same signature
+    // twice), but still deletable and re-addable from the palette.
+    case 'contractSignVendor':
+      return { id: newId('csv'), type: 'contractSignVendor', locked: true }
+    case 'contractSignPrimary':
+      return { id: newId('csp'), type: 'contractSignPrimary', locked: true }
+    case 'contractSignSecondary':
+      return { id: newId('css'), type: 'contractSignSecondary', locked: true }
     case 'vendorTimelineBody':
       return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
     case 'questionnaireOneAtATime':
@@ -235,7 +244,11 @@ export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'v
       showAbn: true,
     },
     { id: newId('cb'), type: 'contractBody', locked: true },
-    { id: newId('cs'), type: 'contractSign', locked: true },
+    // One signature panel per party, in the order a signature page reads:
+    // the supplier has already signed by sending, then each partner.
+    { id: newId('csv'), type: 'contractSignVendor', locked: true },
+    { id: newId('csp'), type: 'contractSignPrimary', locked: true },
+    { id: newId('css'), type: 'contractSignSecondary', locked: true },
   ]
 }
 
@@ -307,6 +320,27 @@ export function migrateBlocks(blocks: unknown, surface?: 'invoice' | 'contract' 
   // text blocks the MC wrote themselves do NOT trip this — we only
   // match start-of-string against the old default's headings.
   if (surface === 'contract') {
+    // Drop a stray all-in-one `contractSign` once the tree has any per-party
+    // signature block.
+    //
+    // Deliberately NOT a blanket migration of contractSign into the three
+    // panels: block trees are read live rather than snapshotted per contract,
+    // so rewriting one here would restructure the signature section of every
+    // already-sent contract the next time somebody opened it. This only fires
+    // after the MC has explicitly added a per-party block, which is the point
+    // at which the old block has stopped rendering anyway (see
+    // contract-card-layout's mode rules) and would otherwise sit in the editor
+    // looking active while doing nothing.
+    const hasPartyBlock = migrated.some(
+      (b) =>
+        b.type === 'contractSignVendor' ||
+        b.type === 'contractSignPrimary' ||
+        b.type === 'contractSignSecondary',
+    )
+    if (hasPartyBlock) {
+      migrated = migrated.filter((b) => b.type !== 'contractSign')
+    }
+
     const oldDefaultPattern = /^(PARTIES|EVENT DETAILS|\d+\.\s+[A-Z][A-Z &,]+|SIGNATURES)\b/
     const hasMarker = migrated.some((b) => b.type === 'contractBody')
     const hadLegacyTemplate = migrated.some(

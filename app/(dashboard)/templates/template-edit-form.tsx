@@ -36,6 +36,8 @@ import { LineItemsEditor, type EditableItem } from './line-items-editor'
 export interface TemplateItem {
   id: string
   description: string
+  /** Optional per-line note carried onto the invoice when applied. */
+  note?: string | null
   amount: number
 }
 
@@ -54,7 +56,7 @@ export interface TemplateSource {
   id: string
   kind: 'package'
   name: string
-  items: { description: string; amount: number }[]
+  items: { description: string; note?: string | null; amount: number }[]
 }
 
 interface TemplateEditFormProps {
@@ -106,7 +108,13 @@ export function TemplateEditForm({
   const addFromSource = (s: TemplateSource) =>
     setItems((prev) => [
       ...prev,
-      ...s.items.map((it) => ({ id: `new-${crypto.randomUUID()}`, description: it.description, amount: it.amount, quantity: 1 })),
+      ...s.items.map((it) => ({
+        id: `new-${crypto.randomUUID()}`,
+        description: it.description,
+        note: it.note ?? null,
+        amount: it.amount,
+        quantity: 1,
+      })),
     ])
 
   const handleSave = () => {
@@ -115,7 +123,12 @@ export function TemplateEditForm({
       name: name.trim(),
       notes: notes.trim() || null,
       description: description.trim() || null,
-      items: cleaned.items.map(({ id, description: desc, amount }) => ({ id, description: desc, amount })),
+      items: cleaned.items.map(({ id, description: desc, note, amount }) => ({
+        id,
+        description: desc,
+        note: note ?? null,
+        amount,
+      })),
     })
   }
 
@@ -202,6 +215,7 @@ export function TemplateEditForm({
               descriptionPlaceholder="e.g., Reception MC"
               addLabel="Add line item"
               compact
+              showNote
             />
           </div>
         </div>

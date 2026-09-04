@@ -320,6 +320,80 @@ export function invoiceHtml(
 </html>`;
 }
 
+/**
+ * One party's personal signing link.
+ *
+ * A contract can require both partners, and each holds their OWN capability
+ * token, so a single shared URL cannot stand in for the pair.
+ */
+export interface SignerLink {
+  /** The signer's name, used to label their button ("Sign as Sarah"). */
+  name: string;
+  /** That signer's personal `/contract/<sign_token>` URL. */
+  url: string;
+}
+
+/**
+ * The call-to-action block for a contract email: a button per signer plus the
+ * copyable URLs beneath.
+ *
+ * WHY IT TAKES A LIST. Partners frequently share one inbox. The send and
+ * reminder routes used to de-duplicate recipients by address, which silently
+ * dropped the second partner's link entirely, leaving them unable to sign and
+ * the contract unable to ever complete. Dropping the dedup instead would send
+ * two near-identical emails carrying different links, inviting the wrong
+ * person to sign the wrong one. Grouping by address and naming each button is
+ * what resolves both failures at once.
+ *
+ * @param shareUrl - Fallback single URL, used when `links` is absent.
+ * @param label - Button text in the single-link case.
+ * @param links - One entry per signer at this address. Absent or length 1
+ *   reproduces the historical single-button markup byte for byte.
+ */
+function signCtaBlock(
+  shareUrl: string,
+  label: string,
+  links?: SignerLink[],
+): string {
+  const btn = (url: string, text: string) =>
+    `<tr><td style="background:#111827;border-radius:8px;">
+              <a href="${url}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">${text}</a>
+            </td></tr>`;
+
+  // Single-signer (and the no-links default) keeps the exact historical markup
+  // so every existing contract email renders identically.
+  if (!links || links.length <= 1) {
+    const url = links?.[0]?.url ?? shareUrl;
+    return `<table cellpadding="0" cellspacing="0">
+            ${btn(url, label)}
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${url}" style="color:#6b7280;">${url}</a>
+          </p>`;
+  }
+
+  const spacer = `<tr><td style="height:12px;"></td></tr>`;
+  const buttons = links
+    .map((l) => btn(l.url, `Sign as ${escapeHtmlText(l.name)}`))
+    .join(`\n            ${spacer}\n            `);
+  const copyLines = links
+    .map(
+      (l) =>
+        `<p style="margin:0 0 8px;font-size:13px;color:#9ca3af;">
+            ${escapeHtmlText(l.name)}: <a href="${l.url}" style="color:#6b7280;">${l.url}</a>
+          </p>`,
+    )
+    .join("\n          ");
+
+  return `<table cellpadding="0" cellspacing="0">
+            ${buttons}
+          </table>
+          <p style="margin:32px 0 12px;font-size:13px;color:#374151;">
+            You each sign separately, so please use your own link.
+          </p>
+          ${copyLines}`;
+}
+
 export function contractHtml(
   opts: {
     coupleName: string;
@@ -328,6 +402,8 @@ export function contractHtml(
     expiresAt: string | null;
     shareUrl: string;
     mcBusinessName: string;
+    /** One entry per signer sharing this address. See {@link signCtaBlock}. */
+    links?: SignerLink[];
   },
   branding?: PublicBranding | null,
 ): string {
@@ -338,10 +414,12 @@ export function contractHtml(
     expiresAt,
     shareUrl,
     mcBusinessName,
+    links,
   } = opts;
   const expiryLine = expiresAt
     ? `<p style="margin:0 0 32px;font-size:14px;color:#374151;">Please sign by <strong>${expiresAt}</strong>.</p>`
     : "";
+  const cta = signCtaBlock(shareUrl, "Review &amp; Sign Contract", links);
 
   // When branding is provided, use the branded email wrapper; otherwise,
   // preserve the current hardcoded HTML for byte-for-byte compatibility.
@@ -353,14 +431,7 @@ export function contractHtml(
             Hi ${coupleName},<br><br>
             ${mcBusinessName} has sent you a contract to review and sign.
           </p>
-          <table cellpadding="0" cellspacing="0">
-            <tr><td style="background:#111827;border-radius:8px;">
-              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Review &amp; Sign Contract</a>
-            </td></tr>
-          </table>
-          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
-            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
-          </p>`;
+          ${cta}`;
     return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
   }
 
@@ -379,14 +450,7 @@ export function contractHtml(
             Hi ${coupleName},<br><br>
             ${mcBusinessName} has sent you a contract to review and sign.
           </p>
-          <table cellpadding="0" cellspacing="0">
-            <tr><td style="background:#111827;border-radius:8px;">
-              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Review &amp; Sign Contract</a>
-            </td></tr>
-          </table>
-          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
-            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
-          </p>
+          ${cta}
         </td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
           <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>
@@ -477,6 +541,55 @@ export function contractSignedHtml(
 </html>`;
 }
 
+/**
+ * The one-time code a signer enters before signing.
+ *
+ * The code is in the BODY only, never the subject: a subject line shows in
+ * notification previews on a lock screen, which is exactly the shoulder-surfing
+ * case the code is meant to resist.
+ */
+export function contractOtpHtml(
+  opts: {
+    recipientName: string;
+    code: string;
+    contractNumber: string;
+    mcBusinessName: string;
+    minutes: number;
+  },
+  branding?: PublicBranding | null,
+): string {
+  const { recipientName, code, contractNumber, mcBusinessName, minutes } = opts;
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Contract ${escapeHtmlText(contractNumber)}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">Your signing code</h1>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${escapeHtmlText(recipientName)},<br><br>
+            Enter this code on the contract page to confirm it's you.
+          </p>
+          <p style="margin:0 0 24px;font-size:32px;font-weight:600;letter-spacing:0.2em;color:#111827;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtmlText(code)}</p>
+          <p style="margin:0;font-size:13px;color:#9ca3af;">
+            The code expires in ${String(minutes)} minutes. If you didn't ask to sign a contract from ${escapeHtmlText(mcBusinessName)}, you can ignore this email.
+          </p>`;
+
+  if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding);
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <tr><td style="padding:40px 40px 32px;">${bodyHtml}</td></tr>
+        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
+          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${escapeHtmlText(mcBusinessName)} via Zebri</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 export function contractReminderHtml(
   opts: {
     coupleName: string;
@@ -485,6 +598,8 @@ export function contractReminderHtml(
     expiresAt: string | null;
     shareUrl: string;
     mcBusinessName: string;
+    /** One entry per signer sharing this address. See {@link signCtaBlock}. */
+    links?: SignerLink[];
   },
   branding?: PublicBranding | null,
 ): string {
@@ -495,10 +610,12 @@ export function contractReminderHtml(
     expiresAt,
     shareUrl,
     mcBusinessName,
+    links,
   } = opts;
   const expiryLine = expiresAt
     ? `<p style="margin:0 0 32px;font-size:14px;color:#b45309;">Reminder: this contract expires on <strong>${expiresAt}</strong>.</p>`
     : "";
+  const cta = signCtaBlock(shareUrl, "Review &amp; Sign", links);
 
   // When branding is provided, use the branded email wrapper; otherwise,
   // preserve the current hardcoded HTML for byte-for-byte compatibility.
@@ -510,14 +627,7 @@ export function contractReminderHtml(
             Hi ${coupleName},<br><br>
             Just a gentle nudge - your contract from ${mcBusinessName} is still waiting for your signature.
           </p>
-          <table cellpadding="0" cellspacing="0">
-            <tr><td style="background:#111827;border-radius:8px;">
-              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Review &amp; Sign</a>
-            </td></tr>
-          </table>
-          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
-            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
-          </p>`;
+          ${cta}`;
     return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
   }
 
@@ -536,14 +646,7 @@ export function contractReminderHtml(
             Hi ${coupleName},<br><br>
             Just a gentle nudge - your contract from ${mcBusinessName} is still waiting for your signature.
           </p>
-          <table cellpadding="0" cellspacing="0">
-            <tr><td style="background:#111827;border-radius:8px;">
-              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Review &amp; Sign</a>
-            </td></tr>
-          </table>
-          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
-            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
-          </p>
+          ${cta}
         </td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
           <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>

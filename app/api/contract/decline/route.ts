@@ -23,13 +23,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
-import { inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
+import { CONTRACT_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
 import { createClient } from '@/lib/supabase/server';
 
 // 3 / min / IP — declining is a one-shot terminal event. Any higher
 // frequency is abuse, not legitimate.
-const limiter = inMemoryLimiter({ windowMs: 60_000, max: 3 });
+const limiter = inMemoryLimiter(CONTRACT_RATE_LIMITS.decline);
 
 const bodySchema = z.object({
   token: z.uuid('Token must be a UUID'),

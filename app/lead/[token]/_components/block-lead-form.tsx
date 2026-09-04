@@ -44,10 +44,18 @@ export function BlockLeadForm({
   token,
   form,
   blocks,
+  embed,
 }: {
   token: string;
   form: PublicLeadForm;
   blocks: Block[];
+  /**
+   * True inside the iframe embed. The form then reports `document.referrer`
+   * (the host page) so the lead records which site it came from. Off on the
+   * hosted page, where the referrer is wherever the couple browsed from, not
+   * the site the form lived on.
+   */
+  embed?: boolean;
 }) {
   const [state, setState] = useState<SubmitState>('ready');
   // Stamped on mount (client only) so the submit route can measure fill time.
@@ -78,6 +86,7 @@ export function BlockLeadForm({
           ...buildLeadPayload(blocks, values),
           hp,
           rendered_at: renderedAt.current,
+          ...(embed ? { referrer: document.referrer } : {}),
         }),
       });
       if (res.ok) {

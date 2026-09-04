@@ -161,11 +161,19 @@ describe('print shell', () => {
 })
 
 describe('buildPrintHtml options for plain documents', () => {
-  it('bare suppresses the browser header/footer by zeroing the page margin and padding the body', () => {
+  it('bare suppresses the browser header/footer and repeats the page padding on every sheet', () => {
     const el = <article className="script-document">Do you, Nguyễn Thị Ánh</article>
     const html = buildPrintHtml({ title: 'Ceremony', element: el, branding: null, canvas: false, frame: false, bare: true, fonts: { href: 'https://fonts.googleapis.com/css2?family=Noto+Serif', bodyStack: '"Noto Serif", serif' } })
-    expect(html).toContain('@page { margin: 0; } body { padding: 14mm; }')
+    // Zero page margin leaves the browser nowhere to draw its header, footer,
+    // date or page numbers. The 14mm comes back as thead/tfoot spacers, which
+    // the print layout repeats on EVERY page; body padding would only reach
+    // the top of the first page and the bottom of the last.
+    expect(html).toContain('@page { margin: 0; } body { padding: 0 14mm; }')
     expect(html).not.toContain('@page { margin: 14mm; }')
+    expect(html).toContain('<table class="print-sheet">')
+    expect(html).toContain('.print-sheet > thead { display: table-header-group; }')
+    expect(html).toContain('.print-sheet > tfoot { display: table-footer-group; }')
+    expect(html).toContain('.print-vpad { height: 14mm; }')
     expect(html).not.toContain('border border-border')
     expect(html).toContain('href="https://fonts.googleapis.com/css2?family=Noto+Serif"')
     expect(html).toContain('body { font-family: "Noto Serif", serif;')
