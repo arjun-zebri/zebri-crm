@@ -71,7 +71,7 @@ import { execSync } from 'node:child_process';
 // Scheduler UI pass: sweeping four hand-rolled toggle switches onto the shared
 // `Toggle` primitive removed the duplicated markup and its violations → 53,
 // then moving the meeting type status onto its card removed another → 52.
-const ERROR_BUDGET = 52;
+const ERROR_BUDGET = 43;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -221,7 +221,13 @@ const ERROR_BUDGET = 52;
 // pre-existing import-order warning while ordering the new vendor-role
 // imports across the contract/portal surfaces, and another while ordering
 // the table-extension import in the rich-text editor (95 → 93).
-const WARNING_BUDGET = 93;
+// Workflows (unified Workflows replacing Tasks + Automations): the
+// retired Tasks and Automations surfaces took their warnings with them,
+// and eslint --fix swept import-order across the ~215 files the rename
+// touched. The new workflows code is clean (74 -> 73).
+// Workflows UI pass: retiring queue-row/queue-group/review-card and the
+// suggestion cards took two import-order warnings with them (73 -> 71).
+const WARNING_BUDGET = 71;
 
 function runEslintJson() {
   try {

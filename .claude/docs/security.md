@@ -320,15 +320,27 @@ entitlement fields.
 
 ### Cron-secret enforcement
 
-Three cron-triggered routes:
+Six cron-triggered routes:
 
 | Route | Schedule (`vercel.json`) |
 |---|---|
 | `/api/cron/expire-contracts` | `0 22 * * *` |
 | `/api/email/send-contract-reminders` | `15 22 * * *` |
+| `/api/cron/booking-reminders` | `30 22 * * *` (Scheduler Phase D) |
 | `/api/cron/prune-stripe-events` | `0 3 * * *` (Phase 2A) |
+| `/api/cron/automations-tick` | `0 1 * * *` (the workflow tick; keeps its legacy path because renaming a live cron endpoint is a needless outage risk) |
+| `/api/cron/workflow-digest` | `0 21 * * *` (Workflows) |
 
-Both now use the shared helper **`@/lib/api/cron-auth`** —
+Every cron here is **daily**, and has to be: the Vercel **Hobby** plan
+rejects any more frequent expression at deploy time. The digest wants to
+be hourly (it gates on each MC's local 7am) and is capped to one daily
+run with a two-hour local window instead -- see
+`.claude/docs/workflows.md`. A per-user local-date stamp
+(`user_public_settings.daily_digest_last_sent_on`) keeps that to one send
+per MC per day, including through the repeated hour daylight saving
+creates.
+
+All of them use the shared helper **`@/lib/api/cron-auth`** —
 `isCronAuthorized(request)` — which:
 
 - Reads `CRON_SECRET` from env, fails closed if unset.
@@ -485,6 +497,23 @@ a couple so partners can't read each other's before the day:
   `tests/integration/automations/vows-feature.test.ts` (each link sees
   only its own vow; cross-partner delete is a no-op).
 
+**Workflow milestones (opt-in leak surface).** `get_portal_milestones`
+is the only route by which a couple can read anything from a workflow,
+and a workflow is the MC's internal list ("chase the outstanding
+balance" is a step on it). Three properties hold it shut:
+
+- `workflow_steps.visible_to_couple` defaults to **false**. Nothing
+  reaches the portal unless the MC deliberately toggled that step.
+- The function is `security definer` and token-gated through
+  `_resolve_portal_couple`, filtered to the resolved couple's `active`
+  instances. An unknown, disabled or wrong-couple token returns `[]`.
+- Status collapses to `done` | `upcoming`. `error_message` is never
+  selected, so an internal failure cannot reach the couple's page.
+
+Proven in `tests/integration/portal/milestones.test.ts` through the
+anon client: invisible steps, a cancelled instance, another couple's
+token, a revoked token, and a signed-in MC querying the table directly.
+
 **Public token-attempt limiter** (see prior section) sits in front
 of `/portal/[token]` and returns `notFound()` after 60 invalid
 attempts/hour. Valid-token loads are free.
@@ -601,7 +630,7 @@ DELETE (sampled clean across the migrations).
 | `couples` | ✅ | `user_id` | ✅ `tests/integration/rls/couples.test.ts` (5 tests) + `tests/integration/billing/couple-cap.test.ts` (10 tests — Starter cap enforcement) | Couples & Events |
 | `events` | ✅ | `user_id` | ✅ `tests/integration/rls/events.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `contacts` | ✅ | `user_id` | ✅ `tests/integration/rls/contacts.test.ts` (Phase 5, 5 tests) | Contacts |
-| `tasks` | ✅ | `user_id` | ✅ `tests/integration/rls/tasks.test.ts` (Phase 4B, 5 tests) | Tasks |
+| `tasks` | ✅ SELECT only (frozen 2026-09) | `user_id` | ✅ `tests/integration/workflows/legacy-frozen.test.ts` (10 tests — reads still work, every write path refused) | Retired → Workflows |
 | `invoices` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoice_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `bookings` | ✅ | `user_id` + `_owns_couple_or_null(couple_id)` + `_owns_meeting_type(meeting_type_id)` on write | ✅ `tests/integration/rls/bookings.test.ts` (Phase C: cross-tenant read/insert/update/delete denial, manage_token uniqueness, couple-delete set-null; parent-ownership: cross-tenant couple/meeting-type insert denial, repoint-on-update denial, null-couple allowed) | Public Booking (Phase C); parent guard 20260821040000 |
@@ -630,7 +659,18 @@ DELETE (sampled clean across the migrations).
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |
 | `event_vendors` (legacy) | ✅ | (join) | ☐ | Contacts |
-| `task_groups` | ✅ | `user_id` | ✅ `tests/integration/rls/task-groups.test.ts` (Phase 6, 5 tests) | Tasks |
+| `task_groups` | ✅ SELECT only (frozen 2026-09) | `user_id` | ✅ `tests/integration/workflows/legacy-frozen.test.ts` | Retired → Workflows |
+| `task_statuses` / `task_priorities` / `task_types` | ✅ SELECT only (frozen 2026-09) | `user_id` | ✅ `tests/integration/workflows/legacy-frozen.test.ts` | Retired → Workflows |
+| `automations` / `automation_actions` / `automation_runs` | ✅ SELECT only (frozen 2026-09) | `user_id` | ✅ `tests/integration/workflows/legacy-frozen.test.ts` | Retired → Workflows |
+| `workflow_tags` | ✅ | `user_id` | ✅ `tests/integration/rls/workflows.test.ts` (10 tests, all seven tables) | Workflows |
+| `workflow_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
+| `workflow_template_tags` | ✅ (checks **both** sides: template and tag ownership) | (join) | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
+| `workflow_template_steps` | ✅ (+ parent-ownership via `_owns_workflow_template_or_null`) | (via template) | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
+| `workflow_instances` | ✅ (+ parent-ownership on `couple_id` and `template_id`) | `user_id` | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
+| `workflow_steps` | ✅ (via instance ownership) | (via instance) | ✅ `tests/integration/rls/workflows.test.ts` + `tests/integration/portal/milestones.test.ts` (a `visible_to_couple` step is still owner-only to a signed-in MC; the RPC is the only door) + `tests/integration/workflows/done-list.test.ts` (the Done list and its count are both scoped to the caller) | Workflows |
+| `workflow_audit_log` | ✅ (SELECT-only for owner; service-role writes) | `user_id` | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
+| `workflow_conversion_ledger` | ✅ RLS enabled, no policy — migrations + service role only | — | ✅ `tests/integration/workflows/converter.test.ts` (16 tests) | Workflows |
+| `workflow_dispatched_events` | ✅ RLS enabled, no policy — service role only | — | ☐ (retired dual-run guard, kept for rollback) | Workflows |
 | `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) + `tests/integration/timeline/public-timeline-rpc.test.ts` (Phase 10 — public RPC guards) | Timeline |
 | `portal_files` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-files.test.ts` (Phase 4D, 4 tests) | Client Portal |
 | `portal_people` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-people.test.ts` (Phase 4D, 5 tests) | Client Portal |

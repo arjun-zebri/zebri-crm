@@ -47,9 +47,9 @@ must hit the §5 Definition of Done before it's "done".
 ## Current scope (everything below is in scope for hardening)
 
 Authentication & subscriptions · Couples (+ couple-owned Events) ·
-Contacts · Tasks · Payments (Quotes, Invoices) · Contracts (e-sign) ·
+Contacts · Workflows · Payments (Quotes, Invoices) · Contracts (e-sign) ·
 Client Portal (public, token-gated) · Timeline · Branding editor ·
-Workflows / automation · Admin + Shadow mode · Email pipeline ·
+Admin + Shadow mode · Email pipeline ·
 Stripe Connect · Slack alerts · Cron jobs.
 
 The original "DO NOT build: Analytics / Automation / …" rule from the
@@ -58,7 +58,7 @@ MVP is **obsolete** — those features exist and ship to paying users.
 ## App layout
 
 Sidebar (240px fixed) + main content. Sidebar nav: Dashboard, Couples,
-Calendar, Tasks, Contacts, Payments, Branding, Settings. Admin link is
+Calendar, Workflows, Contacts, Payments, Branding, Settings. Admin link is
 shown only when `isAdmin(user)` returns true (read via the entitlements
 helper — see Auth model below).
 
@@ -302,6 +302,7 @@ in `.claude/docs/` **in the same PR**:
 | Auth / entitlements model | `authentication.md`                              |
 | Billing / Stripe          | `payments.md`                                    |
 | Slack alerts              | `alerts.md`                                      |
+| Workflows / automation    | `workflows.md`                                   |
 | Tests / selectors         | `testing.md`                                     |
 | Security posture          | `security.md`                                    |
 | CI/CD                     | `cicd.md`                                        |

@@ -4,7 +4,6 @@ import { useState } from 'react';
 
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal';
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal';
-import { EventTasks } from '@/components/events/event-tasks';
 import { EventTimeline } from '@/components/events/event-timeline';
 import { EventVendors } from '@/components/events/event-vendors';
 import { Button } from '@/components/ui/button';
@@ -50,7 +49,7 @@ const NOT_RENDERABLE = [
     name: 'EventProfile',
     file: 'components/events/event-profile.tsx',
     lines: 125,
-    why: 'A shell around EventVendors, EventTasks and EventTimeline, all shown separately below.',
+    why: 'A shell around EventVendors and EventTimeline, both shown separately below.',
   },
 ];
 
@@ -73,17 +72,6 @@ export function CompositesBound() {
           <ClientOnly fallback={<Loading label="Mounting timeline" />}>
             <EventTimeline eventId={DEMO_EVENT_ID} />
           </ClientOnly>
-        </ReadOnlyPreview>
-      </Spec>
-
-      <Spec
-        name="EventTasks"
-        file="components/events/event-tasks.tsx"
-        importPath="@/components/events/event-tasks"
-        description="Per-event task list with inline create. Seeded with two tasks."
-      >
-        <ReadOnlyPreview>
-          <EventTasks eventId={DEMO_EVENT_ID} />
         </ReadOnlyPreview>
       </Spec>
 

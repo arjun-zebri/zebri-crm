@@ -14,8 +14,8 @@ import { DashboardLeadSources } from "./dashboard-lead-sources";
 import { DashboardLeads } from "./dashboard-leads";
 import { DashboardRevenueChart } from "./dashboard-revenue-chart";
 import { DashboardStats } from "./dashboard-stats";
-import { DashboardTasks } from "./dashboard-tasks";
-import { useDashboardStats, useDashboardTasks, DashboardPeriod } from "./use-dashboard";
+import { DashboardSteps } from "./dashboard-steps";
+import { useDashboardStats, useDashboardSteps, DashboardPeriod } from "./use-dashboard";
 
 
 const periodOptions: { value: DashboardPeriod; label: string }[] = [
@@ -30,9 +30,9 @@ export default function DashboardPage() {
   const [periodOpen, setPeriodOpen] = useState(false);
   const periodRef = useRef<HTMLDivElement>(null);
   const { data: stats, isLoading: statsLoading } = useDashboardStats(period);
-  const { data: tasks, isLoading: tasksLoading } = useDashboardTasks();
+  const { data: steps, isLoading: stepsLoading } = useDashboardSteps();
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
-  const [defaultTab, setDefaultTab] = useState<'overview' | 'tasks' | 'payments'>('overview');
+  const [defaultTab, setDefaultTab] = useState<'overview' | 'workflow' | 'payments'>('overview');
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -62,8 +62,8 @@ export default function DashboardPage() {
     });
   };
 
-  const handleTaskCoupleClick = (coupleData: { id: string; name: string }) => {
-    setDefaultTab('tasks');
+  const handleStepCoupleClick = (coupleData: { id: string; name: string }) => {
+    setDefaultTab('workflow');
     setSelectedCouple({
       id: coupleData.id,
       name: coupleData.name,
@@ -160,14 +160,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Bottom section: Leads | Lead Sources | Outstanding Tasks | Outstanding Invoices */}
+          {/* Bottom section: Leads | Lead Sources | Outstanding To-Dos | Outstanding Invoices */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
             <DashboardLeads period={period} />
             <DashboardLeadSources period={period} />
-            <DashboardTasks
-              tasks={tasks || []}
-              isLoading={tasksLoading}
-              onCoupleClick={handleTaskCoupleClick}
+            <DashboardSteps
+              steps={steps || []}
+              isLoading={stepsLoading}
+              onCoupleClick={handleStepCoupleClick}
             />
             <DashboardInvoices onCoupleClick={handleInvoiceCoupleClick} />
           </div>

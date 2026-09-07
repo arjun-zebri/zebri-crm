@@ -64,6 +64,15 @@ const BASE_CLASSES =
   'focus-visible:outline-none ' +
   'disabled:opacity-50 disabled:cursor-not-allowed read-only:bg-surface-muted';
 
+// A number field arrives with the browser's own spinner buttons: platform
+// chrome that ignores every token, eats the right-hand padding, and steps
+// the value when the field is scrolled past. Same reasoning as the custom
+// Checkbox and Toggle. Typing and the arrow keys both still work.
+const NUMBER_CLASSES =
+  '[appearance:textfield] ' +
+  '[&::-webkit-outer-spin-button]:appearance-none ' +
+  '[&::-webkit-inner-spin-button]:appearance-none';
+
 /** Token-driven labelled input. See {@link InputProps}. */
 export function Input({
   id,
@@ -111,7 +120,9 @@ export function Input({
         ref={ref}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`${BASE_CLASSES} ${SIZE_CLASSES} ${borderClass}`}
+        className={`${BASE_CLASSES} ${SIZE_CLASSES} ${borderClass}${
+          rest.type === 'number' ? ` ${NUMBER_CLASSES}` : ''
+        }`}
         {...rest}
       />
       {error ? (

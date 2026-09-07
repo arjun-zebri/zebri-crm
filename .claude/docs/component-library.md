@@ -90,12 +90,25 @@ schedule stages). 5 tones (`neutral` / `info` / `success` / `warning`
 text-{tone}`. Never use raw `bg-emerald-50 text-emerald-600` etc. —
 the pill is the canonical surface.
 
+### `<Callout />` — `@/components/ui/callout`
+Inline note for a sentence that carries a consequence ("nothing
+anchored after this runs until you tick it"). 4 tones (`info` default /
+`success` / `warning` / `danger`), each with its own Lucide icon;
+`icon={null}` drops the glyph, `icon={Sparkles}` replaces it. Tonal
+`border-{tone}/40 bg-{tone}/10` with the text left as `text-text`, so
+the box tints rather than shouts.
+
+Use it only where the sentence changes what the reader should expect. A
+caption that restates what a field does ("Added to the timeline when
+this runs") stays muted prose — promote those too and the page ends up
+with four coloured boxes and no hierarchy.
+
 Conventions:
-- All four honour the design tokens (`text-text`, `text-text-muted`,
+- All five honour the design tokens (`text-text`, `text-text-muted`,
   `text-danger`, `text-body`, `text-section`, `bg-success/10`, …).
   Don't override with raw hex.
 - Unit-tested under `tests/unit/components/ui/{loading,empty,
-  error-state,state-pill}.test.tsx`.
+  error-state,state-pill,callout}.test.tsx`.
 
 ## Builder parts — `components/builders/parts/*` (Phase 2C.2)
 

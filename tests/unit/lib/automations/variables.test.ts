@@ -17,6 +17,8 @@ function makeCtx(overrides: Partial<RunContext> = {}): RunContext {
     userId: 'u',
     automationId: 'a',
     runId: 'r',
+    instanceId: 'r',
+    stepId: 's',
     coupleId: 'c',
     triggerEvent: {
       id: 'e',

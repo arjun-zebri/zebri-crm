@@ -31,6 +31,8 @@ function ctxWith(payload: Record<string, unknown>, actionResults: RunContext['ac
     userId: 'u',
     automationId: 'a',
     runId: 'r',
+    instanceId: 'r',
+    stepId: 's',
     coupleId: 'c',
     triggerEvent: completionEvent(payload),
     couple: null,

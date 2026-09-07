@@ -7,11 +7,11 @@
  * @module app/(dashboard)/couples/couple-profile-types
  */
 import type {
-  CheckSquare,
   Clock,
   FileSignature,
   FileText,
   LayoutDashboard,
+  ListChecks,
   Music,
   Paperclip,
   Receipt,
@@ -21,7 +21,7 @@ import type {
 
 export type CoupleProfileSection =
   | 'overview'
-  | 'tasks'
+  | 'workflow'
   | 'time'
   | 'contacts'
   | 'timeline'
@@ -32,7 +32,6 @@ export type CoupleProfileSection =
   | 'payments'
   | 'contracts'
   | 'questionnaires'
-  | 'automations'
   | 'emails';
 
 /**
@@ -43,7 +42,7 @@ export type CoupleProfileSection =
  */
 export const SECTION_KEYS: readonly CoupleProfileSection[] = [
   'overview',
-  'tasks',
+  'workflow',
   'time',
   'contacts',
   'timeline',
@@ -54,7 +53,6 @@ export const SECTION_KEYS: readonly CoupleProfileSection[] = [
   'payments',
   'contracts',
   'questionnaires',
-  'automations',
   'emails',
 ] as const;
 
@@ -88,13 +86,28 @@ export interface CoupleProfileNavItem {
 // import block (a small ergonomics win — the icons themselves stay
 // declared in the nav-items factory, not here).
 export type LucideIcon =
-  | typeof CheckSquare
   | typeof Clock
   | typeof FileSignature
   | typeof FileText
   | typeof LayoutDashboard
+  | typeof ListChecks
   | typeof Music
   | typeof Paperclip
   | typeof Receipt
   | typeof ScrollText
   | typeof Users;
+
+/**
+ * Tab keys that existed before Workflows replaced Tasks and Automations,
+ * mapped to the tab that took their place.
+ *
+ * Stored layouts are per-user JSON, so an MC who reordered or hid either
+ * legacy tab still has those strings saved. Without this map the keys would
+ * simply be dropped on read and `workflow` would reappend itself at the end
+ * of the nav, silently undoing their ordering.
+ */
+export const LEGACY_SECTION_KEYS: Readonly<Record<string, CoupleProfileSection>> =
+  {
+    tasks: 'workflow',
+    automations: 'workflow',
+  };

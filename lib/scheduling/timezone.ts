@@ -58,6 +58,35 @@ export function addDaysToDateString(date: string, days: number): string {
   return new Date(Date.UTC(year!, month! - 1, day! + days)).toISOString().slice(0, 10);
 }
 
+/**
+ * Add whole calendar months to a `YYYY-MM-DD` date string.
+ *
+ * Calendar months, not 30-day blocks: "one month before the wedding" for a
+ * 14 November wedding is 14 October, whatever the month lengths in between.
+ *
+ * When the source day does not exist in the target month (31 March minus
+ * one month), the result clamps to the last day of that month rather than
+ * rolling into the next one, which is what `Date.UTC` would do on its own.
+ *
+ * @param date - date string in YYYY-MM-DD form
+ * @param months - whole months to add (may be negative)
+ * @returns the shifted date string in YYYY-MM-DD form
+ */
+export function addMonthsToDateString(date: string, months: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  const targetMonthStart = new Date(Date.UTC(year!, month! - 1 + months, 1));
+  // Day 0 of the following month is the last day of the target month.
+  const lastDayOfTarget = new Date(
+    Date.UTC(targetMonthStart.getUTCFullYear(), targetMonthStart.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  const clampedDay = Math.min(day!, lastDayOfTarget);
+  return new Date(
+    Date.UTC(targetMonthStart.getUTCFullYear(), targetMonthStart.getUTCMonth(), clampedDay),
+  )
+    .toISOString()
+    .slice(0, 10);
+}
+
 export function zonedTimeToUtc(date: string, time: string, timeZone: string): Date {
   const [y, m, d] = date.split('-').map(Number);
   const [hh, mm] = time.split(':').map(Number);

@@ -74,6 +74,8 @@ function makeCtx(reviewLink: string | null): RunContext {
     userId: 'u1',
     automationId: 'a1',
     runId: 'r1',
+    instanceId: 'r1',
+    stepId: 's1',
     coupleId: 'c1',
     triggerEvent: {} as never,
     couple: { id: 'c1', name: 'Sam & Alex', email: null } as never,

@@ -12,14 +12,15 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { dispatchPendingEvents } from '@/lib/automations/dispatcher'
 import { runTimeEmitters } from '@/lib/automations/time-emitters'
+import { dispatchPendingEvents } from '@/lib/workflows/dispatcher'
 
 import {
   createTestUser,
   serviceClient,
   type TestUser,
 } from '../helpers/supabase'
+import { instancesFor, seedEventTemplate } from '../helpers/workflows'
 
 function isoDateOffset(days: number): string {
   const today = new Date()
@@ -74,20 +75,7 @@ async function seedInvoiceDueAutomation(
   user: TestUser,
   config: Record<string, unknown> = {},
 ): Promise<string> {
-  const admin = serviceClient()
-  const { data, error } = await admin
-    .from('automations' as never)
-    .insert({
-      user_id: user.id,
-      name: `invoice_due ${JSON.stringify(config)}`,
-      trigger_type: 'invoice_due',
-      trigger_config: config,
-      status: 'active',
-    } as never)
-    .select('id')
-    .single()
-  if (error || !data) throw new Error(`seed automation: ${error?.message}`)
-  return (data as { id: string }).id
+  return seedEventTemplate(user.id, 'invoice_due', config)
 }
 
 async function seedStage(
@@ -236,12 +224,12 @@ describe('invoice_due time-emitter', () => {
     expect(await invoiceDueEventsFor(invoiceId)).toHaveLength(1)
   })
 
-  it('dispatcher matches and opens a run for an empty-config automation', async () => {
+  it('dispatcher matches and applies a template with an empty config', async () => {
     // End-to-end emitter → dispatcher chain, mirroring the A1
-    // regression coverage: empty trigger_config must behave like the
-    // schema defaults on both the emit side and the match side.
+    // regression coverage: an empty config must behave like the schema
+    // defaults on both the emit side and the match side.
     const coupleId = await seedCouple(user)
-    const automationId = await seedInvoiceDueAutomation(user, {})
+    const templateId = await seedInvoiceDueAutomation(user, {})
     await seedInvoice(user, coupleId, isoDateOffset(0))
 
     const emit = await runTimeEmitters(serviceClient())
@@ -249,11 +237,7 @@ describe('invoice_due time-emitter', () => {
 
     await dispatchPendingEvents(serviceClient())
 
-    const { data: runs } = await serviceClient()
-      .from('automation_runs' as never)
-      .select('id, automation_id, status')
-      .eq('automation_id', automationId)
-    expect(runs ?? []).toHaveLength(1)
+    expect(await instancesFor(templateId)).toHaveLength(1)
   })
 
   it('respects tenant isolation — events are RLS-scoped to their owner', async () => {

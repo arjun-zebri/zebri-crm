@@ -2,12 +2,14 @@
 
 This document defines every page in the CRM.
 
-## Feedback pill (global to the dashboard)
+## Feedback (global to the dashboard)
 
-Every page inside `app/(dashboard)` renders a fixed "Feedback" pill in the
+Every page inside `app/(dashboard)` renders the assistant dock in the
 bottom-right corner, on desktop and mobile alike. It is mounted once in
-`app/(dashboard)/layout.tsx` as `<FeedbackLauncher />`, so no page opts in or
-out.
+`app/(dashboard)/layout.tsx` as `<AssistantLauncher />` inside
+`<AssistantProvider>`, so no page opts in or out. Feedback is one of the two
+actions behind its round button; the dock itself is specified under **The
+corner assistant** further down.
 
 - Opens a modal with three fields (kind, summary, what happened) plus an
   optional screenshot. Everything else a ticket needs is captured by the API
@@ -23,10 +25,12 @@ out.
   "Thanks, logged as ZEB-42".
 - Hidden entirely while an admin is in Shadow mode, and rejected server-side
   too, so a ticket can never look like an MC raised it when they did not.
-- Sits at `z-[150]`, above the overlay ladder, so it stays usable with a modal
-  open. It hides itself while its own modal is open.
+- Sits at `z-[150]`, above the overlay ladder, so it stays usable over
+  somebody else's modal, which is exactly where a bug tends to show itself.
+  Its own modal is the exception: the dock (and the chat panel) unmount while
+  the feedback form is open.
 
-Public surfaces (portal, contract signing, public invoice) have no pill.
+Public surfaces (portal, contract signing, public invoice) have no dock.
 
 ## Mobile Layout Notes
 
@@ -177,7 +181,7 @@ Full-width page. Header with "Dashboard" title and New Vendor / New Couple butto
 Two-tier grid layout:
 
 1. **Top section:** `grid-cols-5`  -  Stats + Revenue Chart (left 3 cols) | Calendar Widget (right 2 cols)
-2. **Bottom section:** `grid-cols-3`  -  Leads (left) | Lead Sources (center) | Outstanding Tasks (right)
+2. **Bottom section:** `grid-cols-3`  -  Leads (left) | Lead Sources (center) | Outstanding To-Dos (right)
 
 ## Top Left: Stats (3 metric cards)
 
@@ -242,21 +246,25 @@ Each card shows:
 - Total count shown in header
 - Unknown source shown for couples with no lead_source set
 
-## Bottom Right: Outstanding Tasks
+## Bottom Right: Outstanding To-Dos
 
-**Card title:** "Outstanding Tasks"
+**Card title:** "Outstanding To-Dos"
 
-**Content:** Up to 10 incomplete tasks (status != 'done'), ordered by due_date ascending.
+**Content:** Up to 10 pending manual workflow steps (`todo` and
+`appointment` types on an active instance), ordered by `due_at`
+ascending. `dashboard-steps.tsx`, reading the same rows as the
+Workflows queue.
 
-**For each task:**
-- Checkbox (accent-black) to mark done (optimistic update)
-- Task title
-- Couple name (gray, if linked)
-- Due date (overdue dates in text-red-500)
+**For each step:**
+- Step title
+- Couple name (subtle)
+- Due date (overdue in `text-danger`)
 
 **Empty state:** "All caught up."
 
-**Click behaviour:** Click row to open couple's profile slide-over.
+**Click behaviour:** Click a row to open that couple's profile on the
+Workflow tab. A step with no couple (the MC's personal list) has no
+destination here and is left to the queue.
 
 ## Overall Styling
 
@@ -302,6 +310,14 @@ Table Columns:
 Name Email Phone Event Date Venue Status
 
 Sorting: Controlled via sort dropdown in header toolbar (name, event date, created date). No clickable sort on table headers.
+
+Workflow progress: each couple carries a line reading where they are up
+to ("4 of 12 · next: send the run sheet"), with a marker when something
+failed or a send is waiting on the MC. One batched query for the whole
+page (`use-workflow-progress.ts`), not one per card: forty cards means
+forty round trips, which is how a board that felt instant starts feeling
+slow. The "next" line only ever names a step the MC can act on, never an
+automated one they cannot.
 
 Actions:
 
@@ -381,8 +397,26 @@ per-couple) and is **saved when the modal closes** (overlay / Esc / ✕) to
 hiding the active tab falls the body back to the first visible tab. Derive logic
 tolerates drift (unknown stored keys dropped, newly added tabs appended).
 
-**Tabs:** Overview, Pulse, Tasks, **Time**, Contacts, Timeline, Songs, Files,
-Vows, **Scripts**, Payments, Contracts, Automations, **Templates**.
+**Tabs:** Overview, Pulse, **Workflow**, **Time**, Contacts, Timeline,
+Songs, Files, Vows, **Scripts**, Payments, Contracts, **Templates**.
+
+The Workflow tab replaced the separate Tasks and Automations tabs
+(2026-09). Layouts saved against the old `tasks` / `automations` keys
+are migrated on read.
+
+It is **one list**, not one checklist per applied workflow: **Needs you
+now** (held sends, failures, anything overdue), **Next** (soonest
+first, undated last) and a collapsed **Done (n)**. A row carries the
+workflow's name as a chip only when the MC started that workflow, so
+the auto-created default instance ("General") is never a heading for
+something they never made. Rows open the shared `StepDetailModal`,
+where a manual step's name, note and due date can be edited; the row
+`⋯` gains **Stop this workflow** for a step from a started workflow.
+
+The tab header carries **Start a workflow** and **Add a to-do**, both
+buttons opening modals. The classifier is
+`couple-workflow-buckets.ts`, pure and unit-tested. Below the list sits
+the engine's audit feed.
 
 ### Scripts tab
 
@@ -537,13 +571,13 @@ matches the trigger's width rather than inflating with it.
 impersonating, so a support session cannot write onto the MC's timesheet.
 The Time tab still shows their existing sessions.
 
-The **Templates** tab (Mail icon, after Automations) is where the MC
+The **Templates** tab (Mail icon, after Contracts) is where the MC
 emails this couple. Header has two actions: **Send email** (compose from
 a saved template → sends to the couple) and **Test template** (same
 compose, but sends to the MC's own inbox with a `[Test]` subject, not
 logged). Below is the sent-history  -  newest first, each row showing
 subject, source template, recipient, a status pill, and relative sent
-time (calm card list mirroring Automations). Backed by `couple_emails`;
+time (calm card list). Backed by `couple_emails`;
 the send route logs a row on each real send. (The "Send email" entry
 point moved here off the Overview's General section.)
 
@@ -590,13 +624,15 @@ Opens as a slide-over panel within the Events tab of the Couple Profile (or can 
 - Status badge (upcoming / completed / cancelled)
 - Quick actions right-aligned: Edit (opens edit modal)
 
-**Tabs:** Overview | Vendors | Tasks | Timeline
+**Tabs:** Overview | Vendors | Timeline
 
 **Overview tab:** Key event details  -  date, venue, price, status, timeline_notes.
 
 **Vendors tab:** Contacts assigned to this event via event_contacts. Add/remove contacts.
 
-**Tasks tab:** Tasks linked to this event via tasks.related_event_id.
+The Tasks tab retired with the Workflows cutover (2026-09). There is no
+event-level workflow instance in v1: a to-do for an event lives on the
+couple's workflow with the event named in its description.
 
 **Timeline tab:**
 
@@ -930,93 +966,316 @@ Every meeting an MC has taken through a booking link, as one full-height list th
 
 ---
 
-# Tasks Page
+# Workflows Page
 
-Route: `/tasks`
+Route: `/workflows`. Replaced both `/tasks` and `/automations` (both now
+redirect here). Full feature doc: `.claude/docs/workflows.md`.
 
-Notion-style database table for cross-entity task management. Tasks scoped per-couple or per-event are also rendered as embedded sections inside the couple and event profiles using the same `TaskRow` + `TaskSidePanel` primitives, so a redesign here automatically propagates everywhere tasks appear.
+Two tabs, shell in `workflows-client.tsx`, tab kept in the URL as
+`?tab=`:
 
-## Page header
+## Upcoming (default)
 
-- Green-circle check icon + page title `Tasks` (text-2xl sm:text-3xl font-semibold)
-- Subtitle: "Stay organized with tasks, your way."
-- Right-aligned `+ New task` primary button on desktop; mobile uses a floating "+" FAB above the bottom nav.
+The MC's daily view, and deliberately not called Today: most of what
+makes a wedding go well is decided in the fortnight before it, and a
+tab called Today invites a list that hides exactly that.
 
-## Toolbar
+One list, cut into date bands, with the group heading in a rail down
+the left and the rows beside it. Headings stacked above their rows push
+the work down the page and make twelve things feel like six sections;
+beside them, the whole day fits on one screen.
 
-- Search input (matches title + description)
-- `+ Filter` button → property picker → value picker → adds an inline filter chip. Clickable chips re-open the value picker; the chip's `X` removes that filter.
-- `+ Sort` button works the same way; sort direction toggles by clicking the chip.
-- Filterable properties: Status, Priority, Task type, Couple. Sortable: Due date, Status, Priority, Task name.
-- **Group by** dropdown on the right: Status (default) · Date · Couple · Priority · Custom · None. Selection persists in `localStorage` under key `tasks-group-by`.
+Bands, in order: **Overdue** (danger-toned, and where an errored step
+always lands whatever date it carries), **Today**, **Tomorrow**, **This
+week**, **Next week**, **Later**, **No date**. Empty bands are dropped.
 
-## Properties (columns)
+Each row is a checkbox (or a ⚡ for a step the engine runs, or a warning
+glyph for one that failed), the step title, the couple and their
+wedding date, a right-hand label whose form follows the band, and a
+always-visible `⋯` (Tomorrow, Next week, Skip this step, Open the
+couple) - a control that only appears under the pointer is one the MC
+has to already know about. A send held for their OK carries a warning
+**Needs your OK** pill beside its title; nothing sends from a list row.
+The label's form follows the band: a
+time within today ("4:00pm"), a weekday within the fortnight ("Mon"), a
+date beyond it ("3 Nov"), and how long it has been sitting for anything
+overdue ("87 days ago"). Grouping and labelling live in
+`queue-buckets.ts`, pure and unit-tested.
 
-Each task row is a grid: gutter | Task name | Status | Due date | Priority | Task type. Cells inline-edit by click  -  no need to open the side panel:
+**The whole row opens the step.** It was the title alone, and a send is
+stored with an empty title (the builder only asks for a name on manual
+steps), so the row's only click target collapsed to nothing: a held
+send could be seen and never opened, and so never authorised.
+`stepDisplayTitle` (`lib/workflows/step-label.ts`) now names any step
+from what it does and what it says, in the loaders, so every surface
+agrees.
 
-- **Task name**  -  click to enter inline text edit; Enter saves, Esc cancels.
-- **Status**  -  pill picker. Values: `todo`/Not started (gray) · `in_progress`/In progress (blue) · `done`/Done (emerald).
-- **Due date**  -  date picker popover. Overdue dates render in red.
-- **Priority**  -  pill picker. `high` (red) · `medium` (amber) · `low` (emerald). Optional.
-- **Task type**  -  autocomplete popover with create-on-the-fly. Free-form text (`tasks.task_type`); colour assigned deterministically from a 6-colour palette by hashing the value.
+Automated steps sit in the day they will run rather than in a section
+of their own. The old five-section layout (held sends, overdue, due
+today, coming up, sending by itself) was five answers to a question the
+MC was not asking.
 
-The first row of each section renders a column-header strip (`Aa Task name · Status · Due date · Priority · Task type`).
+One **group-by dropdown** at the top right, three rows, no sections.
+The button reads back the choice as a sentence ("Group by date"), so
+the list never looks wrong for a reason the MC cannot see.
 
-## Hover affordances
+- **Date** (default) — the bands above.
+- **Couple** — one group per couple, nearest wedding first, the wedding
+  date on the rail under their name, and the MC's own to-dos ("My
+  to-dos") last. The couple column on each row is dropped in this
+  grouping: a repeated name down a column is what makes a grouped list
+  hard to scan.
+- **Who does it** — **You**, then **Zebri** ("Runs by itself"). Named
+  that rather than "manual vs automatic" because the MC does not think
+  of their own work as manual, and because it survives the button
+  label; an empty side is dropped.
 
-- The row gutter shows a hover-revealed checkbox for multi-select (always visible once any task is selected).
-- The title cell shows a hover-revealed `Open` button (with `Maximize2` icon) on the right edge → opens the `TaskSidePanel`.
-- A drag handle appears in the gutter on hover (desktop only).
-- Clicking anywhere else in the row enters that cell's inline edit mode  -  clicking the row does NOT open the panel.
+This replaced a filter: three axes and thirteen rows (who / when /
+what), then a five-row single-select. Filtering was the wrong control.
+Hiding rows to answer "what is Zebri doing for me this week" leaves the
+list wrong in a way the MC has to remember; regrouping the same rows
+answers the question and keeps everything on screen. **No grouping ever
+hides a step** — the unit tests assert every grouping holds the whole
+list.
 
-## Group-by modes
+Rules live in `queue-grouping.ts` (`QueueGroupBy`, `groupQueueItems`,
+`groupByLabel`), pure and unit-tested; the date grouping delegates to
+`bucketQueueItems`. Each row's right-hand label is read off the row's
+own date band (`bucketFor`), not off the rail, so "Mon" and "87 days
+ago" still say the right thing when the rail is grouped by couple, and
+an overdue row keeps the danger tone in every grouping.
 
-All modes render as collapsible Notion-style section pills: chevron + coloured header pill + count + hover actions (`Palette` colour, `MoreHorizontal` rename/delete for custom groups, `+` add task).
+**Add a to-do** sits beside the group-by menu as a button and opens a
+composer modal (name, who it is for, notes, due date), like every other
+create in the app. It used to be an inline row inside the table, which
+put a four-control form in the middle of a list of work and had nowhere
+to put a note.
 
-- **Status (default):** Sections per status value (Not started / In progress / Done). Drag a task to a different section to update its `status`.
-- **Date:** Overdue (red) / Today / Upcoming / No date.
-- **Couple:** One section per couple plus Unassigned. Drag updates `related_couple_id`.
-- **Priority:** Sections per priority value plus No priority. Drag updates `priority`.
-- **Custom:** Sections per `task_groups` row plus Ungrouped. Group headers are rename-on-click; recolour via Palette icon; delete via menu. `+ New group` affordance at the bottom.
-- **None:** Flat list ordered by `position`.
+Nothing above the scrolling body carries `overflow-hidden`: the
+dropdown is absolutely positioned in the toolbar, and clipping it left
+a menu that was in the DOM, focusable, and invisible.
 
-In all modes, drag-to-reorder within a section updates `position`.
+Keyboard: ↑ / ↓ move, Enter opens, E completes. An MC clearing a
+morning should not have to aim at twelve checkboxes. Escape closes the
+filter dropdown.
 
-## Multi-select & bulk actions
+On a phone the rail narrows to `w-24`, the rows drop to `px-3 gap-2`,
+the couple line hides below `sm`, and the right-hand label goes
+`whitespace-nowrap` with no fixed width, so "87 days ago" stays on one
+line instead of doubling the height of its row. Without that the titles
+truncated to about four characters.
 
-- Shift-clicking a row's checkbox extends the selection from the last clicked row to the current one.
-- When ≥ 1 task is selected, a floating `BulkActionsBar` slides up from bottom-centre: count · `Done` · `Date` · `Group` (custom mode only) · `Delete` · clear.
-- `Esc` clears the selection.
+**Loading** is `UpcomingSkeleton` (`workflows-skeletons.tsx`): the same
+rail-plus-rows geometry, five rows, a heading on every third rail. A
+centred spinner says nothing about what is coming and the page visibly
+reflows when it lands. **Empty** is `WorkflowsEmpty`, shared with the
+other tab (see below). There is only one wording for it: grouping never
+empties the list, so an empty Upcoming means there is genuinely nothing
+to do.
 
-## Side panel (peek view)
+### The Done strip
 
-Triggered by the hover `Open` button on the row. Width 640px on desktop, 760px at `lg` breakpoint, full-screen sheet on mobile. Layout mirrors Notion's peek:
+Under the last band, inside the same scrolling body: a collapsed
+`▸ Done (11)` that expands in place (`done-section.tsx`,
+`done-list.tsx`). Finished work belongs at the end of the list it came
+from, not in a tab of its own.
 
-- Large editable title (no border; auto-saves on blur)
-- Property table  -  Status, Due date, Priority, Task type, Group (if any), Couple  -  each as a clickable cell, same components as the table inline cells.
-- Notes textarea (auto-saves on blur)
-- Footer: `Delete task` (red).
-- Header: prev / next arrows walk through the visible task list. Esc / backdrop / X close.
+It renders only when there is something in it — a permanent "Done (0)"
+on a fresh account is a promise the page has not earned — and the count
+comes from a `head`-only count query that runs beside the queue. The
+rows themselves are fetched on expand (`enabled: open`), so a strip
+nobody opens costs one cheap count.
 
-## File structure
+Contents: everything `done` or `skipped` in the last **90 days**
+(`DONE_WINDOW_DAYS`), grouped by the day it was finished — Today,
+Yesterday, then dates — newest first, because the only question asked
+of finished work is "what did I just do". Rows read ticked and struck
+through, a skipped row says **Skipped** and carries no tick (it was
+never done), and the right-hand column is the time it was finished
+rather than when it was due. Clicking a row opens the same
+`StepDetailModal`; clicking the box un-ticks it through
+`untickStepAction`, which puts the step back to `pending`, reopens a
+`completed` instance, and moves the row back into the live list.
 
-```
-app/(dashboard)/tasks/
-  page.tsx               -  orchestrator: queries, mutations, group-by dispatch, dnd-kit wiring
-  task-types.ts          -  Status / Priority enums + pill colour tables + taskTypeColor() hash
-  task-cells.tsx         -  inline-edit cells: TitleCell, StatusCell, DueDateCell, PriorityCell, TaskTypeCell
-  task-row.tsx           -  table row layout (gutter + cells), hover Open button, multi-select
-  task-side-panel.tsx    -  wide peek panel reusing the same property cells
-  group-by-toggle.tsx    -  toolbar dropdown
-  group-section.tsx      -  collapsible section header + ColumnHeader strip
-  filter-bar.tsx         -  Notion-style filter + sort chip bar
-  bulk-actions-bar.tsx   -  floating multi-select bar
-  use-task-groups.ts     -  react-query hooks for task_groups CRUD
-```
+Its own list rather than a flag on `UpcomingList`: every column
+differs, and bending one component to cover both would make the live
+list harder to read for the sake of the archive. The rail geometry is
+identical so the two line up when the strip is open.
 
-Shared UI: `components/ui/side-panel.tsx`, `components/ui/row-actions-menu.tsx`.
+The read is `loadDoneSteps` / `countDoneSteps` in
+`lib/workflows/queue.ts`. Both deliberately omit the queue's
+`workflow_instances.status = 'active'` filter: ticking the last step of
+a workflow flips its instance to `completed`, so that filter would hide
+exactly the steps that finished something.
 
----
+**Shell.** No card. The toolbar sits on the page and the list below it
+takes the rest of the height and does its own scrolling, so the list
+runs to the bottom of the screen rather than stopping wherever the rows
+happen to end. It matches the couples list, which is also a bare table
+in a bordered-box-free page, and it matches the other tab.
+
+### The step detail modal
+
+Clicking any row opens it (`step-detail-modal.tsx`), shaped like every
+other action modal: the step's name in the header, the step in the
+body, the decision in the footer. It carries the two things a row
+cannot: where the step sits in its workflow, and, for a send, the real
+message.
+
+- One line of context: "Michael and Tara · 12 Oct · 37 days out ·
+  Booked to wedding day · step 4 of 11".
+- A warning callout on a held send ("This is waiting on you. Nothing
+  goes out until you send it."), a danger one carrying the error on a
+  step that failed, and a warning naming any variable that could not be
+  filled in.
+- **It opens editable.** The step's own words are already in the
+  fields: a send shows its rendered subject and body, a to-do its name,
+  note and due date, any other action its own fields. There is no Edit
+  button to find first.
+- Actions: **Open the couple** on the left; then **Snooze**, **Save**
+  (keeps an edit without acting on it), and the primary — **Send &
+  complete** for an automated step, **Mark done** for a to-do, **Try
+  again** for one that failed.
+- One height in every state (`min-h-80`, footer rendered from the first
+  frame) and a skeleton shaped like the step while it loads: a modal
+  that grows as its data lands moves the button being reached for.
+
+The review gate lives here rather than in a section of the list. A held
+send is not a different kind of work, it is a step whose button says
+Send instead of Done.
+
+## Workflows (tab key `templates`)
+
+Labelled **Workflows** in the UI: the sidebar already has a Templates
+page, for documents and emails, and two Templates in one app is one too
+many. The URL key stays `?tab=templates`, which is in bookmarks and is
+where the retired `/automations` route lands.
+
+A grid of cards, not a list. A workflow is a thing an MC owns and
+reasons about ("is this running, and on how many couples?"), and the
+two facts that decide whether they touch it were the hardest to see in
+a row of columns.
+
+Each card carries its name and a **switch** (live / paused, right there
+rather than three clicks into an overflow menu, because turning a
+workflow on and off is the most common and most consequential thing
+done to one), its description, its tags, and a footer reading
+"11 steps · Starts on enquiry" over "Live · 6 couples running". The
+always-visible overflow menu holds **Tags**, duplicate and delete.
+
+There is no Archive. The switch pauses a workflow and Delete removes
+it, which is the whole vocabulary an MC has for one; a third
+half-retired state on the same card only asked which of "paused" and
+"archived" a workflow was. Rows archived before it went still read
+"Archived · …" and revive when the switch is turned on.
+
+**Tags** get two controls. The toolbar dropdown filters by them and
+holds the "Manage tags" entry (chips along the toolbar grew with the
+tag list and wrapped it onto two lines). The card's **Tags** action
+opens a small modal of checkboxes that writes through
+`setTemplateTags` — which had been wired through the library hook since
+tags shipped, with nothing ever calling it, so tags could be created,
+coloured and filtered by but never attached to anything.
+
+There is **one** primary button, "New workflow", opening a menu of
+two: **Build it myself** and **Generate with Zebri AI**. It replaced
+three toolbar buttons that were repeated again inside the empty state.
+The third entry, a chooser of ready-made starter workflows, was removed
+in September 2026 along with the starters themselves (see
+`workflows.md`).
+
+Both produce a **draft**. Nothing is ever switched on for the MC.
+
+**Generate with Zebri AI** (`describe-workflow.tsx`) is one field and
+two buttons, and that is the whole modal. The earlier version explained
+itself in four paragraphs: an intro, a labelled name field, three
+worked examples printed in full, and a closing "nothing is turned on"
+reassurance. That is more reading than the task is worth, and nobody
+reads a paragraph in a box that is asking them to type.
+
+What replaced it:
+
+- The intro is the textarea's placeholder, read where it is useful.
+- The name field is gone. It is inferable from the description and
+  editable on the canvas a second later.
+- The worked examples are gone in both forms. As prose they were three
+  paragraphs to read; as chips they were still three decisions offered
+  before the MC had made the only one that counts.
+- The footer promise is gone. The canvas already says DRAFT and nothing
+  sends until it is switched on.
+
+The field is `resizable={false}` (it sits in a modal, where dragging it
+taller only pushes the buttons around) and there is **no minimum
+length**: a word count blocks a terse description that would have
+worked and passes a long one that says nothing, so only an empty field
+disables Build it.
+
+No card wraps the grid, and the toolbar has no rule under it: the cards
+are the structure, and a bordered box around bordered boxes reads as
+clutter. Upcoming lost its frame for the same reason, so the two tabs
+now share one shell: toolbar on the page, body below it taking the rest
+of the height and scrolling itself.
+
+**Loading** is `TemplatesSkeleton`: three placeholder cards on the same
+grid classes the real ones use, so nothing shifts sideways when the
+data lands. The toolbar stays put through the load and the error state
+rather than being replaced by them. **Empty** is `WorkflowsEmpty`
+(`workflows-empty.tsx`), the one empty state both tabs render, with
+"Nothing matches" and a Clear filters button when a search or tag
+filter is narrowing the list. It is a fixed `min-h-96` block under the
+toolbar rather than a centred fill of the remaining height: centred in
+a full-height container it sits well below the middle of the screen
+once the page header, tabs and toolbar are counted, and reads as
+something that fell down the page.
+
+Custom colour tags are managed from the tag editor modal and filter the
+list as a union: an MC scanning for "enquiry or package" work wants
+both.
+
+## Builder — `/workflows/[id]`
+
+The React Flow canvas, moved from `/automations/[id]` with every chip,
+composer modal, filter builder and the AI copilot intact. The first
+card is the apply rule ("Applies when"); steps hang below it, and a
+branch step's two sides render as two columns.
+
+A workflow has two states, draft and active. The header toggle flips
+between them; only an active workflow applies automatically.
+
+"Applied to" opens the drawer listing the couples this workflow is
+running on, with any failed step surfaced inline.
+
+**Preview dates** runs the workflow against one couple's real wedding
+date and shows the calendar it would produce, before it is switched on.
+Rows whose date depends on a manual step being ticked on time are
+flagged, because that is an assumption and not a date.
+
+Each step's inspector carries its **timing** (straight after the step
+above / relative to the apply date / relative to the wedding day) and
+an **"Ask me before this runs"** toggle for automated steps. The card
+shows a short chip for anything that is not the default timing.
+
+No step can be shown to the couple. The workflow is the MC's own list
+end to end, so the old "Show this to the couple" toggle is gone from
+every step.
+
+Steps whose config is a form open a **composer modal** instead of
+expanding the card (`MODAL_ACTIONS` in `inspector-panel.tsx`): the
+sends, the note, the questionnaire, and both manual steps. A modal-only
+card never expands, so anything the inline panel would have carried has
+to travel into the modal: the email composer holds its own **"Ask me
+before this runs"** toggle at the foot of the form, and it saves with
+the rest of the draft rather than on the click. The manual
+composer (`manual-step-modal.tsx`) is where a to-do or an appointment
+gets its **name** - the card reads "Give it a name" until it has one -
+along with its notes, its timing and, for an appointment, the meeting
+type that ticks it automatically.
+
+**On a phone** (below `md`) the canvas is replaced by a plain vertical
+list of the same cards, in run order with branch legs indented
+(`mobile-step-list.tsx`). Nothing is read-only and nothing is missing:
+it is the same builder with the pan-and-zoom geometry taken out, which
+on a 390px screen fights the page rather than helping.
 
 # Payments Page
 
@@ -1038,6 +1297,75 @@ Invoices are fully **manual**  -  the MC builds each one by hand (optionally sta
 - `invoices-list.tsx`, `contracts-list.tsx`  -  per-tab row mapping + status pill catalogues.
 - `use-payments-data.ts`  -  React Query hooks for the two lists.
 - `use-payments-shortcut.ts`  -  `PaymentsTab` type + `/` keyboard shortcut + Escape-to-clear.
+
+### Zebri AI (the copilot)
+
+Lives in the **corner assistant** (`components/assistant/`), not on the
+canvas. The builder contributes only the conversation and the composer,
+portalling them into the dock's panel; the shell, its position and its
+close button belong to the assistant. See "The corner assistant" below.
+
+There is **no greeting bubble**. A canned "tell me what should happen"
+answered nothing, sat above every real exchange for the life of the
+page, and said what the composer's placeholder already says.
+
+**The opening prompt is consumed once.** `?describe=` arrives from the
+"describe your process" modal, and the canvas captures it in a state
+initialiser then immediately `router.replace`s it out of the URL.
+Leaving it there meant every reload re-sent it, and these prompts
+*build things*: each refresh silently ran the whole "add these six
+steps" turn again against the same workflow.
+
+**The endpoint is `COPILOT_ENDPOINT` in `use-copilot-chat.ts`**, and it
+is the only place that path is written. It had drifted from the route's
+own directory during the automations → workflows rename, so every
+message 404'd and the panel showed "Something went wrong. Please try
+again." `tests/unit/app/workflows/copilot-endpoint.test.ts` now asserts
+the path resolves to a route file on disk.
+
+Gates, in the route's order: auth → `isSubscribed` → per-minute burst →
+daily message cap. An unsubscribed account gets "Zebri AI needs an
+active subscription.", which is a real answer and not the generic
+failure.
+
+### The corner assistant
+
+One control, bottom-right, on every dashboard page
+(`components/assistant/`). It replaced the Feedback pill, which was a
+separate floating thing fighting the copilot for the same corner: two
+controls, one of which appeared on a single screen, both asking to be
+the thing you press when you want something from Zebri.
+
+- **The round button** (`assistant-dock.tsx`) reveals two pills to its
+  **left**: "Send feedback" and "Zebri AI". Beside it rather than
+  stacked, because the chat opens upward from here and a column of
+  buttons would fight it for the same strip. They **fade in together,
+  in place** (150ms, no transform). They used to slide in from the right
+  and stagger, which turned a two-button menu into a small performance:
+  the eye tracked the movement instead of reading the labels, and the
+  pair were never both readable until it finished.
+- **"Zebri AI" is disabled** where no page has offered a chat, rather
+  than hidden. A control that comes and goes between screens teaches
+  nobody where it lives.
+- **The chat opens behind the AI button**, not the round one, and
+  stacks above both so the thing that opened it stays in reach.
+- **No feedback link inside the chat.** It had one while the round
+  button opened the panel directly; with "Send feedback" its own pill
+  two inches below, that was the same action twice in one corner.
+
+A page offers its chat by **portalling into the panel's slot**
+(`assistant-context.tsx`), not by handing an element up through
+context: the page keeps its own hooks, state and fetching, and the
+launcher owns nothing but the shell. Registration is a **count**, not a
+boolean, because React mounts the incoming route before unmounting the
+outgoing one, and a boolean would have the leaving page clear the
+arriving page's registration.
+
+`z-[150]`, inherited from the pill: it clears the overlay ladder
+(`top` panels at `z-[130]`) and stays under toasts (`z-[200]`), because
+a modal is exactly where a bug tends to show itself. Hidden entirely
+while shadowing, since a ticket filed then would look like the MC
+raised it.
 
 ## Invoices Tab
 

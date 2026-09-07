@@ -1,5 +1,12 @@
 # Automations
 
+> **RETIRED (2026-09).** The Automations engine was replaced by the
+> unified Workflows feature. The trigger and action vocabulary in this
+> doc carried over verbatim and is still accurate; the engine, the
+> builder route and the run model described here are gone. Read
+> `.claude/docs/workflows.md` first. Where the two disagree, that file
+> wins.
+
 Source-of-truth doc for Phase 14a. Covers the engine, the event
 bus, the trigger / action catalogue, the recipient model, the
 variable resolver, and the recipe library. Read this before

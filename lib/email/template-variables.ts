@@ -68,6 +68,8 @@ export function buildSampleContext(opts: SampleContextOptions = {}): RunContext 
     userId: 'sample',
     automationId: 'sample',
     runId: 'sample',
+    instanceId: 'sample',
+    stepId: 'sample',
     coupleId: 'sample',
     triggerEvent: {
       id: 'sample',

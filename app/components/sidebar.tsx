@@ -4,18 +4,17 @@ import type { User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
+  ListChecks,
   Target,
   Contact,
   Settings,
   LogOut,
   Calendar,
-  CheckSquare,
   CreditCard,
   Shield,
   ChevronLeft,
   ChevronRight,
   Paintbrush,
-  Sparkles,
   FileStack,
   RotateCcw,
 } from "lucide-react";
@@ -32,10 +31,9 @@ const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Couples", href: "/couples?view=board", icon: Target },
   { label: "Calendar", href: "/calendar", icon: Calendar },
-  { label: "Tasks", href: "/tasks", icon: CheckSquare },
+  { label: "Workflows", href: "/workflows", icon: ListChecks },
   { label: "Contacts", href: "/contacts", icon: Contact },
   { label: "Payments", href: "/payments", icon: CreditCard },
-  { label: "Automations", href: "/automations", icon: Sparkles },
   { label: "Templates", href: "/templates", icon: FileStack },
 ];
 

@@ -1,5 +1,5 @@
 /**
- * Cron route: tick the automations engine once.
+ * Cron route: tick the workflows engine once.
  *
  * Vercel Cron fires this once a day on the Hobby tier (the
  * schedule in `vercel.json` is `0 1 * * *` — 1 am UTC, mid-morning
@@ -12,15 +12,19 @@
  * Each tick:
  *
  *   1. Runs the time-based emitters — computes "what should fire
- *      now" for triggers like `invoice_due` / `task_overdue` that
+ *      now" for triggers like `invoice_due` / `step_overdue` that
  *      have no source-row state change to hook a DB trigger off.
  *      New events land in the bus and are dispatched on this same
  *      tick.
- *   2. Dispatches up to N unprocessed events from the bus -
- *      matches them to active automations, opens runs.
- *   3. Advances up to N live runs by one action each.
+ *   2. Dispatches up to N unprocessed events from the bus - matches
+ *      them to active workflow templates, opening applied instances.
+ *   3. Advances every due workflow step.
  *
- * All three halves are budget-capped so a backlog can't run the
+ * The route keeps its `automations-tick` path: it is named in
+ * `vercel.json` and in the deployed cron config, and renaming a live
+ * cron endpoint to match internal vocabulary is a needless outage risk.
+ *
+ * Every pass is budget-capped so a backlog can't run the
  * function past Vercel's timeout. If unprocessed events ever
  * grow above a threshold, the tick fires a Slack alert so we
  * notice before users do.
@@ -33,10 +37,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { sendAlert } from '@/lib/alerts/send-alert'
 import { isCronAuthorized } from '@/lib/api/cron-auth'
-import { dispatchPendingEvents } from '@/lib/automations/dispatcher'
-import { advanceLiveRuns } from '@/lib/automations/runner'
 import { runTimeEmitters } from '@/lib/automations/time-emitters'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { dispatchPendingEvents as dispatchWorkflowEvents } from '@/lib/workflows/dispatcher'
+import { advanceDueSteps } from '@/lib/workflows/executor'
 
 const TICK_SLOW_THRESHOLD_MS = 30_000
 const TICK_BACKLOG_THRESHOLD = 1_000
@@ -53,8 +57,15 @@ async function handle(request: NextRequest) {
   // this tick are picked up in the same pass — minimises the
   // worst-case delivery latency to one tick rather than two.
   const emitters = await runTimeEmitters(supabase)
-  const dispatch = await dispatchPendingEvents(supabase)
-  const runner = await advanceLiveRuns(supabase)
+
+  // Each pass is isolated: dispatch throwing must not cost every due
+  // step its turn, and vice versa.
+  const workflowDispatch = await guard('workflows.dispatch', () =>
+    dispatchWorkflowEvents(supabase),
+  )
+  const workflowExecutor = await guard('workflows.executor', () =>
+    advanceDueSteps(supabase),
+  )
 
   const durationMs = Date.now() - started
 
@@ -63,7 +74,7 @@ async function handle(request: NextRequest) {
       type: 'automation_tick_slow',
       severity: 'warn',
       durationMs,
-      actionsExecuted: runner.actionsExecuted,
+      actionsExecuted: workflowExecutor?.stepsExecuted ?? 0,
     })
   }
 
@@ -85,10 +96,29 @@ async function handle(request: NextRequest) {
     ok: true,
     duration_ms: durationMs,
     emitters,
-    dispatch,
-    runner,
+    workflow_dispatch: workflowDispatch,
+    workflow_executor: workflowExecutor,
     backlog: count ?? 0,
   })
+}
+
+/**
+ * Run one tick pass, alerting and returning null if it throws.
+ *
+ * A failure in one pass must not stop the other from getting its turn.
+ */
+async function guard<T>(source: string, pass: () => Promise<T>): Promise<T | null> {
+  try {
+    return await pass()
+  } catch (err) {
+    void sendAlert({
+      type: 'app_error',
+      severity: 'error',
+      source,
+      message: `tick pass failed: ${err instanceof Error ? err.message : String(err)}`,
+    })
+    return null
+  }
 }
 
 export const GET = handle

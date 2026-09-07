@@ -13,6 +13,7 @@ import {
   serviceClient,
   type TestUser,
 } from '../helpers/supabase'
+import { seedEventTemplate } from '../helpers/workflows'
 
 /** A date `yearsAgo` years before today, on today's UTC MM-DD. */
 function anniversaryDate(yearsAgo: number): string {
@@ -65,19 +66,10 @@ async function seedAutomation(
   years: number,
   maxYears?: number,
 ): Promise<string> {
-  const { data, error } = await serviceClient()
-    .from('automations' as never)
-    .insert({
-      user_id: user.id,
-      name: `anniversary ${years}`,
-      trigger_type: 'anniversary_of_event',
-      trigger_config: { years, ...(maxYears ? { maxYears } : {}) },
-      status: 'active',
-    } as never)
-    .select('id')
-    .single()
-  if (error || !data) throw new Error(`seed automation: ${error?.message}`)
-  return (data as { id: string }).id
+  return seedEventTemplate(user.id, 'anniversary_of_event', {
+    years,
+    ...(maxYears ? { maxYears } : {}),
+  })
 }
 
 async function eventsFor(eventId: string) {

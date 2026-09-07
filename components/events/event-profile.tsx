@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { Event, STATUS_LABELS } from '@/types/event'
 
 import { EventOverview } from './event-overview'
-import { EventTasks } from './event-tasks'
 import { EventTimeline } from './event-timeline'
 import { EventVendors } from './event-vendors'
 
@@ -18,7 +17,7 @@ interface EventProfileProps {
 }
 
 export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'tasks' | 'timeline'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'timeline'>('overview')
 
   if (!event) return null
 
@@ -92,16 +91,6 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
               Vendors
             </button>
             <button
-              onClick={() => setActiveTab('tasks')}
-              className={`py-3 text-body font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === 'tasks'
-                  ? 'border-gray-900 text-text'
-                  : 'border-transparent text-text-subtle hover:text-gray-600'
-              }`}
-            >
-              Tasks
-            </button>
-            <button
               onClick={() => setActiveTab('timeline')}
               className={`py-3 text-body font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'timeline'
@@ -118,7 +107,6 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
         <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
           {activeTab === 'overview' && <EventOverview event={event} />}
           {activeTab === 'vendors' && <EventVendors eventId={event.id} />}
-          {activeTab === 'tasks' && <EventTasks eventId={event.id} />}
           {activeTab === 'timeline' && <EventTimeline eventId={event.id} />}
         </div>
       </div>

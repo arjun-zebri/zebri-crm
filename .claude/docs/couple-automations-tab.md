@@ -1,5 +1,12 @@
 # Couple profile → Automations tab (redesign)
 
+> **RETIRED (2026-09).** The Automations engine was replaced by the
+> unified Workflows feature. The trigger and action vocabulary in this
+> doc carried over verbatim and is still accurate; the engine, the
+> builder route and the run model described here are gone. Read
+> `.claude/docs/workflows.md` first. Where the two disagree, that file
+> wins.
+
 Reframe the couple profile's **Automations** tab from a passive run log
 into an **activity + control** surface: what automation has done for this
 couple, what's coming, what broke — and the ability to **run an automation

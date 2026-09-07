@@ -39,7 +39,7 @@ describe('Time tab registration', () => {
   it('appends "time" to a stored tab order that predates it', () => {
     const keys = orderedTabKeys({
       hidden_tabs: [],
-      tab_order: ['overview', 'tasks'],
+      tab_order: ['overview', 'workflow'],
     });
     expect(keys).toContain('time');
   });

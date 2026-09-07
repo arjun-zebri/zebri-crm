@@ -1,5 +1,12 @@
 # Automations — Triggers & Actions Inventory + Recommendation
 
+> **RETIRED (2026-09).** The Automations engine was replaced by the
+> unified Workflows feature. The trigger and action vocabulary in this
+> doc carried over verbatim and is still accurate; the engine, the
+> builder route and the run model described here are gone. Read
+> `.claude/docs/workflows.md` first. Where the two disagree, that file
+> wins.
+
 > **Outcome (2026-06-14):** decisions from this review are locked in
 > `automations-wiring.md` → "Catalogue review outcome". The launch
 > rule: a trigger/action is visible in the picker only if it does

@@ -42,6 +42,10 @@ export async function buildRunContext(
     userId: run.user_id,
     automationId: run.automation_id,
     runId: run.id,
+    // The unified workflows model calls a run an instance and an action
+    // a step. Same values, under the names the workflows engine uses.
+    instanceId: run.id,
+    stepId: run.current_action_id ?? '',
     coupleId: run.couple_id,
     triggerEvent: event,
     couple,

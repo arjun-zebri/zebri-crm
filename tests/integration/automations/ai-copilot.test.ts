@@ -32,7 +32,7 @@ vi.mock('@/lib/alerts/send-alert', () => ({
 let scriptedResponses: Array<Record<string, unknown>> = []
 let scriptIndex = 0
 
-vi.mock('@/lib/automations/ai-copilot/llm-client', async (importOriginal) => {
+vi.mock('@/lib/workflows/ai-copilot/llm-client', async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>()
   return {
     ...original,
@@ -51,7 +51,7 @@ vi.mock('@/lib/automations/ai-copilot/llm-client', async (importOriginal) => {
 })
 
 // eslint-disable-next-line import/order
-import { DAILY_MESSAGE_CAP, POST } from '@/app/api/ai/automation-copilot/route'
+import { DAILY_MESSAGE_CAP, POST } from '@/app/api/ai/workflow-copilot/route'
 // eslint-disable-next-line import/order
 import { NextRequest } from 'next/server'
 
@@ -72,31 +72,33 @@ async function makeUserWithAutomation(
   const user = await createTestUser({}, appMetadata)
   cleanup.push(user.cleanup)
   const admin = serviceClient()
+  // The copilot's tool vocabulary still says "automation"; what it edits
+  // is a workflow template.
   const { data, error } = await admin
-    .from('automations')
+    .from('workflow_templates')
     .insert({
       user_id: user.id,
-      name: 'Copilot test automation',
-      trigger_type: 'new_enquiry',
-      trigger_config: {},
+      name: 'Copilot test workflow',
       status: 'draft',
+      apply_rule_type: 'on_event',
+      apply_rule_config: { eventType: 'new_enquiry', triggerConfig: {} },
     })
     .select('id')
     .single()
-  if (error || !data) throw new Error(error?.message ?? 'automation insert failed')
+  if (error || !data) throw new Error(error?.message ?? 'template insert failed')
   return { user, automationId: data.id }
 }
 
 function req(body: unknown): NextRequest {
-  return new NextRequest('http://localhost/api/ai/automation-copilot', {
+  return new NextRequest('http://localhost/api/ai/workflow-copilot', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   })
 }
 
-const message = (automationId: string, content = 'Add a task step') => ({
-  automationId,
+const message = (templateId: string, content = 'Add a task step') => ({
+  templateId,
   messages: [{ role: 'user', content }],
 })
 
@@ -162,9 +164,11 @@ describe('tool loop against real RLS', () => {
             id: 'toolu_1',
             name: 'add_action',
             input: {
-              type: 'create_task',
-              config: { title: 'Call the couple' },
-              label: 'Follow-up task',
+              type: 'todo',
+              // A to-do's wording lives in its title, not its config:
+              // there is nothing for the engine to configure.
+              config: {},
+              label: 'Call the couple',
             },
           },
         ],
@@ -185,11 +189,13 @@ describe('tool loop against real RLS', () => {
 
     const admin = serviceClient()
     const { data: actions } = await admin
-      .from('automation_actions')
-      .select('type, label, config')
-      .eq('automation_id', automationId)
+      .from('workflow_template_steps')
+      .select('type, title, config')
+      .eq('template_id', automationId)
     expect(actions).toHaveLength(1)
-    expect(actions![0]!.type).toBe('create_task')
+    // `todo` is a native step type, so it lands as the row type itself
+    // rather than as an `action` carrying a config.actionType slug.
+    expect(actions![0]!.type).toBe('todo')
 
     // and the daily counter advanced for this user
     const { data: usage } = await admin
@@ -200,7 +206,7 @@ describe('tool loop against real RLS', () => {
   })
 
   it('chains a second step via afterActionId without tripping branch_consistency', async () => {
-    // Regression: the DB enforces parent_action_id + branch_path set
+    // Regression: the DB enforces parent_step_id + branch_path set
     // together (branch children) or neither (sequenced steps). The
     // executor must express "after step X" through position order, not
     // parent linkage — a live bug caught by this exact constraint.
@@ -208,13 +214,14 @@ describe('tool loop against real RLS', () => {
     currentClient = user.client
     const admin = serviceClient()
     const { data: first } = await admin
-      .from('automation_actions')
+      .from('workflow_template_steps')
       .insert({
-        automation_id: automationId,
+        template_id: automationId,
         position: 100,
-        type: 'send_email',
-        config: {},
-        parent_action_id: null,
+        type: 'action',
+        config: { actionType: 'send_email' },
+        title: '',
+        parent_step_id: null,
         branch_path: null,
       })
       .select('id')
@@ -227,8 +234,9 @@ describe('tool loop against real RLS', () => {
             id: 'toolu_1',
             name: 'add_action',
             input: {
-              type: 'create_task',
-              config: { title: 'Follow up' },
+              type: 'todo',
+              config: {},
+              label: 'Follow up',
               afterActionId: first!.id,
             },
           },
@@ -244,13 +252,13 @@ describe('tool loop against real RLS', () => {
     expect(text).toContain('"ok":true')
 
     const { data: actions } = await admin
-      .from('automation_actions')
-      .select('type, position, parent_action_id, branch_path')
-      .eq('automation_id', automationId)
+      .from('workflow_template_steps')
+      .select('type, config, position, parent_step_id, branch_path')
+      .eq('template_id', automationId)
       .order('position', { ascending: true })
     expect(actions).toHaveLength(2)
-    expect(actions![1]!.type).toBe('create_task')
-    expect(actions![1]!.parent_action_id).toBeNull()
+    expect(actions![1]!.type).toBe('todo')
+    expect(actions![1]!.parent_step_id).toBeNull()
     expect(actions![1]!.branch_path).toBeNull()
     expect(actions![1]!.position).toBeGreaterThan(actions![0]!.position)
   })
@@ -281,9 +289,9 @@ describe('tool loop against real RLS', () => {
     expect(text).toContain('"ok":false')
     const admin = serviceClient()
     const { data: actions } = await admin
-      .from('automation_actions')
+      .from('workflow_template_steps')
       .select('id')
-      .eq('automation_id', automationId)
+      .eq('template_id', automationId)
     expect(actions).toHaveLength(0)
   })
 })

@@ -471,53 +471,81 @@ export function useDashboardInvoices() {
   });
 }
 
-interface DashboardTask {
+/**
+ * One outstanding manual step, as the dashboard card needs it.
+ *
+ * The dashboard only surfaces work the MC has to do by hand: an
+ * automated step is the engine's problem, not something to nag about.
+ */
+export interface DashboardStep {
   id: string;
   title: string;
-  due_date: string | null;
-  status: "todo" | "in_progress" | "done";
-  related_couple_id: string | null;
-  couple?: { id: string; name: string } | null;
+  due_at: string | null;
+  /** The couple this step belongs to. Always present here: see below. */
+  couple: { id: string; name: string } | null;
 }
 
-export function useDashboardTasks() {
+/** Shape PostgREST returns for the nested instance and couple. */
+interface StepRowWithInstance {
+  id: string;
+  title: string;
+  due_at: string | null;
+  workflow_instances:
+    | { couple_id: string | null; couples: { id: string; name: string } | { id: string; name: string }[] | null }
+    | { couple_id: string | null; couples: { id: string; name: string } | { id: string; name: string }[] | null }[]
+    | null;
+}
+
+/** Unwrap a PostgREST relation that may arrive as an object or a one-item array. */
+function firstOf<T>(rel: T | T[] | null | undefined): T | null {
+  if (Array.isArray(rel)) return rel[0] ?? null;
+  return rel ?? null;
+}
+
+/**
+ * The MC's outstanding manual steps across every couple, soonest first.
+ *
+ * Replaces the old task query: a to-do is now a step on a couple's
+ * workflow, so there is one list instead of two. Only `todo` and
+ * `appointment` steps are manual; everything else runs itself.
+ */
+export function useDashboardSteps() {
   const supabase = createClient();
 
   return useQuery({
-    queryKey: ["dashboardTasks"],
-    queryFn: async () => {
+    queryKey: ["dashboardSteps"],
+    queryFn: async (): Promise<DashboardStep[]> => {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
-        .from("tasks")
+        .from("workflow_steps")
         .select(
-          "id, title, due_date, status, related_couple_id, couple:couples(id, name)"
+          "id, title, due_at, workflow_instances!inner(couple_id, user_id, status, couples(id, name))",
         )
-        .eq("user_id", user.user.id)
-        .neq("status", "done")
-        // Dashboard widget's only action is "click → open couple
-        // profile on Tasks tab". Un-linked tasks have no destination
-        // here; they still appear on /tasks.
-        .not("related_couple_id", "is", null)
-        .order("due_date", { ascending: true, nullsFirst: false })
+        .in("type", ["todo", "appointment"])
+        .eq("status", "pending")
+        .eq("workflow_instances.user_id", user.user.id)
+        .eq("workflow_instances.status", "active")
+        // The card's only action is "click, open the couple's Workflow
+        // tab", so a step with no couple (the MC's personal workflow)
+        // has no destination here. It still shows in the queue.
+        .not("workflow_instances.couple_id", "is", null)
+        .order("due_at", { ascending: true, nullsFirst: false })
         .limit(10);
 
       if (error) throw error;
-      // Supabase returns joined relations as arrays; normalize to
-      // a single object (or null).
-      type CoupleRel = { id: string; name: string };
-      type TaskRow = Omit<DashboardTask, 'couple'> & {
-        couple: CoupleRel | CoupleRel[] | null;
-      };
-      const normalized = (data ?? []).map((t) => {
-        const row = t as unknown as TaskRow;
-        const couple = Array.isArray(row.couple)
-          ? row.couple[0] ?? null
-          : row.couple;
-        return { ...row, couple } as DashboardTask;
+
+      return (data ?? []).map((row) => {
+        const step = row as unknown as StepRowWithInstance;
+        const instance = firstOf(step.workflow_instances);
+        return {
+          id: step.id,
+          title: step.title,
+          due_at: step.due_at,
+          couple: firstOf(instance?.couples),
+        };
       });
-      return normalized;
     },
   });
 }

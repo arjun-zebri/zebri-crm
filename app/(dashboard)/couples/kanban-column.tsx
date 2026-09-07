@@ -11,6 +11,7 @@ import {
 } from '@/types/couple';
 
 import { KanbanCard } from "./kanban-card";
+import type { CoupleProgress } from "./use-workflow-progress";
 
 interface KanbanColumnProps {
   status: CoupleStatusRecord;
@@ -19,6 +20,8 @@ interface KanbanColumnProps {
   onAddClick?: (statusSlug: string) => void;
   selectedIds: Set<string>;
   activeDrag: { draggableId: string; movingIds: Set<string>; movingCouples: Couple[] } | null;
+  /** Workflow progress per couple id, for the line under each card. */
+  progress: Map<string, CoupleProgress>;
 }
 
 export function KanbanColumn({
@@ -28,6 +31,7 @@ export function KanbanColumn({
   onAddClick,
   selectedIds,
   activeDrag,
+  progress,
 }: KanbanColumnProps) {
   const classes = getStatusClasses(status.color);
   const [collapsed, setCollapsed] = useState(false);
@@ -74,6 +78,7 @@ export function KanbanColumn({
                   isSelected={selectedIds.has(couple.id)}
                   onClick={(e) => onCardInteract(couple, e)}
                   activeDrag={activeDrag}
+                  progress={progress.get(couple.id)}
                 />
               ))}
               {provided.placeholder}

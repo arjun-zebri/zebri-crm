@@ -17,6 +17,7 @@ process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_integration_dummy_not_used'
 process.env.STRIPE_CONNECT_WEBHOOK_SECRET ??= 'whsec_integration_dummy_not_used'
 
 import { beforeAll } from 'vitest'
+
 import { localSupabaseEnv, serviceClient } from './helpers/supabase'
 
 // Route handlers read connection details from process.env directly

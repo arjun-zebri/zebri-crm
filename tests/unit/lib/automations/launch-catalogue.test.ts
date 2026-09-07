@@ -23,13 +23,25 @@ import {
 import { triggerRegistry } from '@/lib/automations/triggers'
 
 describe('launch catalogue — triggers', () => {
-  it('lists exactly the 29 triggers that fire today', () => {
+  it('lists exactly the 28 triggers that fire today', () => {
     // 28 from the launch review + questionnaire_completed (P4 — emitted by
     // the couple_questionnaires completion DB trigger) + consultation_booked,
     // booking_cancelled (consultation lifecycle from Phase D DB trigger and RPC),
     // and consultation_completed (Phase D time emitter), minus the two portal
-    // duplicates folded into "Portal item added".
-    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(29)
+    // duplicates folded into "Portal item added", minus the three task_*
+    // triggers retired at the Workflows cutover, plus step_overdue and
+    // package_applied which replaced them.
+    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(28)
+  })
+
+  it('hides the task triggers Workflows retired, without deregistering them', () => {
+    // A workflow converted from an automation saved against one of these
+    // must still parse, so the spec stays in the registry. Nothing emits
+    // them any more: `step_overdue` took their place.
+    for (const type of ['task_created', 'task_completed', 'task_overdue'] as const) {
+      expect(isTriggerLaunchVisible(type)).toBe(false)
+      expect(triggerRegistry[type], `${type} must stay in the registry`).toBeDefined()
+    }
   })
 
   it('hides the portal triggers folded into "Portal item added"', () => {
@@ -108,7 +120,7 @@ describe('launch catalogue — triggers', () => {
   })
 
   it('predicate agrees with the set', () => {
-    expect(isTriggerLaunchVisible('task_overdue')).toBe(true)
+    expect(isTriggerLaunchVisible('step_overdue')).toBe(true)
     expect(isTriggerLaunchVisible('new_enquiry')).toBe(true)
     expect(isTriggerLaunchVisible('time_before_event')).toBe(true) // T1
   })
@@ -126,11 +138,17 @@ describe('launch catalogue — actions', () => {
     // the canvas), send_portal_link + request_information
     // (2026-08-16: both are one-line emails carrying a portal link,
     // which send_email now does better and at any length), and
-    // send_pre_event_checklist (2026-08-16, product decision).
-    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(14)
+    // send_pre_event_checklist (2026-08-16, product decision). Minus
+    // create_task (2026-09-04): the workflows `todo` step type is an
+    // item in the sequence and gates everything behind it, while
+    // create_task spawns a to-do that gates nothing. Two things called
+    // "to-do" behaving in opposite ways is a trap, so only the gating
+    // one is offered.
+    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(13)
     for (const retired of [
       'pause_couple_automations',
       'update_task',
+      'create_task',
       'send_portal_link',
       'request_information',
       'send_pre_event_checklist',
