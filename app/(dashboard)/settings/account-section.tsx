@@ -33,6 +33,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { ChangePasswordResult } from './account/action-state';
 import { changePasswordAction } from './account/actions';
 import { AutoSaveStatus, type SaveState } from './auto-save-status';
+import { DailyDigestCard } from './daily-digest-card';
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -55,6 +56,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
       ) : (
         <EmailPreferencesCard />
       )}
+      <DailyDigestCard />
       <DangerZoneCard />
     </div>
   );

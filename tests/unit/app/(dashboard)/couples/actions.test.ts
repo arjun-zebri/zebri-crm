@@ -28,6 +28,9 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/alerts/logger', () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
+// These actions kick the workflow engine after responding; the kick
+// itself has its own tests and needs a database.
+vi.mock('@/lib/workflows/kick', () => ({ scheduleKick: vi.fn() }));
 
 beforeEach(() => {
   vi.resetModules();
@@ -164,75 +167,6 @@ describe('deleteCoupleAction', () => {
     expect(result.ok).toBe(true);
     expect(fromMock).toHaveBeenCalledWith('couples');
     expect(deleteMock).toHaveBeenCalled();
-  });
-});
-
-describe('createCoupleTaskAction', () => {
-  it('returns ok=false on a non-UUID coupleId', async () => {
-    const { createCoupleTaskAction } = await loadActions();
-    const result = await createCoupleTaskAction({
-      coupleId: 'not-a-uuid',
-      title: 'x',
-    });
-    expect(result.ok).toBe(false);
-  });
-
-  it('returns ok=false on an empty title', async () => {
-    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    const { createCoupleTaskAction } = await loadActions();
-    const result = await createCoupleTaskAction({
-      coupleId: validUuid,
-      title: '   ',
-    });
-    expect(result.ok).toBe(false);
-  });
-
-  it('returns the new id on the happy path', async () => {
-    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    const { createCoupleTaskAction } = await loadActions();
-    const result = await createCoupleTaskAction({
-      coupleId: validUuid,
-      title: 'Send venue floor-plan',
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.data.id).toBe(validUuid);
-  });
-});
-
-describe('updateCoupleTaskAction', () => {
-  it('returns ok=false on an empty patch', async () => {
-    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    const { updateCoupleTaskAction } = await loadActions();
-    const result = await updateCoupleTaskAction({
-      id: validUuid,
-      patch: {},
-    });
-    expect(result.ok).toBe(false);
-  });
-
-  it('returns ok=false on a malformed due_date', async () => {
-    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    const { updateCoupleTaskAction } = await loadActions();
-    const result = await updateCoupleTaskAction({
-      id: validUuid,
-      patch: { due_date: '14/09/2026' },
-    });
-    expect(result.ok).toBe(false);
-  });
-
-  it('calls supabase update on the happy path', async () => {
-    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    const { updateCoupleTaskAction } = await loadActions();
-    const result = await updateCoupleTaskAction({
-      id: validUuid,
-      patch: { title: 'New', status: 'in_progress' },
-    });
-    expect(result.ok).toBe(true);
-    expect(fromMock).toHaveBeenCalledWith('tasks');
-    expect(updateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'New', status: 'in_progress' }),
-    );
   });
 });
 

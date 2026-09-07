@@ -39,6 +39,8 @@ function makeCtx(): RunContext {
     userId: 'u1',
     automationId: 'a1',
     runId: 'r1',
+    instanceId: 'r1',
+    stepId: 's1',
     coupleId: 'c1',
     triggerEvent: {
       id: 'evt',

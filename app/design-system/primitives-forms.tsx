@@ -53,7 +53,7 @@ export function PrimitivesForms() {
           <code> cursor-pointer</code> either: a base rule in <code>globals.css</code> gives every{' '}
           <code>button</code> the hand cursor, including raw ones this primitive does not own.
           Reach for <code>shape=&quot;pill&quot;</code> only when the button floats free of the
-          layout, like the Feedback pill; a pill sitting in a form row next to an input reads as a
+          layout, like the assistant dock; a pill sitting in a form row next to an input reads as a
           third radius the system does not have.
         </Rule>
         <div className="space-y-6">
@@ -140,12 +140,20 @@ export function PrimitivesForms() {
       </Spec>
 
       <Spec name="Textarea" file="components/ui/textarea.tsx"
-        importPath="@/components/ui/textarea" description="Input's sibling for prose. Same chrome; height comes from rows, and it resizes vertically only.">
+        importPath="@/components/ui/textarea" description="Input's sibling for prose. Same chrome; height comes from rows, and it never resizes.">
         <Rule>
           Not 32px tall. A paragraph field is inherently multi-line, so it is the one control that
           breaks the single-height rule, keeping only the border, radius, padding and focus
           treatment of <code>Input</code>. Reach for it whenever a free-text paragraph is collected
           instead of a bare <code>textarea</code>.
+        </Rule>
+        <Rule>
+          <strong>No textarea in Zebri is user-resizable.</strong> There is no{' '}
+          <code>resizable</code> prop, and a base rule in <code>globals.css</code> sets{' '}
+          <code>resize: none</code> on every bare <code>textarea</code> too, so a hand-rolled
+          field cannot reintroduce the drag handle. Every field of ours sits in a fixed layout,
+          where dragging one taller only shoves the rest of the form around. Pick the height once
+          with <code>rows</code>: 3 for a one-line note, 8&ndash;10 for a body of prose.
         </Rule>
         <DemoGrid cols={3}>
           <Demo label="Default">
@@ -157,8 +165,8 @@ export function PrimitivesForms() {
           <Demo label="Error">
             <Textarea label="Message" error="A message is required." />
           </Demo>
-          <Demo label="Fixed height">
-            <Textarea label="Description" rows={3} resizable={false} />
+          <Demo label="Taller (rows={8})">
+            <Textarea label="Description" rows={8} placeholder="Room for a paragraph" />
           </Demo>
         </DemoGrid>
       </Spec>

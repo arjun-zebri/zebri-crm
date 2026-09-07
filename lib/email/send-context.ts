@@ -121,6 +121,8 @@ export async function buildManualSendContext(
     userId: user.id,
     automationId: 'manual',
     runId: 'manual',
+    instanceId: 'manual',
+    stepId: 'manual',
     coupleId,
     triggerEvent: {
       id: 'manual',

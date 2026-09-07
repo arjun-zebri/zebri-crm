@@ -7,13 +7,14 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { dispatchPendingEvents } from '@/lib/automations/dispatcher'
+import { dispatchPendingEvents } from '@/lib/workflows/dispatcher'
 
 import {
   createTestUser,
   serviceClient,
   type TestUser,
 } from '../helpers/supabase'
+import { instancesFor, seedEventTemplate } from '../helpers/workflows'
 
 /**
  * Seed a couple with the portal enabled; return id + both partner tokens.
@@ -34,19 +35,7 @@ async function seedCouple(
 }
 
 async function seedAutomation(user: TestUser, who?: string): Promise<string> {
-  const { data, error } = await serviceClient()
-    .from('automations' as never)
-    .insert({
-      user_id: user.id,
-      name: 'couple_completed_vows',
-      trigger_type: 'couple_completed_vows',
-      trigger_config: who ? { who } : {},
-      status: 'active',
-    } as never)
-    .select('id')
-    .single()
-  if (error || !data) throw new Error(`seed automation: ${error?.message}`)
-  return (data as { id: string }).id
+  return seedEventTemplate(user.id, 'couple_completed_vows', who ? { who } : {})
 }
 
 async function vowEventsFor(vowId: string) {
@@ -72,7 +61,7 @@ describe('vows feature (P3)', () => {
 
   it('save_portal_vow inserts a vow and emits couple_completed_vows', async () => {
     const couple = await seedCouple(user)
-    const automationId = await seedAutomation(user)
+    const templateId = await seedAutomation(user)
 
     const vowId = crypto.randomUUID()
     // No `p_who` — the RPC derives it from the token. The primary
@@ -101,13 +90,9 @@ describe('vows feature (P3)', () => {
     expect(events[0]!.payload.who).toBe('primary')
     expect(events[0]!.couple_id).toBe(couple.id)
 
-    // Dispatcher opens a run.
+    // The dispatcher applies the workflow.
     await dispatchPendingEvents(serviceClient())
-    const { data: runs } = await serviceClient()
-      .from('automation_runs' as never)
-      .select('id')
-      .eq('automation_id', automationId)
-    expect(runs ?? []).toHaveLength(1)
+    expect(await instancesFor(templateId)).toHaveLength(1)
   })
 
   it('the `who` filter narrows which automations fire', async () => {
@@ -120,12 +105,8 @@ describe('vows feature (P3)', () => {
     } as never)
     await dispatchPendingEvents(serviceClient())
 
-    // A 'primary' vow must not open a run on a 'spouse'-filtered automation.
-    const { data: runs } = await serviceClient()
-      .from('automation_runs' as never)
-      .select('id')
-      .eq('automation_id', spouseOnly)
-    expect(runs ?? []).toHaveLength(0)
+    // A 'primary' vow must not apply a 'spouse'-filtered workflow.
+    expect(await instancesFor(spouseOnly)).toHaveLength(0)
   })
 
   it('rejects an invalid portal token', async () => {

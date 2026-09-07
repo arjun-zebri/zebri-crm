@@ -38,4 +38,18 @@ describe('<Input />', () => {
     await userEvent.type(screen.getByLabelText('Name'), 'Sarah');
     expect(onChange).toHaveBeenCalled();
   });
+
+  it('strips the browser spinner from a number field', () => {
+    // Platform chrome that ignores the tokens and eats the field's
+    // padding. Every number input in the app goes through here.
+    render(<Input label="How many" type="number" />);
+    const cls = screen.getByLabelText('How many').className;
+    expect(cls).toContain('[appearance:textfield]');
+    expect(cls).toContain('[&::-webkit-inner-spin-button]:appearance-none');
+  });
+
+  it('leaves a text field alone', () => {
+    render(<Input label="Name" />);
+    expect(screen.getByLabelText('Name').className).not.toContain('appearance');
+  });
 });

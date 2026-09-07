@@ -83,10 +83,11 @@ default emoji and routing.
 | `stripe_connect_disabled` | warn | `account.updated` webhook reported a non-null `requirements.disabled_reason` — Stripe paused some capability and the MC needs to action it (Phase 2D.1) | `/api/stripe/webhook` (Connect branch) |
 | `stripe_connect_deauthorized` | warn | MC removed our platform from their Stripe account via the Stripe Dashboard (Phase 2D.1) | `/api/stripe/webhook` (Connect branch) |
 | `email_rate_limit_hit` | warn | Per-user send-quote / send-invoice / send-template limit hit (Phase 2C; `action` discriminates) | `/api/email/send-{quote,invoice,template}` |
-| `automation_paused_missing_variables` | warn | A `send_email` automation using a saved template hit an unresolved variable for a couple — the run is paused (not auto-resumed) until the MC fixes the data and clicks "Fix & retry" on the couple Automations tab (Email Templates feature) | `lib/automations/runner.ts` |
+| `automation_paused_missing_variables` | warn | A `send_email` step using a saved template hit an unresolved variable for a couple. The step parks on a far-future wake time and never resumes by itself, so this alert is the only signal the email did not send; the MC fixes the data and retries the step from the couple's Workflow tab. `automationId` carries the template id (or the instance id for an ad-hoc workflow), `runId` the instance id | `lib/workflows/executor.ts` |
 | `resend_send_failed` | error | Resend API rejected / errored | `/api/email/*` |
 | `resend_bounced` | warn | Bounce reported | `/api/resend/webhook` |
 | `cron_job_failed` | error | Cron handler threw | `/api/cron/*` |
+| — (no alert) | — | The morning digest deliberately alerts on nothing. A failed send leaves `daily_digest_last_sent_on` unstamped so the next hourly run retries it, and the route returns `{considered, sent, skippedEmpty, failed}` for the cron log. A per-MC digest failure is not an incident | `/api/cron/workflow-digest` |
 | `cron_job_missed` | warn | Expected run did not arrive | scheduled checker (Phase 0.7) |
 | `auth_anomaly` | warn | Failed-login spike, token reuse, … | middleware (Phase 0.8) |
 | `auth_rate_limit_hit` | warn | Per-action rate limit hit (login/signup/reset/update/change password) | `app/(auth)/actions.ts` + `app/(dashboard)/settings/account/actions.ts` (Phase 1) |
@@ -99,7 +100,7 @@ default emoji and routing.
 | `bug_report_submitted` | info | An MC sent feedback from the in-app pill; carries the ZEB- reference, title, type, reporter, the page they were on, and a link to the Notion task | `lib/bug-reports/submit.ts` |
 | `bug_report_notion_sync_failed` | error | The `bug_reports` row saved but the Notion push failed. There is no retry, so this alert repeats the full title and description: it is the only copy anyone will read when re-filing the ticket by hand | `lib/bug-reports/submit.ts` |
 | `bug_report_screenshot_upload_failed` | warn | The Notion File Upload step failed. The ticket was still filed, just without its screenshot | `lib/bug-reports/submit.ts` |
-| `app_error` | error | Catch-all / uncaught errors | global error boundaries |
+| `app_error` | error | Catch-all / uncaught errors. Carries a `source` string so the channel line reads `<source>: <message>`. Zebri AI uses `ai-copilot` (usage-counter failure) and `ai-draft-email` (usage-counter failure, or the model call failing after the MC pressed Rewrite) | global error boundaries, `/api/ai/*` |
 
 Wiring each row to its source happens during that surface's hardening
 phase — the dispatcher and matrix land here, the call sites follow

@@ -1345,7 +1345,7 @@ Each page/section is its own small PR(s) and must meet the §5 DoD before it's "
 3. **Couples + Events**  -  core CRM
 4. **Contracts** (e-sign)  -  legal/money
 5. **Contacts**
-6. **Tasks**
+6. ~~**Tasks**~~  -  retired 2026-09 into Workflows (item 14).
 7. **Dashboard**
 8. **Client Portal** (public surface)
 9. **Quotes**
@@ -1353,7 +1353,39 @@ Each page/section is its own small PR(s) and must meet the §5 DoD before it's "
 11. **Branding editor**
 12. **Settings**
 13. **Admin / Shadow mode**
-14. **Workflows / automation**  -  Phase 14a (foundation + builder + recipe library + linear engine) **shipped 2026-06-04** on `staging`. See `.claude/docs/automations.md` for the trigger/action catalogue + architecture. 14b (SMS / WhatsApp / IG / AI helpers / questionnaire editor / run-as-batch) is the follow-up.
+14. **Workflows**  -  the unified feature that **replaced both Tasks and
+    Automations**, built 2026-09 on `staging`. Spec
+    `docs/superpowers/specs/2026-08-19-workflows-design.md`, plan
+    `docs/superpowers/plans/2026-09-04-workflows.md`, feature doc
+    `.claude/docs/workflows.md` (read that first; `automations.md` and
+    friends describe the retired engine and are bannered as such).
+    Phases A-E are done: schema and engine, the builder moved to
+    `/workflows/[id]` with the copilot intact, the couple profile's
+    folded Workflow tab, the queue and dashboard card, and the cutover
+    (converter, freeze, redirects, retired surfaces deleted).
+
+    A usability audit followed and shipped in the same batch: the queue
+    became an **Upcoming** view (one date-banded list with a rail of
+    group headings, a step detail modal, and keyboard navigation); the
+    library became a **card grid** with the ready-made workflows offered
+    inline and one "New workflow" menu in place of three buttons; a
+    **review-before-send** gate with a rendered
+    preview, inline edit and an AI rewrite; the **timing control** the
+    schema always supported but had no UI for; **dry-run** date
+    projection; **starters** and "describe your process" as the two ways
+    out of an empty library; a **7am morning digest** in the MC's own
+    timezone; **portal milestones** (opt-in, `visible_to_couple`);
+    per-couple progress on the couples board; and a **list-mode builder**
+    below `md`, since a pan-and-zoom canvas is the wrong shape for a
+    phone.
+
+    Phase F (Scheduler wiring for appointment steps, dropping the frozen
+    legacy tables) is the follow-up. The drop stays unwritten until the
+    freeze has been in production long enough to verify the legacy
+    tables are untouched.
+    The earlier Phase 14a automations engine shipped 2026-06-04 and is
+    now retired; its trigger and action vocabulary carried over verbatim
+    and still lives under `lib/automations/`.
 15. **Cron + email pipeline**
 16. **Email Templates**  -  reusable per-MC email templates (TipTap body +
     mustache subject) usable in the automation `send_email` action and a

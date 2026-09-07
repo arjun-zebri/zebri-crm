@@ -121,10 +121,14 @@ function CouplesPageContent() {
 
   // Redirect bare /couples to /couples?view=board (the kanban
   // default). Pure side effect; doesn't write component state, so
-  // no setState-in-effect issue.
+  // no setState-in-effect issue. Every other param is carried over:
+  // this fires before the couples query resolves, so dropping them
+  // would kill an `?openCouple=` deep link before it is ever read.
   useEffect(() => {
     if (!viewParam) {
-      router.replace('/couples?view=board');
+      const params = new URLSearchParams(window.location.search);
+      params.set('view', 'board');
+      router.replace(`/couples?${params.toString()}`);
     }
   }, [viewParam, router]);
 

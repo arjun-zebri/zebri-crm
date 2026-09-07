@@ -48,8 +48,9 @@ vi.mock('@/lib/email/send-context', async () => {
   }
 })
 
-import { runAutomationForCoupleAction } from '@/app/(dashboard)/automations/actions'
 import { dispatchEmail } from '@/lib/email/dispatch'
+import { advanceDueSteps } from '@/lib/workflows/executor'
+import { applyTemplate } from '@/lib/workflows/instantiate'
 
 import {
   createTestUser,
@@ -67,7 +68,7 @@ async function seed(
   user: TestUser,
 ): Promise<{
   coupleId: string
-  automationId: string
+  workflowTemplateId: string
   templateId: string
   fileId: string
 }> {
@@ -121,33 +122,36 @@ async function seed(
   if (fErr) throw new Error(fErr.message)
   const fileId = (file as { id: string }).id
 
-  // Create automation with send_email action referencing the template.
+  // A workflow template whose single step sends the email. The step is
+  // the head of its lane with `after_previous` timing, so applying the
+  // template makes it immediately due and the next executor pass runs it.
   const { data: auto, error: aErr } = await svc
-    .from('automations')
+    .from('workflow_templates')
     .insert({
       user_id: user.id,
       name: 'Send template with attachment',
-      trigger_type: 'manual_fire',
+      apply_rule_type: 'manual',
       status: 'active',
     } as never)
     .select('id')
     .single()
   if (aErr) throw new Error(aErr.message)
-  const automationId = (auto as { id: string }).id
+  const workflowTemplateId = (auto as { id: string }).id
 
-  const { error: actErr } = await svc.from('automation_actions').insert({
-    automation_id: automationId,
-    type: 'send_email',
+  const { error: actErr } = await svc.from('workflow_template_steps').insert({
+    template_id: workflowTemplateId,
+    type: 'action',
     position: 0,
-    parent_action_id: null,
+    parent_step_id: null,
     config: {
+      actionType: 'send_email',
       recipients: { roles: ['primary'], fallback: 'primary_only' },
       templateId,
     },
   } as never)
   if (actErr) throw new Error(actErr.message)
 
-  return { coupleId, automationId, templateId, fileId }
+  return { coupleId, workflowTemplateId, templateId, fileId }
 }
 
 afterEach(() => {
@@ -158,7 +162,8 @@ afterEach(() => {
 describe('send_email automation action with template attachments', () => {
   it('fetches and includes template-linked files as attachments', async () => {
     const user = await createTestUser()
-    const { coupleId, automationId } = await seed(user)
+    const svc = serviceClient()
+    const { coupleId, workflowTemplateId } = await seed(user)
 
     // Mock dispatchEmail to capture the email payload and return success.
     // Store all calls so we can inspect what was sent to the couple.
@@ -169,8 +174,13 @@ describe('send_email automation action with template attachments', () => {
     })
 
     activeUser = user
-    const res = await runAutomationForCoupleAction({ automationId, coupleId })
-    expect(res.ok).toBe(true)
+    const applied = await applyTemplate(svc, {
+      userId: user.id,
+      templateId: workflowTemplateId,
+      coupleId,
+    })
+    expect(applied).toHaveProperty('instanceId')
+    await advanceDueSteps(svc)
 
     // Verify dispatchEmail was called at least once (could be test + real, or just real).
     expect(dispatchEmailMock).toHaveBeenCalled()
@@ -245,29 +255,30 @@ describe('send_email automation action with template attachments', () => {
     if (fErr) throw new Error(fErr.message)
     const fileId = (file as { id: string }).id
 
-    // Create automation with send_email action that references both the
+    // A workflow template whose send_email step references both the
     // template (which contains the file) and explicitly lists the same
     // file in attachFiles. The deduplication should ensure it appears
     // only once in the final attachments array.
     const { data: auto, error: aErr } = await svc
-      .from('automations')
+      .from('workflow_templates')
       .insert({
         user_id: user.id,
         name: 'Dedupe send',
-        trigger_type: 'manual_fire',
+        apply_rule_type: 'manual',
         status: 'active',
       } as never)
       .select('id')
       .single()
     if (aErr) throw new Error(aErr.message)
-    const automationId = (auto as { id: string }).id
+    const workflowTemplateId = (auto as { id: string }).id
 
-    const { error: actErr } = await svc.from('automation_actions').insert({
-      automation_id: automationId,
-      type: 'send_email',
+    const { error: actErr } = await svc.from('workflow_template_steps').insert({
+      template_id: workflowTemplateId,
+      type: 'action',
       position: 0,
-      parent_action_id: null,
+      parent_step_id: null,
       config: {
+        actionType: 'send_email',
         recipients: { roles: ['primary'], fallback: 'primary_only' },
         templateId,
         attachFiles: [fileId], // Same file, also in attachFiles
@@ -283,8 +294,13 @@ describe('send_email automation action with template attachments', () => {
     })
 
     activeUser = user
-    const res = await runAutomationForCoupleAction({ automationId, coupleId })
-    expect(res.ok).toBe(true)
+    const applied = await applyTemplate(svc, {
+      userId: user.id,
+      templateId: workflowTemplateId,
+      coupleId,
+    })
+    expect(applied).toHaveProperty('instanceId')
+    await advanceDueSteps(svc)
 
     // Find the real send to the couple
     const realSend = capturedPayloads.find(

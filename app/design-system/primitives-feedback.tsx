@@ -4,6 +4,7 @@ import { CalendarDays, Users } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Callout, type CalloutTone } from '@/components/ui/callout';
 import { Empty } from '@/components/ui/empty';
 import { ErrorState } from '@/components/ui/error-state';
 import { Loading } from '@/components/ui/loading';
@@ -27,6 +28,7 @@ const BADGE_VENDOR = [
 ] as const;
 const BADGE_EVENT = ['upcoming', 'completed', 'cancelled'] as const;
 const TONES = ['neutral', 'info', 'success', 'warning', 'danger'] as const;
+const CALLOUT_TONES: readonly CalloutTone[] = ['info', 'success', 'warning', 'danger'];
 
 /** All feedback primitives with their variant matrices. */
 export function PrimitivesFeedback() {
@@ -84,6 +86,26 @@ export function PrimitivesFeedback() {
                 <StatePill key={t} tone={t} label={t} dot="hollow" />
               ))}
             </DemoRow>
+          </Demo>
+        </div>
+      </Spec>
+
+      <Spec name="Callout" file="components/ui/callout.tsx"
+        importPath="@/components/ui/callout" description="An inline note whose sentence carries a consequence. Four tones, each with its own icon; pass icon={null} to drop the glyph. A caption that only restates what a field does stays muted prose.">
+        <div className="space-y-4">
+          <Demo label="Tones">
+            <div className="space-y-2">
+              {CALLOUT_TONES.map((tone) => (
+                <Callout key={tone} tone={tone}>
+                  This to-do is yours to tick off. Nothing anchored after it runs until you do.
+                </Callout>
+              ))}
+            </div>
+          </Demo>
+          <Demo label="No icon">
+            <Callout tone="warning" icon={null}>
+              Quiet hours are on, so anything falling overnight sends at 8am.
+            </Callout>
           </Demo>
         </div>
       </Spec>

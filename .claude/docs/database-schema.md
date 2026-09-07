@@ -309,6 +309,13 @@ RLS: Standard user_id = auth.uid() policy for authenticated CRUD. Anon SELECT is
 
 # tasks
 
+> **RETIRED 2026-09 and frozen.** Replaced by `workflow_steps`. The
+> write policies were dropped in `20260907000000`; SELECT stays open so
+> a support question about an old row is still answerable. Same for
+> `task_groups`, `task_statuses`, `task_priorities` and `task_types`,
+> which retired with the checklist simplification. See the Workflows
+> section at the end of this file.
+
 Follow-ups and reminders.
 
 Columns:
@@ -1314,9 +1321,9 @@ timezone (text, nullable)  -  IANA timezone (e.g. 'Australia/Sydney', 'America/N
 
 Times in availability_rules and availability_overrides are wall-clock in this timezone. Migration: `20260819000000_create_scheduling_tables.sql`.
 
-## bug_reports (in-app Feedback pill)
+## bug_reports (in-app feedback)
 
-Feedback submitted from the Feedback pill on every dashboard page. This table is the source of truth, not Notion: the row is written before the Notion push runs, so an outage, a revoked token or a rate-limit never loses a report. The Notion task in Tasks Tracker is a mirror.
+Feedback submitted from the assistant dock on every dashboard page. This table is the source of truth, not Notion: the row is written before the Notion push runs, so an outage, a revoked token or a rate-limit never loses a report. The Notion task in Tasks Tracker is a mirror.
 
 Columns:
 id (uuid, primary key)
@@ -1754,3 +1761,158 @@ not acceptable.
 - `verify_contract_hash(text)` — public fingerprint lookup, by hash only,
   returning no document content.
 - Dropped: the stale `decline_contract(uuid, text)` overload.
+
+
+------------------------------------------------------------------------
+
+# Workflows (2026-09)
+
+Full feature doc: `.claude/docs/workflows.md`. Migrations
+`20260905000000` (foundation), `20260905000100` (apply-rule triggers),
+`20260905000200` (helper RPCs), `20260906000000` (converter),
+`20260907000000` (freeze).
+
+An applied workflow instance IS the run. Templates are authored once;
+applying one **snapshots** its steps into rows the couple owns, so
+editing a template never disturbs live work.
+
+## `workflow_tags`
+
+`id`, `user_id`, `name`, `color`, `position`. Case-insensitive unique
+index on `(user_id, lower(name))`.
+
+## `workflow_templates`
+
+`id`, `user_id`, `name`, `description`, `status` (`draft` | `active` |
+`archived`), `apply_rule_type` (`manual` | `on_couple_created` |
+`on_stage_changed` | `on_package_applied` | `on_event`),
+`apply_rule_config` jsonb, `allow_reapply`, `quiet_hours_start/end`,
+`branch_depth_limit`, `canvas_viewport` jsonb, `version`.
+
+Converter columns: `legacy_automation_id` (unique where not null),
+`template_slug` (starter-library provenance).
+
+There is no `paused` status. Draft and active cover what three did.
+
+## `workflow_template_tags`
+
+Join table. Its RLS checks **both** sides: a foreign key does not
+enforce ownership, so an owner-only `with check` would still let a user
+tag their template with another tenant's tag.
+
+## `workflow_template_steps`
+
+`id`, `template_id`, `position`, `type` (`todo` | `appointment` |
+`action` | `wait` | `branch`), `config` jsonb, `title`, `description`,
+`timing` jsonb, `parent_step_id`, `branch_path` (`yes` | `no`),
+`requires_approval`, `visible_to_couple`, `disabled`, `canvas_x`,
+`canvas_y`, plus `legacy_action_id`.
+
+`canvas_x` / `canvas_y` are **nullable** (migration `20260910000000`).
+They shipped `not null default 0`, which meant every step carried a
+position and the builder's auto-layout, which only places a step
+*without* one, never ran: whole workflows rendered stacked at a single
+point. Null means "lay me out"; a number means "the MC dragged me
+here". Presentation only, so run order is untouched by either.
+
+`canvas_x` / `canvas_y` are **nullable** (migration `20260910000000`).
+They shipped `not null default 0`, which meant every step carried a
+position and the builder's auto-layout, which only places a step
+*without* one, never ran: whole workflows rendered stacked at a single
+point. Null means "lay me out"; a number means "the MC dragged me
+here". Presentation only, so run order is untouched by either.
+
+CHECK `workflow_template_steps_branch_consistency`: `parent_step_id`
+and `branch_path` are both null or both set.
+
+An `action` step stores the old action slug in `config.actionType`.
+
+## `workflow_instances`
+
+`id`, `user_id`, `couple_id` (nullable — a personal instance has none),
+`template_id` (nullable, ad-hoc instances have none), `name`,
+`template_version`, `status` (`active` | `completed` | `cancelled`),
+`is_default`, `is_personal`, `trigger_event_id`, `context` jsonb,
+`applied_at`, `completed_at`, `error_message`.
+
+Partial unique indexes: one default per couple, one personal per user,
+one instance per trigger event (so a re-delivered bus event cannot open
+a duplicate).
+
+A DB trigger creates the default ("General") instance in the same
+transaction as the couple INSERT, so there is never a couple with
+nowhere to put a to-do.
+
+## `workflow_steps`
+
+The snapshot the MC works. Same shape as a template step plus `due_at`,
+`status` (`pending` | `running` | `waiting` | `done` | `skipped` |
+`errored`), `approval_token`, `approval_expires_at`, `completed_at`,
+`error_message`, `output` jsonb, and `legacy_task_id`.
+
+`requires_approval` is the review gate: an automated step that is
+pending, due and still flagged does not run, and surfaces on the Today
+view for the MC to read and send. `isExecutable` already refuses to run
+past it, so no separate "held" status exists.
+
+`visible_to_couple` (default false) puts the step on the couple's portal
+as a milestone. Opt-in by design: a workflow is the MC's internal list.
+Partial index `workflow_steps_visible_idx` on `(instance_id)` where
+`visible_to_couple` — on a table where nearly every row is invisible, a
+full index would be mostly dead weight.
+
+`template_step_id` is `ON DELETE SET NULL`: deleting a template step
+must never delete a couple's progress.
+
+`due_at` null means "not schedulable yet" — an `after_previous` step
+whose predecessor has not finished. **That is the gating mechanism**
+that lets a manual to-do hold up an automated email.
+
+Partial index `workflow_steps_due_idx` on `(due_at)` where status is
+pending or waiting is the executor's hot query.
+
+## `workflow_audit_log`
+
+SELECT-only policy; the engine writes with the service role.
+
+## `workflow_conversion_ledger`
+
+One row per one-time data conversion (`tasks_and_automations_v1`), so a
+migration replay is a no-op. No RLS: migrations and service role only.
+
+## `workflow_dispatched_events`
+
+The retired dual-run guard. The dispatcher now owns
+`automation_events.processed_at` again; this table is kept until the
+legacy tables drop so a rollback has somewhere to look. No RLS.
+
+## Helper functions
+
+- `ensure_default_workflow(uuid)` — the couple's default instance,
+  created if absent. `security invoker`, deliberately NOT definer, so
+  RLS still gates a cross-tenant call.
+- `_workflow_wedding_due_at(jsonb, date, text)`,
+  `_workflow_couple_wedding_date(uuid)`,
+  `_workflow_recompute_wedding_steps(uuid)` — recompute
+  `wedding_relative` due dates when the couple's date moves. Triggered
+  from `events` INSERT/DELETE/UPDATE OF date and `couples` UPDATE OF
+  `event_date`, because the wedding date resolves as
+  `primary event date ?? couples.event_date`.
+- `_owns_workflow_template_or_null(uuid)` and siblings — the ownership
+  guards the foreign keys do not give you.
+- `get_portal_milestones(uuid)` — the couple-facing read, granted to
+  `anon` and `authenticated`. `security definer`, token-gated through
+  `_resolve_portal_couple`, and returns `[]` (never an error) for an
+  unknown, disabled or wrong-couple token. Returns only
+  `visible_to_couple` steps on `active` instances, collapsing status to
+  `done` | `upcoming`: a couple never sees `errored`, and never sees
+  `skipped` as distinct from done.
+
+### `user_public_settings` (workflow digest)
+| Column | Type | Purpose |
+|---|---|---|
+| `daily_digest_enabled` | boolean | Opt-out for the 7am morning digest |
+| `daily_digest_last_sent_on` | date | The MC's **local** date of the last send, so the repeated hour daylight saving creates cannot produce a second one |
+
+Migrations: `20260908000000_workflow_digest_settings.sql`,
+`20260909000000_workflow_portal_milestones.sql`.

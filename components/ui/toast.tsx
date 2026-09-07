@@ -45,11 +45,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
-      {/* `bottom-20`, not `bottom-6`: the Feedback pill owns the bottom-right
+      {/* `bottom-20`, not `bottom-6`: the assistant dock owns the bottom-right
           corner on every dashboard page, and a toast landing on top of it hid
           the control that had just been used. Offsetting the stack by the
-          pill's height plus its inset keeps both readable, at the cost of
-          toasts floating slightly high on public pages, which have no pill. */}
+          dock's height plus its inset keeps both readable, at the cost of
+          toasts floating slightly high on public pages, which have no dock. */}
       <div
         data-capture-hide
         className="fixed bottom-20 right-6 z-[200] flex flex-col gap-2 pointer-events-none"

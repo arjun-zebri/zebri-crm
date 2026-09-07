@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { Couple, CoupleStatusRecord } from '@/types/couple';
 
 import { KanbanColumn } from "./kanban-column";
+import { useWorkflowProgress } from "./use-workflow-progress";
 
 interface CouplesKanbanProps {
   couples: Couple[];
@@ -44,6 +45,10 @@ export function CouplesKanban({
   const dndSelectionSnapshotRef = useRef<Set<string>>(new Set());
   const [dragRect, setDragRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [activeDrag, setActiveDrag] = useState<{ draggableId: string; movingIds: Set<string>; movingCouples: Couple[] } | null>(null);
+
+  // One batched read for every card on the board. A query per card would
+  // be forty round trips on a busy season.
+  const progress = useWorkflowProgress(couples.map((c) => c.id));
 
   // Flat visual order: column-by-column, top-to-bottom within each column
   const orderedCouples = statuses.flatMap((status) =>
@@ -219,6 +224,7 @@ export function CouplesKanban({
             <KanbanColumn
               status={status}
               couples={couples.filter((c) => c.status === status.slug)}
+              progress={progress}
               onCardInteract={handleCardInteract}
               onAddClick={onAddClick}
               selectedIds={selectedIds}

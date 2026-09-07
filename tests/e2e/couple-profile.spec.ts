@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-import { login, addCouple, deleteCouple, openCoupleProfile, navigateToProfileTab, search, uniqueName } from './helpers'
+import { login, addCouple, deleteCouple, openCoupleProfile, navigateToProfileTab, uniqueName } from './helpers'
 
 const COUPLE_NAME_PREFIX = 'Profile Test'
 
@@ -95,48 +95,6 @@ test.describe('Couple Profile', () => {
     await panel.locator('button:has(h3:has-text("Contacts"))').click()
     // ContactPicker renders a search input
     await expect(panel.locator('input[placeholder*="Search"], input[placeholder*="search"]').first()).toBeVisible({ timeout: 5000 })
-  })
-
-  // ── TASKS tab ─────────────────────────────────────────────────────────────
-
-  test('Tasks: empty state shows "No tasks yet" and a top-right "New task" button', async ({ page }) => {
-    await navigateToProfileTab(page, 'Tasks')
-    const panel = page.locator('[data-testid="couple-profile-panel"]')
-    await expect(panel.locator('text=No tasks yet')).toBeVisible()
-    await expect(panel.getByRole('button', { name: 'New task' })).toBeVisible()
-  })
-
-  test('Tasks: create task — row with title appears in Upcoming section', async ({ page }) => {
-    await navigateToProfileTab(page, 'Tasks')
-    const panel = page.locator('[data-testid="couple-profile-panel"]')
-
-    await panel.locator('text=+ Add task').click()
-    await page.waitForSelector('h2:has-text("New Task")', { timeout: 5000 })
-
-    await page.locator('input[placeholder="What needs to be done?"]').fill('Call venue')
-    await page.locator('button:has-text("Save")').click()
-    await page.waitForLoadState('networkidle')
-
-    await expect(panel.locator('text=Call venue')).toBeVisible()
-  })
-
-  test('Tasks: toggle task complete moves it to Done section', async ({ page }) => {
-    await navigateToProfileTab(page, 'Tasks')
-    const panel = page.locator('[data-testid="couple-profile-panel"]')
-
-    // Add a task first
-    await panel.locator('text=+ Add task').click()
-    await page.waitForSelector('h2:has-text("New Task")', { timeout: 5000 })
-    await page.locator('input[placeholder="What needs to be done?"]').fill('Toggle me')
-    await page.locator('button:has-text("Save")').click()
-    await page.waitForLoadState('networkidle')
-
-    // Click the circle toggle button (title="Mark as done")
-    await panel.locator('button[title="Mark as done"]').first().click()
-    await page.waitForLoadState('networkidle')
-
-    // Task should now appear under Done section heading
-    await expect(panel.locator('text=Done')).toBeVisible()
   })
 
   // ── PAYMENTS tab ──────────────────────────────────────────────────────────

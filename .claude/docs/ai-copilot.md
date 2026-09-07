@@ -3,9 +3,23 @@
 > Status: **Phase A implemented** (2026-08-07, branch
 > `feature/ai-copilot-phase-a`) — infra + create/edit tools, route,
 > panel wiring, migration, unit + integration tests. Still gated
-> behind `SHOW_ZEBRI_AI = false` until Phase C launch polish.
+> behind `SHOW_ZEBRI_AI` until Phase C launch polish.
 > Phases B (read_runs/read_audit_log explain tools) and C (template
 > chips, e2e, flag flip) are not yet built.
+>
+> **Paths in this doc were repointed on 2026-09-06.** The
+> automations → workflows rename moved the route to
+> `app/api/ai/workflow-copilot`, the modules to
+> `lib/workflows/ai-copilot/`, and the panel to
+> `app/(dashboard)/workflows/[id]/ai-copilot-bar.tsx`, and this file
+> still named the old ones. So did the client's `fetch`, which meant
+> every message 404'd and the panel said only "Something went wrong.
+> Please try again." `COPILOT_ENDPOINT` in `use-copilot-chat.ts` is now
+> the single place that path is written, and
+> `tests/unit/app/workflows/copilot-endpoint.test.ts` asserts it
+> resolves to a route file on disk. The route's own integration test
+> imports `POST` and calls it directly, which is correct for testing
+> the handler and is exactly why it could never catch a wrong URL.
 
 ## Why
 
@@ -20,7 +34,7 @@ tools already validated.
 
 The groundwork exists: the automations engine (trigger + action DAG,
 event bus, cron tick, runner, run history, audit log) is complete, and
-`app/(dashboard)/automations/[id]/ai-copilot-panel.tsx` is a fully
+`app/(dashboard)/workflows/[id]/ai-copilot-bar.tsx` is a fully
 built chat panel awaiting an LLM. No LLM integration exists anywhere
 in the codebase yet — that is the new work.
 
@@ -38,7 +52,7 @@ in the codebase yet — that is the new work.
 
 ```
 User types NL in copilot panel
-  → POST /api/ai/automation-copilot (SSE stream)
+  → POST /api/ai/workflow-copilot (SSE stream)
     → gates: auth → isSubscribed() → burst rate limit → daily cap
     → Claude (claude-haiku-4-5 default, tool-use loop)
         tools: set_trigger · add_action · update_action_config ·
@@ -59,33 +73,33 @@ produces; the deterministic engine runs it unchanged.
 ### Phase A — infra + create-from-scratch
 
 New:
-- `app/api/ai/automation-copilot/route.ts` — POST, gates, drives the
+- `app/api/ai/workflow-copilot/route.ts` — POST, gates, drives the
   function-calling loop, SSE response. Extend the
   `scripts/check-no-service-role-in-client.mjs` CI-guard pattern to
   also forbid `ANTHROPIC_API_KEY` in client files.
-- `lib/automations/ai-copilot/llm-client.ts` — the only file that
+- `lib/workflows/ai-copilot/llm-client.ts` — the only file that
   imports `@anthropic-ai/sdk`: model id constant, the tool-use loop,
   tool definition marshalling, refusal handling. Keeps the provider
   swappable without touching the route or executors.
-- `lib/automations/ai-copilot/tool-schemas.ts` — Zod input schemas for
+- `lib/workflows/ai-copilot/tool-schemas.ts` — Zod input schemas for
   the 7 tools; `add_action.config` re-validated against the per-type
   action config schema from the registry (waits/branches against
   `conditions.ts` schemas).
-- `lib/automations/ai-copilot/tool-executors.ts` — one executor per
+- `lib/workflows/ai-copilot/tool-executors.ts` — one executor per
   tool, `{ automationId, userId, supabase }`; reuses the mutation
   logic behind the canvas server actions in
   `app/(dashboard)/automations/actions.ts`; node positions come from
   the existing `auto-layout.ts` (the AI never sets `position_x/y`).
-- `lib/automations/ai-copilot/system-prompt.ts` — stable cached
+- `lib/workflows/ai-copilot/system-prompt.ts` — stable cached
   prefix: MC domain framing, serialized launch-visible catalogue
   (`launch-catalogue.ts` + registries), template-variable reference,
   worked NL→tool-call examples, safety rules. Volatile
   current-automation state goes in messages after the cached prefix.
-- `lib/automations/ai-copilot/stream.ts` — SSE event encoding
+- `lib/workflows/ai-copilot/stream.ts` — SSE event encoding
   (`message_delta` / `tool_call` / `tool_result` / `error`).
 
 Modified:
-- `ai-copilot-panel.tsx` — new props (`automationId`,
+- `ai-copilot-bar.tsx` — new props (`automationId`,
   `automationStatus`, `onActionsChanged`); wire `onSubmit` to the
   route; ephemeral client-side conversation state with a hard token
   bound + "start new conversation" affordance.
@@ -145,6 +159,28 @@ daily, cross-tenant RLS denial, add_action row lands).
    service-role usage anywhere in the path.
 4. `ANTHROPIC_API_KEY` server-side only, CI-guarded.
 5. Subscribed-only + burst limit + persisted daily cap bound spend.
+
+## Second surface: drafting one email
+
+`POST /api/ai/draft-email` (`lib/workflows/ai-draft.ts`) rewrites the
+message held at the review gate: one instruction ("warmer", "mention the
+venue changed") applied to the copy already on screen, returned as a
+subject and body for the MC to read.
+
+It is deliberately not the copilot. No tools, no workflow access, no
+send: it takes text and returns text. The step id is read through the
+caller's RLS-scoped client and is the tenant guard.
+
+Same gates as the copilot, and the **same daily cap** —
+`DAILY_MESSAGE_CAP` moved to `lib/workflows/ai-copilot/limits.ts` and
+both surfaces increment `increment_ai_copilot_usage`, so an MC cannot
+run up an Anthropic bill through whichever surface is cheaper to loop.
+
+The system prompt spends most of its length ruling out corporate warmth
+(exclamation marks, "excited to partner with you", em dashes) and
+protecting `{{variables}}`: breaking one breaks the send. `parseDraft`
+falls back to the copy that went in rather than throwing, so an
+off-format reply costs a re-press and never blanks an email.
 
 ## Out of scope
 

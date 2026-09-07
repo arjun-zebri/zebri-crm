@@ -11,7 +11,6 @@
 
 import type { Couple } from '@/types/couple';
 
-import { CoupleAutomations } from './couple-automations';
 import { CoupleContracts } from './couple-contracts';
 import { CoupleEmails } from './couple-emails';
 import { CoupleOverview } from './couple-overview';
@@ -19,9 +18,9 @@ import { CouplePayments } from './couple-payments';
 import type { CoupleProfileSection } from './couple-profile-types';
 import { CoupleQuestionnaires } from './couple-questionnaires';
 import { CoupleScripts } from './couple-scripts';
-import { CoupleTasks } from './couple-tasks';
 import { CoupleTime } from './couple-time';
 import { CoupleTimeline } from './couple-timeline';
+import { CoupleWorkflow } from './couple-workflow';
 import { McPortalContacts } from './mc-portal-contacts';
 import { McPortalFiles } from './mc-portal-files';
 import { McPortalSongs } from './mc-portal-songs';
@@ -51,7 +50,15 @@ export function CoupleProfileBody({
         </div>
       )}
 
-      {activeSection === 'tasks' && <CoupleTasks coupleId={couple.id} />}
+      {activeSection === 'workflow' && (
+        <CoupleWorkflow
+          coupleId={couple.id}
+          // `next_event_date` is the live value off the couple's events;
+          // `event_date` is the legacy denormalised column kept in sync
+          // for the engine. Prefer the live one, fall back to the column.
+          weddingDate={couple.next_event_date ?? couple.event_date}
+        />
+      )}
 
       {activeSection === 'time' && <CoupleTime coupleId={couple.id} />}
 
@@ -99,10 +106,6 @@ export function CoupleProfileBody({
       )}
 
       {activeSection === 'scripts' && <CoupleScripts couple={couple} />}
-
-      {activeSection === 'automations' && (
-        <CoupleAutomations coupleId={couple.id} />
-      )}
 
       {activeSection === 'emails' && <CoupleEmails coupleId={couple.id} coupleName={couple.name} />}
     </div>

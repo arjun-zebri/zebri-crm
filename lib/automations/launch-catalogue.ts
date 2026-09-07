@@ -56,10 +56,11 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   // Portal / timeline
   'section_completed',
   'timeline_edited',
-  // Tasks
-  'task_created',
-  'task_completed',
-  'task_overdue',
+  // Workflow steps. The three task_* triggers they replaced are hidden
+  // from the picker but stay registered, so a workflow converted from an
+  // automation saved against one still parses and runs.
+  'step_overdue',
+  'package_applied',
   // Contacts
   'contact_created',
   'contact_linked_to_couple',
@@ -121,7 +122,13 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'update_couple_stage',
   'add_note',
   'create_couple',
-  'create_task',
+  // `create_task` is deliberately absent. It spawns a to-do on the
+  // couple's general list at run time, which gates nothing; the `todo`
+  // step type in the picker is an item in the sequence and holds up
+  // everything anchored behind it. Two things called "to-do" that behave
+  // in opposite ways is a trap, so only the gating one is offered.
+  // Converted workflows that still carry a `create_task` step keep
+  // running: the handler is untouched, only the picker entry is gone.
   'send_contract',
   'send_invoice',
   'send_couple_questionnaire',

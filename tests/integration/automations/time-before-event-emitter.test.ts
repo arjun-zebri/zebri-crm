@@ -14,14 +14,15 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { dispatchPendingEvents } from '@/lib/automations/dispatcher'
 import { runTimeEmitters } from '@/lib/automations/time-emitters'
+import { dispatchPendingEvents } from '@/lib/workflows/dispatcher'
 
 import {
   createTestUser,
   serviceClient,
   type TestUser,
 } from '../helpers/supabase'
+import { instancesFor, seedEventTemplate } from '../helpers/workflows'
 
 function isoDateOffset(days: number): string {
   const today = new Date()
@@ -74,23 +75,11 @@ async function seedAutomation(
   amount: number,
   opts: { unit?: string; eventType?: string } = {},
 ): Promise<string> {
-  const { data, error } = await serviceClient()
-    .from('automations' as never)
-    .insert({
-      user_id: user.id,
-      name: `time_before_event ${amount}`,
-      trigger_type: 'time_before_event',
-      trigger_config: {
-        amount,
-        unit: opts.unit ?? 'days',
-        ...(opts.eventType ? { eventType: opts.eventType } : {}),
-      },
-      status: 'active',
-    } as never)
-    .select('id')
-    .single()
-  if (error || !data) throw new Error(`seed automation: ${error?.message}`)
-  return (data as { id: string }).id
+  return seedEventTemplate(user.id, 'time_before_event', {
+    amount,
+    unit: opts.unit ?? 'days',
+    ...(opts.eventType ? { eventType: opts.eventType } : {}),
+  })
 }
 
 async function eventsFor(eventId: string) {
@@ -232,18 +221,16 @@ describe('time_before_event time-emitter', () => {
     // is not a path a user can reach. A saved config still parses via
     // passthrough — it just no longer narrows.
     const coupleId = await seedCouple(user)
-    const automationId = await seedAutomation(user, 7, { eventType: 'rehearsal' })
+    const templateId = await seedAutomation(user, 7, { eventType: 'rehearsal' })
     await seedEvent(user, coupleId, isoDateOffset(7), { eventType: 'rehearsal' })
     await seedEvent(user, coupleId, isoDateOffset(7), { eventType: 'ceremony' })
 
     await runTimeEmitters(serviceClient())
     await dispatchPendingEvents(serviceClient())
 
-    const { data: runs } = await serviceClient()
-      .from('automation_runs' as never)
-      .select('id, automation_id')
-      .eq('automation_id', automationId)
-    expect(runs ?? []).toHaveLength(2)
+    // Both events fire, but the dispatcher dedupes per couple: an
+    // automatic second apply would send the same emails twice.
+    expect(await instancesFor(templateId)).toHaveLength(1)
   })
 
   it('respects tenant isolation — events are RLS-scoped to their owner', async () => {

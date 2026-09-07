@@ -1,17 +1,8 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+
 import { useToast } from '@/components/ui/toast'
-import {
-  useContacts,
-  useCreateContact,
-  useUpdateContact,
-  useDeleteContact,
-} from './use-contacts'
-import { ContactsHeader } from './contacts-header'
-import { ContactsList } from './contacts-list'
-import { ContactModal } from './contact-modal'
-import { ContactProfile } from './contact-profile'
 import {
   Contact,
   ContactCategory,
@@ -20,6 +11,18 @@ import {
   SortDirection,
   CATEGORY_LABELS,
 } from '@/types/contact'
+
+import { ContactModal } from './contact-modal'
+import { ContactProfile } from './contact-profile'
+import { ContactsHeader } from './contacts-header'
+import { ContactsList } from './contacts-list'
+import {
+  useContacts,
+  useCreateContact,
+  useUpdateContact,
+  useDeleteContact,
+} from './use-contacts'
+
 
 export default function ContactsPage() {
   const { data: vendors, isLoading } = useContacts()

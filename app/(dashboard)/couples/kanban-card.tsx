@@ -6,10 +6,22 @@ import {
   NotDraggingStyle,
   DraggableStateSnapshot,
 } from "@hello-pangea/dnd";
-import { Calendar, GripVertical, Mail, MapPin, Phone } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  GripVertical,
+  ListChecks,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
+
 
 import { formatDate } from "@/lib/utils";
 import { Couple } from '@/types/couple';
+
+import type { CoupleProgress } from "./use-workflow-progress";
 
 interface KanbanCardProps {
   couple: Couple;
@@ -17,6 +29,8 @@ interface KanbanCardProps {
   isSelected?: boolean;
   onClick: (e: React.MouseEvent) => void;
   activeDrag: { draggableId: string; movingIds: Set<string>; movingCouples: Couple[] } | null;
+  /** Where this couple is up to, when their workflows have loaded. */
+  progress?: CoupleProgress | undefined;
 }
 
 function getDragStyle(
@@ -30,7 +44,13 @@ function getDragStyle(
   return style;
 }
 
-function CardBody({ couple }: { couple: Couple }) {
+function CardBody({
+  couple,
+  progress,
+}: {
+  couple: Couple;
+  progress?: CoupleProgress | undefined;
+}) {
   // Primary partner contact, falling back to the couple-level fields for
   // pre-partner-contacts rows. Event date/venue come from the resolved
   // next event (`next_event_*`), since the couple-level columns are legacy.
@@ -74,12 +94,34 @@ function CardBody({ couple }: { couple: Couple }) {
             )}
           </div>
         )}
+        {progress && progress.total > 0 && (
+          <div className="mt-1.5 flex items-center gap-1.5 text-body text-text-subtle">
+            {progress.hasFailure ? (
+              <AlertTriangle size={12} strokeWidth={1.5} className="shrink-0 text-danger" />
+            ) : progress.needsReview ? (
+              <ShieldCheck size={12} strokeWidth={1.5} className="shrink-0 text-warning" />
+            ) : (
+              <ListChecks size={12} strokeWidth={1.5} className="shrink-0" />
+            )}
+            <span className="truncate">
+              {progress.done} of {progress.total}
+              {progress.nextTitle ? ` · next: ${progress.nextTitle}` : ''}
+            </span>
+          </div>
+        )}
       </div>
     </>
   );
 }
 
-export function KanbanCard({ couple, index, isSelected, onClick, activeDrag }: KanbanCardProps) {
+export function KanbanCard({
+  couple,
+  index,
+  isSelected,
+  onClick,
+  activeDrag,
+  progress,
+}: KanbanCardProps) {
   return (
     <Draggable draggableId={couple.id} index={index}>
       {(provided, snapshot) => {
@@ -111,7 +153,7 @@ export function KanbanCard({ couple, index, isSelected, onClick, activeDrag }: K
                 : "bg-surface border-border"
             }`}
           >
-            <CardBody couple={couple} />
+            <CardBody couple={couple} progress={progress} />
 
             {showStack && (
               <div className="absolute top-full left-0 right-0 pt-2 space-y-2 pointer-events-none">

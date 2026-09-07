@@ -71,7 +71,6 @@ export function MeetingTypeFieldsBasics({
         label="Description"
         placeholder="What is this meeting type about?"
         rows={3}
-        resizable={false}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />

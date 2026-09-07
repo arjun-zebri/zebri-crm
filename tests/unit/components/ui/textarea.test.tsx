@@ -38,15 +38,11 @@ describe('<Textarea />', () => {
     expect(screen.queryByText('Only you see this.')).not.toBeInTheDocument();
   });
 
-  it('resizes vertically only', () => {
-    // Horizontal resize drags the field out of whatever column it is
-    // in, which is never what an MC meant to do.
+  it('never carries a resize handle', () => {
+    // Every field of ours sits in a fixed layout, so dragging one taller
+    // only pushes the rest of the form around. Height is `rows`, chosen
+    // once by the call site, and there is no opt-out.
     render(<Textarea label="Note" />);
-    expect(screen.getByLabelText('Note').className).toContain('resize-y');
-  });
-
-  it('drops the resize handle when the layout is fixed', () => {
-    render(<Textarea label="Note" resizable={false} />);
     const field = screen.getByLabelText('Note');
     expect(field.className).toContain('resize-none');
     expect(field.className).not.toContain('resize-y');

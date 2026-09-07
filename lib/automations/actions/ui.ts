@@ -102,14 +102,14 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
     },
     "create_task": {
       "category": "general",
-      "label": "Create task",
-      "description": "Add a task for yourself",
+      "label": "Create to-do",
+      "description": "Add a to-do for yourself",
       "icon": "ListPlus"
     },
     "update_task": {
       "category": "general",
-      "label": "Update task",
-      "description": "Update an existing task",
+      "label": "Update to-do",
+      "description": "Update a to-do created earlier",
       "icon": "ListChecks"
     },
     "create_calendar_event": {
