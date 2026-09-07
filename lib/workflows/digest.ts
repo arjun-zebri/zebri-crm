@@ -24,8 +24,25 @@ import { loadQueue, type QueueItem } from './queue';
 /** Fallback when the MC has never saved a timezone. */
 const DEFAULT_TIMEZONE = 'Australia/Sydney';
 
-/** The local hour a digest is sent at, in the MC's own zone. */
+/** The local hour a digest is aimed at, in the MC's own zone. */
 export const DIGEST_LOCAL_HOUR = 7;
+
+/**
+ * The local hours a digest may actually go out in.
+ *
+ * A window rather than the single hour above, because the cron that
+ * drives this can only run **once a day** on Vercel's Hobby plan, and
+ * that one run has to cover both halves of the Australian year:
+ * `0 21 * * *` is 8am in Sydney under AEDT and 7am under AEST. Hobby
+ * also gives no timing precision -- a job set for 21:00 fires anywhere
+ * up to 21:59 -- and the window absorbs that too.
+ *
+ * The consequence, stated plainly: on Hobby only an MC whose zone puts
+ * them inside this window gets a digest at all. Moving to Pro restores
+ * the hourly tick, and with it a true 7am for every timezone; widening
+ * this window instead would just mail somebody at 4am.
+ */
+export const DIGEST_LOCAL_HOURS: readonly number[] = [7, 8];
 
 /** One user's digest, ready to render. */
 export interface DigestPayload {
@@ -50,15 +67,18 @@ export function digestSize(payload: DigestPayload): number {
 }
 
 /**
- * Is it the digest hour for this timezone right now?
+ * Is it a sending hour for this timezone right now?
  *
- * The cron fires hourly and every MC gets their own 7am, so this is the
- * per-user gate. Comparing the local hour rather than converting a fixed
- * UTC time is what makes it correct across daylight saving, where a
- * fixed UTC send would drift an hour twice a year.
+ * The per-user gate. Comparing the MC's **local** hour rather than
+ * converting a fixed UTC time is what keeps this correct across
+ * daylight saving, where a fixed UTC send drifts an hour twice a year.
+ *
+ * See {@link DIGEST_LOCAL_HOURS} for why this is a window and what it
+ * costs on the Hobby plan. One send per MC per day is guaranteed by
+ * `daily_digest_last_sent_on` holding the local date, not by this.
  */
 export function isDigestHour(now: Date, timezone: string): boolean {
-  return localHour(now, timezone) === DIGEST_LOCAL_HOUR;
+  return DIGEST_LOCAL_HOURS.includes(localHour(now, timezone));
 }
 
 /** The wall-clock hour (0-23) at `utc` in `timezone`. */

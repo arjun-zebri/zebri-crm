@@ -13,12 +13,11 @@
  */
 'use client'
 
-import { ChevronRight, Repeat2, Trash2, X } from 'lucide-react'
+import { ChevronRight, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -40,7 +39,6 @@ import {
   PORTAL_SECTION_LABELS,
   type ComparisonOp,
 } from '@/lib/automations/trigger-constants'
-import { triggerRegistry } from '@/lib/automations/triggers'
 import { VARIABLE_CATALOGUE } from '@/lib/automations/variables'
 import { createClient } from '@/lib/supabase/client'
 import { toStepTiming } from '@/lib/workflows/timing-summary'
@@ -103,6 +101,18 @@ export type SavedPayload =
     }
 
 /**
+ * What the config form is being asked to edit: the workflow's apply rule,
+ * or one step on it.
+ *
+ * Lifted out of the old inspector drawer's props when that drawer was
+ * removed. The two consumers left (`StepConfigForm` and `ConfigureTab`)
+ * only ever needed this one field of it.
+ */
+export type StepSelection =
+  | { kind: 'trigger'; applyRuleType: TriggerType; applyRuleConfig: Record<string, unknown> }
+  | { kind: 'action'; action: AutomationActionRow }
+
+/**
  * The step's "Ask me before this runs" flag, handed to a composer modal.
  *
  * The flag lives on the row, not in `config`, and a modal-only step's
@@ -112,115 +122,6 @@ export type SavedPayload =
 export interface ReviewToggle {
   checked: boolean
   onChange: (checked: boolean) => void
-}
-
-interface Props {
-  selection:
-    | { kind: 'trigger'; applyRuleType: TriggerType; applyRuleConfig: Record<string, unknown> }
-    | { kind: 'action'; action: AutomationActionRow }
-  templateId: string
-  onClose: () => void
-  onSaved: (payload: SavedPayload) => void
-  /** Only available when `selection.kind === 'trigger'`. Fires the
-   *  trigger picker again from the inspector header. */
-  onChangeTrigger?: (e: React.MouseEvent) => void
-  /** Only available when `selection.kind === 'action'`. */
-  onDeleteAction?: (stepId: string) => Promise<void> | void
-}
-
-export function InspectorPanel({ selection, templateId, onClose, onSaved, onChangeTrigger, onDeleteAction }: Props) {
-  // Confirm-before-delete is routed through the shared ConfirmDialog
-  // modal rather than the browser's native confirm() (banned by the
-  // design system).
-  const [confirmOpen, setConfirmOpen] = useState(false)
-
-  const meta = selection.kind === 'trigger'
-    ? {
-        kindLabel: 'Trigger',
-        title: triggerRegistry[selection.applyRuleType]?.ui.label ?? selection.applyRuleType,
-        description: triggerRegistry[selection.applyRuleType]?.ui.description ?? '',
-      }
-    : {
-        kindLabel: actionSubLabel(selection.action),
-        title: actionHeaderLabel(selection.action),
-        description: actionDescription(selection.action),
-      }
-
-  return (
-    <aside className="w-[340px] shrink-0 border-l border-border bg-surface flex flex-col h-full animate-slide-in-right">
-      <div className="flex items-start justify-between gap-2 px-4 py-3 border-b border-border">
-        <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wide text-text-subtle">{meta.kindLabel}</div>
-          <div className="text-body font-semibold truncate">{meta.title}</div>
-          {meta.description && (
-            <div className="text-body text-text-muted mt-0.5 line-clamp-2">{meta.description}</div>
-          )}
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {selection.kind === 'trigger' && onChangeTrigger && (
-            <button
-              type="button"
-              onClick={onChangeTrigger}
-              className="text-text-muted hover:text-text cursor-pointer p-1"
-              aria-label="Change trigger"
-              title="Change trigger"
-            >
-              <Repeat2 size={16} strokeWidth={1.5} />
-            </button>
-          )}
-          {selection.kind === 'action' && onDeleteAction && (
-            <button
-              type="button"
-              onClick={() => setConfirmOpen(true)}
-              className="text-text-muted hover:text-danger cursor-pointer p-1"
-              aria-label="Delete action"
-              title="Delete action"
-            >
-              <Trash2 size={16} strokeWidth={1.5} />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-text-muted hover:text-text cursor-pointer p-1"
-            aria-label="Close inspector"
-          >
-            <X size={16} strokeWidth={1.5} />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <ConfigureTab
-          selection={selection}
-          templateId={templateId}
-          onSaved={onSaved}
-        />
-      </div>
-
-      {selection.kind === 'action' && onDeleteAction && (
-        <ConfirmDialog
-          open={confirmOpen}
-          title="Delete action"
-          description="Delete this action? This cannot be undone."
-          confirmLabel="Delete"
-          onConfirm={() => {
-            setConfirmOpen(false)
-            void onDeleteAction(selection.action.id)
-          }}
-          onCancel={() => setConfirmOpen(false)}
-        />
-      )}
-    </aside>
-  )
-}
-
-function actionDescription(action: AutomationActionRow): string {
-  if (action.type === 'wait' || action.type === 'branch' || action.type === 'stop' || action.type === 'approval' || action.type === 'sub_flow') {
-    return ''
-  }
-  const ui = actionUi[action.type as ActionType]
-  return ui?.description ?? ''
 }
 
 /* ─── Configure tab ───────────────────────────────────────────── */
@@ -270,7 +171,7 @@ export const MODAL_ACTIONS: ReadonlySet<string> = new Set([
 
 
 export function StepConfigForm(props: {
-  selection: Props['selection']
+  selection: StepSelection
   templateId: string
   onSaved: (payload: SavedPayload) => void
   /**
@@ -289,7 +190,7 @@ function ConfigureTab({
   onSaved,
   modal,
 }: {
-  selection: Props['selection']
+  selection: StepSelection
   templateId: string
   onSaved: (payload: SavedPayload) => void
   modal?: { open: boolean; onClose: () => void }
@@ -1693,36 +1594,4 @@ function SelectInput({
       options={radixOptions}
     />
   )
-}
-
-function actionHeaderLabel(action: AutomationActionRow): string {
-  if (action.label) return action.label
-  if ((action.type as string) === 'todo') return 'To-do'
-  if ((action.type as string) === 'appointment') return 'Appointment'
-  if (action.type === 'wait' || action.type === 'branch' || action.type === 'stop' || action.type === 'approval' || action.type === 'sub_flow') {
-    return action.type[0]!.toUpperCase() + action.type.slice(1)
-  }
-  const ui = actionUi[action.type as ActionType]
-  return ui?.label ?? 'Action'
-}
-
-function actionSubLabel(action: AutomationActionRow): string {
-  switch (action.type as string) {
-    case 'todo':
-      return 'To-do'
-    case 'appointment':
-      return 'Appointment'
-    case 'wait':
-      return 'Wait'
-    case 'branch':
-      return 'Branch'
-    case 'stop':
-      return 'Stop'
-    case 'approval':
-      return 'Approval'
-    case 'sub_flow':
-      return 'Sub-flow'
-    default:
-      return 'Action'
-  }
 }

@@ -519,14 +519,27 @@ its own copy of all of them.
 
 ## The morning digest
 
-`app/api/cron/workflow-digest/route.ts`, hourly. Everything the engine
-does is invisible until somebody logs in, which is the wrong default for
-a product whose promise is "you will not forget anything".
+`app/api/cron/workflow-digest/route.ts`, daily at `0 21 * * *`.
+Everything the engine does is invisible until somebody logs in, which is
+the wrong default for a product whose promise is "you will not forget
+anything".
 
-Every MC gets it at **7am in their own timezone**, so the route wakes
-each hour and works out whose local 7am it currently is
-(`isDigestHour`). A single daily UTC run would land at a different local
-time for each MC and drift an hour twice a year with daylight saving.
+The gate is the MC's **local** hour, not a fixed UTC time, so daylight
+saving cannot drift the send an hour twice a year (`isDigestHour`).
+
+It wants to run **hourly** -- that is what would give every timezone its
+own 7am. Vercel's **Hobby plan caps crons at once per day** and rejects a
+more frequent expression at deploy time, so the schedule is a single
+daily run and `DIGEST_LOCAL_HOURS` is a window (`[7, 8]`) wide enough to
+cover both halves of the Australian year: 21:00 UTC is 8am in Sydney
+under AEDT and 7am under AEST. Hobby also promises no timing precision,
+firing anywhere inside the 21:00 hour, which the same window absorbs.
+
+The cost, stated plainly: **on Hobby an MC whose timezone falls outside
+that window gets no digest at all.** Widening it further would mail
+somebody at 4am, which is worse. Moving to Pro restores the hourly tick
+and with it a real 7am for every timezone -- change the schedule back to
+`0 * * * *` and narrow `DIGEST_LOCAL_HOURS` to `[DIGEST_LOCAL_HOUR]`.
 
 Two guards keep it to one per MC per day:
 

@@ -9,11 +9,18 @@ import { buildDigest, digestSubject, isDigestHour } from '@/lib/workflows/digest
 /**
  * Morning digest cron.
  *
- * Runs **hourly**, deliberately. Every MC gets the digest at 7am in their
- * own timezone, so the route wakes each hour, works out whose local 7am
- * it currently is, and sends only to them. A single daily UTC run would
- * put the email at a different local time for each MC and drift an hour
- * twice a year with daylight saving.
+ * Wakes once a day and works out whose local morning it currently is,
+ * sending only to them. The gate is on the MC's **local** hour rather
+ * than a fixed UTC time, so daylight saving cannot drift the send an
+ * hour twice a year.
+ *
+ * It wants to run hourly, which is what would give every timezone its
+ * own 7am. Vercel's Hobby plan caps crons at once per day and rejects a
+ * more frequent expression at deploy time, so the schedule is daily at
+ * 21:00 UTC and `DIGEST_LOCAL_HOURS` is a window wide enough to cover
+ * both halves of the Australian year plus Hobby's -59-minute timing
+ * jitter. On Hobby an MC outside that window gets no digest; moving to
+ * Pro restores the hourly tick and with it a real 7am everywhere.
  *
  * Two guards keep it to one send per MC per day:
  *
@@ -92,7 +99,7 @@ async function handle(request: NextRequest) {
           .update({ daily_digest_last_sent_on: localDate })
           .eq('user_id', row.user_id);
       } else {
-        // Leave the date unstamped so the next hourly run retries. A
+        // Leave the date unstamped so the next run retries. A
         // transient transport failure should not cost the MC their day.
         failed += 1;
       }

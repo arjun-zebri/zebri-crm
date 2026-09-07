@@ -329,14 +329,16 @@ Six cron-triggered routes:
 | `/api/cron/booking-reminders` | `30 22 * * *` (Scheduler Phase D) |
 | `/api/cron/prune-stripe-events` | `0 3 * * *` (Phase 2A) |
 | `/api/cron/automations-tick` | `0 1 * * *` (the workflow tick; keeps its legacy path because renaming a live cron endpoint is a needless outage risk) |
-| `/api/cron/workflow-digest` | `0 * * * *` (Workflows) |
+| `/api/cron/workflow-digest` | `0 21 * * *` (Workflows) |
 
-The digest is **hourly on purpose**: every MC gets it at 7am in their
-own timezone, so the route wakes each hour and works out whose local 7am
-it is. A per-user local-date stamp
-(`user_public_settings.daily_digest_last_sent_on`) is what keeps that to
-one send per MC per day, including through the repeated hour daylight
-saving creates.
+Every cron here is **daily**, and has to be: the Vercel **Hobby** plan
+rejects any more frequent expression at deploy time. The digest wants to
+be hourly (it gates on each MC's local 7am) and is capped to one daily
+run with a two-hour local window instead -- see
+`.claude/docs/workflows.md`. A per-user local-date stamp
+(`user_public_settings.daily_digest_last_sent_on`) keeps that to one send
+per MC per day, including through the repeated hour daylight saving
+creates.
 
 All of them use the shared helper **`@/lib/api/cron-auth`** —
 `isCronAuthorized(request)` — which:
