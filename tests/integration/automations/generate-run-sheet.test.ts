@@ -46,6 +46,8 @@ function makeCtx(user: TestUser, coupleId: string): RunContext {
     userId: user.id,
     automationId: '00000000-0000-0000-0000-000000000001',
     runId: '00000000-0000-0000-0000-000000000002',
+    instanceId: '00000000-0000-0000-0000-000000000002',
+    stepId: '00000000-0000-0000-0000-000000000003',
     coupleId,
     triggerEvent,
     couple: {

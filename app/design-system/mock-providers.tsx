@@ -61,7 +61,6 @@ function createSeededClient(): QueryClient {
   const seed: [readonly unknown[], unknown][] = [
     [['event-timeline', DEMO_EVENT_ID], FIXTURES.timelineItems],
     [['event-share', DEMO_EVENT_ID], FIXTURES.eventShare],
-    [['event-tasks', DEMO_EVENT_ID], FIXTURES.tasks],
     [['event-contacts', DEMO_EVENT_ID], FIXTURES.eventContacts],
     [['all-couples-for-invoice'], FIXTURES.couples],
     [['all-couples-for-contract'], FIXTURES.couples],

@@ -33,6 +33,7 @@ import { sendAlert } from '@/lib/alerts';
 import { logger } from '@/lib/alerts/logger';
 import { currentPlan } from '@/lib/auth/entitlements';
 import { createClient } from '@/lib/supabase/server';
+import { scheduleKick } from '@/lib/workflows/kick';
 import type { Couple } from '@/types/couple';
 
 /* ─── Tagged result type ───────────────────────────────────────── */
@@ -149,6 +150,12 @@ export async function createCoupleAction(
     });
     return { ok: false, error: 'Could not create couple.' };
   }
+
+  // The insert emitted `new_enquiry` on the bus. Run this MC's slice of
+  // the workflows tick now rather than leaving it for the daily cron,
+  // which is why a workflow that starts on a new enquiry used to do
+  // nothing for a day. The kick runs after the response, never in it.
+  scheduleKick(user.id);
 
   return { ok: true, data: data as Couple };
 }
@@ -468,6 +475,10 @@ export async function bulkCreateCouplesAction(
     }
   }
 
+  // Every inserted row emitted its own `new_enquiry`; one kick drains
+  // them all, since it works the user's queue rather than one event.
+  scheduleKick(user.id);
+
   return { ok: true, data: { created: toInsert.length, skippedForLimit, invalidRows } };
 }
 
@@ -508,6 +519,10 @@ export async function updateCoupleAction(
     });
     return { ok: false, error: 'Could not update couple.' };
   }
+
+  // A status change emits `couple_stage_changed`; the kick is cheap
+  // enough not to bother working out whether this update was one.
+  scheduleKick(user.id);
 
   return { ok: true, data: data as Couple };
 }
@@ -615,6 +630,8 @@ export async function bulkMoveCouplesAction(
     return { ok: false, error: 'Could not move couples.' };
   }
 
+  scheduleKick(user.id);
+
   return { ok: true, data: { updatedIds } };
 }
 
@@ -655,6 +672,8 @@ export async function bulkUpdateCouplesStatusAction(
     return { ok: false, error: 'Could not update couples.' };
   }
 
+  scheduleKick(user.id);
+
   return { ok: true, data: undefined };
 }
 
@@ -687,162 +706,6 @@ export async function bulkDeleteCouplesAction(
       count: parsed.data.length,
     });
     return { ok: false, error: 'Could not delete couples.' };
-  }
-
-  return { ok: true, data: undefined };
-}
-
-/* ─── Per-couple task actions (Phase 4B) ──────────────────────── */
-//
-// The Couple Profile's Tasks tab writes against `tasks` directly
-// today. Lifted here so the tab becomes pure composition + the
-// per-row UI talks to a single audited write path.
-//
-// `priority`, `task_type`, `status` are user-facing free-form
-// fields (the Tasks page lets MCs add custom priorities + statuses);
-// we Zod-string-bound them but don't enum them.
-
-const taskStatusSchema = z.string().trim().min(1).max(100);
-// `priority` is a free-form string (low/medium/high are conventional
-// but MCs can add custom priorities via the Tasks page). Don't
-// over-narrow.
-const taskPrioritySchema = z.string().trim().min(1).max(100).nullable();
-
-const createTaskSchema = z.object({
-  // Optional client-generated UUID so the optimistic UI row can be
-  // created with the same id that the server-side row ends up with —
-  // that way cell edits (status, priority, etc.) fire `patchTask`
-  // against a real UUID immediately after `+ New task` is clicked,
-  // instead of failing Zod's UUID check on a `temp-` placeholder.
-  // RLS still enforces ownership, so accepting a client-supplied id
-  // is safe; an unlikely collision would surface as a unique-violation
-  // error from Postgres.
-  id: z.uuid().optional(),
-  coupleId: z.uuid('coupleId must be a UUID'),
-  title: z.string().trim().min(1, 'Title is required').max(500),
-});
-
-export type CreateCoupleTaskInput = z.input<typeof createTaskSchema>;
-
-export async function createCoupleTaskAction(
-  input: CreateCoupleTaskInput,
-): Promise<ActionResult<{ id: string }>> {
-  const parsed = createTaskSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: 'Invalid task data.' };
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in.' };
-
-  const insertPayload: {
-    id?: string;
-    user_id: string;
-    related_couple_id: string;
-    title: string;
-    status: string;
-  } = {
-    user_id: user.id,
-    related_couple_id: parsed.data.coupleId,
-    title: parsed.data.title,
-    status: 'todo',
-  };
-  if (parsed.data.id) insertPayload.id = parsed.data.id;
-
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert(insertPayload)
-    .select('id')
-    .single();
-
-  if (error || !data) {
-    logger.error('[couples/actions] createCoupleTaskAction failed', error, {
-      userId: user.id,
-    });
-    return { ok: false, error: 'Could not create task.' };
-  }
-
-  return { ok: true, data: { id: data.id } };
-}
-
-const updateTaskSchema = z.object({
-  id: z.uuid('Task id must be a UUID'),
-  patch: z
-    .object({
-      title: z.string().trim().min(1).max(500).optional(),
-      due_date: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .nullable()
-        .optional(),
-      description: z.string().max(5000).nullable().optional(),
-      status: taskStatusSchema.optional(),
-      priority: taskPrioritySchema.optional(),
-      task_type: z.string().trim().max(100).nullable().optional(),
-      group_id: z.uuid().nullable().optional(),
-    })
-    .refine((patch) => Object.keys(patch).length > 0, {
-      message: 'Patch must contain at least one field',
-    }),
-});
-
-export type UpdateCoupleTaskInput = z.infer<typeof updateTaskSchema>;
-
-export async function updateCoupleTaskAction(
-  input: UpdateCoupleTaskInput,
-): Promise<ActionResult<void>> {
-  const parsed = updateTaskSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: 'Invalid task patch.' };
-  }
-  const { id, patch } = parsed.data;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in.' };
-
-  const { error } = await supabase.from('tasks').update(patch).eq('id', id);
-
-  if (error) {
-    logger.error('[couples/actions] updateCoupleTaskAction failed', error, {
-      userId: user.id,
-      taskId: id,
-    });
-    return { ok: false, error: 'Could not update task.' };
-  }
-
-  return { ok: true, data: undefined };
-}
-
-const deleteTaskSchema = z.uuid('Task id must be a UUID');
-
-export async function deleteCoupleTaskAction(
-  id: string,
-): Promise<ActionResult<void>> {
-  const parsed = deleteTaskSchema.safeParse(id);
-  if (!parsed.success) {
-    return { ok: false, error: 'Invalid task ID.' };
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in.' };
-
-  const { error } = await supabase.from('tasks').delete().eq('id', parsed.data);
-
-  if (error) {
-    logger.error('[couples/actions] deleteCoupleTaskAction failed', error, {
-      userId: user.id,
-      taskId: id,
-    });
-    return { ok: false, error: 'Could not delete task.' };
   }
 
   return { ok: true, data: undefined };

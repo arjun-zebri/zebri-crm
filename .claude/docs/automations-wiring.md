@@ -1,5 +1,12 @@
 # Automations — Triggers & Actions Wiring Plan
 
+> **RETIRED (2026-09).** The Automations engine was replaced by the
+> unified Workflows feature. The trigger and action vocabulary in this
+> doc carried over verbatim and is still accurate; the engine, the
+> builder route and the run model described here are gone. Read
+> `.claude/docs/workflows.md` first. Where the two disagree, that file
+> wins.
+
 **Status:** Active roadmap. Sibling doc to `automations.md` (which is
 the canonical "how the system works"). This doc is **time-bounded**:
 each item ticks off as it ships to `staging`, and the doc is retired

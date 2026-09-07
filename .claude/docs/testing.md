@@ -513,6 +513,103 @@ Unit: Tests for duration/buffer subtraction utility used by slot picker. Covers:
 - Same-day multi-slot rendering (9am-6pm availability, 30-min slots + buffers)
 - Timezone edge cases (buffer spans calendar day boundary)
 
+### Workflows (2026-09 cutover)
+
+The full pyramid for the unified Workflows feature. Feature doc:
+`.claude/docs/workflows.md`.
+
+Unit:
+- `tests/unit/lib/workflows/` — apply-rule matching, the step registry,
+  step timing (every case carries a non-UTC fixture), the queue
+  grouping, and executor gating. The audit added: `review` (what counts
+  as "needs review", and that an edit writes `content` and drops
+  `templateId`), `dry-run`, `nudges`, `timing-summary`, `digest` (the
+  timezone hour maths and the subject line), and `ai-draft` (prompt
+  assembly plus every fallback path in the reply parser).
+- `tests/unit/app/workflows/queue-buckets.test.ts` — which date band a
+  step falls in (including "read the date in the MC's zone, not UTC"),
+  which bands render when empty, and the right-hand label each band
+  produces.
+- `tests/unit/app/workflows/queue-done.test.ts` — the Done strip's day
+  banding: Today / Yesterday / a date, read in the MC's zone rather
+  than UTC, newest day first, and a legacy row with no `completed_at`
+  still given a home.
+- `tests/unit/app/workflows/queue-grouping.test.ts` — the three
+  groupings, their order (nearest wedding first, the personal list
+  last, the MC's own work before Zebri's), and the invariant that
+  matters most: every grouping holds the whole list, because the
+  control regroups rather than filters.
+- `tests/unit/app/workflows/auto-layout.test.ts` — also covers a step
+  stored at `(0, 0)`, which is what every step written before migration
+  `20260910000000` carries and what made whole workflows render on one
+  point.
+- `tests/unit/lib/workflows/ai-copilot/` — the copilot's tool executors
+  against a scripted Supabase mock. The fixtures are **stored** rows: an
+  action slug lives in `config.actionType`, and the trigger inside the
+  `on_event` apply rule.
+- `tests/unit/app/workflows/` — the builder's pure helpers plus the
+  "Applied to" drawer.
+- `tests/unit/app/couples/workflow-checklist.test.tsx` — branch children
+  ordering at any nesting depth, and the "Step N of M" readout.
+- `tests/unit/app/(dashboard)/couples/couple-profile-tabs.test.ts` —
+  includes the migration of layouts saved against the retired `tasks`
+  and `automations` tab keys.
+
+Integration (local Supabase, real RLS):
+- `instantiate` (snapshot isolation), `apply-triggers` (the DB triggers
+  that open a default instance and recompute wedding-relative dates),
+  `dispatcher`, `executor`, `step-overdue-emitter`, `tick`,
+  `instance-actions`, `converter`, `task-action-repoint`,
+  `legacy-frozen`, and `rls/workflows.test.ts` for cross-tenant denial
+  on all seven tables.
+- `review.test.ts` — preview renders the couple's real details, approve
+  clears the hold and runs the step there and then, and reschedule moves
+  the date without rewriting the timing rule. Each has its cross-tenant
+  twin, asserted as a no-op on the row and not just an error string.
+  (Was `review-and-starters.test.ts`; the starter half went with the
+  starters in September 2026.)
+- `done-list.test.ts` — the Done strip's read: a step whose instance
+  completed still appears, skipped rows come back with their status, the
+  90-day window holds, ordering is newest first, and neither the list
+  nor the count crosses a tenant.
+- `digest.test.ts` — the day splits into held / overdue / due today, a
+  quiet day builds nothing at all, and one MC's digest never contains
+  another's couples.
+- `tests/integration/portal/milestones.test.ts` — `get_portal_milestones`
+  through the **anon** client: only opted-in steps, skipped shown as
+  done, `errored` never shown (and `error_message` never present in the
+  payload), a cancelled instance hidden, another couple's token empty, a
+  revoked token empty, and a signed-in MC still refused the row
+  directly.
+- `tests/integration/helpers/workflows.ts` seeds an `on_event` template
+  and reads back the instances the dispatcher opened. The emitter suites
+  use it: the far end of the "DB write → bus → dispatcher" chain is now
+  an applied instance, not a run.
+
+E2E: `workflows-builder.spec.ts`, `couple-workflow.spec.ts`,
+`workflows-nav.spec.ts`, `workflows-upcoming.spec.ts`,
+`portal-package-workflow.spec.ts` (the last one skips itself when
+`CRON_SECRET` is unset, since it drives a tick).
+
+**The canvas saves in the background.** Every builder edit paints
+optimistically and persists after. A `goto` or `reload` issued while a
+save is in flight aborts it, and the step or rule is gone through no
+fault of the app, so pair each edit with a `waitForResponse` on its POST
+rather than `waitForLoadState('networkidle')`. Wait for one edit before
+making the next, or the second wait latches onto the first save. A save
+also revalidates its own route, and the refresh that follows reads as a
+competing navigation, which is why `openTemplates` retries its `goto`
+once.
+
+**Mobile nav.** Below `md` the sidebar is translated off-canvas behind a
+hamburger, so a nav link is in the DOM and reports as visible but cannot
+be tapped. Call `openSidebar(page)` from `helpers.ts` first: it is a
+no-op on desktop, so one spec runs on both projects.
+
+**Careful with dedupe.** An automatic apply refuses a template already
+live on a couple, so two bus events for one couple open **one**
+instance. A test expecting one per event is asserting the old engine.
+
 ## What NOT to Test
 - Supabase internals or DB queries
 - Exact CSS values or pixel measurements

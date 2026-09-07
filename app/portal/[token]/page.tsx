@@ -21,6 +21,7 @@ import { repairBlocks } from '@/lib/branding/validate-blocks'
 
 
 import { BrandingHead } from './branding-head'
+import type { PortalMilestone } from './milestones-section'
 import { PortalShell } from './portal-shell'
 
 export interface PortalPerson {
@@ -177,6 +178,8 @@ export interface PortalData {
     selected_package_id: string | null
     packages: PortalPackage[]
   } | null
+  /** Steps the MC opted into showing this couple. See milestones-section. */
+  milestones: PortalMilestone[]
   enabled_sections: string[] | null
   branding: PublicBranding | null
   branding_blocks: Block[] | null
@@ -232,6 +235,12 @@ export default async function PortalPage({
   // the questionnaires pattern.
   const { data: pkgData } = await supabase.rpc('get_portal_packages', { p_token: token })
   portal.packages = (pkgData as PortalData['packages']) ?? null
+
+  // Milestones, same pattern again: the MC-visible slice of the couple's
+  // workflows. Its own RPC so the large get_portal_data payload, and
+  // every section already reading it, stays untouched.
+  const { data: msData } = await supabase.rpc('get_portal_milestones', { token })
+  portal.milestones = (msData as PortalMilestone[] | null) ?? []
 
   // Resolve branding once at the page boundary. portal.branding comes from
   // get_portal_data which always returns a fully populated PublicBranding

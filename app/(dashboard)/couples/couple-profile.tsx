@@ -3,9 +3,9 @@
  * drawer; see Phase 4 plan §2 decision 6a) that opens when a couple
  * is clicked in the list/kanban.
  *
- * Tabs nesting every per-couple feature: Overview, Tasks, Contacts,
- * Timeline, Songs, Files, Vows, Scripts, Payments, Contracts, Questionnaires,
- * Automations, Emails. Contracts
+ * Tabs nesting every per-couple feature: Overview, Workflow, Contacts,
+ * Timeline, Songs, Files, Vows, Scripts, Payments, Contracts,
+ * Questionnaires, Emails. Contracts
  * is available on every plan; the Starter-plan cap (5 distinct
  * couples) is enforced at contract creation inside `CoupleContracts`,
  * not by hiding the tab.
@@ -21,18 +21,17 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  CheckSquare,
   ClipboardList,
   Clock,
   FileSignature,
   Heart,
   LayoutDashboard,
+  ListChecks,
   Mail,
   Music,
   Paperclip,
   Receipt,
   ScrollText,
-  Sparkles,
   Timer,
   Users,
 } from 'lucide-react';
@@ -67,9 +66,9 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     icon: <LayoutDashboard size={18} strokeWidth={1.5} />,
   },
   {
-    key: 'tasks',
-    label: 'Tasks',
-    icon: <CheckSquare size={18} strokeWidth={1.5} />,
+    key: 'workflow',
+    label: 'Workflow',
+    icon: <ListChecks size={18} strokeWidth={1.5} />,
   },
   {
     key: 'time',
@@ -122,11 +121,6 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'questionnaires',
     label: 'Questionnaires',
     icon: <ClipboardList size={18} strokeWidth={1.5} />,
-  },
-  {
-    key: 'automations',
-    label: 'Automations',
-    icon: <Sparkles size={18} strokeWidth={1.5} />,
   },
   {
     key: 'emails',
@@ -321,6 +315,10 @@ export function CoupleProfile({
       >
         <div
           data-testid="couple-profile-panel"
+          // Lets a test re-open this exact couple through `?openCouple=`
+          // rather than clicking the board again, where an async progress
+          // line can move the card out from under the click.
+          data-couple-id={couple.id}
           className="bg-surface rounded-control shadow-xl w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >

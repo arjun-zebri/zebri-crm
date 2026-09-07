@@ -214,7 +214,7 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: 
 function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => void }) {
   const pct = Math.round(zoom * 100)
   return (
-    // Sized and positioned to sit in line with the Feedback pill, which is
+    // Sized and positioned to sit in line with the assistant dock, which is
     // fixed at `bottom-6 right-6` on every dashboard page and was covering
     // these controls: `right-40` clears its footprint, `bottom-6` puts the two
     // on the same baseline, and `h-8` gives them the same height.

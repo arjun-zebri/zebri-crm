@@ -143,6 +143,7 @@ export function PortalShell({ token, initialData, branding, styles }: PortalShel
             }}
             events={initialData.events}
             packages={initialData.packages}
+            milestones={initialData.milestones ?? []}
             branding={branding}
           />
         )}

@@ -64,7 +64,7 @@ export function getScrollLockCount(): number {
 /**
  * Chrome that floats over the page and must not count as an "outside press".
  *
- * Opted into by the Feedback pill, the feedback form (`Modal chrome`) and the
+ * Opted into by the assistant dock, the feedback form (`Modal chrome`) and the
  * toast stack. Ordinary modals are not chrome: they are page content an MC
  * may well be reporting on.
  */
@@ -75,7 +75,7 @@ const CHROME_SELECTOR = '[data-capture-hide]';
  *
  * Every dropdown and panel in the app closes itself on a press outside its
  * own ref. That is right for a press on the page, and wrong for a press on
- * the Feedback pill: an MC reporting a bug about an open panel had it fold
+ * the assistant dock: an MC reporting a bug about an open panel had it fold
  * away the instant they reached for the report button, so the thing they
  * wanted to screenshot was gone. The same holds for clicking a toast action.
  *

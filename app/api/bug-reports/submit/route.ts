@@ -1,5 +1,5 @@
 /**
- * Accepts a report from the in-app Feedback pill.
+ * Accepts a report from the in-app feedback form.
  *
  * Writes the durable `bug_reports` row first, then files the Notion ticket.
  * The response is 200 either way: once the row is saved the MC's work is safe,

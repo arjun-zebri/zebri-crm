@@ -2174,6 +2174,120 @@ export type Database = {
         }
         Relationships: []
       }
+      meetings: {
+        Row: {
+          booking_id: string | null
+          consent_accepted_at: string | null
+          consent_name: string | null
+          couple_id: string
+          created_at: string
+          deepgram_callback_secret: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          input_tokens: number | null
+          join_token: string
+          model: string | null
+          output_tokens: number | null
+          pipeline_attempts: number
+          pipeline_error: string | null
+          pipeline_step: string
+          pipeline_updated_at: string
+          provider: string
+          provider_room_name: string
+          provider_room_url: string | null
+          recording_id: string | null
+          recording_kept: boolean
+          recording_storage_path: string | null
+          scheduled_for: string | null
+          scratch_notes: string | null
+          speaker_timeline: Json | null
+          started_at: string | null
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          consent_accepted_at?: string | null
+          consent_name?: string | null
+          couple_id: string
+          created_at?: string
+          deepgram_callback_secret?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          input_tokens?: number | null
+          join_token: string
+          model?: string | null
+          output_tokens?: number | null
+          pipeline_attempts?: number
+          pipeline_error?: string | null
+          pipeline_step?: string
+          pipeline_updated_at?: string
+          provider?: string
+          provider_room_name: string
+          provider_room_url?: string | null
+          recording_id?: string | null
+          recording_kept?: boolean
+          recording_storage_path?: string | null
+          scheduled_for?: string | null
+          scratch_notes?: string | null
+          speaker_timeline?: Json | null
+          started_at?: string | null
+          status?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          consent_accepted_at?: string | null
+          consent_name?: string | null
+          couple_id?: string
+          created_at?: string
+          deepgram_callback_secret?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          input_tokens?: number | null
+          join_token?: string
+          model?: string | null
+          output_tokens?: number | null
+          pipeline_attempts?: number
+          pipeline_error?: string | null
+          pipeline_step?: string
+          pipeline_updated_at?: string
+          provider?: string
+          provider_room_name?: string
+          provider_room_url?: string | null
+          recording_id?: string | null
+          recording_kept?: boolean
+          recording_storage_path?: string | null
+          scheduled_for?: string | null
+          scratch_notes?: string | null
+          speaker_timeline?: Json | null
+          started_at?: string | null
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_categories: {
         Row: {
           color: string
@@ -2990,10 +3104,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_meeting_settings: {
+        Row: {
+          keep_audio: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          keep_audio?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          keep_audio?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_public_settings: {
         Row: {
           couple_profile_tabs_config: Json
           created_at: string
+          daily_digest_enabled: boolean
+          daily_digest_last_sent_on: string | null
           email_mode: string
           mc_signature_image: string | null
           oauth_access_token_encrypted: string | null
@@ -3014,6 +3148,8 @@ export type Database = {
         Insert: {
           couple_profile_tabs_config?: Json
           created_at?: string
+          daily_digest_enabled?: boolean
+          daily_digest_last_sent_on?: string | null
           email_mode?: string
           mc_signature_image?: string | null
           oauth_access_token_encrypted?: string | null
@@ -3034,6 +3170,8 @@ export type Database = {
         Update: {
           couple_profile_tabs_config?: Json
           created_at?: string
+          daily_digest_enabled?: boolean
+          daily_digest_last_sent_on?: string | null
           email_mode?: string
           mc_signature_image?: string | null
           oauth_access_token_encrypted?: string | null
@@ -3126,6 +3264,476 @@ export type Database = {
           },
         ]
       }
+      workflow_audit_log: {
+        Row: {
+          couple_id: string | null
+          created_at: string
+          detail: Json
+          event: string
+          id: string
+          instance_id: string | null
+          step_id: string | null
+          user_id: string
+        }
+        Insert: {
+          couple_id?: string | null
+          created_at?: string
+          detail?: Json
+          event: string
+          id?: string
+          instance_id?: string | null
+          step_id?: string | null
+          user_id: string
+        }
+        Update: {
+          couple_id?: string | null
+          created_at?: string
+          detail?: Json
+          event?: string
+          id?: string
+          instance_id?: string | null
+          step_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_audit_log_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_audit_log_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_audit_log_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_conversion_ledger: {
+        Row: {
+          converted_at: string
+          detail: Json
+          id: string
+        }
+        Insert: {
+          converted_at?: string
+          detail?: Json
+          id: string
+        }
+        Update: {
+          converted_at?: string
+          detail?: Json
+          id?: string
+        }
+        Relationships: []
+      }
+      workflow_dispatched_events: {
+        Row: {
+          dispatched_at: string
+          event_id: string
+        }
+        Insert: {
+          dispatched_at?: string
+          event_id: string
+        }
+        Update: {
+          dispatched_at?: string
+          event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_dispatched_events_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "automation_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_instances: {
+        Row: {
+          applied_at: string
+          completed_at: string | null
+          context: Json
+          couple_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          is_default: boolean
+          is_personal: boolean
+          name: string
+          status: string
+          template_id: string | null
+          template_version: number | null
+          trigger_event_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string
+          completed_at?: string | null
+          context?: Json
+          couple_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          is_default?: boolean
+          is_personal?: boolean
+          name: string
+          status?: string
+          template_id?: string | null
+          template_version?: number | null
+          trigger_event_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string
+          completed_at?: string | null
+          context?: Json
+          couple_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          is_default?: boolean
+          is_personal?: boolean
+          name?: string
+          status?: string
+          template_id?: string | null
+          template_version?: number | null
+          trigger_event_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_instances_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_instances_trigger_event_id_fkey"
+            columns: ["trigger_event_id"]
+            isOneToOne: false
+            referencedRelation: "automation_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_steps: {
+        Row: {
+          approval_expires_at: string | null
+          approval_token: string | null
+          branch_path: string | null
+          completed_at: string | null
+          config: Json
+          created_at: string
+          description: string | null
+          due_at: string | null
+          error_message: string | null
+          id: string
+          instance_id: string
+          legacy_task_id: string | null
+          output: Json | null
+          parent_step_id: string | null
+          position: number
+          requires_approval: boolean
+          status: string
+          template_step_id: string | null
+          timing: Json
+          title: string
+          type: string
+          updated_at: string
+          visible_to_couple: boolean
+        }
+        Insert: {
+          approval_expires_at?: string | null
+          approval_token?: string | null
+          branch_path?: string | null
+          completed_at?: string | null
+          config?: Json
+          created_at?: string
+          description?: string | null
+          due_at?: string | null
+          error_message?: string | null
+          id?: string
+          instance_id: string
+          legacy_task_id?: string | null
+          output?: Json | null
+          parent_step_id?: string | null
+          position: number
+          requires_approval?: boolean
+          status?: string
+          template_step_id?: string | null
+          timing?: Json
+          title?: string
+          type: string
+          updated_at?: string
+          visible_to_couple?: boolean
+        }
+        Update: {
+          approval_expires_at?: string | null
+          approval_token?: string | null
+          branch_path?: string | null
+          completed_at?: string | null
+          config?: Json
+          created_at?: string
+          description?: string | null
+          due_at?: string | null
+          error_message?: string | null
+          id?: string
+          instance_id?: string
+          legacy_task_id?: string | null
+          output?: Json | null
+          parent_step_id?: string | null
+          position?: number
+          requires_approval?: boolean
+          status?: string
+          template_step_id?: string | null
+          timing?: Json
+          title?: string
+          type?: string
+          updated_at?: string
+          visible_to_couple?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_steps_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_steps_parent_step_id_fkey"
+            columns: ["parent_step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_steps_template_step_id_fkey"
+            columns: ["template_step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_template_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workflow_template_steps: {
+        Row: {
+          branch_path: string | null
+          canvas_x: number | null
+          canvas_y: number | null
+          config: Json
+          created_at: string
+          description: string | null
+          disabled: boolean
+          id: string
+          legacy_action_id: string | null
+          parent_step_id: string | null
+          position: number
+          requires_approval: boolean
+          template_id: string
+          timing: Json
+          title: string
+          type: string
+          updated_at: string
+          visible_to_couple: boolean
+        }
+        Insert: {
+          branch_path?: string | null
+          canvas_x?: number | null
+          canvas_y?: number | null
+          config?: Json
+          created_at?: string
+          description?: string | null
+          disabled?: boolean
+          id?: string
+          legacy_action_id?: string | null
+          parent_step_id?: string | null
+          position: number
+          requires_approval?: boolean
+          template_id: string
+          timing?: Json
+          title?: string
+          type: string
+          updated_at?: string
+          visible_to_couple?: boolean
+        }
+        Update: {
+          branch_path?: string | null
+          canvas_x?: number | null
+          canvas_y?: number | null
+          config?: Json
+          created_at?: string
+          description?: string | null
+          disabled?: boolean
+          id?: string
+          legacy_action_id?: string | null
+          parent_step_id?: string | null
+          position?: number
+          requires_approval?: boolean
+          template_id?: string
+          timing?: Json
+          title?: string
+          type?: string
+          updated_at?: string
+          visible_to_couple?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_template_steps_parent_step_id_fkey"
+            columns: ["parent_step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_template_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_template_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_template_tags: {
+        Row: {
+          tag_id: string
+          template_id: string
+        }
+        Insert: {
+          tag_id: string
+          template_id: string
+        }
+        Update: {
+          tag_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_template_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_template_tags_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          allow_reapply: boolean
+          apply_rule_config: Json
+          apply_rule_type: string
+          branch_depth_limit: number
+          canvas_viewport: Json
+          created_at: string
+          description: string | null
+          id: string
+          legacy_automation_id: string | null
+          name: string
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          status: string
+          template_slug: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          allow_reapply?: boolean
+          apply_rule_config?: Json
+          apply_rule_type?: string
+          branch_depth_limit?: number
+          canvas_viewport?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          legacy_automation_id?: string | null
+          name: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          status?: string
+          template_slug?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          allow_reapply?: boolean
+          apply_rule_config?: Json
+          apply_rule_type?: string
+          branch_depth_limit?: number
+          canvas_viewport?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          legacy_automation_id?: string | null
+          name?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          status?: string
+          template_slug?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -3146,6 +3754,10 @@ export type Database = {
       }
       _owns_package_or_null: {
         Args: { p_package_id: string }
+        Returns: boolean
+      }
+      _owns_workflow_template_or_null: {
+        Args: { p_template_id: string }
         Returns: boolean
       }
       _resolve_contract_token: {
@@ -3170,6 +3782,22 @@ export type Database = {
         Returns: Json
       }
       _vendor_role_label: { Args: { meta: Json }; Returns: string }
+      _workflow_couple_wedding_date: {
+        Args: { p_couple_id: string }
+        Returns: string
+      }
+      _workflow_recompute_wedding_steps: {
+        Args: { p_couple_id: string }
+        Returns: undefined
+      }
+      _workflow_wedding_due_at: {
+        Args: { p_timezone: string; p_timing: Json; p_wedding_date: string }
+        Returns: string
+      }
+      accept_meeting_consent: {
+        Args: { p_name: string; p_token: string }
+        Returns: Json
+      }
       admin_user_last_seen: {
         Args: never
         Returns: {
@@ -3264,6 +3892,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      ensure_default_workflow: {
+        Args: { p_couple_id: string }
+        Returns: string
+      }
       expire_contracts: { Args: never; Returns: string[] }
       fail_signer_otp: {
         Args: { p_max_attempts: number; p_otp_id: string }
@@ -3273,7 +3905,9 @@ export type Database = {
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
       get_booking_by_manage_token: { Args: { token: string }; Returns: Json }
       get_lead_form: { Args: { token: string }; Returns: Json }
+      get_meeting_join: { Args: { p_token: string }; Returns: Json }
       get_portal_data: { Args: { token: string }; Returns: Json }
+      get_portal_milestones: { Args: { token: string }; Returns: Json }
       get_portal_packages: { Args: { p_token: string }; Returns: Json }
       get_portal_questionnaires: { Args: { token: string }; Returns: Json }
       get_public_booking_page: { Args: { token: string }; Returns: Json }

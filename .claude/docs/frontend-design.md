@@ -113,11 +113,23 @@ treatment: the `Input` chrome. Two knock-ons, both intentional:
 darkening to `brand-fg` on focus, `danger` border on error, label /
 help / error linked by `aria-describedby`  -  with the one deliberate
 difference that height comes from `rows` rather than the 32px control
-height, and the field resizes vertically only. It exists because
-multi-line fields were being hand-rolled with a copied class string
-that drifted from `Input` (the automations inspector had seven of
-them behind a local `TextArea`). Reach for it wherever a form needs
-more than one line.
+height. It exists because multi-line fields were being hand-rolled
+with a copied class string that drifted from `Input` (the automations
+inspector had seven of them behind a local `TextArea`). Reach for it
+wherever a form needs more than one line.
+
+**No textarea in Zebri is user-resizable** (2026-09-07). `Textarea` has
+no `resizable` prop any more, and `globals.css` carries a base rule
+setting `resize: none` on every bare `textarea`, so a hand-rolled field
+cannot reintroduce the drag handle either. Every multi-line field in the
+app sits in a fixed layout  -  a modal, a card, a form column  -  where
+dragging one taller only shoves the rest of the form around, and the
+handle itself reads as an unfinished control. Height is a design
+decision made once at the call site with `rows`: 3 for a one-line note,
+8 to 10 for a body of prose. The rule sits in `@layer base` (same
+layering as the `cursor: pointer` button rule), so a deliberate
+`resize-y` utility on a call site still wins if a genuinely resizable
+surface ever turns up.
 
 `MenuItem` and `RowActionsMenu` keep a `size` prop, but it is a **row
 density** (padding and min-width), not a height or a type size. Menu
@@ -198,11 +210,23 @@ Known divergences the showroom still reports:
   primitive is the intended look; the rule is stale.
   `Button` also takes `shape="pill"`, which swaps `rounded-control` for
   `rounded-pill`. It is for a button that floats free of the layout (the
-  Feedback pill); a pill sitting in a form row beside an input reads as a
+  assistant dock); a pill sitting in a form row beside an input reads as a
   third radius the system does not have.
 - **Status chips.** Four implementations coexist: `StatePill` (tokens,
   keep), `Badge` (21 raw-palette variants), `StatBadge` inside
   `dashboard-stats.tsx`, and the vendor badges.
+- **Number inputs.** `Input` strips the browser's spinner buttons
+  whenever `type="number"`. They are platform chrome that ignores the
+  tokens, eat the field's right-hand padding, and step the value when
+  the field is scrolled past. Arrow keys still work. Six raw `<input>`
+  call sites in `components/builders/` and `branding/` carry the same
+  class soup by hand; they lose it when they move onto the primitive.
+- **Inline notes.** `Callout` (`components/ui/callout.tsx`) is the one
+  tinted note box: four tones, tonal border + `/10` fill, `text-text`
+  body. The hand-rolled amber banners in `settings/`, `calendar/` and
+  the public booking pages predate it and should fold into it as those
+  pages are next touched. A caption that only describes a field stays
+  muted prose - the box is for a sentence with a consequence.
 - **Missing primitives.** `SectionNav` and `DataTable` are still
   copy-pasted markup. `PageHeader` and `Card` were extracted (see below).
 
@@ -252,17 +276,17 @@ Stacking comes from `OVERLAY_Z`, keyed by `layer`:
 `Modal` takes `layer="nested" | "top"`. The older `nested` boolean still
 works and maps to `layer="nested"`.
 
-The Feedback pill sits between the overlay ladder and toasts on purpose: a
-modal is exactly where a bug tends to show itself, so the pill has to stay
+The assistant dock sits between the overlay ladder and toasts on purpose: a
+modal is exactly where a bug tends to show itself, so the dock has to stay
 usable over one. Two consequences to keep in mind:
 
 - The toast stack is offset to `bottom-20` (rather than `bottom-6`) so a toast
-  never lands on the pill. This applies on public pages too, where toasts
+  never lands on the dock. This applies on public pages too, where toasts
   therefore float slightly high.
-- Anything else anchored bottom-right has to clear the pill's roughly 140px
-  footprint. Already moved: the payments footer total (`pr-40`) and the
+- Anything else anchored bottom-right has to clear the dock's open footprint,
+  roughly 320px. Already moved: the payments footer total (`pr-40`) and the
   branding canvas zoom widget (`right-40`). Add to that list rather than
-  nudging the pill.
+  nudging the dock.
 
 **`data-capture-hide` marks app chrome.** Two things read it, and both mean
 the same thing: this element is chrome, not page content.
@@ -270,9 +294,9 @@ the same thing: this element is chrome, not page content.
 1. The feedback screenshot (`modern-screenshot`) leaves it out of the shot.
    Excluding a node skips its whole subtree.
 2. `isChromePress()` in `use-overlay` treats a press on it as *not* an outside
-   press, so dropdowns and panels stay open when the MC reaches for the pill.
+   press, so dropdowns and panels stay open when the MC reaches for the dock.
 
-The Feedback pill and the toast stack set it directly; the feedback form gets
+The assistant dock and the toast stack set it directly; the feedback form gets
 it from `<Modal chrome>`. Nothing else should. An ordinary modal is usually the
 very thing being reported, so it has to appear in the screenshot and behave
 like page content: an earlier version excluded every `[data-overlay]`, which

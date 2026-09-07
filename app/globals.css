@@ -132,6 +132,21 @@
   }
 }
 
+/* Text areas never carry a drag handle.
+   Every textarea in the app sits inside a fixed layout (a modal, a card,
+   a form column), where dragging one taller only pushes the rest of the
+   form around, and the handle itself reads as an unfinished control.
+   Height is a design decision made once, with `rows`.
+
+   Same layering as the cursor rule above: `@layer base` so it lands after
+   preflight but still loses to the `utilities` layer, leaving a deliberate
+   `resize-y` on a call site as the single documented escape hatch. */
+@layer base {
+  textarea {
+    resize: none;
+  }
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }

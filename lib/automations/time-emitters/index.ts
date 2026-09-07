@@ -6,7 +6,7 @@
  * {@link emit_automation_event} synchronously inside the transaction.
  *
  * A handful of triggers, though, don't have a source row that changes
- * when they "fire": `invoice_due`, `invoice_overdue`, `task_overdue`,
+ * when they "fire": `invoice_due`, `invoice_overdue`, `step_overdue`,
  * `time_before_event`, etc. They need to be computed each tick by
  * comparing the source row's timestamp to "now".
  *
@@ -42,6 +42,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { sendAlert } from '@/lib/alerts/send-alert'
+// The workflows engine's own emitter. It lives under lib/workflows but
+// registers here, because the tick has one emitter registry.
+import { stepOverdueEmitter } from '@/lib/workflows/emitters/step-overdue'
 import type { TriggerType } from '@/types/automations'
 import type { Database } from '@/types/database'
 
@@ -49,7 +52,6 @@ import { anniversaryOfEventEmitter } from './anniversary-of-event'
 import { consultationCompletedEmitter } from './consultation-completed'
 import { invoiceDueEmitter } from './invoice-due'
 import { invoiceOverdueEmitter } from './invoice-overdue'
-import { taskOverdueEmitter } from './task-overdue'
 import { timeAfterEventEmitter } from './time-after-event'
 import { timeBeforeEventEmitter } from './time-before-event'
 
@@ -77,7 +79,7 @@ export interface TimeEmitter {
 const registry: readonly TimeEmitter[] = [
   invoiceDueEmitter,
   invoiceOverdueEmitter,
-  taskOverdueEmitter,
+  stepOverdueEmitter,
   timeBeforeEventEmitter,
   timeAfterEventEmitter,
   anniversaryOfEventEmitter,

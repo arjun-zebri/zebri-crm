@@ -147,7 +147,6 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           // Fixed height on purpose: this is the field people actually write
           // in, so it starts tall enough not to need dragging, and a drag
           // handle in a modal only pushes the footer around.
-          resizable={false}
           maxLength={5000}
         />
 

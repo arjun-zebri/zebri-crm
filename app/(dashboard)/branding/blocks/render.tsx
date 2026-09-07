@@ -1402,7 +1402,7 @@ export function RenderFormField({ block, state }: RenderProps<FormFieldBlock>) {
           disabled
         />
       ) : block.inputType === 'textarea' ? (
-        <Textarea {...(placeholder ? { placeholder } : {})} readOnly tabIndex={-1} resizable={false} />
+        <Textarea {...(placeholder ? { placeholder } : {})} readOnly tabIndex={-1} />
       ) : (
         <Input type={block.inputType} {...(placeholder ? { placeholder } : {})} readOnly tabIndex={-1} />
       )}

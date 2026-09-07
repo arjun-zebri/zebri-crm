@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import { expect, Page } from '@playwright/test'
 
 export function uniqueName(prefix: string): string {
   return `${prefix} ${Date.now()}`
@@ -46,6 +46,21 @@ export async function login(page: Page) {
   // that matched /login itself, so waitForURL resolved before the redirect happened.
   // Now we explicitly wait until the URL is no longer /login.
   await page.waitForURL(url => !url.pathname.startsWith('/login'), { timeout: 20000 })
+}
+
+/**
+ * Make the sidebar nav clickable.
+ *
+ * Below `md` the sidebar is translated off-canvas behind a hamburger in a
+ * fixed top bar, so a nav link is in the DOM (and reports as visible) but
+ * cannot be tapped. On desktop there is no top bar and this is a no-op,
+ * which lets one spec run on both projects.
+ */
+export async function openSidebar(page: Page) {
+  const topBar = page.locator('div.md\\:hidden.fixed.top-0')
+  if (!(await topBar.isVisible().catch(() => false))) return
+  await topBar.locator('button').first().click()
+  await expect(page.locator('aside')).toHaveClass(/translate-x-0/)
 }
 
 export async function logout(page: Page) {
@@ -137,7 +152,7 @@ export async function deleteCouple(page: Page, name: string) {
 
 export async function navigateToProfileTab(
   page: Page,
-  tab: 'Overview' | 'Tasks' | 'Time' | 'Payments' | 'Names' | 'Timeline' | 'Songs' | 'Files' | 'Vows' | 'Scripts'
+  tab: 'Overview' | 'Workflow' | 'Time' | 'Payments' | 'Names' | 'Timeline' | 'Songs' | 'Files' | 'Vows' | 'Scripts'
 ) {
   // Exact accessible name, not a substring match. The panel also renders
   // the couple-name button and a Timeline tab, so `has-text("Time")`

@@ -22,6 +22,10 @@ import { logger } from '@/lib/alerts/logger';
 import { createClient } from '@/lib/supabase/server';
 
 import {
+  migrateHiddenTabKeys,
+  migrateTabKeys,
+} from './couple-profile-tabs';
+import {
   DEFAULT_TABS_CONFIG,
   SECTION_KEYS,
   type CoupleProfileSection,
@@ -56,11 +60,13 @@ const writeSchema = z
  */
 function coerceConfig(raw: unknown): CoupleProfileTabsConfig {
   const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const keys = (v: unknown): CoupleProfileSection[] =>
-    Array.isArray(v) ? v.filter(isSectionKey) : [];
+  const strings = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((k): k is string => typeof k === 'string') : [];
   return {
-    hidden_tabs: keys(obj.hidden_tabs).filter((k) => k !== 'overview'),
-    tab_order: keys(obj.tab_order),
+    hidden_tabs: migrateHiddenTabKeys(strings(obj.hidden_tabs)).filter(
+      (k) => k !== 'overview',
+    ),
+    tab_order: migrateTabKeys(strings(obj.tab_order)),
   };
 }
 

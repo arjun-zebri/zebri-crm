@@ -76,7 +76,7 @@ import { execSync } from 'node:child_process';
 // `tooltip` conditionally rather than passing an explicit undefined into an
 // optional prop, clearing one long-standing violation (262 -> 261).
 // PDF renderer replaced by printing the public branded cards (261 -> 260).
-const STRICT_BUDGET = 260;
+const STRICT_BUDGET = 240;
 
 function runTscStrict() {
   try {

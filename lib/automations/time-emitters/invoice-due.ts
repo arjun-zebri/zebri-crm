@@ -52,6 +52,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { getTriggerSpec } from '@/lib/automations/triggers'
+import { loadActiveTriggerConfigs } from '@/lib/workflows/trigger-configs'
 import type { Database } from '@/types/database'
 
 import type { TimeEmitter } from './index'
@@ -137,13 +138,7 @@ function parseDays(config: unknown): number | null {
 async function collectActiveLeadTimes(
   supabase: SupabaseClient<Database>,
 ): Promise<Map<string, Set<number>>> {
-  const { data, error } = await supabase
-    .from('automations' as never)
-    .select('user_id, trigger_config')
-    .eq('status', 'active')
-    .eq('trigger_type', 'invoice_due')
-
-  if (error) throw new Error(`load invoice_due automations: ${error.message}`)
+  const data = await loadActiveTriggerConfigs(supabase, 'invoice_due')
 
   const grouped = new Map<string, Set<number>>()
   for (const row of (data ?? []) as Array<{

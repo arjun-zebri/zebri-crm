@@ -198,3 +198,52 @@ One-time converter, run as part of the cutover deploy:
 - Notification story for overdue steps (Slack alert? email digest?).
   Currently task_overdue could email via automations; decide the native
   equivalent.
+
+## Decisions settled at implementation planning (2026-09-04)
+
+These close the "Open questions" section above and correct one line in
+the UI section. Where this section and the body of the spec disagree,
+this section wins.
+
+1. **The builder keeps the React Flow canvas.** This REVERSES the
+   "vertical ordered step list (NOT the old canvas)" line under UI
+   surfaces. Free node placement, zoom and connector lines were an
+   explicit earlier decision, and a flow-list variant of the
+   automations builder was built and reverted once already. The
+   vertical checklist is how an **applied instance** renders on the
+   couple profile and in the queue; it is not the authoring surface.
+2. **Everything in the automations builder ports over**: the chip-driven
+   config UI and its per-trigger filter arrays, the email / document /
+   questionnaire / run-sheet / timeline composer modals, the trigger
+   filter system, and the AI copilot (its tool schemas re-point at the
+   new tables).
+3. **The couple profile gets ONE folded Workflow tab.** Applied
+   workflows render as checklists with progress; the per-couple run /
+   audit feed that lives in the Automations tab today becomes an
+   activity section inside the same tab. The `automations` tab key
+   retires from `couple-profile-tabs`.
+4. **`on_package_applied` fires when `couples.selected_package_id`
+   transitions to a non-null value** (or changes to a different
+   package). That single column is written both by the MC on the couple
+   profile and by the couple in the portal, so one DB trigger covers
+   both paths. Invoice created / sent / paid are deliberately NOT the
+   anchor: an invoice is a billing artefact and can lag or never exist.
+5. **Queue layout**: three groups, Overdue / Due today / Upcoming, with
+   filters for couple, tag and step type. No bulk actions in v1 (the
+   old task board's bulk bar does not carry over) since production
+   usage does not justify them; the decision is revisitable once real
+   step volume exists.
+6. **Converted automations stay as real drafts**, not archived
+   read-only. A draft is editable and activatable, which is what an MC
+   would want from an automation they built; the 4 active ones convert
+   active.
+7. **Overdue steps notify natively via the bus.** The `task_overdue`
+   trigger is replaced by a `step_overdue` event emitted by the tick's
+   time emitters, so an MC can build a workflow that emails them a
+   digest. The queue's Overdue group is the primary surface. No Slack
+   alert for user-level overdue: `sendAlert()` stays operational
+   (engine failures, converter problems), not a user notification
+   channel.
+8. **Appointment steps stay a dated to-do in the core phases**; the
+   Scheduler wiring is Phase F as originally specced, even though the
+   Scheduler has since shipped.

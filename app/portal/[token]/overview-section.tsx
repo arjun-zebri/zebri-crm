@@ -11,10 +11,12 @@ import { roleDefaults } from '@/lib/branding/type-defaults'
 import { createClient } from '@/lib/supabase/client'
 
 import { ContactDetailsCard, type ContactTriple } from './contact-details-card'
+import { MilestonesSection, type PortalMilestone } from './milestones-section'
 import { EventsList } from './overview-events'
 import { PackageSelector } from './package-selector'
 import { PortalEvent, type PortalPackage } from './page'
 import { PortalEventModal } from './portal-event-modal'
+
 
 interface OverviewSectionProps {
   token: string
@@ -27,6 +29,8 @@ interface OverviewSectionProps {
   packages: { selected_package_id: string | null; packages: PortalPackage[] } | null
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding
+  /** Steps the MC chose to show. Empty for an MC who has shown none. */
+  milestones: PortalMilestone[]
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -41,7 +45,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
  * lightweight Saving / Saved / error affordance. Borderless throughout to
  * match the couple-modal Overview.
  */
-export function OverviewSection({ token, primary, secondary, events, packages, branding }: OverviewSectionProps) {
+export function OverviewSection({ token, primary, secondary, events, packages, branding, milestones }: OverviewSectionProps) {
   const supabase = createClient()
   const [primaryTriple, setPrimaryTriple] = useState<ContactTriple>(primary)
   const [secondaryTriple, setSecondaryTriple] = useState<ContactTriple>(secondary)
@@ -118,6 +122,15 @@ export function OverviewSection({ token, primary, secondary, events, packages, b
 
   return (
     <div className="max-w-xl space-y-10">
+      {/* First, because "is anything happening?" is the question a couple
+          opens this page to answer. Renders nothing when the MC has not
+          marked any step visible, which is the default. */}
+      <MilestonesSection
+        milestones={milestones}
+        textColor={branding.text_color}
+        mutedColor={branding.text_color}
+      />
+
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3

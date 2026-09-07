@@ -49,6 +49,11 @@ export type TriggerType =
   | 'custom_field_changed'
   // Pipeline (couples)
   | 'couple_stage_changed'
+  // Emitted when couples.selected_package_id becomes non-null (or
+  // changes). That one column is written both by the MC on the couple
+  // profile and by the couple in the portal, so a single DB trigger
+  // covers both paths. Feeds the workflows `on_package_applied` rule.
+  | 'package_applied'
   // Invoices / payments
   | 'invoice_created'
   | 'invoice_sent'
@@ -77,10 +82,15 @@ export type TriggerType =
   | 'section_completed'
   | 'portal_section_started_not_finished' // emitted by the tick
   | 'timeline_edited'
-  // Task
+  // Task (retired at the Workflows cutover; kept in the union and the
+  // registry so a config saved against one still parses)
   | 'task_created'
   | 'task_completed'
   | 'task_overdue' // emitted by the tick
+  // Workflow steps. Replaces task_overdue: emitted by the tick when a
+  // manual step sits past its due date. Lets an MC build a workflow that
+  // chases their own overdue steps.
+  | 'step_overdue'
   // Contacts (vendors, family, bridal party)
   | 'contact_created'
   | 'contact_updated'
@@ -323,6 +333,17 @@ export interface AutomationActionRow {
   position_x: number | null
   /** Canvas y coordinate. NULL until first drag. */
   position_y: number | null
+  /**
+   * When the step comes due, as a `StepTiming`. Workflows only: the
+   * automations engine had no per-step scheduling, so the builder
+   * carries it through as opaque json rather than importing the
+   * workflows types into the trigger/action registries.
+   */
+  timing?: Json
+  /** Hold this send until the MC has read it. Workflows only. */
+  requires_approval?: boolean
+  /** Show this step on the couple's portal. Workflows only. */
+  visible_to_couple?: boolean
   created_at: string
   updated_at: string
 }
@@ -458,8 +479,25 @@ export interface ResolvedRecipient {
  */
 export interface RunContext {
   userId: string
+  /**
+   * The workflow engine populates this with the template id, or the
+   * instance id for an ad-hoc instance with no template behind it.
+   * Retained under its original name because eight action handler
+   * modules read it; renaming it would touch all of them for no gain.
+   */
   automationId: string
+  /**
+   * The workflow engine populates this with the instance id: in the
+   * unified model the applied instance IS the run.
+   */
   runId: string
+  /**
+   * The applied workflow instance this step belongs to. Same value as
+   * {@link RunContext.runId}, under the name the workflows code uses.
+   */
+  instanceId: string
+  /** The workflow step currently executing. */
+  stepId: string
   coupleId: string | null
   triggerEvent: AutomationEventRow
 

@@ -6,14 +6,15 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { dispatchPendingEvents } from '@/lib/automations/dispatcher'
 import { runTimeEmitters } from '@/lib/automations/time-emitters'
+import { dispatchPendingEvents } from '@/lib/workflows/dispatcher'
 
 import {
   createTestUser,
   serviceClient,
   type TestUser,
 } from '../helpers/supabase'
+import { instancesFor, seedEventTemplate } from '../helpers/workflows'
 
 function isoDateOffset(days: number): string {
   const today = new Date()
@@ -61,23 +62,11 @@ async function seedAutomation(
   amount: number,
   opts: { unit?: string; eventType?: string } = {},
 ): Promise<string> {
-  const { data, error } = await serviceClient()
-    .from('automations' as never)
-    .insert({
-      user_id: user.id,
-      name: `time_after_event ${amount}`,
-      trigger_type: 'time_after_event',
-      trigger_config: {
-        amount,
-        unit: opts.unit ?? 'days',
-        ...(opts.eventType ? { eventType: opts.eventType } : {}),
-      },
-      status: 'active',
-    } as never)
-    .select('id')
-    .single()
-  if (error || !data) throw new Error(`seed automation: ${error?.message}`)
-  return (data as { id: string }).id
+  return seedEventTemplate(user.id, 'time_after_event', {
+    amount,
+    unit: opts.unit ?? 'days',
+    ...(opts.eventType ? { eventType: opts.eventType } : {}),
+  })
 }
 
 async function eventsFor(eventId: string) {
@@ -161,23 +150,21 @@ describe('time_after_event time-emitter', () => {
     expect(await eventsFor(eventId)).toHaveLength(1)
   })
 
-  it('opens a run per event on the lag day, whatever its type', async () => {
+  it('applies the template once for a couple on the lag day, whatever the event type', async () => {
     // Mirror of the time_before_event case: `eventType` narrowing was
     // removed in the 2026-08-13 sweep because nothing in the app
-    // writes `events.event_type`.
+    // writes `events.event_type`. Both events therefore fire, but the
+    // dispatcher dedupes per couple: a second automatic apply would run
+    // the same emails twice at the same couple.
     const coupleId = await seedCouple(user)
-    const automationId = await seedAutomation(user, 7, { eventType: 'reception' })
+    const templateId = await seedAutomation(user, 7, { eventType: 'reception' })
     await seedEvent(user, coupleId, isoDateOffset(-7), { eventType: 'reception' })
     await seedEvent(user, coupleId, isoDateOffset(-7), { eventType: 'ceremony' })
 
     await runTimeEmitters(serviceClient())
     await dispatchPendingEvents(serviceClient())
 
-    const { data: runs } = await serviceClient()
-      .from('automation_runs' as never)
-      .select('id, automation_id')
-      .eq('automation_id', automationId)
-    expect(runs ?? []).toHaveLength(2)
+    expect(await instancesFor(templateId)).toHaveLength(1)
   })
 
   it('respects tenant isolation', async () => {

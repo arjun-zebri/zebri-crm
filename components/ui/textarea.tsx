@@ -11,9 +11,10 @@ import { useId, type Ref, type TextareaHTMLAttributes } from 'react';
  *
  * The one deliberate difference is height: a control height would
  * defeat the purpose, so height comes from `rows` (4 by default) and
- * the field resizes vertically only — horizontal resize would drag it
- * out of whatever column it sits in. Pass `resizable={false}` in a
- * fixed layout, where dragging it just pushes the rest around.
+ * nothing else. The field is never user-resizable: a drag handle in a
+ * modal or a form column only pushes the rest of the layout around, so
+ * the right height is chosen once here rather than left to the MC. The
+ * same rule is enforced app-wide on bare `textarea` in `globals.css`.
  *
  * @example
  * ```tsx
@@ -35,12 +36,6 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
   help?: string;
   /** Error message rendered in place of `help`. Role=alert. */
   error?: string;
-  /**
-   * Whether the user can drag the field taller. Off for a field in a
-   * fixed layout (a modal, a card), where dragging it only pushes the
-   * rest of the form around.
-   */
-  resizable?: boolean;
   /** Optional ref to the underlying `<textarea>`. */
   ref?: Ref<HTMLTextAreaElement>;
 }
@@ -61,7 +56,6 @@ export function Textarea({
   error,
   className,
   rows = 4,
-  resizable = true,
   ref,
   ...rest
 }: TextareaProps) {
@@ -90,7 +84,7 @@ export function Textarea({
         rows={rows}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`${BASE_CLASSES} ${resizable ? 'resize-y' : 'resize-none'} ${borderClass}`}
+        className={`${BASE_CLASSES} resize-none ${borderClass}`}
       />
       {error ? (
         <p id={errorId} role="alert" className="text-body text-danger">

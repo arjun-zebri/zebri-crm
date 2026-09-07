@@ -377,6 +377,42 @@ const coupleStageChanged: TriggerSpec<{
   },
 }
 
+/**
+ * Config shape for {@link packageApplied}, declared as a schema first so
+ * the spec's type parameter is `z.infer` of it rather than a hand-written
+ * twin, which would not be assignable under `exactOptionalPropertyTypes`.
+ */
+const packageAppliedConfig = z.object({
+  // Free-form uuid rather than an enum: packages are user-owned rows and
+  // an automation saved against a since-deleted package has to keep
+  // parsing. It simply stops matching.
+  packageId: z.string().optional(),
+}).passthrough()
+
+/**
+ * Emitted when `couples.selected_package_id` becomes non-null, or changes
+ * to a different package. That single column is written both by the MC on
+ * the couple profile and by the couple in the portal, so one DB trigger
+ * covers both paths. Invoice created / sent / paid are deliberately not
+ * the anchor: an invoice is a billing artefact and can lag or never exist.
+ */
+const packageApplied: TriggerSpec<z.infer<typeof packageAppliedConfig>> = {
+  type: 'package_applied',
+  configSchema: packageAppliedConfig,
+  match(event, config) {
+    const payload = p(event)
+    // No package configured means "any package".
+    if (config.packageId && payload.package_id !== config.packageId) return false
+    return true
+  },
+  ui: {
+    category: 'pipeline',
+    label: 'Package applied',
+    description: 'When a package is chosen for a couple',
+    icon: 'Package',
+  },
+}
+
 // ────────────────────────────────────────────────────────────────
 // Quotes / invoices / payments
 // ────────────────────────────────────────────────────────────────
@@ -1118,9 +1154,10 @@ const taskOverdue: TriggerSpec<TaskFilterConfig & {
   configSchema: taskFilterSchema.extend({
     daysOverdueMin: z.number().int().min(0).max(365).optional(),
   }),
-  // The `task_overdue` event is emitted by the time-emitter once per
-  // (task, threshold, day) — see `lib/automations/time-emitters/
-  // task-overdue.ts`. The emitter stamps the overdue depth in
+  // Retired: `step_overdue` replaced it and its emitter is gone, so
+  // nothing emits `task_overdue` any more. The spec stays registered so
+  // a workflow converted from an automation saved against it still
+  // parses instead of failing to load. The emitter stamped the depth in
   // `payload.days_overdue`; narrowing here means an automation with
   // min=7 only fires for the day-7 event, not the day-1 one. Priority
   // and type narrow against the payload (the emitter carries both).
@@ -1230,7 +1267,7 @@ const manualFire: TriggerSpec<{
     requireConfirmation: z.boolean().optional(),
     requireNote: z.boolean().optional(),
   }).passthrough(),
-  match(event, _config) {
+  match(event) {
     // Manual fires carry the target automation id in the payload -
     // the dispatcher reads that directly. This matcher exists to
     // make the type uniform; the dispatcher short-circuits before
@@ -1698,6 +1735,41 @@ const brandingPublished: TriggerSpec<Record<string, unknown>> = {
 // Registry
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Config shape for {@link stepOverdue}, declared as a schema first so the
+ * spec's type parameter is `z.infer` of it rather than a hand-written twin.
+ */
+const stepOverdueConfig = z.object({
+  // How many days past due before this fires. Defaults to 1 so "overdue"
+  // always means strictly past the due date; the due date itself is not
+  // yet overdue. Same convention the retired task_overdue used.
+  daysOverdueMin: z.number().int().min(1).default(1),
+  stepType: z.enum(['todo', 'appointment']).optional(),
+}).passthrough()
+
+/**
+ * Emitted by the tick when a manual workflow step sits past its due date.
+ * Replaces the retired `task_overdue` trigger: step completion and
+ * overdue live natively in the workflows engine now.
+ */
+const stepOverdue: TriggerSpec<z.infer<typeof stepOverdueConfig>> = {
+  type: 'step_overdue',
+  configSchema: stepOverdueConfig,
+  match(event, config) {
+    const payload = p(event)
+    const days = Number(payload.days_overdue ?? 0)
+    if (days < config.daysOverdueMin) return false
+    if (config.stepType && payload.step_type !== config.stepType) return false
+    return true
+  },
+  ui: {
+    category: 'task',
+    label: 'Workflow step overdue',
+    description: 'A step you have to tick is past its due date',
+    icon: 'AlarmClock',
+  },
+}
+
 export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   // Lead
   new_enquiry: newEnquiry,
@@ -1705,6 +1777,8 @@ export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   custom_field_changed: customFieldChanged,
   // Pipeline
   couple_stage_changed: coupleStageChanged,
+  package_applied: packageApplied,
+  step_overdue: stepOverdue,
   // Quotes / invoices / payments
   // Invoices / payments
   invoice_created: invoiceCreated,

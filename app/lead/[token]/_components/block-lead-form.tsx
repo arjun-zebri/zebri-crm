@@ -217,7 +217,6 @@ function FormFieldControl({
         {...placeholderProp}
         onChange={(e) => onChange(e.target.value)}
         // A drag-resized field would fight the embed iframe's height auto-sizing.
-        resizable={false}
       />
     );
   }
