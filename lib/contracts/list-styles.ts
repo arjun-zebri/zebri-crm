@@ -25,6 +25,7 @@
  * @module lib/contracts/list-styles
  */
 import { Extension, wrappingInputRule } from '@tiptap/core'
+import { ListItem } from '@tiptap/extension-list'
 import type { EditorState } from '@tiptap/pm/state'
 
 /** One numbering format the picker offers. */
@@ -121,6 +122,21 @@ export function effectiveListStyle(state: EditorState): string | null {
   }
   return 'decimal'
 }
+
+/**
+ * StarterKit's list item, but admitting a heading as the item's first block.
+ *
+ * A clause title such as "1. Definitions" is a numbered heading, and with
+ * the stock `paragraph block*` content the H1/H2 toolbar buttons silently
+ * did nothing inside a list. Register this with
+ * `StarterKit.configure({ listItem: false })` wherever `ContractListStyles`
+ * is registered (editor and both server renders), so the stored JSON
+ * round-trips identically. The `.contract-content` CSS sizes the marker to
+ * match a heading item.
+ */
+export const ContractListItem = ListItem.extend({
+  content: '(paragraph | heading) block*',
+})
 
 /** The scheme on the outermost list around the caret, or null. */
 export function activeListScheme(state: EditorState): string | null {

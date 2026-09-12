@@ -14,6 +14,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { buildContractVariables, renderContractHtml } from '@/lib/contracts/contract-variables'
 import {
   CONTRACT_LIST_STYLES,
+  ContractListItem,
   ContractListStyles,
   effectiveListStyle,
   isContractListStyle,
@@ -339,6 +340,51 @@ describe('the Legal scheme', () => {
   it('drops a scheme that is not known', () => {
     const doc = { ...listDoc(null), content: [{ ...listDoc(null).content[0], attrs: { listScheme: 'x' } }] }
     expect(renderContractHtml(doc as JSONContent, vars)).not.toContain('data-list-scheme')
+  })
+})
+
+describe('headings inside list items', () => {
+  afterEach(() => {
+    editors.splice(0).forEach((e) => e.destroy())
+  })
+
+  it('lets a numbered clause title be a heading', () => {
+    // StarterKit's list item only admits a paragraph first, so H1/H2 in the
+    // toolbar did nothing inside a list. The contract list item admits a
+    // heading there, so "1. Definitions" can be a real heading.
+    const editor = new Editor({
+      extensions: [StarterKit.configure({ listItem: false }), ContractListItem, ContractListStyles],
+      content: listDoc(null),
+    })
+    editors.push(editor)
+    editor.commands.setTextSelection(3)
+    editor.commands.toggleHeading({ level: 2 })
+    const item = json(editor).content?.[0]?.content?.[0]
+    expect(item?.type).toBe('listItem')
+    expect(item?.content?.[0]?.type).toBe('heading')
+  })
+
+  it('renders the heading inside the list item', () => {
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'orderedList',
+          content: [
+            {
+              type: 'listItem',
+              content: [
+                { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Definitions' }] },
+                { type: 'paragraph', content: [{ type: 'text', text: 'In this agreement:' }] },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    expect(renderContractHtml(doc, vars)).toBe(
+      '<ol><li><h2>Definitions</h2><p>In this agreement:</p></li></ol>',
+    )
   })
 })
 

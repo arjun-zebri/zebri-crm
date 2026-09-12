@@ -34,7 +34,7 @@ import StarterKit from '@tiptap/starter-kit'
 import sanitizeHtml from 'sanitize-html'
 
 import { extractTokens, resolveVariable, variableLabel } from '@/lib/automations/variables'
-import { ContractListStyles } from '@/lib/contracts/list-styles'
+import { ContractListItem, ContractListStyles } from '@/lib/contracts/list-styles'
 import type { RunContext } from '@/types/automations'
 
 import { renderSignatureHtml } from './signature'
@@ -195,7 +195,10 @@ const CHIP_CLASS = 'inline-block rounded-control bg-blue-50 px-1.5 py-0.5 text-b
  */
 export function renderTemplateChips(content: JSONContent): string {
   const raw = generateHTML(content, [
-    StarterKit,
+    // The contract list item admits a heading as an item's first block;
+    // for an email template it behaves exactly like the stock one.
+    StarterKit.configure({ listItem: false }),
+    ContractListItem,
     // Contract templates may contain tables. generateHTML throws on any node
     // whose extension is absent, so the preview would fail outright without
     // this. Harmless for email templates, which have no table nodes.

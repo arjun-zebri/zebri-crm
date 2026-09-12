@@ -472,7 +472,12 @@ register the matching extension or `generateHTML` drops the content:
   (`renderTemplateChips` registers the extension too), the public
   contract page and the PDF agree. Contracts and contract templates
   only: email clients ignore `::marker` CSS, so email surfaces do not
-  offer it.
+  offer it. With `listStyles` the stock list item is swapped for
+  `ContractListItem` (`StarterKit.configure({ listItem: false })`),
+  which admits a heading as an item's first block so "1. Definitions"
+  can be a real H2; both server renders register the same item. Markers
+  follow the item's leading bold / italic and a heading item's type
+  (CSS `:has()`, see `frontend-design.md`).
 
 ## Email Templates components — `app/(dashboard)/templates/*`
 

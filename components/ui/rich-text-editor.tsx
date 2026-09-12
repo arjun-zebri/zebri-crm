@@ -20,7 +20,7 @@ import { TableHoverControls } from '@/components/ui/rich-text-table-controls'
 import { buildVariableSuggestion } from '@/components/ui/variable-suggestion'
 import { variableLabel } from '@/lib/automations/variables'
 import { CONTRACT_VARIABLES } from '@/lib/contracts/contract-variables'
-import { ContractListStyles } from '@/lib/contracts/list-styles'
+import { ContractListItem, ContractListStyles } from '@/lib/contracts/list-styles'
 import { toPlainJSON } from '@/lib/utils'
 
 /** A mergeable variable for the "Insert variable" popover. */
@@ -214,13 +214,18 @@ export function RichTextEditor({
     extensions: [
       // StarterKit v3 bundles Link; keep clicks from navigating while
       // editing (the toolbar Link button manages hrefs instead).
-      StarterKit.configure({ link: { openOnClick: false } }),
+      // With `listStyles`, the stock list item gives way to the contract one
+      // (a heading may lead an item, so "1. Definitions" can be a heading).
+      StarterKit.configure({
+        link: { openOnClick: false },
+        ...(listStyles ? { listItem: false } : {}),
+      }),
       Placeholder.configure({ placeholder }),
       mentionExtension,
       // Opt-in: a table node reaching a renderer that has not registered the
       // extension throws "Unknown node type: table" at generateHTML time.
       ...(tables ? [TableKit.configure({ table: { resizable: true } })] : []),
-      ...(listStyles ? [ContractListStyles] : []),
+      ...(listStyles ? [ContractListItem, ContractListStyles] : []),
     ],
     content: value && Object.keys(value).length > 0 ? value : { type: 'doc', content: [{ type: 'paragraph' }] },
     editable,

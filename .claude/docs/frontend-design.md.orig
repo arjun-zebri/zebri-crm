@@ -966,51 +966,6 @@ Notion-style compact toolbar in header row:
 
 ------------------------------------------------------------------------
 
-# Contract List Numbering (2026-09-12)
-
-Legal-style clause numbering on contract surfaces (contract builder body,
-contract template editor). The rich-text toolbar's Numbered list button
-becomes a split control (`ListStyleMenu`,
-`components/ui/rich-text-list-style-menu.tsx`): the icon still toggles
-the list; beside it a trigger shows the current list's glyph (`1.`, `1.1`,
-`(a)`) with a chevron, muted when the caret is not in a list. It opens a
-`MenuPanel` with two labelled groups: **Whole list**, holding the Legal
-preset (`1.` / `1.1` / `(a)` / `(i)`), and **This level**, the eight
-formats each row leading with its first marker: `1.` · `1.1` · `a.` ·
-`(a)` · `A.` · `i.` · `(i)` · `I.`. The row in effect is `selected`.
-
-- The preset is one attribute on the outermost list and numbers by depth,
-  so a sub-list made later with Tab is right without another pick. A
-  per-level format applies to the one list under the caret and overrides
-  the preset there. Nested lists are their own `<ol>`.
-- Typing a first marker at the start of a line (`a. `, `(a) `, `A. `,
-  `i. `, `(i) `, `I. `, `1.1 `) starts a list in that format, as Word's
-  automatic lists do; `1. ` stays the plain list.
-- Rendering is CSS only: `ol[data-list-style="…"] > li::marker { content: … }`
-  and `:where(ol[data-list-scheme="legal"] ol …) > li::marker` in
-  `globals.css`, keyed on the attributes rather than any wrapper class, so
-  every surface that shows contract HTML (editor, builder preview, template
-  preview, public page, PDF) draws the same marker. `1.1` uses
-  `counters(list-item, ".")`, which the browser scopes per `<ol>`, and keeps
-  the plain `1.` at the top level. The scheme rules carry no specificity so
-  a per-list format wins.
-- Numbered markers take the body text colour (`--cc-body-color`) so a
-  clause number reads with its clause; bullet dots keep the muted grey.
-  The format rules themselves only set `content`.
-- The marker follows the styling the item's text starts with: an item
-  whose first inline is bold or italic gets a bold or italic number
-  (`li:has(> :first-child > strong:first-child)::marker`, one level of
-  mark nesting covered). A `::marker` never inherits from a `<strong>`
-  inside the item, hence the `:has()`.
-- A list item may be a heading (`ContractListItem` admits `heading` as
-  the first block, so H1/H2/H3 work inside a list). The marker then
-  takes the heading's font, weight, size and colour, the heading drops
-  its top margin (it would push the title below its number) and the item
-  carries `1rem` of clause spacing instead.
-- Rendered live on `/design-system` under Editors and pickers.
-
-------------------------------------------------------------------------
-
 # Inputs
 
 border border-gray-200\

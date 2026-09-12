@@ -78,6 +78,20 @@ describe('RichTextEditor numbering format picker', () => {
     })
   })
 
+  it('turns a list item into a heading from the toolbar', async () => {
+    // "1. Definitions" as a real heading. Stock StarterKit list items only
+    // admit a paragraph first, so H2 used to do nothing inside a list.
+    const onChange = vi.fn()
+    render(<RichTextEditor value={listDoc} onChange={onChange} listStyles />)
+    await userEvent.click(await screen.findByTitle('Heading 2'))
+
+    await waitFor(() => {
+      const emitted = lastEmitted(onChange)
+      expect(emitted).toContain('"listItem"')
+      expect(emitted).toContain('"heading"')
+    })
+  })
+
   it('starts a numbered list when a format is picked outside one', async () => {
     const onChange = vi.fn()
     render(<RichTextEditor value={paragraphDoc} onChange={onChange} listStyles />)

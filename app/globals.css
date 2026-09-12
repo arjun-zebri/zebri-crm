@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /* ────────────────────────────────────────────────────────────────────
    Design tokens (Phase 0.5)
@@ -22,32 +22,24 @@
   --card: #ffffff;
 
   /* Text */
-  --text: #111827; /* gray-900 */
-  --text-muted: #6b7280; /* gray-500 */
+  --text: #111827;        /* gray-900 */
+  --text-muted: #6b7280;  /* gray-500 */
   --text-subtle: #9ca3af; /* gray-400 */
   --text-inverse: #ffffff;
 
   /* Borders */
-  --border: #e5e7eb; /* gray-200 */
+  --border: #e5e7eb;        /* gray-200 */
   --border-strong: #d1d5db; /* gray-300 */
 
   /* Brand (monochrome) */
   --brand-fg: #000000;
   --brand-bg: #ffffff;
 
-  /* The ground behind a video tile, and the tile itself while a camera
-     is off. Near-black on purpose: a tile is a window onto a room, and a
-     light grey rectangle beside a real camera feed reads as a broken
-     image rather than as a camera that is off. It is the one surface in
-     the app that is dark in a light theme, which is why it is its own
-     token rather than a surface tier. */
-  --call-tile: #1c1c1c;
-
   /* Semantic states */
   --success: #059669; /* emerald-600 */
-  --danger: #dc2626; /* red-600 */
+  --danger:  #dc2626; /* red-600 */
   --warning: #f59e0b; /* amber-500 */
-  --info: #2563eb; /* blue-600 */
+  --info:    #2563eb; /* blue-600 */
 
   color-scheme: light;
 }
@@ -68,12 +60,6 @@
      animation-delay elapses, which is what makes the staggered entrance
      read. */
   --animate-tile-in: tile-in 2000ms ease-in-out backwards;
-  /* The bar of a step that is running. The pipeline steps have no
-     measurable progress inside them, so nothing here claims a
-     percentage: a short segment sweeps the track to say "still working",
-     which is the honest signal and the one that stops a slow step
-     reading as a frozen page. */
-  --animate-progress-sweep: progress-sweep 1600ms ease-in-out infinite;
 
   /* Colour utilities reference the runtime CSS vars above so the same
      class name resolves to the right value per theme automatically. */
@@ -81,7 +67,6 @@
   --color-surface-muted: var(--surface-muted);
   --color-surface-emphasis: var(--surface-emphasis);
   --color-card: var(--card);
-  --color-call-tile: var(--call-tile);
 
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
@@ -107,7 +92,7 @@
      collapsing to one corner value is simpler to hold than a scale
      nobody was following. */
   --radius-control: 0.375rem; /* 6px — everything with corners */
-  --radius-pill: 9999px; /* pills, chips, avatars, dots */
+  --radius-pill:    9999px;   /* pills, chips, avatars, dots */
 
   /* Typography. Three sizes, each carrying its own line-height: without
      the `--line-height` half a token sets only a font-size and inherits
@@ -115,7 +100,7 @@
      class it replaced. The ratios below are exactly Tailwind's. */
   --text-display: 1.875rem; /* page titles  (≡ text-3xl + font-semibold) */
   --text-display--line-height: calc(2.25 / 1.875);
-  --text-section: 1.25rem; /* section titles (≡ text-xl + font-semibold) */
+  --text-section: 1.25rem;  /* section titles (≡ text-xl + font-semibold) */
   --text-section--line-height: calc(1.75 / 1.25);
   /* One body size. `--text-caption` (12px) was removed on 2026-08-07:
      captions, labels, helper text and dense control chrome now render at
@@ -124,7 +109,7 @@
      Dropped from 14px to 13px on 2026-08-16 (the app chrome read too
      large next to the 13px sidebar; 13px won). Leading stays at 20px so
      every control, row and toolbar keeps its exact height. */
-  --text-body: 0.8125rem; /* body, captions, labels, controls */
+  --text-body:    0.8125rem; /* body, captions, labels, controls */
   --text-body--line-height: calc(1.25 / 0.8125);
 }
 
@@ -163,12 +148,8 @@
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes modal-in {
@@ -202,15 +183,6 @@
   }
 }
 
-@keyframes progress-sweep {
-  from {
-    transform: translateX(-110%);
-  }
-  to {
-    transform: translateX(320%);
-  }
-}
-
 @keyframes tile-in {
   from {
     opacity: 0;
@@ -223,15 +195,9 @@
 /* Brief glow used by the branding editor to surface which blocks a brand-kit
    change just affected. Triggered by adding the .zb-token-flash class. */
 @keyframes zb-token-flash {
-  0% {
-    box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
-  }
-  20% {
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
-  }
+  0%   { box-shadow: 0 0 0 0 rgba(15, 23, 42, 0); }
+  20%  { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
 }
 .zb-token-flash {
   animation: zb-token-flash 900ms ease-out;
@@ -278,7 +244,7 @@
 .contract-content h1,
 .contract-content .ProseMirror h1 {
   font-family: var(--cc-subheading-font, inherit);
-  font-size: var(--cc-subheading-size, 1.5rem) !important;
+  font-size: var(--cc-subheading-size,1.5rem) !important;
   font-weight: var(--cc-subheading-weight, 600) !important;
   line-height: 1.3 !important;
   color: var(--cc-subheading-color, #111827) !important;
@@ -288,7 +254,7 @@
 .contract-content h2,
 .contract-content .ProseMirror h2 {
   font-family: var(--cc-subheading-font, inherit);
-  font-size: var(--cc-subheading-size, 1.125rem) !important;
+  font-size: var(--cc-subheading-size,1.125rem) !important;
   font-weight: var(--cc-subheading-weight, 600) !important;
   line-height: 1.4 !important;
   color: var(--cc-subheading-color, #111827) !important;
@@ -298,7 +264,7 @@
 .contract-content h3,
 .contract-content .ProseMirror h3 {
   font-family: var(--cc-subheading-font, inherit);
-  font-size: var(--cc-subheading-size, 1rem) !important;
+  font-size: var(--cc-subheading-size,1rem) !important;
   font-weight: var(--cc-subheading-weight, 600) !important;
   line-height: 1.4 !important;
   color: var(--cc-subheading-color, #111827) !important;
@@ -350,9 +316,7 @@
   display: list-item !important;
 }
 .contract-content li::marker,
-.contract-content .ProseMirror li::marker {
-  color: #9ca3af;
-}
+.contract-content .ProseMirror li::marker { color: #9ca3af; }
 /* Clause numbers read as part of the clause, so they take the body colour;
    only bullet dots stay muted. Grey `1.1` / `(a)` markers were hard to read
    against the text they number. */
@@ -360,10 +324,49 @@
 .contract-content .ProseMirror ol > li::marker {
   color: var(--cc-body-color, #374151);
 }
-.contract-content li > p,
-.contract-content .ProseMirror li > p {
-  margin: 0 !important;
+/* The marker follows the styling the item's text starts with. A `::marker`
+   only inherits from the `<li>`, never from a `<strong>` inside it, so a
+   bolded clause kept a regular-weight number. `:has()` looks at the first
+   inline of the item's first block (one level of mark nesting covered, for
+   bold inside italic). Matches the `strong` / `em` rules below. */
+.contract-content li:has(> :first-child > strong:first-child)::marker,
+.contract-content li:has(> :first-child > :first-child > strong:first-child)::marker {
+  font-weight: 600;
+  color: #111827;
 }
+.contract-content li:has(> :first-child > em:first-child)::marker,
+.contract-content li:has(> :first-child > :first-child > em:first-child)::marker {
+  font-style: italic;
+}
+/* A heading as a list item ("1. Definitions"). The marker takes the heading's
+   size, weight and colour so the number reads as part of the title; the
+   heading's own top margin is dropped, since it would push the title below
+   its number, and the item carries the clause spacing instead. */
+.contract-content li > h1,
+.contract-content li > h2,
+.contract-content li > h3,
+.contract-content .ProseMirror li > h1,
+.contract-content .ProseMirror li > h2,
+.contract-content .ProseMirror li > h3 {
+  margin: 0 0 0.25rem !important;
+}
+.contract-content li:has(> h1:first-child),
+.contract-content li:has(> h2:first-child),
+.contract-content li:has(> h3:first-child) {
+  margin-top: 1rem;
+}
+.contract-content li:has(> h1:first-child)::marker,
+.contract-content li:has(> h2:first-child)::marker,
+.contract-content li:has(> h3:first-child)::marker {
+  font-family: var(--cc-subheading-font, inherit);
+  font-weight: var(--cc-subheading-weight, 600);
+  color: var(--cc-subheading-color, #111827);
+}
+.contract-content li:has(> h1:first-child)::marker { font-size: var(--cc-subheading-size, 1.5rem); }
+.contract-content li:has(> h2:first-child)::marker { font-size: var(--cc-subheading-size, 1.125rem); }
+.contract-content li:has(> h3:first-child)::marker { font-size: var(--cc-subheading-size, 1rem); }
+.contract-content li > p,
+.contract-content .ProseMirror li > p { margin: 0 !important; }
 
 /* Contract LIST NUMBERING FORMATS. The editor stores a `listStyle` attribute
    on each ordered list (see lib/contracts/list-styles.ts) that reaches the
@@ -436,18 +439,11 @@ ol[data-list-style="decimal-outline"] > li::marker {
 .contract-content li > p + ul,
 .contract-content li > p + ol,
 .contract-content .ProseMirror li > p + ul,
-.contract-content .ProseMirror li > p + ol {
-  margin-top: 0.25rem !important;
-}
+.contract-content .ProseMirror li > p + ol { margin-top: 0.25rem !important; }
 .contract-content strong,
-.contract-content .ProseMirror strong {
-  font-weight: 600;
-  color: #111827;
-}
+.contract-content .ProseMirror strong { font-weight: 600; color: #111827; }
 .contract-content em,
-.contract-content .ProseMirror em {
-  font-style: italic;
-}
+.contract-content .ProseMirror em { font-style: italic; }
 .contract-content blockquote,
 .contract-content .ProseMirror blockquote {
   border-left: 3px solid #e5e7eb;
@@ -457,16 +453,9 @@ ol[data-list-style="decimal-outline"] > li::marker {
   font-style: italic;
 }
 .contract-content a,
-.contract-content .ProseMirror a {
-  color: #2563eb;
-  text-decoration: underline;
-}
+.contract-content .ProseMirror a { color: #2563eb; text-decoration: underline; }
 .contract-content hr,
-.contract-content .ProseMirror hr {
-  margin: 1.25rem 0;
-  border: 0;
-  border-top: 1px solid #e5e7eb;
-}
+.contract-content .ProseMirror hr { margin: 1.25rem 0; border: 0; border-top: 1px solid #e5e7eb; }
 
 /* Contract-body TABLES. Same rules serve the editor (.ProseMirror), the live
    preview, the public /contract/[token] page and the printed PDF, so a fee
@@ -502,16 +491,11 @@ ol[data-list-style="decimal-outline"] > li::marker {
 .contract-content th > p,
 .contract-content td > p,
 .contract-content .ProseMirror th > p,
-.contract-content .ProseMirror td > p {
-  margin: 0 !important;
-}
+.contract-content .ProseMirror td > p { margin: 0 !important; }
 
 /* A wide fee table must scroll inside its own box rather than forcing the
    whole page sideways on a phone. */
-.contract-content .tableWrapper {
-  overflow-x: auto;
-  max-width: 100%;
-}
+.contract-content .tableWrapper { overflow-x: auto; max-width: 100%; }
 
 /* Column-resize affordance, editor only. */
 .contract-content .ProseMirror .column-resize-handle {
@@ -523,9 +507,7 @@ ol[data-list-style="decimal-outline"] > li::marker {
   background: #93c5fd;
   pointer-events: none;
 }
-.contract-content .ProseMirror.resize-cursor {
-  cursor: col-resize;
-}
+.contract-content .ProseMirror.resize-cursor { cursor: col-resize; }
 .contract-content .ProseMirror .selectedCell::after {
   content: '';
   position: absolute;
@@ -536,19 +518,15 @@ ol[data-list-style="decimal-outline"] > li::marker {
 
 /* Keep rows off page breaks in the printed contract. */
 @media print {
-  .contract-content tr {
-    page-break-inside: avoid;
-  }
-  .contract-content thead {
-    display: table-header-group;
-  }
+  .contract-content tr { page-break-inside: avoid; }
+  .contract-content thead { display: table-header-group; }
 }
 
 /* Always-visible thin scrollbar */
 .scrollbar-thin {
   overflow-y: scroll !important;
   scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
+  scrollbar-color: #D1D5DB transparent;
 }
 .scrollbar-thin::-webkit-scrollbar {
   width: 4px;
@@ -558,7 +536,7 @@ ol[data-list-style="decimal-outline"] > li::marker {
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
+  background-color: #D1D5DB;
   border-radius: 9999px;
   min-height: 20px;
 }
@@ -570,7 +548,7 @@ ol[data-list-style="decimal-outline"] > li::marker {
   transition: scrollbar-color 200ms ease;
 }
 .scrollbar-hover:hover {
-  scrollbar-color: #e5e7eb transparent;
+  scrollbar-color: #E5E7EB transparent;
 }
 .scrollbar-hover::-webkit-scrollbar {
   width: 4px;
@@ -586,24 +564,22 @@ ol[data-list-style="decimal-outline"] > li::marker {
   transition: background-color 200ms ease;
 }
 .scrollbar-hover:hover::-webkit-scrollbar-thumb {
-  background-color: #e5e7eb;
+  background-color: #E5E7EB;
 }
 .scrollbar-hover:hover::-webkit-scrollbar-thumb:hover {
-  background-color: #d1d5db;
+  background-color: #D1D5DB;
 }
 
 /* Editable text affordance — every InlineText inside a selected block gets a faint mint wash, so users can spot what's editable at a glance. Intensifies on hover. Clears on focus (active editing). */
 [data-selected] [data-inline-text] {
-  background-color: rgba(52, 211, 153, 0.1);
+  background-color: rgba(52, 211, 153, 0.10);
   border-radius: 3px;
-  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.1);
-  transition:
-    background-color 120ms ease,
-    box-shadow 120ms ease;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.10);
+  transition: background-color 120ms ease, box-shadow 120ms ease;
 }
 [data-selected] [data-inline-text]:hover {
-  background-color: rgba(52, 211, 153, 0.2);
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+  background-color: rgba(52, 211, 153, 0.20);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.20);
 }
 [data-selected] [data-inline-text]:focus {
   background-color: transparent !important;
@@ -618,73 +594,25 @@ ol[data-list-style="decimal-outline"] > li::marker {
    set inline on the wrapper (the script's chosen face plus CJK fallbacks);
    per-selection font-family / size / colour marks are inline `style` on
    spans, so nothing here is `!important`. */
-.script-document {
-  line-height: 1.6;
-}
+.script-document { line-height: 1.6; }
 /* The editor's base size; the toolbar's size readout shows 16 for unmarked text. */
-.script-document .ProseMirror {
-  font-size: 16px;
-}
-.script-document h1 {
-  font-size: 1.75em;
-  font-weight: 600;
-  line-height: 1.25;
-  margin: 1.2em 0 0.5em;
-}
-.script-document h2 {
-  font-size: 1.375em;
-  font-weight: 600;
-  line-height: 1.3;
-  margin: 1.2em 0 0.4em;
-}
-.script-document h3 {
-  font-size: 1.125em;
-  font-weight: 600;
-  line-height: 1.35;
-  margin: 1em 0 0.3em;
-}
+.script-document .ProseMirror { font-size: 16px; }
+.script-document h1 { font-size: 1.75em; font-weight: 600; line-height: 1.25; margin: 1.2em 0 0.5em; }
+.script-document h2 { font-size: 1.375em; font-weight: 600; line-height: 1.3; margin: 1.2em 0 0.4em; }
+.script-document h3 { font-size: 1.125em; font-weight: 600; line-height: 1.35; margin: 1em 0 0.3em; }
 .script-document h1:first-child,
 .script-document h2:first-child,
 .script-document h3:first-child,
-.script-document .ProseMirror > :first-child {
-  margin-top: 0;
-}
-.script-document p {
-  margin: 0 0 0.75em;
-}
-.script-document ul {
-  list-style: disc;
-  margin: 0.5em 0 0.75em 1.5em;
-}
-.script-document ol {
-  list-style: decimal;
-  margin: 0.5em 0 0.75em 1.5em;
-}
-.script-document li {
-  margin: 0.2em 0;
-}
-.script-document li > p {
-  margin: 0;
-}
-.script-document strong {
-  font-weight: 600;
-}
-.script-document em {
-  font-style: italic;
-}
-.script-document u {
-  text-decoration: underline;
-}
-.script-document mark {
-  padding: 0 0.1em;
-  border-radius: 2px;
-}
-.script-document a {
-  text-decoration: underline;
-}
+.script-document .ProseMirror > :first-child { margin-top: 0; }
+.script-document p { margin: 0 0 0.75em; }
+.script-document ul { list-style: disc; margin: 0.5em 0 0.75em 1.5em; }
+.script-document ol { list-style: decimal; margin: 0.5em 0 0.75em 1.5em; }
+.script-document li { margin: 0.2em 0; }
+.script-document li > p { margin: 0; }
+.script-document strong { font-weight: 600; }
+.script-document em { font-style: italic; }
+.script-document u { text-decoration: underline; }
+.script-document mark { padding: 0 0.1em; border-radius: 2px; }
+.script-document a { text-decoration: underline; }
 /* A page break outside the editor is a hairline on screen and a real break in print. */
-.script-document hr[data-page-break] {
-  border: 0;
-  border-top: 1px dashed var(--color-border-strong, #d1d5db);
-  margin: 1.5em 0;
-}
+.script-document hr[data-page-break] { border: 0; border-top: 1px dashed var(--color-border-strong, #d1d5db); margin: 1.5em 0; }
