@@ -136,6 +136,30 @@ export function effectiveListStyle(state: EditorState): string | null {
  */
 export const ContractListItem = ListItem.extend({
   content: '(paragraph | heading) block*',
+
+  addKeyboardShortcuts() {
+    return {
+      ...this.parent?.(),
+      // Enter at the end of a heading item starts the next item as a heading
+      // of the same level, so clause titles run on ("1. Definitions", Enter,
+      // "2. Services") without re-styling each one. `splitListItem` alone
+      // gives the new item the schema's default block, a paragraph. Mid-title
+      // it already splits into two headings, and an empty item still lifts
+      // out of the list, so only the end-of-title case is special.
+      Enter: () => {
+        const { $from, empty } = this.editor.state.selection
+        const block = $from.parent
+        const atEnd = empty && $from.parentOffset === block.content.size
+        const continueHeading = block.type.name === 'heading' && block.content.size > 0 && atEnd
+        if (!continueHeading) return this.editor.commands.splitListItem(this.name)
+        return this.editor
+          .chain()
+          .splitListItem(this.name)
+          .setNode('heading', block.attrs)
+          .run()
+      },
+    }
+  },
 })
 
 /** The scheme on the outermost list around the caret, or null. */

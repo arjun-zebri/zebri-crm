@@ -990,10 +990,14 @@ formats each row leading with its first marker: `1.` · `1.1` · `a.` ·
   and `:where(ol[data-list-scheme="legal"] ol …) > li::marker` in
   `globals.css`, keyed on the attributes rather than any wrapper class, so
   every surface that shows contract HTML (editor, builder preview, template
-  preview, public page, PDF) draws the same marker. `1.1` uses
-  `counters(list-item, ".")`, which the browser scopes per `<ol>`, and keeps
-  the plain `1.` at the top level. The scheme rules carry no specificity so
-  a per-list format wins.
+  preview, public page, PDF) draws the same marker. `1.1` composes one
+  named counter per depth (`zc1` … `zc4`, reset on every `<ol>` and
+  incremented on its items) with plain `counter()`, and keeps the plain
+  `1.` at the top level. Not `counters(list-item, ".")`: inside a size
+  container (the branded card is `@container/doc`) Chrome resolves that
+  with a phantom extra level, so the preview and public page showed
+  `1.1.1` for the editor's `1.1`. The scheme rules carry no specificity
+  so a per-list format wins.
 - Numbered markers take the body text colour (`--cc-body-color`) so a
   clause number reads with its clause; bullet dots keep the muted grey.
   The format rules themselves only set `content`.

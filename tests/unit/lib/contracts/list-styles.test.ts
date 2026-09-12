@@ -364,6 +364,74 @@ describe('headings inside list items', () => {
     expect(item?.content?.[0]?.type).toBe('heading')
   })
 
+  /** A one-item list whose item is the given block. */
+  function listOf(block: JSONContent): Editor {
+    const editor = new Editor({
+      extensions: [StarterKit.configure({ listItem: false }), ContractListItem, ContractListStyles],
+      content: {
+        type: 'doc',
+        content: [{ type: 'orderedList', content: [{ type: 'listItem', content: [block] }] }],
+      },
+    })
+    editors.push(editor)
+    return editor
+  }
+  const h2 = (text: string): JSONContent => ({
+    type: 'heading',
+    attrs: { level: 2 },
+    content: text ? [{ type: 'text', text }] : [],
+  })
+  const items = (editor: Editor) => json(editor).content?.[0]?.content ?? []
+  // A real keydown through the view's keymaps. Not `commands.keyboardShortcut`:
+  // that replays the captured steps through an already-advanced mapping and
+  // silently drops every step after the first.
+  const pressEnter = (editor: Editor) =>
+    editor.view.someProp('handleKeyDown', (f) =>
+      f(editor.view, new KeyboardEvent('keydown', { key: 'Enter' })),
+    )
+
+  it('keeps the heading on the next item when Enter is pressed at the end', () => {
+    // Clause titles come one after another: "1. Definitions", Enter,
+    // "2. Services". Stock behaviour gave the new item a paragraph, so every
+    // title after the first had to be re-styled.
+    const editor = listOf(h2('Definitions'))
+    editor.commands.setTextSelection(3 + 'Definitions'.length)
+    pressEnter(editor)
+    expect(items(editor)).toHaveLength(2)
+    expect(items(editor)[1]?.content?.[0]?.type).toBe('heading')
+    expect(items(editor)[1]?.content?.[0]?.attrs?.level).toBe(2)
+  })
+
+  it('splits a heading in two when Enter is pressed mid-title', () => {
+    const editor = listOf(h2('Definitions'))
+    editor.commands.setTextSelection(3 + 'Defin'.length)
+    pressEnter(editor)
+    const [first, second] = items(editor)
+    expect(first?.content?.[0]?.type).toBe('heading')
+    expect(second?.content?.[0]?.type).toBe('heading')
+    expect(second?.content?.[0]?.content?.[0]?.text).toBe('itions')
+  })
+
+  it('still leaves the list from an empty heading item', () => {
+    // Enter on an empty item lifts out of the list, as in any list.
+    const editor = listOf(h2(''))
+    editor.commands.setTextSelection(3)
+    pressEnter(editor)
+    expect(json(editor).content?.[0]?.type).not.toBe('orderedList')
+  })
+
+  it('carries bold onto the next item', () => {
+    // TipTap's splitListItem keeps splittable marks as stored marks; pinned
+    // so a keymap change cannot silently drop it.
+    const editor = listOf({
+      type: 'paragraph',
+      content: [{ type: 'text', text: 'Fees', marks: [{ type: 'bold' }] }],
+    })
+    editor.commands.setTextSelection(3 + 'Fees'.length)
+    editor.commands.splitListItem('listItem')
+    expect(editor.state.storedMarks?.map((m) => m.type.name)).toEqual(['bold'])
+  })
+
   it('renders the heading inside the list item', () => {
     const doc: JSONContent = {
       type: 'doc',
