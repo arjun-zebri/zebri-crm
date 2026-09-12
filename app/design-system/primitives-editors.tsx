@@ -32,6 +32,41 @@ const DOC: JSONContent = {
   ],
 };
 
+/** A clause tree using three numbering formats, one per level. */
+const CLAUSES: JSONContent = {
+  type: 'doc',
+  content: [
+    {
+      type: 'orderedList',
+      content: [
+        clause('Services', [
+          clause('Master of ceremonies for the reception'),
+          clause('Coordination with the venue and vendors'),
+        ], 'decimal-outline'),
+        clause('Fees', [
+          clause('Deposit of 30% on booking', [
+            clause('by card through the invoice link'),
+            clause('by bank transfer'),
+          ], 'lower-alpha-paren'),
+          clause('Balance 14 days before the wedding'),
+        ], 'decimal-outline'),
+      ],
+    },
+  ],
+};
+
+/**
+ * One list item holding `text`, with `children` as a nested list in the
+ * given `listStyle` (each nested list carries its own format).
+ */
+function clause(text: string, children: JSONContent[] = [], listStyle?: string): JSONContent {
+  const content: JSONContent[] = [{ type: 'paragraph', content: [{ type: 'text', text }] }];
+  if (children.length > 0) {
+    content.push({ type: 'orderedList', attrs: { listStyle: listStyle ?? null }, content: children });
+  }
+  return { type: 'listItem', content };
+}
+
 /**
  * A valid, empty WAV. AudioPlayButton needs a real `src`: passing `""`
  * makes the browser re-request the whole page and React logs a warning.
@@ -48,6 +83,7 @@ const VARIABLES = [
 /** Editor primitives with their configuration variants. */
 export function PrimitivesEditors() {
   const [doc, setDoc] = useState<JSONContent>(DOC);
+  const [clauses, setClauses] = useState<JSONContent>(CLAUSES);
   const [sig, setSig] = useState<JSONContent>({ type: 'doc', content: [] });
   const [colour, setColour] = useState('#7c3aed');
   const [address, setAddress] = useState('');
@@ -55,7 +91,7 @@ export function PrimitivesEditors() {
   return (
     <>
       <Spec name="RichTextEditor" file="components/ui/rich-text-editor.tsx"
-        importPath="@/components/ui/rich-text-editor" description="TipTap-backed. Optional variable mentions, signature block and dense mode.">
+        importPath="@/components/ui/rich-text-editor" description="TipTap-backed. Optional variable mentions, signature block and dense mode. Contract surfaces add tables and the Numbering format split control beside Numbered list: its glyph shows the current list's format, the menu offers the Legal preset (1. / 1.1 / (a) / (i) by depth, one click for the whole tree) and the per-level formats. Typing a. / (a) / i. / (i) / A. / I. / 1.1 and a space at the start of a line starts a list in that format. Markers come from the global ol[data-list-style] and ol[data-list-scheme] rules in globals.css; the demo wraps the editor in .contract-content for the contract type scale.">
         <DemoGrid cols={2}>
           <Demo label="Default, with variable inserter">
             <RichTextEditor
@@ -68,6 +104,11 @@ export function PrimitivesEditors() {
           </Demo>
           <Demo label="dense, read only">
             <RichTextEditor value={doc} onChange={setDoc} dense editable={false} />
+          </Demo>
+          <Demo label="Contract: tables + numbering formats">
+            <div className="contract-content">
+              <RichTextEditor value={clauses} onChange={setClauses} tables listStyles />
+            </div>
           </Demo>
         </DemoGrid>
       </Spec>

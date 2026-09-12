@@ -1,0 +1,384 @@
+/**
+ * Numbering formats on contract lists.
+ *
+ * The format is an attribute on the ordered-list node that travels as
+ * `data-list-style` into the locked HTML, where CSS turns it into the
+ * marker. Two things can silently lose it on the way: `generateHTML`
+ * drops attributes no registered extension declares, and the sanitiser
+ * strips attributes not on its allowlist. Both are pinned here.
+ */
+import { Editor, type JSONContent } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
+import { afterEach, describe, expect, it } from 'vitest'
+
+import { buildContractVariables, renderContractHtml } from '@/lib/contracts/contract-variables'
+import {
+  CONTRACT_LIST_STYLES,
+  ContractListStyles,
+  effectiveListStyle,
+  isContractListStyle,
+} from '@/lib/contracts/list-styles'
+
+const vars = buildContractVariables({
+  couple: { name: 'Sam and Alex', email: null },
+  firstEvent: null,
+  userMeta: {},
+})
+
+function listDoc(listStyle: unknown) {
+  return {
+    type: 'doc',
+    content: [
+      {
+        type: 'orderedList',
+        attrs: { listStyle },
+        content: [
+          {
+            type: 'listItem',
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Deposit' }] }],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+describe('contract list numbering formats', () => {
+  it('offers the eight legal-style formats', () => {
+    expect(CONTRACT_LIST_STYLES.map((s) => s.id)).toEqual([
+      'decimal',
+      'decimal-outline',
+      'lower-alpha',
+      'lower-alpha-paren',
+      'upper-alpha',
+      'lower-roman',
+      'lower-roman-paren',
+      'upper-roman',
+    ])
+  })
+
+  it('recognises only catalogued ids', () => {
+    expect(isContractListStyle('lower-roman-paren')).toBe(true)
+    expect(isContractListStyle('bullet')).toBe(false)
+    expect(isContractListStyle(null)).toBe(false)
+  })
+
+  it('keeps a chosen format on the rendered list', () => {
+    const html = renderContractHtml(listDoc('lower-alpha-paren'), vars)
+    expect(html).toContain('<ol data-list-style="lower-alpha-paren">')
+    expect(html).toContain('<li><p>Deposit</p></li>')
+  })
+
+  it('drops a format that is not in the catalogue', () => {
+    // The stored JSON is user-writable, so the catalogue is the allowlist.
+    const html = renderContractHtml(listDoc('evil"><script>'), vars)
+    expect(html).not.toContain('data-list-style')
+    expect(html).toContain('<ol><li><p>Deposit</p></li></ol>')
+  })
+
+  it('renders an unstyled list exactly as before', () => {
+    const html = renderContractHtml(listDoc(null), vars)
+    expect(html).toBe('<ol><li><p>Deposit</p></li></ol>')
+  })
+})
+
+/** Outer list "Fees" holding a nested list "Card", both unstyled. */
+const nestedDoc: JSONContent = {
+  type: 'doc',
+  content: [
+    {
+      type: 'orderedList',
+      content: [
+        {
+          type: 'listItem',
+          content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'Fees' }] },
+            {
+              type: 'orderedList',
+              content: [
+                {
+                  type: 'listItem',
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Card' }] }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
+const editors: Editor[] = []
+
+/** The document as plain `JSONContent` (v3 types `getJSON()` as a node union). */
+function json(editor: Editor): JSONContent {
+  return editor.getJSON() as JSONContent
+}
+
+/** A headless editor with the caret placed inside the text `word`. */
+function editorAt(content: JSONContent, word: string) {
+  const editor = new Editor({ extensions: [StarterKit, ContractListStyles], content })
+  editors.push(editor)
+  let pos = 0
+  editor.state.doc.descendants((node, nodePos) => {
+    if (node.isText && node.text === word) pos = nodePos + 1
+  })
+  editor.commands.setTextSelection(pos)
+  return editor
+}
+
+describe('setListStyle command', () => {
+  // A live view schedules a scroll-to-selection on a timer; in jsdom that
+  // lands on `getClientRects`, which text nodes lack, after the test is over.
+  afterEach(() => {
+    editors.splice(0).forEach((e) => e.destroy())
+  })
+
+  it('styles only the list nearest the caret, not its ancestors', () => {
+    const editor = editorAt(nestedDoc, 'Card')
+    editor.commands.setListStyle('lower-alpha-paren')
+
+    const outer = json(editor).content?.[0]
+    const inner = outer?.content?.[0]?.content?.[1]
+    expect(inner?.attrs?.listStyle).toBe('lower-alpha-paren')
+    expect(outer?.attrs?.listStyle ?? null).toBeNull()
+  })
+
+  it('restyles the outer list when the caret is in it', () => {
+    const editor = editorAt(nestedDoc, 'Fees')
+    editor.commands.setListStyle('upper-alpha')
+
+    const outer = json(editor).content?.[0]
+    const inner = outer?.content?.[0]?.content?.[1]
+    expect(outer?.attrs?.listStyle).toBe('upper-alpha')
+    expect(inner?.attrs?.listStyle ?? null).toBeNull()
+  })
+
+  it('stores the default format as no attribute', () => {
+    const editor = editorAt(listDoc('lower-roman'), 'Deposit')
+    editor.commands.setListStyle('decimal')
+    expect(json(editor).content?.[0]?.attrs?.listStyle ?? null).toBeNull()
+  })
+
+  it('starts a numbered list when the caret is not in one', () => {
+    const editor = editorAt(
+      { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Plain' }] }] },
+      'Plain',
+    )
+    editor.commands.setListStyle('lower-roman-paren')
+    const list = json(editor).content?.[0]
+    expect(list?.type).toBe('orderedList')
+    expect(list?.attrs?.listStyle).toBe('lower-roman-paren')
+  })
+})
+
+/** Type `text` one character at a time so input rules fire as they would for a keyboard. */
+function type(editor: Editor, text: string) {
+  for (const ch of text) {
+    const { from, to } = editor.state.selection
+    const insert = () => editor.state.tr.insertText(ch, from, to)
+    const handled = editor.view.someProp('handleTextInput', (f) =>
+      f(editor.view, from, to, ch, insert),
+    )
+    if (!handled) editor.view.dispatch(insert())
+  }
+}
+
+describe('autoformat by typing a marker at the start of a line', () => {
+  afterEach(() => {
+    editors.splice(0).forEach((e) => e.destroy())
+  })
+
+  const empty: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] }
+
+  it.each([
+    ['a. ', 'lower-alpha'],
+    ['(a) ', 'lower-alpha-paren'],
+    ['A. ', 'upper-alpha'],
+    ['i. ', 'lower-roman'],
+    ['(i) ', 'lower-roman-paren'],
+    ['I. ', 'upper-roman'],
+    ['1.1 ', 'decimal-outline'],
+  ])('"%s" starts a list in the %s format', (marker, style) => {
+    const editor = new Editor({ extensions: [StarterKit, ContractListStyles], content: empty })
+    editors.push(editor)
+    type(editor, marker)
+    const list = json(editor).content?.[0]
+    expect(list?.type).toBe('orderedList')
+    expect(list?.attrs?.listStyle).toBe(style)
+    // The marker itself is consumed, as with Word's automatic lists.
+    expect(editor.state.doc.textContent).toBe('')
+  })
+
+  it('leaves "1. " to the built-in plain numbered list', () => {
+    const editor = new Editor({ extensions: [StarterKit, ContractListStyles], content: empty })
+    editors.push(editor)
+    type(editor, '1. ')
+    const list = json(editor).content?.[0]
+    expect(list?.type).toBe('orderedList')
+    expect(list?.attrs?.listStyle ?? null).toBeNull()
+  })
+
+  it('starts its own list after a differently numbered one, rather than joining it', () => {
+    // ProseMirror's wrapping rule merges a new list into a same-type
+    // neighbour, which turned "(a) " typed under a `1.` list into item 3.
+    const editor = new Editor({
+      extensions: [StarterKit, ContractListStyles],
+      content: {
+        type: 'doc',
+        content: [listDoc(null).content[0] as JSONContent, { type: 'paragraph' }],
+      },
+    })
+    editors.push(editor)
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1)
+    type(editor, '(a) ')
+    // StarterKit's trailingNode adds a paragraph after a closing list; only
+    // the lists matter here.
+    const lists = (json(editor).content ?? []).filter((b) => b.type === 'orderedList')
+    expect(lists).toHaveLength(2)
+    expect(lists[1]?.attrs?.listStyle).toBe('lower-alpha-paren')
+    expect(lists[0]?.attrs?.listStyle ?? null).toBeNull()
+  })
+
+  it('continues a list of the same format', () => {
+    const editor = new Editor({
+      extensions: [StarterKit, ContractListStyles],
+      content: {
+        type: 'doc',
+        content: [listDoc('lower-alpha-paren').content[0] as JSONContent, { type: 'paragraph' }],
+      },
+    })
+    editors.push(editor)
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1)
+    type(editor, '(a) ')
+    const lists = (json(editor).content ?? []).filter((b) => b.type === 'orderedList')
+    expect(lists).toHaveLength(1)
+    expect(lists[0]?.content).toHaveLength(2)
+  })
+
+  it('does not fire mid-sentence', () => {
+    const editor = new Editor({ extensions: [StarterKit, ContractListStyles], content: empty })
+    editors.push(editor)
+    type(editor, 'see clause (a) ')
+    expect(json(editor).content?.[0]?.type).toBe('paragraph')
+  })
+})
+
+/** Three levels deep, no formats set: "Fees" > "Deposit" > "Card". */
+const threeDeep: JSONContent = {
+  type: 'doc',
+  content: [
+    {
+      type: 'orderedList',
+      content: [
+        {
+          type: 'listItem',
+          content: [
+            { type: 'paragraph', content: [{ type: 'text', text: 'Fees' }] },
+            {
+              type: 'orderedList',
+              attrs: { listStyle: 'upper-alpha' },
+              content: [
+                {
+                  type: 'listItem',
+                  content: [
+                    { type: 'paragraph', content: [{ type: 'text', text: 'Deposit' }] },
+                    {
+                      type: 'orderedList',
+                      content: [
+                        {
+                          type: 'listItem',
+                          content: [
+                            { type: 'paragraph', content: [{ type: 'text', text: 'Card' }] },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
+describe('the Legal scheme', () => {
+  afterEach(() => {
+    editors.splice(0).forEach((e) => e.destroy())
+  })
+
+  it('is set on the outermost list from anywhere inside it, clearing per-list formats', () => {
+    const editor = editorAt(threeDeep, 'Card')
+    editor.commands.setListScheme('legal')
+
+    const root = json(editor).content?.[0]
+    const level2 = root?.content?.[0]?.content?.[1]
+    expect(root?.attrs?.listScheme).toBe('legal')
+    // The scheme owns every level; the old `A.` override would fight it.
+    expect(level2?.attrs?.listStyle ?? null).toBeNull()
+  })
+
+  it('is cleared by setting it to null', () => {
+    const editor = editorAt(threeDeep, 'Fees')
+    editor.commands.setListScheme('legal')
+    editor.commands.setListScheme(null)
+    expect(json(editor).content?.[0]?.attrs?.listScheme ?? null).toBeNull()
+  })
+
+  it('reaches the rendered list and survives the sanitiser', () => {
+    const editor = editorAt(threeDeep, 'Fees')
+    editor.commands.setListScheme('legal')
+    const html = renderContractHtml(json(editor), vars)
+    expect(html).toContain('<ol data-list-scheme="legal">')
+  })
+
+  it('drops a scheme that is not known', () => {
+    const doc = { ...listDoc(null), content: [{ ...listDoc(null).content[0], attrs: { listScheme: 'x' } }] }
+    expect(renderContractHtml(doc as JSONContent, vars)).not.toContain('data-list-scheme')
+  })
+})
+
+describe('effectiveListStyle', () => {
+  afterEach(() => {
+    editors.splice(0).forEach((e) => e.destroy())
+  })
+
+  it('is null outside a list', () => {
+    const editor = editorAt(
+      { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Plain' }] }] },
+      'Plain',
+    )
+    expect(effectiveListStyle(editor.state)).toBeNull()
+  })
+
+  it('is decimal for an unstyled list with no scheme', () => {
+    const editor = editorAt(nestedDoc, 'Card')
+    expect(effectiveListStyle(editor.state)).toBe('decimal')
+  })
+
+  it('reports a per-list format', () => {
+    const editor = editorAt(threeDeep, 'Deposit')
+    expect(effectiveListStyle(editor.state)).toBe('upper-alpha')
+  })
+
+  it('follows the Legal scheme by depth when the list has no format of its own', () => {
+    const editor = editorAt(threeDeep, 'Card')
+    editor.commands.setListScheme('legal')
+    expect(effectiveListStyle(editor.state)).toBe('lower-alpha-paren')
+    editorAt(threeDeep, 'Deposit')
+    const e2 = editors[editors.length - 1] as Editor
+    e2.commands.setListScheme('legal')
+    expect(effectiveListStyle(e2.state)).toBe('decimal-outline')
+  })
+
+  it('lets a per-list format override the scheme', () => {
+    const editor = editorAt(threeDeep, 'Card')
+    editor.commands.setListScheme('legal')
+    editor.commands.setListStyle('upper-roman')
+    expect(effectiveListStyle(editor.state)).toBe('upper-roman')
+  })
+})

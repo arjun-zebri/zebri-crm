@@ -6,6 +6,7 @@ import StarterKit from '@tiptap/starter-kit'
 import sanitizeHtml from 'sanitize-html'
 
 import { resolveVendorRole } from '@/lib/branding/vendor-role'
+import { ContractListStyles } from '@/lib/contracts/list-styles'
 import { coupleDisplayName } from '@/lib/couples/display-name'
 
 export interface ContractVariable {
@@ -181,6 +182,9 @@ export function renderContractHtml(contentJson: JSONContent, vars: ContractVaria
   const raw = generateHTML(substituted, [
     StarterKit,
     TableKit,
+    // Same reason as TableKit: an attribute no extension declares is dropped,
+    // and every list in the locked snapshot would silently revert to decimal.
+    ContractListStyles,
     Mention.configure({
       HTMLAttributes: { class: 'inline-block rounded-control bg-surface-emphasis px-1.5 py-0.5 text-body' },
     }),
@@ -199,6 +203,9 @@ export function renderContractHtml(contentJson: JSONContent, vars: ContractVaria
       td: ['colspan', 'rowspan', 'colwidth'],
       th: ['colspan', 'rowspan', 'colwidth'],
       col: ['width', 'span'],
+      // The numbering format and whole-tree scheme; the CSS marker rules key
+      // off them.
+      ol: ['data-list-style', 'data-list-scheme'],
     },
   })
 }

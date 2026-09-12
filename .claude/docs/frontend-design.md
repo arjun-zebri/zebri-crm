@@ -21,6 +21,17 @@ Regenerate after any sweep so the page reports today's reality:
 npm run design-system:audit
 ```
 
+The Primitives section is split by group (`app/design-system/
+primitives-*.tsx`, registered in `section-primitives.tsx`): layout, form
+controls, feedback, overlays, editors and pickers, and **call**
+(`primitives-call.tsx`): the five shared building blocks the video
+meeting surfaces are composed from (`VideoTile`, `CallControlBar`,
+`CallDock`, `ConsentPanel`, `PipelineStatusChip`; see
+`component-library.md` for the full props). All five are presentational,
+so the section renders every toggle combination, both video-tile sizes,
+and every `MeetingStatus` / `MeetingPipelineStep` chip with no call
+actually in progress.
+
 ### Radius: two tokens only
 
 ```
@@ -131,6 +142,56 @@ layering as the `cursor: pointer` button rule), so a deliberate
 `resize-y` utility on a call site still wins if a genuinely resizable
 surface ever turns up.
 
+**One dark surface: the video tile** (2026-09-09, `--call-tile`,
+`bg-call-tile`). Everything else in the app sits on a light surface tier,
+but a video tile is a window onto a room: a pale grey rectangle beside a
+real camera feed reads as a broken image rather than as a camera that is
+off, and a light name badge disappears against a bright wall. `VideoTile`
+uses it for the tile and for its monospace name badge, and the lobby
+preview uses it as the ground behind the camera. It is deliberately not a
+surface tier, so nothing else picks it up by accident.
+
+**`CallControlBar` takes `endVariant`** (2026-09-09). `'solid'` is the
+MC's End call, filled red, the loudest thing on their screen because
+ending the call is final and theirs to do. `'outline'` is the couple's
+Leave: same red, drawn as an outline, because leaving is ordinary and
+their screen should not be dominated by it.
+
+**`ConsentPanel` takes a `preview` slot** (2026-09-09). With one, it
+renders as a two-column lobby instead of a single card. The couple's
+pre-call screen is the last thing they see before a video call with
+someone they are paying, and a lone name field on a white page told them
+nothing about whether their camera works. The consent wording stays in
+the primitive: it is the legal surface, and it must not be reworded per
+call site.
+
+**`ConsentPanel` takes a `disclosure` slot** (2026-09-11). The consent
+copy is spec §5.5 word for word and ends in a link-styled `<button>` "How
+your call is handled" (the same treatment as `ErrorState`'s "Try again":
+it discloses in place, so it must be a button, but reads as the link the
+spec calls it). Pressing it reveals whatever the slot holds, an info
+`Callout` in practice (`app/meet/[token]/meet-disclosure.tsx`). The slot
+keeps the primitive from importing `app/`. The name field's placeholder is
+now `coupleFirstName ?? 'Your name'`, never a pre-filled value.
+
+**`Textarea` grows on request** (2026-09-09). `grow` makes the field
+fill the height its flex parent gives it instead of sizing to `rows`.
+It is for the one shape `rows` cannot express: a field that owns a
+column rather than sitting in a form, like the mid-call notes pad,
+where a fixed box leaves dead space under it and the caller cannot fix
+that from outside (the element that has to stretch is the inner
+`textarea`, not the wrapper). Everything else still picks its height
+once with `rows`.
+
+**`SectionLabel` names a region** (2026-09-08,
+`components/ui/section-label.tsx`). The uppercase, letter-spaced,
+`text-text-subtle` label above a group of rows  -  "Captured",
+"Still open", "Invite the couple". It exists because the same three
+utilities were being retyped at every call site and drifting: the
+letter-spacing in particular was arbitrary each time. It takes
+`trailing` for a count or a control on the same line, and `as` when the
+label is a real heading rather than decoration.
+
 `MenuItem` and `RowActionsMenu` keep a `size` prop, but it is a **row
 density** (padding and min-width), not a height or a type size. Menu
 rows do not sit in a line with page controls.
@@ -221,9 +282,21 @@ Known divergences the showroom still reports:
   the field is scrolled past. Arrow keys still work. Six raw `<input>`
   call sites in `components/builders/` and `branding/` carry the same
   class soup by hand; they lose it when they move onto the primitive.
+- **Proposed changes.** `ChangeRow` (`components/ui/change-row.tsx`) is
+  the row a review screen is made of: label, old value struck through,
+  arrow, new value, with a "New" or "Remove" pill for a create or a
+  removal. A conflict swaps the arrow for three named values (on the
+  call, now in Zebri, proposed), since an arrow cannot say which value
+  moved. It carries no controls of its own so the same row reads the
+  same whether it is pending, being edited, or resolved and greyed.
+- **Links that act.** `LinkButton` (`components/ui/link-button.tsx`)
+  is a Next `Link` carrying the Button's exact classes through
+  `buttonClassName`, for a navigation that is the primary action of its
+  row ("Join"). Nothing hand-rolls `bg-brand-fg h-8 px-3` on an `<a>`.
 - **Inline notes.** `Callout` (`components/ui/callout.tsx`) is the one
-  tinted note box: four tones, tonal border + `/10` fill, `text-text`
-  body. The hand-rolled amber banners in `settings/`, `calendar/` and
+  tinted note box: four semantic tones, tonal border + `/10` fill,
+  `text-text` body, plus a `neutral` tone on the muted surface for a
+  note with nothing to warn about. The hand-rolled amber banners in `settings/`, `calendar/` and
   the public booking pages predate it and should fold into it as those
   pages are next touched. A caption that only describes a field stays
   muted prose - the box is for a sentence with a consequence.
@@ -966,6 +1039,41 @@ Notion-style compact toolbar in header row:
 
 ------------------------------------------------------------------------
 
+# Contract List Numbering (2026-09-12)
+
+Legal-style clause numbering on contract surfaces (contract builder body,
+contract template editor). The rich-text toolbar's Numbered list button
+becomes a split control (`ListStyleMenu`,
+`components/ui/rich-text-list-style-menu.tsx`): the icon still toggles
+the list; beside it a trigger shows the current list's glyph (`1.`, `1.1`,
+`(a)`) with a chevron, muted when the caret is not in a list. It opens a
+`MenuPanel` with two labelled groups: **Whole list**, holding the Legal
+preset (`1.` / `1.1` / `(a)` / `(i)`), and **This level**, the eight
+formats each row leading with its first marker: `1.` · `1.1` · `a.` ·
+`(a)` · `A.` · `i.` · `(i)` · `I.`. The row in effect is `selected`.
+
+- The preset is one attribute on the outermost list and numbers by depth,
+  so a sub-list made later with Tab is right without another pick. A
+  per-level format applies to the one list under the caret and overrides
+  the preset there. Nested lists are their own `<ol>`.
+- Typing a first marker at the start of a line (`a. `, `(a) `, `A. `,
+  `i. `, `(i) `, `I. `, `1.1 `) starts a list in that format, as Word's
+  automatic lists do; `1. ` stays the plain list.
+- Rendering is CSS only: `ol[data-list-style="…"] > li::marker { content: … }`
+  and `:where(ol[data-list-scheme="legal"] ol …) > li::marker` in
+  `globals.css`, keyed on the attributes rather than any wrapper class, so
+  every surface that shows contract HTML (editor, builder preview, template
+  preview, public page, PDF) draws the same marker. `1.1` uses
+  `counters(list-item, ".")`, which the browser scopes per `<ol>`, and keeps
+  the plain `1.` at the top level. The scheme rules carry no specificity so
+  a per-list format wins.
+- Numbered markers take the body text colour (`--cc-body-color`) so a
+  clause number reads with its clause; bullet dots keep the muted grey.
+  The format rules themselves only set `content`.
+- Rendered live on `/design-system` under Editors and pickers.
+
+------------------------------------------------------------------------
+
 # Inputs
 
 border border-gray-200\
@@ -988,9 +1096,12 @@ Props:
 - `startHour` (number, default 0)  -  earliest hour to show (0-23)
 - `endHour` (number, default 23)  -  latest hour to show (0-23); generates times up to and including the final minute at this hour
 - `disabled` (boolean, default false)
+- `ariaLabel` (string, optional)  -  accessible name for the trigger when the label is laid out by the caller (the Event modal's "Ceremony time"); forwarded to `Select` as `aria-label`
 - `label` / `help` / `error` (text, optional)  -  linked to the input via `aria-describedby`
 
 Dropdown renders times as 12-hour format with AM/PM (e.g. "9:00 AM", "2:30 PM"). Never hand-roll a time dropdown; reach for TimeSelect.
+
+**A value set after mount survives inside a form.** `Select` (which TimeSelect wraps) drops the empty value Radix echoes from its hidden native `<select>` when a controlled value arrives one commit before the options have registered, which is what happens in any modal that fills its fields from a row in `useEffect`. Without the guard the Event modal's ceremony time read "Not set" for every saved event. Pinned by `tests/unit/components/ui/select.test.tsx`.
 
 ------------------------------------------------------------------------
 
