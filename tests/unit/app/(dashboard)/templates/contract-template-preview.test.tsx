@@ -45,4 +45,28 @@ describe('ContractTemplatePreview', () => {
     expect(wrapper.className).toContain('[&_td]:border')
     expect(wrapper.className).toContain('[&_table]:border-collapse')
   })
+
+  it('keeps the numbering format on a list', () => {
+    // Same failure shape as tables: without the extension registered on this
+    // render path the attribute is dropped and every clause list shows as
+    // 1. 2. 3., however the MC numbered it in the editor. The marker CSS keys
+    // off the attribute itself, so no wrapper class is needed here.
+    const doc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'orderedList',
+          attrs: { listStyle: 'lower-alpha-paren' },
+          content: [
+            {
+              type: 'listItem',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'by card' }] }],
+            },
+          ],
+        },
+      ],
+    } as never
+    const { container } = render(<ContractTemplatePreview content={doc} />)
+    expect(container.querySelector('ol')?.getAttribute('data-list-style')).toBe('lower-alpha-paren')
+  })
 })

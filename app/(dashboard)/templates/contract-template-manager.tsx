@@ -318,7 +318,7 @@ function TemplateEditor({ template, saving, onCancel, onSave }: TemplateEditorPr
         </div>
         <div>
           <label className="block text-body font-medium text-text mb-2">Content</label>
-          <RichTextEditor value={content} onChange={setContent} tables />
+          <RichTextEditor value={content} onChange={setContent} tables listStyles />
         </div>
         <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
           <Button onClick={onCancel} variant="outline">

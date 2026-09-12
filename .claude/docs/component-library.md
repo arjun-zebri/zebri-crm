@@ -443,6 +443,42 @@ the body opens the inline variable suggestion
 list built on TipTap's suggestion plugin; Enter/Tab inserts the mention
 and swallows the trigger).
 
+Opt-in extras, each gated by a prop because the surface's renderer must
+register the matching extension or `generateHTML` drops the content:
+- `tables` — Insert table button + `TableHoverControls`
+  (`rich-text-table-controls.tsx`). Contracts only.
+- `listStyles` — a split control beside the Numbered list button
+  (`rich-text-list-style-menu.tsx`): the trigger shows the glyph of the
+  list under the caret (`1.`, `1.1`, `(a)`; tracks the selection via
+  `useEditorState`) and opens the **Numbering format** menu. Top row is
+  the **Legal** preset (`1.` / `1.1` / `(a)` / `(i)` by depth, applied to
+  the outermost list; picking it again clears it), then the eight
+  per-list formats `1.`, `1.1`, `a.`, `(a)`, `A.`, `i.`, `(i)`, `I.`.
+  Backed by `lib/contracts/list-styles.ts`: `listStyle` and `listScheme`
+  attributes on `orderedList` (serialised as `data-list-style` /
+  `data-list-scheme`), the `setListStyle` command (styles only the list
+  nearest the caret, so each Tab-indented level is formatted on its own;
+  picked outside a list it starts one), `setListScheme` (sets the preset
+  on the root and clears per-list formats beneath it; a later per-list
+  pick overrides the preset for that list), `effectiveListStyle` for the
+  trigger glyph, and typing autoformats: `a. `, `(a) `, `A. `, `i. `,
+  `(i) `, `I. `, `1.1 ` at the start of a line start a list in that
+  format (first markers only, so "B. Smith" stays prose; a new list
+  only joins the previous one when it has the same format). Markers are
+  drawn by global `ol[data-list-style]` / `ol[data-list-scheme]` rules
+  in `globals.css` (`::marker` + `counter()` / `counters()`; scheme
+  depth rules sit in `:where()` so a per-list format wins), so the
+  editor, the builder preview, the read-only template preview
+  (`renderTemplateChips` registers the extension too), the public
+  contract page and the PDF agree. Contracts and contract templates
+  only: email clients ignore `::marker` CSS, so email surfaces do not
+  offer it. With `listStyles` the stock list item is swapped for
+  `ContractListItem` (`StarterKit.configure({ listItem: false })`),
+  which admits a heading as an item's first block so "1. Definitions"
+  can be a real H2; both server renders register the same item. Markers
+  follow the item's leading bold / italic and a heading item's type
+  (CSS `:has()`, see `frontend-design.md`).
+
 ## Email Templates components — `app/(dashboard)/templates/*`
 
 - `TemplatePreview` — renders subject + body through
