@@ -131,6 +131,7 @@ export function ContractBodyEditor({
         onChange={onChange}
         editable={canEdit}
         tables
+        listStyles
         scrollBody
       />
 

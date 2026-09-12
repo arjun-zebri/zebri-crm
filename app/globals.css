@@ -317,8 +317,133 @@
 }
 .contract-content li::marker,
 .contract-content .ProseMirror li::marker { color: #9ca3af; }
+/* Clause numbers read as part of the clause, so they take the body colour;
+   only bullet dots stay muted. Grey `1.1` / `(a)` markers were hard to read
+   against the text they number. */
+.contract-content ol > li::marker,
+.contract-content .ProseMirror ol > li::marker {
+  color: var(--cc-body-color, #374151);
+}
+/* The marker follows the styling the item's text starts with. A `::marker`
+   only inherits from the `<li>`, never from a `<strong>` inside it, so a
+   bolded clause kept a regular-weight number. `:has()` looks at the first
+   inline of the item's first block (one level of mark nesting covered, for
+   bold inside italic). Matches the `strong` / `em` rules below. */
+.contract-content li:has(> :first-child > strong:first-child)::marker,
+.contract-content li:has(> :first-child > :first-child > strong:first-child)::marker {
+  font-weight: 600;
+  color: #111827;
+}
+.contract-content li:has(> :first-child > em:first-child)::marker,
+.contract-content li:has(> :first-child > :first-child > em:first-child)::marker {
+  font-style: italic;
+}
+/* A heading as a list item ("1. Definitions"). The marker takes the heading's
+   size, weight and colour so the number reads as part of the title; the
+   heading's own top margin is dropped, since it would push the title below
+   its number, and the item carries the clause spacing instead. */
+.contract-content li > h1,
+.contract-content li > h2,
+.contract-content li > h3,
+.contract-content .ProseMirror li > h1,
+.contract-content .ProseMirror li > h2,
+.contract-content .ProseMirror li > h3 {
+  margin: 0 0 0.25rem !important;
+}
+.contract-content li:has(> h1:first-child),
+.contract-content li:has(> h2:first-child),
+.contract-content li:has(> h3:first-child) {
+  margin-top: 1rem;
+}
+.contract-content li:has(> h1:first-child)::marker,
+.contract-content li:has(> h2:first-child)::marker,
+.contract-content li:has(> h3:first-child)::marker {
+  font-family: var(--cc-subheading-font, inherit);
+  font-weight: var(--cc-subheading-weight, 600);
+  color: var(--cc-subheading-color, #111827);
+}
+.contract-content li:has(> h1:first-child)::marker { font-size: var(--cc-subheading-size, 1.5rem); }
+.contract-content li:has(> h2:first-child)::marker { font-size: var(--cc-subheading-size, 1.125rem); }
+.contract-content li:has(> h3:first-child)::marker { font-size: var(--cc-subheading-size, 1rem); }
 .contract-content li > p,
 .contract-content .ProseMirror li > p { margin: 0 !important; }
+
+/* Contract LIST NUMBERING FORMATS. The editor stores a `listStyle` attribute
+   on each ordered list (see lib/contracts/list-styles.ts) that reaches the
+   HTML as `data-list-style`; these rules turn it into the marker. `::marker`
+   with `content` rather than `list-style-type` because the bracketed forms
+   `(a)` / `(i)` and the `1.1` outline have no built-in type. Nested lists
+   are separate `<ol>`s, so each level carries its own format and the rules
+   only need the direct `<li>` children. Unstyled lists keep their surface's
+   decimal rule. Keyed on the attribute, not `.contract-content`, so the
+   editor, the builder preview, the template preview (which has its own type
+   scale), the public page and the PDF all agree; only contract surfaces emit
+   the attribute. */
+ol[data-list-style="lower-alpha"] > li::marker {
+  content: counter(list-item, lower-alpha) ". ";
+}
+ol[data-list-style="lower-alpha-paren"] > li::marker {
+  content: "(" counter(list-item, lower-alpha) ") ";
+}
+ol[data-list-style="upper-alpha"] > li::marker {
+  content: counter(list-item, upper-alpha) ". ";
+}
+ol[data-list-style="lower-roman"] > li::marker {
+  content: counter(list-item, lower-roman) ". ";
+}
+ol[data-list-style="lower-roman-paren"] > li::marker {
+  content: "(" counter(list-item, lower-roman) ") ";
+}
+ol[data-list-style="upper-roman"] > li::marker {
+  content: counter(list-item, upper-roman) ". ";
+}
+/* Outline numbering reads the whole ancestor chain: `2.1`, `2.1.3`. Not
+   `counters(list-item, ".")`: inside a size container (the branded card is
+   `@container/doc`) Chrome resolves that with a phantom extra level, so the
+   builder preview and the public page showed `1.1.1` for the editor's `1.1`.
+   Instead every numbered list keeps one named counter per depth and the
+   marker composes them with plain `counter()`, which was never affected.
+   Depth is the number of `<ol>` ancestors, four levels covered; the last
+   matching rule wins each property, so a depth-3 list resets only `zc3`
+   and leaves the chain above it intact. At the top level there is no parent
+   to prefix, so it keeps the plain `1.` with its full stop; nested it drops
+   the stop, as a legal clause does. (`start` on a list is not reflected.) */
+ol { counter-reset: zc1; }
+ol > li { counter-increment: zc1; }
+ol ol { counter-reset: zc2; }
+ol ol > li { counter-increment: zc2; }
+ol ol ol { counter-reset: zc3; }
+ol ol ol > li { counter-increment: zc3; }
+ol ol ol ol { counter-reset: zc4; }
+ol ol ol ol > li { counter-increment: zc4; }
+ol[data-list-style="decimal-outline"] > li::marker {
+  content: counter(zc1) ". ";
+}
+ol ol[data-list-style="decimal-outline"] > li::marker {
+  content: counter(zc1) "." counter(zc2) " ";
+}
+ol ol ol[data-list-style="decimal-outline"] > li::marker {
+  content: counter(zc1) "." counter(zc2) "." counter(zc3) " ";
+}
+ol ol ol ol[data-list-style="decimal-outline"] > li::marker {
+  content: counter(zc1) "." counter(zc2) "." counter(zc3) "." counter(zc4) " ";
+}
+/* The LEGAL SCHEME is one attribute on the outermost list that numbers every
+   level by depth: `1.` / `1.1` / `(a)` / `(i)`, and `(i)` again below that.
+   Set once, it also covers sub-lists made later with Tab, which arrive with no
+   format of their own. The selectors sit in `:where()` so they carry no
+   specificity: a `data-list-style` on any list inside the tree (rules above)
+   still wins for that list. Deeper rules come later, so on equal specificity
+   the deepest match applies. Level 1 needs no rule: it is the plain default. */
+:where(ol[data-list-scheme="legal"] ol) > li::marker {
+  content: counter(zc1) "." counter(zc2) " ";
+}
+:where(ol[data-list-scheme="legal"] ol ol) > li::marker {
+  content: "(" counter(list-item, lower-alpha) ") ";
+}
+:where(ol[data-list-scheme="legal"] ol ol ol) > li::marker {
+  content: "(" counter(list-item, lower-roman) ") ";
+}
 
 /* A blank line the MC typed with Enter, and an empty table cell, are both an
    empty `<p>` in the rendered HTML. The editor keeps them visible because

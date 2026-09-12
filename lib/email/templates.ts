@@ -34,6 +34,7 @@ import StarterKit from '@tiptap/starter-kit'
 import sanitizeHtml from 'sanitize-html'
 
 import { extractTokens, resolveVariable, variableLabel } from '@/lib/automations/variables'
+import { ContractListItem, ContractListStyles } from '@/lib/contracts/list-styles'
 import type { RunContext } from '@/types/automations'
 
 import { renderSignatureHtml } from './signature'
@@ -113,6 +114,9 @@ const SANITIZE_OPTS: sanitizeHtml.IOptions = {
     td: ['colspan', 'rowspan', 'colwidth'],
     th: ['colspan', 'rowspan', 'colwidth'],
     col: ['width', 'span'],
+    // Contract clause numbering (`lib/contracts/list-styles`), for the
+    // read-only contract-template preview. Inert in an email.
+    ol: ['data-list-style', 'data-list-scheme'],
   },
   // Keep our sentinels out of sanitiser entity-escaping by leaving
   // text alone; they're plain private-use chars, not markup.
@@ -191,11 +195,18 @@ const CHIP_CLASS = 'inline-block rounded-control bg-blue-50 px-1.5 py-0.5 text-b
  */
 export function renderTemplateChips(content: JSONContent): string {
   const raw = generateHTML(content, [
-    StarterKit,
+    // The contract list item admits a heading as an item's first block;
+    // for an email template it behaves exactly like the stock one.
+    StarterKit.configure({ listItem: false }),
+    ContractListItem,
     // Contract templates may contain tables. generateHTML throws on any node
     // whose extension is absent, so the preview would fail outright without
     // this. Harmless for email templates, which have no table nodes.
     TableKit,
+    // Likewise the clause numbering format: unregistered, the attribute is
+    // dropped and the preview shows every list as 1. 2. 3. Email templates
+    // never carry it (their editor does not offer the picker).
+    ContractListStyles,
     Mention.configure({
       HTMLAttributes: { class: CHIP_CLASS },
       renderHTML({ node }) {

@@ -15,10 +15,12 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ListStyleMenu } from '@/components/ui/rich-text-list-style-menu'
 import { TableHoverControls } from '@/components/ui/rich-text-table-controls'
 import { buildVariableSuggestion } from '@/components/ui/variable-suggestion'
 import { variableLabel } from '@/lib/automations/variables'
 import { CONTRACT_VARIABLES } from '@/lib/contracts/contract-variables'
+import { ContractListItem, ContractListStyles } from '@/lib/contracts/list-styles'
 import { toPlainJSON } from '@/lib/utils'
 
 /** A mergeable variable for the "Insert variable" popover. */
@@ -72,6 +74,14 @@ interface RichTextEditorProps {
    * (`renderContractHtml`); the email pipeline does not.
    */
   tables?: boolean
+  /**
+   * Offer legal-style numbering formats (`1.`, `1.1`, `(a)`, `(i)`) on
+   * numbered lists. Opt-in for the same reason as `tables`: the renderer must
+   * register `ContractListStyles` or the format is dropped at send time. The
+   * markers are `::marker` CSS, which email clients ignore, so email surfaces
+   * leave this off.
+   */
+  listStyles?: boolean
   /**
    * Cap the typing area's height and scroll inside it, instead of letting the
    * editor grow without bound.
@@ -149,6 +159,7 @@ export function RichTextEditor({
   signatureHtml,
   dense = false,
   tables = false,
+  listStyles = false,
   scrollBody = false,
 }: RichTextEditorProps) {
   // When a signature is supplied (compose editor), the mention extension
@@ -203,12 +214,18 @@ export function RichTextEditor({
     extensions: [
       // StarterKit v3 bundles Link; keep clicks from navigating while
       // editing (the toolbar Link button manages hrefs instead).
-      StarterKit.configure({ link: { openOnClick: false } }),
+      // With `listStyles`, the stock list item gives way to the contract one
+      // (a heading may lead an item, so "1. Definitions" can be a heading).
+      StarterKit.configure({
+        link: { openOnClick: false },
+        ...(listStyles ? { listItem: false } : {}),
+      }),
       Placeholder.configure({ placeholder }),
       mentionExtension,
       // Opt-in: a table node reaching a renderer that has not registered the
       // extension throws "Unknown node type: table" at generateHTML time.
       ...(tables ? [TableKit.configure({ table: { resizable: true } })] : []),
+      ...(listStyles ? [ContractListItem, ContractListStyles] : []),
     ],
     content: value && Object.keys(value).length > 0 ? value : { type: 'doc', content: [{ type: 'paragraph' }] },
     editable,
@@ -222,8 +239,8 @@ export function RichTextEditor({
   // an instance with no Table extension while the toolbar (plain React)
   // re-renders with the button. Clicking it then throws "insertTable is not a
   // function". A constant prop never trips this in production; it bites in dev
-  // whenever HMR swaps the flag under a live editor.
-  }, [tables])
+  // whenever HMR swaps the flag under a live editor. Same for `listStyles`.
+  }, [tables, listStyles])
 
   // Sync external value changes (e.g. when a template is applied)
   const lastValueRef = useRef<string>('')
@@ -269,6 +286,7 @@ export function RichTextEditor({
           variables={variables}
           showVariableInserter={showVariableInserter}
           tables={tables}
+          listStyles={listStyles}
         />
       )}
       <EditorContent
@@ -432,12 +450,14 @@ function ToolbarRow({
   variables,
   showVariableInserter,
   tables,
+  listStyles,
 }: {
   editor: ReturnType<typeof useEditor>
   onInsertVariable: (id: string) => void
   variables: readonly EditorVariable[]
   showVariableInserter: boolean
   tables: boolean
+  listStyles: boolean
 }) {
   const [open, setOpen] = useState(false)
   if (!editor) return null
@@ -487,6 +507,7 @@ function ToolbarRow({
       >
         <ListOrdered size={16} strokeWidth={1.5} />
       </ToolbarButton>
+      {listStyles && <ListStyleMenu editor={editor} />}
       <LinkButton editor={editor} />
       {tables && <TableButton editor={editor} />}
       <div className="w-px h-5 bg-gray-200 mx-1" />

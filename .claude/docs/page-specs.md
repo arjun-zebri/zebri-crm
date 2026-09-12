@@ -1432,7 +1432,12 @@ stacking context and painted behind the invoice modal despite its `top` tier.
 - Overflow menu: "Revert to sent" (when paid) · "Cancel invoice" (when editable) · "Delete invoice".
 - State pill map: Draft · Sent (info + hollow) · Deposit paid (warning + filled) · Paid (success + filled) · Overdue (danger + hollow) · Cancelled (muted).
 
-### Server actions (`app/(dashboard)/payments/actions.ts`)
+### `ContractBuilderModal` body editor (`components/builders/parts/contract-body-editor.tsx`)
+- The body is the shared `RichTextEditor` with `tables` and `listStyles` on (the contract template editor under Templates turns on the same two).
+- **Numbering format** (2026-09-12): the split control beside the Numbered list button shows the current list's glyph and opens a menu. **Whole list: Legal** sets `1.` / `1.1` / `(a)` / `(i)` by depth on the outermost list in one click, and sub-lists made later with Tab follow it; picking it again clears it. **This level** offers `1.` · `1.1` · `a.` · `(a)` · `A.` · `i.` · `(i)` · `I.` for the list under the caret only (overriding the preset for that list); a Tab-indented sublist is its own list. Picked outside a list, either starts one. The `1.1` format shows the full path (`2.1`, `2.1.3`) and keeps the plain `1.` at the top level.
+- **Typing shortcuts**: `a. `, `(a) `, `A. `, `i. `, `(i) `, `I. ` or `1.1 ` at the start of a line starts a list in that format (marker consumed, as in Word); `1. ` starts a plain numbered list, `- ` a bullet list. `Cmd/Ctrl+Shift+7` toggles a numbered list, `Tab` / `Shift+Tab` indent and outdent.
+- The format and preset are stored on the list node (`listStyle` / `listScheme`, rendered as `data-list-style` / `data-list-scheme`) and drawn by global marker CSS in `globals.css`, so the editor, the builder preview, the read-only template preview, the public `/contract/[token]` page and the PDF all show the same numbering. Contracts sent before this keep their locked HTML and render unchanged.
+- **Styled numbers**: bold or italic at the start of an item's text carries onto its number, and H1/H2/H3 work inside a list so a clause title can be a numbered heading with a heading-sized number. Enter at the end of a heading item starts the next item as a heading of the same level (mid-title it splits into two headings; an empty item still leaves the list); bold and italic carry over as they do in any list.
 Mutations no longer happen inline. Saves flow through:
 - `saveInvoiceAction(input)`  -  Zod-validated, RLS-scoped, transactional (replace-line-items pattern), plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
 - `deleteInvoiceAction(id)`  -  RLS-scoped destructive.

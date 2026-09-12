@@ -30,3 +30,19 @@ afterEach(() => {
 if (typeof document !== 'undefined' && typeof document.elementFromPoint !== 'function') {
   document.elementFromPoint = () => null
 }
+
+// Same gap, other side: jsdom gives elements `getClientRects` /
+// `getBoundingClientRect` but not `Range`. TipTap's `focus()` scrolls to the
+// caret on an animation frame, and when the caret sits in text (the
+// numbering-format tests) ProseMirror's `coordsAtPos` measures a Range over
+// the text node and throws after the test has already passed. Report an empty
+// rectangle, as an unlaid-out node would.
+if (typeof Range !== 'undefined') {
+  const emptyRect = () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0 })
+  if (typeof Range.prototype.getClientRects !== 'function') {
+    Range.prototype.getClientRects = () => [] as unknown as DOMRectList
+  }
+  if (typeof Range.prototype.getBoundingClientRect !== 'function') {
+    Range.prototype.getBoundingClientRect = () => emptyRect() as DOMRect
+  }
+}
