@@ -98,10 +98,25 @@ export function oauthConfig(
     clientSecret,
     authorizeUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize`,
     tokenUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
+    // User.Read on both: the callback reads the mailbox address from Graph
+    // `/me`, which returns 403 unless a User.* permission was granted.
+    // `openid`/`email` only shape the id_token; they are not Graph scopes.
     scopes:
       purpose === 'calendar'
-        ? ['openid', 'email', 'offline_access', 'https://graph.microsoft.com/Calendars.ReadWrite']
-        : ['openid', 'email', 'offline_access', 'https://graph.microsoft.com/Mail.Send'],
+        ? [
+            'openid',
+            'email',
+            'offline_access',
+            'https://graph.microsoft.com/User.Read',
+            'https://graph.microsoft.com/Calendars.ReadWrite',
+          ]
+        : [
+            'openid',
+            'email',
+            'offline_access',
+            'https://graph.microsoft.com/User.Read',
+            'https://graph.microsoft.com/Mail.Send',
+          ],
     redirectUri,
   };
 }

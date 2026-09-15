@@ -501,7 +501,13 @@ Replaces the prior hosted-AccountLink redirect flow (Phase 2D.1
 4. Stripe fires `account.updated` webhook → handler in
    `lib/payments/connect-events.ts` mirrors the snapshot into
    `connect_accounts` and flips `app_metadata.stripe_connect_enabled`
-   based on `charges_enabled`.
+   based on `charges_enabled`. `POST /api/stripe/connect/sync` (called
+   on embedded-onboarding exit and by the status panel's Refresh
+   button) pulls the account straight from Stripe and performs the
+   **same two writes**: mirror row + entitlement flip. Both stores are
+   read by different surfaces (Settings reads the mirror; the branding
+   "Not ready to send" pill and the invoice-payment route read the
+   entitlement), so any path that updates one must update the other.
 5. Once `charges_enabled = true`, the client swaps to
    `<ConnectAccountManagement>` for ongoing account changes.
 
@@ -522,7 +528,7 @@ Two-tier:
   | Field | Type | Description |
   |---|---|---|
   | `stripe_connect_account_id` | text | Stripe Express account ID (e.g. `acct_1Q...`) |
-  | `stripe_connect_enabled` | boolean | Mirror of `charges_enabled`; flipped by the `account.updated` webhook handler |
+  | `stripe_connect_enabled` | boolean | Mirror of `charges_enabled`; flipped by the `account.updated` webhook handler and by `/api/stripe/connect/sync` |
 
 - **`connect_accounts` table** (detail, populated by webhooks):
   account_id, charges_enabled, payouts_enabled, details_submitted,
