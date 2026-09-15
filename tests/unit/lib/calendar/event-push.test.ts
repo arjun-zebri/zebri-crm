@@ -255,14 +255,71 @@ describe('pushBookingEvent', () => {
     mockFetchOnce({
       id: 'ms-event-999',
     });
+    // Diagnostic lookup of the calendar's allowed providers.
+    mockFetchOnce({ allowedOnlineMeetingProviders: [], defaultOnlineMeetingProvider: 'unknown' });
 
     const result = await pushBookingEvent(supabase, 'u1', details);
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       provider: 'microsoft',
       eventId: 'ms-event-999',
       joinUrl: null,
     } as PushedEvent);
+  });
+
+  it('explains a missing Teams link with the calendar allowed providers', async () => {
+    // Graph silently ignores isOnlineMeeting when the account cannot create
+    // Teams meetings (personal accounts, no Teams licence, add-in policy
+    // off). The response alone does not say why, so the diagnostic reads the
+    // calendar's allowed providers for the Slack alert.
+    vi.mocked(listActiveConnections).mockResolvedValue([msConn as any]);
+    mockFetchOnce({ id: 'ms-event-1', isOnlineMeeting: false });
+    mockFetchOnce({
+      allowedOnlineMeetingProviders: ['skypeForConsumer'],
+      defaultOnlineMeetingProvider: 'unknown',
+    });
+
+    const result = await pushBookingEvent(supabase, 'u1', details);
+
+    expect(result?.joinUrl).toBeNull();
+    expect(result?.conferenceDiagnostic).toBe(
+      'allowedOnlineMeetingProviders=[skypeForConsumer] default=unknown',
+    );
+    const url = vi.mocked(global.fetch).mock.calls[1]![0] as string;
+    expect(url).toContain('graph.microsoft.com/v1.0/me/calendar');
+  });
+
+  it('still reports a missing Teams link when the diagnostic lookup itself fails', async () => {
+    vi.mocked(listActiveConnections).mockResolvedValue([msConn as any]);
+    mockFetchOnce({ id: 'ms-event-2' });
+    mockFetchOnce({ error: 'nope' }, false, 403);
+
+    const result = await pushBookingEvent(supabase, 'u1', details);
+
+    expect(result?.joinUrl).toBeNull();
+    expect(result?.conferenceDiagnostic).toBe('calendar lookup failed (403)');
+  });
+
+  it('explains a missing Meet link with the createRequest status', async () => {
+    vi.mocked(listActiveConnections).mockResolvedValue([googleConn as any]);
+    mockFetchOnce({
+      id: 'g-event-2',
+      conferenceData: { createRequest: { status: { statusCode: 'pending' } } },
+    });
+
+    const result = await pushBookingEvent(supabase, 'u1', details);
+
+    expect(result?.joinUrl).toBeNull();
+    expect(result?.conferenceDiagnostic).toBe('createRequest status=pending');
+  });
+
+  it('carries no diagnostic when the link was minted', async () => {
+    vi.mocked(listActiveConnections).mockResolvedValue([googleConn as any]);
+    mockFetchOnce({ id: 'g-event-3', hangoutLink: 'https://meet.google.com/ok' });
+
+    const result = await pushBookingEvent(supabase, 'u1', details);
+
+    expect(result?.conferenceDiagnostic).toBeUndefined();
   });
 });
 

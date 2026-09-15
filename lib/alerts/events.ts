@@ -351,6 +351,22 @@ export type AlertEvent =
       /** The booking ID that failed to push. */
       bookingId: string;
     })
+  | (BaseEvent & {
+      type: 'booking_video_link_missing';
+      severity: 'warn';
+      /** The MC whose calendar created the event without a conference link. */
+      userId: string;
+      /** The booking whose confirmation went out saying "link to follow". */
+      bookingId: string;
+      /** Which provider created the event. */
+      provider: 'google' | 'microsoft';
+      /**
+       * The provider's own explanation, from {@link PushedEvent.conferenceDiagnostic}:
+       * Google's createRequest status, or the Outlook calendar's allowed
+       * online meeting providers.
+       */
+      diagnostic: string;
+    })
 
   // ───── In-app feedback ─────────────────────────────────────────────
   | (BaseEvent & {

@@ -215,6 +215,19 @@ export async function POST(request: NextRequest) {
     if (pushed) {
       joinUrl = pushed.joinUrl;
       eventIds[pushed.provider] = pushed.eventId;
+      if (locationType === 'video' && !joinUrl) {
+        // The event exists but the provider minted no Meet/Teams link, so the
+        // couple's confirmation says "link to follow" and nothing will follow
+        // unless the MC notices. Say why, in the provider's terms.
+        await sendAlert({
+          type: 'booking_video_link_missing',
+          severity: 'warn',
+          userId,
+          bookingId,
+          provider: pushed.provider,
+          diagnostic: pushed.conferenceDiagnostic ?? 'no diagnostic',
+        });
+      }
     } else {
       // A null push means the MC has no connected calendar at all, which is
       // silent everywhere else: slots were offered without checking their real

@@ -237,6 +237,8 @@ vi.mock('@/lib/supabase/admin', () => ({
         getUserById: async () => ({ data: { user: { email: 'mc@example.com' } }, error: null }),
       },
     },
+    // The success path writes the calendar event ids back onto the booking.
+    from: () => ({ update: () => ({ eq: async () => ({ error: null }) }) }),
   }),
 }));
 vi.mock('@/lib/supabase/server', () => ({
@@ -304,6 +306,36 @@ describe('POST /api/booking/submit response validation', () => {
     expect(res.status).toBe(409);
     const { recordInvalidTokenAttempt } = await import('@/lib/api/public-token-limiter');
     expect(vi.mocked(recordInvalidTokenAttempt)).not.toHaveBeenCalled();
+  });
+
+  it('alerts when a video booking comes back from the calendar with no join link', async () => {
+    // The couple's email will say "link to follow". Nothing follows unless the
+    // MC notices, so Slack gets the provider's own explanation.
+    rpcMock.mockResolvedValue({
+      data: { ok: true, booking_id: 'b-2', user_id: 'user-1', manage_token: 'mt-1', business_name: 'Biz' },
+      error: null,
+    });
+    const { pushBookingEvent } = await import('@/lib/calendar/event-push');
+    vi.mocked(pushBookingEvent).mockResolvedValue({
+      provider: 'microsoft',
+      eventId: 'ev-1',
+      joinUrl: null,
+      conferenceDiagnostic: 'allowedOnlineMeetingProviders=[] default=unknown',
+    });
+
+    const res = await post();
+
+    expect(res.status).toBe(200);
+    const { sendAlert } = await import('@/lib/alerts/send-alert');
+    expect(vi.mocked(sendAlert)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'booking_video_link_missing',
+        userId: 'user-1',
+        bookingId: 'b-2',
+        provider: 'microsoft',
+        diagnostic: 'allowedOnlineMeetingProviders=[] default=unknown',
+      }),
+    );
   });
 
   it('rejects an RPC response missing manage_token instead of emailing a dead link', async () => {

@@ -27,6 +27,16 @@ export interface PushedEvent {
   eventId: string;
   /** Join URL for the conference call, or null if unavailable/requested to omit. */
   joinUrl: string | null;
+  /**
+   * Why a requested conference link is missing, in the provider's own terms,
+   * for the `booking_video_link_missing` alert. Only present when a link was
+   * requested and none came back. Google: the createRequest status. Microsoft:
+   * the calendar's allowed online meeting providers, because Graph silently
+   * ignores `isOnlineMeeting` when the account cannot create Teams meetings
+   * (personal accounts, no Teams licence, add-in policy off) and the event
+   * response alone does not say which.
+   */
+  conferenceDiagnostic?: string;
 }
 
 /** A provider could not create the event; non-blocking failure. */
@@ -155,6 +165,7 @@ async function pushGoogleEvent(
     hangoutLink?: string;
     conferenceData?: {
       entryPoints?: { entryPointType: string; uri: string }[];
+      createRequest?: { status?: { statusCode?: string } };
     };
   };
 
@@ -166,11 +177,17 @@ async function pushGoogleEvent(
       null;
   }
 
-  return {
+  const pushed: PushedEvent = {
     provider: 'google',
     eventId: data.id,
     joinUrl,
   };
+  if (details.withConference && joinUrl === null) {
+    pushed.conferenceDiagnostic = `createRequest status=${
+      data.conferenceData?.createRequest?.status?.statusCode ?? 'absent'
+    }`;
+  }
+  return pushed;
 }
 
 /** Graph dateTimeTimeZone wants a naive datetime; the zone rides separately. */
@@ -233,11 +250,39 @@ async function pushMicrosoftEvent(
 
   const joinUrl = details.withConference ? data.onlineMeeting?.joinUrl ?? null : null;
 
-  return {
+  const pushed: PushedEvent = {
     provider: 'microsoft',
     eventId: data.id,
     joinUrl,
   };
+  if (details.withConference && joinUrl === null) {
+    pushed.conferenceDiagnostic = await describeMicrosoftMeetingProviders(accessToken);
+  }
+  return pushed;
+}
+
+/**
+ * Read which online meeting providers the connected Outlook calendar allows,
+ * as a one-line diagnostic. Never throws: this runs after the event was
+ * created, purely to explain a missing Teams link.
+ */
+async function describeMicrosoftMeetingProviders(accessToken: string): Promise<string> {
+  try {
+    const res = await fetch(
+      'https://graph.microsoft.com/v1.0/me/calendar?$select=allowedOnlineMeetingProviders,defaultOnlineMeetingProvider',
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (!res.ok) return `calendar lookup failed (${res.status})`;
+    const cal = (await res.json()) as {
+      allowedOnlineMeetingProviders?: string[];
+      defaultOnlineMeetingProvider?: string;
+    };
+    return `allowedOnlineMeetingProviders=[${(cal.allowedOnlineMeetingProviders ?? []).join(', ')}] default=${
+      cal.defaultOnlineMeetingProvider ?? 'unknown'
+    }`;
+  } catch (err) {
+    return `calendar lookup failed (${err instanceof Error ? err.message : String(err)})`;
+  }
 }
 
 /**
