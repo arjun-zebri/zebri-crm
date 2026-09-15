@@ -15,6 +15,17 @@
  *   - Seeding is via the service client to bypass RLS.
  *   - Runs on Desktop Chrome and Mobile Pixel 5 (from playwright.config.ts).
  *
+ * Booking links require a connected calendar (20260916000000_booking_requires_
+ * calendar.sql): the public page refuses every meeting type whose owner has
+ * none. The seeded MC therefore gets a `calendar_connections` row, and its
+ * tokens must be REAL, because the slots route fails closed when free/busy
+ * cannot be verified. Set `E2E_CALENDAR_CONNECTION` to a JSON object with
+ * `provider`, `account_email`, `access_token_encrypted`,
+ * `refresh_token_encrypted` (encrypted with the dev server's EMAIL_CRED_KEY)
+ * and `token_expires_at` to run the booking-flow tests; without it only the
+ * "unavailable without a calendar" test runs. Same deferral as the connect
+ * flow itself (testing.md: needs real Google/Azure).
+ *
  * IMPORTANT: This suite requires:
  *   - Local Supabase running (`supabase start`)
  *   - Dev server running on http://localhost:3000
@@ -39,6 +50,17 @@ test.describe('Public booking page', () => {
   // module state and unsafe once tests in this file run in parallel, and the
   // cast defeated the type checking that would have caught it.
   let meetingShareToken: string
+
+  /** Real calendar tokens for the seeded MC, or null to run link-off tests only. */
+  const calendarConnection = process.env.E2E_CALENDAR_CONNECTION
+    ? (JSON.parse(process.env.E2E_CALENDAR_CONNECTION) as {
+        provider: 'google' | 'microsoft'
+        account_email: string
+        access_token_encrypted: string
+        refresh_token_encrypted: string
+        token_expires_at: string
+      })
+    : null
 
   test.beforeAll(async () => {
     // Guard: ensure local Supabase and dev server are reachable.
@@ -99,6 +121,15 @@ test.describe('Public booking page', () => {
       .throwOnError()
 
     meetingShareToken = meetingType.data.share_token
+
+    // Only the booking-flow tests connect a calendar; the link-off test needs
+    // the MC to have none.
+    if (calendarConnection && !test.info().title.includes('without a calendar')) {
+      await admin
+        .from('calendar_connections')
+        .insert({ user_id: mcUser.id, status: 'connected', ...calendarConnection })
+        .throwOnError()
+    }
   })
 
   test.afterEach(async () => {
@@ -108,7 +139,21 @@ test.describe('Public booking page', () => {
     }
   })
 
+  test('Visitor sees the link as unavailable while the MC has no calendar connected', async ({ browser }) => {
+    const visitorCtx = await browser.newContext()
+    try {
+      const page = await visitorCtx.newPage()
+      await page.goto(`/book/${meetingShareToken}`, { waitUntil: 'networkidle' })
+
+      await expect(page.getByText('This booking link is not available')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Consultation', level: 1 })).toHaveCount(0)
+    } finally {
+      await visitorCtx.close()
+    }
+  })
+
   test('First visitor books a consultation and sees the confirmation screen', async ({ browser }) => {
+    test.skip(!calendarConnection, 'Booking links need a real calendar connection; set E2E_CALENDAR_CONNECTION')
     const bookingUrl = `/book/${meetingShareToken}`
 
     // Fresh browser context (no MC cookies).
@@ -148,6 +193,7 @@ test.describe('Public booking page', () => {
   })
 
   test('Second visitor sees slot-taken notice when trying to book the same time', async ({ browser }) => {
+    test.skip(!calendarConnection, 'Booking links need a real calendar connection; set E2E_CALENDAR_CONNECTION')
     const bookingUrl = `/book/${meetingShareToken}`
 
     // First visitor books a slot.
@@ -208,6 +254,7 @@ test.describe('Public booking page', () => {
   })
 
   test('Mobile: slot picker and form work on Pixel 5', async ({ browser }) => {
+    test.skip(!calendarConnection, 'Booking links need a real calendar connection; set E2E_CALENDAR_CONNECTION')
     test.skip(process.env.CI === 'true' && !process.env.PLAYWRIGHT_BASE_URL?.includes('3123'),
       'requires local Supabase or explicit isolated stack')
 

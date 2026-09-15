@@ -294,6 +294,18 @@ describe('POST /api/booking/submit response validation', () => {
     );
   });
 
+  it('answers 409 when the MC has no connected calendar, without counting a bad token', async () => {
+    // The page may have loaded before the MC disconnected. The token is real,
+    // so it must not feed the invalid-token limiter.
+    rpcMock.mockResolvedValue({ data: { error: 'calendar_required' }, error: null });
+
+    const res = await post();
+
+    expect(res.status).toBe(409);
+    const { recordInvalidTokenAttempt } = await import('@/lib/api/public-token-limiter');
+    expect(vi.mocked(recordInvalidTokenAttempt)).not.toHaveBeenCalled();
+  });
+
   it('rejects an RPC response missing manage_token instead of emailing a dead link', async () => {
     // The confirmation email builds its reschedule link from manage_token; a
     // silent fallback to '' used to ship /book/manage/ (a 404) to the booker.

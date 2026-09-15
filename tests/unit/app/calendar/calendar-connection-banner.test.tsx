@@ -54,10 +54,11 @@ describe('CalendarConnectionBanner', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('warns about clashes when no calendar has ever been connected', () => {
+  it('says booking links are off when no calendar has ever been connected', () => {
     useCalendarConnections.mockReturnValue(connectionState());
     render(<CalendarConnectionBanner />);
     expect(screen.getByText(/No calendar connected/i)).toBeInTheDocument();
+    expect(screen.getByText(/booking links are switched off/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Google Calendar' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Outlook Calendar' })).toBeInTheDocument();
   });
@@ -66,6 +67,7 @@ describe('CalendarConnectionBanner', () => {
     useCalendarConnections.mockReturnValue(connectionState({ hasError: true }));
     render(<CalendarConnectionBanner />);
     expect(screen.getByText(/stopped working/i)).toBeInTheDocument();
+    expect(screen.getByText(/booking links are switched off/i)).toBeInTheDocument();
     expect(screen.queryByText(/No calendar connected/i)).not.toBeInTheDocument();
   });
 });

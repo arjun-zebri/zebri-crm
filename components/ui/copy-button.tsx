@@ -48,6 +48,11 @@ export interface CopyButtonProps {
   /** Disables the button. */
   disabled?: boolean;
   /**
+   * Native tooltip. Mainly for a disabled button, which cannot otherwise say
+   * why it is disabled ("Connect a calendar to share booking links").
+   */
+  title?: string;
+  /**
    * Render as bare text rather than a bordered control.
    *
    * For meta rows that read as a sentence ("Share link live · Copy link ·
@@ -67,6 +72,7 @@ export function CopyButton({
   className,
   onCopied,
   disabled,
+  title,
   plain = false,
   ...rest
 }: CopyButtonProps) {
@@ -136,6 +142,7 @@ export function CopyButton({
         type="button"
         onClick={copy}
         disabled={disabled}
+        title={title}
         aria-label={rest['aria-label'] ?? label}
         aria-live="polite"
         className={`inline-flex items-center text-body text-text-muted transition-colors hover:text-text disabled:opacity-50${
@@ -154,6 +161,7 @@ export function CopyButton({
       aria-label={rest['aria-label'] ?? label}
       aria-live="polite"
       {...(disabled !== undefined && { disabled })}
+      {...(title !== undefined && { title })}
       {...(className !== undefined && { className })}
     >
       {labels}

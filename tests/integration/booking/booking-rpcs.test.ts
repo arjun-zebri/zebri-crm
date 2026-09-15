@@ -30,16 +30,40 @@ interface ArrangedType {
 }
 
 /**
- * Create an MC with an active meeting type (share_token enabled).
+ * Give an MC a working calendar connection. Booking links only resolve for
+ * MCs with one: without it the booking never reaches a real calendar and a
+ * video meeting has no join link, so the RPCs treat the type as unavailable.
+ */
+async function connectCalendar(
+  userId: string,
+  opts: { provider?: 'google' | 'microsoft'; status?: 'connected' | 'error' } = {},
+): Promise<void> {
+  const { error } = await serviceClient().from('calendar_connections').insert({
+    user_id: userId,
+    provider: opts.provider ?? 'google',
+    account_email: 'mc@example.com',
+    access_token_encrypted: 'v1:fake.fake.fake',
+    refresh_token_encrypted: 'v1:fake.fake.fake',
+    token_expires_at: new Date(Date.now() + 3600_000).toISOString(),
+    status: opts.status ?? 'connected',
+  });
+  if (error) throw new Error(`calendar_connections insert failed: ${error.message}`);
+}
+
+/**
+ * Create an MC with an active meeting type (share_token enabled) and, unless
+ * `calendar: false`, a connected calendar so the link is bookable.
  */
 async function arrangeMeetingType(opts: {
   name?: string;
   durationMinutes?: number;
   locationTypes?: 'video' | 'phone' | 'in_person';
   active?: boolean;
+  calendar?: boolean;
 } = {}): Promise<ArrangedType> {
   const user = await createTestUser({}, pro);
   const admin = serviceClient();
+  if (opts.calendar !== false) await connectCalendar(user.id);
 
   const durationMinutes = opts.durationMinutes ?? 30;
   const name = opts.name ?? 'Consultation';
@@ -114,6 +138,30 @@ describe('get_public_booking_page', () => {
   it('returns null when the meeting type is inactive', async () => {
     const arr = await arrangeMeetingType({ active: false });
     cleanupQueue.push(arr.user.cleanup);
+
+    const { data } = await anonClient().rpc('get_public_booking_page', {
+      token: arr.token,
+    });
+    expect(data).toBeNull();
+  });
+
+  it('returns null when the MC has no calendar connected, whatever the location type', async () => {
+    for (const locationTypes of ['video', 'phone', 'in_person'] as const) {
+      const arr = await arrangeMeetingType({ locationTypes, calendar: false });
+      cleanupQueue.push(arr.user.cleanup);
+
+      const { data, error } = await anonClient().rpc('get_public_booking_page', {
+        token: arr.token,
+      });
+      expect(error).toBeNull();
+      expect(data).toBeNull();
+    }
+  });
+
+  it('returns null when the only calendar connection is in error', async () => {
+    const arr = await arrangeMeetingType({ calendar: false });
+    cleanupQueue.push(arr.user.cleanup);
+    await connectCalendar(arr.user.id, { status: 'error' });
 
     const { data } = await anonClient().rpc('get_public_booking_page', {
       token: arr.token,
@@ -197,6 +245,30 @@ describe('submit_booking', () => {
       p_notes: null as any,
     });
     expect((data as { error?: string }).error).toBe('not_found');
+  });
+
+  it('rejects a booking when the MC has no calendar connected, without creating one', async () => {
+    const arr = await arrangeMeetingType({ locationTypes: 'phone', calendar: false });
+    cleanupQueue.push(arr.user.cleanup);
+
+    const start = new Date(Date.now() + 48 * 3600_000);
+    const end = new Date(start.getTime() + arr.durationMinutes * 60_000);
+    const { data, error } = await anonClient().rpc('submit_booking', {
+      token: arr.token,
+      p_starts_at: start.toISOString(),
+      p_ends_at: end.toISOString(),
+      p_timezone: 'Australia/Sydney',
+      p_name: 'No Calendar',
+      p_email: 'nocal@example.com',
+    });
+    expect(error).toBeNull();
+    expect((data as { error?: string }).error).toBe('calendar_required');
+
+    const { data: rows } = await serviceClient()
+      .from('bookings')
+      .select('id')
+      .eq('user_id', arr.user.id);
+    expect(rows).toEqual([]);
   });
 
   it('rejects booking with starts_at >= ends_at', async () => {
@@ -650,6 +722,7 @@ describe('submit_booking', () => {
       },
     );
     cleanupQueue.push(user.cleanup);
+    await connectCalendar(user.id);
 
     const admin = serviceClient();
     // Create 5 couples to hit the limit

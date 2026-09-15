@@ -4,11 +4,12 @@
  *
  * Sits above the tabs so it is visible from every tab, because the cost of not
  * connecting is spread across all four: the grid hides nothing it does not
- * know about, bookings never reach the real calendar, and video meeting types
- * produce no join link.
+ * know about, and every booking link is refused by the public page until a
+ * calendar is connected (a booking that never reaches the MC's real calendar,
+ * and for video a join link nothing sends).
  *
- * Nothing here blocks the route. An MC who schedules on Zebri data alone is
- * supported; they just should not discover that by accident.
+ * Nothing here blocks the route itself: the MC can still set up meeting types
+ * and availability before connecting.
  *
  * @module app/(dashboard)/calendar/calendar-connection-banner
  */
@@ -35,8 +36,8 @@ export function CalendarConnectionBanner() {
   // the MC already made a choice and it broke, so say so rather than pitching
   // the feature to them again.
   const message = hasError
-    ? "Your calendar connection stopped working. Until you reconnect, bookings won't check it for clashes."
-    : "No calendar connected. Bookings won't check your real calendar for clashes.";
+    ? 'Your calendar connection stopped working. Booking links are switched off until you reconnect.'
+    : 'No calendar connected. Booking links are switched off until you connect one.';
 
   return (
     <div className="mb-4 flex flex-col gap-3 rounded-control border-l-2 border-warning bg-warning/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">

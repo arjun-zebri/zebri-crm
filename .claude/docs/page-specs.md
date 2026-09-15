@@ -790,13 +790,15 @@ rules never exist without a saved zone.
 
 An MC can connect Google/Outlook from here as well as from Settings → Public Page → Calendars; both routes share `useCalendarConnections()` so they can never disagree. Connecting from here passes `return=calendar`, so the consent round trip lands back on `/calendar` with a toast.
 
-**Nothing on this route is blocked by a missing connection.** Scheduling on Zebri data alone stays supported; the MC just should not discover the trade-off by accident. What silently degrades without one: the grid shows no external busy blocks, offered slots ignore the MC's real calendar, confirmed bookings never reach it, and `video` meeting types produce no join link.
+**Booking links are switched off until a calendar is connected.** A booking taken with no working calendar never reaches the MC's real calendar and, for a `video` type, promises a join link nothing ever sends (a real MC got "Video call (link to follow)" in Sept 2026 and nothing followed). So the public RPCs (`get_public_booking_page`, `submit_booking`) refuse every meeting type whose owner has no `calendar_connections` row in status `connected`: the couple sees the same "unavailable" card as for a paused link. The rest of the route still works; the MC can build meeting types and availability before connecting, and the grid keeps showing Zebri bookings.
 
-- **Banner** above the tabs, visible from all four. Absent when a healthy connection exists, and while the query is still loading so it never flashes in. Two variants: never connected ("No calendar connected. Bookings won't check your real calendar for clashes.") and errored ("Your calendar connection stopped working…"). These read differently on purpose: telling a first-time MC their calendar "stopped working" is nonsense.
+The dashboard mirrors the rule so the MC never hands out a dead link. "Connected" means `useCalendarConnections().hasConnection`, the same status the RPCs check, so a broken connection counts as none on both sides:
+
+- **Banner** above the tabs, visible from all four. Absent when a healthy connection exists, and while the query is still loading so it never flashes in. Two variants: never connected ("No calendar connected. Booking links are switched off until you connect one.") and errored ("Your calendar connection stopped working. Booking links are switched off until you reconnect."). These read differently on purpose: telling a first-time MC their calendar "stopped working" is nonsense.
 - **Calendar tab** shows an inline prompt above the grid when the connection list is empty: "Only Zebri bookings are shown here." Mutually exclusive with the sidebar's existing "could not be reached" warning, which means *connected but unreachable*.
-- **Meeting types tab** warns when an **active** `video` type exists and no calendar is connected, because that gap is visible to the couple: they get a "Video call" confirmation with nothing to click.
+- **Meeting types tab** shows a note ("Booking links are switched off until a calendar is connected. Couples who open one will see it as unavailable."), every card's Copy link button is disabled with that reason as its tooltip, and the Open booking page / Copy embed code menu items are withheld. Edit, pause and delete stay available. The header "Share booking link" button is disabled with the same tooltip.
 
-When a booking is confirmed while the MC has no connection, `booking_created_without_calendar` fires to Slack. The public booking page itself is unchanged.
+`booking_created_without_calendar` still fires to Slack if a booking somehow lands without a connection (it should now be unreachable through the public route).
 
 ## Tab 0: Calendar
 

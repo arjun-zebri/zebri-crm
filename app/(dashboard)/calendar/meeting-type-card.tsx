@@ -22,6 +22,9 @@ import type { Database } from '@/types/database';
 
 type MeetingType = Database['public']['Tables']['meeting_types']['Row'];
 
+/** Tooltip on a withheld link action; the same sentence the tab note uses. */
+export const LINKS_OFF_REASON = 'Connect a calendar to share booking links';
+
 /** How each location type is drawn and described. */
 const LOCATION: Record<string, { label: string; Icon: typeof Video }> = {
   video: { label: 'video', Icon: Video },
@@ -45,6 +48,13 @@ export interface MeetingTypeCardProps {
    * in a hurry, and it should not cost them a modal and a save.
    */
   onToggleActive?: (meetingType: MeetingType, active: boolean) => void;
+  /**
+   * True while the MC has no working calendar connection. The public page
+   * refuses every link in that state, so the card withholds the link actions
+   * (copy, open, embed) rather than hand out a URL a couple will see as
+   * unavailable. Edit, pause and delete stay available.
+   */
+  linksDisabled?: boolean;
 }
 
 /**
@@ -57,6 +67,7 @@ export function MeetingTypeCard({
   onEdit,
   onDelete,
   onToggleActive,
+  linksDisabled = false,
 }: MeetingTypeCardProps) {
   const location = LOCATION[meetingType.location_type];
   const LocationIcon = location?.Icon ?? Video;
@@ -72,22 +83,27 @@ export function MeetingTypeCard({
     return buildScriptSnippet(origin, meetingType.share_token);
   }, [meetingType.share_token]);
 
+  const linkActions: RowAction[] = linksDisabled
+    ? []
+    : [
+        {
+          label: 'Open booking page',
+          onSelect: () => window.open(bookingUrl(), '_blank', 'noopener,noreferrer'),
+        },
+        {
+          label: 'Copy embed code',
+          onSelect: async () => {
+            try {
+              await navigator.clipboard.writeText(embedCode);
+            } catch {
+              // Clipboard permission denied. Nothing useful to do here: the embed
+              // code is also reachable from the edit modal.
+            }
+          },
+        },
+      ];
   const actions: RowAction[] = [
-    {
-      label: 'Open booking page',
-      onSelect: () => window.open(bookingUrl(), '_blank', 'noopener,noreferrer'),
-    },
-    {
-      label: 'Copy embed code',
-      onSelect: async () => {
-        try {
-          await navigator.clipboard.writeText(embedCode);
-        } catch {
-          // Clipboard permission denied. Nothing useful to do here: the embed
-          // code is also reachable from the edit modal.
-        }
-      },
-    },
+    ...linkActions,
     {
       label: 'Delete',
       onSelect: () => onDelete?.(meetingType.id),
@@ -140,6 +156,8 @@ export function MeetingTypeCard({
           label="Copy link"
           copiedLabel="Copied"
           variant="outline"
+          disabled={linksDisabled}
+          {...(linksDisabled && { title: LINKS_OFF_REASON })}
         />
         <div className="flex items-center gap-2 shrink-0">
           <Button

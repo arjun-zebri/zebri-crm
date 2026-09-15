@@ -1,14 +1,14 @@
 /**
- * The video-meeting-type warning on the Meeting types tab.
+ * Booking links are switched off on the Meeting types tab until a calendar is
+ * connected.
  *
- * A `video` meeting type gets its Meet/Teams link from the calendar event
- * push, so with no connection the booking is confirmed with
- * `video_join_url` null and the couple receives a "Video call" email with
- * nothing to click. That is the one gap on this route the couple sees rather
- * than just the MC, so the warning has to be tied to exactly that condition:
- * an active video type AND no connection.
+ * The public RPCs refuse every meeting type whose owner has no working
+ * calendar (a booking that never reaches the MC's real calendar, and for
+ * video a "link to follow" that nothing sends). The tab has to say so and
+ * withhold the link actions, otherwise the MC hands out links that couples
+ * see as unavailable.
  *
- * @module tests/unit/app/calendar/meeting-types-video-warning
+ * @module tests/unit/app/calendar/meeting-types-links-off
  */
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -81,7 +81,7 @@ const CONNECTED = [
   { provider: 'google', accountEmail: 'mc@test', status: 'connected', connectedAt: '' },
 ];
 
-const WARNING = /won't include a join link/i;
+const NOTE = /switched off until a calendar is connected/i;
 
 beforeEach(() => {
   meetingTypes.mockReset().mockReturnValue([meetingType()]);
@@ -93,13 +93,37 @@ beforeEach(() => {
   });
 });
 
-describe('MeetingTypesTab video join-link warning', () => {
-  it('warns when an active video type exists and no calendar is connected', () => {
+describe('MeetingTypesTab with no calendar connected', () => {
+  it('says the links are off and withholds the copy-link action', () => {
     render(<MeetingTypesTab />);
-    expect(screen.getByText(WARNING)).toBeInTheDocument();
+    expect(screen.getByText(NOTE)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /copy link/i })).toBeDisabled();
   });
 
-  it('stays silent once a calendar is connected', () => {
+  it('applies to phone and in-person types too, not just video', () => {
+    meetingTypes.mockReturnValue([
+      meetingType({ location_type: 'in_person' }),
+      meetingType({ id: 'mt2', location_type: 'phone' }),
+    ]);
+    render(<MeetingTypesTab />);
+    expect(screen.getByText(NOTE)).toBeInTheDocument();
+    for (const button of screen.getAllByRole('button', { name: /copy link/i })) {
+      expect(button).toBeDisabled();
+    }
+  });
+
+  it('treats a broken connection the same as none', () => {
+    connections.mockReturnValue({
+      connections: [{ ...CONNECTED[0], status: 'error' }],
+      hasConnection: false,
+      hasError: true,
+      isLoading: false,
+    });
+    render(<MeetingTypesTab />);
+    expect(screen.getByText(NOTE)).toBeInTheDocument();
+  });
+
+  it('enables everything once a calendar is connected', () => {
     connections.mockReturnValue({
       connections: CONNECTED,
       hasConnection: true,
@@ -107,22 +131,7 @@ describe('MeetingTypesTab video join-link warning', () => {
       isLoading: false,
     });
     render(<MeetingTypesTab />);
-    expect(screen.queryByText(WARNING)).not.toBeInTheDocument();
-  });
-
-  it('stays silent when the only video type is paused', () => {
-    // A paused type cannot be booked, so it cannot produce a linkless booking.
-    meetingTypes.mockReturnValue([meetingType({ active: false })]);
-    render(<MeetingTypesTab />);
-    expect(screen.queryByText(WARNING)).not.toBeInTheDocument();
-  });
-
-  it('stays silent for in-person and phone types', () => {
-    meetingTypes.mockReturnValue([
-      meetingType({ location_type: 'in_person' }),
-      meetingType({ id: 'mt2', location_type: 'phone' }),
-    ]);
-    render(<MeetingTypesTab />);
-    expect(screen.queryByText(WARNING)).not.toBeInTheDocument();
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /copy link/i })).toBeEnabled();
   });
 });

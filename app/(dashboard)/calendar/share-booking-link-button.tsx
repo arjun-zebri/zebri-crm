@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useCalendarConnections } from '@/components/calendar/use-calendar-connections';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { MenuItem, MenuPanel } from '@/components/ui/menu';
@@ -9,6 +10,7 @@ import { useToast } from '@/components/ui/toast';
 import { isChromePress } from '@/components/ui/use-overlay';
 import { buildHostedUrl } from '@/lib/booking/snippets';
 
+import { LINKS_OFF_REASON } from './meeting-type-card';
 import { useMeetingTypes } from './use-meeting-types';
 
 /** The booking page URL for a share token, resolved against this origin. */
@@ -27,6 +29,7 @@ function hostedUrl(token: string): string {
  */
 export function ShareBookingLinkButton() {
   const { data: meetingTypes } = useMeetingTypes();
+  const { hasConnection } = useCalendarConnections();
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
@@ -42,6 +45,16 @@ export function ShareBookingLinkButton() {
   }, [open]);
 
   const active = (meetingTypes ?? []).filter((type) => type.active);
+
+  // Same rule as the per-type copy buttons: the public page refuses every
+  // link while there is no working calendar, so do not hand one out.
+  if (!hasConnection) {
+    return (
+      <Button variant="outline" disabled title={LINKS_OFF_REASON}>
+        Share booking link
+      </Button>
+    );
+  }
 
   if (active.length === 0) {
     return (

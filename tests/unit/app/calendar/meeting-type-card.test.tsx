@@ -70,6 +70,20 @@ describe('MeetingTypeCard', () => {
     expect(screen.getByText('12 booked this month')).toBeInTheDocument();
   });
 
+  it('disables the copy-link button and drops the link actions when links are off', async () => {
+    render(<MeetingTypeCard meetingType={baseType} bookedThisMonth={0} linksDisabled />);
+
+    const copy = screen.getByRole('button', { name: /copy link/i });
+    expect(copy).toBeDisabled();
+    expect(copy).toHaveAttribute('title', expect.stringMatching(/connect a calendar/i));
+
+    await userEvent.click(screen.getByRole('button', { name: /row actions/i }));
+    expect(screen.queryByRole('button', { name: /open booking page/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /copy embed code/i })).not.toBeInTheDocument();
+    // Editing and deleting are still fine: the MC can set up before connecting.
+    expect(await screen.findByRole('button', { name: /delete/i })).toBeInTheDocument();
+  });
+
   it('hands the meeting type back when edit is pressed', async () => {
     const onEdit = vi.fn();
     render(

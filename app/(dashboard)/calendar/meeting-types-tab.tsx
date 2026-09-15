@@ -45,7 +45,7 @@ interface MeetingTypesTabProps {
 export function MeetingTypesTab({ onNew, onEdit }: MeetingTypesTabProps) {
   const { data, isLoading, error, refetch } = useMeetingTypes();
   const { data: bookings = [] } = useBookings();
-  const { connections } = useCalendarConnections();
+  const { hasConnection } = useCalendarConnections();
   const deleteType = useDeleteMeetingType();
   const updateType = useUpdateMeetingType();
 
@@ -79,19 +79,15 @@ export function MeetingTypesTab({ onNew, onEdit }: MeetingTypesTabProps) {
   }, [bookings]);
 
   /**
-   * True when a video meeting type would produce a booking with no join link.
+   * True while every booking link is switched off.
    *
-   * The Meet/Teams URL is minted by the calendar event push, so with no
-   * connection `video_join_url` stays null and the couple receives a "Video
-   * call" confirmation with nothing to click. That is the one gap here the
-   * couple sees, not just the MC, so it is worth calling out on this tab.
+   * The public RPCs refuse any meeting type whose owner has no working
+   * calendar: the booking would never reach the MC's real calendar, and a
+   * video type would promise a join link nothing sends. Mirrors
+   * `hasConnection` exactly (status 'connected'), so a broken connection
+   * counts as none here just as it does server-side.
    */
-  const videoTypesWithoutCalendar = useMemo(
-    () =>
-      connections.length === 0 &&
-      data.some((type) => type.active && type.location_type === 'video'),
-    [connections, data],
-  );
+  const linksDisabled = !hasConnection;
 
   const handleNew = () => {
     setEditingMeetingType(null);
@@ -223,8 +219,8 @@ export function MeetingTypesTab({ onNew, onEdit }: MeetingTypesTabProps) {
         </div>
       </div>
 
-      {videoTypesWithoutCalendar && (
-        <CalendarConnectNote message="Your video meeting types won't include a join link until a calendar is connected." />
+      {linksDisabled && (
+        <CalendarConnectNote message="Booking links are switched off until a calendar is connected. Couples who open one will see it as unavailable." />
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -236,6 +232,7 @@ export function MeetingTypesTab({ onNew, onEdit }: MeetingTypesTabProps) {
             onEdit={handleEdit}
             onDelete={(id) => setConfirmingDelete(id)}
             onToggleActive={handleToggleActive}
+            linksDisabled={linksDisabled}
           />
         ))}
       </div>

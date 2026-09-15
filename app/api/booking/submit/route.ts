@@ -157,6 +157,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Booking not available.' }, { status: 404 });
   }
 
+  // The MC disconnected their calendar after the page loaded. A real token,
+  // so it is not counted as an invalid-token probe; the couple just sees the
+  // same "unavailable" outcome the page would now show on reload.
+  if (result.error === 'calendar_required') {
+    return NextResponse.json({ error: 'This booking link is not available right now.' }, { status: 409 });
+  }
+
   if (result.error === 'slot_taken') {
     return NextResponse.json({ error: 'Slot is no longer available.' }, { status: 409 });
   }

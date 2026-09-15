@@ -1419,6 +1419,7 @@ Joins meeting_types, auth.users, and calls _user_branding(mc_user_id) to merge M
 
 Behavior:
 - Returns null if token not found or meeting_type.active=false
+- Returns null if the owner has no `calendar_connections` row in status `connected`. Booking links require a working calendar: without one the booking never reaches the MC's real calendar and a video type promises a join link nothing sends. The dashboard withholds link actions in the same state (`page-specs.md`, Calendar connection states).
 - Merges MC's branding scalars (surface_color, heading_color, fonts, etc.) via _user_branding()
 - Uses coalesce on business_name (raw_user_meta_data->>'business_name' or display_name or '')
 
@@ -1427,7 +1428,7 @@ Error handling:
 
 Rate limiting: none at the RPC boundary (route-level rate-limit applies).
 
-Migration: `20260820001000_booking_rpcs.sql`.
+Migration: `20260820001000_booking_rpcs.sql`; calendar guard added in `20260916000000_booking_requires_calendar.sql`.
 
 ### submit_booking(token, p_starts_at, p_ends_at, p_timezone, p_name, p_email, p_partner_name?, p_phone?, p_notes?) -> jsonb
 
@@ -1463,6 +1464,7 @@ Response (error):
 
 Error results:
 - "not_found": token not found or inactive
+- "calendar_required": the owner has no connected calendar (same rule as get_public_booking_page, re-checked here because the page may have loaded before the MC disconnected). Distinct from "not_found" so the route does not count it as an invalid-token probe; it answers 409.
 - "invalid": p_starts_at >= p_ends_at, starts_at in past, or duration mismatch (>60sec off expected)
 - "rate_limited": >6 confirmed bookings for this meeting type in the last hour
 - "slot_taken": exclusion constraint violation (double-booking guard); booker should retry with different time
@@ -1494,7 +1496,7 @@ Security:
 - MC email is NOT returned to anon (harvesting risk via share tokens)
 - Route fetches mc_email server-side for alert/email headers
 
-Migration: `20260820001000_booking_rpcs.sql`.
+Migration: `20260820001000_booking_rpcs.sql`; calendar guard added in `20260916000000_booking_requires_calendar.sql`.
 
 ## Booking Lifecycle RPCs (Scheduler Phase D)
 
