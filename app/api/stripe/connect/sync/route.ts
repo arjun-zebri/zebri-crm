@@ -23,11 +23,15 @@
 import { NextResponse } from 'next/server';
 
 import { inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
-import { stripeConnectAccountId } from '@/lib/auth/entitlements';
+import {
+  stripeConnectAccountId,
+  updateEntitlements,
+} from '@/lib/auth/entitlements';
 import {
   type ConnectAccountSnapshot,
   syncConnectAccount,
 } from '@/lib/payments/connect-account';
+import { defaultAuthAdmin } from '@/lib/payments/connect-events';
 import { stripe } from '@/lib/payments/stripe';
 import { createClient } from '@/lib/supabase/server';
 
@@ -84,6 +88,19 @@ export async function POST(request: Request) {
         : null,
     };
     await syncConnectAccount(user.id, snapshot);
+
+    // Mirror the same entitlement flip the `account.updated` webhook
+    // does. "Is Stripe connected?" is read from two places: the
+    // Settings page reads the `connect_accounts` mirror, but the
+    // branding readiness pill and the invoice-payment route read
+    // `app_metadata.stripe_connect_enabled`. Writing only the mirror
+    // here left an MC whose webhook never landed seeing "Connected"
+    // in Settings while the invoice canvas still said Stripe was
+    // missing, and card payments stayed refused.
+    await updateEntitlements(defaultAuthAdmin(), user.id, {
+      stripe_connect_account_id: account.id,
+      stripe_connect_enabled: Boolean(account.charges_enabled),
+    });
 
     // The mirror now has the latest from Stripe. The client should
     // re-fetch `/api/stripe/connect/status` to see it.

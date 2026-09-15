@@ -36,6 +36,17 @@ describe('purpose-aware OAuth config', () => {
     expect(m).not.toContain('https://graph.microsoft.com/Mail.Send');
   });
 
+  it('every Microsoft grant carries User.Read so the callback can read /me', () => {
+    // Graph rejects GET /me with 403 unless a User.* permission is granted;
+    // Calendars.ReadWrite / Mail.Send alone are not enough.
+    expect(oauthConfig('microsoft', 'calendar').scopes).toContain(
+      'https://graph.microsoft.com/User.Read',
+    );
+    expect(oauthConfig('microsoft', 'email').scopes).toContain(
+      'https://graph.microsoft.com/User.Read',
+    );
+  });
+
   it('buildAuthorizeUrl carries the purpose scopes', () => {
     const url = new URL(buildAuthorizeUrl('google', 'google.calendar.x', 'calendar'));
     expect(url.searchParams.get('scope')).toContain('calendar.events');
