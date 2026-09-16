@@ -100,6 +100,40 @@ that URL moves under `/couples`). See roadmap §7.
 
 ---
 
+## Feature modules
+
+A **feature module** (`features/<name>/`) is a self-contained lego
+brick with exactly one public face: `features/<name>/index.ts`. It
+exists for a feature large enough to have its own internal layers
+(model, render, data) but that the rest of the app should only ever
+touch through a narrow, intentional API.
+
+`features/proposals/` (Proposal Layout v2, Phase 1) is the first one:
+`model/` (layout schema, migration, presets), `render/` (the public
+renderer), `data/` (server actions), all exported once from
+`features/proposals/index.ts`.
+
+The boundary is enforced by an ESLint `no-restricted-imports` rule in
+`eslint.config.mjs` ("Feature boundary"):
+
+- Code outside `features/proposals/` may import `@/features/proposals`
+  and nothing deeper (no `@/features/proposals/model/*`, etc.).
+- Code inside `features/proposals/` may not import from `@/app/*` (a
+  feature module never reaches into pages), except a temporary regex
+  carve-out for the v1 branding block types it migrates from
+  (`@/app/(dashboard)/branding/blocks/{types,defaults,proposal-starters}`,
+  removed once Phase 3 lands), and may not import from another
+  feature module.
+- Code under `lib/` gets a warning (not an error) importing
+  `@/features/*` - `lib/` is meant to be feature-agnostic.
+
+Add a new feature module the same way: one `index.ts` re-exporting the
+public surface, internal layers underneath, and a matching entry in
+the "Feature boundary" block of `eslint.config.mjs` so the rule covers
+it.
+
+---
+
 ## Code conventions
 
 - **Imports:** prefer `@/`-absolute over deep relative (`../../../`). Keep
