@@ -6,5 +6,8 @@
 /** Max content width (px) of the document card, shared across every surface. */
 export const DOC_MAX_WIDTH_PX = 720
 
+/** Inner column of the page frame; keep in sync with `--container-doc-page`. */
+export const DOC_PAGE_MAX_WIDTH_PX = 1100
+
 /** Light-grey page canvas the white document card sits on. */
 export const DOC_CANVAS_BG = '#F4F4F1'

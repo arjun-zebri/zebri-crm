@@ -12,6 +12,8 @@ interface CanvasFrameProps {
   zoom: number
   setZoom: (v: number) => void
   wide?: boolean
+  /** The proposal surface: a full-bleed page frame rather than a document card. */
+  page?: boolean
   children: React.ReactNode
   /** Floating overlay pinned inside the canvas (e.g. the readiness badge). It
    *  positions itself; render it as a sibling of the scroll area so it stays
@@ -27,19 +29,63 @@ function clampZoom(v: number): number {
   return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(v * 100) / 100))
 }
 
-export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: CanvasFrameProps) {
+export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overlay }: CanvasFrameProps) {
   // Portal uses a wider surface (it's a real-app dashboard preview); documents
-  // stay narrower and identical across quote / invoice / contract.
-  const desktopWidth = wide ? 920 : DOC_MAX_WIDTH_PX
+  // stay narrower and identical across quote / invoice / contract. The page
+  // canvas is wider still than the 1100px column so section backgrounds
+  // visibly bleed past the content while editing, but only by 50px a side:
+  // at 1280 it was a hair wider than the canvas viewport on a common
+  // editor layout, so "100%" cropped the page edges behind a scrollbar.
+  const desktopWidth = page ? 1200 : wide ? 920 : DOC_MAX_WIDTH_PX
 
   // The scroll viewport. Pan writes directly to its scrollLeft/scrollTop, and
   // cursor-anchored zoom reads its scroll + rect to keep the point under the
   // pointer fixed while the scale changes.
   const scrollRef = useRef<HTMLDivElement>(null)
+  // The padded wrapper inside the scroll viewport. Measured (not the zoomed
+  // child) because it is outside the `zoom` property's coordinate space, so
+  // its padding stays in real pixels whatever the zoom is.
+  const padRef = useRef<HTMLDivElement>(null)
+  // The zoom at which the canvas exactly fills the viewport's usable width.
+  // Capped at 1: fitting is for canvases too wide to show, never an excuse to
+  // magnify a narrow document past its true size.
+  const [fitZoom, setFitZoom] = useState(1)
   // True while space is held: the cursor becomes a grab handle and a primary
   // drag pans instead of selecting. Middle-mouse drag pans without the key.
   const [spaceHeld, setSpaceHeld] = useState(false)
   const [panning, setPanning] = useState(false)
+
+  // Measure the fit zoom whenever the viewport or the target canvas width
+  // changes. A ResizeObserver rather than a window listener, since the editor's
+  // side panels collapse and expand without the window ever resizing.
+  // Canvas width the auto-fit has already been applied for, so switching
+  // surfaces re-fits once and a zoom the MC then chooses is never overridden.
+  const fittedFor = useRef<number | null>(null)
+  useLayoutEffect(() => {
+    const viewport = scrollRef.current
+    const pad = padRef.current
+    if (!viewport || !pad) return
+    const measure = () => {
+      const style = getComputedStyle(pad)
+      const available =
+        viewport.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+      if (available <= 0) return
+      const fit = Math.min(1, Math.round((available / desktopWidth) * 100) / 100)
+      setFitZoom(fit)
+      // Apply the fit here, off a real measurement, rather than in a separate
+      // effect: `fitZoom` still holds the previous canvas's value on the first
+      // render after a surface change, so an effect keyed on it would mark this
+      // width as fitted using a stale number and never correct itself.
+      if (fittedFor.current !== desktopWidth) {
+        fittedFor.current = desktopWidth
+        setZoom(clampZoom(fit))
+      }
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(viewport)
+    return () => ro.disconnect()
+  }, [desktopWidth, setZoom])
 
   // Latest zoom, read inside the native wheel listener below without making it
   // a dependency (so the listener attaches once and never detaches mid-gesture).
@@ -182,6 +228,9 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: 
 
       <div
         ref={scrollRef}
+        // The block toolbar's collision boundary (see BlockFrame): it keeps
+        // the toolbar inside the canvas rather than over the surface tabs.
+        data-canvas-scroll
         className="relative h-full overflow-y-auto overflow-x-auto"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -189,16 +238,23 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: 
         onPointerCancel={endPan}
         style={panCursor ? { cursor: panCursor } : undefined}
       >
-        <div className="max-w-[1100px] mx-auto px-6 lg:px-12 pt-12 pb-24 flex justify-center">
+        {/* `min-w-fit` keeps the centred child reachable when it is wider than
+            the viewport: a plain `justify-center` would push its left edge
+            out of the scrollable area. */}
+        <div ref={padRef} className="min-w-fit mx-auto px-6 lg:px-12 pt-12 pb-24 flex justify-center">
           <div
             // Use the `zoom` CSS property (not transform: scale) so dnd-kit's
-            // pointer geometry stays correct while dragging.
+            // pointer geometry stays correct while dragging. `shrink-0` so the
+            // flex parent cannot squeeze the zoomed canvas back down: without
+            // it, zooming IN re-fit the canvas to the parent and looked like a
+            // dead button, while zooming out appeared to work.
+            className="shrink-0"
             style={{ zoom }}
           >
             {device === 'mobile' ? (
               <div className="w-[380px] @container/doc">{children}</div>
             ) : (
-              <div style={{ width: desktopWidth }} className="max-w-full @container/doc">{children}</div>
+              <div style={{ width: desktopWidth }} className="@container/doc">{children}</div>
             )}
           </div>
         </div>
@@ -206,19 +262,20 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: 
 
       {overlay}
 
-      <ZoomWidget zoom={zoom} setZoom={(v) => setZoom(clampZoom(v))} />
+      <ZoomWidget zoom={zoom} fitZoom={fitZoom} setZoom={(v) => setZoom(clampZoom(v))} />
     </div>
   )
 }
 
-function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => void }) {
+function ZoomWidget({ zoom, fitZoom, setZoom }: { zoom: number; fitZoom: number; setZoom: (v: number) => void }) {
   const pct = Math.round(zoom * 100)
   return (
-    // Sized and positioned to sit in line with the assistant dock, which is
-    // fixed at `bottom-6 right-6` on every dashboard page and was covering
-    // these controls: `right-40` clears its footprint, `bottom-6` puts the two
-    // on the same baseline, and `h-8` gives them the same height.
-    <div className="absolute bottom-6 right-40 z-20 flex items-center gap-1.5 bg-surface border border-border rounded-pill shadow-[0_4px_18px_-4px_rgba(15,23,42,0.18)] h-8 px-1">
+    // Centred on the canvas rather than tucked into a corner: it belongs to the
+    // document, not to the page chrome. Centring also clears the assistant
+    // dock (fixed at `bottom-6 right-6` on every dashboard page) without
+    // having to dodge its exact footprint, which is what the old `right-40`
+    // was doing. `bottom-6` keeps the two on one baseline, `h-8` one height.
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-surface border border-border rounded-pill shadow-[0_4px_18px_-4px_rgba(15,23,42,0.18)] h-8 px-1">
       <button
         type="button"
         onClick={() => setZoom(zoom - 0.1)}
@@ -243,10 +300,14 @@ function ZoomWidget({ zoom, setZoom }: { zoom: number; setZoom: (v: number) => v
       <span className="text-[11px] font-mono text-gray-700 tabular-nums w-10 text-center">{pct}%</span>
       <button
         type="button"
-        onClick={() => setZoom(1)}
+        // Its label always said "Fit to width" while it reset to a literal
+        // 100%, which on the proposal's 1200px page frame can be wider than the
+        // viewport: the control that promised to show the whole canvas was the
+        // one cropping it.
+        onClick={() => setZoom(fitZoom)}
         className="w-6 h-6 inline-flex items-center justify-center rounded-pill text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
         aria-label="Fit to width"
-        title="Reset zoom"
+        title="Fit to width"
       >
         <Maximize2 size={11} strokeWidth={2} />
       </button>

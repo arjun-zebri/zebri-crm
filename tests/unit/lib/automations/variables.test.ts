@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { renderTemplate, VARIABLE_CATALOGUE } from '@/lib/automations/variables'
+import { renderTemplate, VARIABLE_CATALOGUE, linkLabel } from "@/lib/automations/variables"
 import type { RunContext } from '@/types/automations'
 
 function makeCtx(overrides: Partial<RunContext> = {}): RunContext {
@@ -167,5 +167,27 @@ describe('portal links', () => {
     expect(tokens).toContain('{{portal.link}}')
     expect(tokens).toContain('{{portal.partner_link}}')
     expect(tokens).toContain('{{portal.vendor_link}}')
+  })
+})
+
+describe('linkLabel', () => {
+  it('returns the couple-facing label for every catalogued link variable', () => {
+    expect(linkLabel('portal.link')).toBe('View your portal')
+    expect(linkLabel('portal.partner_link')).toBe('View your portal')
+    expect(linkLabel('portal.vendor_link')).toBe('View the run sheet')
+    expect(linkLabel('invoice.link')).toBe('View and pay your invoice')
+    expect(linkLabel('contract.link')).toBe('Review and sign your contract')
+    expect(linkLabel('questionnaire.link')).toBe('Fill in your questionnaire')
+    expect(linkLabel('quote.link')).toBe('View your quote')
+    expect(linkLabel('mc.review_link')).toBe('Leave a review')
+  })
+
+  it('ignores filters on the expression', () => {
+    expect(linkLabel('portal.link | default:x')).toBe('View your portal')
+  })
+
+  it('returns null for a non-link variable', () => {
+    expect(linkLabel('couple.primary_name')).toBeNull()
+    expect(linkLabel('invoice.number')).toBeNull()
   })
 })

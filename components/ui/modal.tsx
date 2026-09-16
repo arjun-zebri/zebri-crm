@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import {
@@ -61,6 +61,13 @@ interface ModalProps {
    *  Used by the welcome tour, whose per-step title should sit flush at
    *  the top rather than below a tall, otherwise-empty header row. */
   floatingClose?: boolean;
+  /**
+   * When false, the header X is not rendered, so the only way out is a
+   * choice the body offers (a forced first-run decision like the proposal
+   * role chooser). Backdrop clicks and Escape still call `onClose`; pass a
+   * no-op there. Defaults to true.
+   */
+  dismissible?: boolean;
 }
 
 const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
@@ -90,6 +97,7 @@ export function Modal({
   flushBottom = false,
   chrome = false,
   floatingClose = false,
+  dismissible = true,
 }: ModalProps) {
   // Auto-tier: a base backdrop (z-50) opened from inside a fullscreen
   // overlay (couple/contact profile, settings — panels at z-[60]) is
@@ -113,6 +121,7 @@ export function Modal({
   // only decides for call sites that never said.
   const z = OVERLAY_Z[layer ?? (nested ? 'nested' : latched.tier)];
 
+  const titleId = useId();
   useOverlay({ isOpen, onClose });
   const backdropHandlers = useBackdropDismiss(onClose);
 
@@ -150,6 +159,9 @@ export function Modal({
         {...chromeAttrs}
         role="dialog"
         aria-modal="true"
+        // The title heading names the dialog, so assistive tech announces it
+        // and tests can address it by name (getByRole('dialog', { name })).
+        aria-labelledby={title ? titleId : undefined}
         className={`fixed inset-0 flex items-center justify-center p-4 ${z.panel}`}
         {...backdropHandlers}
       >
@@ -167,13 +179,15 @@ export function Modal({
             // Headerless: the close button floats over the top-right so the
             // body's first row (e.g. the wizard's step title) sits flush at
             // the very top instead of below an otherwise-empty header band.
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="absolute top-3 right-3 z-10 p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
-            >
-              <X size={18} strokeWidth={1.5} />
-            </button>
+            dismissible && (
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                className="absolute top-3 right-3 z-10 p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
+              >
+                <X size={18} strokeWidth={1.5} />
+              </button>
+            )
           ) : (
             /* Header — height ≈ 4rem (py-4 + text-section content). The
                `flushBottom` body below subtracts that from 85vh to
@@ -186,7 +200,7 @@ export function Modal({
               {title && (
                 // A real heading: screen readers announce the dialog name
                 // and e2e selectors can target `h2:has-text(...)`.
-                <h2 className="flex items-center gap-2 text-section font-semibold text-text">
+                <h2 id={titleId} className="flex items-center gap-2 text-section font-semibold text-text">
                   {title}
                 </h2>
               )}
@@ -197,13 +211,15 @@ export function Modal({
                     <div className="w-px h-4 bg-gray-200 mx-1" />
                   </>
                 )}
-                <button
-                  onClick={onClose}
-                  aria-label="Close"
-                  className="p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
-                >
-                  <X size={18} strokeWidth={1.5} />
-                </button>
+                {dismissible && (
+                  <button
+                    onClick={onClose}
+                    aria-label="Close"
+                    className="p-1.5 text-text-subtle hover:text-gray-600 transition cursor-pointer"
+                  >
+                    <X size={18} strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
             </div>
           )}

@@ -1,6 +1,15 @@
 // Shared helpers + types for the public block renderers. Each block component
 // lives in its own file; this is the common surface they all import.
 
+import type { JSONContent } from '@tiptap/core'
+
+// Note: this is a type-only import of `PublicProposalOption` from
+// `lib/proposals/public-types`, and that module imports `PublicDocData` (below)
+// from here. The cycle only exists between types, so it is erased at compile
+// time and never exists at runtime.
+import type { PublicProposalOption } from '@/lib/proposals/public-types'
+import type { HeroOverride } from '@/lib/proposals/types'
+
 import { DENSITY_PADDING } from '../density'
 import type { PublicBranding } from '../public-surface'
 
@@ -26,6 +35,45 @@ export function fmtDate(dateStr: string): string {
 
 export function pad(branding: PublicBranding) {
   return DENSITY_PADDING[branding.density]
+}
+
+/**
+ * How a block tree is framed. `document` is the 720px card every existing
+ * surface uses; `page` is the proposal's full-bleed section layout; `print`
+ * is the document frame with animation and video playback off.
+ */
+export type FrameMode = 'document' | 'page' | 'print'
+
+/** Proposal data the data-bound proposal blocks render from (spec §7.3). */
+export interface PublicDocProposal {
+  options: PublicProposalOption[]
+  introNote: JSONContent | string | null
+  depositPercent: number | null
+  heroOverride: HeroOverride | null
+  expired: boolean
+  // `signing` / `paying` are the Phase C close states: an accepted option
+  // awaiting a contract signature, and a signed contract awaiting the
+  // deposit. The accept block shows a status message instead of the button
+  // for both, same as `accepted` / `declined` / `expired`.
+  state: 'open' | 'signing' | 'paying' | 'accepted' | 'declined' | 'expired'
+  proposalNumber: string
+  acceptedOptionId: string | null
+  acceptedAddonIds: string[]
+  acceptedAt: string | null
+}
+
+/**
+ * Selection state + handlers the public proposal page threads into the
+ * packages and accept blocks. Absent in the editor and preview (read-only).
+ */
+export interface ProposalSlotProps {
+  selectedOptionId?: string | null | undefined
+  selectedAddonIds?: readonly string[] | undefined
+  onSelectOption?: ((id: string) => void) | undefined
+  onToggleAddon?: ((id: string) => void) | undefined
+  onAccept?: (() => void) | undefined
+  /** Opens the decline dialog. Given only on the live page (never the editor, preview or print), and only while the proposal is still open. */
+  onDecline?: (() => void) | undefined
 }
 
 export interface PublicDocItem {
@@ -88,6 +136,8 @@ export interface PublicDocData {
       paidAt: string | null
     }>
   } | null
+  /** Present only on the proposal surface; the data-bound proposal blocks render nothing without it. */
+  proposal?: PublicDocProposal
 }
 
 export interface ActionSlotProps {

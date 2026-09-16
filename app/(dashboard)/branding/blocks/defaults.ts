@@ -3,11 +3,25 @@ import type { JSONContent } from '@tiptap/core'
 import { htmlToPlainText } from '@/lib/branding/sanitize'
 import type { SurfaceTab } from '@/types/branding-preview'
 
+// `proposal-starters.ts` imports `blockTemplate` from this module, and this
+// module imports `proposalNeutralBlocks` from it: a real cycle, but a safe
+// one, because each side only calls the other's function inside a function
+// body (defaultBlocksFor / proposalNeutralBlocks), never at module
+// evaluation, so there is no load-order dependency to break.
+import { proposalNeutralBlocks } from './proposal-starters'
 import type { Block, BlockType, FormFieldBlock, FormFieldInputType, FormFieldRole } from './types'
 
 /** Build a single-paragraph rich-text doc from a plain string (empty = blank paragraph). */
 function textDoc(s: string): JSONContent {
   return { type: 'doc', content: [{ type: 'paragraph', ...(s ? { content: [{ type: 'text', text: s }] } : {}) }] }
+}
+
+/** A rich-text doc holding one variable chip (the hero heading default). */
+function variableDoc(id: string): JSONContent {
+  return {
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [{ type: 'variable', attrs: { id } }] }],
+  }
 }
 
 /**
@@ -133,12 +147,73 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
         label: 'Send enquiry',
         successMessage: 'Thanks! Your enquiry has been sent. We will be in touch soon.',
       }
+    case 'hero':
+      // NOT locked: a second hero is caught by the exactly-one readiness rule (R4),
+      // not by lock state. Locking it would also block deletion per
+      // policy.isDeletable (!locked || CLEARABLE_MARKERS.has(type)), and hero is
+      // not a marker, so it must stay unlocked.
+      return {
+        id: newId('he'), type: 'hero',
+        background: { kind: 'none' },
+        heading: variableDoc('couple_name'),
+        subheading: textDoc('A proposal for your wedding day'),
+        overlay: 35, height: 'full', textAlign: 'center',
+      }
+    case 'introNote':
+      return { id: newId('in'), type: 'introNote', locked: true, heading: 'A note from me' }
+    case 'video':
+      return { id: newId('vd'), type: 'video', source: null, caption: '' }
+    case 'gallery':
+      return { id: newId('ga'), type: 'gallery', images: [], layout: 'grid' }
+    case 'testimonials':
+      // No pre-written quotes: a fabricated testimonial reads as a real past
+      // couple's words, and only the MC knows what their couples actually
+      // said. Starts empty; the public renderer hides an empty block and
+      // the editor shows its add-item state so the MC opts in per quote.
+      return { id: newId('te'), type: 'testimonials', heading: 'Kind words', layout: 'cards', items: [] }
+    case 'aboutMe':
+      return { id: newId('am'), type: 'aboutMe', heading: 'Hi, I\'m your host', body: textDoc('Tell couples who you are and why you love this work.'), imageSide: 'left' }
+    case 'howItWorks':
+      return {
+        id: newId('hw'), type: 'howItWorks', heading: 'How it works',
+        steps: [
+          { id: newId('st'), title: 'Say yes', description: 'Choose a package below and sign in a couple of minutes.', icon: 'check' },
+          { id: newId('st'), title: 'We plan together', description: 'A planning call and a shared run sheet.', icon: 'calendar' },
+          { id: newId('st'), title: 'Your day', description: 'I take care of the flow so you can be present.', icon: 'heart' },
+        ],
+      }
+    case 'faq':
+      return {
+        id: newId('fq'), type: 'faq', heading: 'Questions couples ask',
+        items: [
+          { id: newId('fi'), question: 'How far ahead should we book?', answer: 'Most couples book 9 to 12 months out. Popular Saturdays go first.' },
+          { id: newId('fi'), question: 'Do you travel?', answer: 'Yes. Travel outside the metro area is an optional extra on each package.' },
+        ],
+      }
+    case 'packages':
+      return { id: newId('pk'), type: 'packages', locked: true, heading: 'Your options', layout: 'cards', showInclusions: true, ctaLabel: 'Choose this package' }
+    case 'accept':
+      return {
+        id: newId('ac2'), type: 'accept', locked: true, heading: 'Ready to lock in your date?', buttonLabel: 'Accept and sign',
+        reassurance: {
+          type: 'doc',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A ' }, { type: 'variable', attrs: { id: 'deposit_percent' } }, { type: 'text', text: ' deposit secures your date. Nothing is charged until you sign.' }] }],
+        },
+      }
   }
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead'): Block[] {
+export function defaultBlocksFor(surface: SurfaceTab): Block[] {
+  if (surface === 'proposal') {
+    // The role chooser (mc / celebrant / both) hasn't run yet at this point,
+    // so a brand-new proposal document starts from the role-neutral
+    // skeleton (no about-me/how-it-works/FAQ/testimonials copy written for
+    // a role the MC never confirmed); the editor swaps in the role-specific
+    // starter once the MC picks one (Task 8).
+    return proposalNeutralBlocks()
+  }
   if (surface === 'lead') {
     // Mirrors the fixed-field fallback form on the public /lead/[token] page:
     // same questions, same order, same labels, so customising starts from
@@ -256,7 +331,7 @@ export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'v
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: SurfaceTab): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {

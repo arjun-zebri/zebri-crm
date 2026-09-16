@@ -370,6 +370,50 @@ export function FoundationsSurface() {
           code={`/* globals.css — already done, do not repeat per call site */\n@layer base {\n  button:not(:disabled):not([aria-disabled='true']),\n  [role='button']:not(:disabled):not([aria-disabled='true']) {\n    cursor: pointer;\n  }\n}\n\n{/* still needed: the click target is not a button */}\n<tr onClick={open} className="cursor-pointer hover:bg-surface-muted">`}
         />
       </Spec>
+
+      <Spec
+        name="Page frame"
+        file="lib/branding/page-section.tsx"
+        description="The proposal's full-bleed layout: every block is its own section."
+      >
+        <Rule>
+          There are two frames. The <strong>document</strong> frame is the 720px white card every
+          existing surface (invoice, contract, run sheet, questionnaire) uses. The{' '}
+          <strong>page</strong> frame, used only by proposals, wraps every top-level block in a
+          full-width <code>&lt;section&gt;</code> that can carry its own background colour or
+          image, with the readable content centred at <code>max-w-doc-page</code> (1100px). Inside
+          that column, running text caps at <code>max-w-doc-prose</code> (720px) and a lone card at{' '}
+          <code>max-w-doc-narrow</code> (560px). The hero block is the one exception: it owns the
+          full section width, with no inner column.
+          <br />
+          Sections reveal as they scroll into view with <code>animate-reveal-up</code>, a 700ms
+          rise-and-fade. It respects <code>motion-reduce</code>, and it only ever runs once per
+          section, driven by <code>useReveal</code>. The hero and the <code>print</code> frame
+          never animate.
+          <br />
+          The hero&apos;s height is dragged from its bottom edge in the editor and stored as{' '}
+          <code>heightVh</code>, a share of the couple&apos;s viewport (30 to 100, rendered as{' '}
+          <code>min-height: Nsvh</code> on the page frame, so a full-screen opening always fills
+          the couple&apos;s screen on load).
+        </Rule>
+        <Demo label="A page-frame section, at reduced scale">
+          <div className="rounded-control border border-border overflow-hidden">
+            <div style={{ zoom: 0.5 }}>
+              <section className="relative w-full" style={{ background: '#EFE7DD' }}>
+                <div className="relative mx-auto w-full max-w-doc-page px-8 py-16">
+                  <p className="text-section font-semibold" style={{ color: '#3A2E22' }}>
+                    Our proposal for you
+                  </p>
+                  <p className="mt-2 text-body" style={{ color: '#6B5D4D' }}>
+                    This section carries its own background colour; the text sits inside the
+                    centred <code>max-w-doc-page</code> column.
+                  </p>
+                </div>
+              </section>
+            </div>
+          </div>
+        </Demo>
+      </Spec>
     </>
   );
 }

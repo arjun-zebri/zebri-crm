@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 
 import { resolveVariable, VARIABLE_CATALOGUE } from '@/lib/automations/variables'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
-import { buildSampleContext } from '@/lib/email/template-variables'
+import { buildSampleContext, EMAIL_TEMPLATE_VARIABLES } from '@/lib/email/template-variables'
 
 describe('buildSampleContext', () => {
   it('resolves EVERY catalogue variable to a non-empty sample value', () => {
@@ -45,5 +45,21 @@ describe('buildSampleContext', () => {
     const branding = buildPublicBranding({ brand_color: '#123456' })
     const ctx = buildSampleContext({ businessName: 'Acme', contactName: 'Charlie', signature: null, branding })
     expect(ctx.mc.branding).toBe(branding)
+  })
+})
+
+describe('EMAIL_TEMPLATE_VARIABLES', () => {
+  const byId = (id: string) => EMAIL_TEMPLATE_VARIABLES.find((v) => v.id === id)
+
+  // The popover must tell the MC what actually lands in the email: a
+  // link variable inserts anchored text, not the address the catalogue
+  // example shows.
+  it('describes a link variable by the text it inserts', () => {
+    expect(byId('portal.link')?.description).toBe('Inserts a "View your portal" link')
+    expect(byId('questionnaire.link')?.description).toBe('Inserts a "Fill in your questionnaire" link')
+  })
+
+  it('keeps the example-value description for plain variables', () => {
+    expect(byId('couple.primary_name')?.description).toBe('e.g. Sam')
   })
 })

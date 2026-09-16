@@ -16,6 +16,7 @@ import { CoupleEmails } from './couple-emails';
 import { CoupleOverview } from './couple-overview';
 import { CouplePayments } from './couple-payments';
 import type { CoupleProfileSection } from './couple-profile-types';
+import { CoupleProposals } from './couple-proposals';
 import { CoupleQuestionnaires } from './couple-questionnaires';
 import { CoupleScripts } from './couple-scripts';
 import { CoupleTime } from './couple-time';
@@ -61,6 +62,10 @@ export function CoupleProfileBody({
       )}
 
       {activeSection === 'time' && <CoupleTime coupleId={couple.id} />}
+
+      {activeSection === 'proposals' && (
+        <CoupleProposals coupleId={couple.id} coupleName={couple.name} />
+      )}
 
       {activeSection === 'payments' && (
         <CouplePayments coupleId={couple.id} coupleName={couple.name} />

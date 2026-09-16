@@ -138,7 +138,7 @@ export type AlertEvent =
       type: 'public_token_attempt_burst';
       severity: 'warn';
       ip: string;
-      surface: 'invoice' | 'quote' | 'portal' | 'contract' | 'lead' | 'slots' | 'booking' | 'manage';
+      surface: 'invoice' | 'proposal' | 'portal' | 'contract' | 'lead' | 'slots' | 'booking' | 'manage';
       /** Number of invalid attempts inside the burst window
        *  (typically 10 in 60s). */
       attempts: number;
@@ -182,7 +182,7 @@ export type AlertEvent =
   | (BaseEvent & {
       type: 'email_rate_limit_hit';
       severity: 'warn';
-      action: 'sendQuote' | 'sendInvoice' | 'sendTemplate';
+      action: 'sendProposal' | 'sendInvoice' | 'sendTemplate';
       userId: string;
       ip: string;
     })
@@ -297,6 +297,56 @@ export type AlertEvent =
       type: 'automation_tick_backlog';
       severity: 'warn';
       pendingEvents: number;
+    })
+
+  // ───── Proposals (Phase C close) ────────────────────────────────────
+  | (BaseEvent & {
+      type: 'proposal_accepted';
+      severity: 'info';
+      /** The MC whose proposal was accepted. */
+      userId: string;
+      proposalNumber: string;
+      coupleName: string;
+      /** The accepted option's total, in dollars. */
+      total: number;
+    })
+  | (BaseEvent & {
+      // The couple opened the proposal's public page for the first time.
+      // Reported by `record_proposal_events` off the very first `opened`
+      // event it accepts for a session; deliberately separate from
+      // proposal_accepted/proposal_declined, which fire on the close, not
+      // the read.
+      type: 'proposal_opened';
+      severity: 'info';
+      /** The MC whose proposal was opened. */
+      userId: string;
+      proposalNumber: string;
+      coupleName: string;
+    })
+  | (BaseEvent & {
+      type: 'proposal_declined';
+      severity: 'info';
+      /** The MC whose proposal was declined. */
+      userId: string;
+      proposalNumber: string;
+      coupleName: string;
+      reason: string;
+    })
+  | (BaseEvent & {
+      // The accept/decline/finalize close sequence failed partway through.
+      // The couple-side effect (RPC row, or the signature itself) is already
+      // recorded, so this is never a rollback signal; it is visibility that
+      // one of the close's side effects (rendering the contract, or turning
+      // a signature into a booking) needs a human to check on.
+      type: 'proposal_close_failed';
+      severity: 'error';
+      /** Null when the failure happened before the MC could be resolved. */
+      userId: string | null;
+      /** Null when the failure happened before the proposal could be resolved. */
+      proposalId: string | null;
+      /** Which step of the close failed. */
+      stage: 'accept_rpc' | 'publish' | 'finalize';
+      reason: string;
     })
 
   // ───── Lead capture ────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { ALL_SURFACE_TABS } from '@/lib/branding/enabled-surfaces'
 import type { BodyFont, HeadingFont } from '@/lib/branding/fonts'
 import type { Density } from '@/lib/branding/themes'
+import type { ProposalRole } from '@/lib/proposals/types'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 import { StepBusiness } from './step-business'
@@ -32,6 +33,14 @@ export interface OnboardingResult {
   fontBody: BodyFont
   density: Density
   enabledSurfaces: SurfaceTab[]
+  /**
+   * Which services the MC sells (D12); drives the proposal starter design
+   * and sample packages. `null` means the MC skipped the choice (Skip path)
+   * and gets the role-neutral starter tree instead of a role guessed on
+   * their behalf - a wrong guess would ship fabricated testimonials/claims
+   * under a role the MC never chose.
+   */
+  proposalRole: ProposalRole | null
 }
 
 /**
@@ -79,6 +88,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       ? props.initial.enabledSurfaces
       : ALL_SURFACE_TABS,
   )
+  const [proposalRole, setProposalRole] = useState<ProposalRole>(props.initial.proposalRole ?? 'both')
   const [loading, setLoading] = useState(false)
 
   /**
@@ -100,6 +110,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       fontBody,
       density,
       enabledSurfaces,
+      proposalRole,
     }
     setLoading(true)
     try {
@@ -127,6 +138,9 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       fontBody: fontBody || props.initial.fontBody || 'inter',
       density: density || props.initial.density || 'cozy',
       enabledSurfaces: ALL_SURFACE_TABS,
+      // Skip means the MC never confirmed mc/celebrant/both - null tells
+      // the caller to seed the role-neutral starter tree rather than guess.
+      proposalRole: null,
     }
     setLoading(true)
     try {
@@ -202,6 +216,8 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           <StepDocuments
             enabledSurfaces={enabledSurfaces}
             setEnabledSurfaces={setEnabledSurfaces}
+            proposalRole={proposalRole}
+            setProposalRole={setProposalRole}
           />
         )}
 

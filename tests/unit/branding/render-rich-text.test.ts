@@ -1,7 +1,7 @@
 import type { JSONContent } from '@tiptap/core'
 import { describe, expect, it } from 'vitest'
 
-import { renderRichText, richContentToPlainText } from '@/lib/branding/render-rich-text'
+import { renderRichText, renderRichTextInline, richContentToPlainText } from '@/lib/branding/render-rich-text'
 
 const doc = (content: JSONContent[]): JSONContent => ({ type: 'doc', content })
 const para = (content: JSONContent[]): JSONContent => ({ type: 'paragraph', content })
@@ -11,6 +11,10 @@ const variable = (id: string): JSONContent => ({ type: 'variable', attrs: { id }
 describe('renderRichText', () => {
   it('renders plain text', () => {
     expect(renderRichText(doc([para([text('Hello')])]))).toBe('<p>Hello</p>')
+  })
+
+  it('escapes typed text exactly once', () => {
+    expect(renderRichText(doc([para([text('Anna & Jake <3')])]))).toBe('<p>Anna &amp; Jake &lt;3</p>')
   })
 
   it('renders a bold mark', () => {
@@ -48,5 +52,27 @@ describe('renderRichText', () => {
   it('extracts plain text', () => {
     const d = doc([para([text('Dear '), variable('couple_name')])])
     expect(richContentToPlainText(d, )).toBe('Dear')
+  })
+})
+
+describe('renderRichTextInline', () => {
+  it('unwraps a single paragraph so it can sit inside a heading element', () => {
+    const d = doc([para([text('Anna &'), { type: 'hardBreak' }, text('Jake')])])
+    expect(renderRichTextInline(d)).toBe('Anna &amp;<br>Jake')
+  })
+
+  it('joins several paragraphs with line breaks', () => {
+    const d = doc([para([text('One')]), para([text('Two')])])
+    expect(renderRichTextInline(d)).toBe('One<br>Two')
+  })
+
+  it('keeps marks and resolves variables', () => {
+    const d = doc([para([text('Hi ', [{ type: 'bold' }]), variable('couple_name')])])
+    expect(renderRichTextInline(d, { couple_name: 'A & B' })).toBe('<strong>Hi </strong>A &amp; B')
+  })
+
+  it('returns empty string for empty content', () => {
+    expect(renderRichTextInline(null)).toBe('')
+    expect(renderRichTextInline(doc([para([])]))).toBe('')
   })
 })

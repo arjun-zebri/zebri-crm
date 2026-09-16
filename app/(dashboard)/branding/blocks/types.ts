@@ -52,6 +52,16 @@ export type BlockType =
   | 'spacer'
   | 'formField'
   | 'formSubmit'
+  | 'hero'
+  | 'introNote'
+  | 'video'
+  | 'gallery'
+  | 'testimonials'
+  | 'aboutMe'
+  | 'howItWorks'
+  | 'faq'
+  | 'packages'
+  | 'accept'
 
 export interface BaseBlock {
   id: string
@@ -86,6 +96,12 @@ export interface BaseBlock {
   spaceAbove?: number
   /** Vertical margin below the block in pixels. */
   spaceBelow?: number
+  /**
+   * Full-width section background, honoured only in the `page` frame mode
+   * (the proposal surface). `overlay` is 0-100 darkening over the image so
+   * text stays legible. Ignored by the document and print frames.
+   */
+  sectionBackground?: SectionBackground
 }
 
 export interface HeaderBannerBlock extends BaseBlock {
@@ -667,6 +683,192 @@ export interface QuestionnaireAllOnePageBlock extends QuestionnaireFormBlockBase
   type: 'questionnaireAllOnePage'
 }
 
+/** Background of a full-width page section (page frame only). */
+export interface SectionBackground {
+  color?: string
+  imageUrl?: string
+  /** 0-100 black overlay opacity over the image. */
+  overlay?: number
+}
+
+/** What sits behind the hero heading. `none` falls back to the brand surface colour. */
+export type HeroBackground =
+  | { kind: 'none' }
+  | { kind: 'image'; url: string }
+  | { kind: 'video'; url: string; posterUrl?: string }
+  | { kind: 'embed'; url: string }
+
+/**
+ * Proposal hero: the first full-viewport section. The heading defaults to a
+ * `{{couple_name}}` chip so every proposal opens with the couple's names.
+ * A per-proposal `HeroOverride` (image or embed) replaces `background` at
+ * render time without touching this block.
+ */
+export interface HeroBlock extends BaseBlock {
+  type: 'hero'
+  background: HeroBackground
+  heading: RichTextValue
+  subheading: RichTextValue
+  /** 0-100 black overlay over the background media. */
+  overlay: number
+  /**
+   * Legacy height preset from before the hero was drag-resizable. Still
+   * written by `blockTemplate` and read as the fallback when `heightVh` is
+   * absent (full = 100, tall = 70, short = 45); see `heroHeightVh`.
+   */
+  height: 'full' | 'tall' | 'short'
+  /**
+   * Height as a share of the couple's viewport (30-100), set by dragging the
+   * hero's bottom edge in the editor. 100 is a full-screen opening. Wins
+   * over `height` whenever present.
+   */
+  heightVh?: number
+  /** Show the heading. Absent means shown (blocks saved before the toggle existed). */
+  showHeading?: boolean
+  /** Show the subheading. Absent means shown. */
+  showSubheading?: boolean
+  textAlign: 'left' | 'center' | 'right'
+  /**
+   * Where the text sits in the section's height. Absent on blocks saved
+   * before it existed: those keep their old placement (centred text in the
+   * middle, left-aligned text at the bottom), see `heroVerticalAlign`.
+   */
+  verticalAlign?: 'top' | 'middle' | 'bottom'
+  headingStyle?: TextStyle
+  subheadingStyle?: TextStyle
+}
+
+/**
+ * Marker: renders the proposal's own `intro_note` (written per proposal in
+ * the builder). Only the framing and text style are configurable here.
+ */
+export interface IntroNoteBlock extends BaseBlock {
+  type: 'introNote'
+  /** Optional small heading above the note ("A note from me"). Empty hides it. */
+  heading: RichTextValue
+  headingStyle?: TextStyle
+  textStyle?: TextStyle
+}
+
+/** An uploaded MP4/WebM or a YouTube/Vimeo embed (D14). */
+export type VideoSource =
+  | { kind: 'upload'; url: string; posterUrl?: string }
+  | { kind: 'embed'; url: string }
+
+/**
+ * A single video section: an uploaded file or a YouTube/Vimeo embed, with an
+ * optional caption underneath.
+ */
+export interface VideoBlock extends BaseBlock {
+  type: 'video'
+  source: VideoSource | null
+  caption: RichTextValue
+  captionStyle?: TextStyle
+}
+
+/** One photo in a {@link GalleryBlock}. */
+export interface GalleryImage {
+  id: string
+  url: string
+  alt?: string
+}
+
+/** A photo gallery of up to 12 uploaded images in a grid, masonry, or carousel layout. */
+export interface GalleryBlock extends BaseBlock {
+  type: 'gallery'
+  /** 0-12 images; the editor stops adding at 12. */
+  images: GalleryImage[]
+  layout: 'grid' | 'masonry' | 'carousel'
+}
+
+/** One quote in a {@link TestimonialsBlock}. */
+export interface TestimonialItem {
+  id: string
+  quote: RichTextValue
+  names: RichTextValue
+  detail?: RichTextValue
+  imageUrl?: string
+}
+
+/** A set of past-couple quotes, shown as cards or a carousel. */
+export interface TestimonialsBlock extends BaseBlock {
+  type: 'testimonials'
+  heading: RichTextValue
+  items: TestimonialItem[]
+  layout: 'carousel' | 'cards'
+  headingStyle?: TextStyle
+}
+
+/** A portrait and a short story, introducing the MC or celebrant. */
+export interface AboutMeBlock extends BaseBlock {
+  type: 'aboutMe'
+  portraitUrl?: string
+  heading: RichTextValue
+  body: RichTextValue
+  imageSide: 'left' | 'right'
+  headingStyle?: TextStyle
+  bodyStyle?: TextStyle
+}
+
+/** Lucide icons a step may use; a fixed list so the public page ships no icon lookup by string. */
+export type HowItWorksIcon = 'message' | 'calendar' | 'pen' | 'mic' | 'heart' | 'party' | 'check' | 'file'
+
+/** One step in a {@link HowItWorksBlock}. */
+export interface HowItWorksStep {
+  id: string
+  title: RichTextValue
+  description: RichTextValue
+  icon: HowItWorksIcon
+}
+
+/** The steps from booking to the wedding day, each with an icon and a short description. */
+export interface HowItWorksBlock extends BaseBlock {
+  type: 'howItWorks'
+  heading: RichTextValue
+  steps: HowItWorksStep[]
+  headingStyle?: TextStyle
+}
+
+/** One question and answer in a {@link FaqBlock}. */
+export interface FaqItem {
+  id: string
+  question: RichTextValue
+  answer: RichTextValue
+}
+
+/** A list of common couple questions with their answers. */
+export interface FaqBlock extends BaseBlock {
+  type: 'faq'
+  heading: RichTextValue
+  items: FaqItem[]
+  headingStyle?: TextStyle
+}
+
+/**
+ * Marker: renders this proposal's 1-3 options with add-on toggles and a live
+ * total (D7). The options come from the proposal, never from this block.
+ */
+export interface PackagesBlock extends BaseBlock {
+  type: 'packages'
+  heading: RichTextValue
+  layout: 'cards' | 'stacked'
+  showInclusions: boolean
+  /** Button label on each option card, e.g. "Choose this package". */
+  ctaLabel: string
+  headingStyle?: TextStyle
+}
+
+/** Marker: the accept call to action. Phase C mounts the stepper behind it. */
+export interface AcceptBlock extends BaseBlock {
+  type: 'accept'
+  heading: RichTextValue
+  buttonLabel: string
+  /** Reassurance line under the button (rich text), e.g. deposit + cancellation terms. */
+  reassurance: RichTextValue
+  buttonColor?: string
+  headingStyle?: TextStyle
+}
+
 export type Block =
   | HeaderBannerBlock
   | BusinessNameBlock
@@ -693,8 +895,18 @@ export type Block =
   | SpacerBlock
   | FormFieldBlock
   | FormSubmitBlock
+  | HeroBlock
+  | IntroNoteBlock
+  | VideoBlock
+  | GalleryBlock
+  | TestimonialsBlock
+  | AboutMeBlock
+  | HowItWorksBlock
+  | FaqBlock
+  | PackagesBlock
+  | AcceptBlock
 
-export type BlocksByDoc = Record<'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead', Block[]>
+export type BlocksByDoc = Record<'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead' | 'proposal', Block[]>
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',
@@ -722,6 +934,16 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   spacer: 'Spacer',
   formField: 'Form field',
   formSubmit: 'Submit button',
+  hero: 'Hero',
+  introNote: 'Personal note',
+  video: 'Video',
+  gallery: 'Gallery',
+  testimonials: 'Testimonials',
+  aboutMe: 'About me',
+  howItWorks: 'How it works',
+  faq: 'FAQ',
+  packages: 'Packages',
+  accept: 'Accept',
 }
 
 /**
@@ -781,4 +1003,14 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   spacer: 'Adjustable vertical gap',
   formField: 'A labelled input field',
   formSubmit: 'The submit button',
+  hero: 'Full-screen opening with the couple\'s names',
+  introNote: 'The note you write for this couple (fixed, per proposal)',
+  video: 'An uploaded video or a YouTube / Vimeo link',
+  gallery: 'Up to 12 photos from past weddings',
+  testimonials: 'Kind words from past couples',
+  aboutMe: 'A portrait and your story',
+  howItWorks: 'The steps from booking to the day',
+  faq: 'Questions couples ask, answered',
+  packages: 'This proposal\'s options and add-ons (live)',
+  accept: 'The accept button and reassurance line',
 }

@@ -27,11 +27,13 @@ import { z } from 'zod';
 import { logger } from '@/lib/alerts/logger';
 import { CONTRACT_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
-import { sendExecutedCopies, sendNextSignerInvite } from '@/lib/contracts/notify';
+import { runAfterSignEffects } from '@/lib/contracts/after-sign';
+import { sendNextSignerInvite } from '@/lib/contracts/notify';
 import {
   isValidSignatureDataUrl,
   SIGNATURE_MAX_BYTES,
 } from '@/lib/contracts/signature-image';
+import type { PublicProposalInvoice } from '@/lib/proposals/close-types';
 import { createClient } from '@/lib/supabase/server';
 
 // 3 / min / IP — signing is a one-shot event the couple performs
@@ -147,15 +149,14 @@ export async function POST(request: NextRequest) {
     void sendNextSignerInvite(result.contract_id, result.next_signer_id).catch(() => undefined);
   }
 
+  let proposalInvoice: PublicProposalInvoice | null = null;
+
   // Once the last required signature lands, give every party a copy of the
-  // executed agreement. Failures here must not fail the request: the
-  // signature is already recorded and is not retractable.
+  // executed agreement and (for a proposal's contract) finalize the booking.
+  // See lib/contracts/after-sign.ts: neither step may fail the request, since
+  // the signature is already recorded and is not retractable.
   if (result.complete && result.contract_id) {
-    await sendExecutedCopies(result.contract_id).catch((err: unknown) => {
-      logger.error('[contract/sign] executed-copy delivery failed', err, {
-        contractId: result.contract_id,
-      });
-    });
+    proposalInvoice = await runAfterSignEffects(result.contract_id, token);
   }
 
   return NextResponse.json({
@@ -163,5 +164,6 @@ export async function POST(request: NextRequest) {
     invoice_id: result.invoice_id ?? null,
     complete: result.complete ?? true,
     outstanding: result.outstanding ?? 0,
+    proposal_invoice: proposalInvoice,
   });
 }

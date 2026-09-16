@@ -27,7 +27,7 @@ import type { Block, BlockType } from '@/app/(dashboard)/branding/blocks/types'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
- * Type for a blocks-by-surface object containing trees for all six surfaces.
+ * Type for a blocks-by-surface object containing trees for all seven surfaces.
  */
 export interface BlocksByDoc {
   invoice: Block[]
@@ -36,11 +36,12 @@ export interface BlocksByDoc {
   vendorTimeline: Block[]
   questionnaire: Block[]
   lead: Block[]
+  proposal: Block[]
 }
 
 /**
- * Repair all six surface block trees at once, preserving the autosave invariant:
- * every saved branding_blocks record has all six surface keys, with empty arrays
+ * Repair all seven surface block trees at once, preserving the autosave invariant:
+ * every saved branding_blocks record has all seven surface keys, with empty arrays
  * staying empty (not resurrected with required blocks).
  *
  * Why empty arrays must stay empty: Users can hide a surface entirely via the
@@ -52,16 +53,16 @@ export interface BlocksByDoc {
  *
  * Missing keys (old data predating new surfaces) are seeded as `[]` rather than
  * being dropped or seeded with default blocks. This ensures old rows round-trip
- * losslessly through a save: a user with old 4-surface data will load all 6,
- * see the new surfaces empty in the editor, and on save will have all 6 persisted.
+ * losslessly through a save: a user with old 4-surface data will load all 7,
+ * see the new surfaces empty in the editor, and on save will have all 7 persisted.
  *
  * @param blocks - Input blocks object, may have missing/extra keys
- * @returns Repaired object with all six keys present; empty arrays preserved,
+ * @returns Repaired object with all seven keys present; empty arrays preserved,
  *          non-empty trees fully repaired
  */
 export function repairAllSurfaces(blocks: Partial<BlocksByDoc>): BlocksByDoc {
-  // Initialize all six surfaces. Missing keys become empty arrays.
-  const surfaces: SurfaceTab[] = ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire', 'lead']
+  // Initialize all seven surfaces. Missing keys become empty arrays.
+  const surfaces: SurfaceTab[] = ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire', 'lead', 'proposal']
 
   const result: BlocksByDoc = {
     invoice: [],
@@ -70,6 +71,7 @@ export function repairAllSurfaces(blocks: Partial<BlocksByDoc>): BlocksByDoc {
     vendorTimeline: [],
     questionnaire: [],
     lead: [],
+    proposal: [],
   }
 
   for (const surface of surfaces) {

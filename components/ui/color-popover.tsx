@@ -17,6 +17,12 @@ interface ColorPopoverProps {
    *  default rather than appending, since two z-utilities on one element
    *  resolve by stylesheet order, not by class order. */
   zClassName?: string
+  /** Fires as the panel opens and closes, for a caller that must act once
+   *  a pick is final (e.g. return focus to an editor). */
+  onOpenChange?: (open: boolean) => void
+  /** Extra attributes for the portalled panel, so a parent that finds its
+   *  own menus by attribute can claim this one too. */
+  contentProps?: React.HTMLAttributes<HTMLDivElement> & Record<`data-${string}`, string>
 }
 
 export function ColorPopover({
@@ -26,12 +32,15 @@ export function ColorPopover({
   trigger,
   align = 'start',
   zClassName = 'z-[70]',
+  onOpenChange,
+  contentProps,
 }: ColorPopoverProps) {
   return (
-    <Popover.Root>
+    <Popover.Root {...(onOpenChange ? { onOpenChange } : {})}>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          {...contentProps}
           align={align}
           sideOffset={6}
           className={`bg-surface border border-border rounded-control shadow-xl p-3 ${zClassName} w-[280px] text-body animate-modal-in`}

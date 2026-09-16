@@ -76,7 +76,11 @@ import { execSync } from 'node:child_process';
 // `tooltip` conditionally rather than passing an explicit undefined into an
 // optional prop, clearing one long-standing violation (262 -> 261).
 // PDF renderer replaced by printing the public branded cards (261 -> 260).
-const STRICT_BUDGET = 240;
+// Proposals engine Phase B (Task 10, e2e/docs/gates sweep): landed at 239,
+// no new strict violations (240 -> 239).
+// Hero rich-text/toolbar rebuild: -1 (239 -> 238), the split modules land clean
+// under strict.
+const STRICT_BUDGET = 238;
 
 function runTscStrict() {
   try {

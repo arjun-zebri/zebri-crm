@@ -377,6 +377,20 @@ matches `text-sm`:
 | `--radius-control` | `rounded-control` | 6px | Everything with corners |
 | `--radius-pill` | `rounded-pill` | 9999px | Pills, chips, avatars, dots |
 
+### Container
+
+| Token | Utility | Value | Use |
+|---|---|---|---|
+| `--container-doc-page` | `max-w-doc-page` | 68.75rem (1100px) | Inner readable column of the `page` frame (proposals). Keep in sync with `DOC_PAGE_MAX_WIDTH_PX` in `lib/branding/document-frame.ts`. |
+| `--container-doc-prose` | `max-w-doc-prose` | 45rem (720px) | A readable measure for running text inside the page column (the personal note). Follows the text's alignment: `mx-auto` when centred, `ml-auto` when right-aligned. |
+| `--container-doc-narrow` | `max-w-doc-narrow` | 35rem (560px) | A single card or form inside the page column (a lone package). |
+
+### Motion
+
+| Token | Utility | Value | Use |
+|---|---|---|---|
+| `--animate-reveal-up` | `animate-reveal-up` | `reveal-up 700ms ease-out both` | Section reveal-on-scroll in the `page` frame (see `useReveal` in `lib/branding/page-section.tsx`). Respects `motion-reduce`; never applied to the hero or the `print` frame. |
+
 Spacing uses the Tailwind default scale; no custom spacing tokens.
 
 ### Dark mode (Phase 0.5b)
@@ -481,6 +495,11 @@ pages stay in lockstep:
   the public invoice / contract / run sheet / questionnaire pages. Apply it as
   `style={{ maxWidth: DOC_MAX_WIDTH_PX }}` with `mx-auto w-full`, not a
   `max-w-*` class, so there is one numeric source.
+- `DOC_PAGE_MAX_WIDTH_PX = 1100`  -  the inner readable column of the `page`
+  frame (proposals only). Unlike `DOC_MAX_WIDTH_PX`, this one does have a
+  Tailwind class, `max-w-doc-page` (`--container-doc-page` in
+  `app/globals.css`), because the page frame's sections are plain Tailwind
+  markup rather than an inline-styled card. Keep the two in sync.
 - `DOC_CANVAS_BG = '#F4F4F1'`  -  the light-grey page canvas the white document
   card sits on. The public invoice and contract pages set their page
   background to this (the card keeps its own `surface_color`) so the card
@@ -488,6 +507,54 @@ pages stay in lockstep:
   questionnaire share the width but not the canvas: they have no white card,
   so grey would leave their content floating (revisit if they gain a card).
 - The couple portal is intentionally wider (`max-w-5xl`) and is out of scope.
+
+### The `page` frame (Proposals, Phase B)
+
+The proposal surface is the one exception to the document-card model
+above: `PublicBlockRenderer` takes a `frame: 'document' | 'page' |
+'print'` prop, and in `page` mode every top-level block becomes its own
+full-width `<section>` (`PageSection` in `lib/branding/page-section.tsx`)
+that can carry a `sectionBackground` (colour and/or image with a 0-100
+overlay), with the readable content centred at `max-w-doc-page` (1100px,
+`--container-doc-page`, kept in sync with `DOC_PAGE_MAX_WIDTH_PX`). The
+hero block is the one exception within the exception: it owns the
+section's full width, with no inner column.
+
+Sections reveal on scroll with `animate-reveal-up` (`--animate-reveal-up`,
+a 700ms rise-and-fade), driven by `useReveal`: it respects
+`motion-reduce` and only ever runs once per section. The hero and the
+`print` frame never animate, and the animation falls back to "already
+revealed" when `IntersectionObserver` doesn't exist, so SSR and print
+always paint visible.
+
+The hero's height is dragged, not picked: `heightVh` (30-100) renders
+as `min-height: Nsvh` in the page frame (mobile-first `svh` units so
+the opening section fills the couple's actual visible viewport, not
+the address-bar-inflated `100vh`) and as a share of a 480px opening in
+the document and print frames, where there's no viewport to fill. The
+editor's `HeroResizeGrip` is the same bottom-edge grip the spacer and
+header banner use. See the "Page frame" entry on `/design-system` for
+the rendered demo, and `.claude/docs/proposals.md` for the full
+block/config table and the legacy `height` preset fallback.
+
+The personal note's toolbar is the same one-group row (`Heading` /
+`Note` chip by what was clicked, then typography), and the section
+background every non-hero proposal block shares is a caption-less
+group at the end of that row: colour swatch, image button (icon when
+empty, thumbnail + Remove when set), and an Overlay slider chip shown
+only once there is an image to darken. On the canvas the note itself
+is a muted stand-in under a mint "written per proposal" caption, since
+it is typed in the builder, not here.
+
+The hero's toolbar follows the general-block row (target chip, font,
+size, weight, colour, then `PositionControl`, a 3x3 grid for
+horizontal + vertical placement, the Overlay chip when there is media,
+and `IncludeDropdown` for the heading and subheading); it never shows
+captions above its controls, and the structural row hides spacing /
+radius / border because a full-bleed opening has no box to pad or
+frame. `IncludeDropdown` and `ToolbarDivider` live in
+`blocks/toolbar-primitives.tsx` and are the shared show/hide and
+separator controls for every block toolbar.
 
 Sidebar width: 240px (desktop expanded), 68px (desktop collapsed)
 

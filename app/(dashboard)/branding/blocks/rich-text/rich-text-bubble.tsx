@@ -3,6 +3,7 @@
 import * as Popover from '@radix-ui/react-popover'
 import { type Editor } from '@tiptap/react'
 import { Bold, ChevronDown, Highlighter, Italic, Plus, Underline } from 'lucide-react'
+import { useRef } from 'react'
 
 import { ColorPopover } from '@/components/ui/color-popover'
 import { VARIABLES_BY_SURFACE } from '@/lib/branding/document-variables'
@@ -13,23 +14,33 @@ const TEXT_COLOURS = ['#111827', '#6B7280', '#DC2626', '#EA580C', '#059669', '#0
 const HIGHLIGHTS = ['#FEF08A', '#FBBF24', '#FCA5A5', '#A7F3D0', '#93C5FD', '#D8B4FE']
 
 /**
- * The floating (bubble) toolbar shown over a text selection in a {@link RichText}
- * field: bold / italic / underline, font size, text colour, highlight, and an
- * insert-variable menu scoped to the current surface. All edits route through the
- * passed TipTap editor; colour pickers avoid `.focus()` so the selection is
- * preserved while the popover is open (mirrors the signature toolbar).
+ * Marks the bubble and each of its portalled menus so {@link RichText} can
+ * tell "focus is in one of my menus" from "focus left the field".
+ */
+const BUBBLE_ATTR = { 'data-rich-text-bubble': '' } as const
+
+/**
+ * The floating (bubble) toolbar shown while a {@link RichText} field is
+ * active (caret or selection): bold / italic / underline, font size, text
+ * colour, highlight, and an insert-variable menu scoped to the current
+ * surface. All edits route through the passed TipTap editor; colour pickers
+ * avoid `.focus()` so the selection is preserved while the popover is open
+ * (mirrors the signature toolbar). With only a caret, a picked colour is
+ * re-applied with focus once the picker closes, otherwise the click back
+ * into the text would discard it before anything was typed.
  */
 export function RichTextBubble({ editor, surface }: { editor: Editor; surface: SurfaceTab }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-control border border-border bg-surface px-1 py-1 shadow-lg">
+    <div {...BUBBLE_ATTR} className="flex items-center gap-0.5 rounded-control border border-border bg-surface px-1 py-1 shadow-lg">
       <Toggle active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold"><Bold size={15} strokeWidth={1.75} /></Toggle>
       <Toggle active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic"><Italic size={15} strokeWidth={1.75} /></Toggle>
       <Toggle active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline"><Underline size={15} strokeWidth={1.75} /></Toggle>
       <Divider />
       <SizeMenu editor={editor} />
-      <ColorPopover
+      <CaretSafeColor
+        editor={editor}
         value={editor.getAttributes('textStyle').color || '#111827'}
-        onChange={(c) => editor.chain().setColor(c).run()}
+        apply={(chain, c) => chain.setColor(c)}
         swatches={TEXT_COLOURS}
         trigger={
           <button type="button" title="Text colour" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-gray-700 hover:bg-surface-emphasis cursor-pointer">
@@ -38,9 +49,10 @@ export function RichTextBubble({ editor, surface }: { editor: Editor; surface: S
           </button>
         }
       />
-      <ColorPopover
+      <CaretSafeColor
+        editor={editor}
         value={editor.getAttributes('highlight').color || '#FEF08A'}
-        onChange={(c) => editor.chain().setHighlight({ color: c }).run()}
+        apply={(chain, c) => chain.setHighlight({ color: c })}
         swatches={HIGHLIGHTS}
         trigger={
           <button type="button" title="Highlight" className="flex items-center gap-1 px-1.5 h-7 rounded-control text-gray-700 hover:bg-surface-emphasis cursor-pointer">
@@ -51,6 +63,46 @@ export function RichTextBubble({ editor, surface }: { editor: Editor; surface: S
       <Divider />
       <VariableMenu editor={editor} surface={surface} />
     </div>
+  )
+}
+
+/**
+ * A colour picker that survives a caret. Marks applied to an empty selection
+ * live as "stored marks" that the next selection change discards, and the
+ * click back into the text after closing the picker is exactly that. So the
+ * last pick is re-applied with focus when the picker closes.
+ */
+function CaretSafeColor({
+  editor,
+  value,
+  apply,
+  swatches,
+  trigger,
+}: {
+  editor: Editor
+  value: string
+  apply: (chain: ReturnType<Editor['chain']>, colour: string) => ReturnType<Editor['chain']>
+  swatches: readonly string[]
+  trigger: React.ReactNode
+}) {
+  const picked = useRef<string | null>(null)
+  return (
+    <ColorPopover
+      value={value}
+      onChange={(c) => {
+        picked.current = c
+        apply(editor.chain(), c).run()
+      }}
+      onOpenChange={(open) => {
+        if (open || picked.current === null) return
+        const c = picked.current
+        picked.current = null
+        if (editor.state.selection.empty) apply(editor.chain().focus(), c).run()
+      }}
+      swatches={swatches}
+      trigger={trigger}
+      contentProps={BUBBLE_ATTR}
+    />
   )
 }
 
@@ -83,7 +135,7 @@ function SizeMenu({ editor }: { editor: Editor }) {
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="start" sideOffset={6} className="z-[80] bg-surface border border-border rounded-control shadow-lg py-1 min-w-[5rem]">
+        <Popover.Content {...BUBBLE_ATTR} align="start" sideOffset={6} className="z-[80] bg-surface border border-border rounded-control shadow-lg py-1 min-w-[5rem]">
           {RICH_TEXT_FONT_SIZES.map((s) => (
             <Popover.Close asChild key={s}>
               <button type="button" onClick={() => editor.chain().focus().setFontSize(`${s}px`).run()} className="w-full text-left px-3 py-1.5 text-body text-gray-700 hover:bg-gray-50 cursor-pointer">{s}</button>
@@ -111,7 +163,7 @@ function VariableMenu({ editor, surface }: { editor: Editor; surface: SurfaceTab
         </button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="end" sideOffset={6} className="z-[80] bg-surface border border-border rounded-control shadow-xl p-2 w-[220px] max-h-[300px] overflow-y-auto">
+        <Popover.Content {...BUBBLE_ATTR} align="end" sideOffset={6} className="z-[80] bg-surface border border-border rounded-control shadow-xl p-2 w-[220px] max-h-[300px] overflow-y-auto">
           {groups.map((group, gi) => (
             <div key={group} className={gi > 0 ? 'mt-2 pt-2 border-t border-gray-100' : ''}>
               <div className="px-2 pb-1 text-[10px] uppercase tracking-[0.08em] text-text-subtle">{group}</div>

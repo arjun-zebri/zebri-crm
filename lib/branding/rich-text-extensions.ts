@@ -22,7 +22,9 @@ import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-s
 import StarterKit from '@tiptap/starter-kit'
 
 /** Font sizes (px) offered in the toolbar and accepted by the sanitizer. */
-export const RICH_TEXT_FONT_SIZES = [11, 13, 14, 16, 20, 24, 32, 48] as const
+// 56 to 72 exist for the proposal hero, whose heading renders at 56 on the
+// page: a list that stopped at 48 could only ever make it smaller.
+export const RICH_TEXT_FONT_SIZES = [11, 13, 14, 16, 20, 24, 32, 48, 56, 64, 72] as const
 
 /**
  * Inline atom node for a document variable (e.g. `{{ couple_name }}`).

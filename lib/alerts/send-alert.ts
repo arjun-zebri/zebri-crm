@@ -114,6 +114,14 @@ function describe(event: AlertEvent): string {
       return `tick took ${event.durationMs}ms · ${event.actionsExecuted} actions`;
     case 'automation_tick_backlog':
       return `pending events=${event.pendingEvents}`;
+    case 'proposal_accepted':
+      return `user=${event.userId} · ${event.proposalNumber} accepted by ${event.coupleName} · $${event.total.toFixed(2)}`;
+    case 'proposal_opened':
+      return `user=${event.userId} · ${event.proposalNumber} opened by ${event.coupleName}`;
+    case 'proposal_declined':
+      return `user=${event.userId} · ${event.proposalNumber} declined by ${event.coupleName} (${event.reason})`;
+    case 'proposal_close_failed':
+      return `user=${event.userId ?? 'unknown'} · proposal=${event.proposalId ?? 'unknown'} · stage=${event.stage} · ${event.reason}`;
     case 'lead_blocked_plan_limit':
       return `user=${event.userId} · ${event.email} — website lead blocked by plan limit`;
     case 'lead_new_enquiry':

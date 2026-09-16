@@ -43,7 +43,7 @@ export function PrimitivesOverlays() {
   return (
     <>
       <Spec name="Modal" file="components/ui/modal.tsx"
-        importPath="@/components/ui/modal" description="Six sizes, plus nested, flushBottom and floatingClose modes. Escape closes only the topmost instance.">
+        importPath="@/components/ui/modal" description="Six sizes, plus nested, flushBottom, floatingClose and dismissible={false} (no header X, for a forced first-run choice) modes. Escape closes only the topmost instance.">
         <DemoRow>
           {MODAL_SIZES.map((s) => (
             <Button key={s} variant="outline" onClick={() => setModalSize(s)}>

@@ -4,7 +4,7 @@
  * is clicked in the list/kanban.
  *
  * Tabs nesting every per-couple feature: Overview, Workflow, Contacts,
- * Timeline, Songs, Files, Vows, Scripts, Payments, Contracts,
+ * Timeline, Songs, Files, Vows, Scripts, Proposals, Payments, Contracts,
  * Questionnaires, Emails. Contracts
  * is available on every plan; the Starter-plan cap (5 distinct
  * couples) is enforced at contract creation inside `CoupleContracts`,
@@ -23,6 +23,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ClipboardList,
   Clock,
+  FileHeart,
   FileSignature,
   Heart,
   LayoutDashboard,
@@ -106,6 +107,11 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'scripts',
     label: 'Scripts',
     icon: <ScrollText size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'proposals',
+    label: 'Proposals',
+    icon: <FileHeart size={18} strokeWidth={1.5} />,
   },
   {
     key: 'payments',

@@ -116,11 +116,15 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
 
   // Cmd+Z / Cmd+Shift+Z — works canvas-wide, including while editing inline text.
   // Native inputs/textareas keep their built-in undo so kit-name & search behave naturally.
+  // So do TipTap fields (`.ProseMirror`): they carry their own history, and
+  // taking the shortcut here as well undid twice, blurred the field, and left
+  // the next Backspace deleting the whole selected block instead of a character.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
       const target = e.target as HTMLElement | null
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
+      if (target?.closest?.('.ProseMirror')) return
       if (e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         if (target?.isContentEditable) (target as HTMLElement).blur()

@@ -4,15 +4,26 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import * as Popover from '@radix-ui/react-popover'
 import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, isValidElement, cloneElement, type CSSProperties, type ReactElement, type ReactNode } from 'react'
 
-import { blockOuterStyle, HPAD_EXEMPT_TYPES } from '@/lib/branding/block-outer-style'
+import { blockOuterStyle, hasOuterStyle, HPAD_EXEMPT_TYPES } from '@/lib/branding/block-outer-style'
+import type { FrameMode } from '@/lib/branding/public-blocks/shared'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 import { BlockToolbar } from './block-toolbar'
 import { isDeletable, isMarker, stylesWrapMarker } from './policy'
-import type { Block } from './types'
+import type { Block, BlockType } from './types'
+
+/**
+ * Blocks that size themselves, so the frame's drag-to-resize handle and its
+ * `blockHeightPx` floor stay off them. Header banner, image, spacer and hero
+ * each carry their own resize handle; the hero's writes a share of the
+ * viewport (`heightVh`), not pixels, and pins a matching min-height, which a
+ * frame floor could only fight (a smaller drag did nothing, a larger one
+ * stretched the frame around an unchanged hero).
+ */
+const SELF_SIZED_TYPES: ReadonlySet<BlockType> = new Set<BlockType>(['headerBanner', 'image', 'spacer', 'hero'])
 
 interface BlockFrameProps {
   id: string
@@ -28,7 +39,24 @@ interface BlockFrameProps {
   onDuplicate: () => void
   onDelete: () => void
   onResetBlock: () => void
+  /** The proposal surface: the child is already a `<PageSection>` that owns its own gutter. */
+  frame?: FrameMode | undefined
   children: React.ReactNode
+}
+
+/**
+ * In page mode, `children` is `<PageSection>{content}</PageSection>` (built
+ * by `BlockRenderer`): the section owns the full-bleed background and the
+ * centred `max-w-doc-page` column. Wrapping the section's own content in a
+ * style div (rather than wrapping the section itself, as `BlockFrame`'s
+ * sortable wrapper would) puts the box style inside that column, matching
+ * `BlockOuter` on the public renderer. A no-op (returns `children` as-is)
+ * when there's no style to apply or `children` isn't the expected element.
+ */
+function applyBoxStyleInsideSection(children: ReactNode, style: CSSProperties | undefined): ReactNode {
+  if (!style || !isValidElement(children)) return children
+  const section = children as ReactElement<{ children?: ReactNode }>
+  return cloneElement(section, {}, <div style={style}>{section.props.children}</div>)
 }
 
 export function BlockFrame({
@@ -45,6 +73,7 @@ export function BlockFrame({
   onDuplicate,
   onDelete,
   onResetBlock,
+  frame = 'document',
   children,
 }: BlockFrameProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -61,6 +90,15 @@ export function BlockFrame({
   // control's own default target.
   const [activeSubTarget, setActiveSubTarget] = useState<string | null>(null)
   const blockRef = useRef<HTMLDivElement>(null)
+  // The canvas scroll area, for the toolbar's collision boundary. A block
+  // taller than the canvas (a full-screen hero) otherwise flips the toolbar
+  // above itself and over the surface tabs; bounded to the canvas it slides
+  // to the nearest edge inside it instead.
+  const [toolbarBoundary, setToolbarBoundary] = useState<Element | null>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the mounted DOM once; there is no render-time way to find the scroll ancestor.
+    setToolbarBoundary(blockRef.current?.closest('[data-canvas-scroll]') ?? null)
+  }, [])
 
   const selectionColor = state.brandColor || '#111827'
 
@@ -169,6 +207,20 @@ export function BlockFrame({
   const blockRadius = isMarkerBlock ? undefined : block.blockRadius
   const rawOuterStyle = blockOuterStyle(block, { cornerRadius: state.cornerRadius })
   const outerStyle = isMarkerBlock ? { ...rawOuterStyle, background: undefined } : rawOuterStyle
+  // The full "box" style (padding, background, border, radius, maxWidth,
+  // align, spacing): everything blockOuterStyle produces plus the border
+  // overrides below, folded together because both describe the same visual
+  // box, just with the border fields resolved from a few more inputs.
+  const boxStyle: CSSProperties = {
+    ...outerStyle,
+    borderWidth: borderWidth || outerStyle.borderWidth,
+    borderStyle: (borderWidth || outerStyle.borderWidth) ? 'solid' : undefined,
+    borderColor: (borderWidth || outerStyle.borderWidth) ? borderColor : undefined,
+    borderRadius: blockRadius ?? (borderWidth ? state.cornerRadius : outerStyle.borderRadius),
+  }
+  const isPageFrame = frame === 'page'
+  // The dragged height floor, only for blocks the frame sizes.
+  const frameHeight = !SELF_SIZED_TYPES.has(block.type) && block.blockHeightPx ? block.blockHeightPx : undefined
 
   const blockNode = (
     <div
@@ -177,21 +229,28 @@ export function BlockFrame({
         blockRef.current = node
       }}
       data-block-id={id}
+      // Mirrors the public renderer's PageSection, which already tags every
+      // section with its type. Lets tooling and e2e target a block by what it
+      // IS rather than by matching its rendered copy, which changes with the
+      // MC's own text.
+      data-block-type={block.type}
       data-selected={selected || undefined}
       style={{
-        ...outerStyle,
+        // In page mode the box style (padding/background/border/radius/
+        // maxWidth/align/spacing) is rendered inside the <PageSection> below
+        // instead of here, mirroring the public renderer's BlockOuter, which
+        // nests the same style inside the section rather than around it,
+        // otherwise a maxWidthPx/align on this full-width sortable wrapper
+        // would constrain the whole section instead of just its content.
+        ...(isPageFrame ? {} : boxStyle),
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 30 : selected ? 20 : undefined,
         willChange: isDragging ? 'transform' : undefined,
-        borderWidth: borderWidth || outerStyle.borderWidth,
-        borderStyle: (borderWidth || outerStyle.borderWidth) ? 'solid' : undefined,
-        borderColor: (borderWidth || outerStyle.borderWidth) ? borderColor : undefined,
-        borderRadius: blockRadius ?? (borderWidth ? state.cornerRadius : outerStyle.borderRadius),
-        minHeight: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? block.blockHeightPx : undefined,
-        display: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? 'flex' : undefined,
-        flexDirection: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? 'column' : undefined,
-        justifyContent: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx
+        minHeight: frameHeight,
+        display: frameHeight ? 'flex' : undefined,
+        flexDirection: frameHeight ? 'column' : undefined,
+        justifyContent: frameHeight
           ? (block.blockVAlign === 'top' ? 'flex-start' : block.blockVAlign === 'bottom' ? 'flex-end' : 'center')
           : undefined,
       }}
@@ -255,18 +314,20 @@ export function BlockFrame({
 
       {/* Horizontal document padding is applied once here (matching the public
           BlockOuter), not inside each block, so the whole document shares one
-          inset. Only the empty spacer is exempt. */}
-      {HPAD_EXEMPT_TYPES.has(block.type) ? (
-        children
+          inset. Only the empty spacer is exempt. In page mode, `children` is
+          already a `<PageSection>` (see BlockRenderer) that owns its own
+          full-bleed background and inner `max-w-doc-page` gutter, so adding
+          the doc padding here as well would inset it a second time and stop
+          section backgrounds reaching the canvas edge. */}
+      {HPAD_EXEMPT_TYPES.has(block.type) || isPageFrame ? (
+        isPageFrame ? applyBoxStyleInsideSection(children, hasOuterStyle(block) ? boxStyle : undefined) : children
       ) : (
         <div className={DENSITY_PADDING[state.density].docX}>{children}</div>
       )}
 
-      {/* Block resize handle — shown for all block types except headerBanner,
-          image, and spacer, which each carry their own resize handle. Giving
-          those a second (block-frame) handle also stamped a minHeight floor
-          that fought their own resize, so the container could not shrink. */}
-      {block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && (
+      {/* Block resize handle, for every block that does not size itself
+          (see SELF_SIZED_TYPES). */}
+      {!SELF_SIZED_TYPES.has(block.type) && (
         <BlockResizeHandle onMouseDown={startResize} active={resizing} />
       )}
 
@@ -304,6 +365,7 @@ export function BlockFrame({
             sideOffset={6}
             collisionPadding={16}
             avoidCollisions
+            {...(toolbarBoundary ? { collisionBoundary: toolbarBoundary, sticky: 'always' as const } : {})}
             onOpenAutoFocus={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => {
               const target = e.target as HTMLElement | null

@@ -190,6 +190,8 @@ Shared branded surface renderers. Each public surface (invoice, contract, client
 
 **Shared helper:** `upload-brand-asset(file, type)` in `lib/branding/upload.ts` handles logo/favicon/header/image uploads to Supabase Storage (`branding/{user_id}/{type}`), returns a public URL via signed URL (1-hour TTL cached in-memory). Used by the editor's file picker, brand-panel upload controls, and image-block drag-drop.
 
+**Per-surface dispatcher split (Proposals, Phase B  -  the pattern for future surfaces):** ten proposal-only block types would have bloated `block-renderer.tsx`'s and `block-toolbar.tsx`'s big per-type `switch`, so they dispatch out instead. `app/(dashboard)/branding/blocks/render-proposal.tsx` exports `renderProposalBlock`, one `case` per proposal block type, editor renderer components living one per file under `app/(dashboard)/branding/blocks/proposal/`; `app/(dashboard)/branding/blocks/proposal-controls.tsx` exports `ProposalBlockControls`, the matching toolbar-control dispatcher. Both return `undefined`/`null` for any type they don't recognise, so `block-renderer.tsx`'s `renderBlock` and `block-toolbar.tsx`'s `BlockSpecificControls` call the dispatcher first and fall through to their own switch for the rest of the block library (`render.tsx` itself only exports the individual `Render*` block components, not a dispatcher): the next surface with several block types of its own should add its own `render-<surface>.tsx` / `<surface>-controls.tsx` pair rather than growing the shared switches.
+
 ## Events components — `components/events/*` (Phase 4A)
 
 Shared event-related components used by the couples profile + the

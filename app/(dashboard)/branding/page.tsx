@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { logger } from '@/lib/alerts/logger'
 import {
   ALL_SURFACE_TABS,
   buildEnabledSurfacesMap,
@@ -12,15 +13,18 @@ import { shouldShowOnboarding } from '@/lib/branding/onboarding-gate'
 import type { TextCase } from '@/lib/branding/text-case'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
+import type { ProposalRole } from '@/lib/proposals/types'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandKit } from '@/types/branding-preview'
 import type { Json } from '@/types/database'
 
 import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
+import { proposalNeutralBlocks, proposalStarterBlocks } from './blocks/proposal-starters'
 import type { Block } from './blocks/types'
 import { BrandingEditor } from './branding-editor'
 import { OnboardingModal } from './onboarding/onboarding-modal'
 import type { OnboardingResult } from './onboarding/onboarding-wizard'
+import { chooseProposalRoleAction } from './proposal-role-actions'
 
 interface UserMetadata {
   display_name?: string
@@ -74,7 +78,7 @@ interface UserMetadata {
   section_spacing?: number
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
-  branding_blocks?: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[]; lead?: Block[] }
+  branding_blocks?: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[]; lead?: Block[]; proposal?: Block[] }
   brand_kits?: BrandKit[]
   portal_sections?: {
     timeline?: boolean
@@ -88,7 +92,9 @@ interface UserMetadata {
 }
 
 interface UserBrandingRow {
-  branding_blocks: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[]; lead?: Block[] } | null
+  branding_blocks: { invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[]; lead?: Block[]; proposal?: Block[] } | null
+  /** Role chosen on first open of the Proposal tab; null until chosen. */
+  proposal_role: ProposalRole | null
   brand_kits: BrandKit[] | null
   portal_sections: {
     timeline?: boolean
@@ -170,11 +176,12 @@ export default function BrandingPage() {
         setMetadata(user.user_metadata as UserMetadata)
         const { data: row } = await supabase
           .from('user_branding')
-          .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
+          .select('branding_blocks, proposal_role, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
           .eq('user_id', user.id)
           .maybeSingle()
         const resolved = (row as UserBrandingRow | null) ?? {
           branding_blocks: null,
+          proposal_role: null,
           brand_kits: null,
           portal_sections: null,
           enabled_surfaces: null,
@@ -258,12 +265,20 @@ export default function BrandingPage() {
     const enabledSurfacesMap = buildEnabledSurfacesMap(result.enabledSurfaces)
 
     // Seed branding_blocks from the default tree for each ENABLED surface only.
-    // Disabled surfaces get empty arrays.
+    // Disabled surfaces get empty arrays. Proposal gets the role-specific
+    // starter design (D12) when the MC picked one, or the role-neutral
+    // starter (no fabricated testimonials/role claims) when they skipped.
     const branding_blocks: Record<string, Block[]> = {}
     for (const surface of ALL_SURFACE_TABS) {
-      branding_blocks[surface] = result.enabledSurfaces.includes(surface)
-        ? defaultBlocksFor(surface)
-        : []
+      if (!result.enabledSurfaces.includes(surface)) {
+        branding_blocks[surface] = []
+        continue
+      }
+      if (surface === 'proposal') {
+        branding_blocks[surface] = result.proposalRole !== null ? proposalStarterBlocks(result.proposalRole) : proposalNeutralBlocks()
+        continue
+      }
+      branding_blocks[surface] = defaultBlocksFor(surface)
     }
 
     // Upsert is safe with partial payloads: PostgREST ON CONFLICT only updates
@@ -286,6 +301,17 @@ export default function BrandingPage() {
       return
     }
 
+    // Seed the starter packages for the chosen role (same idempotent action
+    // the in-editor chooser calls). A failure here is not fatal to
+    // onboarding: the branding_blocks are already saved above, and the
+    // chooser will simply show again next time the MC opens the proposal tab.
+    if (result.enabledSurfaces.includes('proposal') && result.proposalRole !== null) {
+      const roleResult = await chooseProposalRoleAction(result.proposalRole)
+      if (!roleResult.ok) {
+        logger.warn('[branding/onboarding] proposal role seeding failed', { error: roleResult.error })
+      }
+    }
+
     // Step (c): Reload page data so editor mounts with new state.
     try {
       const { data: { user: updatedUser } } = await supabase.auth.getUser()
@@ -294,11 +320,12 @@ export default function BrandingPage() {
       }
       const { data: row } = await supabase
         .from('user_branding')
-        .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
+        .select('branding_blocks, proposal_role, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
         .eq('user_id', user.id)
         .maybeSingle()
       setBranding((row as UserBrandingRow | null) ?? {
         branding_blocks: null,
+        proposal_role: null,
         brand_kits: null,
         portal_sections: null,
         enabled_surfaces: null,
@@ -342,6 +369,7 @@ export default function BrandingPage() {
   const migratedVendorTimeline = blocksSrc.vendorTimeline !== undefined ? repairBlocks('vendorTimeline', migrateBlocks(blocksSrc.vendorTimeline, 'vendorTimeline')) : null
   const migratedQuestionnaire = blocksSrc.questionnaire !== undefined ? repairBlocks('questionnaire', migrateBlocks(blocksSrc.questionnaire, 'questionnaire')) : null
   const migratedLead = blocksSrc.lead !== undefined ? repairBlocks('lead', migrateBlocks(blocksSrc.lead, 'lead')) : null
+  const migratedProposal = blocksSrc.proposal !== undefined ? repairBlocks('proposal', migrateBlocks(blocksSrc.proposal, 'proposal')) : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
@@ -363,7 +391,13 @@ export default function BrandingPage() {
           height inside the overflow-hidden layout and its panels can't scroll. */}
       <div className="h-full" inert={showOnboarding ? true : undefined}>
         <BrandingEditor
-          key={dataVersion}
+          // The editor seeds its state from initialData once, at mount. When
+          // the onboarding cache says the wizard is likely, it mounts before
+          // the user_branding fetch resolves (inert under the wizard), so the
+          // key also flips on load: otherwise an onboarded account in a fresh
+          // browser keeps the pre-fetch defaults (and a null proposal role,
+          // which reopened the role chooser on every visit).
+          key={`${dataVersion}-${loading ? 'loading' : 'ready'}`}
           initialData={{
             kitName: metadata?.brand_kit_name || 'My brand',
             logoUrl: metadata?.logo_url || '',
@@ -396,6 +430,7 @@ export default function BrandingPage() {
               vendorTimeline: migratedVendorTimeline !== null ? migratedVendorTimeline : defaultBlocksFor('vendorTimeline'),
               questionnaire: migratedQuestionnaire !== null ? migratedQuestionnaire : defaultBlocksFor('questionnaire'),
               lead: migratedLead !== null ? migratedLead : defaultBlocksFor('lead'),
+              proposal: migratedProposal !== null ? migratedProposal : defaultBlocksFor('proposal'),
             },
             businessName: metadata?.business_name || '',
             phone: metadata?.phone || '',
@@ -441,6 +476,7 @@ export default function BrandingPage() {
             sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
             enabledSurfaces,
             onboardedAt,
+            proposalRole: branding?.proposal_role ?? null,
           }}
         />
       </div>
@@ -464,6 +500,7 @@ export default function BrandingPage() {
           fontHeading: sanitizeHeading(metadata?.font_heading),
           fontBody: sanitizeBody(metadata?.font_body),
           density: metadata?.density || 'cozy',
+          proposalRole: branding?.proposal_role ?? undefined,
         }}
         onComplete={handleWizardComplete}
         error={wizardError}

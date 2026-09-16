@@ -16,8 +16,6 @@
 import { Calendar, DollarSign, Hash, ListChecks, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { Invoice, Contract } from './use-payments-data';
-
 const COL_WIDTHS = {
   number: '11%',
   title: '26%',
@@ -44,8 +42,8 @@ export interface PaymentsRow {
   mobileSecondary: ReactNode;
 }
 
-/** Domain types that can populate this table. */
-export type PaymentsTableItem = Invoice | Contract;
+/** Any row type with an `id`; each list maps its own domain type to `PaymentsRow`. */
+export type PaymentsTableItem = { id: string };
 
 export interface PaymentsTableProps<T extends PaymentsTableItem> {
   loading: boolean;

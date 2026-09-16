@@ -90,6 +90,12 @@ describe('sanitizeRichHtml — attacks are neutralised', () => {
   it('escapes stray angle brackets in text', () => {
     expect(sanitizeRichHtml('1 < 2 && 3 > 2')).toBe('1 &lt; 2 &amp;&amp; 3 &gt; 2')
   })
+
+  it('leaves entities the HTML generator already wrote alone', () => {
+    // The input is generateHTML output, whose text is already escaped; escaping
+    // it again showed "Anna &amp; Jake" literally on the public page.
+    expect(sanitizeRichHtml('<p>Anna &amp; Jake &lt;3 &#39;ok&#39; &#x27;</p>')).toBe('<p>Anna &amp; Jake &lt;3 &#39;ok&#39; &#x27;</p>')
+  })
 })
 
 describe('sanitizeRichHtml page breaks', () => {

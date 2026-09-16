@@ -21,8 +21,10 @@ import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
+import { PageSection } from '@/lib/branding/page-section'
 import { RenderDivider as PublicRenderDivider } from '@/lib/branding/public-blocks/divider'
 import { RenderFooter as PublicRenderFooter } from '@/lib/branding/public-blocks/footer'
+import type { FrameMode } from '@/lib/branding/public-blocks/shared'
 import { RenderTagline as PublicRenderTagline } from '@/lib/branding/public-blocks/tagline'
 import { RenderText as PublicRenderText } from '@/lib/branding/public-blocks/text'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
@@ -50,6 +52,7 @@ import {
   RenderTotals,
   RenderVendorTimelineBody,
 } from './render'
+import { renderProposalBlock } from './render-proposal'
 import { RichText } from './rich-text/rich-text'
 import type { Block, SpacerBlock } from './types'
 
@@ -73,6 +76,14 @@ interface BlockRendererProps {
   removeHeader?: () => void | Promise<void>
   uploadImage?: (file: File, blockId: string) => Promise<void>
   removeImage?: (blockId: string) => void | Promise<void>
+  /** Uploads a static image used inside a proposal block; keyed by the caller. */
+  uploadBlockImage?: (file: File, key: string) => Promise<string>
+  /** Uploads a proposal hero/video background, reporting 0-100 progress. */
+  uploadVideo?: (file: File, key: string, onProgress?: (pct: number) => void) => Promise<string>
+  /** Removes a previously-uploaded proposal asset from the given bucket. */
+  removeAsset?: (bucket: 'branding' | 'proposal-media', key: string) => Promise<void>
+  /** The proposal surface: each block renders inside the page frame's section chrome. */
+  frame?: FrameMode | undefined
 }
 
 export function BlockRenderer({
@@ -95,6 +106,10 @@ export function BlockRenderer({
   removeHeader,
   uploadImage,
   removeImage,
+  uploadBlockImage,
+  uploadVideo,
+  removeAsset,
+  frame,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -190,8 +205,9 @@ export function BlockRenderer({
         className="relative pt-4 pb-8"
         style={{
           fontFamily: FONT_STACKS[state.fontBody],
-          paddingLeft: state.docPadding,
-          paddingRight: state.docPadding,
+          // The page frame's sections own their own horizontal gutters, so
+          // the shared doc padding here would double it up.
+          ...(frame === 'page' ? {} : { paddingLeft: state.docPadding, paddingRight: state.docPadding }),
         }}
         onClick={() => setSelectedBlockIds([])}
       >
@@ -243,6 +259,7 @@ export function BlockRenderer({
                   updateBlock={updateBlock}
                   selected={selected}
                   multiSelected={multi}
+                  frame={frame}
                   onSelect={(additive) => {
                     if (additive) {
                       const has = selectedBlockIds.includes(block.id)
@@ -260,17 +277,30 @@ export function BlockRenderer({
                   onDelete={() => deleteBlock(block.id)}
                   onResetBlock={() => resetBlock(block.id)}
                 >
-                  {renderBlock(block, state, updateBlock, {
-                    selected,
-                    setTagline,
-                    setBusinessName,
-                    uploadLogo,
-                    removeLogo,
-                    uploadHeader,
-                    removeHeader,
-                    uploadImage,
-                    removeImage,
-                  }, surface)}
+                  {(() => {
+                    const content = renderBlock(block, state, updateBlock, {
+                      selected,
+                      setTagline,
+                      setBusinessName,
+                      uploadLogo,
+                      removeLogo,
+                      uploadHeader,
+                      removeHeader,
+                      uploadImage,
+                      removeImage,
+                      uploadBlockImage,
+                      uploadVideo,
+                      removeAsset,
+                    }, surface)
+                    // `frame="document"` here, not `frame`: the section chrome
+                    // (background, inner column) shows while editing, but
+                    // nothing reveal-animates mid-edit.
+                    return frame === 'page' ? (
+                      <PageSection block={block} branding={publicBrandingFromEditorState(state)} frame="document">
+                        {content}
+                      </PageSection>
+                    ) : content
+                  })()}
                 </BlockFrame>
               )
             })}
@@ -291,16 +321,23 @@ export function BlockRenderer({
   )
 }
 
+// Every field is typed `| undefined` (not just `?:`): the call site builds
+// this object straight from BlockRenderer's optional props, and the proposal
+// case reads them into a `ProposalRenderExtras` literal; exactOptionalPropertyTypes
+// needs the explicit union in both directions.
 interface RenderExtras {
-  selected?: boolean
-  setTagline?: (v: string) => void
-  setBusinessName?: (v: string) => void
-  uploadLogo?: (file: File) => Promise<void>
-  removeLogo?: () => void | Promise<void>
-  uploadHeader?: (file: File) => Promise<void>
-  removeHeader?: () => void | Promise<void>
-  uploadImage?: (file: File, blockId: string) => Promise<void>
-  removeImage?: (blockId: string) => void | Promise<void>
+  selected?: boolean | undefined
+  setTagline?: ((v: string) => void) | undefined
+  setBusinessName?: ((v: string) => void) | undefined
+  uploadLogo?: ((file: File) => Promise<void>) | undefined
+  removeLogo?: (() => void | Promise<void>) | undefined
+  uploadHeader?: ((file: File) => Promise<void>) | undefined
+  removeHeader?: (() => void | Promise<void>) | undefined
+  uploadImage?: ((file: File, blockId: string) => Promise<void>) | undefined
+  removeImage?: ((blockId: string) => void | Promise<void>) | undefined
+  uploadBlockImage?: ((file: File, key: string) => Promise<string>) | undefined
+  uploadVideo?: ((file: File, key: string, onProgress?: (pct: number) => void) => Promise<string>) | undefined
+  removeAsset?: ((bucket: 'branding' | 'proposal-media', key: string) => Promise<void>) | undefined
 }
 
 interface SpacerWithResizeProps {
@@ -504,6 +541,25 @@ function renderBlock(
         />
       )
     }
+    // Proposal blocks (public in Task 4/5; hero/video/gallery/testimonials/
+    // aboutMe/howItWorks/faq editors in Task 6; introNote/packages/accept
+    // editors still land in Task 7, where renderProposalBlock returns null).
+    case 'hero':
+    case 'introNote':
+    case 'video':
+    case 'gallery':
+    case 'testimonials':
+    case 'aboutMe':
+    case 'howItWorks':
+    case 'faq':
+    case 'packages':
+    case 'accept':
+      return renderProposalBlock(block, state, updateBlock, {
+        selected: extras.selected,
+        uploadBlockImage: extras.uploadBlockImage,
+        uploadVideo: extras.uploadVideo,
+        removeAsset: extras.removeAsset,
+      }, surface ?? 'proposal')
   }
 }
 

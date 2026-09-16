@@ -23,6 +23,10 @@ export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
   // split still has one and it must keep rendering.
   'contractSign',
   'contractSignVendor', 'contractSignPrimary', 'contractSignSecondary',
+  // The proposal's per-couple note, live package options, and accept CTA are
+  // each injected at render time from that proposal's own data, not template
+  // text, so they are markers like the other data-bound singletons above.
+  'introNote', 'packages', 'accept',
 ] as const)
 
 /**
@@ -37,6 +41,7 @@ export const CLEARABLE_MARKERS: ReadonlySet<BlockType> = new Set([
   'contractBody', 'contractSign', 'vendorTimelineBody', 'couplePortal',
   'questionnaireOneAtATime', 'questionnaireAllOnePage', 'formSubmit',
   'contractSignVendor', 'contractSignPrimary', 'contractSignSecondary',
+  'introNote', 'packages', 'accept',
 ] as const)
 
 /**
@@ -45,10 +50,14 @@ export const CLEARABLE_MARKERS: ReadonlySet<BlockType> = new Set([
  * and the sent document. Most markers inject couple-owned content whose surface
  * comes from the brand palette, so their block frame is stripped (see
  * block-frame.tsx / block-toolbar.tsx). The questionnaire form-style blocks are
- * the exception: the MC frames the questions area like any other block.
+ * the exception: the MC frames the questions area like any other block. The
+ * proposal's introNote, packages, and accept markers are a second exception:
+ * their sectionBackground and frame are proposal content the MC styles like
+ * any other section, so they must apply in page mode too.
  */
 export const STYLE_WRAPPING_MARKERS: ReadonlySet<BlockType> = new Set([
   'questionnaireOneAtATime', 'questionnaireAllOnePage',
+  'introNote', 'packages', 'accept',
 ] as const)
 
 /** Blocks whose content comes from live document data, not template text. The
@@ -81,6 +90,12 @@ export const REQUIRED_BY_SURFACE: Readonly<Record<SurfaceTab, readonly BlockType
   // exactly-one (a submit) constraints below, plus a name-field check in
   // readiness. No single block type is unconditionally required.
   lead: [],
+  // Only the accept CTA. Without it the page is a brochure the couple cannot
+  // act on, which is the one thing a proposal must never be. Everything else,
+  // the hero, the note, even the packages block, is the MC's call: the accept
+  // stepper renders the option cards from the proposal's own data, so a couple
+  // can still choose and pay on a page that never lists them inline.
+  proposal: ['accept'],
 }
 
 /** Surfaces that need at least one of a set of blocks present. */
@@ -101,6 +116,20 @@ export const EXACTLY_ONE_BY_SURFACE: Readonly<Partial<Record<SurfaceTab, readonl
   questionnaire: ['questionnaireOneAtATime', 'questionnaireAllOnePage'],
   // A website form needs exactly one submit button.
   lead: ['formSubmit'],
+}
+
+/**
+ * Surfaces that allow AT MOST ONE of a set of blocks: none is fine, two or more
+ * raises a readiness issue (see lib/branding/readiness.ts).
+ *
+ * Distinct from {@link EXACTLY_ONE_BY_SURFACE}, which also complains about
+ * zero. The proposal's Hero lives here: a second Hero would give the page two
+ * openings (R4), but no Hero at all is a legitimate design choice, and listing
+ * it in both places is what used to render the missing-Hero case twice in the
+ * readiness panel, once as "Hero" and once as "A Hero".
+ */
+export const AT_MOST_ONE_BY_SURFACE: Readonly<Partial<Record<SurfaceTab, readonly BlockType[]>>> = {
+  proposal: ['hero'],
 }
 
 /** Check if a block type is a render-split marker. */
@@ -135,6 +164,12 @@ export function atLeastOneForSurface(surface: SurfaceTab): BlockType[] | null {
 /** Get the exactly-one block constraint for a surface, or null if none apply. */
 export function exactlyOneForSurface(surface: SurfaceTab): BlockType[] | null {
   const set = EXACTLY_ONE_BY_SURFACE[surface]
+  return set ? [...set] : null
+}
+
+/** The at-most-one set for a surface, or null when it has no such rule. */
+export function atMostOneForSurface(surface: SurfaceTab): BlockType[] | null {
+  const set = AT_MOST_ONE_BY_SURFACE[surface]
   return set ? [...set] : null
 }
 

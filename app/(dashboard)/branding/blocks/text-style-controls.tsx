@@ -47,6 +47,9 @@ interface TextStyleControlsProps {
   /** Optional control rendered immediately after the text colour picker (e.g.
    *  the block background colour), so the two colour controls sit together. */
   bgSlot?: ReactNode
+  /** Hide the per-part alignment buttons, for a block whose own position
+   *  control already places every part (the hero). Default true. */
+  showAlign?: boolean
 }
 
 export function TextStyleControls({
@@ -56,6 +59,7 @@ export function TextStyleControls({
   fontKind = 'all',
   expanded = false,
   bgSlot,
+  showAlign = true,
 }: TextStyleControlsProps) {
   const eff = {
     fontFamily: style?.fontFamily ?? defaults.fontFamily,
@@ -184,6 +188,7 @@ export function TextStyleControls({
 
       {bgSlot}
 
+      {showAlign && <>
       <Divider />
 
       {/* Alignment */}
@@ -205,6 +210,7 @@ export function TextStyleControls({
           </Tooltip>
         ))}
       </div>
+      </>}
 
       {expanded && (
         <>

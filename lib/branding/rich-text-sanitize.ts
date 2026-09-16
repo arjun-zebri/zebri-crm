@@ -108,8 +108,16 @@ function keepAttrs(tag: string, raw: string): string {
   return out.length ? ' ' + out.join(' ') : ''
 }
 
+/**
+ * Escape bare `&`, `<` and `>` in a text run. The input is already HTML (the
+ * generator escaped its text nodes), so a well-formed entity is kept as is;
+ * re-escaping it put a literal `&amp;` on the page for every typed ampersand.
+ */
 function escapeText(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return s
+    .replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#[xX][0-9a-fA-F]+);)/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 /**
