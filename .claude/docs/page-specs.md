@@ -1259,6 +1259,19 @@ No step can be shown to the couple. The workflow is the MC's own list
 end to end, so the old "Show this to the couple" toggle is gone from
 every step.
 
+The canvas has no free-form positioning: every card always sits at its
+auto-layout slot (`auto-layout.ts`), evenly spaced by depth, so the
+flow never drifts into an arbitrary arrangement. Dragging a card is a
+reorder gesture, not a placement - drop it above or below another step
+in its own list (same parent/branch as it already has; the canvas
+never re-parents on a drag) and it slots there, snapping back to its
+layout position once the move lands. Mobile gets the same reorder via
+a drag handle on each row. Both resolve to the same position math
+(`planStepReorder`/`planStepReorderFromDrop` in
+`lib/workflows/insert-step.ts`), which also spreads a list's sparse
+`position` integers back out (`renumberTemplateSteps` in `../actions.ts`)
+on the rare list where repeated inserts have closed every gap.
+
 Steps whose config is a form open a **composer modal** instead of
 expanding the card (`MODAL_ACTIONS` in `inspector-panel.tsx`): the
 sends, the note, the questionnaire, and both manual steps. A modal-only
