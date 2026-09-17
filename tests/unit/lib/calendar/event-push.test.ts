@@ -250,19 +250,108 @@ describe('pushBookingEvent', () => {
     expect(result?.joinUrl).toBe('https://meet.google.com/xyz-uvwx');
   });
 
-  it('returns null joinUrl when no conference data is available', async () => {
-    vi.mocked(listActiveConnections).mockResolvedValue([msConn as any]);
-    mockFetchOnce({
-      id: 'ms-event-999',
+  // Graph does not error when a calendar cannot host a Teams meeting
+  // (personal accounts, tenants without Teams): it creates the event
+  // with isOnlineMeeting=false and no onlineMeeting. The booking used
+  // to swallow that and tell the couple "link to follow" with nothing
+  // recorded anywhere about why.
+  describe('a Microsoft event that comes back without a Teams link', () => {
+    it('re-reads the event and takes the link Graph provisioned late', async () => {
+      vi.mocked(listActiveConnections).mockResolvedValue([msConn as any]);
+      mockFetchOnce({ id: 'ms-event-999', isOnlineMeeting: true, onlineMeeting: null });
+      mockFetchOnce({
+        id: 'ms-event-999',
+        isOnlineMeeting: true,
+        onlineMeetingProvider: 'teamsForBusiness',
+        onlineMeeting: { joinUrl: 'https://teams.microsoft.com/l/meetup-join/late' },
+      });
+
+      const result = await pushBookingEvent(supabase, 'u1', details);
+
+      expect(result).toEqual({
+        provider: 'microsoft',
+        eventId: 'ms-event-999',
+        joinUrl: 'https://teams.microsoft.com/l/meetup-join/late',
+      } as PushedEvent);
+      const [url, init] = vi.mocked(global.fetch).mock.calls[1]!;
+      expect(url).toContain('/me/events/ms-event-999?$select=');
+      expect(init?.method).toBeUndefined();
     });
 
-    const result = await pushBookingEvent(supabase, 'u1', details);
+    it('reports what Graph and the calendar said when there is still no link', async () => {
+      vi.mocked(listActiveConnections).mockResolvedValue([msConn as any]);
+      mockFetchOnce({ id: 'ms-event-999', isOnlineMeeting: false, onlineMeetingProvider: 'unknown' });
+      mockFetchOnce({ id: 'ms-event-999', isOnlineMeeting: false, onlineMeetingProvider: 'unknown', onlineMeeting: null });
+      mockFetchOnce({ allowedOnlineMeetingProviders: [], defaultOnlineMeetingProvider: 'unknown' });
 
-    expect(result).toEqual({
-      provider: 'microsoft',
-      eventId: 'ms-event-999',
-      joinUrl: null,
-    } as PushedEvent);
+      const result = await pushBookingEvent(supabase, 'u1', details);
+
+      expect(result?.joinUrl).toBeNull();
+      expect(result?.eventId).toBe('ms-event-999');
+      expect(result?.joinUrlDiagnostic).toBe(
+        'event isOnlineMeeting=false provider=unknown · calendar allows=[] default=unknown',
+      );
+      expect(vi.mocked(global.fetch).mock.calls[2]![0]).toContain('/me/calendar?$select=');
+    });
+
+    it('never fails the push because a diagnostic read failed', async () => {
+      vi.mocked(listActiveConnections).mockResolvedValue([msConn as any]);
+      mockFetchOnce({ id: 'ms-event-999' });
+      mockFetchOnce({ error: 'throttled' }, false, 429);
+      vi.mocked(global.fetch).mockRejectedValueOnce(new Error('network'));
+
+      const result = await pushBookingEvent(supabase, 'u1', details);
+
+      expect(result?.joinUrl).toBeNull();
+      expect(result?.joinUrlDiagnostic).toBe(
+        'event isOnlineMeeting=absent provider=absent · calendar allows=[] default=unknown',
+      );
+    });
+
+    it('does not re-read when no conference was requested', async () => {
+      vi.mocked(listActiveConnections).mockResolvedValue([msConn as any]);
+      mockFetchOnce({ id: 'ms-event-999' });
+
+      const result = await pushBookingEvent(supabase, 'u1', { ...details, withConference: false });
+
+      expect(result).toEqual({ provider: 'microsoft', eventId: 'ms-event-999', joinUrl: null });
+      expect(vi.mocked(global.fetch)).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('a Google event that comes back without a Meet link', () => {
+    it('re-reads the event and takes the link once the conference request settles', async () => {
+      vi.mocked(listActiveConnections).mockResolvedValue([googleConn as any]);
+      mockFetchOnce({
+        id: 'google-event-1',
+        conferenceData: { createRequest: { status: { statusCode: 'pending' } } },
+      });
+      mockFetchOnce({ id: 'google-event-1', hangoutLink: 'https://meet.google.com/late' });
+
+      const result = await pushBookingEvent(supabase, 'u1', details);
+
+      expect(result?.joinUrl).toBe('https://meet.google.com/late');
+      expect(vi.mocked(global.fetch).mock.calls[1]![0]).toContain(
+        '/events/google-event-1?conferenceDataVersion=1',
+      );
+    });
+
+    it('reports the conference request status when there is still no link', async () => {
+      vi.mocked(listActiveConnections).mockResolvedValue([googleConn as any]);
+      mockFetchOnce({
+        id: 'google-event-1',
+        conferenceData: { createRequest: { status: { statusCode: 'failure' } } },
+      });
+      mockFetchOnce({
+        id: 'google-event-1',
+        conferenceData: { createRequest: { status: { statusCode: 'failure' } } },
+      });
+
+      const result = await pushBookingEvent(supabase, 'u1', details);
+
+      expect(result?.joinUrl).toBeNull();
+      expect(result?.joinUrlDiagnostic).toBe('conference request status=failure');
+    });
   });
 });
 

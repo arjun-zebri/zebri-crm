@@ -128,6 +128,8 @@ function describe(event: AlertEvent): string {
       }`;
     case 'booking_event_push_failed':
       return `user=${event.userId} · ${event.provider} status=${event.status} · booking=${event.bookingId}`;
+    case 'booking_video_link_missing':
+      return `user=${event.userId} · ${event.provider} · booking=${event.bookingId} — event created but no video link (couple told "link to follow"): ${event.diagnostic}`;
     case 'bug_report_submitted':
       return `${event.ticketRef ?? 'new ticket'} · ${event.reportType} · "${event.title}" — ${event.reporter} on ${event.routePath}\n${event.notionUrl}`;
     case 'bug_report_notion_sync_failed':

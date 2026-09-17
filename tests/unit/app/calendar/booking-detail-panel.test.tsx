@@ -116,6 +116,56 @@ describe('BookingDetailPanel', () => {
     expect(screen.queryByTestId('booking-join-link')).not.toBeInTheDocument()
   })
 
+  // A video booking whose calendar minted no link (Outlook without Teams,
+  // no calendar at all) used to look identical to one that was never meant
+  // to have a link, and the couple was already told "link to follow".
+  it('tells the MC when a video booking has no link to send', () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BookingDetailPanel
+          isOpen={true}
+          onClose={vi.fn()}
+          booking={{
+            ...mockBooking,
+            meeting_type: { ...mockBooking.meeting_type!, location_type: 'video' },
+          }}
+          mcTimezone="Australia/Melbourne"
+        />
+      </QueryClientProvider>
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent(/No video link was created/)
+  })
+
+  it('says nothing about a link for a phone or in-person booking, or once cancelled', () => {
+    const cases: Booking[] = [
+      mockBooking,
+      {
+        ...mockCancelledBooking,
+        meeting_type: { ...mockBooking.meeting_type!, location_type: 'video' },
+      },
+      {
+        ...mockBooking,
+        meeting_type: { ...mockBooking.meeting_type!, location_type: 'video' },
+        video_join_url: 'https://meet.google.com/abc-defg-hij',
+      },
+    ]
+    for (const booking of cases) {
+      const { unmount } = render(
+        <QueryClientProvider client={queryClient}>
+          <BookingDetailPanel
+            isOpen={true}
+            onClose={vi.fn()}
+            booking={booking}
+            mcTimezone="Australia/Melbourne"
+          />
+        </QueryClientProvider>
+      )
+      expect(screen.queryByText(/No video link was created/)).not.toBeInTheDocument()
+      unmount()
+    }
+  })
+
   it('hides the join link once the booking is cancelled', () => {
     // The Meet room is torn down with the calendar event, so offering the link
     // would send the MC to a dead call.

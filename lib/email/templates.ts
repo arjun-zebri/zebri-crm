@@ -33,7 +33,7 @@ import type { JSONContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import sanitizeHtml from 'sanitize-html'
 
-import { extractTokens, resolveVariable, variableLabel } from '@/lib/automations/variables'
+import { extractTokens, linkLabel, resolveVariable, variableLabel } from '@/lib/automations/variables'
 import { ContractListItem, ContractListStyles } from '@/lib/contracts/list-styles'
 import type { RunContext } from '@/types/automations'
 
@@ -335,7 +335,7 @@ function substituteMentions(
       return { type: 'text', text: `${SIG_OPEN}${index}${SIG_CLOSE}` }
     }
     const value = resolveWith(expr, ctx, overrides)
-    if (value) return { type: 'text', text: value }
+    if (value) return valueNode(expr, value)
     unresolved.add(basePath(expr))
     const text =
       mode === 'preview'
@@ -377,7 +377,7 @@ function fillMentions(
     // gets sent verbatim. An empty signature collapses to nothing on send.
     if (basePath(expr) === SIGNATURE_PATH) return node
     const value = resolveWith(expr, ctx, overrides)
-    return value ? { type: 'text', text: value } : node
+    return value ? valueNode(expr, value) : node
   }
   if (Array.isArray(node.content)) {
     return {
@@ -388,6 +388,18 @@ function fillMentions(
     }
   }
   return node
+}
+
+/**
+ * The text node a resolved mention becomes. A link variable turns into
+ * its couple-facing label carrying the URL as a `link` mark, so the
+ * email (and the editable compose preview) shows "View your portal"
+ * rather than the raw address. Everything else is the plain value.
+ */
+function valueNode(expr: string, value: string): JSONContent {
+  const label = linkLabel(expr)
+  if (!label) return { type: 'text', text: value }
+  return { type: 'text', text: label, marks: [{ type: 'link', attrs: { href: value } }] }
 }
 
 /** Record (don't render) every unresolved mention in a body. */
