@@ -16,15 +16,16 @@
 import type { JSONContent } from '@tiptap/core'
 import type { CSSProperties, ReactNode } from 'react'
 
-import { getTextColor } from '@/lib/branding/contrast'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
 import type { ButtonAction, ButtonAttrs, ImageAttrs } from '../model/doc'
 import type { RichDoc } from '../model/layout'
 import { isProposalVariable } from '../model/variables'
 
-import { embedSrc } from './embed-src'
+import { AudioNode, ButtonNode, ColumnsFrame, EmbedNode, ImageNode, isSafeHref, SpacerBox } from './rich-doc-nodes'
 import { HEADING_ROLE, roleCss } from './text-roles'
+
+export { isHttpUrl } from './rich-doc-nodes'
 
 /** How a rich doc is being rendered: the live public page, the editor canvas, or a PDF/print pass. */
 export type RenderMode = 'page' | 'edit' | 'print'
@@ -44,16 +45,6 @@ export interface RichDocContext {
 }
 
 type Mark = { type: string; attrs?: Record<string, unknown> }
-
-// The schema (`model/schema.ts`) is the primary guard against unsafe
-// hrefs/srcs on write; this is the second guard, at render time, because a
-// stored doc can reach the renderer without being re-parsed (a stale cached
-// row, a future editor bypass). `isSafeHref` matches the link mark's own
-// allowlist (http(s), mailto, tel); `isHttpUrl` is stricter for `src`
-// attributes (image/audio), which have no legitimate non-http(s) use.
-const isSafeHref = (href: string): boolean => /^(https?:\/\/|mailto:|tel:)/i.test(href)
-/** `http(s)` only, exported so `render/section.tsx` can apply the same render-time guard to section background media. */
-export const isHttpUrl = (src: string): boolean => /^https?:\/\//i.test(src)
 
 // Applies marks innermost-first by folding the node through each mark in
 // order, so `[bold, link]` wraps as <a><strong>text</strong></a>.
@@ -85,87 +76,6 @@ function applyMarks(node: ReactNode, marks: Mark[] | undefined, key: string): Re
       default: return inner
     }
   }, node)
-}
-
-const BUTTON_SIZE: Record<ButtonAttrs['size'], string> = { sm: 'h-8 px-3', md: 'h-10 px-5', lg: 'h-12 px-7 text-section' }
-const ALIGN_CLASS: Record<'left' | 'center' | 'right', string> = { left: 'justify-start', center: 'justify-center', right: 'justify-end' }
-
-function ButtonNode({ attrs, ctx }: { attrs: ButtonAttrs; ctx: RichDocContext }) {
-  const color = attrs.color ?? ctx.branding.brand_color
-  const radius = attrs.radius ?? ctx.branding.button_radius
-  // A fill button's label must read against whatever colour it sits on, so
-  // it is computed the same way the v1 accept block already does (see
-  // lib/branding/public-blocks/proposal/accept.tsx), not hardcoded white:
-  // an MC with a light brand colour (pale gold, blush) would otherwise get
-  // an unreadable white-on-light button.
-  const style: CSSProperties = attrs.variant === 'outline'
-    ? { borderColor: color, color, borderRadius: radius }
-    : { background: color, color: getTextColor(color), borderRadius: radius }
-  const cls = `inline-flex items-center font-medium border-2 ${attrs.variant === 'outline' ? 'bg-transparent' : 'border-transparent'} ${BUTTON_SIZE[attrs.size]}`
-  const wrap = (child: ReactNode) => <div className={`flex ${ALIGN_CLASS[attrs.align]} my-4`}>{child}</div>
-  if (attrs.action.kind === 'link') {
-    // An unsafe href degrades to a plain, non-interactive label rather than
-    // an inert anchor, so the button still reads correctly on the page.
-    return isSafeHref(attrs.action.href)
-      ? wrap(<a href={attrs.action.href} target="_blank" rel="noopener noreferrer" className={cls} style={style}>{attrs.label}</a>)
-      : wrap(<span className={cls} style={style}>{attrs.label}</span>)
-  }
-  const action = attrs.action
-  return wrap(
-    <button type="button" className={`${cls} cursor-pointer`} style={style} onClick={() => ctx.onAction?.(action)}>
-      {attrs.label}
-    </button>,
-  )
-}
-
-const IMAGE_LAYOUT: Record<ImageAttrs['layout'], string> = {
-  inline: 'my-4',
-  left: 'float-left mr-6 mb-4 max-md:float-none max-md:mr-0',
-  right: 'float-right ml-6 mb-4 max-md:float-none max-md:ml-0',
-  full: 'my-6',
-}
-
-function ImageNode({ attrs }: { attrs: ImageAttrs }) {
-  // Schema-validated storage URLs are already http(s)-only; this is the
-  // render-time second guard (see the comment on isSafeHref/isHttpUrl above).
-  if (!isHttpUrl(attrs.src)) return null
-  const width = attrs.layout === 'full' ? '100%' : `${attrs.widthPct}%`
-  return (
-    <figure className={`m-0 max-md:!w-full ${IMAGE_LAYOUT[attrs.layout]}`} style={{ width }}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- MC-uploaded media at arbitrary sizes */}
-      <img src={attrs.src} alt={attrs.alt ?? ''} className="block w-full h-auto rounded-control" loading="lazy" />
-      {attrs.caption ? <figcaption className="mt-2 text-body text-text-muted">{attrs.caption}</figcaption> : null}
-    </figure>
-  )
-}
-
-function EmbedNode({ url, mode }: { url: string; mode: RenderMode }) {
-  const resolved = embedSrc(url)
-  if (!resolved) return null
-  if (mode === 'print') return <p className="my-4"><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></p>
-  return (
-    <div className="my-6 aspect-video w-full overflow-hidden rounded-control">
-      <iframe
-        src={resolved.src}
-        title={`${resolved.provider} embed`}
-        className="h-full w-full border-0"
-        loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-presentation"
-        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-      />
-    </div>
-  )
-}
-
-function AudioNode({ src, title, mode }: { src: string; title: string | undefined; mode: RenderMode }) {
-  if (mode === 'print') return isSafeHref(src) ? <p className="my-4"><a href={src} target="_blank" rel="noopener noreferrer">{title ?? 'Listen'}</a></p> : null
-  if (!isHttpUrl(src)) return null
-  return (
-    <figure className="mx-0 my-6">
-      {title ? <figcaption className="mb-2 text-body font-medium">{title}</figcaption> : null}
-      <audio src={src} controls preload="none" className="w-full" />
-    </figure>
-  )
 }
 
 function renderInline(nodes: JSONContent[] | undefined, ctx: RichDocContext, key: string): ReactNode[] {
@@ -227,21 +137,11 @@ function renderBlock(n: JSONContent, ctx: RichDocContext, key: string): ReactNod
       const cols = n.content ?? []
       // Print keeps two columns side by side and stacks three (spec §6).
       const stack = ctx.mode === 'print' && cols.length === 3
-      return (
-        <div key={key} data-columns className={`my-4 ${stack ? 'flex flex-col' : 'flex max-md:flex-col'} gap-6`}>
-          {cols.map((c, i) => (
-            <div key={`${key}-${i}`} style={{ flex: `${Number(c.attrs?.ratio ?? 1 / cols.length)} 1 0%` }} className="min-w-0 max-md:!flex-auto">
-              {children(c.content)}
-            </div>
-          ))}
-        </div>
-      )
+      const ratios = cols.map((c) => Number(c.attrs?.ratio ?? 1 / cols.length))
+      return <ColumnsFrame key={key} stack={stack} ratios={ratios}>{cols.map((c) => children(c.content))}</ColumnsFrame>
     }
     case 'column': return <div key={key}>{children(n.content)}</div>
-    case 'spacer': {
-      const h = Number(n.attrs?.heightPx ?? 0)
-      return <div key={key} data-spacer aria-hidden style={{ height: ctx.mode === 'print' ? 0 : (Number.isFinite(h) ? h : 0) }} />
-    }
+    case 'spacer': return <SpacerBox key={key} heightPx={Number(n.attrs?.heightPx ?? 0)} mode={ctx.mode} />
     // Inline nodes at block level (a stray text node) render as a paragraph.
     case 'text': case 'hardBreak': case 'variable': return <p key={key} className="m-0 mb-3" style={textStyle(ctx, 'body')}>{renderInline([n], ctx, key)}</p>
     default: return null

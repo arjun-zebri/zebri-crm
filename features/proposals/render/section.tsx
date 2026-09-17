@@ -11,7 +11,6 @@
  * @module features/proposals/render/section
  */
 import { useReveal } from '@/lib/branding/page-section'
-import { VideoPlayer } from '@/lib/branding/public-blocks/proposal/media'
 import type { ProposalSlotProps, PublicDocData } from '@/lib/branding/public-blocks/shared'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
@@ -19,7 +18,8 @@ import type { ButtonAction } from '../model/doc'
 import type { Section } from '../model/layout'
 
 import { DataSectionView } from './data-section'
-import { isHttpUrl, RichDocView, type RenderMode } from './rich-doc'
+import { RichDocView, type RenderMode } from './rich-doc'
+import { SectionBackdrop } from './section-backdrop'
 import { sectionCss } from './section-style'
 
 /** Props for {@link SectionView}. */
@@ -40,8 +40,6 @@ export function SectionView({ section, index, branding, doc, mode, values, propo
   // The opening section is on screen at load; animating it would only delay the first paint.
   const animate = mode === 'page' && index > 0
   const { ref, revealed } = useReveal(animate)
-  const bg = section.style.background
-  const overlay = Math.min(100, Math.max(0, bg?.overlay ?? 0)) / 100
   const ctx = { branding, mode, values, textColor: section.style.textColor, align: section.style.align, onAction }
 
   return (
@@ -54,24 +52,12 @@ export function SectionView({ section, index, branding, doc, mode, values, propo
       }`}
       style={sectionStyle}
     >
-      {bg?.image && isHttpUrl(bg.image) ? (
-        // eslint-disable-next-line @next/next/no-img-element -- MC-uploaded section background
-        <img src={bg.image} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" fetchPriority={index === 0 ? 'high' : 'auto'} />
-      ) : null}
-      {bg?.video && isHttpUrl(bg.video) ? (
-        <div className="absolute inset-0">
-          <VideoPlayer
-            url={bg.video}
-            posterUrl={bg.poster && isHttpUrl(bg.poster) ? bg.poster : undefined}
-            background
-            frame={mode === 'print' ? 'print' : 'page'}
-          />
-        </div>
-      ) : null}
-      {(bg?.image || bg?.video) && overlay > 0 ? (
-        <div aria-hidden data-section-overlay className="absolute inset-0" style={{ background: `rgba(0,0,0,${overlay})` }} />
-      ) : null}
-      <div className={`relative mx-auto flex w-full flex-col justify-center px-4 @sm/doc:px-8 ${columnClass}`} style={column}>
+      <SectionBackdrop background={section.style.background} index={index} mode={mode} />
+      {/* `data-content-column` marks the resizable box for the editor's
+          `SectionResizeOverlay` (Task 12): a data attribute rather than a
+          new element, so `mode: 'page'`/`'print'` render exactly the same
+          markup the public page always has. */}
+      <div data-content-column className={`relative mx-auto flex w-full flex-col justify-center px-4 @sm/doc:px-8 ${columnClass}`} style={column}>
         {section.intro ? <RichDocView doc={section.intro} ctx={ctx} /> : null}
         {section.kind === 'content' && section.content ? (
           <RichDocView doc={section.content} ctx={ctx} />

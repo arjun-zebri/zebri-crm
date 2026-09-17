@@ -6,6 +6,7 @@
 import { notFound } from 'next/navigation';
 
 import { proposalLayoutV2Enabled } from '../flags';
+import { ProposalsFrame } from '../proposals-frame';
 
 import { TemplatesList } from './templates-list';
 
@@ -13,8 +14,10 @@ import { TemplatesList } from './templates-list';
 export default function TemplatesPage() {
   if (!proposalLayoutV2Enabled()) notFound();
   return (
-    <div className="space-y-6">
-      <TemplatesList />
-    </div>
+    <ProposalsFrame>
+      <div className="space-y-6">
+        <TemplatesList />
+      </div>
+    </ProposalsFrame>
   );
 }

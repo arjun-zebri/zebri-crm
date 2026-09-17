@@ -12,20 +12,23 @@ import { Empty } from '@/components/ui/empty';
 import { PageHeader } from '@/components/ui/page-header';
 
 import { proposalLayoutV2Enabled } from '../flags';
+import { ProposalsFrame } from '../proposals-frame';
 import { ProposalsNav } from '../proposals-nav';
 
 /** Renders the Settings tab route (Phase 1 placeholder), gated behind the Proposal Layout v2 flag. */
 export default function ProposalsSettingsPage() {
   if (!proposalLayoutV2Enabled()) notFound();
   return (
-    <div className="space-y-6">
-      <PageHeader title="Proposals" />
-      <ProposalsNav active="settings" />
-      <Empty
-        icon={Settings}
-        title="Proposal defaults are coming"
-        description="Password protection, PDF download, link preview, expiry and deposit defaults for every new proposal."
-      />
-    </div>
+    <ProposalsFrame>
+      <div className="space-y-6">
+        <PageHeader title="Proposals" />
+        <ProposalsNav active="settings" />
+        <Empty
+          icon={Settings}
+          title="Proposal defaults are coming"
+          description="Password protection, PDF download, link preview, expiry and deposit defaults for every new proposal."
+        />
+      </div>
+    </ProposalsFrame>
   );
 }

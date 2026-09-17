@@ -49,8 +49,16 @@ export interface SectionStyle {
   height: 'fit' | 'full'
   contentWidth: ContentWidth
   padding: SectionPadding
-  /** One colour for every text node in the section (white over a photo). */
-  textColor?: string
+  /**
+   * One colour for every text node in the section (white over a photo).
+   * The `| undefined` (not just the `?`) is deliberate: the section bar's
+   * "Use page colour" control clears this by dispatching an explicit
+   * `undefined` patch value (the reducer merges patches with a plain
+   * spread, so there is no other way to remove a key), which
+   * `exactOptionalPropertyTypes` rejects unless the property's own type
+   * admits `undefined`. Mirrors `Section.content` below for the same reason.
+   */
+  textColor?: string | undefined
   /** Default alignment for the section's text. */
   align?: 'left' | 'center'
 }

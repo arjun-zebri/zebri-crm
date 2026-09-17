@@ -4,18 +4,37 @@ import { useEffect, useRef, useState } from 'react'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
+/** Options for {@link useAutosave}. */
+export interface UseAutosaveOptions {
+  /**
+   * When true, a save still pending when this hook unmounts is flushed
+   * immediately instead of silently dropped: the pending debounce timer is
+   * cancelled and `save` is invoked once more with the latest value,
+   * fire-and-forget (the component is already gone, so there is no
+   * `status` left to update). Off by default, so every existing caller
+   * keeps its exact current behaviour.
+   *
+   * Without this, navigating away within the debounce window of the last
+   * edit (e.g. clicking "Back" right after typing) drops that edit
+   * entirely, even though the header was still showing "Saving…".
+   */
+  flushOnUnmount?: boolean
+}
+
 /**
  * Autosave hook with debouncing, error handling, and manual retry.
  * Automatically saves changes after debounceMs of inactivity.
  * @param value - The value to autosave
  * @param save - Async function to persist the value
  * @param debounceMs - Debounce delay in milliseconds (default 800)
+ * @param options - See {@link UseAutosaveOptions}.
  * @returns Object with status, lastSavedAt timestamp, and retry function
  */
 export function useAutosave<T>(
   value: T,
   save: (value: T) => Promise<void>,
-  debounceMs = 800
+  debounceMs = 800,
+  options: UseAutosaveOptions = {}
 ) {
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
@@ -23,6 +42,7 @@ export function useAutosave<T>(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveRef = useRef(save)
   const valueRef = useRef<T>(value)
+  const flushOnUnmountRef = useRef(options.flushOnUnmount ?? false)
 
   useEffect(() => {
     saveRef.current = save
@@ -31,6 +51,26 @@ export function useAutosave<T>(
   useEffect(() => {
     valueRef.current = value
   }, [value])
+
+  useEffect(() => {
+    flushOnUnmountRef.current = options.flushOnUnmount ?? false
+  }, [options.flushOnUnmount])
+
+  // Flushes a still-pending save on unmount (see `flushOnUnmount`). A
+  // separate effect with an empty dependency array, not folded into the
+  // debounce effect below: that effect's own cleanup runs on *every*
+  // `serialized` change too (it is how the debounce resets), so it cannot
+  // tell a real unmount apart from a normal reset. An empty-deps effect's
+  // cleanup only ever runs once, on unmount.
+  useEffect(() => {
+    return () => {
+      if (!flushOnUnmountRef.current) return
+      if (!timerRef.current) return
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+      void saveRef.current(valueRef.current)
+    }
+  }, [])
 
   const serialized = JSON.stringify(value)
 
@@ -47,6 +87,13 @@ export function useAutosave<T>(
     setStatus('saving')
     const captured = JSON.parse(serialized) as T
     timerRef.current = setTimeout(async () => {
+      // Cleared as soon as the timer actually fires, not left holding the
+      // (by then meaningless) id of an already-elapsed timeout: the
+      // `flushOnUnmount` cleanup above uses `timerRef.current` as its
+      // "is a save still pending" signal, so a stale non-null value here
+      // would make it re-send a save that already went out (or, worse, one
+      // whose promise already rejected once).
+      timerRef.current = null
       try {
         await saveRef.current(captured)
         setStatus('saved')
@@ -69,6 +116,8 @@ export function useAutosave<T>(
     setStatus('saving')
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(async () => {
+      // See the matching comment in the debounce effect above.
+      timerRef.current = null
       try {
         await saveRef.current(valueRef.current)
         setStatus('saved')

@@ -2,14 +2,15 @@
 
 /**
  * One row of the Templates tab: the template's name (click to rename),
- * the default badge, a disabled Open (the editor ships in Phase 2), and
- * Delete.
+ * the default badge, Open (the editor route, Proposal Layout v2 Phase 2
+ * Task 14), and Delete.
  *
  * @module app/(dashboard)/proposals/templates/template-row
  */
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonClassName } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { TemplateSummary } from '@/features/proposals';
@@ -123,9 +124,18 @@ export function TemplateRow({ template, canDelete, onRename, onSetDefault, onDel
       ) : (
         <Button variant="ghost" onClick={onSetDefault}>Make default</Button>
       )}
-      <Tooltip label="Layout editor coming soon">
-        <Button variant="secondary" disabled aria-label={`Open ${template.name}`}>Open</Button>
-      </Tooltip>
+      {/* `Button` has neither an `asChild` nor an `href` prop (it only ever
+          renders a real `<button>`), so a link styled to match it goes
+          through `buttonClassName` (the primitive's own class builder)
+          rather than nesting two interactive elements or hand-copying its
+          classes. */}
+      <Link
+        href={`/proposals/templates/${template.id}`}
+        aria-label={`Open ${template.name}`}
+        className={buttonClassName({ variant: 'secondary' })}
+      >
+        Open
+      </Link>
       <Button variant="ghost" disabled={!canDelete} onClick={onDelete} aria-label={`Delete ${template.name}`}>
         Delete
       </Button>

@@ -1556,12 +1556,95 @@ and scroll container from `app/(dashboard)/proposals/layout.tsx`.
   starter, if none does). New template, rename (click the name,
   Enter/blur commits, Escape cancels), Make default, Delete (refuses
   the default and the last remaining template, `ConfirmDialog`
-  confirmation). Open is disabled with a tooltip ("Layout editor coming
-  soon") until Phase 2 ships the section editor.
+  confirmation). Open (`template-row.tsx`, a `next/link` `Link` styled
+  through `buttonClassName`) opens the section editor at
+  `/proposals/templates/[id]` (Phase 2, below).
 - **Analytics** (`/proposals/analytics`) and **Settings**
   (`/proposals/settings`): `Empty`-state placeholders until Phase 4/5.
 
 Full model: `.claude/docs/proposals.md` (Layout v2 section).
+
+## Templates editor (Phase 2)
+
+Route `/proposals/templates/[id]` (`app/(dashboard)/proposals/templates/[id]/page.tsx`,
+a server component; `notFound()` when `proposalLayoutV2Enabled()` is
+false). Full width: it opts out of `ProposalsFrame`'s gutter
+(`app/(dashboard)/proposals/proposals-frame.tsx`) and owns its own
+scroll, the canvas managing its own viewport. Feature code lives under
+`features/proposals/editor/`; full architecture, the one-history rule,
+and media limits: `.claude/docs/proposals.md` (Phase 2 section).
+
+**Header** (`editor-header.tsx`, one `h-12` row): Back to Templates,
+the template name (click to rename), autosave status ("Saving…" /
+"Saved" / "Saved Ns ago" / "Save failed" with a Retry button), Undo /
+Redo (⌘Z / ⌘⇧Z), and a Desktop/Mobile `PillToggle` switching the canvas
+preview device. No Save button (the editor autosaves) and no Preview
+yet (the public page stays on v1 until Phase 4).
+
+**Canvas** (`section-canvas.tsx`, inside `CanvasFrame` with `page` and
+`wide`): one row per layout section, sortable via dnd-kit
+(`closestCenter`, pointer + keyboard sensors) or `Alt+ArrowUp/Down`,
+plus a hover "+" insert line between sections and a trailing "Add
+section" button. Sections cap at `LAYOUT_LIMITS.maxSections` (40,
+`features/proposals/model/rich-doc-spec.ts`); every add control
+disables past the cap with the tooltip "Templates hold up to 40
+sections" (`SECTION_CAP_MESSAGE`, `add-line.tsx`).
+
+**Selection model:** at most one section selected, and optionally one
+node within it (an image, button, embed, audio, spacer, or the
+`columns` row) - never both a section-level and unrelated node
+selection at once. Selecting is not undoable (only layout edits are;
+see `.claude/docs/proposals.md`). `Escape` steps the selection out one
+level: inside a section's text editor it exits to the section; with a
+node selected it clears the node; with only a section selected it
+clears entirely (`step-selection-out.ts`).
+
+**Add palette** (`add-palette.tsx` + `use-add-palette.ts`): Sections
+(the seven `SectionKind`s) and Presets (the seven starter `PresetId`s,
+flavoured by the fixed `role="mc"` - no role picker until Phase 4) tabs.
+Opened from a hover "+" line it is a `Popover` anchored to that line;
+from the trailing button (nothing to anchor to) it opens as a `Modal`.
+
+**Three control bars** (`features/proposals/editor/bars/`, each one
+`h-8` row via `BarShell`, floated over the canvas through `CanvasFrame`'s
+`overlay` slot): a section bar (background, padding, corner radius,
+hide-on-mobile, duplicate, reset style, delete), a node bar per node
+kind (image/button/embed/audio/columns/spacer - position, size,
+alt/caption/link, source), and a text bar (TipTap's own bubble menu:
+style, font, size, weight, colour, marks, alignment, lists, link,
+insert, text case). Every bar overflows low-frequency controls behind
+a trailing `...` menu once the row would not fit at 380px. Full rule
+set: `.claude/docs/frontend-design.md` ("Control bars").
+
+**Resizing** (`resize/`, `components/editor/resize-grip.tsx`): a
+section's height (drag or the grip's arrow keys) and width (narrow
+560 / medium 720 / wide 1100px, or a dragged px value); an image or
+spacer node's own resize grips. Values commit to the undo stack on
+mouse-up, not per pixel dragged.
+
+**Keyboard** (`use-canvas-keys.ts`, `use-editor-shortcuts.ts`, spec
+3.5): with a section selected and focus outside any editor - `Escape`
+(step selection out), `Alt+ArrowUp/Down` (reorder), `⌘D`/`Ctrl+D`
+(duplicate), `Backspace`/`Delete` (delete; an empty content section
+goes straight away, anything else asks via `ConfirmDialog` first).
+Inside a section's text editor - `⌘Z`/`⌘⇧Z` (layout undo/redo, forwarded
+through `HistoryKeymapExtension` since TipTap's own history is off) and
+`⌘K` (open the text bar's link popover).
+
+**Mobile canvas** (`device="mobile"`, spec 3.6): `CanvasFrame` renders
+a fixed 380px-wide wrapper stamped `data-canvas="mobile"`, which
+`EDITOR_PROSE_CLASS` (`editor-styles.ts`) keys off to stack a
+`columns` row and float image figures full-width - the same visual
+result as the public renderer's own `max-md:` classes, which never
+fire inside the fixed-width wrapper since it is not a real viewport
+resize.
+
+**Autosave** (`use-template-autosave.ts`): 800ms after the last
+change, `parseProposalLayout` re-validates the layout before every
+save; a failure logs `proposal_layout_invalid_editor` and surfaces as
+"Save failed" rather than reaching the server. A save still pending on
+unmount (e.g. clicking Back within the debounce window) is flushed via
+`useAutosave`'s `flushOnUnmount` option rather than dropped.
 
 ---
 

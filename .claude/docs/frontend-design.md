@@ -900,6 +900,107 @@ The **Website form** (`lead`) is a full branding surface with its own tab, edite
 
 ------------------------------------------------------------------------
 
+# Editor primitives (`components/editor/`)
+
+The controls above (`PillToggle`, `ActiveTargetLabel`, `ToolbarDivider`,
+`IncludeDropdown`, `PositionControl`, `Select`, `Slider`,
+`NumberStepper`), the `ResizeGrip` resize handle and its drag maths,
+and the zoomable/pannable `CanvasFrame` used to live under
+`app/(dashboard)/branding/`. Proposal Layout v2 Phase 2 (spec 5.3)
+lifted them to `components/editor/` so the Branding editor and the
+proposal section editor share one set instead of drifting into two.
+Import from the barrel:
+
+```ts
+import { PillToggle, ToolbarDivider, CanvasFrame, type CanvasDevice } from '@/components/editor'
+```
+
+- `PillToggle`, `ActiveTargetLabel`, `VAlignIcon`, `ToolbarDivider`,
+  `IncludeDropdown` (+ `IncludeRow`): `components/editor/toolbar-primitives.tsx`.
+- `PositionControl`: `components/editor/position-control.tsx`. A 3x3
+  grid button placing text top/middle/bottom x left/centre/right.
+  Deliberately untyped against the Branding block model: it takes
+  plain `'left' | 'center' | 'right'` / `'top' | 'middle' | 'bottom'`
+  unions rather than importing `HeroBlock`, because `components/editor/`
+  must not import from `app/` or `features/`.
+- `Select`, `SelectOption`: `components/editor/select.tsx`. Popover
+  select with an optional custom label renderer and a meta column.
+- `Slider`: `components/editor/slider.tsx`. Pointer-drag + keyboard
+  (arrows, Page Up/Down, Home/End) slider over `[min, max]`.
+- `NumberStepper`: `components/editor/number-stepper.tsx`. An editable
+  numeric `<input type="number">` (role `spinbutton`), clamped to
+  `[min, max]`, flanked by Decrease/Increase buttons named
+  `Decrease ${ariaLabel}` / `Increase ${ariaLabel}`. An optional
+  `suffix` (e.g. `"px"`) renders as muted text after the input.
+- `ResizeGrip`, `ResizeGripProps`, plus the pure drag maths it's built
+  on (`Snap`, `zoomFactor`, `clamp`, `stepRound`, `applySnaps`,
+  `dragValue`): `components/editor/resize-grip.tsx` and
+  `resize-math.ts`. A `role="slider"` pill grip (`axis: 'y'` on the
+  bottom edge, `cursor-ns-resize`; `'x'` on the side edge,
+  `cursor-ew-resize`) draggable with the mouse or the arrow keys
+  (`step`, default 1), with an optional `scale` (layout px per unit
+  of `value`, e.g. a vh-based height), `snaps` (locks within
+  `tolerance` units and swaps the readout for the snap's `label`),
+  and `onCommit` (fires once on mouse up, the undo-history point).
+  `zoomFactor` recovers the CSS-`zoom` scale of a zoomed canvas from
+  an element's unzoomed layout height vs. its zoomed screen height
+  (1 in jsdom, which has no layout). The Branding hero's
+  `HeroResizeGrip` (`app/(dashboard)/branding/blocks/proposal/hero-resize.tsx`)
+  is a thin wrapper over it.
+- `CanvasFrame`, `CanvasFrameProps`, `CanvasDevice`:
+  `components/editor/canvas-frame.tsx`. The zoomable, pannable
+  document viewport (cursor-anchored zoom, space/middle-drag pan,
+  fit-to-width), with its zoom widget.
+
+**The Branding editor's old import paths still work.** Each one
+(`app/(dashboard)/branding/blocks/toolbar-primitives.tsx`,
+`app/(dashboard)/branding/blocks/proposal/position-control.tsx`,
+`app/(dashboard)/branding/components/{select,slider}.tsx`,
+`app/(dashboard)/branding/canvas-frame.tsx`) is now a compatibility
+re-export of `@/components/editor`, removed in Phase 5 when the
+Branding toolbar is rebuilt on these primitives directly. New code
+(the proposal section editor, and any Branding code touched from now
+on) should import from `@/components/editor`, not the old paths.
+
+Rendered on `/design-system` under "Editor primitives".
+
+## Control bars (Proposal Layout v2 Phase 2)
+
+The section, node and text bars in `features/proposals/editor/bars/`
+(section bar, node bar + its per-kind variants, text bar) share one
+rule set, enforced by `BarShell` (`features/proposals/editor/bars/bar-shell.tsx`):
+
+- **One 32px row.** `BarShell` lays out `h-8 items-center gap-1`; a bar
+  never wraps to a second row or grows taller to fit more controls.
+  Built only from `components/editor/` primitives plus `components/ui/`
+  (`Tooltip`, `ColorPopover`, `MenuPanel`/`MenuItem`, `Button`,
+  `ConfirmDialog`).
+- **No captions above controls.** A control's meaning comes from its
+  icon, its `aria-label`/`Tooltip`, or (for a `Select`) its own visible
+  value - never a label rendered above the row.
+  `ActiveTargetLabel` (`components/editor/toolbar-primitives.tsx`) is
+  the one exception: it names what a bar is currently acting on (e.g.
+  a selected image), inline in the row itself.
+- **Overflow `...` when a bar would not fit at 380px.** A control that
+  does not fit the row at that width moves behind the bar's own
+  trailing `...` menu (`BarShell`'s `overflow` slot), a `Popover`
+  anchored to the `...` trigger - `text-bar-overflow.tsx` (list
+  toggles + the `Aa` case choices) and `section-bar.tsx` (Hide on
+  phone, Duplicate, Reset style, Delete) both do this. The threshold
+  is the bar's own control order, not a runtime width measurement
+  (`BarShell`'s module doc has the why).
+- **Anything deeper than one step opens a popover from that control.**
+  A colour choice, a font pick, a link edit - each opens a `Popover`
+  anchored to the control that triggered it, never a second toolbar
+  row. `text-bar.tsx`'s `Link` control and `ColorPopover` follow this;
+  so does every `Select` in a bar.
+
+Rendered on `/design-system` alongside the editor primitives (the
+Templates editor itself, behind `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2`, is
+where the bars run for real - see `.claude/docs/page-specs.md`).
+
+------------------------------------------------------------------------
+
 # Global Styles (Branding Editor)
 
 The **Global styles** accordion exposes branding defaults applied to every surface:

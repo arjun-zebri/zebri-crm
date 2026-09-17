@@ -45,13 +45,15 @@ describe('TemplatesList', () => {
     vi.clearAllMocks()
   })
 
-  it('ensures a default, then lists templates with the default badge and a disabled Open', async () => {
+  it('ensures a default, then lists templates with the default badge and an Open link to the editor route', async () => {
     actions.ensureDefaultTemplateAction.mockResolvedValue({ ok: true, template: { ...templates[0], layout: { version: 2, sections: [] } }, migratedFromV1: false })
     actions.listTemplatesAction.mockResolvedValue({ ok: true, templates })
     renderWithClient(<TemplatesList />)
     expect(await screen.findByText('My proposal')).toBeInTheDocument()
     expect(screen.getByText('Default')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /open/i })[0]).toBeDisabled()
+    const openLinks = screen.getAllByRole('link', { name: /open/i })
+    expect(openLinks[0]).toHaveAttribute('href', `/proposals/templates/${templates[0]!.id}`)
+    expect(openLinks[1]).toHaveAttribute('href', `/proposals/templates/${templates[1]!.id}`)
     expect(actions.ensureDefaultTemplateAction).toHaveBeenCalledTimes(1)
   })
 

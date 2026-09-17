@@ -737,6 +737,72 @@ cross-tenant denial on `proposal_templates` and `proposal_settings`.
 `get_public_proposal_layout` RPC and the `features/proposals/data/templates.ts`
 server actions.
 
+#### Layout v2 (Phase 2, 2026-09-17)
+
+Full feature doc: `.claude/docs/proposals.md` (Layout v2 Phase 2
+section). Every test imports from `@/features/proposals` only (the
+ESLint feature-boundary rule covers `tests/**` too).
+
+Unit, `tests/unit/components/editor/`: `canvas-frame.test.tsx`,
+`number-stepper.test.tsx`, `resize-grip.test.tsx`, `resize-math.test.ts`,
+`slider.test.tsx`, `toolbar-primitives.test.tsx` cover the lifted
+primitives on their own (no editor around them).
+
+Unit, `tests/unit/features/proposals/editor/`: `state.test.ts`
+(`layoutReducer`, `newSectionFor`), `use-layout-editor.test.tsx` (the
+one-history split), `content-section-editor.test.tsx` (mount, emit,
+re-hydrate, registry), `extensions.test.ts` (schema/spec parity plus a
+round-trip of every node type through `normaliseEditorJSON` +
+`parseProposalLayout`), `slash-menu.test.ts` and
+`columns-commands.test.ts` (bare `@tiptap/core` `Editor` harness, no
+React), `section-canvas.test.tsx` (selection, deletion, insert lines),
+`add-palette.test.tsx` / `use-add-palette.test.ts`,
+`insert-items.test.ts`, `node-views.test.tsx`, `node-bar.test.tsx`,
+`section-bar.test.tsx`, `text-bar.test.tsx`, `section-resize.test.tsx`
+/ `section-resize-math.test.ts`, `mobile-canvas.test.tsx`,
+`keyboard.test.tsx`, `template-editor.test.tsx`,
+`use-template-autosave.test.tsx`. `tests/unit/features/proposals/data/media.test.ts`
+covers `uploadProposalMediaFile`/`MEDIA_LIMITS`.
+`tests/unit/branding/use-autosave.test.ts` covers the new
+`flushOnUnmount` option; `tests/unit/components/ui/button.test.tsx`
+covers `buttonClassName`; `tests/unit/app/proposals/templates-list.test.tsx`
+covers the Templates tab's Open link.
+
+**dnd-kit pattern:** `section-canvas.test.tsx` does not simulate a
+pointer drag through `DndContext` - jsdom has no layout, so dnd-kit's
+collision detection never fires meaningfully. Reordering is exercised
+through the same `Alt+ArrowUp/Down` keyboard path a real user has
+(`fireEvent.keyDown(window, { key: 'ArrowDown', altKey: true })`),
+which drives the identical `moveSection` dispatch the drag handler
+does. A future test asserting drag-specific behaviour (drag overlay,
+`closestCenter` itself) would need `@dnd-kit/core`'s own test utilities
+or a real browser (Playwright).
+
+**TipTap pattern:** two styles depending on whether React is under
+test. `content-section-editor.test.tsx` and friends mount the real
+component with RTL and read the live `Editor` back out of
+`editor-registry.ts` (`getEditor(sectionId)`, awaited via `waitFor`
+since registration happens in an effect after mount). `slash-menu.test.ts`
+and `columns-commands.test.ts` skip React entirely - `new Editor({
+extensions: buildRichDocExtensions({}), content: doc(...) })` against
+a bare `@tiptap/core` instance, asserting on `editor.state`/
+`editor.commands` directly. **Every editor created this second way
+must call `editor.destroy()` before the test ends** (each `it` in
+`columns-commands.test.ts` does, one per test) - an un-destroyed
+`Editor` leaves ProseMirror plugin timers running past teardown, which
+surfaces as async noise or an occasional non-zero exit code from a
+combined `unit` project run, not a failure in the offending test
+itself.
+
+Integration (local Supabase, real RLS):
+`tests/integration/proposals/template-editor-save.test.ts` round-trips
+a doc using every rich-doc node type through
+`updateTemplateLayoutAction` -> `getTemplateAction` byte-for-byte
+(normalised through `normaliseEditorJSON` first, matching what the
+live editor sends) and asserts a cross-tenant write is refused with
+the row untouched. No new RLS tables this phase - `proposal_templates`
+and `proposal_settings` coverage is unchanged from Phase 1.
+
 ## What NOT to Test
 - Supabase internals or DB queries
 - Exact CSS values or pixel measurements

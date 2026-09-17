@@ -178,4 +178,48 @@ describe('useAutosave', () => {
     })
     expect(saveFn).toHaveBeenCalledTimes(1)
   })
+
+  describe('flushOnUnmount', () => {
+    it('flushes a still-pending save on unmount instead of dropping it', () => {
+      const saveFn = vi.fn().mockResolvedValue(undefined)
+      const { rerender, unmount } = renderHook(
+        ({ value }) => useAutosave(value, saveFn, 800, { flushOnUnmount: true }),
+        { initialProps: { value: { count: 0 } } }
+      )
+
+      act(() => {
+        rerender({ value: { count: 1 } })
+      })
+      // Still inside the 800ms debounce window: nothing sent yet.
+      act(() => {
+        vi.advanceTimersByTime(200)
+      })
+      expect(saveFn).not.toHaveBeenCalled()
+
+      unmount()
+      expect(saveFn).toHaveBeenCalledTimes(1)
+      expect(saveFn).toHaveBeenCalledWith({ count: 1 })
+    })
+
+    it('does not flush on unmount when the option is off (the default)', () => {
+      const saveFn = vi.fn().mockResolvedValue(undefined)
+      const { rerender, unmount } = renderHook(
+        ({ value }) => useAutosave(value, saveFn, 800),
+        { initialProps: { value: { count: 0 } } }
+      )
+
+      act(() => {
+        rerender({ value: { count: 1 } })
+      })
+      unmount()
+      expect(saveFn).not.toHaveBeenCalled()
+    })
+
+    it('does nothing on unmount when there is no pending save', () => {
+      const saveFn = vi.fn().mockResolvedValue(undefined)
+      const { unmount } = renderHook(() => useAutosave({ count: 0 }, saveFn, 800, { flushOnUnmount: true }))
+      unmount()
+      expect(saveFn).not.toHaveBeenCalled()
+    })
+  })
 })

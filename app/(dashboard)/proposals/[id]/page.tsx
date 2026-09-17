@@ -13,6 +13,7 @@ import { Empty } from '@/components/ui/empty';
 import { ErrorState } from '@/components/ui/error-state';
 import { Loading } from '@/components/ui/loading';
 
+import { ProposalsFrame } from '../proposals-frame';
 import { useProposal } from '../use-proposals';
 
 import { ProposalDetail } from './proposal-detail';
@@ -23,12 +24,12 @@ export default function ProposalDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const { data, isLoading, error, refetch } = useProposal(id);
 
-  if (isLoading) return <Loading label="Loading proposal" />;
-  if (error) return <ErrorState title="Could not load this proposal" error={error} onRetry={() => void refetch()} />;
-  if (!data) return <Empty title="Proposal not found" description="It may have been deleted." />;
+  if (isLoading) return <ProposalsFrame><Loading label="Loading proposal" /></ProposalsFrame>;
+  if (error) return <ProposalsFrame><ErrorState title="Could not load this proposal" error={error} onRetry={() => void refetch()} /></ProposalsFrame>;
+  if (!data) return <ProposalsFrame><Empty title="Proposal not found" description="It may have been deleted." /></ProposalsFrame>;
 
   return (
-    <>
+    <ProposalsFrame>
       <ProposalDetail proposal={data} onEdit={() => setEditOpen(true)} onChanged={() => void refetch()} />
       {editOpen ? (
         <ProposalBuilderModal
@@ -38,6 +39,6 @@ export default function ProposalDetailPage() {
           onDeleted={() => router.push('/proposals')}
         />
       ) : null}
-    </>
+    </ProposalsFrame>
   );
 }

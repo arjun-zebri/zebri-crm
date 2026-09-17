@@ -463,6 +463,28 @@ surface (the portal) today.
   (a bad file never starts a doomed upload), but the bucket's own MIME
   and size limits are the real enforcement boundary; the client check
   is only a fast-fail UX improvement.
+- **`uploadProposalMediaFile`** (`features/proposals/data/media.ts`,
+  Proposal Layout v2 Phase 2): the template editor's own upload path to
+  the same `proposal-media` bucket (image nodes, audio nodes, and
+  section background images/video via the node bars in
+  `features/proposals/editor/bars/`), duplicating
+  `uploadProposalMedia`'s client-side-caps-before-network-call pattern
+  rather than importing it (the feature-module boundary forbids
+  `features/proposals/` reaching into `app/`). `MEDIA_LIMITS` caps:
+  image 10MB (`jpeg`/`png`/`webp`/`gif`), audio 25MB
+  (`mpeg`/`mp4`/`x-m4a`/`wav`), video and hero `background` 50MB
+  (`mp4`/`webm`). **Gap closed**: `20260928000000_proposal_media_mime_types.sql`
+  widened the bucket's `allowed_mime_types` from `['video/mp4',
+  'video/webm']` to the full union `MEDIA_LIMITS` allows (video, then
+  image, then audio types); `file_size_limit` stays 52428800 (50MB),
+  the ceiling sized for the largest kind - the smaller per-kind caps
+  (image 10MB, audio 25MB) remain client-side-only in `MEDIA_LIMITS`,
+  enforced before the upload request opens, not by the bucket itself.
+  Image and audio uploads in the template editor now succeed
+  end-to-end. Still not covered by any test (`media.test.ts` only
+  exercises the client-side validation branch, never a real bucket
+  write) - an integration test writing an image/audio object to the
+  local bucket would close that gap.
 - **Embed host allowlist**: `parseEmbedUrl` (`lib/proposals/embed-url.ts`)
   only recognises YouTube and Vimeo hostnames (`YOUTUBE_HOSTS` /
   `VIMEO_HOSTS`, exact `Set` membership, not a substring or regex

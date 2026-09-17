@@ -4,6 +4,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { AlignLeft, AlignCenter, AlignRight, Italic, Underline, Type, ChevronDown } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { NumberStepper } from '@/components/editor'
 import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
 import {
@@ -284,56 +285,6 @@ function ToggleButton({
     >
       {children}
     </button>
-  )
-}
-
-function NumberStepper({
-  value,
-  min,
-  max,
-  step,
-  onChange,
-  ariaLabel,
-}: {
-  value: number
-  min: number
-  max: number
-  step: number
-  onChange: (v: number) => void
-  ariaLabel: string
-}) {
-  return (
-    <div className="inline-flex items-center border border-border rounded-control h-8">
-      <button
-        type="button"
-        onClick={() => onChange(Math.max(min, value - step))}
-        className="w-5 h-full text-text-muted hover:text-text hover:bg-gray-50 transition cursor-pointer text-body"
-        aria-label="Decrease"
-      >
-        −
-      </button>
-      <input
-        type="number"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => {
-          const v = parseFloat(e.target.value)
-          if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)))
-        }}
-        aria-label={ariaLabel}
-        className="w-8 h-full text-body text-center bg-transparent text-text outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      />
-      <button
-        type="button"
-        onClick={() => onChange(Math.min(max, value + step))}
-        className="w-5 h-full text-text-muted hover:text-text hover:bg-gray-50 transition cursor-pointer text-body"
-        aria-label="Increase"
-      >
-        +
-      </button>
-    </div>
   )
 }
 

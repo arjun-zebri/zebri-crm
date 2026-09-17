@@ -2038,13 +2038,23 @@ Migration `20260924000000_proposal_surface.sql`. Full feature doc:
   `celebrant`, `both`) remembers the role chosen on first open of the
   Proposal branding tab.
 - **`proposal-media` storage bucket**: public read, 50MB file size
-  limit, `allowed_mime_types` restricted to `video/mp4` and
+  limit, `allowed_mime_types` originally restricted to `video/mp4` and
   `video/webm`, for uploaded hero/video block sources. Owner-write
   storage policies (insert/update/delete require
   `auth.uid()::text = split_part(name, '/', 1)`, i.e. the first path
   segment is the uploader's own user id), select open to anyone  -  the
   same shape as the existing `branding` bucket. See `security.md` for
   the policy listing.
+  **Widened in `20260928000000_proposal_media_mime_types.sql`** (Layout
+  v2 Phase 2) to also accept the image and audio kinds the template
+  editor uploads (`features/proposals/data/media.ts` `MEDIA_LIMITS`):
+  `allowed_mime_types` is now `video/mp4`, `video/webm`, `image/jpeg`,
+  `image/png`, `image/webp`, `image/gif`, `audio/mpeg`, `audio/mp4`,
+  `audio/x-m4a`, `audio/wav`. `file_size_limit` stays 52428800 (50MB) -
+  that's the bucket-level ceiling, sized for the largest kind
+  (video/background); the smaller per-kind caps (image 10MB, audio
+  25MB) are enforced client-side in `MEDIA_LIMITS` before upload, not
+  at the bucket.
 
 ## Proposals Phase D additions (2026-09-15)
 

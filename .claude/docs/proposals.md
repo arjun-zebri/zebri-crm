@@ -87,6 +87,121 @@ builder design mode and a real settings form (Phase 4), analytics data
 (`app/(dashboard)/proposals/[id]/proposal-pdf-button.tsx`) and the
 Branding preview still render v1 only until Phase 2.
 
+## Layout v2 (Phase 2)
+
+Spec: `docs/superpowers/specs/2026-09-16-proposal-layout-v2-design.md`
+section 8 item 2. Plan:
+`docs/superpowers/plans/2026-09-16-proposal-layout-v2-phase2-template-editor.md`.
+Same branch, same flag, still staging-only. Ships the section editor at
+`/proposals/templates/[id]` the Templates tab's Open link now opens
+(`app/(dashboard)/proposals/templates/[id]/page.tsx`). Full page
+behaviour: `.claude/docs/page-specs.md` ("Templates editor (Phase 2)").
+
+**New code, two places:**
+
+- **`components/editor/`** - toolbar and canvas primitives lifted out
+  of `app/(dashboard)/branding/` so the Branding editor and this
+  section editor share one set: `toolbar-primitives.tsx`
+  (`PillToggle`, `ActiveTargetLabel`, `ToolbarDivider`,
+  `IncludeDropdown`), `position-control.tsx`, `select.tsx`,
+  `slider.tsx` (`onCommit(v)` for the undo-history point),
+  `number-stepper.tsx`, `resize-grip.tsx` + `resize-math.ts` (`Snap`,
+  `applySnaps`, `dragValue`, ...), `canvas-frame.tsx` (the zoomable,
+  pannable viewport; its `scrollRef` prop exposes the scroll element
+  so a floated control bar's popovers stay inside the canvas). The old
+  Branding import paths still work as re-export shims until the
+  Phase 5 toolbar rebuild. Rendered on `/design-system`
+  (`app/design-system/editor-primitives.tsx`).
+- **`features/proposals/editor/`** - everything the template editor
+  itself needs: `state.ts` (`LayoutAction`, `layoutReducer`,
+  `newSectionFor`), `use-layout-editor.ts` (the one history, below),
+  `extensions/` (the spec-parity TipTap set with `undoRedo: false`,
+  the slash menu, the history keymap, node/columns commands),
+  `content-section-editor.tsx` (one TipTap `Editor` per content
+  section, registered in `editor-registry.ts` so a bar rendered
+  elsewhere in the tree can reach it by section id), `section-canvas.tsx`
+  (dnd-kit sortable rows; owns the add palette), `editable-section.tsx`
+  + `content-section-frame.tsx`, `add-line.tsx` (the 40-section cap,
+  `SECTION_CAP_MESSAGE`), `add-palette.tsx` + `use-add-palette.ts`,
+  `insert-items.ts` (image/audio/embed run through
+  `proposalEditor.callbacks`, wired to `insert-media-host.tsx` +
+  `use-insert-media.ts` - see below; every other item is a direct
+  editor command), `node-views/` (React NodeViews with resize grips
+  for image/button/embed/audio/spacer/columns), `bars/` (section, text,
+  and per-kind node bars, `bar-shell.tsx`, `override-dot.tsx`),
+  `resize/` (section height/width resize maths and grips),
+  `template-editor.tsx` + `template-editor-body.tsx` +
+  `editor-header.tsx` + `use-template-autosave.ts` +
+  `use-editor-shortcuts.ts` + `use-canvas-keys.ts` +
+  `step-selection-out.ts`, `editor-styles.ts` (`EDITOR_PROSE_CLASS`,
+  the mobile-canvas stacking rules).
+- **`features/proposals/data/media.ts`** - `uploadProposalMediaFile`
+  (client-side upload to the `proposal-media` bucket, mirroring
+  `app/(dashboard)/branding/upload-proposal-media.ts`'s raw-XHR
+  progress pattern as a standalone copy: the module boundary below
+  forbids importing that file directly). `MEDIA_LIMITS`: image 10MB
+  (`jpeg`/`png`/`webp`/`gif`), audio 25MB (`mpeg`/`mp4`/`x-m4a`/`wav`),
+  video and hero `background` 50MB (`mp4`/`webm`).
+- **Inserting a fresh image/audio/embed** (not replacing an existing
+  node's src/url, which the node bars handle directly) goes through
+  `insert-media-host.tsx`'s `InsertMediaHost`, mounted once in
+  `template-editor-body.tsx` beside `useEditorShortcuts`.
+  `use-insert-media.ts` wires its imperative `open` handle into every
+  registered editor's `proposalEditor.callbacks` (mirrors
+  `use-editor-shortcuts.ts`'s pattern). Picking a file uploads via
+  `uploadProposalMediaFile` and inserts the node through
+  `insert-atom-node.ts`'s `insertAtomNode`, which leaves it
+  node-selected so its node bar opens immediately; a busy/error pill
+  (`insert-media-status-pill.tsx`) floats over the canvas while the
+  upload is in flight. Embed goes through a url-first modal
+  (`embed-insert-modal.tsx`) instead of an upload, gated by the same
+  `detectEmbedProvider` allowlist the node bar's Replace-link popover
+  uses - no bare `url: null` placeholder node can ever reach the
+  document through this path (an earlier direct-insert path could, and
+  broke autosave for the whole template; see the Phase 2 final-fix
+  ledger).
+
+**One history, not two.** `useLayoutEditor` runs the layout through
+`lib/branding/use-history.ts`'s `useHistory<ProposalLayout>`; the
+selection lives beside it in a plain `useState` so clicking a
+different section never pushes an undo step (`use-layout-editor.ts`'s
+module doc has the full ordering rationale). TipTap's own history is
+off (`undoRedo: false` in `extensions/index.ts`) - two undo stacks
+fighting over the same keystroke is worse than one - so
+`HistoryKeymapExtension` (`extensions/history-keymap.ts`) is what lets
+⌘Z/⌘⇧Z reach the layout's real history while a section's text editor
+has focus, via callbacks `use-editor-shortcuts.ts` sets on every
+mounted editor's storage (`extensions/proposal-editor-storage.ts`).
+
+**Every editor output is validated before it lands anywhere.** Rich
+text JSON passes through `toPlainJSON` (`@/lib/utils`, TipTap's
+`getJSON()` output carries a null prototype that server actions
+silently drop) before it enters the reducer's `setContent` branch,
+and the full layout passes through `parseProposalLayout`
+(`model/schema.ts`) again before every autosave
+(`use-template-autosave.ts`). A layout the editor itself produced must
+always pass its own schema - a failure there means a bug upstream, so
+it logs `proposal_layout_invalid_editor` and shows "Save failed"
+rather than reaching the server with a broken layout.
+
+**Limits** (`model/rich-doc-spec.ts`'s `LAYOUT_LIMITS`): 40 sections
+per template, 200 nodes per rich doc, 2MB serialised.
+
+**Module boundary**: `extensions/index.ts` carries its own `'use
+client'` - the `[id]` route is a server component importing the
+`@/features/proposals` barrel, and the node extensions value-import
+`@tiptap/react`'s `ReactNodeViewRenderer` (a class, undefined on the
+server) at module evaluation. Without the directive the barrel pulled
+that import into the RSC module graph and the route 500'd.
+
+**Not in Phase 2**: the public page still renders v1 or the Phase 1
+v2 fallback only - nothing here writes `proposals.layout`, so a link
+stays untouched until Phase 4. Data-section editing (Layout/Include
+controls, quantities, gallery, video, testimonials, FAQ, accept) is
+Phase 3. The editor's `role` is fixed to `'mc'` (flavours the add
+palette's Presets tab only) until Phase 4's role picker; no per-
+proposal Design mode or page settings form yet.
+
 ## What a proposal is
 
 An MC offers a couple up to three priced **options** (each a snapshot
