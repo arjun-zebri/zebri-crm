@@ -24,7 +24,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { actionUi } from '@/lib/automations/actions/ui';
 import { docToText } from '@/lib/automations/mustache-doc';
-import { renderTemplate } from '@/lib/automations/variables';
+import { linkLabelForUrl, renderTemplate } from '@/lib/automations/variables';
 import type { ActionType, RunContext } from '@/types/automations';
 import type { Database, Json } from '@/types/database';
 import type { WorkflowStepRow } from '@/types/workflows';
@@ -176,8 +176,47 @@ export function applyReviewEdits(
       type: 'doc',
       content: edits.body.split('\n').map((line) => ({
         type: 'paragraph',
-        ...(line.length > 0 ? { content: [{ type: 'text', text: line }] } : {}),
+        ...(line.length > 0 ? { content: linkifyLine(line) } : {}),
       })),
     },
   } as Json;
+}
+
+/**
+ * One inline node of the doc an edited line becomes. Declared as `Json`
+ * shapes (index-signature friendly) so the assembled doc is assignable
+ * to the step's `config` column without a detour through `unknown`.
+ */
+type InlineNode =
+  | { type: 'text'; text: string }
+  | { type: 'text'; text: string; marks: { type: 'link'; attrs: { href: string } }[] };
+
+const URL_PATTERN = /https?:\/\/[^\s<>"')\]]+/g;
+
+/**
+ * Split an edited line into text and link nodes.
+ *
+ * The preview renders a link variable as its URL (a textarea has
+ * nothing else to show), so once the MC edits, the address is all that
+ * is left of `{{portal.link}}`. Sending it as plain text would hand the
+ * couple a bare URL, the thing link variables exist to avoid. Each app
+ * share link goes back out as its couple-facing label; any other URL
+ * the MC typed keeps its text but becomes clickable.
+ */
+function linkifyLine(line: string): InlineNode[] {
+  const nodes: InlineNode[] = [];
+  let last = 0;
+  for (const match of line.matchAll(URL_PATTERN)) {
+    const url = match[0];
+    const start = match.index ?? 0;
+    if (start > last) nodes.push({ type: 'text', text: line.slice(last, start) });
+    nodes.push({
+      type: 'text',
+      text: linkLabelForUrl(url) ?? url,
+      marks: [{ type: 'link', attrs: { href: url } }],
+    });
+    last = start + url.length;
+  }
+  if (last < line.length) nodes.push({ type: 'text', text: line.slice(last) });
+  return nodes;
 }

@@ -160,6 +160,68 @@ describe('renderEmailTemplate', () => {
   })
 })
 
+// Link variables (`portal.link`, `invoice.link`, …) used to land in the
+// email as the bare URL, with no anchor at all. A couple reading "here is
+// your portal: https://app.zebri.com.au/portal/…" is exactly what the
+// ticket asked us to stop doing. They now render as friendly linked text.
+describe('link variables', () => {
+  const linkCtx = () =>
+    makeCtx({
+      couple: { ...makeCtx().couple!, portalEnabled: true, portalToken: 'tok-1' },
+    })
+
+  it('renders a link variable as friendly anchored text, not the raw URL', () => {
+    const body = doc(text('Here is your portal: '), mention('portal.link'))
+    const { html, unresolved } = renderEmailTemplate(body, linkCtx(), 'send')
+    expect(unresolved).toEqual([])
+    expect(html).toMatch(/<a [^>]*href="https:\/\/[^"]+\/portal\/tok-1"[^>]*>View your portal<\/a>/)
+    // The URL must appear only inside the href, never as visible text.
+    expect(html.replace(/href="[^"]*"/g, '')).not.toContain('/portal/tok-1')
+  })
+
+  it('labels every link namespace with a couple-facing verb phrase', () => {
+    const ctx = makeCtx({
+      triggerEvent: {
+        ...makeCtx().triggerEvent,
+        payload: {
+          invoice_link: 'https://x.test/i/1',
+          contract_link: 'https://x.test/c/1',
+          questionnaire_link: 'https://x.test/q/1',
+        } as never,
+      },
+    })
+    const body = doc(mention('invoice.link'), mention('contract.link'), mention('questionnaire.link'))
+    const { html } = renderEmailTemplate(body, ctx, 'send')
+    expect(html).toContain('>View and pay your invoice</a>')
+    expect(html).toContain('>Review and sign your contract</a>')
+    expect(html).toContain('>Fill in your questionnaire</a>')
+  })
+
+  it('still flags an unresolvable link variable as missing', () => {
+    const ctx = makeCtx({ couple: { ...makeCtx().couple!, portalEnabled: false } })
+    const { html, unresolved } = renderEmailTemplate(doc(mention('portal.link')), ctx, 'preview')
+    expect(unresolved).toEqual(['portal.link'])
+    expect(html).not.toContain('<a ')
+  })
+
+  it('seeds the editable compose preview with the linked label, not the URL', () => {
+    const body = doc(text('Portal: '), mention('portal.link'))
+    const resolved = resolveTemplateContent(body, linkCtx())
+    const para = resolved.content?.[0]
+    const linkNode = para?.content?.find((n) => n.marks?.some((m) => m.type === 'link'))
+    expect(linkNode?.text).toBe('View your portal')
+    expect(linkNode?.marks?.[0]?.attrs?.['href']).toMatch(/\/portal\/tok-1$/)
+    // Round trip: sending the seeded preview keeps the anchor.
+    const { html } = renderEmailTemplate(resolved, linkCtx(), 'send')
+    expect(html).toContain('>View your portal</a>')
+  })
+
+  it('leaves non-link variables as plain text', () => {
+    const { html } = renderEmailTemplate(doc(mention('couple.primary_name')), makeCtx(), 'send')
+    expect(html).not.toContain('<a ')
+  })
+})
+
 describe('resolveTemplateContent', () => {
   /** Flatten a resolved doc to its concatenated text. */
   function flat(node: JSONContent): string {

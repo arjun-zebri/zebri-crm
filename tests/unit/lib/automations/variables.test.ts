@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { renderTemplate, VARIABLE_CATALOGUE } from '@/lib/automations/variables'
+import { linkLabel, linkLabelForUrl, renderTemplate, VARIABLE_CATALOGUE } from '@/lib/automations/variables'
 import type { RunContext } from '@/types/automations'
 
 function makeCtx(overrides: Partial<RunContext> = {}): RunContext {
@@ -167,5 +167,43 @@ describe('portal links', () => {
     expect(tokens).toContain('{{portal.link}}')
     expect(tokens).toContain('{{portal.partner_link}}')
     expect(tokens).toContain('{{portal.vendor_link}}')
+  })
+})
+
+describe('linkLabel', () => {
+  it('returns the couple-facing label for every catalogued link variable', () => {
+    expect(linkLabel('portal.link')).toBe('View your portal')
+    expect(linkLabel('portal.partner_link')).toBe('View your portal')
+    expect(linkLabel('portal.vendor_link')).toBe('View the run sheet')
+    expect(linkLabel('invoice.link')).toBe('View and pay your invoice')
+    expect(linkLabel('contract.link')).toBe('Review and sign your contract')
+    expect(linkLabel('questionnaire.link')).toBe('Fill in your questionnaire')
+    expect(linkLabel('quote.link')).toBe('View your quote')
+    expect(linkLabel('mc.review_link')).toBe('Leave a review')
+  })
+
+  it('ignores filters on the expression', () => {
+    expect(linkLabel('portal.link | default:x')).toBe('View your portal')
+  })
+
+  it('returns null for a non-link variable', () => {
+    expect(linkLabel('couple.primary_name')).toBeNull()
+    expect(linkLabel('invoice.number')).toBeNull()
+  })
+})
+
+describe('linkLabelForUrl', () => {
+  it('labels each share route this app mints', () => {
+    expect(linkLabelForUrl('https://app.zebri.com.au/portal/tok')).toBe('View your portal')
+    expect(linkLabelForUrl('https://app.zebri.com.au/timeline/tok')).toBe('View the run sheet')
+    expect(linkLabelForUrl('https://app.zebri.com.au/invoice/tok')).toBe('View and pay your invoice')
+    expect(linkLabelForUrl('https://app.zebri.com.au/contract/tok')).toBe('Review and sign your contract')
+    expect(linkLabelForUrl('https://app.zebri.com.au/questionnaire/tok')).toBe('Fill in your questionnaire')
+  })
+
+  it('returns null for another host, an unknown route, or a non-URL', () => {
+    expect(linkLabelForUrl('https://example.com/portal/tok')).toBeNull()
+    expect(linkLabelForUrl('https://app.zebri.com.au/about')).toBeNull()
+    expect(linkLabelForUrl('not a url')).toBeNull()
   })
 })

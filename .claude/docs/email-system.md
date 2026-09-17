@@ -191,6 +191,21 @@ templates. Branding (logo, brand colour, fonts) is injected into the shell from
 Unresolved tokens render empty (never literal `{{…}}`), matching the automation
 resolver's behaviour.
 
+**Link variables render as labelled links, never as the address.** A
+mention for `portal.link`, `portal.partner_link`, `portal.vendor_link`,
+`invoice.link`, `contract.link`, `questionnaire.link`, `quote.link` or
+`mc.review_link` becomes a `link`-marked text node ("View your portal",
+"View and pay your invoice", "Fill in your questionnaire", ...) with the
+resolved URL as its `href`. The labels live in `LINK_LABELS`
+(`lib/automations/variables.ts`, `linkLabel()`); the editor's variable
+popover describes each one as "Inserts a ... link". The review-before-send
+textarea (`lib/workflows/review.ts`) has to show the URL, since a textarea
+holds no links, so `applyReviewEdits` re-links any app share URL left in
+the edited copy by route (`linkLabelForUrl()`), and turns any other URL
+into a plain clickable link. The two plain-text portal emails
+(`send_portal_link`, `request_information`) carry their link as the
+shell's labelled button instead of a pasted address.
+
 ## Template catalogue (the "proper CRM for MCs" content)
 
 Seeded starter templates grouped by lifecycle stage. Each maps to a manual action
