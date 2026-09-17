@@ -227,8 +227,8 @@ const ERROR_BUDGET = 43;
 // touched. The new workflows code is clean (74 -> 73).
 // Workflows UI pass: retiring queue-row/queue-group/review-card and the
 // suggestion cards took two import-order warnings with them (73 -> 71).
-// Email link labels: porting the fix onto staging (it had only ever
-// landed on main) came in clean (71 -> 70).
+// Email link labels + booking video-link alert: the budget had one
+// warning of slack on staging; locked in (71 -> 70).
 const WARNING_BUDGET = 70;
 
 function runEslintJson() {
