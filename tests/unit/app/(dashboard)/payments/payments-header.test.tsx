@@ -12,6 +12,7 @@ import { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PaymentsHeader } from '@/app/(dashboard)/payments/payments-header';
+import { INVOICE_SORT_OPTIONS } from '@/app/(dashboard)/payments/use-invoice-sort';
 
 function Harness(overrides: Partial<React.ComponentProps<typeof PaymentsHeader>> = {}) {
   const ref = useRef<HTMLInputElement | null>(null);
@@ -24,6 +25,9 @@ function Harness(overrides: Partial<React.ComponentProps<typeof PaymentsHeader>>
       onSearchChange={vi.fn()}
       searchInputRef={ref}
       onNew={vi.fn()}
+      invoiceSort={INVOICE_SORT_OPTIONS[2]!}
+      onInvoiceSortChange={vi.fn()}
+      reportsToolbar={<div>Report toolbar</div>}
       {...overrides}
     />
   );
@@ -86,5 +90,36 @@ describe('PaymentsHeader', () => {
     // At least one button must be the clear (svg-only, no accessible name).
     const clear = buttons.find((b) => b.querySelector('svg.lucide-x'));
     expect(clear).toBeDefined();
+  });
+
+  it('renders a Reports tab and switches to it', async () => {
+    const onTabChange = vi.fn();
+    render(<Harness onTabChange={onTabChange} />);
+    await userEvent.click(screen.getByRole('button', { name: /Reports/i }));
+    expect(onTabChange).toHaveBeenCalledWith('reports');
+  });
+
+  it('hides search and the New button on the Reports tab', () => {
+    render(<Harness activeTab="reports" />);
+    expect(screen.queryByPlaceholderText(/Search/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /New/ })).not.toBeInTheDocument();
+  });
+
+  it('renders the caller-supplied reportsToolbar inside the toolbar row on Reports', () => {
+    // Regression: the toolbar row used to be dropped entirely on
+    // Reports (removing its `mt-3` spacing too, so the tab strip
+    // jumped up), then replaced with an empty height-only spacer
+    // (dead whitespace with nothing in it). It should always hold
+    // real content — the caller's own Reports-specific controls.
+    render(<Harness activeTab="reports" reportsToolbar={<div>Report toolbar</div>} />);
+    expect(screen.getByText('Report toolbar')).toBeInTheDocument();
+  });
+
+  it('shows the sort control only on the Invoices tab', () => {
+    const { rerender } = render(<Harness activeTab="invoices" />);
+    expect(screen.getByText('Newest first')).toBeInTheDocument();
+
+    rerender(<Harness activeTab="contracts" />);
+    expect(screen.queryByText('Newest first')).not.toBeInTheDocument();
   });
 });

@@ -13,16 +13,19 @@
  *   │      ( Ask Zebri to build a step …        ↑ )     │
  *   └───────────────────────────────────────────────────┘
  *
- * Nodes drag freely, the canvas zooms, and edges follow. Config lives
- * inside the node: clicking a card expands it in place to hold its
- * filter chips or action form, so there is no side rail. That is the
- * one change from the original canvas, and it exists because a fixed
- * 340px rail was both too empty for a two-filter trigger and too
- * narrow to write an email in.
+ * The canvas zooms and edges follow, but nodes don't drag freely: every
+ * step always sits at its auto-layout slot (see `auto-layout.ts`), so
+ * the flow stays evenly spaced. Dragging a node is a reorder gesture
+ * instead - drop it above or below another step in its own list and it
+ * snaps into that slot (`lib/workflows/insert-step.ts`'s
+ * `planStepReorderFromDrop`). Config lives inside the node: clicking a
+ * card expands it in place to hold its filter chips or action form, so
+ * there is no side rail. That is the one change from the original
+ * canvas, and it exists because a fixed 340px rail was both too empty
+ * for a two-filter trigger and too narrow to write an email in.
  *
  * Engine semantics are unchanged: run order comes from `position` /
- * `parent_action_id` / `branch_path`. Node x/y is presentation only,
- * persisted per drag so a layout survives a reload.
+ * `parent_action_id` / `branch_path`.
  *
  * @module app/(dashboard)/workflows/[id]/page
  */
@@ -42,11 +45,16 @@ import {
   type Node,
 } from '@xyflow/react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { actionUi } from '@/lib/automations/actions/ui';
 import { triggerRegistry } from '@/lib/automations/triggers';
 import { createClient } from '@/lib/supabase/client';
+import {
+  type InsertionPlan,
+  planStepReorder,
+  planStepReorderFromDrop,
+} from '@/lib/workflows/insert-step';
 import { isAutomated, splitStepType } from '@/lib/workflows/steps';
 import { isDefaultTiming, shortTiming, toStepTiming } from '@/lib/workflows/timing-summary';
 import type {
@@ -61,10 +69,10 @@ import type { TemplateStatus } from '@/types/workflows';
 import {
   deleteTemplateStepRow,
   renameTemplateAction,
+  renumberTemplateSteps,
   setTemplateStatusAction,
   setApplyRuleAction,
   updateTemplateStepEdges,
-  updateTemplateStepPosition,
 } from '../actions';
 
 import {
@@ -157,8 +165,6 @@ function AutomationCanvas() {
     parentStepId: string | null;
     branchPath: BranchPath | null;
     afterPosition: number;
-    positionX: number;
-    positionY: number;
     anchor: { x: number; y: number };
   }>(null);
 
@@ -370,7 +376,7 @@ function AutomationCanvas() {
     const byId = new Map(initialNodes.map((n) => [n.id, n.data]));
     const out: MobileStepItem[] = [];
     const trigger = byId.get(TRIGGER_NODE_ID);
-    if (trigger) out.push({ data: trigger, depth: 0 });
+    if (trigger) out.push({ data: trigger, depth: 0, parentStepId: null, branchPath: null });
 
     const walk = (parentId: string | null, path: BranchPath | null, depth: number) => {
       const children = actions
@@ -384,6 +390,8 @@ function AutomationCanvas() {
         out.push({
           data,
           depth,
+          parentStepId: parentId,
+          branchPath: path,
           // The leg is labelled once, on the step that starts it.
           ...(path && index === 0 ? { branchLabel: path === 'yes' ? 'Yes' : 'No' } : {}),
         });
@@ -471,9 +479,23 @@ function AutomationCanvas() {
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
 
-  /* ── Drag → persist position ───────────────────────────────── */
+  /* ── Drag → reorder ─────────────────────────────────────────── */
 
-  const dragPersistTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Applies a reorder plan (see `lib/workflows/insert-step`) to both the
+  // local rows and the server: the moved step's new `position`, plus any
+  // sibling renumbering the plan opened up a gap with.
+  const applyReorderPlan = useCallback((movingId: string, plan: InsertionPlan) => {
+    const updates = [...(plan.renumber ?? []), { stepId: movingId, position: plan.position }];
+    // Mirror it locally right away so the canvas snaps the card straight
+    // to its new slot instead of waiting on the round-trip.
+    setActions((prev) =>
+      prev.map((a) => {
+        const update = updates.find((u) => u.stepId === a.id);
+        return update ? { ...a, position: update.position } : a;
+      }),
+    );
+    void renumberTemplateSteps({ updates }).then(() => setSavedAt(new Date()));
+  }, []);
 
   const handleNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChange>[0]) => {
@@ -486,31 +508,35 @@ function AutomationCanvas() {
           c.id !== ADD_ACTION_NODE_ID &&
           !c.dragging
         ) {
-          const id = c.id;
-          const pos = c.position;
-          // Mirror the drop into the local rows immediately. Without
-          // this the row keeps its stale position_x/y and the next
-          // setActions rebuilds from auto-layout, snapping the dragged
-          // node back to where it used to be.
-          setActions((prev) =>
-            prev.map((a) => (a.id === id ? { ...a, position_x: pos.x, position_y: pos.y } : a)),
-          );
-          const existing = dragPersistTimeouts.current.get(id);
-          if (existing) clearTimeout(existing);
-          dragPersistTimeouts.current.set(
-            id,
-            setTimeout(() => {
-              void updateTemplateStepPosition({
-                stepId: id,
-                positionX: pos.x,
-                positionY: pos.y,
-              }).then(() => setSavedAt(new Date()));
-            }, 250),
-          );
+          // The canvas has no free-form positioning: a drop is a reorder
+          // gesture, resolved from nothing but where it landed among the
+          // dragged step's own siblings. It always snaps back to its
+          // auto-layout slot once the reorder lands, dropped pixel or not.
+          const plan = planStepReorderFromDrop(actions, layout.actions, c.id, c.position.y);
+          if (plan) applyReorderPlan(c.id, plan);
         }
       }
     },
-    [onNodesChange],
+    [onNodesChange, actions, layout, applyReorderPlan],
+  );
+
+  // The mobile list's drag handle drops directly onto another step's
+  // row, so the anchor is already known - no drop-y geometry to resolve.
+  // Only ever reorders within the dragged step's own list: a drop onto a
+  // step from a different parent/branch is a no-op.
+  const handleMobileReorder = useCallback(
+    (movingId: string, overId: string) => {
+      const moving = actions.find((a) => a.id === movingId);
+      const anchor = actions.find((a) => a.id === overId);
+      if (!moving || !anchor) return;
+      const sameList =
+        (moving.parent_action_id ?? null) === (anchor.parent_action_id ?? null) &&
+        (moving.branch_path ?? null) === (anchor.branch_path ?? null);
+      if (!sameList) return;
+      const direction = moving.position < anchor.position ? 'below' : 'above';
+      applyReorderPlan(movingId, planStepReorder(actions, moving, anchor, direction));
+    },
+    [actions, applyReorderPlan],
   );
 
   const onConnect = useCallback(
@@ -638,8 +664,6 @@ function AutomationCanvas() {
           parentStepId: tailContext.parentStepId,
           branchPath: tailContext.branchPath,
           afterPosition: tailContext.afterPosition,
-          positionX: tailContext.x,
-          positionY: tailContext.y,
           anchor: { x: e.clientX, y: e.clientY },
         });
       }
@@ -692,11 +716,10 @@ function AutomationCanvas() {
                   parentStepId: tailContext.parentStepId,
                   branchPath: tailContext.branchPath,
                   afterPosition: tailContext.afterPosition,
-                  positionX: tailContext.x,
-                  positionY: tailContext.y,
                   anchor: { x: e.clientX, y: e.clientY },
                 })
               }
+              onReorder={handleMobileReorder}
             />
           ) : (
             <ReactFlow
@@ -773,8 +796,6 @@ function AutomationCanvas() {
           parentStepId={actionPickerCtx.parentStepId}
           branchPath={actionPickerCtx.branchPath}
           afterPosition={actionPickerCtx.afterPosition}
-          positionX={actionPickerCtx.positionX}
-          positionY={actionPickerCtx.positionY}
           anchor={actionPickerCtx.anchor}
           onClose={() => setActionPickerCtx(null)}
           onCreated={(optimistic, serverResult) => {

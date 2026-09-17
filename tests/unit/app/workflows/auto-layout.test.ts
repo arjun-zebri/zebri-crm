@@ -55,10 +55,14 @@ describe('autoLayout', () => {
     expect(actions['n1']).toMatchObject({ x: COL_GAP / 2, y: ROW_GAP * 2 })
   })
 
-  it('respects persisted coordinates', () => {
+  it('ignores any persisted coordinates: every node is always auto-laid-out', () => {
+    // The canvas has no free-form positioning any more (steps reorder by
+    // drag, they don't get placed at arbitrary pixels), so a leftover
+    // position_x/position_y from before that change must not resurrect
+    // the old "dragged node" behaviour.
     const a = row({ id: 'a', position: 100, position_x: 42, position_y: 999 })
     const { actions } = autoLayout([a])
-    expect(actions['a']).toMatchObject({ x: 42, y: 999, fromPersisted: true })
+    expect(actions['a']).toMatchObject({ x: 0, y: ROW_GAP })
   })
 
   it('places actions after a branch below the deepest NESTED child', () => {
@@ -116,7 +120,7 @@ describe('autoLayout', () => {
   })
 })
 
-describe('positions that were never really chosen', () => {
+describe('legacy position_x/position_y columns', () => {
   it('lays out a step stored at (0, 0) instead of stacking it', () => {
     // `canvas_x`/`canvas_y` shipped `not null default 0`, so every step
     // written before migration 20260910000000 carries a position the MC
@@ -125,14 +129,13 @@ describe('positions that were never really chosen', () => {
     const b = row({ id: 'b', position: 200, position_x: 0, position_y: 0 });
     const out = autoLayout([a, b]);
 
-    expect(out.actions['a']?.fromPersisted).toBe(false);
     expect(out.actions['a']?.y).not.toBe(out.actions['b']?.y);
     expect(out.actions['b']!.y - out.actions['a']!.y).toBe(ROW_GAP);
   });
 
-  it('still honours a real drag', () => {
+  it('ignores a non-zero legacy value the same way', () => {
     const a = row({ id: 'a', position: 100, position_x: 42, position_y: 999 });
     const out = autoLayout([a]);
-    expect(out.actions['a']).toMatchObject({ x: 42, y: 999, fromPersisted: true });
+    expect(out.actions['a']).toMatchObject({ x: 0, y: ROW_GAP });
   });
 });
