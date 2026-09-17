@@ -18,7 +18,7 @@ import { actionUi } from '@/lib/automations/actions/ui'
 import { isActionLaunchVisible } from '@/lib/automations/launch-catalogue'
 import type { ActionType, AutomationActionRow } from '@/types/automations'
 
-import { updateTemplateStepPosition, upsertTemplateStepRow } from '../actions'
+import { upsertTemplateStepRow } from '../actions'
 
 import { CommandPalette, type PaletteAnchor, type PaletteItem } from './command-palette'
 import { getLucideIcon } from './lucide-lookup'
@@ -28,8 +28,6 @@ interface Props {
   parentStepId: string | null
   branchPath: 'yes' | 'no' | null
   afterPosition: number
-  positionX: number
-  positionY: number
   anchor: PaletteAnchor
   onClose: () => void
   /** Fires synchronously with the optimistic row + a server promise.
@@ -117,8 +115,6 @@ export function ActionPicker({
   parentStepId,
   branchPath,
   afterPosition,
-  positionX,
-  positionY,
   anchor,
   onClose,
   onCreated,
@@ -176,12 +172,12 @@ export function ActionPicker({
       optimistic = buildOptimisticAction({
         id: stepId, templateId, position: afterPosition,
         type: manual.stepType as unknown as ActionType,
-        config: {}, parentStepId, branchPath, positionX, positionY,
+        config: {}, parentStepId, branchPath,
       })
       serverPromise = persistAction({
         stepId, templateId, position: afterPosition,
         type: manual.stepType as unknown as ActionType,
-        config: {}, parentStepId, branchPath, positionX, positionY,
+        config: {}, parentStepId, branchPath,
       })
     } else if (id.startsWith('flow:')) {
       const flow = FLOW_ITEMS.find((f) => f.id === id)
@@ -189,22 +185,22 @@ export function ActionPicker({
       const config = defaultActionConfigFor(flow.actionType)
       optimistic = buildOptimisticAction({
         id: stepId, templateId, position: afterPosition, type: flow.actionType,
-        config, parentStepId, branchPath, positionX, positionY,
+        config, parentStepId, branchPath,
       })
       serverPromise = persistAction({
         stepId, templateId, position: afterPosition, type: flow.actionType,
-        config, parentStepId, branchPath, positionX, positionY,
+        config, parentStepId, branchPath,
       })
     } else if (id.startsWith('action:')) {
       const actionType = id.slice('action:'.length)
       const config = defaultActionConfigFor(actionType as ActionType)
       optimistic = buildOptimisticAction({
         id: stepId, templateId, position: afterPosition, type: actionType as ActionType,
-        config, parentStepId, branchPath, positionX, positionY,
+        config, parentStepId, branchPath,
       })
       serverPromise = persistAction({
         stepId, templateId, position: afterPosition, type: actionType as ActionType,
-        config, parentStepId, branchPath, positionX, positionY,
+        config, parentStepId, branchPath,
       })
     }
     if (optimistic && serverPromise) onCreated(optimistic, serverPromise)
@@ -231,8 +227,6 @@ async function persistAction(args: {
   config: Record<string, unknown>
   parentStepId: string | null
   branchPath: 'yes' | 'no' | null
-  positionX: number
-  positionY: number
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const result = await upsertTemplateStepRow({
     stepId: args.stepId,
@@ -244,11 +238,6 @@ async function persistAction(args: {
     branchPath: args.branchPath,
   })
   if (!result.ok) return { ok: false, error: result.error }
-  await updateTemplateStepPosition({
-    stepId: args.stepId,
-    positionX: args.positionX,
-    positionY: args.positionY,
-  })
   return { ok: true }
 }
 
@@ -260,8 +249,6 @@ function buildOptimisticAction(args: {
   config: Record<string, unknown>
   parentStepId: string | null
   branchPath: 'yes' | 'no' | null
-  positionX: number
-  positionY: number
 }): AutomationActionRow {
   const now = new Date().toISOString()
   return {
@@ -274,8 +261,11 @@ function buildOptimisticAction(args: {
     branch_path: args.branchPath,
     label: null,
     disabled: false,
-    position_x: args.positionX,
-    position_y: args.positionY,
+    // The canvas has no free-form positioning: every node always
+    // renders at its auto-layout slot, so these columns stay at the
+    // "never chosen" sentinel for the row's whole life.
+    position_x: null,
+    position_y: null,
     created_at: now,
     updated_at: now,
   }

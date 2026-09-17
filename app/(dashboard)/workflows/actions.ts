@@ -370,27 +370,6 @@ export async function upsertTemplateStepRow(
   return { ok: true, data: { id: data.id } }
 }
 
-const stepPositionSchema = z.object({
-  stepId: z.string().uuid(),
-  positionX: z.number(),
-  positionY: z.number(),
-})
-
-/** Persist a node's canvas coordinates after a drag. */
-export async function updateTemplateStepPosition(
-  input: z.infer<typeof stepPositionSchema>,
-): Promise<ActionResult<null>> {
-  const parsed = stepPositionSchema.safeParse(input)
-  if (!parsed.success) return { ok: false, error: parsed.error.message }
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('workflow_template_steps')
-    .update({ canvas_x: parsed.data.positionX, canvas_y: parsed.data.positionY })
-    .eq('id', parsed.data.stepId)
-  if (error) return { ok: false, error: error.message }
-  return { ok: true, data: null }
-}
-
 const stepEdgesSchema = z.object({
   stepId: z.string().uuid(),
   parentStepId: z.string().uuid().nullable(),
@@ -412,6 +391,36 @@ export async function updateTemplateStepEdges(
     })
     .eq('id', parsed.data.stepId)
   if (error) return { ok: false, error: error.message }
+  return { ok: true, data: null }
+}
+
+const renumberStepsSchema = z.object({
+  updates: z.array(z.object({ stepId: z.string().uuid(), position: z.number().int() })).min(1),
+})
+
+/**
+ * Rewrite the `position` of a batch of existing steps, with no other
+ * column touched.
+ *
+ * Only called by a mid-list insert once its two neighbours have no
+ * integer left between them (see `lib/workflows/insert-step.ts`) - a
+ * plain position-only update, not the general `upsertTemplateStepRow`,
+ * so it can never clobber a step's type or config while spreading the
+ * list back out.
+ */
+export async function renumberTemplateSteps(
+  input: z.infer<typeof renumberStepsSchema>,
+): Promise<ActionResult<null>> {
+  const parsed = renumberStepsSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: parsed.error.message }
+  const supabase = await createClient()
+  for (const update of parsed.data.updates) {
+    const { error } = await supabase
+      .from('workflow_template_steps')
+      .update({ position: update.position })
+      .eq('id', update.stepId)
+    if (error) return { ok: false, error: error.message }
+  }
   return { ok: true, data: null }
 }
 

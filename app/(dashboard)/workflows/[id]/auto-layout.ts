@@ -1,9 +1,12 @@
 /**
- * Auto-layout for actions without persisted x/y coordinates.
+ * Auto-layout for the workflow canvas.
  *
- * The first time a user opens a canvas (or for any action created
- * before this column existed), we need a sensible default layout
- * so nothing renders at (0, 0) stacked on top of each other.
+ * The canvas has no free-form positioning: every node always sits at
+ * its computed slot, so the steps stay evenly spaced no matter how a
+ * step was dragged around to get reordered. Dragging is a reorder
+ * gesture (see `lib/workflows/insert-step.ts`'s `planStepReorderFromDrop`),
+ * never a placement, so a dropped node always snaps back to its layout
+ * position once the reorder lands.
  *
  * Algorithm: layered top-down from the trigger node. Each action's
  * y is its depth × ROW_GAP. The gap leaves room for a node that has
@@ -11,11 +14,6 @@
  * a collapsed card occupies. x is its branch column × COL_GAP,
  * offset to center under its parent. Branch yes/no paths split
  * left/right.
- *
- * This is layout-on-display only: positions aren't persisted
- * unless the user actually drags a node. That keeps the canvas
- * idempotent - a fresh load with no manual edits always renders
- * the same way.
  *
  * @module app/(dashboard)/workflows/[id]/auto-layout
  */
@@ -36,28 +34,10 @@ export const ROW_GAP = 200
 /** Horizontal distance between a branch's yes and no columns. */
 export const COL_GAP = 260
 
-/**
- * Has the MC actually dragged this node?
- *
- * `(0, 0)` counts as "no". The columns shipped `not null default 0`, so
- * every step written before migration `20260910000000` carries a
- * position it never chose, and treating those as placed stacked whole
- * workflows on a single point. Reading `(0, 0)` as unplaced fixes those
- * rows wherever they still exist (an environment the migration has not
- * reached yet, or a row written by an older client) at no real cost: the
- * auto-layout puts the first node at `(0, 0)` anyway, so a node
- * deliberately dragged there lands back where it was.
- */
-function isPlaced(x: number | null, y: number | null): boolean {
-  if (x === null || y === null) return false;
-  return x !== 0 || y !== 0;
-}
-
 export interface PlacedAction {
   id: string
   x: number
   y: number
-  fromPersisted: boolean
 }
 
 /**
@@ -108,15 +88,9 @@ function layOutSequence(
 ): number {
   let depth = startDepth
   for (const action of sequence) {
-    const placed = isPlaced(action.position_x, action.position_y)
-    const x = placed ? (action.position_x as number) : centerX + branchOffsetX
-    const y = placed ? (action.position_y as number) : depth * ROW_GAP
-    out[action.id] = {
-      id: action.id,
-      x,
-      y,
-      fromPersisted: placed,
-    }
+    const x = centerX + branchOffsetX
+    const y = depth * ROW_GAP
+    out[action.id] = { id: action.id, x, y }
 
     if (action.type === 'branch') {
       const yes = allActions

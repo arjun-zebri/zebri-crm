@@ -251,6 +251,47 @@ to a part-paid invoice cannot erase a recorded payment.
 total only; when a schedule is active the "Pay with card" button is
 hidden and installments are tracked manually (see Part 2 below).
 
+### Invoice balance + the Payments Reports tab (2026-09-17)
+
+Neither `invoices` nor `invoice_payment_stages` stores a scalar
+"amount paid" or "balance due" — both are derived on read, because a
+stage's `amount_cents` can go stale after a later discount/tax-rate
+edit and a stored total would drift from it silently.
+
+- **`lib/payments/invoice-balance.ts`** — `getInvoiceBalance()` (and
+  the DB-shaped convenience wrapper `getInvoiceBalanceFromDb()`) takes
+  an invoice's money fields + its `invoice_payment_stages` rows and
+  returns `{ totalCents, paidCents, balanceCents, nextDueDate,
+  isFullyPaid }`. Stageless: binary via `status`. Staged: sums
+  `amount_cents` of rows with `paid_at` set; `nextDueDate` is the
+  soonest unpaid stage's `due_date`. A cancelled invoice always owes
+  nothing. The balance is off the true `invoiceTotal()` (tax +
+  discount applied), not `subtotal` — the Invoices list and the
+  dashboard revenue chart still read `subtotal` alone, which is a
+  known pre-existing inconsistency this did not fix everywhere.
+- **Invoices tab** (`invoices-list.tsx`): the "Total" column is now
+  **"Balance"** (outstanding amount, or a quiet "Paid"/"—" once
+  settled/cancelled), and the "Due" column is **"Next due"** — a
+  staged invoice's overdue badge now flips on the soonest *unpaid
+  stage's* due date, not the invoice's own (often stale) `due_date`.
+  A Sort control (`use-invoice-sort.ts` / `invoice-sort-menu.tsx`)
+  adds "Balance due (highest)" and "Next payment due (soonest)"
+  alongside Newest/Oldest.
+- **Payments Reports tab** (`payments-reports.tsx` /
+  `use-payments-report.ts` / `lib/payments/report-transactions.ts`):
+  a cash-basis income ledger for tax time — one row per payment
+  *actually received* (a paid stage, or a paid stageless invoice's
+  single payment), not per invoice. GST is split out per payment at
+  the invoice's own `tax_rate` (`gross / (1 + rate/100)`), which is
+  exact rather than approximate since one invoice carries one rate.
+  Date range is financial-year-aware
+  (`lib/payments/financial-year.ts`: this FY / last FY / this BAS
+  quarter, AU FY = Jul 1 - Jun 30). Summary tiles: collected, GST
+  collected, net, and outstanding (a snapshot across every invoice,
+  not filtered by range). "Export CSV" hands the filtered ledger to
+  an accountant via the existing `lib/utils/csv.ts` helper.
+  Cancelled invoices contribute no transactions.
+
 ## Stripe Dashboard configuration (REQUIRED for plan changes)
 
 The `subscription_update_confirm` flow used by

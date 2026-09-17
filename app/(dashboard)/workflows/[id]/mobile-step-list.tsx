@@ -13,14 +13,25 @@
  * use. Nothing is read-only and nothing is missing: it is the same
  * builder with the geometry taken out.
  *
- * Node positions are presentation only, so a workflow edited here and
- * then opened on a desktop still lays out correctly.
+ * Steps reorder the same way the canvas does: drag the handle to move a
+ * step above or below another one in its own list. `onReorder` only
+ * ever fires for a drop within that same list (same parent + branch) -
+ * the drag handle here has no way to pick a target from a different one.
  *
  * @module app/(dashboard)/workflows/[id]/mobile-step-list
  */
 
-import { ChevronDown, Plus, Repeat2, Trash2 } from 'lucide-react'
+import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { ChevronDown, GripVertical, Plus, Repeat2, Trash2 } from 'lucide-react'
 import { createElement } from 'react'
+
+import type { BranchPath } from '@/types/automations'
 
 import type { FlowNodeApi, FlowNodeData } from './flow-node'
 import { getLucideIcon } from './lucide-lookup'
@@ -32,6 +43,9 @@ export interface MobileStepItem {
   depth: number
   /** "Yes" / "No", on the first step of a branch leg only. */
   branchLabel?: string | undefined
+  /** The sibling list this step reorders within: same parent + branch. */
+  parentStepId: string | null
+  branchPath: BranchPath | null
 }
 
 export interface MobileStepListProps {
@@ -41,25 +55,39 @@ export interface MobileStepListProps {
   canAdd: boolean
   /** Adds to the end of the main line; the event anchors the picker. */
   onAdd: (e: React.MouseEvent) => void
+  /** A step's drag handle was dropped onto another step's row. */
+  onReorder: (movingId: string, overId: string) => void
 }
 
 /** The phone-width builder list. See {@link MobileStepListProps}. */
-export function MobileStepList({ items, api, canAdd, onAdd }: MobileStepListProps) {
+export function MobileStepList({ items, api, canAdd, onAdd, onReorder }: MobileStepListProps) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    onReorder(String(active.id), String(over.id))
+  }
+
   return (
     <div className="h-full overflow-y-auto px-4 py-4">
-      <ol className="space-y-2">
-        {items.map((item) => (
-          <li
-            key={item.data.nodeId}
-            style={{ paddingLeft: `${item.depth * 16}px` }}
-          >
-            {item.branchLabel ? (
-              <p className="mb-1 text-body text-text-subtle">{item.branchLabel}</p>
-            ) : null}
-            <StepCard item={item} api={api} />
-          </li>
-        ))}
-      </ol>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((item) => item.data.nodeId)} strategy={verticalListSortingStrategy}>
+          <ol className="space-y-2">
+            {items.map((item) => (
+              <li
+                key={item.data.nodeId}
+                style={{ paddingLeft: `${item.depth * 16}px` }}
+              >
+                {item.branchLabel ? (
+                  <p className="mb-1 text-body text-text-subtle">{item.branchLabel}</p>
+                ) : null}
+                <StepCard item={item} api={api} />
+              </li>
+            ))}
+          </ol>
+        </SortableContext>
+      </DndContext>
 
       {canAdd ? (
         <button
@@ -75,20 +103,43 @@ export function MobileStepList({ items, api, canAdd, onAdd }: MobileStepListProp
   )
 }
 
-/** One card. Mirrors the canvas node, minus the handles and the drag. */
+/** One card. Mirrors the canvas node, minus the connector handles. */
 function StepCard({ item, api }: { item: MobileStepItem; api: FlowNodeApi }) {
   const d = item.data
-  const expanded = api.expandedId === d.nodeId
   const isTrigger = d.kind === 'trigger' || d.kind === 'trigger_empty'
+  const expanded = api.expandedId === d.nodeId
   const configurable = !d.modalOnly && !d.noConfig
+
+  // The trigger doesn't reorder: it isn't a sibling any drag could land on.
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: d.nodeId,
+    disabled: isTrigger,
+  })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={`rounded-control bg-card ${
-        expanded ? 'border border-border-strong shadow-lg' : 'border border-border shadow-sm'
-      }`}
+        isDragging ? 'opacity-50' : ''
+      } ${expanded ? 'border border-border-strong shadow-lg' : 'border border-border shadow-sm'}`}
     >
       <div className="flex items-center gap-3 px-3 py-3">
+        {!isTrigger ? (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="shrink-0 cursor-grab touch-none p-1 text-text-subtle active:cursor-grabbing"
+            aria-label={`Drag to reorder ${d.title}`}
+          >
+            <GripVertical size={15} strokeWidth={1.5} />
+          </button>
+        ) : null}
         <button
           type="button"
           {...(d.noConfig ? { disabled: true } : { onClick: () => api.onToggle(d.nodeId) })}

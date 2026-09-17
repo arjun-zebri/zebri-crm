@@ -1260,6 +1260,19 @@ No step can be shown to the couple. The workflow is the MC's own list
 end to end, so the old "Show this to the couple" toggle is gone from
 every step.
 
+The canvas has no free-form positioning: every card always sits at its
+auto-layout slot (`auto-layout.ts`), evenly spaced by depth, so the
+flow never drifts into an arbitrary arrangement. Dragging a card is a
+reorder gesture, not a placement - drop it above or below another step
+in its own list (same parent/branch as it already has; the canvas
+never re-parents on a drag) and it slots there, snapping back to its
+layout position once the move lands. Mobile gets the same reorder via
+a drag handle on each row. Both resolve to the same position math
+(`planStepReorder`/`planStepReorderFromDrop` in
+`lib/workflows/insert-step.ts`), which also spreads a list's sparse
+`position` integers back out (`renumberTemplateSteps` in `../actions.ts`)
+on the rare list where repeated inserts have closed every gap.
+
 Steps whose config is a form open a **composer modal** instead of
 expanding the card (`MODAL_ACTIONS` in `inspector-panel.tsx`): the
 sends, the note, the questionnaire, and both manual steps. A modal-only
@@ -1286,17 +1299,23 @@ Route group: `(dashboard)`
 
 Purpose: Unified hub for managing invoices and contracts. The MC can view, create, and edit both in one place with tab-based navigation.
 
-Header: Title "Payments" + two tabs: **Invoices** | **Contracts** (Invoices is the default tab). The active tab is the `PaymentsTab` type (`'invoices' | 'contracts'`, in `use-payments-shortcut.ts`). Search bar + "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
+Header: Title "Payments" + three tabs: **Invoices** | **Contracts** | **Reports** (Invoices is the default tab). The active tab is the `PaymentsTab` type (`'invoices' | 'contracts' | 'reports'`, in `use-payments-shortcut.ts`). Search bar + "New Invoice" / "New Contract" button (label changes based on active tab); Reports has neither (it's a read-only ledger). Pressing `/` outside an input focuses the search box; Escape clears it.
 
 Invoices are fully **manual**  -  the MC builds each one by hand (optionally starting from a saved invoice template or package). Nothing seeds an invoice or a payment schedule automatically; signing a contract does not create an invoice.
 
-**Composition (Phase 2C decomposition):** `app/(dashboard)/payments/page.tsx` is an orchestrator that composes the following co-located sections:
+**Invoices tab (2026-09-17):** the money column is **"Balance"** (outstanding amount, or "Paid"/"—" once settled/cancelled) and the date column is **"Next due"** (the soonest unpaid stage's due date for a staged invoice, else the invoice's own `due_date`) — see `.claude/docs/payments.md` "Invoice balance + the Payments Reports tab". A Sort dropdown (`invoice-sort-menu.tsx`) offers Balance due (highest), Next payment due (soonest), Newest first, Oldest first.
 
-- `payments-header.tsx`  -  title row, search toolbar, tab strip.
-- `payments-table.tsx`  -  shared desktop-table / mobile-list primitive consumed by both tabs.
-- `payments-footer.tsx`  -  fixed bottom count + (for invoices) money total.
+**Reports tab (2026-09-17):** a cash-basis income report for tax time — financial-year / BAS-quarter / date-range picker, summary tiles (collected, GST collected, net, outstanding), a per-payment transaction ledger, and a CSV export. No search, no "New" action, no footer. See `payments-reports.tsx` and `.claude/docs/payments.md`.
+
+**Composition (Phase 2C decomposition, extended 2026-09-17):** `app/(dashboard)/payments/page.tsx` is an orchestrator that composes the following co-located sections:
+
+- `payments-header.tsx`  -  title row, search toolbar, tab strip (hides search/New on Reports).
+- `payments-table.tsx`  -  shared desktop-table / mobile-list primitive consumed by the Invoices/Contracts tabs.
+- `payments-footer.tsx`  -  fixed bottom count + (for invoices) money total; hidden on Reports.
 - `invoices-list.tsx`, `contracts-list.tsx`  -  per-tab row mapping + status pill catalogues.
-- `use-payments-data.ts`  -  React Query hooks for the two lists.
+- `invoice-sort-menu.tsx`, `use-invoice-sort.ts`  -  Invoices tab sort control + comparator.
+- `payments-reports.tsx`, `payments-report-table.tsx`, `use-payments-report.ts`  -  the Reports tab.
+- `use-payments-data.ts`  -  React Query hooks for invoices/contracts (invoices now include tax/discount fields + `invoice_payment_stages`, for the balance + reports math).
 - `use-payments-shortcut.ts`  -  `PaymentsTab` type + `/` keyboard shortcut + Escape-to-clear.
 
 ### Zebri AI (the copilot)
