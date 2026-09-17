@@ -230,8 +230,13 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     return `${base} text-text hover:bg-gray-50`
   }
 
+  // `gap-2` is a floor, not a substitute for `justify-between`: when the
+  // trigger is wider than its content (the common case, stretched by a
+  // parent), `justify-between` still pushes the icon to the far edge: the
+  // gap only guarantees the icon never sits flush against the date when
+  // the trigger is content-sized instead (e.g. a compact custom-range row).
   const triggerLayout =
-    iconPosition === 'left' ? 'justify-start gap-2' : 'justify-between'
+    iconPosition === 'left' ? 'justify-start gap-2' : 'justify-between gap-2'
   // One treatment. `underline` (flat bottom-rule, for the couple/event
   // modals) and `meta` (builder meta rows) were removed on 2026-08-07:
   // three chromes for one control meant a date field looked like a

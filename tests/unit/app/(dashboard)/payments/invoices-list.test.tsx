@@ -2,9 +2,11 @@
  * Unit tests for the InvoicesList decomposition.
  *
  * The core risk here is `deriveInvoices` — the pure function that
- * flags an invoice as "overdue" when its due_date is past + the
- * status isn't already paid/cancelled. The UI render is tested
- * lightly via the PaymentsTable's empty + populated branches.
+ * flags an invoice as "overdue" when its next payment (a stage's due
+ * date, or the invoice's own due_date if stageless) is past and the
+ * status isn't already paid/cancelled — plus attaches the balance the
+ * Balance column reads. The UI render is tested lightly via the
+ * PaymentsTable's empty + populated branches.
  */
 import { render, screen } from '@testing-library/react';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -21,9 +23,14 @@ const baseInvoice = {
   title: 'Ceremony',
   status: 'sent',
   subtotal: 5000,
+  tax_rate: 0,
+  discount_type: null,
+  discount_value: null,
   due_date: null,
+  paid_at: null,
   created_at: '2026-04-01T00:00:00Z',
   couple: { id: 'c1', name: 'Couple A' },
+  invoice_payment_stages: [],
 };
 
 describe('deriveInvoices', () => {
@@ -99,6 +106,34 @@ describe('deriveInvoices', () => {
     expect(d?.status).toBe('sent');
     expect(d?.effectiveStatus).toBe('overdue');
   });
+
+  it('attaches the full balance for an unpaid stageless invoice', () => {
+    const [d] = deriveInvoices([{ ...baseInvoice, subtotal: 5000 }]);
+    expect(d?.balanceCents).toBe(500000);
+    expect(d?.nextDueDate).toBeNull();
+  });
+
+  it('attaches a zero balance for a paid invoice', () => {
+    const [d] = deriveInvoices([{ ...baseInvoice, status: 'paid', paid_at: '2026-04-05T00:00:00Z' }]);
+    expect(d?.balanceCents).toBe(0);
+  });
+
+  it('uses the soonest unpaid stage due date as nextDueDate, and flags overdue from it', () => {
+    const [d] = deriveInvoices([
+      {
+        ...baseInvoice,
+        due_date: '2026-12-31', // stale invoice-level due date, should be ignored once staged
+        invoice_payment_stages: [
+          { amount_cents: 250000, paid_at: '2026-04-10T00:00:00Z', due_date: '2026-04-10', label: 'Deposit' },
+          { amount_cents: 250000, paid_at: null, due_date: '2026-05-01', label: 'Final payment' },
+        ],
+      },
+    ]);
+    expect(d?.balanceCents).toBe(250000);
+    expect(d?.nextDueDate).toBe('2026-05-01');
+    expect(d?.isOverdue).toBe(true);
+    expect(d?.effectiveStatus).toBe('overdue');
+  });
 });
 
 describe('InvoicesList', () => {
@@ -106,6 +141,8 @@ describe('InvoicesList', () => {
     ...baseInvoice,
     effectiveStatus: 'sent',
     isOverdue: false,
+    balanceCents: 500000,
+    nextDueDate: null,
   };
 
   it('renders the empty state when there are no rows and no search', () => {

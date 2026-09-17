@@ -27,9 +27,14 @@ function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
     title: 'Test Invoice',
     status: 'sent',
     subtotal: 1000,
+    tax_rate: 0,
+    discount_type: null,
+    discount_value: null,
     due_date: null,
+    paid_at: null,
     created_at: '2026-04-01T00:00:00Z',
     couple: { id: 'c1', name: 'Test Couple' },
+    invoice_payment_stages: [],
     ...overrides,
   };
 }

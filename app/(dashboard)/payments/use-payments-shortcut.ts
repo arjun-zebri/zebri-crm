@@ -14,7 +14,7 @@
 
 import { type RefObject, useEffect } from 'react';
 
-export type PaymentsTab = 'invoices' | 'contracts';
+export type PaymentsTab = 'invoices' | 'contracts' | 'reports';
 
 export interface UsePaymentsShortcutOptions {
   searchInputRef: RefObject<HTMLInputElement | null>;

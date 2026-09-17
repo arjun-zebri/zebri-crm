@@ -18,15 +18,31 @@ import { useQuery } from '@tanstack/react-query';
 
 import { createClient } from '@/lib/supabase/client';
 
+/** A row from `invoice_payment_stages`, as fetched for balance + reporting math. */
+export interface InvoiceStage {
+  amount_cents: number;
+  paid_at: string | null;
+  due_date: string | null;
+  label: string;
+}
+
 export interface Invoice {
   id: string;
   invoice_number: string;
   title: string;
   status: string;
   subtotal: number;
+  /** GST percentage; see `lib/payments/invoice-total`. */
+  tax_rate: number;
+  discount_type: string | null;
+  discount_value: number | null;
   due_date: string | null;
+  /** Set when a stageless invoice is marked paid. */
+  paid_at: string | null;
   created_at: string;
   couple: { id: string; name: string };
+  /** Empty for a stageless invoice (single up-front payment). */
+  invoice_payment_stages: InvoiceStage[];
 }
 
 export interface Contract {
@@ -53,7 +69,7 @@ export function useInvoices() {
       const { data, error } = await supabase
         .from('invoices')
         .select(
-          'id, invoice_number, title, status, subtotal, due_date, created_at, couple:couple_id(id, name)',
+          'id, invoice_number, title, status, subtotal, tax_rate, discount_type, discount_value, due_date, paid_at, created_at, couple:couple_id(id, name), invoice_payment_stages(amount_cents, paid_at, due_date, label)',
         )
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });
