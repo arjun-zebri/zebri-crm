@@ -351,6 +351,22 @@ export type AlertEvent =
       /** The booking ID that failed to push. */
       bookingId: string;
     })
+  | (BaseEvent & {
+      type: 'booking_video_link_missing';
+      severity: 'warn';
+      /** The MC whose calendar accepted the event but minted no link. */
+      userId: string;
+      /** Which provider the event went to. */
+      provider: 'google' | 'microsoft';
+      /** The video booking the couple was told "link to follow" for. */
+      bookingId: string;
+      /**
+       * What the provider answered, verbatim from the push: Graph's
+       * `isOnlineMeeting` / `onlineMeetingProvider` plus the calendar's
+       * allowed providers, or Google's conference request status.
+       */
+      diagnostic: string;
+    })
 
   // ───── In-app feedback ─────────────────────────────────────────────
   | (BaseEvent & {

@@ -27,6 +27,15 @@ export interface PushedEvent {
   eventId: string;
   /** Join URL for the conference call, or null if unavailable/requested to omit. */
   joinUrl: string | null;
+  /**
+   * Why a requested conference link is missing, as the provider
+   * reported it. Only set when `withConference` was asked for and
+   * `joinUrl` is still null after a re-read; it exists so the Slack
+   * alert can say what Graph or Google actually answered rather than
+   * "no link" (the event itself succeeds in these cases, so nothing
+   * else surfaces the reason).
+   */
+  joinUrlDiagnostic?: string;
 }
 
 /** A provider could not create the event; non-blocking failure. */
@@ -150,27 +159,63 @@ async function pushGoogleEvent(
 
   if (!res.ok) throw new EventPushError('google', res.status);
 
-  const data = (await res.json()) as {
-    id: string;
-    hangoutLink?: string;
-    conferenceData?: {
-      entryPoints?: { entryPointType: string; uri: string }[];
-    };
-  };
+  const data = (await res.json()) as GoogleEvent;
 
-  let joinUrl: string | null = null;
-  if (details.withConference) {
-    joinUrl =
-      data.hangoutLink ??
-      data.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri ??
-      null;
-  }
+  if (!details.withConference) return { provider: 'google', eventId: data.id, joinUrl: null };
 
+  let joinUrl = googleJoinUrl(data);
+  if (joinUrl) return { provider: 'google', eventId: data.id, joinUrl };
+
+  // Meet creation is asynchronous: the create response can carry the
+  // conference request as `pending` with no link yet. One re-read picks
+  // up the common case where it has settled by the time we ask.
+  const again = await readJson<GoogleEvent>(
+    `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${data.id}?conferenceDataVersion=1`,
+    accessToken,
+  );
+  joinUrl = again ? googleJoinUrl(again) : null;
+  if (joinUrl) return { provider: 'google', eventId: data.id, joinUrl };
+
+  const status = (again ?? data).conferenceData?.createRequest?.status?.statusCode ?? 'absent';
   return {
     provider: 'google',
     eventId: data.id,
-    joinUrl,
+    joinUrl: null,
+    joinUrlDiagnostic: `conference request status=${status}`,
   };
+}
+
+/** The slice of a Google event that carries its Meet link. */
+interface GoogleEvent {
+  id: string;
+  hangoutLink?: string;
+  conferenceData?: {
+    entryPoints?: { entryPointType: string; uri: string }[];
+    createRequest?: { status?: { statusCode?: string } };
+  };
+}
+
+function googleJoinUrl(event: GoogleEvent): string | null {
+  return (
+    event.hangoutLink ??
+    event.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri ??
+    null
+  );
+}
+
+/**
+ * Best-effort GET of a provider resource. Returns null on any failure:
+ * these reads only enrich a push that already succeeded, so they must
+ * never turn it into a failure.
+ */
+async function readJson<T>(url: string, accessToken: string): Promise<T | null> {
+  try {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
 }
 
 /** Graph dateTimeTimeZone wants a naive datetime; the zone rides separately. */
@@ -224,20 +269,51 @@ async function pushMicrosoftEvent(
 
   if (!res.ok) throw new EventPushError('microsoft', res.status);
 
-  const data = (await res.json()) as {
-    id: string;
-    onlineMeeting?: {
-      joinUrl?: string;
-    };
-  };
+  const data = (await res.json()) as GraphEvent;
+  if (!details.withConference) return { provider: 'microsoft', eventId: data.id, joinUrl: null };
 
-  const joinUrl = details.withConference ? data.onlineMeeting?.joinUrl ?? null : null;
+  let joinUrl = data.onlineMeeting?.joinUrl ?? null;
+  if (joinUrl) return { provider: 'microsoft', eventId: data.id, joinUrl };
 
+  // Graph provisions the Teams meeting after the event; re-read once in
+  // case the create response simply ran ahead of it.
+  const again = await readJson<GraphEvent>(
+    `https://graph.microsoft.com/v1.0/me/events/${data.id}?$select=isOnlineMeeting,onlineMeetingProvider,onlineMeeting`,
+    accessToken,
+  );
+  joinUrl = again?.onlineMeeting?.joinUrl ?? null;
+  if (joinUrl) return { provider: 'microsoft', eventId: data.id, joinUrl };
+
+  // Still nothing. Graph answers a Teams request the calendar cannot
+  // honour by creating the event with `isOnlineMeeting: false` and
+  // provider `unknown`, not with an error: personal Microsoft accounts
+  // and tenants without Teams enabled both land here. The calendar's
+  // own allowed-provider list says which, so read it for the alert.
+  const calendar = await readJson<{
+    allowedOnlineMeetingProviders?: string[];
+    defaultOnlineMeetingProvider?: string;
+  }>(
+    'https://graph.microsoft.com/v1.0/me/calendar?$select=allowedOnlineMeetingProviders,defaultOnlineMeetingProvider',
+    accessToken,
+  );
+  const settled = again ?? data;
   return {
     provider: 'microsoft',
     eventId: data.id,
-    joinUrl,
+    joinUrl: null,
+    joinUrlDiagnostic:
+      `event isOnlineMeeting=${settled.isOnlineMeeting ?? 'absent'} provider=${settled.onlineMeetingProvider ?? 'absent'}` +
+      ` · calendar allows=[${(calendar?.allowedOnlineMeetingProviders ?? []).join(', ')}]` +
+      ` default=${calendar?.defaultOnlineMeetingProvider ?? 'unknown'}`,
   };
+}
+
+/** The slice of a Graph event that says whether it got a Teams meeting. */
+interface GraphEvent {
+  id: string;
+  isOnlineMeeting?: boolean;
+  onlineMeetingProvider?: string;
+  onlineMeeting?: { joinUrl?: string } | null;
 }
 
 /**

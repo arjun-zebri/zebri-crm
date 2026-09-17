@@ -14,7 +14,7 @@
  * @module lib/email/template-variables
  */
 
-import { VARIABLE_CATALOGUE } from '@/lib/automations/variables'
+import { linkLabel, VARIABLE_CATALOGUE } from '@/lib/automations/variables'
 import type { RunContext } from '@/types/automations'
 
 /** Shape the {@link RichTextEditor} variable popover expects. */
@@ -28,15 +28,21 @@ export interface EditorVariable {
 /**
  * Flat, editor-ready list of every email variable, grouped order
  * preserved from {@link VARIABLE_CATALOGUE}. `id` is the bare
- * expression (no `{{ }}`); `description` shows an example value.
+ * expression (no `{{ }}`); `description` shows an example value, or
+ * for a link variable the anchor text it inserts (the catalogue's URL
+ * example would misdescribe what lands in the email).
  */
 export const EMAIL_TEMPLATE_VARIABLES: readonly EditorVariable[] = VARIABLE_CATALOGUE.flatMap(
   (group) =>
-    group.variables.map((v) => ({
-      id: v.token.replace(/[{}]/g, '').trim(),
-      label: v.label,
-      description: `e.g. ${v.example}`,
-    })),
+    group.variables.map((v) => {
+      const id = v.token.replace(/[{}]/g, '').trim()
+      const label = linkLabel(id)
+      return {
+        id,
+        label: v.label,
+        description: label ? `Inserts a "${label}" link` : `e.g. ${v.example}`,
+      }
+    }),
 )
 
 /**

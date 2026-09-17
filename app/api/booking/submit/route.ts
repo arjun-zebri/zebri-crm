@@ -208,6 +208,21 @@ export async function POST(request: NextRequest) {
     if (pushed) {
       joinUrl = pushed.joinUrl;
       eventIds[pushed.provider] = pushed.eventId;
+      // The event landed but the provider minted no conference link, so
+      // the couple's confirmation says "link to follow" and the MC has to
+      // send one by hand. Providers answer this with a normal 201 (Graph
+      // on a calendar without Teams, Meet still pending), so it is
+      // invisible unless we say it here.
+      if (locationType === 'video' && !joinUrl) {
+        await sendAlert({
+          type: 'booking_video_link_missing',
+          severity: 'warn',
+          userId,
+          provider: pushed.provider,
+          bookingId,
+          diagnostic: pushed.joinUrlDiagnostic ?? 'no diagnostic',
+        });
+      }
     } else {
       // A null push means the MC has no connected calendar at all, which is
       // silent everywhere else: slots were offered without checking their real
