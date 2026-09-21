@@ -5,7 +5,7 @@ import { BusyLabel } from './busy-label';
 /**
  * Canonical button primitive.
  *
- * Use this for every clickable action in the app — pages must not declare
+ * Use this for every clickable action in the app - pages must not declare
  * raw `<button className="bg-black …">` markup any more. Token-driven so
  * light/dark mode and brand changes propagate automatically.
  *
@@ -55,7 +55,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   ref?: Ref<HTMLButtonElement>;
 }
 
-// Visual styling — token-only. Hover/focus tones come from the same token
+// Visual styling - token-only. Hover/focus tones come from the same token
 // ladder so brand changes propagate without per-call overrides.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
@@ -102,6 +102,36 @@ const SHAPE_CLASSES: Record<ButtonShape, string> = {
   pill: 'rounded-pill',
 };
 
+/** Options for {@link buttonClassName}. */
+export interface ButtonClassNameOptions {
+  /** Visual style. Defaults to `'primary'`. */
+  variant?: ButtonVariant;
+  /** Square icon-only sizing. Defaults to `false`. */
+  iconOnly?: boolean;
+  /** Corner treatment. Defaults to `'control'`. */
+  shape?: ButtonShape;
+  /** Extra classes appended after the computed ones, same as `Button`'s own `className`. */
+  className?: string | undefined;
+}
+
+/**
+ * The exact class string `Button` itself renders, for a non-`<button>`
+ * element that must look identical to one - most commonly a `next/link`
+ * `Link` styled as a button. `Button` has no `asChild` or `href` prop (a
+ * real `<button>` cannot be nested inside an `<a>`, and `Link` cannot
+ * render as a `<button>`), so this is the sanctioned way to reuse its
+ * exact look elsewhere: extend the primitive, never hand-copy its classes
+ * (CLAUDE.md's design-system rule 2) - a future tweak to `VARIANT_CLASSES`
+ * or `SIZE_CLASSES` reaches every caller of this function too, since
+ * `Button` itself is built from it below.
+ */
+export function buttonClassName({ variant = 'primary', iconOnly = false, shape = 'control', className }: ButtonClassNameOptions = {}): string {
+  const sizeCls = iconOnly ? ICON_SIZE_CLASSES : SIZE_CLASSES;
+  return `${BASE_CLASSES} ${SHAPE_CLASSES[shape]} ${VARIANT_CLASSES[variant]} ${sizeCls}${
+    className ? ` ${className}` : ''
+  }`;
+}
+
 /** Token-driven button. See {@link ButtonProps}. */
 export function Button({
   variant = 'primary',
@@ -115,10 +145,7 @@ export function Button({
   ref,
   ...rest
 }: ButtonProps) {
-  const sizeCls = iconOnly ? ICON_SIZE_CLASSES : SIZE_CLASSES;
-  const cls = `${BASE_CLASSES} ${SHAPE_CLASSES[shape]} ${VARIANT_CLASSES[variant]} ${sizeCls}${
-    className ? ` ${className}` : ''
-  }`;
+  const cls = buttonClassName({ variant, iconOnly, shape, className });
   return (
     <button
       ref={ref}
@@ -129,7 +156,7 @@ export function Button({
       {...rest}
     >
       {/* `BusyLabel` overlays the spinner on the label rather than adding
-          it beside — which is what this did until 2026-08-07, widening
+          it beside - which is what this did until 2026-08-07, widening
           the button on click and shoving the rest of the row sideways. */}
       <BusyLabel busy={loading}>{children}</BusyLabel>
     </button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, FileSignature, FileText, Globe, MessageSquare, Receipt, Users2 } from 'lucide-react'
+import { Clock, FileHeart, FileSignature, FileText, Globe, MessageSquare, Receipt, Users2 } from 'lucide-react'
 import { useState } from 'react'
 
 import type { SurfaceTab } from '@/types/branding-preview'
@@ -19,6 +19,7 @@ const SURFACES: Surface[] = [
   { id: 'vendorTimeline', label: 'Run sheet', description: 'Vendor-facing day-of timeline', icon: Clock },
   { id: 'questionnaire', label: 'Questionnaires', description: 'Collect details from couples', icon: MessageSquare },
   { id: 'lead', label: 'Website form', description: 'Public enquiry form for your website', icon: Globe },
+  { id: 'proposal', label: 'Proposals', description: 'Full-page proposals couples accept online', icon: FileHeart },
 ]
 
 interface DocumentsSectionProps {

@@ -182,13 +182,13 @@ export type StripeRateLimitKey = keyof typeof STRIPE_RATE_LIMITS;
  * loop from a misbehaving client (or a compromised session) firing
  * the "send invoice" button on repeat.
  *
- * - **sendQuote / sendInvoice**: 5/min/user. Resends are normal
+ * - **sendProposal / sendInvoice**: 5/min/user. Resends are normal
  *   (the modal exposes a "Resend email" button); we just stop
  *   runaway loops.
  * - Per-user keys, not per-IP — these are authenticated routes.
  */
 export const EMAIL_RATE_LIMITS = {
-  sendQuote: { windowMs: 60_000, max: 5 },
+  sendProposal: { windowMs: 60_000, max: 5 },
   sendInvoice: { windowMs: 60_000, max: 5 },
   sendTemplate: { windowMs: 60_000, max: 5 },
 } as const satisfies Record<string, LimiterOptions>;
@@ -264,3 +264,23 @@ export const CONTRACT_RATE_LIMITS = {
 } as const satisfies Record<string, LimiterOptions>;
 
 export type ContractRateLimitKey = keyof typeof CONTRACT_RATE_LIMITS;
+
+/**
+ * Proposal-close rate-limits. Both public, unauthenticated, token-gated
+ * routes: `accept` and `decline` are each a one-shot event per couple, so
+ * 5/min/IP is generous headroom for a fat-fingered retry while still
+ * stopping a scripted loop.
+ *
+ * - **events**: 30/min/IP. The public page's engagement tracker flushes its
+ *   batch every 10s and again on `pagehide`, so one tab is ~6 requests a
+ *   minute; 30 leaves room for a couple in front of a couple of tabs (their
+ *   phone and a laptop open to the same link) plus a retry or two without
+ *   opening the door to a scripted batch-spam loop.
+ */
+export const PROPOSAL_RATE_LIMITS = {
+  accept: { windowMs: 60_000, max: 5 },
+  decline: { windowMs: 60_000, max: 5 },
+  events: { windowMs: 60_000, max: 30 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type ProposalRateLimitKey = keyof typeof PROPOSAL_RATE_LIMITS;

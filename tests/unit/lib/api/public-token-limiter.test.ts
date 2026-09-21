@@ -84,7 +84,7 @@ describe('recordInvalidTokenAttempt', () => {
     for (let i = 0; i < 11; i += 1) {
       await recordInvalidTokenAttempt({
         ip: 'burst-ip',
-        surface: 'quote',
+        surface: 'proposal',
       });
     }
     expect(sendAlertMock).toHaveBeenCalledTimes(1);
@@ -92,7 +92,7 @@ describe('recordInvalidTokenAttempt', () => {
       expect.objectContaining({
         type: 'public_token_attempt_burst',
         ip: 'burst-ip',
-        surface: 'quote',
+        surface: 'proposal',
       }),
     );
   });

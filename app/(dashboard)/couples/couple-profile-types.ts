@@ -29,6 +29,7 @@ export type CoupleProfileSection =
   | 'files'
   | 'vows'
   | 'scripts'
+  | 'proposals'
   | 'payments'
   | 'contracts'
   | 'questionnaires'
@@ -50,6 +51,7 @@ export const SECTION_KEYS: readonly CoupleProfileSection[] = [
   'files',
   'vows',
   'scripts',
+  'proposals',
   'payments',
   'contracts',
   'questionnaires',

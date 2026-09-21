@@ -1,0 +1,98 @@
+'use client'
+
+/**
+ * The section bar's name field: a ghost `Button` that turns into an
+ * `Input` on click, mirroring `app/(dashboard)/proposals/templates/template-card.tsx`'s
+ * rename pattern. Split out of `section-bar.tsx` to keep that file within
+ * its line budget.
+ *
+ * @module features/proposals/editor/bars/section-name-field
+ */
+import { useRef, useState } from 'react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tooltip } from '@/components/ui/tooltip'
+
+import type { Section } from '../../model/layout'
+import { KIND_LABELS, sectionLabel } from '../../model/section-labels'
+import type { SectionCanvasProps } from '../section-canvas'
+
+// Re-exported so existing importers (this file's
+// own callers) keep working unchanged; the mapping itself now lives in
+// `model/section-labels.ts` so the starter catalogue (a pure model file)
+// can use it too without pulling this `'use client'` component into the
+// model layer.
+export { KIND_LABELS, sectionLabel }
+
+/** Props for {@link SectionNameField}. */
+export interface SectionNameFieldProps {
+  section: Section
+  dispatch: SectionCanvasProps['dispatch']
+}
+
+/** The section name field. See the module doc for the rename pattern it mirrors. */
+export function SectionNameField({ section, dispatch }: SectionNameFieldProps) {
+  const fallback = KIND_LABELS[section.kind]
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(section.name ?? fallback)
+  // Adopts an externally-driven rename (e.g. undo) once it lands; mirrors
+  // `template-card.tsx`'s own render-phase sync for the same reason.
+  const [synced, setSynced] = useState(section.name)
+  if (section.name !== synced) {
+    setSynced(section.name)
+    setValue(section.name ?? fallback)
+  }
+  const cancelledRef = useRef(false)
+
+  const commit = () => {
+    if (cancelledRef.current) {
+      cancelledRef.current = false
+      return
+    }
+    setEditing(false)
+    const name = value.trim()
+    if (name && name !== (section.name ?? fallback)) {
+      dispatch({ type: 'setName', id: section.id, name }, { commit: true })
+    } else {
+      setValue(section.name ?? fallback)
+    }
+  }
+
+  if (editing) {
+    return (
+      <Input
+        aria-label="Section name"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+          if (e.key === 'Escape') {
+            cancelledRef.current = true
+            setValue(section.name ?? fallback)
+            setEditing(false)
+          }
+        }}
+        autoFocus
+        className="w-32 shrink-0"
+      />
+    )
+  }
+
+  return (
+    <Tooltip side="top" label="Click to rename" className="shrink-0">
+      <Button
+        variant="ghost"
+        aria-label={`Rename ${value}`}
+        onClick={() => {
+          cancelledRef.current = false
+          setEditing(true)
+        }}
+        className="w-32 shrink-0 justify-start"
+      >
+        <span className="truncate">{value}</span>
+      </Button>
+    </Tooltip>
+  )
+}

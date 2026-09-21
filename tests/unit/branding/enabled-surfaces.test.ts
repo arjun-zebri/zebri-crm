@@ -25,12 +25,14 @@ describe('resolveEnabledSurfaces', () => {
 
   it('keeps surfaces the user disabled (absent keys in the legacy map) off', () => {
     const saved = { contract: true, portal: true }
-    expect(resolveEnabledSurfaces(saved)).toEqual(['contract', 'portal', 'lead'])
+    // lead and proposal both predate this map shape, so both default on.
+    expect(resolveEnabledSurfaces(saved)).toEqual(['contract', 'portal', 'lead', 'proposal'])
   })
 
   it('respects an explicit lead: false', () => {
     const saved = { invoice: true, lead: false }
-    expect(resolveEnabledSurfaces(saved)).toEqual(['invoice'])
+    // proposal is unset here, so it still defaults on even though lead is off.
+    expect(resolveEnabledSurfaces(saved)).toEqual(['invoice', 'proposal'])
   })
 
   it('reads the legacy array shape (DB column default) and adds lead', () => {
@@ -39,10 +41,11 @@ describe('resolveEnabledSurfaces', () => {
   })
 
   it('ignores unknown surface names in either shape', () => {
-    expect(resolveEnabledSurfaces(['invoice', 'proposal'])).toEqual(['invoice', 'lead'])
-    expect(resolveEnabledSurfaces({ invoice: true, proposal: true })).toEqual([
+    expect(resolveEnabledSurfaces(['invoice', 'unknownSurface'])).toEqual(['invoice', 'lead', 'proposal'])
+    expect(resolveEnabledSurfaces({ invoice: true, unknownSurface: true })).toEqual([
       'invoice',
       'lead',
+      'proposal',
     ])
   })
 
@@ -51,6 +54,7 @@ describe('resolveEnabledSurfaces', () => {
       'invoice',
       'questionnaire',
       'lead',
+      'proposal',
     ])
   })
 })
@@ -64,6 +68,7 @@ describe('buildEnabledSurfacesMap', () => {
       vendorTimeline: false,
       questionnaire: false,
       lead: false,
+      proposal: false,
     })
   })
 

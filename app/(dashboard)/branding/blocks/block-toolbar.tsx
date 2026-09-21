@@ -15,12 +15,15 @@ import { Slider } from '../components/slider'
 import { publicBrandingFromEditorState } from '../editor-branding'
 
 import { FormFieldControls, FormSubmitControls } from './form-field-controls'
-import { isDataBound, isDeletable, isMarker, isRequired, stylesWrapMarker } from './policy'
+import { atMostOneForSurface, isDataBound, isDeletable, isMarker, isRequired, stylesWrapMarker } from './policy'
+import { ProposalBlockControls } from './proposal-controls'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
+import { ActiveTargetLabel, IncludeDropdown, PillToggle, VAlignIcon } from './toolbar-primitives'
 import { blockDisplayName } from './types'
 import type {
   Block,
+  BlockType,
   TextStyle,
   TitleBlock,
   TextBlock,
@@ -48,6 +51,18 @@ import type {
   FormSubmitBlock,
 } from './types'
 
+/**
+ * The ten proposal block types whose controls are `ProposalBlockControls`
+ * (Task 7): their captioned inputs make Row 1 taller than a plain toolbar
+ * row (like the form blocks), and their background is the section
+ * background rendered inside those controls, not the generic per-block
+ * `BackgroundControl`.
+ */
+const PROPOSAL_CONTROL_TYPES: ReadonlySet<BlockType> = new Set([
+  'hero', 'introNote', 'video', 'gallery', 'testimonials',
+  'aboutMe', 'howItWorks', 'faq', 'packages', 'accept',
+] as const)
+
 interface BlockToolbarProps {
   block: Block
   state: BrandPreviewState
@@ -62,6 +77,10 @@ interface BlockToolbarProps {
 
 export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarget, onDuplicate, onDelete, onResetBlock }: BlockToolbarProps) {
   const canDelete = isDeletable(block, surface)
+  // A second copy of an at-most-one block (the proposal's hero) would only
+  // trip the readiness rule, so Duplicate is off for it rather than offered
+  // and then flagged.
+  const canDuplicate = !(atMostOneForSurface(surface)?.includes(block.type) ?? false)
   const hasLiveData = isDataBound(block.type)
   const isBlockRequired = isRequired(block.type, surface)
   // Render-split markers (contract body/sign, run sheet, couple portal) inject
@@ -107,7 +126,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
           swatch lines up with the 32px inputs instead of floating mid-label. */}
       <div
         className={`flex ${
-          block.type === 'formField' || block.type === 'formSubmit'
+          block.type === 'formField' || block.type === 'formSubmit' || PROPOSAL_CONTROL_TYPES.has(block.type)
             ? 'items-end'
             : 'items-center'
         } gap-1 px-1 pt-1`}
@@ -121,20 +140,26 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
             cards), so it keeps the Background control. Other markers take their
             surface from the brand Surface colour, so it stays hidden for them. */}
         {block.type !== 'action' && (!isMarkerBlock || block.type === 'couplePortal') &&
-          !['title', 'text', 'businessName', 'tagline', 'footer', 'divider'].includes(block.type) && (
+          !['title', 'text', 'businessName', 'tagline', 'footer', 'divider'].includes(block.type) &&
+          !PROPOSAL_CONTROL_TYPES.has(block.type) && (
             <BackgroundControl block={block} updateBlock={updateBlock} />
           )}
       </div>
 
       {/* Row 2: structural controls + actions */}
       <div className="flex items-center gap-1 px-1 pb-1 pt-0.5 border-t border-gray-100 mt-1">
-        {block.type !== 'headerBanner' && block.type !== 'action' && !isMarkerBlock && (
+        {/* The hero places its text with its own Text position control; the
+            frame-level v-align only acts on a dragged block height, which the
+            hero does not have. */}
+        {block.type !== 'headerBanner' && block.type !== 'action' && block.type !== 'hero' && !isMarkerBlock && (
           <>
             <VAlignControl block={block} updateBlock={updateBlock} />
             <Divider />
           </>
         )}
-        {block.type !== 'action' && !isMarkerBlock && (
+        {/* The hero is a full-bleed opening: there is no box to pad, round
+            or frame, so the box controls would only inset its media. */}
+        {block.type !== 'action' && block.type !== 'hero' && !isMarkerBlock && (
           <>
             <SpacingControl block={block} updateBlock={updateBlock} />
             <RadiusControl block={block} updateBlock={updateBlock} />
@@ -158,12 +183,17 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
               <RotateCcw size={13} strokeWidth={1.75} />
             </button>
           </Tooltip>
-          <Tooltip label="Duplicate">
+          <Tooltip label={canDuplicate ? 'Duplicate' : `Only one ${blockDisplayName(block, surface)} per document`}>
             <button
               type="button"
               onClick={onDuplicate}
-              aria-label="Duplicate block"
-              className="p-1.5 rounded-control text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer transition"
+              disabled={!canDuplicate}
+              aria-label={canDuplicate ? 'Duplicate block' : `Only one ${blockDisplayName(block, surface)} per document`}
+              className={`p-1.5 rounded-control transition ${
+                canDuplicate
+                  ? 'text-text-muted hover:text-text hover:bg-surface-emphasis cursor-pointer'
+                  : 'text-text-muted opacity-40 cursor-not-allowed'
+              }`}
             >
               <Copy size={13} strokeWidth={1.75} />
             </button>
@@ -254,6 +284,17 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
           <SubmitStyleControls block={block} state={state} updateBlock={updateBlock} />
         </div>
       )
+    case 'hero':
+    case 'introNote':
+    case 'video':
+    case 'gallery':
+    case 'testimonials':
+    case 'aboutMe':
+    case 'howItWorks':
+    case 'faq':
+    case 'packages':
+    case 'accept':
+      return <ProposalBlockControls block={block} state={state} surface={surface} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
   }
 }
 
@@ -609,47 +650,7 @@ function TitleIncludeDropdown({
     { label: isInvoice ? 'Due date' : 'Expiry date', active: block.showExpires, set: (v: boolean) => updateBlock<TitleBlock>(block.id, { showExpires: v }) },
     { label: 'ABN', active: block.showAbn, set: (v: boolean) => updateBlock<TitleBlock>(block.id, { showAbn: v }) },
   ]
-  return (
-    <Popover.Root>
-      <Tooltip label="Show or hide title items">
-        <Popover.Trigger asChild>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-control text-body hover:bg-surface-emphasis cursor-pointer border border-border text-gray-700 shrink-0"
-          >
-            <span className="text-text font-medium">Include</span>
-            <ChevronDown size={10} strokeWidth={2} className="text-text-subtle" />
-          </button>
-        </Popover.Trigger>
-      </Tooltip>
-      <Popover.Portal>
-        <Popover.Content
-          align="start"
-          sideOffset={6}
-          className="bg-surface border border-border rounded-control shadow-xl p-2 z-[60] w-[200px] animate-modal-in"
-        >
-          {rows.map((row) => (
-            <button
-              key={row.label}
-              type="button"
-              onClick={() => row.set(!row.active)}
-              aria-pressed={row.active}
-              className="flex w-full items-center gap-2 px-2 py-1.5 rounded-control text-body text-gray-700 hover:bg-surface-emphasis cursor-pointer"
-            >
-              <span
-                className={`inline-flex items-center justify-center w-4 h-4 rounded-control border shrink-0 ${
-                  row.active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-surface border-border-strong text-transparent'
-                }`}
-              >
-                <Check size={11} strokeWidth={3} />
-              </span>
-              <span>{row.label}</span>
-            </button>
-          ))}
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
-  )
+  return <IncludeDropdown rows={rows} tooltip="Show or hide title items" />
 }
 
 // ── Text ──────────────────────────────────────────────────────────────────────
@@ -2641,50 +2642,7 @@ function Toggle({ label, active, onChange }: { label: string; active: boolean; o
   )
 }
 
-function PillToggle<V extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: V; label: string; icon?: React.ReactNode }[]
-  value: V
-  onChange: (v: V) => void
-}) {
-  return (
-    <div className="inline-flex bg-surface-emphasis rounded-control p-0.5">
-      {options.map((opt) => {
-        const btn = (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onChange(opt.value)}
-            className={`px-2 py-1 text-body rounded-control cursor-pointer transition ${
-              value === opt.value ? 'bg-surface text-text shadow-sm font-medium' : 'text-text-muted hover:text-text'
-            }`}
-          >
-            {opt.icon ?? opt.label}
-          </button>
-        )
-        return opt.icon ? (
-          <Tooltip key={opt.value} label={opt.label}>{btn}</Tooltip>
-        ) : btn
-      })}
-    </div>
-  )
-}
 
-/**
- * Non-interactive label naming the sub-element the style controls are acting on
- * (the one clicked in the preview). Replaces the per-block target switchers:
- * selection happens by clicking in the preview, this just says what's selected.
- */
-function ActiveTargetLabel({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center h-8 px-2.5 rounded-control bg-surface-emphasis text-body font-medium text-text whitespace-nowrap shrink-0">
-      {label}
-    </span>
-  )
-}
 
 function NumberField({
   label,
@@ -2788,6 +2746,7 @@ function RadiusControl({
         <Popover.Trigger asChild>
           <button
             type="button"
+            aria-label="Corner radius"
             className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-body border cursor-pointer transition shrink-0 ${
               active
                 ? 'bg-gray-900 text-white border-gray-900'
@@ -2866,15 +2825,6 @@ function ColSpreadIcon() {
   )
 }
 
-function VAlignIcon({ position }: { position: 'top' | 'middle' | 'bottom' }) {
-  const lineY = position === 'top' ? 4 : position === 'middle' ? 6 : 8
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.25" />
-      <rect x="3.5" y={lineY} width="7" height="2" rx="0.75" fill="currentColor" />
-    </svg>
-  )
-}
 
 // ── Spacer ────────────────────────────────────────────────────────────────────
 
@@ -2973,6 +2923,7 @@ function SpacingControl({
         <Popover.Trigger asChild>
           <button
             type="button"
+            aria-label="Spacing"
             className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-body border cursor-pointer transition shrink-0 ${
               active
                 ? 'bg-gray-900 text-white border-gray-900'
@@ -3056,6 +3007,7 @@ function BorderControl({
         <Popover.Trigger asChild>
           <button
             type="button"
+            aria-label="Border"
             className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-control text-body border cursor-pointer transition shrink-0 ${
               active
                 ? 'bg-gray-900 text-white border-gray-900'

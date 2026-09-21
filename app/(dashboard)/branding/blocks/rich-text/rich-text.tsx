@@ -2,6 +2,7 @@
 
 import type { JSONContent } from '@tiptap/core'
 import Placeholder from '@tiptap/extension-placeholder'
+import type { EditorView } from '@tiptap/pm/view'
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { useEffect, useMemo, useRef } from 'react'
@@ -29,6 +30,14 @@ function toDoc(value: JSONContent | string | null | undefined): JSONContent {
   return Object.keys(value).length > 0 ? value : EMPTY_DOC
 }
 
+/**
+ * What Enter does in a field. `paragraph` starts a new paragraph (body copy);
+ * `lineBreak` inserts a soft break inside the one paragraph (a heading that
+ * wraps onto a chosen line, rendered as `<br>`); `blur` commits and leaves
+ * (single-line labels). Escape leaves the field in every mode.
+ */
+export type EnterKeyMode = 'paragraph' | 'lineBreak' | 'blur'
+
 export interface RichTextProps {
   /** Current field content (TipTap JSON, or a legacy string during migration). */
   value: JSONContent | string | null | undefined
@@ -38,10 +47,37 @@ export interface RichTextProps {
   surface: SurfaceTab
   /** Placeholder shown when empty. */
   placeholder?: string
-  /** Single-line fields (title, labels) suppress Enter/newlines. Default false. */
+  /** Shorthand for `enterKey="blur"`, kept for the document fields that use it. */
   singleLine?: boolean
+  /** See {@link EnterKeyMode}. Defaults to `paragraph`, or `blur` when `singleLine` is set. */
+  enterKey?: EnterKeyMode
   className?: string
   style?: React.CSSProperties
+}
+
+/**
+ * Whether the floating toolbar should be visible. It shows for a selection of
+ * real text only, like the inline bar in a document editor, and stays up while
+ * one of its own menus (size / colour / variable) has focus so a pick doesn't
+ * dismiss it.
+ *
+ * It deliberately does NOT show on a bare caret, nor when the selection holds
+ * only a variable chip (e.g. selecting the whole `{{ couple_name }}` heading):
+ * the bar floats over the text, so a bar with nothing to format sat on top of
+ * the very words you were trying to click into, and read as a second toolbar
+ * beside the block toolbar. Whole-field styling lives in the block toolbar;
+ * this bar marks a selected range of characters.
+ */
+export function bubbleShouldShow(o: { menuFocused: boolean; hasTextSelection: boolean }): boolean {
+  return o.hasTextSelection || o.menuFocused
+}
+
+/** Inserts a hard line break at the selection (the same node Shift+Enter makes). */
+function insertLineBreak(view: EditorView): boolean {
+  const br = view.state.schema.nodes.hardBreak
+  if (!br) return false
+  view.dispatch(view.state.tr.replaceSelectionWith(br.create()).scrollIntoView())
+  return true
 }
 
 /**
@@ -52,7 +88,8 @@ export interface RichTextProps {
  * value it just emitted so it never fights the caret mid-edit (same guard as the
  * signature editor).
  */
-export function RichText({ value, onChange, surface, placeholder, singleLine = false, className = '', style }: RichTextProps) {
+export function RichText({ value, onChange, surface, placeholder, singleLine = false, enterKey, className = '', style }: RichTextProps) {
+  const enterMode: EnterKeyMode = enterKey ?? (singleLine ? 'blur' : 'paragraph')
   const extensions = useMemo(
     () => [
       ...RICH_TEXT_EXTENSIONS.filter((e) => e.name !== 'variable'),
@@ -69,17 +106,33 @@ export function RichText({ value, onChange, surface, placeholder, singleLine = f
     content: toDoc(value),
     immediatelyRender: false,
     editorProps: {
-      // Single-line fields commit and blur on Enter rather than splitting.
-      handleKeyDown: singleLine
-        ? (_view, event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              ;(document.activeElement as HTMLElement | null)?.blur()
-              return true
-            }
-            return false
-          }
-        : undefined,
+      // Expose the contenteditable as a textbox for assistive tech (TipTap
+      // sets neither role nor a name on its own), named from the placeholder,
+      // the same as the InlineText fields these replaced.
+      attributes: {
+        role: 'textbox',
+        'aria-multiline': enterMode === 'blur' ? 'false' : 'true',
+        ...(placeholder ? { 'aria-label': placeholder } : {}),
+      },
+      handleKeyDown: (view, event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          view.dom.blur()
+          return true
+        }
+        // Shift+Enter keeps StarterKit's own hard break in every mode.
+        if (event.key !== 'Enter' || event.shiftKey) return false
+        if (enterMode === 'blur') {
+          event.preventDefault()
+          view.dom.blur()
+          return true
+        }
+        if (enterMode === 'lineBreak') {
+          event.preventDefault()
+          return insertLineBreak(view)
+        }
+        return false
+      },
     },
     onUpdate: ({ editor: ed }) => {
       // Normalise to a plain object so a server action never drops null-proto
@@ -87,6 +140,14 @@ export function RichText({ value, onChange, surface, placeholder, singleLine = f
       const json = JSON.parse(JSON.stringify(ed.getJSON())) as JSONContent
       lastEmittedRef.current = JSON.stringify(json)
       onChange(json)
+    },
+    onFocus: ({ editor: ed }) => {
+      // Select the block that owns this field, the same signal InlineText
+      // sends, so clicking any rich-text field opens that block's toolbar.
+      const block = ed.view.dom.closest('[data-block-id]')
+      if (block && !block.hasAttribute('data-selected')) {
+        block.dispatchEvent(new CustomEvent('zebri:text-focus', { bubbles: true, detail: { blockId: block.getAttribute('data-block-id') } }))
+      }
     },
   })
 
@@ -96,15 +157,40 @@ export function RichText({ value, onChange, surface, placeholder, singleLine = f
     if (incoming === lastEmittedRef.current) return
     if (incoming === JSON.stringify(editor.getJSON())) return
     lastEmittedRef.current = incoming
-    editor.commands.setContent(toDoc(value), { emitUpdate: false })
+    // Deferred out of the commit phase: variable chips are React node views,
+    // which TipTap mounts with flushSync, and React refuses to flush from
+    // inside an effect ("flushSync was called from inside a lifecycle
+    // method"). A microtask runs before the next paint, so the canvas never
+    // shows the stale text.
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled || editor.isDestroyed) return
+      editor.commands.setContent(toDoc(value), { emitUpdate: false })
+    })
+    return () => {
+      cancelled = true
+    }
   }, [value, editor])
 
   if (!editor) return null
 
   return (
     <>
-      {/* Only show the toolbar for a non-empty selection (not just a caret). */}
-      <BubbleMenu editor={editor} shouldShow={({ editor: ed }) => !ed.state.selection.empty}>
+      <BubbleMenu
+        editor={editor}
+        shouldShow={({ editor: ed }) => {
+          const { from, to, empty } = ed.state.selection
+          // textBetween with an empty leaf-text arg counts characters only:
+          // a selection of just a variable atom yields '' and stays hidden.
+          const hasTextSelection = !empty && ed.state.doc.textBetween(from, to, '', '').length > 0
+          return bubbleShouldShow({
+            // The bubble's own menus (size, colour, variable) are portalled, so
+            // they are found by attribute rather than by DOM containment.
+            menuFocused: !!document.activeElement?.closest('[data-rich-text-bubble]'),
+            hasTextSelection,
+          })
+        }}
+      >
         <RichTextBubble editor={editor} surface={surface} />
       </BubbleMenu>
       <EditorContent

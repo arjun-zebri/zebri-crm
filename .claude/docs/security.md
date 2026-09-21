@@ -51,6 +51,11 @@ the helper.
   owns), `bank_*` (user owns), `stripe_connect_enabled` (UX flip on
   public Pay button only — Stripe rejects on charge if no Connect
   account). Tracked for Payments page hardening (Phase 2).
+  `get_public_proposal` (Proposals Phase C) reads the same `bank_*`
+  fields from `raw_user_meta_data` and `stripe_connect_enabled` from
+  `raw_app_meta_data` with a `raw_user_meta_data` fallback; same
+  low-impact class as the invoice entry, same fix when the bank fields
+  move.
 - Sidebar admin-link visibility (display only — middleware enforces).
   Tracked for Admin / Shadow phase (Phase 13).
 - ~~`user_metadata` fallback inside the helper~~ — **resolved in
@@ -438,7 +443,7 @@ interface stays stable so call sites don't change.
 ### Public token-attempt limiter — `@/lib/api/public-token-limiter` (Phase 2D.2)
 
 Sits in front of the unauthenticated share-token surfaces
-(`/invoice/[token]`, `/portal/[token]`). Counts
+(`/invoice/[token]`, `/portal/[token]`, `/proposal/[token]`). Counts
 **invalid** token attempts per IP — successful loads of a valid
 token are free. Two cooperating bands:
 
@@ -450,14 +455,112 @@ token are free. Two cooperating bands:
   burst (deduped via an internal one-shot bucket — no spam on
   attempts 12, 13, 14, …).
 
-Wired today: `/portal/[token]` (server component, easy hookup).
-**Not yet wired** on `/invoice/[token]`. That page is a client
+Wired today: `/portal/[token]` and `/proposal/[token]` (both server
+components, easy hookup). **Not yet wired** on `/invoice/[token]`. That page is a client
 component that calls `get_public_invoice` directly from the browser,
 so the limiter would need a server-fetch refactor (convert to RSC +
 Client component child for interactivity). Tracked as a follow-up. The
 unique-share-token capability model is the primary defence; the
 limiter is defence-in-depth and covers the highest-traffic public
 surface (the portal) today.
+
+### Proposal media storage, embed allowlist, and the role action (Phase B)
+
+- **`proposal-media` storage bucket**
+  (`supabase/migrations/20260924000000_proposal_surface.sql`): public
+  read, 50MB / MP4-or-WebM enforced at the bucket. Owner-write path
+  rule on insert/update/delete  -  `auth.uid()::text = split_part(name,
+  '/', 1)`, i.e. the object's first path segment must be the caller's
+  own user id  -  the same shape as the existing `branding` bucket's
+  policies. `uploadProposalMedia` (`app/(dashboard)/branding/upload-proposal-media.ts`)
+  validates type and size client-side before the request even opens
+  (a bad file never starts a doomed upload), but the bucket's own MIME
+  and size limits are the real enforcement boundary; the client check
+  is only a fast-fail UX improvement.
+- **`uploadProposalMediaFile`** (`features/proposals/data/media.ts`,
+  Proposal Layout v2 Phase 2): the template editor's own upload path to
+  the same `proposal-media` bucket (image nodes, audio nodes, and
+  section background images/video via the node bars in
+  `features/proposals/editor/bars/`), duplicating
+  `uploadProposalMedia`'s client-side-caps-before-network-call pattern
+  rather than importing it (the feature-module boundary forbids
+  `features/proposals/` reaching into `app/`). `MEDIA_LIMITS` caps:
+  image 10MB (`jpeg`/`png`/`webp`/`gif`), audio 25MB
+  (`mpeg`/`mp4`/`x-m4a`/`wav`), video and hero `background` 50MB
+  (`mp4`/`webm`). **Gap closed**: `20260928000000_proposal_media_mime_types.sql`
+  widened the bucket's `allowed_mime_types` from `['video/mp4',
+  'video/webm']` to the full union `MEDIA_LIMITS` allows (video, then
+  image, then audio types); `file_size_limit` stays 52428800 (50MB),
+  the ceiling sized for the largest kind - the smaller per-kind caps
+  (image 10MB, audio 25MB) remain client-side-only in `MEDIA_LIMITS`,
+  enforced before the upload request opens, not by the bucket itself.
+  Image and audio uploads in the template editor now succeed
+  end-to-end. Still not covered by any test (`media.test.ts` only
+  exercises the client-side validation branch, never a real bucket
+  write) - an integration test writing an image/audio object to the
+  local bucket would close that gap.
+- **Embed host allowlist**: `parseEmbedUrl` (`lib/proposals/embed-url.ts`)
+  only recognises YouTube and Vimeo hostnames (`YOUTUBE_HOSTS` /
+  `VIMEO_HOSTS`, exact `Set` membership, not a substring or regex
+  match); every other host returns `null` and the caller never embeds
+  it. This is the only thing standing between a pasted URL and an
+  arbitrary iframe `src` on a public page, so a new video provider
+  must be added to one of those two sets deliberately, never inferred
+  from the URL shape.
+- **`chooseProposalRoleAction`** (`app/(dashboard)/branding/proposal-role-actions.ts`):
+  a `'use server'` action, Zod-validated (`z.enum(PROPOSAL_ROLES)`
+  rejects anything but `mc` / `celebrant` / `both`), using the
+  RLS-scoped server client (`createClient()` from
+  `lib/supabase/server`, session-derived  -  never the service role) for
+  every read/write, so the `user_branding` upsert and the starter
+  `packages`/`package_items` inserts are all scoped to the caller by
+  RLS, not by an application-level `user_id` check. Idempotent: it
+  only seeds starter packages when the MC owns zero packages, so
+  calling it again (a different role, or a retry) never duplicates
+  them.
+
+### Proposal close RPCs and routes (Proposals Phase C)
+
+`supabase/migrations/20260925000000_proposal_close.sql`. Every RPC is
+`security definer`, `set search_path = public`, and resolves its subject
+through a token the couple already holds (never an id from the body).
+
+**SECURITY DEFINER inventory:**
+
+| RPC | Grant | Notes |
+|---|---|---|
+| `accept_proposal(p_token, p_option_id, p_addon_selection)` | `anon`, `authenticated` | Share-token gated; validates option/add-on parentage before touching any pending contract; owner-matches the template read and the draft delete; refuses `already_accepted` once the contract is signed. Add-on ids stored de-duplicated. Returns `contract_id`, `sign_token`, `user_id`, `proposal_id`. |
+| `decline_proposal(p_token, p_reason, p_message)` | `anon`, `authenticated` | Share-token gated; deletes an unsigned draft contract (owner-matched) and nulls `contract_id`; refuses once the contract is signed. |
+| `get_public_proposal(token)` | `anon` | Returns `pending_contract.sign_token` (the couple's own signer credential), `invoice.share_token`, the MC's `bank_*` and `stripe_connect_enabled`; `deposit_percent` is null whenever `payment_schedule_id` is set. `pending_contract` and `invoice` are owner-matched (`user_id = p.user_id`). |
+| `finalize_proposal_acceptance(p_token, p_invoice)` | service role only (`revoke ... from public, anon, authenticated`) | Signer-token gated; the invoice payload is computed server-side in `lib/proposals/finalize.ts`. Refuses `declined`, `not_signed`; owner-matches the existing-invoice read. |
+| `expire_proposals()` | service role only (`revoke ... from public, anon, authenticated`) | Daily cron stamp; the cron route is pending (Task 6). |
+| `record_proposal_events(p_token, p_session_id, p_events)` | `anon`, `authenticated` | Share-token gated (`for update` lock on the proposal row before computing `first_open`, closing a two-tabs-same-second race). Validates `p_session_id` and caps the batch at 50 events; unknown event types are silently dropped, not counted in `inserted`. Returns `{ ok, inserted, first_open }`. Proposals Phase D. |
+| `get_public_proposal_layout(token)` | `anon`, `authenticated` | Share-token gated (`share_token_enabled = true`), `stable`, no side effects (no view-count bump, unlike `get_public_proposal`). Returns the proposal's own `layout`, else `null`; `null` for a disabled or unknown token; no `proposal_templates` fallback at all (a template never renders on a couple's link, cross-tenant or not). Strips `page.passwordHash` from the returned jsonb with `#-` before it leaves the function, since the password gate runs server-side and the hash is never a public field. Proposal Layout v2 Phase 1 (`supabase/migrations/20260927000000_proposal_layout_v2.sql`). |
+
+**Rule: any `proposals.*_id` pointer read by a public RPC must be
+owner-matched in the RPC itself (`... and x.user_id = p.user_id`), not
+only in the table's `with check`.** The `with check` stops an RLS
+client writing a foreign pointer; the RPC clause stops a pointer that
+arrived any other way (a service-role write, a future migration) from
+leaking another MC's row through this MC's share link. Both layers
+exist today; `tests/integration/proposals/accept-proposal.test.ts`
+seeds a spoofed `contract_id` with the service client and asserts
+`get_public_proposal` returns `pending_contract: null` and
+`accept_proposal` never deletes the foreign draft.
+
+**Routes:** `POST /api/proposal/accept` and `/decline` are Zod-validated
+(`lib/proposals/accept-schemas.ts`), rate-limited 5/min/IP, never log
+the share token, and count an RPC `not_found` against
+`recordInvalidTokenAttempt({ surface: 'proposal' })` so enumeration
+through the routes trips the same alert as the page. `POST
+/api/contract/sign` runs `runAfterSignEffects`, which alerts
+`proposal_close_failed` (stage `finalize`, with the MC and proposal ids
+once known) on every finalize failure, thrown or returned. The public
+page self-heals a signed-but-unfinalized contract by re-running the
+idempotent finalize before render (`app/proposal/[token]/_lib/self-heal.ts`).
+`saveProposalAction` deletes an unsigned pending draft (killing the stale
+sign token) and refuses once it is signed. `publishContractSnapshot` only
+ever rewrites a `status = 'draft'` contract.
 
 ### Public Portal RPC security model (Phase 8)
 
@@ -616,6 +719,12 @@ token-attempt limiter (currently `/portal/[token]` only) to cover
 | `app/api/stripe/invoice-payment/route.ts` | ✅ `bodySchema` (invoiceId UUID, shareToken min/max, paymentType enum) | ✅ 10/min/IP via `inMemoryLimiter` | Generic 404 on missing-or-mismatched-token (no info leak). `success_url` carries `session_id={CHECKOUT_SESSION_ID}` for the payment-success re-verification. `metadata.connected_account_id` cross-checked on the success page. Stripe-failure path uses `logger.error`; raw error message NOT returned to the couple (returns generic 502). |
 | `app/invoice/payment-success/page.tsx` | n/a (server component) | n/a | Server-side `stripe.checkout.sessions.retrieve(session_id, { expand: ['payment_intent'] })`. Five-check verification: invoice exists + MC has Connect account + session.metadata.invoice_id matches + session.metadata.connected_account_id matches + payment_intent.status === 'succeeded'. Any mismatch → notFound() + `payment_success_param_tampered` Slack alert. Idempotent. |
 
+### Proposal template autosave beacon
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/proposals/templates/layout-beacon/route.ts` | ✅ `updateTemplateLayoutSchema` (same schema `updateTemplateLayoutAction` uses) | n/a — authenticated same-origin write, not a public/money surface | Exists only so `navigator.sendBeacon` (fired from a `beforeunload` handler, see `proposals.md`) has a plain endpoint to call, since a Server Action can't be a beacon target. Same auth (`supabase.auth.getUser()`) and ownership check (RLS via the user-context client, `.eq('id', ...)` + `count: 'exact'` returns 404 on a foreign or unknown id) as the action. Cross-tenant denial covered by `tests/integration/proposals/layout-beacon-route.test.ts`. Best-effort: the response is never read (the page is unloading). |
+
 ### Public questionnaire routes — Couple questionnaires
 
 | Route | Zod | Rate-limit | Notes |
@@ -694,6 +803,7 @@ DELETE (sampled clean across the migrations).
 | `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
 | `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) + `tests/integration/branding/user-branding-rls.test.ts` (cross-tenant denial + RPC scoping, 4 tests) | Branding |
+| `storage.objects` (`proposal-media` bucket) | ✅ (public read; insert/update/delete require the object's first path segment `= auth.uid()`) | path prefix (`<user_id>/…`) | ✅ `tests/integration/rls/proposal-media-storage.test.ts` (5 tests: owner upload, cross-tenant upload denial, anon public read, cross-tenant delete denial, owner delete) | Proposals Engine Phase B |
 | `user_public_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/user-public-settings.test.ts` (5 tests — cross-tenant read/update/insert denial incl. encrypted OAuth tokens + global subdomain uniqueness) | Settings — Public Page |
 | `calendar_connections` | ✅ | `user_id` | ✅ `tests/integration/rls/calendar-connections.test.ts` (cross-tenant read/update/delete denial incl. encrypted tokens) | Scheduler Phase A |
 | `meeting_types` | ✅ | `user_id` | ✅ `tests/integration/rls/scheduling-tables.test.ts` (Scheduler Phase B: cross-tenant read/insert/update/delete denial) | Scheduler Phase B |
@@ -706,6 +816,12 @@ DELETE (sampled clean across the migrations).
 | `automation_runs` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cross-tenant retry/cancel/pause/resume are no-ops) | Automations |
 | `automation_waits` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cancel consumes; resume reads — exercised via the control actions) | Automations |
 | `automation_audit_log` | ✅ (SELECT-only for owner; writes service-role) | `user_id` | ☐ (read RLS-scoped by the couple Automations feed) | Automations |
+| `proposals` | ✅ (+ owner `exists` checks in `with check` on every pointer: `couple_id`, `event_id`, `contract_id`, `invoice_id`, `contract_template_id`, `payment_schedule_id`) | `user_id` | ✅ `tests/integration/rls/proposals.test.ts` (8 tests: owner read with options/items, cross-tenant SELECT/UPDATE/DELETE denial, forged `user_id` insert rejected, insert and update spoofing another MC's `couple_id` rejected) + `tests/integration/rls/proposals-pointers.test.ts` (update pointing `contract_id` / `invoice_id` / `contract_template_id` / `payment_schedule_id` at another MC's row rejected; own rows accepted) | Proposals |
+| `proposal_options` | ✅ (+ parent-ownership via `_owns_proposal` in `with check`) | `user_id` | ✅ `tests/integration/rls/proposals.test.ts` (cross-tenant option-to-proposal attach rejected) | Proposals |
+| `proposal_option_items` | ✅ (+ parent-ownership via `_owns_proposal_option` in `with check`) | `user_id` | ✅ `tests/integration/rls/proposals.test.ts` (cross-tenant item-to-option attach rejected) | Proposals |
+| `proposal_events` | ✅ (+ parent-ownership `exists` check on `proposal_id` in `with check`) | `user_id` | ✅ `tests/integration/rls/proposal-events.test.ts` (4 tests: owner read / cross-tenant read denial, cross-tenant insert spoofing `proposal_id` rejected, anon direct read/insert denial, owner delete cascades with the proposal) | Proposals Phase D |
+| `proposal_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/proposal-templates.test.ts` (5 tests: owner read/update, owner delete, cross-tenant SELECT/UPDATE/DELETE denial, cross-tenant forged-`user_id` insert rejected, anon locked out, one-default-per-user unique-index refusal) | Proposal Layout v2 Phase 1 |
+| `proposal_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/proposal-settings.test.ts` (1 test: owner read/update, cross-tenant read/update/delete denial, cross-tenant forged-`user_id` insert rejected, anon locked out) | Proposal Layout v2 Phase 1 |
 | `system_heartbeats` | RLS on, no policies (service only) | n/a | `tests/integration/cron/scheduler.test.ts` | Scheduler (R1) |
 
 **Four tables need more than `auth.uid() = user_id` in WITH CHECK.**

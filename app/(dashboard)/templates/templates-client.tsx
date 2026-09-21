@@ -11,6 +11,7 @@
 'use client'
 
 import type { JSONContent } from '@tiptap/react'
+import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
 import { PageHeader } from '@/components/ui/page-header'
@@ -20,9 +21,15 @@ import { ContractTemplateManager } from './contract-template-manager'
 import { EmailsTab } from './emails-tab'
 import { InvoiceTemplatesManager } from './invoice-templates-manager'
 import { PackagesManager } from './packages-manager'
+import { ProposalTemplatesTab } from './proposal-templates-tab'
 import { QuestionnaireTemplateManager } from './questionnaire-template-manager'
 import { TemplatesActionsProvider } from './templates-actions-slot'
-import { TemplatesTabs, type TemplateTab } from './templates-tabs'
+import { TEMPLATE_TABS, TemplatesTabs, type TemplateTab } from './templates-tabs'
+
+/** Reads `?tab=` for a deep link (e.g. the /proposals templates shortcut's "See all"); falls back to Emails for an unknown/missing value. */
+function initialTab(raw: string | null): TemplateTab {
+  return (TEMPLATE_TABS.find((t) => t.id === raw)?.id as TemplateTab | undefined) ?? 'emails'
+}
 
 interface TemplatesClientProps {
   businessName?: string | undefined
@@ -36,7 +43,8 @@ interface TemplatesClientProps {
 }
 
 export function TemplatesClient({ businessName, contactName, email, emailSignature, branding }: TemplatesClientProps) {
-  const [activeTab, setActiveTab] = useState<TemplateTab>('emails')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<TemplateTab>(() => initialTab(searchParams.get('tab')))
   // The active tab portals its primary actions into this tab-row slot node.
   const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null)
 
@@ -60,6 +68,7 @@ export function TemplatesClient({ businessName, contactName, email, emailSignatu
               branding={branding}
             />
           )}
+          {activeTab === 'proposals' && <ProposalTemplatesTab />}
           {activeTab === 'packages' && <PackagesManager />}
           {activeTab === 'invoices' && <InvoiceTemplatesManager />}
           {activeTab === 'contracts' && <ContractTemplateManager />}

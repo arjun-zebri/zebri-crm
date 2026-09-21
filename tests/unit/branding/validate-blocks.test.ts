@@ -57,7 +57,7 @@ describe('repairBlocks', () => {
 })
 
 describe('repairAllSurfaces', () => {
-  it('returns all six surface keys when input has all six', () => {
+  it('returns all seven surface keys when input has all seven', () => {
     const input: BlocksByDoc = {
       invoice: [{ id: 'i', type: 'paymentSchedule', locked: true }],
       contract: [{ id: 'c', type: 'contractBody', locked: true }],
@@ -65,6 +65,7 @@ describe('repairAllSurfaces', () => {
       vendorTimeline: [{ id: 'vt', type: 'vendorTimelineBody', locked: true }],
       questionnaire: [{ id: 'q', type: 'questionnaireAllOnePage', locked: true }],
       lead: [{ id: 'l', type: 'formSubmit', locked: true, label: 'Send', successMessage: 'Thanks' }],
+      proposal: [{ id: 'p', type: 'packages', locked: true, heading: 'Your options', layout: 'cards', showInclusions: true, ctaLabel: 'Choose this package' }],
     }
     const result = repairAllSurfaces(input)
     expect(Object.keys(result).sort()).toEqual([
@@ -72,6 +73,7 @@ describe('repairAllSurfaces', () => {
       'invoice',
       'lead',
       'portal',
+      'proposal',
       'questionnaire',
       'vendorTimeline',
     ])

@@ -1,9 +1,11 @@
 import { DesignSystemNav } from './design-system-nav';
+import { EditorPrimitives } from './editor-primitives';
 import { SectionComposites } from './section-composites';
 import { SectionForms } from './section-forms';
 import { SectionFoundations } from './section-foundations';
 import { SectionPatterns } from './section-patterns';
 import { SectionPrimitives } from './section-primitives';
+import { Section } from './showroom';
 
 /**
  * The Zebri design system.
@@ -45,6 +47,13 @@ export default function DesignSystemPage() {
         <SectionPrimitives />
         <SectionForms />
         <SectionPatterns />
+        <Section
+          id="editor-primitives"
+          title="Editor primitives"
+          description="components/editor/: the toolbar controls, position picker, select, slider, numeric stepper and zoomable canvas frame the Branding editor and the proposal section editor both build on."
+        >
+          <EditorPrimitives />
+        </Section>
         <SectionComposites />
       </main>
     </div>

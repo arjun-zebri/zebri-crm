@@ -16,8 +16,6 @@
 import { Calendar, DollarSign, Hash, ListChecks, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { Invoice, Contract } from './use-payments-data';
-
 const COL_WIDTHS = {
   number: '11%',
   title: '26%',
@@ -44,14 +42,16 @@ export interface PaymentsRow {
   mobileSecondary: ReactNode;
 }
 
-/** Domain types that can populate this table. */
-export type PaymentsTableItem = Invoice | Contract;
+/** Any row type with an `id`; each list maps its own domain type to `PaymentsRow`. */
+export type PaymentsTableItem = { id: string };
 
 export interface PaymentsTableProps<T extends PaymentsTableItem> {
   loading: boolean;
   rows: T[];
   emptyIcon: ReactNode;
   emptyMessage: string;
+  /** Optional call-to-action rendered under the empty message (e.g. a "New" button), instead of naming a specific header control in the message text. */
+  emptyAction?: ReactNode;
   valueColLabel: string;
   valueColIcon: ReactNode;
   lastColLabel: string;
@@ -81,6 +81,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
   rows,
   emptyIcon,
   emptyMessage,
+  emptyAction,
   valueColLabel,
   valueColIcon,
   lastColLabel,
@@ -92,6 +93,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
       <div className="py-16 text-center">
         {emptyIcon}
         <p className="text-body text-text-subtle">{emptyMessage}</p>
+        {emptyAction ? <div className="mt-3">{emptyAction}</div> : null}
       </div>
     );
   }

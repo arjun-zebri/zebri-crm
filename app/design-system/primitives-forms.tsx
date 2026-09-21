@@ -54,7 +54,10 @@ export function PrimitivesForms() {
           <code>button</code> the hand cursor, including raw ones this primitive does not own.
           Reach for <code>shape=&quot;pill&quot;</code> only when the button floats free of the
           layout, like the assistant dock; a pill sitting in a form row next to an input reads as a
-          third radius the system does not have.
+          third radius the system does not have. There is no <code>asChild</code> or{' '}
+          <code>href</code> prop, so a <code>next/link</code> <code>Link</code> that must look like
+          a button imports <code>buttonClassName()</code> from the same module instead of
+          hand-copying these classes.
         </Rule>
         <div className="space-y-6">
           <Demo label="Variants">

@@ -30,6 +30,7 @@ export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
   vendorTimeline: ['vendorTimelineBody'],
   questionnaire: ['questionnaireOneAtATime', 'questionnaireAllOnePage'],
   lead: ['formField', 'formSubmit'],
+  proposal: ['hero', 'introNote', 'aboutMe', 'howItWorks', 'packages', 'video', 'gallery', 'testimonials', 'faq', 'accept'],
 }
 
 /**

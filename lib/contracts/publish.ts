@@ -43,6 +43,11 @@ export interface PublishOptions {
   /** Captured server-side for the countersignature's audit fields. */
   ip?: string | null
   userAgent?: string | null
+  /**
+   * Set when the contract was generated from an accepted proposal. Fills
+   * `package_name` / `total_amount` / `deposit_amount`.
+   */
+  proposalVars?: { packageName: string; total: number; deposit: number } | null
 }
 
 export type PublishResult =
@@ -74,6 +79,11 @@ export async function publishContractSnapshot(
     )
     .eq('id', contractId)
     .eq('user_id', user.id)
+    // Drafts only, by construction: a sent or signed contract's snapshot is
+    // what was (or will be) signed, so re-rendering it here would rewrite the
+    // agreed text and the countersignature. Every caller (the builder's save,
+    // the send route, the proposal accept route) only ever means a draft.
+    .eq('status', 'draft')
     .single()
 
   if (!contract) return { ok: false, reason: 'not_found' }
@@ -99,6 +109,7 @@ export async function publishContractSnapshot(
     firstEvent: firstEvent ?? null,
     userMeta: user.user_metadata ?? {},
     userEmail: user.email ?? null,
+    proposal: options.proposalVars ?? null,
   })
 
   const content = contract.content as unknown as Parameters<typeof renderContractHtml>[0]

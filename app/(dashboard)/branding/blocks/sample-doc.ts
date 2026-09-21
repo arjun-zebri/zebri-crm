@@ -9,6 +9,7 @@
  */
 
 import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
+import { SAMPLE_PROPOSAL_DOC } from '@/lib/proposals/sample-proposal'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
@@ -115,4 +116,5 @@ export const SAMPLE_DOC_BY_SURFACE: Record<SurfaceTab, PublicDocData> = {
   vendorTimeline: sampleVendorTimelineDoc(),
   questionnaire: sampleQuestionnaireDoc(),
   lead: sampleLeadDoc(),
+  proposal: SAMPLE_PROPOSAL_DOC,
 }

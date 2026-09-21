@@ -35,6 +35,18 @@ describe('sanitizeRichHtml — allowed content', () => {
     expect(sanitizeRichHtml('<span data-variable="evil"></span>')).toBe('<span></span>')
   })
 
+  it('keeps a chip fallback, escaped, and drops one over 200 characters', () => {
+    expect(sanitizeRichHtml('<span data-variable="couple_name" data-fallback="you &amp; me"></span>')).toBe(
+      '<span data-variable="couple_name" data-fallback="you &amp; me"></span>',
+    )
+    expect(sanitizeRichHtml('<span data-variable="couple_name" data-fallback="a<b"></span>')).toBe(
+      '<span data-variable="couple_name" data-fallback="a&lt;b"></span>',
+    )
+    expect(sanitizeRichHtml(`<span data-variable="couple_name" data-fallback="${'x'.repeat(201)}"></span>`)).toBe(
+      '<span data-variable="couple_name"></span>',
+    )
+  })
+
   it('keeps a text-align on a paragraph', () => {
     expect(sanitizeRichHtml('<p style="text-align:center">x</p>')).toBe(
       '<p style="text-align:center">x</p>',
@@ -89,6 +101,12 @@ describe('sanitizeRichHtml — attacks are neutralised', () => {
 
   it('escapes stray angle brackets in text', () => {
     expect(sanitizeRichHtml('1 < 2 && 3 > 2')).toBe('1 &lt; 2 &amp;&amp; 3 &gt; 2')
+  })
+
+  it('leaves entities the HTML generator already wrote alone', () => {
+    // The input is generateHTML output, whose text is already escaped; escaping
+    // it again showed "Anna &amp; Jake" literally on the public page.
+    expect(sanitizeRichHtml('<p>Anna &amp; Jake &lt;3 &#39;ok&#39; &#x27;</p>')).toBe('<p>Anna &amp; Jake &lt;3 &#39;ok&#39; &#x27;</p>')
   })
 })
 

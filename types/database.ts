@@ -1019,6 +1019,7 @@ export type Database = {
           locked_content_html: string | null
           mc_signature_name: string | null
           notes: string | null
+          proposal_id: string | null
           reminder_count: number
           require_signer_otp: boolean
           share_token: string
@@ -1052,6 +1053,7 @@ export type Database = {
           locked_content_html?: string | null
           mc_signature_name?: string | null
           notes?: string | null
+          proposal_id?: string | null
           reminder_count?: number
           require_signer_otp?: boolean
           share_token?: string
@@ -1085,6 +1087,7 @@ export type Database = {
           locked_content_html?: string | null
           mc_signature_name?: string | null
           notes?: string | null
+          proposal_id?: string | null
           reminder_count?: number
           require_signer_otp?: boolean
           share_token?: string
@@ -1105,6 +1108,48 @@ export type Database = {
             foreignKeyName: "contracts_couple_id_fkey"
             columns: ["couple_id"]
             isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couple_briefs: {
+        Row: {
+          brief: string
+          couple_id: string
+          open_items: Json
+          source_meeting_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brief: string
+          couple_id: string
+          open_items?: Json
+          source_meeting_ids?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brief?: string
+          couple_id?: string
+          open_items?: Json
+          source_meeting_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_briefs_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: true
             referencedRelation: "couples"
             referencedColumns: ["id"]
           },
@@ -1660,6 +1705,7 @@ export type Database = {
       }
       events: {
         Row: {
+          ceremony_time: string | null
           couple_id: string
           created_at: string
           date: string
@@ -1668,6 +1714,7 @@ export type Database = {
           drive_time_from_home_seconds: number | null
           drive_time_to_next_event_seconds: number | null
           event_type: string
+          guest_count: number | null
           id: string
           share_token: string | null
           share_token_enabled: boolean
@@ -1682,6 +1729,7 @@ export type Database = {
           venue_website: string | null
         }
         Insert: {
+          ceremony_time?: string | null
           couple_id: string
           created_at?: string
           date: string
@@ -1690,6 +1738,7 @@ export type Database = {
           drive_time_from_home_seconds?: number | null
           drive_time_to_next_event_seconds?: number | null
           event_type?: string
+          guest_count?: number | null
           id?: string
           share_token?: string | null
           share_token_enabled?: boolean
@@ -1704,6 +1753,7 @@ export type Database = {
           venue_website?: string | null
         }
         Update: {
+          ceremony_time?: string | null
           couple_id?: string
           created_at?: string
           date?: string
@@ -1712,6 +1762,7 @@ export type Database = {
           drive_time_from_home_seconds?: number | null
           drive_time_to_next_event_seconds?: number | null
           event_type?: string
+          guest_count?: number | null
           id?: string
           share_token?: string | null
           share_token_enabled?: boolean
@@ -1968,6 +2019,7 @@ export type Database = {
           notes: string | null
           paid_at: string | null
           payment_terms: string | null
+          proposal_id: string | null
           share_token: string
           share_token_enabled: boolean
           status: string
@@ -1992,6 +2044,7 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
+          proposal_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -2016,6 +2069,7 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
+          proposal_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -2039,6 +2093,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -2075,6 +2136,246 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      meeting_checklists: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          items: string[]
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          items?: string[]
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          items?: string[]
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meeting_consents: {
+        Row: {
+          accepted_at: string
+          id: string
+          meeting_id: string
+          name: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          meeting_id: string
+          name: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          meeting_id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_consents_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_notes: {
+        Row: {
+          decisions: Json
+          edited_at: string | null
+          edited_sections: string[]
+          generated_at: string
+          id: string
+          key_details: Json
+          meeting_id: string
+          open_questions: Json
+          personal_notes: Json
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          decisions?: Json
+          edited_at?: string | null
+          edited_sections?: string[]
+          generated_at?: string
+          id?: string
+          key_details?: Json
+          meeting_id: string
+          open_questions?: Json
+          personal_notes?: Json
+          summary: string
+          user_id: string
+        }
+        Update: {
+          decisions?: Json
+          edited_at?: string | null
+          edited_sections?: string[]
+          generated_at?: string
+          id?: string
+          key_details?: Json
+          meeting_id?: string
+          open_questions?: Json
+          personal_notes?: Json
+          summary?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_notes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_proposals: {
+        Row: {
+          applied_target_id: string | null
+          applied_value: Json | null
+          couple_id: string
+          created_at: string
+          current_value: Json | null
+          error: string | null
+          field: string | null
+          id: string
+          kind: string
+          meeting_id: string
+          op: string
+          position: number
+          proposed_value: Json | null
+          resolved_at: string | null
+          status: string
+          target_id: string | null
+          target_label: string
+          user_id: string
+        }
+        Insert: {
+          applied_target_id?: string | null
+          applied_value?: Json | null
+          couple_id: string
+          created_at?: string
+          current_value?: Json | null
+          error?: string | null
+          field?: string | null
+          id?: string
+          kind: string
+          meeting_id: string
+          op: string
+          position?: number
+          proposed_value?: Json | null
+          resolved_at?: string | null
+          status?: string
+          target_id?: string | null
+          target_label: string
+          user_id: string
+        }
+        Update: {
+          applied_target_id?: string | null
+          applied_value?: Json | null
+          couple_id?: string
+          created_at?: string
+          current_value?: Json | null
+          error?: string | null
+          field?: string | null
+          id?: string
+          kind?: string
+          meeting_id?: string
+          op?: string
+          position?: number
+          proposed_value?: Json | null
+          resolved_at?: string | null
+          status?: string
+          target_id?: string | null
+          target_label?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_proposals_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_proposals_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_transcript_segments: {
+        Row: {
+          created_at: string
+          end_ms: number
+          id: string
+          meeting_id: string
+          position: number
+          search: unknown
+          speaker_label: string
+          speaker_name: string | null
+          start_ms: number
+          text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_ms: number
+          id?: string
+          meeting_id: string
+          position: number
+          search?: unknown
+          speaker_label: string
+          speaker_name?: string | null
+          start_ms: number
+          text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_ms?: number
+          id?: string
+          meeting_id?: string
+          position?: number
+          search?: unknown
+          speaker_label?: string
+          speaker_name?: string | null
+          start_ms?: number
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_transcript_segments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meeting_type_availability_rules: {
         Row: {
@@ -2177,6 +2478,7 @@ export type Database = {
       meetings: {
         Row: {
           booking_id: string | null
+          checklist: Json | null
           consent_accepted_at: string | null
           consent_name: string | null
           couple_id: string
@@ -2187,14 +2489,17 @@ export type Database = {
           id: string
           input_tokens: number | null
           join_token: string
+          link_sent_at: string | null
           model: string | null
           output_tokens: number | null
           pipeline_attempts: number
           pipeline_error: string | null
           pipeline_step: string
           pipeline_updated_at: string
+          proposals_error: string | null
+          proposals_status: string
           provider: string
-          provider_room_name: string
+          provider_room_name: string | null
           provider_room_url: string | null
           recording_id: string | null
           recording_kept: boolean
@@ -2209,6 +2514,7 @@ export type Database = {
         }
         Insert: {
           booking_id?: string | null
+          checklist?: Json | null
           consent_accepted_at?: string | null
           consent_name?: string | null
           couple_id: string
@@ -2219,14 +2525,17 @@ export type Database = {
           id?: string
           input_tokens?: number | null
           join_token: string
+          link_sent_at?: string | null
           model?: string | null
           output_tokens?: number | null
           pipeline_attempts?: number
           pipeline_error?: string | null
           pipeline_step?: string
           pipeline_updated_at?: string
+          proposals_error?: string | null
+          proposals_status?: string
           provider?: string
-          provider_room_name: string
+          provider_room_name?: string | null
           provider_room_url?: string | null
           recording_id?: string | null
           recording_kept?: boolean
@@ -2241,6 +2550,7 @@ export type Database = {
         }
         Update: {
           booking_id?: string | null
+          checklist?: Json | null
           consent_accepted_at?: string | null
           consent_name?: string | null
           couple_id?: string
@@ -2251,14 +2561,17 @@ export type Database = {
           id?: string
           input_tokens?: number | null
           join_token?: string
+          link_sent_at?: string | null
           model?: string | null
           output_tokens?: number | null
           pipeline_attempts?: number
           pipeline_error?: string | null
           pipeline_step?: string
           pipeline_updated_at?: string
+          proposals_error?: string | null
+          proposals_status?: string
           provider?: string
-          provider_room_name?: string
+          provider_room_name?: string | null
           provider_room_url?: string | null
           recording_id?: string | null
           recording_kept?: boolean
@@ -2287,6 +2600,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      onboarding_progress: {
+        Row: {
+          business_types: string[]
+          checklist_dismissed_at: string | null
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          milestones: Json
+          seen_intros: Json
+          skipped_at: string | null
+          skipped_at_step: number | null
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_types?: string[]
+          checklist_dismissed_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          milestones?: Json
+          seen_intros?: Json
+          skipped_at?: string | null
+          skipped_at_step?: number | null
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_types?: string[]
+          checklist_dismissed_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          milestones?: Json
+          seen_intros?: Json
+          skipped_at?: string | null
+          skipped_at_step?: number | null
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       package_categories: {
         Row: {
@@ -2676,6 +3034,394 @@ export type Database = {
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_events: {
+        Row: {
+          client_event_id: string
+          created_at: string
+          id: string
+          payload: Json
+          proposal_id: string
+          session_id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          client_event_id?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          proposal_id: string
+          session_id: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          client_event_id?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          proposal_id?: string
+          session_id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_option_items: {
+        Row: {
+          amount: number
+          created_at: string
+          default_included: boolean
+          description: string
+          id: string
+          is_addon: boolean
+          note: string | null
+          option_id: string
+          position: number
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          default_included?: boolean
+          description: string
+          id?: string
+          is_addon?: boolean
+          note?: string | null
+          option_id: string
+          position: number
+          quantity?: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          default_included?: boolean
+          description?: string
+          id?: string
+          is_addon?: boolean
+          note?: string | null
+          option_id?: string
+          position?: number
+          quantity?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_option_items_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_options: {
+        Row: {
+          created_at: string
+          description: string | null
+          fixed_price: number | null
+          gst_inclusive: boolean
+          id: string
+          is_popular: boolean
+          position: number
+          pricing_mode: string
+          proposal_id: string
+          source_package_id: string | null
+          subtotal: number
+          title: string
+          user_id: string
+          weekend_loading_percent: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          fixed_price?: number | null
+          gst_inclusive?: boolean
+          id?: string
+          is_popular?: boolean
+          position: number
+          pricing_mode?: string
+          proposal_id: string
+          source_package_id?: string | null
+          subtotal?: number
+          title: string
+          user_id: string
+          weekend_loading_percent?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          fixed_price?: number | null
+          gst_inclusive?: boolean
+          id?: string
+          is_popular?: boolean
+          position?: number
+          pricing_mode?: string
+          proposal_id?: string
+          source_package_id?: string | null
+          subtotal?: number
+          title?: string
+          user_id?: string
+          weekend_loading_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_options_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_options_source_package_id_fkey"
+            columns: ["source_package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_settings: {
+        Row: {
+          allow_download: boolean
+          deposit_percent: number
+          expiry_days: number
+          link_preview: Json | null
+          password_enabled: boolean
+          section_nav: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allow_download?: boolean
+          deposit_percent?: number
+          expiry_days?: number
+          link_preview?: Json | null
+          password_enabled?: boolean
+          section_nav?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allow_download?: boolean
+          deposit_percent?: number
+          expiry_days?: number
+          link_preview?: Json | null
+          password_enabled?: boolean
+          section_nav?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      proposal_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          layout: Json
+          name: string
+          revision: number
+          settings: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          layout: Json
+          name: string
+          revision?: number
+          settings?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          layout?: Json
+          name?: string
+          revision?: number
+          settings?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          accepted_addon_selection: Json | null
+          accepted_at: string | null
+          accepted_option_id: string | null
+          contract_id: string | null
+          contract_template_id: string | null
+          couple_id: string
+          created_at: string
+          declined_at: string | null
+          declined_message: string | null
+          declined_reason: string | null
+          deposit_percent: number | null
+          email_sent_at: string | null
+          event_id: string | null
+          expires_at: string | null
+          first_viewed_at: string | null
+          hero_override: Json | null
+          id: string
+          intro_note: Json | null
+          invoice_id: string | null
+          last_viewed_at: string | null
+          layout: Json | null
+          payment_schedule_id: string | null
+          proposal_number: string
+          share_token: string
+          share_token_enabled: boolean
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          version: number
+          view_count: number
+        }
+        Insert: {
+          accepted_addon_selection?: Json | null
+          accepted_at?: string | null
+          accepted_option_id?: string | null
+          contract_id?: string | null
+          contract_template_id?: string | null
+          couple_id: string
+          created_at?: string
+          declined_at?: string | null
+          declined_message?: string | null
+          declined_reason?: string | null
+          deposit_percent?: number | null
+          email_sent_at?: string | null
+          event_id?: string | null
+          expires_at?: string | null
+          first_viewed_at?: string | null
+          hero_override?: Json | null
+          id?: string
+          intro_note?: Json | null
+          invoice_id?: string | null
+          last_viewed_at?: string | null
+          layout?: Json | null
+          payment_schedule_id?: string | null
+          proposal_number: string
+          share_token?: string
+          share_token_enabled?: boolean
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          version?: number
+          view_count?: number
+        }
+        Update: {
+          accepted_addon_selection?: Json | null
+          accepted_at?: string | null
+          accepted_option_id?: string | null
+          contract_id?: string | null
+          contract_template_id?: string | null
+          couple_id?: string
+          created_at?: string
+          declined_at?: string | null
+          declined_message?: string | null
+          declined_reason?: string | null
+          deposit_percent?: number | null
+          email_sent_at?: string | null
+          event_id?: string | null
+          expires_at?: string | null
+          first_viewed_at?: string | null
+          hero_override?: Json | null
+          id?: string
+          intro_note?: Json | null
+          invoice_id?: string | null
+          last_viewed_at?: string | null
+          layout?: Json | null
+          payment_schedule_id?: string | null
+          proposal_number?: string
+          share_token?: string
+          share_token_enabled?: boolean
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_accepted_option_id_fkey"
+            columns: ["accepted_option_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_contract_template_id_fkey"
+            columns: ["contract_template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_payment_schedule_id_fkey"
+            columns: ["payment_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -3094,29 +3840,38 @@ export type Database = {
       }
       user_branding: {
         Row: {
+          blocks_proposal_v1_backup: Json | null
+          blocks_proposal_v1_backup_at: string | null
           brand_kits: Json
           branding_blocks: Json | null
           enabled_surfaces: Json
           onboarded_at: string | null
           portal_sections: Json | null
+          proposal_role: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          blocks_proposal_v1_backup?: Json | null
+          blocks_proposal_v1_backup_at?: string | null
           brand_kits?: Json
           branding_blocks?: Json | null
           enabled_surfaces?: Json
           onboarded_at?: string | null
           portal_sections?: Json | null
+          proposal_role?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          blocks_proposal_v1_backup?: Json | null
+          blocks_proposal_v1_backup_at?: string | null
           brand_kits?: Json
           branding_blocks?: Json | null
           enabled_surfaces?: Json
           onboarded_at?: string | null
           portal_sections?: Json | null
+          proposal_role?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -3125,16 +3880,19 @@ export type Database = {
       user_meeting_settings: {
         Row: {
           keep_audio: boolean
+          minutes_alerted_on: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           keep_audio?: boolean
+          minutes_alerted_on?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           keep_audio?: boolean
+          minutes_alerted_on?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -3763,6 +4521,7 @@ export type Database = {
       }
       _contract_strip_money_mentions: { Args: { node: Json }; Returns: Json }
       _contract_tokenise_role: { Args: { node: Json }; Returns: Json }
+      _invoke_cron_route: { Args: { p_path: string }; Returns: undefined }
       _ip_prefix: { Args: { p_ip: string }; Returns: string }
       _owns_contract: { Args: { p_contract_id: string }; Returns: boolean }
       _owns_couple_or_null: { Args: { p_couple_id: string }; Returns: boolean }
@@ -3774,6 +4533,8 @@ export type Database = {
         Args: { p_package_id: string }
         Returns: boolean
       }
+      _owns_proposal: { Args: { p_proposal_id: string }; Returns: boolean }
+      _owns_proposal_option: { Args: { p_option_id: string }; Returns: boolean }
       _owns_workflow_template_or_null: {
         Args: { p_template_id: string }
         Returns: boolean
@@ -3814,6 +4575,10 @@ export type Database = {
       }
       accept_meeting_consent: {
         Args: { p_name: string; p_token: string }
+        Returns: Json
+      }
+      accept_proposal: {
+        Args: { p_addon_selection?: Json; p_option_id: string; p_token: string }
         Returns: Json
       }
       admin_user_last_seen: {
@@ -3866,6 +4631,10 @@ export type Database = {
         Args: { p_payload: Json; p_token: string }
         Returns: Json
       }
+      decline_proposal: {
+        Args: { p_message?: string; p_reason: string; p_token: string }
+        Returns: Json
+      }
       delete_portal_file: {
         Args: { p_id: string; p_token: string }
         Returns: undefined
@@ -3916,12 +4685,18 @@ export type Database = {
         Returns: string
       }
       expire_contracts: { Args: never; Returns: string[] }
+      expire_proposals: { Args: never; Returns: string[] }
       fail_signer_otp: {
         Args: { p_max_attempts: number; p_otp_id: string }
         Returns: Json
       }
+      finalize_proposal_acceptance: {
+        Args: { p_invoice: Json; p_token: string }
+        Returns: Json
+      }
       generate_contract_number: { Args: { p_user_id: string }; Returns: string }
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
+      generate_proposal_number: { Args: { p_user_id: string }; Returns: string }
       get_booking_by_manage_token: { Args: { token: string }; Returns: Json }
       get_lead_form: { Args: { token: string }; Returns: Json }
       get_meeting_join: { Args: { p_token: string }; Returns: Json }
@@ -3932,6 +4707,8 @@ export type Database = {
       get_public_booking_page: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
       get_public_invoice: { Args: { token: string }; Returns: Json }
+      get_public_proposal: { Args: { token: string }; Returns: Json }
+      get_public_proposal_layout: { Args: { token: string }; Returns: Json }
       get_public_questionnaire: { Args: { token: string }; Returns: Json }
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }
@@ -3962,6 +4739,10 @@ export type Database = {
           p_actor_user_agent?: string
           token: string
         }
+        Returns: Json
+      }
+      record_proposal_events: {
+        Args: { p_events: Json; p_session_id: string; p_token: string }
         Returns: Json
       }
       reschedule_booking: {
@@ -4134,7 +4915,23 @@ export type Database = {
         Args: { p_responses: Json; token: string }
         Returns: Json
       }
+      toggle_meeting_checklist_item: {
+        Args: { p_done: boolean; p_item_id: string; p_meeting_id: string }
+        Returns: Json
+      }
       verify_contract_hash: { Args: { p_hash: string }; Returns: Json }
+      write_meeting_results: {
+        Args: {
+          p_decisions: Json
+          p_edited_sections?: string[]
+          p_key_details: Json
+          p_meeting_id: string
+          p_open_questions: Json
+          p_personal_notes: Json
+          p_summary: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -4153,12 +4950,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4182,11 +4979,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4207,11 +5004,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4232,11 +5029,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4249,11 +5046,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

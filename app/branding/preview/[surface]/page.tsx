@@ -35,11 +35,13 @@ import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 import { DEFAULT_VENDOR_ROLE } from '@/lib/branding/vendor-role'
 import type { Answer, Question, Responses } from '@/lib/questionnaires/question-schema'
 
+import { ProposalPreview } from './proposal-preview'
+
 /**
  * Validates a surface string and returns true if it is a valid BuilderSurface.
  */
-function isValidSurface(s: unknown): s is 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' {
-  return s === 'invoice' || s === 'contract' || s === 'portal' || s === 'vendorTimeline' || s === 'questionnaire'
+function isValidSurface(s: unknown): s is 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'proposal' {
+  return s === 'invoice' || s === 'contract' || s === 'portal' || s === 'vendorTimeline' || s === 'questionnaire' || s === 'proposal'
 }
 
 /**
@@ -108,7 +110,7 @@ export default function BrandingPreviewPage() {
 /**
  * Content renderer for a valid surface.
  */
-function PreviewContent({ surface }: { surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' }) {
+function PreviewContent({ surface }: { surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'proposal' }) {
   const { branding, blocks: savedBlocks, loading } = useCurrentBranding(surface)
   useBrandingHead(branding)
 
@@ -160,6 +162,12 @@ function PreviewContent({ surface }: { surface: 'invoice' | 'contract' | 'portal
 
   if (surface === 'questionnaire') {
     return <QuestionnairePreview branding={branding} blocks={savedBlocks} pageStyle={pageStyle} />
+  }
+
+  if (surface === 'proposal') {
+    // No pageStyle/DOC_CANVAS_BG wrapper here: the page frame owns its own
+    // full-page background and text colour (see ProposalPreview).
+    return <ProposalPreview branding={branding} blocks={savedBlocks} />
   }
 
   return null

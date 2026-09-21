@@ -82,6 +82,63 @@ const eslintConfig = defineConfig([
               group: ["@/components/*", "@/components/**"],
               message: "lib/ must not import React components.",
             },
+            {
+              group: ["@/features/*", "@/features/**"],
+              message: "lib/ must not depend on a feature.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // Feature boundary (spec D8): a feature is a lego brick with one public
+  // face. Outside code may import `@/features/proposals` and nothing deeper;
+  // inside code may not reach into app/ (the branding editor in particular)
+  // or into another feature. `error`, not `warn`: a new rule with zero
+  // violations should stay at zero.
+  {
+    files: ["**/*.{ts,tsx}"],
+    ignores: ["features/proposals/**", "lib/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/features/proposals/*", "@/features/proposals/**", "**/features/proposals/*/**"],
+              message: "Import from '@/features/proposals' (the module's index), never from inside it.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["features/proposals/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              // Temporary carve-out (removed in Phase 3): the v1 block types, defaults
+              // and role starters, which the migration and presets derive from.
+              regex: "^@/app/(?!\\(dashboard\\)/branding/blocks/(types|defaults|proposal-starters)$)",
+              message: "features/proposals must not import from app/. Move shared code to lib/ or components/.",
+            },
+            {
+              // Same boundary as above, closed against a relative path style
+              // (`../../app/...`) bypassing the `@/app/...` regex above. No
+              // carve-out here: the three allowed files are always imported
+              // with the `@/app/...` absolute specifier, never a relative one.
+              regex: "^\\.{1,2}/.*app/",
+              message: "features/proposals must not import from app/. Move shared code to lib/ or components/.",
+            },
+            {
+              group: ["@/features/*", "!@/features/proposals", "!@/features/proposals/**"],
+              message: "A feature must not import another feature's internals.",
+            },
           ],
         },
       ],

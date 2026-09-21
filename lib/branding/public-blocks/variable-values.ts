@@ -52,6 +52,10 @@ export function buildVariableValues(
     // Document number (surface-specific ids share the generic ref field)
     invoice_number: formatVariableValue('text', refNumber),
     contract_number: formatVariableValue('text', refNumber),
+    proposal_number: formatVariableValue('text', refNumber),
+    // Proposal-only: the accept block's deposit line. Empty when the
+    // proposal has no deposit percent set (invoiced in full).
+    deposit_percent: doc.proposal?.depositPercent != null ? `${doc.proposal.depositPercent}%` : '',
     // Document date (due / expiry share the generic expiresAt field)
     due_date: formatVariableValue('date', dateValue),
     expiry_date: formatVariableValue('date', dateValue),

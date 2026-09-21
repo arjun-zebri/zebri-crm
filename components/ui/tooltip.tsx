@@ -77,7 +77,12 @@ export function Tooltip({ label, shortcut, side = 'bottom', multiline = false, c
       {open && position && typeof document !== 'undefined' && createPortal(
         <span
           role="tooltip"
-          className={`pointer-events-none fixed z-[140] px-2 py-1 rounded-control bg-gray-900 text-white text-body font-medium shadow-lg ${
+          // `animate-fade-in` only ever touches `opacity` (see its
+          // `@keyframes` in globals.css), never `transform` - safe to
+          // combine with the static centring transform below, which an
+          // animation that also set `transform` would otherwise clobber
+          // for the animation's duration.
+          className={`pointer-events-none fixed z-[140] animate-fade-in rounded-control bg-text px-2 py-1 text-body font-medium text-text-inverse shadow-lg ${
             multiline ? 'whitespace-pre-line text-left' : 'whitespace-nowrap'
           } ${side === 'top' ? '-translate-x-1/2 -translate-y-full' : '-translate-x-1/2'}`}
           style={{

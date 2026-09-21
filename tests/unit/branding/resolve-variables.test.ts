@@ -17,6 +17,18 @@ describe('resolveVariablesInHtml', () => {
     expect(resolveVariablesInHtml(html, {})).not.toContain('{{')
   })
 
+  it('renders the chip fallback when the value is empty, and the value when it is not', () => {
+    const html = 'Hi <span data-variable="couple_name" data-fallback="you two"></span>!'
+    expect(resolveVariablesInHtml(html, {})).toBe('Hi you two!')
+    expect(resolveVariablesInHtml(html, { couple_name: '' })).toBe('Hi you two!')
+    expect(resolveVariablesInHtml(html, { couple_name: 'Ada & Bo' })).toBe('Hi Ada &amp; Bo!')
+  })
+
+  it('escapes a fallback and decodes entities the serialiser put in the attribute', () => {
+    const html = '<span data-fallback="&lt;b&gt; &amp; you" data-variable="couple_name"></span>'
+    expect(resolveVariablesInHtml(html, {})).toBe('&lt;b&gt; &amp; you')
+  })
+
   it('leaves marks wrapping the chip intact so the value inherits formatting', () => {
     const html = '<strong style="color:#900"><span data-variable="couple_name"></span></strong>'
     expect(resolveVariablesInHtml(html, { couple_name: 'Ada' })).toBe(

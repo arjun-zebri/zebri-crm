@@ -15,6 +15,9 @@ const base = {
 
 describe('contract variables after proposal removal', () => {
   it('offers exactly the surviving variables plus the vendor role', () => {
+    // Phase C re-adds the three proposal-money variables (see
+    // `tests/unit/lib/contracts/contract-variables-proposal.test.ts`); they
+    // are appended at the end so the ids above stay in their original order.
     expect(CONTRACT_VARIABLES.map((v) => v.id)).toEqual([
       'couple_name',
       'couple_email',
@@ -31,6 +34,9 @@ describe('contract variables after proposal removal', () => {
       'mc_address',
       'mc_signature_name',
       'today',
+      'package_name',
+      'total_amount',
+      'deposit_amount',
     ])
   })
 
@@ -47,10 +53,14 @@ describe('contract variables after proposal removal', () => {
     expect(vars.mc_business_name).toBe('Zebri MC')
   })
 
-  it('no longer exposes proposal-derived money variables', () => {
+  it('dashes the proposal-derived money variables on a manual contract', () => {
+    // Phase C: these resolve from an accepted proposal (see the dedicated
+    // proposal-variables test file); a manual contract has no proposal input
+    // and renders the dash placeholder, same as any other unset variable.
     const vars = buildContractVariables(base)
-    expect(vars).not.toHaveProperty('total_amount')
-    expect(vars).not.toHaveProperty('deposit_amount')
+    expect(vars.package_name).toBe('-')
+    expect(vars.total_amount).toBe('-')
+    expect(vars.deposit_amount).toBe('-')
   })
 
   it('renders a dash for missing couple/event fields', () => {
@@ -77,12 +87,15 @@ describe('findUnknownVariables', () => {
     expect(findUnknownVariables(body)).toEqual([])
   })
 
-  it('flags the money mentions that shipped in the seeded default template', () => {
+  it('flags mentions with no matching catalog entry', () => {
+    // `total_amount` / `deposit_amount` were unknown before Phase C (they
+    // shipped in the seeded default template ahead of the catalog entry);
+    // now that the catalog resolves them, this uses ids that stay unknown.
     const body = docOf(
-      para({ type: 'text', text: 'The Fee is ' }, mention('total_amount')),
-      para({ type: 'text', text: 'A deposit of ' }, mention('deposit_amount')),
+      para({ type: 'text', text: 'Guests: ' }, mention('guest_count')),
+      para({ type: 'text', text: 'Wifi: ' }, mention('wifi_password')),
     )
-    expect(findUnknownVariables(body)).toEqual(['total_amount', 'deposit_amount'])
+    expect(findUnknownVariables(body)).toEqual(['guest_count', 'wifi_password'])
   })
 
   it('finds mentions nested inside lists and de-duplicates them', () => {
@@ -99,10 +112,10 @@ describe('findUnknownVariables', () => {
   it('agrees with what renderContractHtml would actually emit', () => {
     // The guard exists precisely because the renderer falls back to the raw
     // token rather than failing, so the two must not drift apart.
-    const body = docOf(para({ type: 'text', text: 'Fee: ' }, mention('total_amount')))
+    const body = docOf(para({ type: 'text', text: 'Guests: ' }, mention('guest_count')))
     const html = renderContractHtml(body, buildContractVariables(base))
-    expect(html).toContain('{{total_amount}}')
-    expect(findUnknownVariables(body)).toEqual(['total_amount'])
+    expect(html).toContain('{{guest_count}}')
+    expect(findUnknownVariables(body)).toEqual(['guest_count'])
   })
 })
 

@@ -1,6 +1,8 @@
 'use client'
 
+import { Button } from '@/components/ui/button'
 import { ALL_SURFACE_TABS } from '@/lib/branding/enabled-surfaces'
+import { PROPOSAL_ROLES, PROPOSAL_ROLE_LABELS, type ProposalRole } from '@/lib/proposals/types'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
@@ -10,6 +12,9 @@ import type { SurfaceTab } from '@/types/branding-preview'
 interface StepDocumentsProps {
   enabledSurfaces: SurfaceTab[]
   setEnabledSurfaces: (v: SurfaceTab[]) => void
+  /** Which services the MC sells; only shown (as chips) while `proposal` is enabled. */
+  proposalRole: ProposalRole
+  setProposalRole: (v: ProposalRole) => void
 }
 
 /**
@@ -48,6 +53,10 @@ const SURFACES: Record<SurfaceTab, SurfaceDescription> = {
   lead: {
     label: 'Website form',
     description: 'A public enquiry form you embed on your own website',
+  },
+  proposal: {
+    label: 'Proposals',
+    description: 'A full-page proposal couples read, choose from, and accept',
   },
 }
 
@@ -92,27 +101,41 @@ export function StepDocuments(props: StepDocumentsProps) {
           const info = SURFACES[surface]
 
           return (
-            <label
+            <div
               key={surface}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-control border cursor-pointer transition ${
-                enabled
-                  ? 'border-border-strong bg-surface-muted'
-                  : 'border-border hover:border-border-strong'
+              className={`rounded-control border transition ${
+                enabled ? 'border-border-strong bg-surface-muted' : 'border-border hover:border-border-strong'
               }`}
             >
-              <input
-                type="checkbox"
-                checked={enabled}
-                onChange={() => toggleSurface(surface)}
-                disabled={isOnlyEnabled}
-                className="accent-black cursor-pointer disabled:opacity-50 disabled:cursor-default"
-                aria-label={info.label}
-              />
-              <div className="flex-1 min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-                <span className="text-body font-medium text-text shrink-0">{info.label}</span>
-                <span className="text-body text-text-muted">{info.description}</span>
-              </div>
-            </label>
+              <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={() => toggleSurface(surface)}
+                  disabled={isOnlyEnabled}
+                  className="accent-black cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                  aria-label={info.label}
+                />
+                <div className="flex-1 min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                  <span className="text-body font-medium text-text shrink-0">{info.label}</span>
+                  <span className="text-body text-text-muted">{info.description}</span>
+                </div>
+              </label>
+              {surface === 'proposal' && enabled && (
+                <div className="flex gap-2 px-3 pb-2.5 pl-9">
+                  {PROPOSAL_ROLES.map((role) => (
+                    <Button
+                      key={role}
+                      type="button"
+                      variant={props.proposalRole === role ? 'primary' : 'secondary'}
+                      onClick={() => props.setProposalRole(role)}
+                    >
+                      {PROPOSAL_ROLE_LABELS[role].label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
           )
         })}
       </div>

@@ -4,8 +4,13 @@
  * Verifies that deleting required blocks triggers the "Not ready to send" panel
  * with appropriate issue messages, and that re-adding the block clears the flag.
  *
- * Tests deletion and re-addition of Package totals (proposal surface) and
+ * Tests deletion and re-addition of the Accept CTA (proposal surface) and
  * Bank details + Pay CTA (invoice surface).
+ *
+ * The Accept CTA is the proposal's ONLY required block: the hero, personal
+ * note and packages blocks are all optional, since the accept stepper renders
+ * the option cards from the proposal's own data. See
+ * app/(dashboard)/branding/blocks/policy.ts.
  *
  * Requires the running app + deployed migration. Deferred: not executed in the authoring session.
  *
@@ -54,8 +59,8 @@ test.describe('Branding Editor - Readiness Flag', () => {
     await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible({ timeout: 10000 })
   })
 
-  test.describe('Proposal surface - Package totals block', () => {
-    test('deleting Package totals shows "Not ready to send" panel with issue message (desktop)', async ({ page }) => {
+  test.describe('Proposal surface - Accept CTA block', () => {
+    test('deleting the Accept CTA shows "Not ready to send" panel with issue message (desktop)', async ({ page }) => {
       page.setViewportSize({ width: 1280, height: 800 })
 
       const proposalTab = page.getByRole('button', { name: /^proposal$/i })
@@ -64,18 +69,12 @@ test.describe('Branding Editor - Readiness Flag', () => {
         await page.waitForTimeout(300)
       }
 
-      // Find and click the Package totals block
-      const blocks = await page.locator('[data-block-id]').all()
-      let blockFound = false
-
-      for (const block of blocks) {
-        const text = await block.textContent()
-        if (text && /package\s+totals?/i.test(text)) {
-          await block.click()
-          await page.waitForTimeout(200)
-          blockFound = true
-          break
-        }
+      // Find and click the Accept CTA block
+      const accept = page.locator('[data-block-type="accept"]').first()
+      const blockFound = await accept.isVisible().catch(() => false)
+      if (blockFound) {
+        await accept.click()
+        await page.waitForTimeout(200)
       }
 
       expect(blockFound).toBeTruthy()
@@ -86,16 +85,16 @@ test.describe('Branding Editor - Readiness Flag', () => {
       await deleteBtn.click()
       await page.waitForTimeout(300)
 
-      // Assert the "Not ready to send" panel appears with Package totals message
+      // Assert the "Not ready to send" panel appears naming the Accept block
       const panel = page.getByRole('heading', { name: 'Not ready to send' })
       await expect(panel).toBeVisible()
 
-      // Check for the issue message mentioning Package totals
-      const issueMessage = page.getByText(/package\s+totals?/i)
+      // Check for the issue message naming the Accept block
+      const issueMessage = page.getByText(/^accept$/i)
       await expect(issueMessage).toBeVisible()
     })
 
-    test('deleting Package totals shows flag on Pixel 5', async ({ page }) => {
+    test('deleting the Accept CTA shows flag on Pixel 5', async ({ page }) => {
       page.setViewportSize({ width: 412, height: 915 })
 
       const proposalTab = page.getByRole('button', { name: /^proposal$/i })
@@ -104,16 +103,10 @@ test.describe('Branding Editor - Readiness Flag', () => {
         await page.waitForTimeout(300)
       }
 
-      // Find and click the Package totals block
-      const blocks = await page.locator('[data-block-id]').all()
-      for (const block of blocks) {
-        const text = await block.textContent()
-        if (text && /package\s+totals?/i.test(text)) {
-          await block.click()
-          await page.waitForTimeout(200)
-          break
-        }
-      }
+      // Find and click the Accept CTA block
+      const accept = page.locator('[data-block-type="accept"]').first()
+      await accept.click()
+      await page.waitForTimeout(200)
 
       // Delete the block
       const deleteBtn = page.getByRole('button', { name: /delete block/i })
@@ -126,7 +119,7 @@ test.describe('Branding Editor - Readiness Flag', () => {
       await expect(panel).toBeVisible()
     })
 
-    test('deleting Package totals shows flag on iPhone 12', async ({ page }) => {
+    test('deleting the Accept CTA shows flag on iPhone 12', async ({ page }) => {
       page.setViewportSize({ width: 390, height: 844 })
 
       const proposalTab = page.getByRole('button', { name: /^proposal$/i })
@@ -135,16 +128,10 @@ test.describe('Branding Editor - Readiness Flag', () => {
         await page.waitForTimeout(300)
       }
 
-      // Find and click the Package totals block
-      const blocks = await page.locator('[data-block-id]').all()
-      for (const block of blocks) {
-        const text = await block.textContent()
-        if (text && /package\s+totals?/i.test(text)) {
-          await block.click()
-          await page.waitForTimeout(200)
-          break
-        }
-      }
+      // Find and click the Accept CTA block
+      const accept = page.locator('[data-block-type="accept"]').first()
+      await accept.click()
+      await page.waitForTimeout(200)
 
       // Delete the block
       const deleteBtn = page.getByRole('button', { name: /delete block/i })
@@ -157,7 +144,7 @@ test.describe('Branding Editor - Readiness Flag', () => {
       await expect(panel).toBeVisible()
     })
 
-    test('re-adding Package totals from palette clears the "Not ready to send" flag (desktop)', async ({ page }) => {
+    test('re-adding the Accept CTA from palette clears the "Not ready to send" flag (desktop)', async ({ page }) => {
       page.setViewportSize({ width: 1280, height: 800 })
 
       const proposalTab = page.getByRole('button', { name: /^proposal$/i })
@@ -166,18 +153,12 @@ test.describe('Branding Editor - Readiness Flag', () => {
         await page.waitForTimeout(300)
       }
 
-      // Find and click the Package totals block
-      const blocks = await page.locator('[data-block-id]').all()
-      let blockFound = false
-
-      for (const block of blocks) {
-        const text = await block.textContent()
-        if (text && /package\s+totals?/i.test(text)) {
-          await block.click()
-          await page.waitForTimeout(200)
-          blockFound = true
-          break
-        }
+      // Find and click the Accept CTA block
+      const accept = page.locator('[data-block-type="accept"]').first()
+      const blockFound = await accept.isVisible().catch(() => false)
+      if (blockFound) {
+        await accept.click()
+        await page.waitForTimeout(200)
       }
 
       expect(blockFound).toBeTruthy()
@@ -199,8 +180,8 @@ test.describe('Branding Editor - Readiness Flag', () => {
         await page.waitForTimeout(200)
       }
 
-      // Find Package totals in the palette and click it
-      const paletteItems = page.locator('[data-testid="palette-item"], button').filter({ has: page.getByText(/package\s+totals?/i) })
+      // Find the Accept block in the palette and click it
+      const paletteItems = page.locator('[data-testid="palette-item"], button').filter({ has: page.getByText(/^accept$/i) })
       if (await paletteItems.first().isVisible()) {
         await paletteItems.first().click()
         await page.waitForTimeout(300)

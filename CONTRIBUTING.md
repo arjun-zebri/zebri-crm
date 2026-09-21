@@ -36,6 +36,9 @@ app/                Next.js App Router. Pages are orchestrators only.
   timeline/
 components/
   ui/               Shared UI primitives (Button, Modal, Toast, …).
+  editor/           Toolbar + canvas primitives shared by the Branding
+                    editor and the proposal section editor (Proposal
+                    Layout v2 Phase 2). Never imports features/ or app/.
   <feature>/        Shared composite feature components,
                     e.g. components/builders/ (Quote/Invoice/Contract modals).
 types/              Shared domain/entity types (see rule below).
@@ -97,6 +100,42 @@ It also contains a **live route** (`events/[id]/timeline/page.tsx` →
 decision, not a pure structural move, and is **deferred to the Events
 page-hardening phase** (needs the Phase 0.3 test net + a decision on whether
 that URL moves under `/couples`). See roadmap §7.
+
+---
+
+## Feature modules
+
+A **feature module** (`features/<name>/`) is a self-contained lego
+brick with exactly one public face: `features/<name>/index.ts`. It
+exists for a feature large enough to have its own internal layers
+(model, render, data) but that the rest of the app should only ever
+touch through a narrow, intentional API.
+
+`features/proposals/` (Proposal Layout v2) is the first one:
+`model/` (layout schema, migration, presets), `render/` (the public
+renderer), `data/` (server actions, media upload), and, since Phase 2,
+`editor/` (the template editor: reducer, canvas, control bars, resize,
+TipTap extensions), all exported once from
+`features/proposals/index.ts`.
+
+The boundary is enforced by an ESLint `no-restricted-imports` rule in
+`eslint.config.mjs` ("Feature boundary"):
+
+- Code outside `features/proposals/` may import `@/features/proposals`
+  and nothing deeper (no `@/features/proposals/model/*`, etc.).
+- Code inside `features/proposals/` may not import from `@/app/*` (a
+  feature module never reaches into pages), except a temporary regex
+  carve-out for the v1 branding block types it migrates from
+  (`@/app/(dashboard)/branding/blocks/{types,defaults,proposal-starters}`,
+  removed once Phase 3 lands), and may not import from another
+  feature module.
+- Code under `lib/` gets a warning (not an error) importing
+  `@/features/*` - `lib/` is meant to be feature-agnostic.
+
+Add a new feature module the same way: one `index.ts` re-exporting the
+public surface, internal layers underneath, and a matching entry in
+the "Feature boundary" block of `eslint.config.mjs` so the rule covers
+it.
 
 ---
 

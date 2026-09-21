@@ -34,7 +34,7 @@ export interface FlattenedLineItem {
 }
 
 /** Round to whole cents: keeps float drift out of displayed totals. */
-function roundCents(amount: number): number {
+export function roundCents(amount: number): number {
   return Math.round(amount * 100) / 100
 }
 

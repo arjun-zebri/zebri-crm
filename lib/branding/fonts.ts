@@ -1,6 +1,25 @@
 /**
+ * Script (cursive) faces: wedding-appropriate handwriting and calligraphy
+ * styles. Listed separately because they are heading and accent faces only;
+ * {@link BODY_FONTS} leaves them out so a whole page can never be set in
+ * cursive by accident.
+ * @public
+ */
+export const SCRIPT_FONT_IDS = [
+  'great_vibes',
+  'dancing_script',
+  'parisienne',
+  'allura',
+  'alex_brush',
+  'pinyon_script',
+  'sacramento',
+  'satisfy',
+] as const
+
+/**
  * Complete catalogue of font IDs available for branding.
- * Includes both serif and sans-serif typefaces curated for professional use.
+ * Sans-serif and serif typefaces curated for professional use, plus the
+ * script faces in {@link SCRIPT_FONT_IDS}.
  * @public
  */
 export const FONT_IDS = [
@@ -46,6 +65,8 @@ export const FONT_IDS = [
   'gilda_display',
   'italiana',
   'forum',
+  // Script fonts
+  ...SCRIPT_FONT_IDS,
 ] as const
 
 /**
@@ -55,18 +76,19 @@ export const FONT_IDS = [
 export type FontId = (typeof FONT_IDS)[number]
 
 /**
- * HEADING_FONTS now includes all available fonts.
- * Retained as FONT_IDS to maintain back-compatibility with existing consumers.
+ * Fonts a heading may use: the whole catalogue, script faces included.
  * @public
  */
-export const HEADING_FONTS = FONT_IDS
+export const HEADING_FONTS: readonly FontId[] = FONT_IDS
 
 /**
- * BODY_FONTS now includes all available fonts.
- * Retained as FONT_IDS to maintain back-compatibility with existing consumers.
+ * Fonts a body may use: the catalogue minus the script faces (see
+ * {@link SCRIPT_FONT_IDS}). The proposal builder's per-text font pickers
+ * read `FONT_IDS` directly, so a cursive run inside a paragraph is still
+ * possible there; only Branding's page-wide body font excludes them.
  * @public
  */
-export const BODY_FONTS = FONT_IDS
+export const BODY_FONTS: readonly FontId[] = FONT_IDS.filter((id) => !(SCRIPT_FONT_IDS as readonly string[]).includes(id))
 
 /**
  * HeadingFont is an alias for FontId, maintained for back-compatibility.
@@ -127,6 +149,15 @@ export const FONT_LABELS: Record<FontId, string> = {
   gilda_display: 'Gilda Display',
   italiana: 'Italiana',
   forum: 'Forum',
+  // Script fonts
+  great_vibes: 'Great Vibes',
+  dancing_script: 'Dancing Script',
+  parisienne: 'Parisienne',
+  allura: 'Allura',
+  alex_brush: 'Alex Brush',
+  pinyon_script: 'Pinyon Script',
+  sacramento: 'Sacramento',
+  satisfy: 'Satisfy',
 }
 
 /**
@@ -177,6 +208,17 @@ export const FONT_STACKS: Record<FontId, string> = {
   gilda_display: '"Gilda Display", "Times New Roman", serif',
   italiana: '"Italiana", "Times New Roman", serif',
   forum: '"Forum", "Times New Roman", serif',
+  // Script fonts. "Brush Script MT" is the same fallback the signature
+  // stack uses (`signature-font.ts`), so a script heading and a signature
+  // degrade to the same face when Google Fonts is unreachable.
+  great_vibes: '"Great Vibes", "Brush Script MT", cursive',
+  dancing_script: '"Dancing Script", "Brush Script MT", cursive',
+  parisienne: '"Parisienne", "Brush Script MT", cursive',
+  allura: '"Allura", "Brush Script MT", cursive',
+  alex_brush: '"Alex Brush", "Brush Script MT", cursive',
+  pinyon_script: '"Pinyon Script", "Brush Script MT", cursive',
+  sacramento: '"Sacramento", "Brush Script MT", cursive',
+  satisfy: '"Satisfy", "Brush Script MT", cursive',
 }
 
 /**
@@ -227,6 +269,32 @@ export const GOOGLE_FONT_FAMILIES: Record<FontId, string> = {
   gilda_display: 'Gilda+Display',
   italiana: 'Italiana',
   forum: 'Forum',
+  // Script fonts. Only Dancing Script ships a weight axis; the rest are
+  // single-weight and faux-bold in the browser like Cardo or Prata do.
+  great_vibes: 'Great+Vibes',
+  dancing_script: 'Dancing+Script:wght@400;500;600;700',
+  parisienne: 'Parisienne',
+  allura: 'Allura',
+  alex_brush: 'Alex+Brush',
+  pinyon_script: 'Pinyon+Script',
+  sacramento: 'Sacramento',
+  satisfy: 'Satisfy',
+}
+
+/** `FONT_STACKS` inverted, so a stored stack string finds its id in one lookup. */
+const FONT_ID_BY_STACK: ReadonlyMap<string, FontId> = new Map(FONT_IDS.map((id) => [FONT_STACKS[id], id]))
+
+/**
+ * The `FontId` whose {@link FONT_STACKS} entry equals `stack`, or `null`
+ * when `stack` is unset or matches no catalogue font. The proposal editor
+ * stores a `textStyle` mark's `fontFamily` as the raw stack string (the
+ * renderer assigns it to CSS verbatim), so this is how anything that needs
+ * the id back (the Font select, the public page's font loader) gets it.
+ * @public
+ */
+export function fontIdFromStack(stack: string | null | undefined): FontId | null {
+  if (!stack) return null
+  return FONT_ID_BY_STACK.get(stack) ?? null
 }
 
 /**
@@ -239,6 +307,27 @@ export function googleFontsHref(fonts: FontId[]): string {
   const unique = Array.from(new Set(fonts))
   const families = unique.map(f => `family=${GOOGLE_FONT_FAMILIES[f]}`).join('&')
   return `https://fonts.googleapis.com/css2?${families}&display=swap`
+}
+
+/** `id` of the `<link>` {@link ensureBrandFontsStylesheet} injects, so a second caller finds the first one's. */
+const BRAND_FONTS_LINK_ID = 'zebri-brand-fonts'
+
+/**
+ * Appends one Google Fonts stylesheet for every branding font to
+ * `document.head`, once per page, so a font picker can preview each face
+ * and a canvas can paint any font a user might pick. Idempotent and
+ * SSR-safe (a no-op without `document`). The Branding editor and the
+ * proposal template editor both call this on mount.
+ * @public
+ */
+export function ensureBrandFontsStylesheet(): void {
+  if (typeof document === 'undefined') return
+  if (document.getElementById(BRAND_FONTS_LINK_ID)) return
+  const link = document.createElement('link')
+  link.id = BRAND_FONTS_LINK_ID
+  link.rel = 'stylesheet'
+  link.href = googleFontsHref([...FONT_IDS])
+  document.head.appendChild(link)
 }
 
 /**

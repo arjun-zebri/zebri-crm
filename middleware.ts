@@ -21,6 +21,12 @@ const PUBLIC_ROUTES = [
   "/invoice",
   "/portal",
   "/contract",
+  // Public proposal page + its accept/decline/events endpoints (Phases C/D).
+  // Token-gated. Trailing slash on both "/proposal/" and "/api/proposal/"
+  // (not "/proposal" / "/api/proposal") so these don't prefix-match the
+  // private dashboard route at "/proposals" (or a future "/api/proposals").
+  "/proposal/",
+  "/api/proposal/",
   // Couple-facing questionnaire fill page + its save/submit endpoints —
   // token-gated (share_token is the capability), no session expected.
   "/questionnaire",

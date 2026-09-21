@@ -23,6 +23,11 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
   const futureRef = useRef<T[]>([])
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCommittedRef = useRef<T>(initial)
+  // The value on screen, readable synchronously. React only runs a
+  // `setState` updater when it next renders, so `undo`/`redo` cannot read
+  // the pending (not yet committed) value out of React state in the same
+  // event they run in; every write below goes through this ref first.
+  const latestRef = useRef<T>(initial)
   const [, force] = useState(0)
   const triggerRender = useCallback(() => force(n => n + 1), [])
 
@@ -38,26 +43,24 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
-    setStateInner(current => {
-      if (JSON.stringify(current) === JSON.stringify(lastCommittedRef.current)) {
-        return current
-      }
-      pastRef.current.push(lastCommittedRef.current)
-      if (pastRef.current.length > MAX_HISTORY) pastRef.current.shift()
-      futureRef.current = []
-      lastCommittedRef.current = current
-      triggerRender()
-      updateHistoryState()
-      return current
-    })
+    const current = latestRef.current
+    if (JSON.stringify(current) === JSON.stringify(lastCommittedRef.current)) return
+    pastRef.current.push(lastCommittedRef.current)
+    if (pastRef.current.length > MAX_HISTORY) pastRef.current.shift()
+    futureRef.current = []
+    lastCommittedRef.current = current
+    triggerRender()
+    updateHistoryState()
   }, [triggerRender, updateHistoryState])
 
   const set = useCallback(
     (updater: T | ((prev: T) => T), opts?: { commit?: boolean }) => {
-      setStateInner(prev => {
-        const next = typeof updater === 'function' ? (updater as (p: T) => T)(prev) : updater
-        return next
-      })
+      // Resolved here rather than deferred to React so `latestRef` is
+      // right the moment `set` returns; two `set`s in one handler still
+      // compose in order because each reads the ref the last one wrote.
+      const next = typeof updater === 'function' ? (updater as (p: T) => T)(latestRef.current) : updater
+      latestRef.current = next
+      setStateInner(next)
       if (timerRef.current) clearTimeout(timerRef.current)
       if (opts?.commit) {
         timerRef.current = setTimeout(commitNow, 0)
@@ -68,41 +71,42 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
     [commitNow]
   )
 
+  // Both flush any edit still inside the debounce window onto the stack
+  // first: a user who types and immediately presses Cmd+Z expects that
+  // keystroke undone, not skipped over (or, with nothing committed yet,
+  // nothing to happen at all while the edit quietly stops being undoable).
   const undo = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
+    commitNow()
     const past = pastRef.current
     if (past.length === 0) return
     const previous = past.pop()!
     futureRef.current.push(lastCommittedRef.current)
     lastCommittedRef.current = previous
+    latestRef.current = previous
     setStateInner(previous)
     triggerRender()
     updateHistoryState()
-  }, [triggerRender, updateHistoryState])
+  }, [commitNow, triggerRender, updateHistoryState])
 
   const redo = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
+    commitNow()
     const future = futureRef.current
     if (future.length === 0) return
     const next = future.pop()!
     pastRef.current.push(lastCommittedRef.current)
     lastCommittedRef.current = next
+    latestRef.current = next
     setStateInner(next)
     triggerRender()
     updateHistoryState()
-  }, [triggerRender, updateHistoryState])
+  }, [commitNow, triggerRender, updateHistoryState])
 
   const reset = useCallback((newState: T) => {
     if (timerRef.current) clearTimeout(timerRef.current)
     pastRef.current = []
     futureRef.current = []
     lastCommittedRef.current = newState
+    latestRef.current = newState
     setStateInner(newState)
     triggerRender()
     updateHistoryState()
@@ -116,11 +120,15 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
 
   // Cmd+Z / Cmd+Shift+Z — works canvas-wide, including while editing inline text.
   // Native inputs/textareas keep their built-in undo so kit-name & search behave naturally.
+  // So do TipTap fields (`.ProseMirror`): they carry their own history, and
+  // taking the shortcut here as well undid twice, blurred the field, and left
+  // the next Backspace deleting the whole selected block instead of a character.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
       const target = e.target as HTMLElement | null
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
+      if (target?.closest?.('.ProseMirror')) return
       if (e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         if (target?.isContentEditable) (target as HTMLElement).blur()

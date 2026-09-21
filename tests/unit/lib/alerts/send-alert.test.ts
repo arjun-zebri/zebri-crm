@@ -69,6 +69,48 @@ describe('formatSlackMessage', () => {
     expect(payload.text).not.toContain('no join link sent');
   });
 
+  it('formats a proposal_close_failed event', () => {
+    const payload = formatSlackMessage({
+      type: 'proposal_close_failed',
+      severity: 'error',
+      userId: 'u1',
+      proposalId: 'p1',
+      stage: 'publish',
+      reason: 'not_found',
+    });
+    expect(payload.text).toContain(':rotating_light:');
+    expect(payload.text).toContain('user=u1');
+    expect(payload.text).toContain('proposal=p1');
+    expect(payload.text).toContain('stage=publish');
+    expect(payload.text).toContain('not_found');
+  });
+
+  it('falls back to "unknown" for a proposal_close_failed event with no ids yet', () => {
+    const payload = formatSlackMessage({
+      type: 'proposal_close_failed',
+      severity: 'error',
+      userId: null,
+      proposalId: null,
+      stage: 'accept_rpc',
+      reason: 'expired',
+    });
+    expect(payload.text).toContain('user=unknown');
+    expect(payload.text).toContain('proposal=unknown');
+  });
+
+  it('formats a proposal_opened event', () => {
+    const payload = formatSlackMessage({
+      type: 'proposal_opened',
+      severity: 'info',
+      userId: 'u1',
+      proposalNumber: 'PR-001',
+      coupleName: 'Anna & Jake',
+    });
+    expect(payload.text).toContain(':information_source:');
+    expect(payload.text).toContain('user=u1');
+    expect(payload.text).toContain('PR-001 opened by Anna & Jake');
+  });
+
   it('uses the warning emoji for warn severity', () => {
     const payload = formatSlackMessage({
       type: 'rls_denied_spike',

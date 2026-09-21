@@ -14,14 +14,17 @@
 
 import type { Ref } from 'react'
 
+import { proposalLayoutV2Enabled } from '@/app/(dashboard)/proposals/flags'
+
 /** The template kinds surfaced as tabs. */
-export type TemplateTab = 'emails' | 'packages' | 'invoices' | 'contracts' | 'questionnaires'
+export type TemplateTab = 'emails' | 'proposals' | 'packages' | 'invoices' | 'contracts' | 'questionnaires'
 
 /** Ordered tab definitions — id drives state, label is the visible text.
  *  Ordered by the money flow: packages → invoices are built on
  *  each other, so they sit together in that order. */
 export const TEMPLATE_TABS: { id: TemplateTab; label: string }[] = [
   { id: 'emails', label: 'Emails' },
+  { id: 'proposals', label: 'Proposals' },
   { id: 'packages', label: 'Packages' },
   { id: 'invoices', label: 'Invoices' },
   { id: 'contracts', label: 'Contracts' },
@@ -36,6 +39,8 @@ interface TemplatesTabsProps {
 }
 
 export function TemplatesTabs({ activeTab, onTabChange, actionsRef }: TemplatesTabsProps) {
+  // Proposal templates ship behind the Layout v2 flag; the tab goes with them.
+  const tabs = TEMPLATE_TABS.filter((t) => t.id !== 'proposals' || proposalLayoutV2Enabled())
   return (
     // Border lives on the outer row so the underline spans the full width,
     // under both the tabs and the right-aligned action slot. On mobile the
@@ -43,7 +48,7 @@ export function TemplatesTabs({ activeTab, onTabChange, actionsRef }: TemplatesT
     <div className="flex flex-col gap-2 border-b border-border sm:flex-row sm:items-end sm:justify-between sm:gap-4">
       <div className="relative overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <div className="flex gap-6">
-          {TEMPLATE_TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
