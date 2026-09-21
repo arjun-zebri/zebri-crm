@@ -107,6 +107,80 @@ export function extractTokens(input: string): string[] {
   return out
 }
 
+/** Base URL for every share link. Mirrors the action handlers'. */
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+
+/**
+ * Couple-facing anchor text for each link variable, keyed by base path.
+ *
+ * A link variable dropped into an email body renders as this text with
+ * the resolved URL as its `href`, instead of the bare address. Couples
+ * read "View your portal", not `https://app.zebri.com.au/portal/7f3a…`
+ * (a real complaint from an MC). Both partners' portal links share a
+ * label because each partner only ever sees their own.
+ *
+ * `quote.link` is listed because the "Quote cover email" starter uses
+ * it, even though no resolver fills it yet.
+ */
+const LINK_LABELS: Readonly<Record<string, string>> = {
+  'portal.link': 'View your portal',
+  'portal.partner_link': 'View your portal',
+  'portal.vendor_link': 'View the run sheet',
+  'invoice.link': 'View and pay your invoice',
+  'contract.link': 'Review and sign your contract',
+  'questionnaire.link': 'Fill in your questionnaire',
+  'quote.link': 'View your quote',
+  'mc.review_link': 'Leave a review',
+}
+
+/**
+ * The anchor text a link variable should render as, or `null` when the
+ * expression is not a link variable (it renders as plain text).
+ *
+ * @param expr - A variable path or full expression (filters ignored),
+ *   e.g. `portal.link` or `portal.link | default:x`.
+ */
+export function linkLabel(expr: string): string | null {
+  const base = (expr.split('|')[0] ?? expr).trim()
+  return LINK_LABELS[base] ?? null
+}
+
+/**
+ * The same labels keyed by the public route each link resolves to, for
+ * the one place the variable itself is gone: an MC editing a send at
+ * review time works in a plain textarea, so the rendered URL is all
+ * that survives. Matching the route lets the edited copy still go out
+ * as "View your portal" rather than the address.
+ */
+const LINK_LABELS_BY_ROUTE: ReadonlyArray<readonly [route: string, label: string]> = [
+  ['portal', 'View your portal'],
+  ['timeline', 'View the run sheet'],
+  ['invoice', 'View and pay your invoice'],
+  ['contract', 'Review and sign your contract'],
+  ['questionnaire', 'Fill in your questionnaire'],
+  ['quote', 'View your quote'],
+]
+
+/**
+ * The anchor text for a share URL this app minted, or `null` for any
+ * other address (it renders as itself).
+ *
+ * @param url - An absolute URL, e.g. `https://app.zebri.com.au/portal/7f3a`.
+ */
+export function linkLabelForUrl(url: string): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
+  }
+  // Only this app's own routes: an MC's website that happens to have a
+  // /portal page must not be relabelled as the couple's portal.
+  if (parsed.host !== new URL(APP_URL).host) return null
+  const route = parsed.pathname.split('/')[1]
+  return LINK_LABELS_BY_ROUTE.find(([r]) => r === route)?.[1] ?? null
+}
+
 /**
  * Couple-facing anchor text for each link variable, keyed by base path.
  *
@@ -288,9 +362,6 @@ function flattenSignatureText(doc: TextishNode | null | undefined): string {
     .replace(/\s+/g, ' ')
     .trim()
 }
-
-/** Base URL for every share link. Mirrors the action handlers'. */
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
 
 /**
  * Portal and run-sheet share links.

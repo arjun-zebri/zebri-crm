@@ -96,6 +96,37 @@ describe('applyReviewEdits', () => {
     expect(out['templateId']).toBeUndefined();
   });
 
+  // The preview shows a link variable as its URL, so after an edit the
+  // address is all that remains of {{portal.link}}. It must still reach
+  // the couple as the labelled link, not the bare address.
+  it('sends an app share link in edited copy as its couple-facing label', () => {
+    const url = 'https://app.zebri.com.au/portal/tok-1';
+    const out = applyReviewEdits(
+      { actionType: 'send_email' },
+      { subject: 'S', body: `Your portal: ${url} - see you soon` },
+    ) as { content: { content: { content?: unknown[] }[] } };
+    expect(out.content.content[0]?.content).toEqual([
+      { type: 'text', text: 'Your portal: ' },
+      { type: 'text', text: 'View your portal', marks: [{ type: 'link', attrs: { href: url } }] },
+      { type: 'text', text: ' - see you soon' },
+    ]);
+  });
+
+  it('keeps any other URL as clickable text', () => {
+    const out = applyReviewEdits(
+      { actionType: 'send_email' },
+      { subject: 'S', body: 'Our site: https://example.com/portal/x' },
+    ) as { content: { content: { content?: unknown[] }[] } };
+    expect(out.content.content[0]?.content).toEqual([
+      { type: 'text', text: 'Our site: ' },
+      {
+        type: 'text',
+        text: 'https://example.com/portal/x',
+        marks: [{ type: 'link', attrs: { href: 'https://example.com/portal/x' } }],
+      },
+    ]);
+  });
+
   it('drops a stale legacy body so the send cannot pick it', () => {
     const out = applyReviewEdits(
       { actionType: 'send_email', body: 'the old plain text' },

@@ -1,5 +1,7 @@
 'use client';
 
+import { AlertTriangle } from 'lucide-react';
+
 import {
   formatCountdown,
   formatFullDate,
@@ -39,6 +41,15 @@ export function BookingDetailSummary({ booking, timeZone }: BookingDetailSummary
     ? `${booking.meeting_type.duration_minutes} min · ${locationLabel(booking.meeting_type.location_type)}`
     : '';
 
+  // A video call with nothing to join. The calendar push accepted the
+  // event but minted no link (Outlook without Teams, or no calendar at
+  // all), and the couple's confirmation already says "link to follow", so
+  // the MC is the only one who can still make the call happen.
+  const missingLink =
+    booking.meeting_type?.location_type === 'video' &&
+    !booking.video_join_url &&
+    booking.status !== 'cancelled';
+
   return (
     <div>
       <h3 className="text-section font-semibold text-text" data-testid="booking-meeting-type">
@@ -54,6 +65,14 @@ export function BookingDetailSummary({ booking, timeZone }: BookingDetailSummary
       {countdown && (
         <p className={`mt-1 text-body ${hasEnded ? 'text-text-subtle' : 'text-success'}`}>
           {countdown}
+        </p>
+      )}
+
+      {missingLink && (
+        <p className="mt-2 flex items-start gap-2 text-body text-text" role="status">
+          <AlertTriangle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-warning" />
+          No video link was created for this booking, so the couple has none. Send them one
+          before the call.
         </p>
       )}
     </div>

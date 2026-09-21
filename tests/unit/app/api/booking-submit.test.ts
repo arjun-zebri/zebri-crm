@@ -237,6 +237,8 @@ vi.mock('@/lib/supabase/admin', () => ({
         getUserById: async () => ({ data: { user: { email: 'mc@example.com' } }, error: null }),
       },
     },
+    // The post-push write of video_join_url / external_event_ids.
+    from: () => ({ update: () => ({ eq: async () => ({ error: null }) }) }),
   }),
 }));
 vi.mock('@/lib/supabase/server', () => ({
@@ -291,6 +293,68 @@ describe('POST /api/booking/submit response validation', () => {
     const { recordInvalidTokenAttempt } = await import('@/lib/api/public-token-limiter');
     expect(vi.mocked(recordInvalidTokenAttempt)).toHaveBeenCalledWith(
       expect.objectContaining({ surface: 'booking' }),
+    );
+  });
+
+  it('alerts when the calendar took the event but minted no video link', async () => {
+    // Graph answers a Teams request the calendar cannot honour with a
+    // normal 201 and no onlineMeeting, so without this the only trace is
+    // a couple reading "link to follow" forever.
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        booking_id: 'b-1',
+        user_id: 'user-1',
+        manage_token: 'mt-1',
+        business_name: 'Biz',
+      },
+      error: null,
+    });
+    const { pushBookingEvent } = await import('@/lib/calendar/event-push');
+    vi.mocked(pushBookingEvent).mockResolvedValueOnce({
+      provider: 'microsoft',
+      eventId: 'ev-1',
+      joinUrl: null,
+      joinUrlDiagnostic: 'event isOnlineMeeting=false provider=unknown · calendar allows=[] default=unknown',
+    });
+
+    const res = await post();
+
+    expect(res.status).toBe(200);
+    const { sendAlert } = await import('@/lib/alerts/send-alert');
+    expect(vi.mocked(sendAlert)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'booking_video_link_missing',
+        provider: 'microsoft',
+        bookingId: 'b-1',
+        diagnostic: expect.stringContaining('calendar allows=[]'),
+      }),
+    );
+  });
+
+  it('stays quiet when the calendar minted a link', async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        ok: true,
+        booking_id: 'b-1',
+        user_id: 'user-1',
+        manage_token: 'mt-1',
+        business_name: 'Biz',
+      },
+      error: null,
+    });
+    const { pushBookingEvent } = await import('@/lib/calendar/event-push');
+    vi.mocked(pushBookingEvent).mockResolvedValueOnce({
+      provider: 'microsoft',
+      eventId: 'ev-1',
+      joinUrl: 'https://teams.microsoft.com/l/meetup-join/x',
+    });
+
+    await post();
+
+    const { sendAlert } = await import('@/lib/alerts/send-alert');
+    expect(vi.mocked(sendAlert)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'booking_video_link_missing' }),
     );
   });
 

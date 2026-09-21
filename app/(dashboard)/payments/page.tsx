@@ -24,7 +24,10 @@ import { ContractsList } from './contracts-list';
 import { deriveInvoices, InvoicesList } from './invoices-list';
 import { PaymentsFooter } from './payments-footer';
 import { PaymentsHeader } from './payments-header';
+import { PaymentsReports } from './payments-reports';
+import { BALANCE_DUE_SORT, useInvoiceSort } from './use-invoice-sort';
 import { useContracts, useInvoices } from './use-payments-data';
+import { usePaymentsReportsTab } from './use-payments-reports-tab';
 import { type PaymentsTab, usePaymentsShortcut } from './use-payments-shortcut';
 
 export default function PaymentsPage() {
@@ -84,6 +87,16 @@ export default function PaymentsPage() {
     );
   }, [contracts, contractSearch]);
 
+  const { sort: invoiceSort, setSort: setInvoiceSort, sortedInvoices } = useInvoiceSort(filteredInvoices);
+
+  const { reportsToolbar, reportsBodyProps } = usePaymentsReportsTab({
+    onOpenInvoice: setActiveInvoiceId,
+    onViewOutstanding: () => {
+      setActiveTab('invoices');
+      setInvoiceSort(BALANCE_DUE_SORT);
+    },
+  });
+
   const currentSearch = activeTab === 'invoices' ? invoiceSearch : contractSearch;
 
   function setCurrentSearch(value: string) {
@@ -111,11 +124,14 @@ export default function PaymentsPage() {
       <PaymentsHeader
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        count={count}
+        {...(activeTab !== 'reports' ? { count } : {})}
         search={currentSearch}
         onSearchChange={setCurrentSearch}
         searchInputRef={searchInputRef}
         onNew={handleNew}
+        invoiceSort={invoiceSort}
+        onInvoiceSortChange={setInvoiceSort}
+        reportsToolbar={reportsToolbar}
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -123,7 +139,7 @@ export default function PaymentsPage() {
           {activeTab === 'invoices' && (
             <InvoicesList
               loading={isLoading}
-              invoices={filteredInvoices}
+              invoices={sortedInvoices}
               searching={Boolean(invoiceSearch)}
               onOpen={setActiveInvoiceId}
             />
@@ -136,10 +152,11 @@ export default function PaymentsPage() {
               onOpen={setActiveContract}
             />
           )}
+          {activeTab === 'reports' && <PaymentsReports {...reportsBodyProps} />}
         </div>
       </div>
 
-      <PaymentsFooter tab={activeTab} count={count} total={total} />
+      {activeTab !== 'reports' && <PaymentsFooter tab={activeTab} count={count} total={total} />}
 
       {!!activeInvoiceId && (
         <InvoiceBuilderModal

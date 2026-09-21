@@ -14,12 +14,12 @@
 
 import { z } from 'zod'
 
+import { wrapAutomationShell } from '@/lib/email/html'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult, ActionType, RunContext } from '@/types/automations'
 
 import { renderTemplate } from '../variables'
 
-import { wrapAutomationHtml } from './messaging'
 import type { ActionSpec } from './index'
 
 import { Resend } from 'resend'
@@ -167,12 +167,18 @@ const sendPortalLink: ActionSpec<z.infer<typeof sendPortalLinkSchema>> = {
         payload: { ...(ctx.triggerEvent.payload as Record<string, unknown>), portal_link: link },
       },
     }
-    const body = renderTemplate(config.message, ctxWithLink) + `\n\n${link}`
+    // The link rides as the shell's button rather than a bare address
+    // pasted under the message: a couple reads "View your portal", not
+    // a token URL.
+    const html = wrapAutomationShell(renderTemplate(config.message, ctxWithLink), ctx.mc.businessName, {
+      label: 'View your portal',
+      url: link,
+    })
     await resend().emails.send({
       from: FROM,
       to: ctx.couple.email,
       subject: `Your event portal - ${ctx.mc.businessName}`,
-      html: wrapAutomationHtml(body, ctx),
+      html,
       replyTo: ctx.mc.email,
     })
     return { kind: 'ok', output: { portal_link: link } }
@@ -207,12 +213,15 @@ const requestInformation: ActionSpec<z.infer<typeof requestInformationSchema>> =
       .single()
     if (!data?.portal_token) return { kind: 'error', message: 'no portal token' }
     const link = `${APP_URL}/portal/${data.portal_token}#${config.section}`
-    const body = renderTemplate(config.message, ctx) + `\n\n${link}`
+    const html = wrapAutomationShell(renderTemplate(config.message, ctx), ctx.mc.businessName, {
+      label: 'Fill in your portal',
+      url: link,
+    })
     await resend().emails.send({
       from: FROM,
       to: ctx.couple.email,
       subject: `One step left - ${ctx.mc.businessName}`,
-      html: wrapAutomationHtml(body, ctx),
+      html,
       replyTo: ctx.mc.email,
     })
     return { kind: 'ok', output: { section: config.section } }
