@@ -182,41 +182,6 @@ export function linkLabelForUrl(url: string): string | null {
 }
 
 /**
- * Couple-facing anchor text for each link variable, keyed by base path.
- *
- * A link variable dropped into an email body renders as this text with
- * the resolved URL as its `href`, instead of the bare address. Couples
- * read "View your portal", not `https://app.zebri.com.au/portal/7f3a…`
- * (a real complaint from an MC). Both partners' portal links share a
- * label because each partner only ever sees their own.
- *
- * `quote.link` is listed because the "Quote cover email" starter uses
- * it, even though no resolver fills it yet.
- */
-const LINK_LABELS: Readonly<Record<string, string>> = {
-  'portal.link': 'View your portal',
-  'portal.partner_link': 'View your portal',
-  'portal.vendor_link': 'View the run sheet',
-  'invoice.link': 'View and pay your invoice',
-  'contract.link': 'Review and sign your contract',
-  'questionnaire.link': 'Fill in your questionnaire',
-  'quote.link': 'View your quote',
-  'mc.review_link': 'Leave a review',
-}
-
-/**
- * The anchor text a link variable should render as, or `null` when the
- * expression is not a link variable (it renders as plain text).
- *
- * @param expr - A variable path or full expression (filters ignored),
- *   e.g. `portal.link` or `portal.link | default:x`.
- */
-export function linkLabel(expr: string): string | null {
-  const base = (expr.split('|')[0] ?? expr).trim()
-  return LINK_LABELS[base] ?? null
-}
-
-/**
  * Human label for a variable path, used in "Missing: …" warnings and
  * the editor's missing-variable highlights. Prefers the
  * {@link VARIABLE_CATALOGUE} label; falls back to a title-cased key.
