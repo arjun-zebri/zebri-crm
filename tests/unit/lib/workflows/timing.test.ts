@@ -134,6 +134,41 @@ describe('computeDueAt', () => {
     // 2027-02-28 00:00 Sydney is AEDT (UTC+11) = 2027-02-27T13:00Z.
     expect(due).toBe('2027-02-27T13:00:00.000Z');
   });
+
+  it('wedding_relative with a send time lands at that local time, not midnight', () => {
+    const timing: StepTiming = { mode: 'wedding_relative', direction: 'before', amount: 2, unit: 'weeks', sendTime: '09:15' };
+    // 2026-10-31 09:15 Sydney (AEDT, +11) is 2026-10-30T22:15Z.
+    expect(computeDueAt(timing, anchors)).toBe('2026-10-30T22:15:00.000Z');
+  });
+
+  it('a send time is resolved in the zone of the day it lands on, across the DST switch', () => {
+    // Sydney moves +10 to +11 on 2026-10-04. The same 09:00 send time is
+    // 23:00Z the day before the switch and 22:00Z the day after.
+    const dst = { ...anchors, weddingDate: '2026-10-04' };
+    expect(computeDueAt({ mode: 'wedding_relative', direction: 'before', amount: 1, unit: 'days', sendTime: '09:00' }, dst)).toBe('2026-10-02T23:00:00.000Z');
+    expect(computeDueAt({ mode: 'wedding_relative', direction: 'after', amount: 1, unit: 'days', sendTime: '09:00' }, dst)).toBe('2026-10-04T22:00:00.000Z');
+  });
+
+  it('apply_relative in minutes is instant arithmetic from the apply moment', () => {
+    const timing: StepTiming = { mode: 'apply_relative', amount: 30, unit: 'minutes' };
+    expect(computeDueAt(timing, anchors)).toBe('2026-09-04T03:30:00.000Z');
+  });
+
+  it('apply_relative in hours is instant arithmetic too', () => {
+    const timing: StepTiming = { mode: 'apply_relative', amount: 2, unit: 'hours' };
+    expect(computeDueAt(timing, anchors)).toBe('2026-09-04T05:00:00.000Z');
+  });
+
+  it('apply_relative in days with a send time lands on that local time', () => {
+    const timing: StepTiming = { mode: 'apply_relative', amount: 3, unit: 'days', sendTime: '17:30' };
+    // Applied 2026-09-04 local; 2026-09-07 17:30 Sydney (AEST, +10) is 07:30Z.
+    expect(computeDueAt(timing, anchors)).toBe('2026-09-07T07:30:00.000Z');
+  });
+
+  it('after_previous in minutes', () => {
+    const timing: StepTiming = { mode: 'after_previous', delayAmount: 45, unit: 'minutes' };
+    expect(computeDueAt(timing, { ...anchors, previousCompletedAt: '2026-09-10T01:00:00Z' })).toBe('2026-09-10T01:45:00.000Z');
+  });
 });
 
 describe('recomputeDueDates', () => {

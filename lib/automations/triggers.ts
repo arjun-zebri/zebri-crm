@@ -818,9 +818,10 @@ const eventDeleted: TriggerSpec<EventFilterConfig & { withinDaysOfEvent?: number
  * Config for the tick-emitted day-offset triggers.
  *
  * `amount` is the trigger's required parameter (which lead/lag event
- * this automation answers); `unit` stays day-grain (locked
- * 2026-06-14 — the daily cron can't serve sub-day offsets) and is
- * kept in the schema because the emitter checks it. The wedding-date
+ * this automation answers); `unit` stays day-grain (locked 2026-06-14;
+ * the emitter is day-grain by that decision, not by the pg_cron tick's
+ * cadence, which is 15 minutes) and is kept in the schema because the
+ * emitter checks it. The wedding-date
  * family narrows on the event's own date. The seven Phase 14a
  * extras (time of day, public holidays, review / referral state,
  * pause and status checks) are gone — nothing read any of them, and

@@ -36,6 +36,7 @@ import type { PublicBranding } from '@/lib/branding/public-surface'
 import { createClient } from '@/lib/supabase/server'
 import { joinApplyRule } from '@/lib/workflows/apply-rules'
 import { splitStepType } from '@/lib/workflows/steps'
+import { parseStepTiming, stepTimingSchema } from '@/lib/workflows/timing-schema'
 import type { Json } from '@/types/database'
 import type { WorkflowTemplateRow } from '@/types/workflows'
 
@@ -307,7 +308,7 @@ const upsertStepSchema = z.object({
   type: z.string().min(1),
   config: z.record(z.string(), z.any()).default({}),
   label: z.string().optional(),
-  timing: z.record(z.string(), z.any()).optional(),
+  timing: stepTimingSchema.optional(),
   parentStepId: z.string().uuid().nullable().optional(),
   branchPath: z.enum(['yes', 'no']).nullable().optional(),
   requiresApproval: z.boolean().optional(),
@@ -326,7 +327,17 @@ export async function upsertTemplateStepRow(
   input: z.infer<typeof upsertStepSchema>,
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = upsertStepSchema.safeParse(input)
-  if (!parsed.success) return { ok: false, error: parsed.error.message }
+  if (!parsed.success) {
+    // A bad `timing` fails deep inside the discriminated union, so
+    // `parsed.error.message` for it is Zod's JSON-stringified issues
+    // array: unreadable in a toast. Re-run just that field through the
+    // shared schema for the one-line message when that is the cause.
+    if (input && typeof input === 'object' && 'timing' in input) {
+      const timingResult = parseStepTiming((input as { timing?: unknown }).timing)
+      if (!timingResult.ok) return { ok: false, error: `Invalid timing: ${timingResult.error}` }
+    }
+    return { ok: false, error: parsed.error.message }
+  }
   const supabase = await createClient()
 
   const split = splitStepType(parsed.data.type, parsed.data.config)

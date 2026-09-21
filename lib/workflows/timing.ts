@@ -1,17 +1,19 @@
 /**
  * Step timing: when each step in an applied workflow comes due.
  *
- * Three anchors, one per {@link StepTiming} mode:
+ * Three anchors, one per mode, and one sub-case:
  *
- * - `wedding_relative` and `apply_relative` resolve to **local midnight**
- *   on a shifted calendar date. They do not gate on anything, which is
- *   what lets "2 weeks before the wedding" appear in the queue while
- *   earlier to-dos are still open.
+ * - `wedding_relative` and `apply_relative` resolve to **local midnight,
+ *   or the step's `sendTime`,** on a shifted calendar date. They do not
+ *   gate on anything, which is what lets "2 weeks before the wedding"
+ *   appear in the queue while earlier to-dos are still open.
  * - `after_previous` resolves to the predecessor's completion **instant**
  *   plus a delay, and is `null` until that predecessor finishes. That null
  *   is the gating mechanism: an automated step anchored to a manual to-do
  *   has no `due_at`, so the executor never picks it up, until the MC ticks
  *   the to-do.
+ * - `apply_relative` in minutes or hours is an instant offset from the
+ *   apply moment, like `after_previous`.
  *
  * Never hand-roll date or hour arithmetic on instants here. Compose
  * `zonedTimeToUtc`, `addDaysToDateString` and `addMonthsToDateString` from
@@ -66,6 +68,19 @@ function shiftDate(
   return addDaysToDateString(date, unit === 'weeks' ? amount * 7 : amount);
 }
 
+/** Milliseconds per delay unit; delays are instant arithmetic by design. */
+const MS_PER_DELAY_UNIT = { minutes: 60_000, hours: 3_600_000, days: 86_400_000 } as const;
+
+/**
+ * `time` (or midnight) on `date` in `timezone`, as an ISO instant.
+ *
+ * Resolved in the zone on that calendar day, so a 9am step keeps being
+ * 9am on the wall clock across a daylight-saving switch.
+ */
+function localTime(date: string, time: string | undefined, timezone: string): string {
+  return zonedTimeToUtc(date, time ?? '00:00', timezone).toISOString();
+}
+
 /**
  * Local midnight on `date` in `timezone`, as an ISO instant.
  *
@@ -74,7 +89,7 @@ function shiftDate(
  * UTC midnight, which lands an Australian to-do on the previous day.
  */
 export function localMidnight(date: string, timezone: string): string {
-  return zonedTimeToUtc(date, '00:00', timezone).toISOString();
+  return localTime(date, undefined, timezone);
 }
 
 /**
@@ -95,26 +110,29 @@ export function computeDueAt(
       if (!anchors.weddingDate) return null;
       const signed = timing.direction === 'before' ? -timing.amount : timing.amount;
       const shifted = shiftDate(anchors.weddingDate, signed, timing.unit);
-      return localMidnight(shifted, anchors.timezone);
+      return localTime(shifted, timing.sendTime, anchors.timezone);
     }
     case 'apply_relative': {
-      // Count calendar days from the LOCAL date the workflow was applied,
-      // not from the instant: "3 days after booking" means three sleeps,
-      // not 72 hours.
+      // A sub-day delay is "this long after it was applied", an instant.
+      // A calendar delay counts LOCAL days from the apply date: "3 days
+      // after booking" means three sleeps, not 72 hours.
+      if (timing.unit === 'minutes' || timing.unit === 'hours') {
+        const base = new Date(anchors.appliedAt).getTime();
+        return new Date(base + timing.amount * MS_PER_DELAY_UNIT[timing.unit]).toISOString();
+      }
       const appliedLocalDate = zonedDateParts(
         new Date(anchors.appliedAt),
         anchors.timezone,
       ).date;
       const shifted = shiftDate(appliedLocalDate, timing.amount, timing.unit);
-      return localMidnight(shifted, anchors.timezone);
+      return localTime(shifted, timing.sendTime, anchors.timezone);
     }
     case 'after_previous': {
       if (!anchors.previousCompletedAt) return null;
       // Instant arithmetic, deliberately: "2 days after that happened"
       // rather than "on the calendar day two days later".
-      const ms = timing.unit === 'hours' ? 3_600_000 : 86_400_000;
       const base = new Date(anchors.previousCompletedAt).getTime();
-      return new Date(base + timing.delayAmount * ms).toISOString();
+      return new Date(base + timing.delayAmount * MS_PER_DELAY_UNIT[timing.unit]).toISOString();
     }
   }
 }

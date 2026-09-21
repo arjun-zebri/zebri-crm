@@ -240,9 +240,23 @@ Two RPCs for the `/api/cron/booking-reminders` endpoint; neither is callable by 
 - **`bookings_due_for_reminder()`**: service_role only. Returns all confirmed bookings whose meeting type has `reminder_enabled = true`, whose `starts_at` is 0 to 36 hours away, and whose `reminder_sent_at` is null. Used by cron to batch-fetch remindable bookings. Returns `manage_token` alongside `booking_id`: the reminder email's reschedule link is `/book/manage/<manage_token>`, and building it from the booking id instead shipped a dead link in every reminder (fixed 20260821030000).
 - **`mark_booking_reminder_sent(p_booking_id uuid)`**: service_role only. Sets `reminder_sent_at = now()`. Called after sending the reminder email so the booking is not re-sent on the next tick.
 
+### Scheduler functions (pg_cron, R1)
+
+`system_heartbeats` deliberately carries no `user_id`: it is a system table, not tenant data, so the RLS matrix row above has no owner column, and RLS is on with no policies at all, service-role only.
+
+Three functions in `20261001000000_pg_cron_scheduler.sql`, all `security definer`, `set search_path = public`, and all revoked from public/anon/authenticated; service_role keeps the default grant:
+
+- **`cron_call(p_path text)`**: reads the Vault-stored `app_base_url` and `cron_secret`, then POSTs to `<app_base_url><path>` via pg_net. Never exposes the secret: it is read into a local variable and used only as an outbound header, never returned.
+- **`set_scheduler_secrets(p_base_url, p_secret)`**: upserts the two Vault secrets. Called only from the Admin "Sync scheduler" server action, which supplies the app's own `NEXT_PUBLIC_APP_URL` and `CRON_SECRET`.
+- **`scheduler_status()`**: returns `{ configured, base_url, jobs[], heartbeats{} }` for the Admin Scheduler card. Returns the base URL only, never the secret.
+
+pg_net's `net.http_request_queue` / `net._http_response` are granted to PUBLIC by `supabase_admin` and `postgres` cannot revoke that on a hosted project; the queue row briefly holds the bearer header. The protection is that `net` is not a PostgREST-exposed schema and no `public` security-invoker function reads it.
+
+Vercel Deployment Protection must stay off on any deployment pg_cron calls: `pg_net`'s request carries only the `cron_secret` bearer, never Vercel's own cron-bypass header, so a protected deployment silently 401s every job behind Vercel's own auth page while `cron.job_run_details` still reads `succeeded` (see `.claude/docs/cicd.md` "First deploy on a project").
+
 ### Cron auth gate: `/api/cron/booking-reminders` (Scheduler Phase D)
 
-Uses the shared `isCronAuthorized(request)` helper (constant-time comparison of `Authorization: Bearer CRON_SECRET`). Invoked on a 22:30 UTC schedule via `vercel.json`. See "Cron-secret enforcement" section above for full details.
+Uses the shared `isCronAuthorized(request)` helper (constant-time comparison of `Authorization: Bearer CRON_SECRET`). Invoked on a 22:30 UTC schedule via pg_cron (`zebri:booking-reminders`). See "Cron-secret enforcement" section above for full details.
 
 ### MC Calendar Busy Route: `GET /api/calendar/busy` (Scheduler Phase E)
 
@@ -325,25 +339,25 @@ entitlement fields.
 
 ### Cron-secret enforcement
 
-Six cron-triggered routes:
+Six cron-triggered routes, scheduled by pg_cron rather than
+`vercel.json` (see `.claude/docs/cicd.md` "Scheduled jobs (pg_cron)"
+for the full job table and secret-sync flow):
 
-| Route | Schedule (`vercel.json`) |
+| Route | Schedule (UTC) |
 |---|---|
 | `/api/cron/expire-contracts` | `0 22 * * *` |
 | `/api/email/send-contract-reminders` | `15 22 * * *` |
 | `/api/cron/booking-reminders` | `30 22 * * *` (Scheduler Phase D) |
 | `/api/cron/prune-stripe-events` | `0 3 * * *` (Phase 2A) |
-| `/api/cron/automations-tick` | `0 1 * * *` (the workflow tick; keeps its legacy path because renaming a live cron endpoint is a needless outage risk) |
-| `/api/cron/workflow-digest` | `0 21 * * *` (Workflows) |
+| `/api/cron/automations-tick` | `*/15 * * * *` (the workflow tick; keeps its legacy path because renaming a live cron endpoint is a needless outage risk) |
+| `/api/cron/workflow-digest` | `0 * * * *` (Workflows) |
 
-Every cron here is **daily**, and has to be: the Vercel **Hobby** plan
-rejects any more frequent expression at deploy time. The digest wants to
-be hourly (it gates on each MC's local 7am) and is capped to one daily
-run with a two-hour local window instead -- see
-`.claude/docs/workflows.md`. A per-user local-date stamp
-(`user_public_settings.daily_digest_last_sent_on`) keeps that to one send
-per MC per day, including through the repeated hour daylight saving
-creates.
+pg_cron is not capped the way Vercel's Hobby scheduler was, so the tick
+runs every 15 minutes and the digest runs hourly, gating on each MC's
+local 7am: see `.claude/docs/workflows.md`. A per-user local-date
+stamp (`user_public_settings.daily_digest_last_sent_on`) keeps that to
+one send per MC per day, including through the repeated hour daylight
+saving creates.
 
 All of them use the shared helper **`@/lib/api/cron-auth`** —
 `isCronAuthorized(request)` — which:
@@ -808,6 +822,7 @@ DELETE (sampled clean across the migrations).
 | `proposal_events` | ✅ (+ parent-ownership `exists` check on `proposal_id` in `with check`) | `user_id` | ✅ `tests/integration/rls/proposal-events.test.ts` (4 tests: owner read / cross-tenant read denial, cross-tenant insert spoofing `proposal_id` rejected, anon direct read/insert denial, owner delete cascades with the proposal) | Proposals Phase D |
 | `proposal_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/proposal-templates.test.ts` (5 tests: owner read/update, owner delete, cross-tenant SELECT/UPDATE/DELETE denial, cross-tenant forged-`user_id` insert rejected, anon locked out, one-default-per-user unique-index refusal) | Proposal Layout v2 Phase 1 |
 | `proposal_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/proposal-settings.test.ts` (1 test: owner read/update, cross-tenant read/update/delete denial, cross-tenant forged-`user_id` insert rejected, anon locked out) | Proposal Layout v2 Phase 1 |
+| `system_heartbeats` | RLS on, no policies (service only) | n/a | `tests/integration/cron/scheduler.test.ts` | Scheduler (R1) |
 
 **Four tables need more than `auth.uid() = user_id` in WITH CHECK.**
 Foreign keys are checked with elevated privileges and ignore RLS, so an

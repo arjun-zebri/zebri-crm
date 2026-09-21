@@ -44,6 +44,8 @@ export interface ExecutorResult {
   stepsExecuted: number;
   instancesCompleted: number;
   errors: number;
+  /** True when the deadline stopped the pass before every due step ran. */
+  truncated: boolean;
 }
 
 /** Statuses a step can no longer move on from. */
@@ -79,10 +81,13 @@ export function isExecutable(step: WorkflowStepRow, now: Date): boolean {
  *   (`./kick`): a step that just came due for them must not mean
  *   running every other tenant's backlog on their request. The cron
  *   leaves it unset and sweeps everyone.
+ * @param opts.deadline - epoch ms after which no further step starts.
+ *   Steps not reached keep `due_at` in the past and are picked up next
+ *   tick, oldest first, because the query already orders by `due_at`.
  */
 export async function advanceDueSteps(
   supabase: SupabaseClient<Database>,
-  opts: { userId?: string } = {},
+  opts: { userId?: string; deadline?: number } = {},
 ): Promise<ExecutorResult> {
   const now = new Date();
 
@@ -98,7 +103,7 @@ export async function advanceDueSteps(
       .eq('status', 'active');
     instanceIds = (data ?? []).map((row) => row.id);
     if (instanceIds.length === 0) {
-      return { stepsExecuted: 0, instancesCompleted: 0, errors: 0 };
+      return { stepsExecuted: 0, instancesCompleted: 0, errors: 0, truncated: false };
     }
   }
 
@@ -132,9 +137,14 @@ export async function advanceDueSteps(
 
   let stepsExecuted = 0;
   let errors = 0;
+  let truncated = false;
   const touchedInstances = new Set<string>();
 
   for (const step of candidates) {
+    if (opts.deadline !== undefined && Date.now() >= opts.deadline) {
+      truncated = true;
+      break;
+    }
     const instance = await loadInstance(supabase, step.instance_id);
     // A cancelled or completed instance keeps its steps but must not run
     // them. Guarding here rather than in the query keeps the hot index
@@ -162,7 +172,7 @@ export async function advanceDueSteps(
     if (await completeInstanceIfDone(supabase, instanceId)) instancesCompleted += 1;
   }
 
-  return { stepsExecuted, instancesCompleted, errors };
+  return { stepsExecuted, instancesCompleted, errors, truncated };
 }
 
 /** Execute one step and write its outcome. */

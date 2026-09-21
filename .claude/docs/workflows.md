@@ -111,10 +111,21 @@ over untouched.
 
 `lib/workflows/timing.ts`. Three modes:
 
-- `wedding_relative` — "2 weeks before the wedding". Null wedding date
-  means the step stays unscheduled rather than guessing.
-- `apply_relative` — "3 days after this workflow was applied".
-- `after_previous` — the default, and the gating mechanism above.
+- `wedding_relative`: "2 weeks before the wedding", optionally `sendTime`
+  ("at 9:15am", `HH:MM` on a 15-minute grid, MC timezone). Null wedding
+  date means the step stays unscheduled rather than guessing.
+- `apply_relative`: "3 days after this workflow was applied" (local
+  days, optional `sendTime`), or "45 minutes after" (`minutes` / `hours`
+  are an instant offset from the apply moment, no `sendTime`).
+- `after_previous`: the default, and the gating mechanism above. Delay
+  in `minutes` (multiples of 15), `hours` or `days`.
+
+One schema, `lib/workflows/timing-schema.ts`, validates every writer
+(builder save, copilot, converter); `toStepTiming` still coerces on read
+so a row from before a mode existed renders. Quiet hours apply after
+timing: a 9:15pm send inside the couple's quiet window is deferred as
+before. The 15-minute grid exists because the tick runs every 15
+minutes; a finer promise would be a lie.
 
 Never do date arithmetic by hand here. Compose `zonedTimeToUtc`,
 `localMidnight`, `addDaysToDateString` and `addMonthsToDateString` from
@@ -220,10 +231,16 @@ sweep; adding one is a single `scheduleKick(user.id)`.
 ### The cron sweep
 
 `app/api/cron/automations-tick/route.ts` keeps its path (it is named in
-`vercel.json`; renaming a live cron endpoint to match internal
-vocabulary is a needless outage risk). It stays the sweeper: it owns
-the time-based emitters, catches every event whose emitter does not
-kick, and re-tries anything a kick dropped. Each tick:
+the scheduler migration; renaming a live cron endpoint is a needless
+outage risk). pg_cron calls it every 15 minutes. It stays the sweeper: it
+owns the time-based emitters, catches every event whose emitter does not
+kick, and re-tries anything a kick dropped. The three passes share one
+45-second deadline (`TICK_BUDGET_MS`): work not reached is left exactly
+where it was and the next tick takes it, oldest first. The response and
+the `automations-tick` heartbeat both carry `truncated`, so a tick that
+keeps running out of time is visible on the Admin Scheduler card and in
+the `cron_job_missed` alert the hourly digest raises when the heartbeat
+goes stale. Each tick:
 
 1. `runTimeEmitters` — compute what should fire now for triggers with no
    source-row change (`invoice_due`, `step_overdue`, …).
@@ -519,27 +536,22 @@ its own copy of all of them.
 
 ## The morning digest
 
-`app/api/cron/workflow-digest/route.ts`, daily at `0 21 * * *`.
-Everything the engine does is invisible until somebody logs in, which is
-the wrong default for a product whose promise is "you will not forget
-anything".
+`app/api/cron/workflow-digest/route.ts`, hourly via pg_cron
+(`zebri:workflow-digest`, `0 * * * *`). Everything the engine does is
+invisible until somebody logs in, which is the wrong default for a
+product whose promise is "you will not forget anything".
 
 The gate is the MC's **local** hour, not a fixed UTC time, so daylight
 saving cannot drift the send an hour twice a year (`isDigestHour`).
+`DIGEST_LOCAL_HOURS` is `[DIGEST_LOCAL_HOUR]` (7am): the job runs hourly
+now that pg_cron is not capped the way Vercel's Hobby scheduler used to
+be, so every timezone gets its own real 7am instead of the shared UTC
+window the old daily run needed.
 
-It wants to run **hourly** -- that is what would give every timezone its
-own 7am. Vercel's **Hobby plan caps crons at once per day** and rejects a
-more frequent expression at deploy time, so the schedule is a single
-daily run and `DIGEST_LOCAL_HOURS` is a window (`[7, 8]`) wide enough to
-cover both halves of the Australian year: 21:00 UTC is 8am in Sydney
-under AEDT and 7am under AEST. Hobby also promises no timing precision,
-firing anywhere inside the 21:00 hour, which the same window absorbs.
-
-The cost, stated plainly: **on Hobby an MC whose timezone falls outside
-that window gets no digest at all.** Widening it further would mail
-somebody at 4am, which is worse. Moving to Pro restores the hourly tick
-and with it a real 7am for every timezone -- change the schedule back to
-`0 * * * *` and narrow `DIGEST_LOCAL_HOURS` to `[DIGEST_LOCAL_HOUR]`.
+The hourly run also checks the tick's health: when
+`system_heartbeats.automations-tick` is older than 45 minutes, the
+digest route sends a `cron_job_missed` Slack alert, since a stalled tick
+is otherwise invisible until an MC notices nothing fired.
 
 Two guards keep it to one per MC per day:
 

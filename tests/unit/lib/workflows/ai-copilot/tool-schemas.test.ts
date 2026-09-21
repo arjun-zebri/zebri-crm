@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   validateActionConfig,
+  validateTiming,
   validateTriggerConfig,
 } from '@/lib/workflows/ai-copilot/tool-schemas'
 
@@ -85,5 +86,26 @@ describe('validateTriggerConfig', () => {
     const res = validateTriggerConfig('new_enquiry', {})
     expect(res.ok).toBe(true)
     if (res.ok) expect(res.config).toBeTypeOf('object')
+  })
+})
+
+describe('validateTiming with minutes and sendTime', () => {
+  it('accepts a 45-minute chain delay and a 9:15am wedding-relative step', () => {
+    expect(validateTiming({ mode: 'after_previous', delayAmount: 45, unit: 'minutes' }).ok).toBe(true)
+    expect(
+      validateTiming({
+        mode: 'wedding_relative',
+        direction: 'before',
+        amount: 2,
+        unit: 'days',
+        sendTime: '09:15',
+      }).ok,
+    ).toBe(true)
+  })
+
+  it('rejects off-grid minutes with the shared message', () => {
+    const r = validateTiming({ mode: 'after_previous', delayAmount: 10, unit: 'minutes' })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toMatch(/multiple of 15/)
   })
 })

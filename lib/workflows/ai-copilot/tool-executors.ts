@@ -182,7 +182,7 @@ export const COPILOT_TOOL_PARAMETERS: Record<CopilotToolName, Record<string, unk
       timing: {
         type: ['object', 'null'],
         description:
-          'When this step comes due. One of {mode:"wedding_relative",direction:"before"|"after",amount:int,unit:"days"|"weeks"|"months"}, {mode:"apply_relative",amount:int,unit:"days"|"weeks"|"months"}, or {mode:"after_previous",delayAmount:int,unit:"hours"|"days"}. Omit for straight after the step above.',
+          'When this step comes due. One of {mode:"wedding_relative",direction:"before"|"after",amount:int,unit:"days"|"weeks"|"months",sendTime?:"HH:MM"}, {mode:"apply_relative",amount:int,unit:"minutes"|"hours"|"days"|"weeks"|"months",sendTime?:"HH:MM"}, or {mode:"after_previous",delayAmount:int,unit:"minutes"|"hours"|"days"}. Minutes must be a multiple of 15. sendTime is a clock time on the 15-minute grid (e.g. "09:15") and only allowed with days, weeks or months. Omit for straight after the step above.',
       },
       requiresApproval: {
         type: ['boolean', 'null'],

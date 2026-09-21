@@ -2888,7 +2888,30 @@ detail slide-over.
   session for them, so a recently-shadowed user can look falsely active.
 - **Row 3  -  operational lists:** upcoming renewals, past due, Connect
   issues.
-- **Row 4  -  supporting lists:** dormant accounts, recent signups.
+- **Row 4  -  Scheduler card** (`sections/scheduler-card.tsx`): the one
+  place the founder configures the pg_cron scheduler. Shows a
+  Configured / Not configured badge (are the Vault secrets set), the
+  base URL pg_cron will call, the `automations-tick` heartbeat as
+  "Tick healthy" or "Tick stale" (older than `TICK_STALE_MS`, 45
+  minutes, or never run) with a relative timestamp plus "last tick
+  truncated" when the heartbeat's `detail.truncated` is true, and every
+  pg_cron job (`scheduler-job-list.tsx`) with its schedule, last start
+  and last outcome, labelled `queued` / `queue failed` (`failed` in the
+  danger tone). That label is pg_cron's own result of
+  `select public.cron_call(...)`, i.e. whether the request was handed
+  to pg_net, not whether the route it called returned 200 - the HTTP
+  outcome is observable today only for the tick, through its heartbeat;
+  the five daily jobs have no HTTP signal yet (see `cicd.md` "Scheduled
+  jobs (pg_cron)"). Data comes from the service-role `scheduler_status()`
+  RPC via `lib/admin/scheduler.ts`; `loadSchedulerCard()` never throws,
+  so a project without the scheduler migration shows an error line on
+  this card instead of taking `/admin` down. The **Sync scheduler**
+  button calls `syncSchedulerAction()`, which pushes the deployment's
+  own `NEXT_PUBLIC_APP_URL` and `CRON_SECRET` into Vault through
+  `set_scheduler_secrets()`; nothing is typed in, and the audit row
+  records only `{ ok }`. This is the first-deploy step for every
+  project, see `cicd.md`. A refresh button re-reads the status in place.
+- **Row 5  -  supporting lists:** dormant accounts, recent signups.
 
 ## Users tab
 
