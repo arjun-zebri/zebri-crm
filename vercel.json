@@ -1,29 +1,3 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    {
-      "path": "/api/cron/expire-contracts",
-      "schedule": "0 22 * * *"
-    },
-    {
-      "path": "/api/email/send-contract-reminders",
-      "schedule": "15 22 * * *"
-    },
-    {
-      "path": "/api/cron/booking-reminders",
-      "schedule": "30 22 * * *"
-    },
-    {
-      "path": "/api/cron/prune-stripe-events",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/automations-tick",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/workflow-digest",
-      "schedule": "0 21 * * *"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }

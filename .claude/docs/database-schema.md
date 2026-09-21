@@ -1916,3 +1916,19 @@ legacy tables drop so a rollback has somewhere to look. No RLS.
 
 Migrations: `20260908000000_workflow_digest_settings.sql`,
 `20260909000000_workflow_portal_milestones.sql`.
+
+### system_heartbeats
+
+| column | type | notes |
+|---|---|---|
+| name | text pk | job name, e.g. `automations-tick` |
+| last_run_at | timestamptz | stamped by the job at the end of a run |
+| detail | jsonb | `{ truncated, durationMs }` for the tick |
+
+RLS on, no policies: service-role only. Written by `lib/workflows/heartbeat.ts`.
+
+### Scheduler functions (`20261001000000`)
+
+- `cron_call(p_path text) → bigint`: POSTs `<app_base_url><path>` via pg_net with the Vault bearer secret; returns the request id or null when unconfigured. Execute revoked from public, anon, authenticated.
+- `set_scheduler_secrets(p_base_url, p_secret)`: upserts the two Vault secrets. Service-role only.
+- `scheduler_status() → jsonb`: `{ configured, base_url, jobs[], heartbeats{} }`. Service-role only.

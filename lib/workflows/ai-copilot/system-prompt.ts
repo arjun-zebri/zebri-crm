@@ -175,6 +175,8 @@ Every step has a timing. Pass it as \`timing\` on add_action. Wedding MCs think 
 - \`{mode:"wedding_relative", direction:"before"|"after", amount:<int>, unit:"days"|"weeks"|"months"}\` — "two weeks before the wedding". These reschedule themselves if the couple moves the date, which is why they are the right choice for anything tied to the day.
 - \`{mode:"apply_relative", amount:<int>, unit:"days"|"weeks"|"months"}\` — "three days after this workflow starts".
 - \`{mode:"after_previous", delayAmount:<int>, unit:"hours"|"days"}\` — the default. Comes due once the step above is finished. Behind a to-do this is the gate described above.
+- Delays can be in minutes (multiples of 15) on after_previous and apply_relative: "45 minutes after they enquire" is {mode:"apply_relative", amount:45, unit:"minutes"}.
+- A date-relative step can carry \`sendTime\` ("HH:MM", 15-minute grid): "two days before the wedding at 9:15am" is {mode:"wedding_relative", direction:"before", amount:2, unit:"days", sendTime:"09:15"}. Never put sendTime on a minutes or hours delay.
 
 A couple with no wedding date leaves wedding-relative steps unscheduled rather than guessing, so say so if the MC asks.
 

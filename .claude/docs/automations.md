@@ -109,8 +109,9 @@ RPC.
 
 ## The tick
 
-`app/api/cron/automations-tick/route.ts` fires every minute via
-`vercel.json`. Bearer-auth via `isCronAuthorized`.
+`app/api/cron/automations-tick/route.ts` fires every 15 minutes via
+pg_cron (`.claude/docs/cicd.md` "Scheduled jobs (pg_cron)"). Bearer-auth
+via `isCronAuthorized`.
 
 Each tick:
 
@@ -452,8 +453,8 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 
 ## API surface
 
-- `POST /api/cron/automations-tick` - bearer-auth tick (Vercel Cron,
-  every minute)
+- `POST /api/cron/automations-tick` - bearer-auth tick (pg_cron,
+  every 15 minutes)
 - `POST /api/automations/test-run` - rate-limited preview that
   renders templates against a real couple without sending
 - `GET /api/automations/approve/[token]?decision=approve|deny` -

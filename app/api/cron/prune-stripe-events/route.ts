@@ -7,8 +7,8 @@
  * Retention picked at 3× Stripe's window per [[phase_2_payments]]
  * §11.1.
  *
- * Scheduled via `vercel.json` to run daily at 03:00 UTC. Bearer-
- * token gated via {@link isCronAuthorized}. Returns
+ * Scheduled via pg_cron (`zebri:prune-stripe-events`) to run daily at
+ * 03:00 UTC. Bearer-token gated via {@link isCronAuthorized}. Returns
  * `{ ok, deletedCount }`. Fires the `stripe_events_prune_high`
  * alert if it deletes > 5,000 rows in a single run — a normal
  * day deletes ~the previous day's volume (hundreds to low

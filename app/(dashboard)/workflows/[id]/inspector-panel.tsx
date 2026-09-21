@@ -534,7 +534,7 @@ function ActionConfigForm({
       label: label || undefined,
       parentStepId: action.parent_action_id,
       branchPath: action.branch_path,
-      timing: timing as unknown as Record<string, unknown>,
+      timing,
       requiresApproval: needsReview,
     })
   })
