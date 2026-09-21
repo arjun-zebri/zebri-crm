@@ -14,7 +14,7 @@ import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 const files = execSync(
-  `grep -rl --include='*.ts' --include='*.tsx' "^'use server'" app lib`,
+  `grep -rl --include='*.ts' --include='*.tsx' "^'use server'" app lib features`,
   { encoding: 'utf8' },
 )
   .trim()

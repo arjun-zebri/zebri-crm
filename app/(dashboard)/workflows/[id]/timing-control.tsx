@@ -13,35 +13,31 @@
  * that is how an MC talks: "six weeks out", "three days after they
  * book", "once I have called them".
  *
+ * The rules behind each control (minute snapping, which units carry a
+ * send time, what survives a mode switch) live in `./timing-units` so
+ * they are tested without driving a Radix Select in jsdom.
+ *
  * @module app/(dashboard)/workflows/[id]/timing-control
  */
 
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { MINUTE_STEP } from '@/lib/workflows/timing-schema'
 import type { StepTiming } from '@/types/workflows'
 
-/** The three anchors, in the order the select offers them. */
-const MODE_OPTIONS = [
-  { value: 'after_previous', label: 'After the step above' },
-  { value: 'wedding_relative', label: 'Relative to the wedding date' },
-  { value: 'apply_relative', label: 'After this workflow starts' },
-]
-
-const CHAIN_UNITS = [
-  { value: 'hours', label: 'hours' },
-  { value: 'days', label: 'days' },
-]
-
-const CALENDAR_UNITS = [
-  { value: 'days', label: 'days' },
-  { value: 'weeks', label: 'weeks' },
-  { value: 'months', label: 'months' },
-]
-
-const DIRECTIONS = [
-  { value: 'before', label: 'before the wedding' },
-  { value: 'after', label: 'after the wedding' },
-]
+import { SendTimeSelect } from './send-time-select'
+import {
+  CALENDAR_UNITS,
+  CHAIN_UNITS,
+  DIRECTIONS,
+  MODE_OPTIONS,
+  START_UNITS,
+  supportsSendTime,
+  switchMode,
+  withAmount,
+  withUnit,
+} from './timing-units'
+import { useDraftNumber } from './use-draft-number'
 
 export interface TimingControlProps {
   value: StepTiming
@@ -50,61 +46,25 @@ export interface TimingControlProps {
   allowAfterPrevious?: boolean
 }
 
-/** Swap modes, keeping the number the MC already typed where it fits. */
-function switchMode(current: StepTiming, mode: StepTiming['mode']): StepTiming {
-  const amount =
-    current.mode === 'after_previous' ? current.delayAmount : current.amount
-  switch (mode) {
-    case 'wedding_relative':
-      return { mode, direction: 'before', amount, unit: 'weeks' }
-    case 'apply_relative':
-      return { mode, amount, unit: 'days' }
-    case 'after_previous':
-      // Hours only exist on this mode, and a "2 months" carried over from
-      // a calendar mode would be nonsense as a chain delay.
-      return { mode, delayAmount: amount, unit: 'days' }
-  }
-}
-
 /**
  * The timing editor for one step. See {@link TimingControlProps}.
  *
- * Renders as a row of controls plus the sentence they produce, so the MC
- * reads back what they built rather than assembling it in their head.
+ * Renders as one row of controls; the sentence they produce is shown on
+ * the canvas card by the page, via `shortTiming`.
  */
-export function TimingControl({
-  value,
-  onChange,
-  allowAfterPrevious = true,
-}: TimingControlProps) {
+export function TimingControl({ value, onChange, allowAfterPrevious = true }: TimingControlProps) {
   const amount = value.mode === 'after_previous' ? value.delayAmount : value.amount
-  const modes = allowAfterPrevious
-    ? MODE_OPTIONS
-    : MODE_OPTIONS.filter((m) => m.value !== 'after_previous')
+  const modes = allowAfterPrevious ? MODE_OPTIONS : MODE_OPTIONS.filter((m) => m.value !== 'after_previous')
+  const units =
+    value.mode === 'after_previous' ? CHAIN_UNITS : value.mode === 'apply_relative' ? START_UNITS : CALENDAR_UNITS
+  // Typed digits stay local until blur or Enter, so the parent (and the
+  // schema's multiple-of-15 rule) only ever sees a snapped amount.
+  const amountField = useDraftNumber(amount, `${value.mode}:${value.unit}`, (n) => onChange(withAmount(value, n)))
 
-  /** Write a new amount, keeping the rest of the mode's shape intact. */
-  function setAmount(next: number) {
-    if (value.mode === 'after_previous') onChange({ ...value, delayAmount: next })
-    else onChange({ ...value, amount: next })
-  }
-
-  /** Keep the unit inside the set its mode allows. */
-  function setUnit(next: string) {
-    if (value.mode === 'after_previous') {
-      onChange({ ...value, unit: next === 'hours' ? 'hours' : 'days' })
-      return
-    }
-    onChange({
-      ...value,
-      unit: next === 'weeks' || next === 'months' ? next : 'days',
-    })
-  }
-
-  // One row, wrapping only where it has to: the anchor and the amount
-  // are one sentence ("2 weeks before the wedding"), and stacking them
-  // made a three-control question fill a modal. The amount and its unit
-  // wrap as a pair - a "2" that has come away from its "weeks" is worse
-  // than either arrangement.
+  // One row, wrapping only where it has to: the anchor and the amount are
+  // one sentence ("2 weeks before the wedding"). The amount and its unit
+  // wrap as a pair; a "2" that has come away from its "weeks" is worse
+  // than either arrangement. "Send at" joins the pair when it applies.
   return (
     <div className="flex flex-wrap items-end gap-2">
       <Select
@@ -115,21 +75,21 @@ export function TimingControl({
         className="min-w-44 flex-1"
       />
 
-      <div className="flex items-end gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         <Input
           type="number"
-          min={0}
+          min={value.unit === 'minutes' ? MINUTE_STEP : 0}
+          step={value.unit === 'minutes' ? MINUTE_STEP : 1}
           aria-label="How many"
-          value={String(amount)}
-          onChange={(e) => setAmount(Math.max(0, Number(e.currentTarget.value) || 0))}
+          {...amountField}
           className="w-16"
         />
 
         <Select
           ariaLabel="Unit"
           value={value.unit}
-          options={value.mode === 'after_previous' ? CHAIN_UNITS : CALENDAR_UNITS}
-          onValueChange={setUnit}
+          options={units}
+          onValueChange={(next) => onChange(withUnit(value, next))}
           className="w-28"
         />
 
@@ -138,12 +98,12 @@ export function TimingControl({
             ariaLabel="Before or after the wedding"
             value={value.direction}
             options={DIRECTIONS}
-            onValueChange={(next) =>
-              onChange({ ...value, direction: next === 'after' ? 'after' : 'before' })
-            }
+            onValueChange={(next) => onChange({ ...value, direction: next === 'after' ? 'after' : 'before' })}
             className="w-44"
           />
         ) : null}
+
+        {supportsSendTime(value) ? <SendTimeSelect value={value} onChange={onChange} /> : null}
       </div>
     </div>
   )

@@ -38,6 +38,8 @@ export interface DispatchResult {
   openedInstances: number;
   /** Appointment steps a Scheduler booking completed on this pass. */
   appointmentsCompleted: number;
+  /** True when the deadline stopped the pass before the batch was done. */
+  truncated: boolean;
 }
 
 /**
@@ -55,19 +57,28 @@ export interface DispatchResult {
  *   event the MC just caused - the one they are watching for - is the
  *   one that does not get dispatched. The cron leaves it unset and
  *   works the backlog down.
+ * @param opts.deadline - epoch ms; events not reached stay unprocessed for
+ *   the next tick.
  */
 export async function dispatchPendingEvents(
   supabase: SupabaseClient<Database>,
   limit = 500,
-  opts: { userId?: string; since?: string } = {},
+  opts: { userId?: string; since?: string; deadline?: number } = {},
 ): Promise<DispatchResult> {
   const events = await loadUndispatchedEvents(supabase, limit, opts);
 
   let matchedTemplates = 0;
   let openedInstances = 0;
   let appointmentsCompleted = 0;
+  let truncated = false;
+  let processedEvents = 0;
 
   for (const event of events) {
+    if (opts.deadline !== undefined && Date.now() >= opts.deadline) {
+      truncated = true;
+      break;
+    }
+    processedEvents += 1;
     try {
       // A booking can satisfy an appointment step that is already
       // running, as well as opening a new workflow. Do it first, so the
@@ -104,10 +115,11 @@ export async function dispatchPendingEvents(
   }
 
   return {
-    processedEvents: events.length,
+    processedEvents,
     matchedTemplates,
     openedInstances,
     appointmentsCompleted,
+    truncated,
   };
 }
 

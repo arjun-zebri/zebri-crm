@@ -18,6 +18,7 @@ import {
 import { useAutosave } from '@/lib/branding/use-autosave'
 import { useHistory } from '@/lib/branding/use-history'
 import { repairAllSurfaces } from '@/lib/branding/validate-blocks'
+import type { ProposalRole } from '@/lib/proposals/types'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from '@/types/branding-preview'
 import type { Json } from '@/types/database'
@@ -27,6 +28,7 @@ import { BlockRenderer } from './blocks/block-renderer'
 import type { PaletteEntry } from './blocks/blocks-by-surface'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import { CLEARABLE_MARKERS, isDeletable, isMarker } from './blocks/policy'
+import { proposalStarterBlocks } from './blocks/proposal-starters'
 import type { Block, ImageBlock } from './blocks/types'
 import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
@@ -34,8 +36,10 @@ import { CanvasScopeBar } from './canvas-scope-bar'
 import { EditorTopbar } from './editor-topbar'
 import { NotReadyPanel } from './not-ready-panel'
 import { PortalSectionsBar } from './portal-preview'
+import { ProposalRoleChooser } from './proposal-role-chooser'
 import { SurfaceTabs } from './surface-tabs'
-import { uploadBrandAsset } from './upload-brand-asset'
+import { uploadBlockImage, uploadBrandAsset } from './upload-brand-asset'
+import { uploadProposalMedia } from './upload-proposal-media'
 
 
 export interface PortalSectionSettings {
@@ -71,7 +75,7 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] }
+    blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[]; proposal: Block[] }
     businessName: string
     phone: string
     website: string
@@ -102,6 +106,11 @@ interface BrandingEditorProps {
     sectionSpacing: number
     enabledSurfaces: SurfaceTab[]
     onboardedAt: string | null
+    /** Role chosen on first open of the Proposal tab (mc/celebrant/both), or
+     *  null before it has been chosen. Stored outside {@link EditorState}
+     *  (plain useState, not undo history) because it is a one-time chooser
+     *  answer, not an editable design token. Read by Task 8's role picker. */
+    proposalRole: ProposalRole | null
   }
 }
 
@@ -137,7 +146,7 @@ export interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] }
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[]; proposal: Block[] }
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
@@ -225,6 +234,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const { state, set: setState, undo, redo, canUndo, canRedo } = useHistory<EditorState>(initial)
 
   const [surface, setSurface] = useState<SurfaceTab>('invoice')
+  // Kept in plain useState (see the initialData doc above) rather than
+  // EditorState so choosing a role isn't an undo step: it's a one-time
+  // chooser answer, not an editable design token.
+  const [proposalRole, setProposalRole] = useState<ProposalRole | null>(initialData.proposalRole)
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [zoom, setZoom] = useState(1)
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
@@ -633,7 +646,33 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     updateBlock<ImageBlock>(blockId, { url: undefined })
   }
 
-  const docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead' = surface
+  // Proposal block uploads: a static image (hero/gallery/testimonials/
+  // about-me) goes through the `branding` bucket; a video (hero/video block)
+  // goes through `proposal-media` with progress reporting. Both toast on
+  // failure through the shared helpers' `onError`, same as every other
+  // upload path above.
+  const uploadBlockImageCb = (file: File, key: string) =>
+    uploadBlockImage(file, key, { onError: (m) => toast(m, 'error') })
+
+  const uploadVideoCb = (file: File, key: string, onProgress?: (pct: number) => void) =>
+    uploadProposalMedia(file, key, { onProgress, onError: (m) => toast(m, 'error') })
+
+  const removeAssetCb = async (bucket: 'branding' | 'proposal-media', key: string) => {
+    // Same toast-on-failure contract as uploadBlockImageCb/uploadVideoCb, so a
+    // failed remove (auth lookup, or the storage call itself) surfaces to the
+    // MC instead of rejecting silently.
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { error } = await supabase.storage.from(bucket).remove([`${user.id}/${key}`])
+      if (error) throw error
+    } catch {
+      toast('Could not remove media', 'error')
+    }
+  }
+
+  const docSurface: SurfaceTab = surface
 
   /** Normalise a kit's per-surface block trees, filling any missing
    *  surface with its default layout so applying a kit keeps the MC's
@@ -649,6 +688,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       vendorTimeline: blocks.vendorTimeline ?? defaultBlocksFor('vendorTimeline'),
       questionnaire: blocks.questionnaire ?? defaultBlocksFor('questionnaire'),
       lead: blocks.lead ?? defaultBlocksFor('lead'),
+      proposal: blocks.proposal ?? defaultBlocksFor('proposal'),
     }
   }
 
@@ -815,6 +855,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       vendorTimeline: defaultBlocksFor('vendorTimeline'),
       questionnaire: defaultBlocksFor('questionnaire'),
       lead: defaultBlocksFor('lead'),
+      proposal: defaultBlocksFor('proposal'),
     }
     const kit: BrandKit = {
       id: `kit-${Date.now().toString(36)}`,
@@ -1002,6 +1043,18 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   return (
     <div className="flex flex-col h-full bg-surface overflow-hidden">
+      <ProposalRoleChooser
+        // Not while the onboarding wizard is up: it asks the same question,
+        // and the chooser portals outside the editor's inert wrapper.
+        open={surface === 'proposal' && proposalRole === null && initialData.onboardedAt !== null}
+        onChosen={(role) => {
+          setProposalRole(role)
+          setState(
+            (prev) => ({ ...prev, blocks: { ...prev.blocks, proposal: proposalStarterBlocks(role) } }),
+            { commit: true },
+          )
+        }}
+      />
       <EditorTopbar
         kitName={state.kitName}
         setKitName={(v) => setState((prev) => ({ ...prev, kitName: v }))}
@@ -1140,6 +1193,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           zoom={zoom}
           setZoom={setZoom}
           wide={surface === 'portal'}
+          page={surface === 'proposal'}
           overlay={<NotReadyPanel readiness={surfaceReadiness} />}
         >
           <CanvasScopeBar
@@ -1198,6 +1252,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             removeHeader={removeHeader}
             uploadImage={uploadImage}
             removeImage={removeImage}
+            uploadBlockImage={uploadBlockImageCb}
+            uploadVideo={uploadVideoCb}
+            removeAsset={removeAssetCb}
+            frame={surface === 'proposal' ? 'page' : 'document'}
           />
         </CanvasFrame>
       </div>
@@ -1304,8 +1362,8 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[] },
-  docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead',
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[]; lead: Block[]; proposal: Block[] },
+  docSurface: SurfaceTab,
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return

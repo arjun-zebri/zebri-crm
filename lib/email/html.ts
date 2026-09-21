@@ -242,6 +242,38 @@ export function questionnaireHtml(
 </html>`;
 }
 
+/**
+ * The neutral (unbranded) card shell every couple-facing email falls back to
+ * when the sender has no {@link PublicBranding}.
+ *
+ * Extracted from {@link invoiceHtml} so `proposalHtml` can reuse the exact
+ * same wrapper: the two emails previously carried independent copies of this
+ * markup, and a future tweak to one would silently drift from the other.
+ *
+ * @param bodyHtml - Pre-rendered inner content (heading, CTA, links).
+ * @param mcBusinessName - Shown in the "Sent by … via Zebri" footer.
+ */
+function plainCardHtml(bodyHtml: string, mcBusinessName: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <tr><td style="padding:40px 40px 32px;">
+          ${bodyHtml}
+        </td></tr>
+        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
+          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 export function invoiceHtml(
   opts: {
     coupleName: string;
@@ -265,10 +297,7 @@ export function invoiceHtml(
     ? `<p style="margin:0 0 32px;font-size:14px;color:#374151;">Due: <strong>${dueDate}</strong></p>`
     : "";
 
-  // When branding is provided, use the branded email wrapper; otherwise,
-  // preserve the current hardcoded HTML for byte-for-byte compatibility.
-  if (branding) {
-    const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Invoice ${invoiceNumber}</p>
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Invoice ${invoiceNumber}</p>
           <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${invoiceTitle}</h1>
           ${dueLine}
           <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
@@ -283,41 +312,161 @@ export function invoiceHtml(
           <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
             Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
           </p>`;
-    return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
-  }
 
-  return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
-        <tr><td style="padding:40px 40px 32px;">
-          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Invoice ${invoiceNumber}</p>
-          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${invoiceTitle}</h1>
-          ${dueLine}
+  // When branding is provided, use the branded email wrapper; otherwise,
+  // fall back to the plain card, preserved byte-for-byte via `plainCardHtml`.
+  if (branding) return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
+  return plainCardHtml(bodyHtml, mcBusinessName);
+}
+
+/**
+ * Proposal email body. Same skeleton as {@link invoiceHtml}: a branded
+ * wrapper when the sender has branding, else the plain card.
+ */
+export function proposalHtml(
+  opts: {
+    coupleName: string;
+    proposalNumber: string;
+    proposalTitle: string;
+    expiresAt: string | null;
+    shareUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
+  const { coupleName, proposalNumber, proposalTitle, expiresAt, shareUrl, mcBusinessName } = opts;
+  const expiryLine = expiresAt
+    ? `<p style="margin:0 0 32px;font-size:14px;color:#374151;">Valid until: <strong>${expiresAt}</strong></p>`
+    : "";
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Proposal ${proposalNumber}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${proposalTitle}</h1>
+          ${expiryLine}
           <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
             Hi ${coupleName},<br><br>
-            ${mcBusinessName} has sent you an invoice. Click the button below to view it and arrange payment.
+            ${mcBusinessName} has put together a proposal for your day. Open it to see the options and choose the one that suits you.
           </p>
           <table cellpadding="0" cellspacing="0">
             <tr><td style="background:#111827;border-radius:8px;">
-              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">View Invoice</a>
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">View proposal</a>
             </td></tr>
           </table>
           <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
             Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>`;
+  if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding);
+  return plainCardHtml(bodyHtml, mcBusinessName);
+}
+
+/**
+ * MC-facing notification: a couple accepted a proposal option. Sent from
+ * the finalize step, so by the time it lands the contract is signed and the
+ * invoice exists; the copy says so rather than "ready for signature".
+ *
+ * Unlike the couple-facing builders above (Resend's shared address only),
+ * this one is sent to the MC themselves, so it reuses the same
+ * branded/plain wrapper split for consistency with every other Zebri
+ * notification they receive. Names are escaped: the couple's name and the
+ * package title are free text the MC (or the couple, via the lead form)
+ * typed, and an email body is HTML.
+ */
+export function proposalAcceptedHtml(
+  opts: {
+    coupleName: string;
+    proposalNumber: string;
+    proposalTitle: string;
+    packageName: string;
+    total: number;
+    invoiceNumber: string;
+    detailUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
+  const { coupleName, proposalNumber, proposalTitle, packageName, total, invoiceNumber, detailUrl, mcBusinessName } = opts;
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Proposal ${escapeHtmlText(proposalNumber)}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${escapeHtmlText(proposalTitle)}</h1>
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            ${escapeHtmlText(coupleName)} accepted <strong>${escapeHtmlText(packageName)}</strong> at $${total.toFixed(2)} and signed the contract. Invoice ${escapeHtmlText(invoiceNumber)} has been generated.
           </p>
-        </td></tr>
-        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
-          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${detailUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Open in Zebri</a>
+            </td></tr>
+          </table>`;
+  if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding);
+  return plainCardHtml(bodyHtml, mcBusinessName);
+}
+
+/**
+ * MC-facing notification: the couple opened the proposal's public page for
+ * the first time. Sent once per proposal (the events route only calls this
+ * on `first_open`), so the copy leans into "just opened" rather than
+ * repeat-view language.
+ *
+ * Same escaping posture as {@link proposalAcceptedHtml}: the couple's name
+ * and the proposal title are free text, and an email body is HTML.
+ */
+export function proposalOpenedHtml(
+  opts: {
+    coupleName: string;
+    proposalNumber: string;
+    proposalTitle: string;
+    detailUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
+  const { coupleName, proposalNumber, proposalTitle, detailUrl, mcBusinessName } = opts;
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Proposal ${escapeHtmlText(proposalNumber)}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${escapeHtmlText(proposalTitle)}</h1>
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            ${escapeHtmlText(coupleName)} just opened your proposal ${escapeHtmlText(proposalTitle)}. You can watch how they read it on the proposal page.
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${detailUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Open in Zebri</a>
+            </td></tr>
+          </table>`;
+  if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding);
+  return plainCardHtml(bodyHtml, mcBusinessName);
+}
+
+/**
+ * MC-facing notification: a couple declined a proposal.
+ *
+ * Every free-text field is HTML-escaped: the couple's message obviously, but
+ * also the names and the reason label, since an email body is HTML and a
+ * name with an angle bracket in it must not become markup.
+ */
+export function proposalDeclinedHtml(
+  opts: {
+    coupleName: string;
+    proposalNumber: string;
+    proposalTitle: string;
+    reasonLabel: string;
+    message: string | null;
+    detailUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
+  const { coupleName, proposalNumber, proposalTitle, reasonLabel, message, detailUrl, mcBusinessName } = opts;
+  const messageLine = message
+    ? `<p style="margin:0 0 24px;font-size:14px;color:#374151;font-style:italic;">&ldquo;${escapeHtmlText(message)}&rdquo;</p>`
+    : "";
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Proposal ${escapeHtmlText(proposalNumber)}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${escapeHtmlText(proposalTitle)}</h1>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+            ${escapeHtmlText(coupleName)} declined this proposal: <strong>${escapeHtmlText(reasonLabel)}</strong>.
+          </p>
+          ${messageLine}
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${detailUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Open in Zebri</a>
+            </td></tr>
+          </table>`;
+  if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding);
+  return plainCardHtml(bodyHtml, mcBusinessName);
 }
 
 /**

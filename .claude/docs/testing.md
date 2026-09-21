@@ -319,6 +319,10 @@ One file per feature area. Do not create test files for sub-features  -  add to 
 | Wizard "Next" button | `button:has-text("Next")` (context-specific inside modal) |
 | Wizard "Done" button | `button:has-text("Done")` (step 8 close action) |
 | Settings phone input | `input[placeholder="Phone"]` (placeholder selector; label association pending Settings hardening) |
+| Step timing "Send at" | `getByRole('combobox', { name: 'Send at' })` (Radix Select trigger) |
+| Step timing "How many" | `getByRole('spinbutton', { name: 'How many' })` (`step=15` when the unit is minutes) |
+| Admin "Sync scheduler" | `getByRole('button', { name: 'Sync scheduler' })` |
+| Admin "Refresh" (scheduler card) | `getByRole('button', { name: 'Refresh' })` (icon-only, on `/admin`) |
 
 ## Helpers
 
@@ -334,6 +338,7 @@ One file per feature area. Do not create test files for sub-features  -  add to 
 | `deleteVendor(page, name)` | Opens profile, Edit modal, two-click delete |
 | `search(page, term)` | Types into `input[placeholder="Search..."]` |
 | `uniqueName(prefix)` | Returns `"prefix + timestamp"` for test isolation |
+| `runSql(sql)` (`tests/integration/helpers/sql.ts`) | Runs raw SQL against the **local** Supabase database as `postgres`, via `docker exec` into the `supabase_db_zebri-crm` container. For integration tests that need schemas PostgREST never exposes (`vault`, `cron`, `net`): scheduler state inspection and cleanup. Everything else keeps using the PostgREST clients in `./supabase`. |
 
 ---
 
@@ -609,6 +614,199 @@ no-op on desktop, so one spec runs on both projects.
 **Careful with dedupe.** An automatic apply refuses a template already
 live on a couple, so two bus events for one couple open **one**
 instance. A test expecting one per event is asserting the old engine.
+
+### Proposals (2026-09-13, Phase A; Phase B page-mode surface 2026-09-14)
+
+Feature doc: `.claude/docs/proposals.md`.
+
+Integration (local Supabase, real RLS): `tests/integration/rls/proposals.test.ts`
+covers cross-tenant SELECT/UPDATE/DELETE denial on `proposals`, a
+forged `user_id` insert, and the parent-ownership `with check` on
+`proposal_options` and `proposal_option_items` (an option or item
+attached to another tenant's proposal/option is rejected).
+`tests/integration/proposals/proposal-role-action.test.ts` covers
+`chooseProposalRoleAction`.
+
+E2E: `tests/e2e/proposals.spec.ts` (chromium, Mobile Chrome, Mobile
+Safari). Creates a proposal from `/proposals`, saves it, and confirms
+the detail page loads; asserts an unsent proposal's public link 404s
+for a logged-out visitor (`browser.newContext()`); and, when
+`TEST_PROPOSAL_TOKEN` is set (flip `share_token_enabled` on a saved row
+via local SQL), asserts the branding editor's Proposal tab shows the
+role chooser once and renders the page canvas, and that a sent
+proposal's public page renders in page mode with a selectable package
+and an accept dialog.
+
+**Selector notes:**
+- The "New proposal" button in `proposals-header.tsx` carries an
+  explicit `aria-label="New proposal"`: its visible text collapses to
+  icon-only below `sm` (`hidden sm:inline`), which without the
+  `aria-label` left the button with no accessible name at all on
+  mobile and broke `getByRole('button', { name: /New proposal/i })`
+  there. Fixed alongside this spec.
+- The builder's Save button reads **"Save changes"**, not a bare
+  "Save" (`components/builders/parts/share-and-send.tsx`); Send reads
+  "Send to couple" while a draft and "Resend" once sent.
+- The couple picker is `BuilderMetaRow` (shared with Quote/Invoice):
+  click the "Select couple" trigger, then a button inside
+  `[data-radix-popper-content-wrapper]`.
+- **Role chooser dialog:** `page.getByRole('dialog', { name: 'What do
+  you offer?' })`; its three role buttons are named by
+  `PROPOSAL_ROLE_LABELS` (`lib/proposals/types.ts`), namely "MC",
+  "Celebrant", "MC and Celebrant", via an explicit `aria-label` on each
+  `<button>`, matched with `getByRole('button', { name: /MC and
+  Celebrant/ })`. Reloading the page after choosing shows zero matches
+  for the dialog (`toHaveCount(0)`): the choice persists on
+  `user_branding.proposal_role`.
+- **Package cards on the public page:** `article[data-option-id]`, with
+  `aria-pressed` on the card itself (not its inner button) tracking
+  selection: `cards.first().getByRole('button').first().click()` then
+  `expect(cards.first()).toHaveAttribute('aria-pressed', 'true')`.
+- **Accept:** the accept block's button reads "Accept and sign"
+  (`AcceptBlock.buttonLabel` default in
+  `app/(dashboard)/branding/blocks/defaults.ts`); clicking it opens
+  the accept stepper (`AcceptStepper`, Phase C), a `ProposalSheet`
+  `role="dialog"` named "Confirm your booking" through
+  `aria-labelledby` on its heading `<h2>` (id from `useId`, so match
+  by name, never by id). The stepper walks Choose, Sign, Pay, Done
+  (an `<ol aria-label="Booking progress">` with `aria-current="step"`
+  on the active dot). The decline link opens a second `ProposalSheet`
+  named "Not the right fit?" (reason radio group + optional message).
+  Every proposal dialog is addressable by accessible name: the role
+  chooser goes through the shared `Modal` primitive
+  (`components/ui/modal.tsx`), which sets `aria-labelledby` the same
+  way whenever a `title` prop is given, so `getByRole('dialog', {
+  name: '...' })` resolves everywhere.
+- **Resume rules (unit-tested in
+  `tests/unit/app/proposal/resume-flow.test.ts`):** the stepper opens
+  on Sign when `pending_contract` has a rendered body, on Choose (with
+  the accepted option preselected) when `locked_content_html` is null
+  (publish failed after the RPC; Continue re-runs it), on Pay when
+  accepted with an unpaid first stage, and on Done once paid. A signed
+  `pending_contract` with no `accepted_at` is repaired by the server
+  page before render (`app/proposal/[token]/_lib/self-heal.ts`,
+  `tests/unit/app/proposal/self-heal.test.ts`); if that repair fails
+  the stepper resumes on Done rather than re-opening Sign.
+- **`TEST_PROPOSAL_TOKEN` recipe:** flip `share_token_enabled = true` on
+  a saved proposal row via local SQL (`docker exec -i
+  supabase_db_zebri-crm psql -U postgres -d postgres`), then export the
+  token as `TEST_PROPOSAL_TOKEN`. The role-chooser test needs a signed-
+  in `TEST_EMAIL` on the target DB **that also owns at least one
+  couple**: `creates a proposal and lands on its detail page` opens the
+  couple picker and clicks the first result, which times out against a
+  couple-less account. Seeding a fresh `TEST_EMAIL` (service-role
+  `admin.auth.admin.createUser`) needs a matching `insert into couples
+  (user_id, name, status) values (...)` alongside it. The login rate
+  limiter trips after ~5 logins per user in a short window and this
+  spec logs in per test, so use one seeded user per project run (a
+  fresh user per `--project`, not per test). The seeded account also
+  needs `user_branding.onboarded_at` set (any timestamp): with it
+  null, `/branding?surface=proposal` shows the branding
+  onboarding wizard instead of the role chooser (the wizard asks the
+  same MC/Celebrant/both question in its own Documents step), so the
+  role-chooser test's guard never sees the "What do you offer?" dialog
+  at all.
+
+#### Engagement (Phase D, fix wave 2026-09-15)
+
+Unit (`tests/unit/lib/proposals/engagement*.test.ts`,
+`tests/unit/app/proposal/engagement-*.test.ts`,
+`tests/unit/app/proposals/proposal-engagement.test.tsx`) and integration
+(`tests/integration/proposals/record-proposal-events.test.ts`,
+`tests/integration/rls/proposal-events.test.ts`, local Supabase, real
+RLS) cover the tracker, the aggregation, the RPC (including the row
+lock, the owner no-op, and the payload/duration/row bounds) and the
+route. Playwright e2e is outstanding (M8, deferred): nothing yet drives
+a real browser through scroll to flush to RPC to the MC's dashboard.
+
+#### Layout v2 (Phase 1, 2026-09-16)
+
+Full feature doc: `.claude/docs/proposals.md` (Layout v2 section).
+
+Unit (`tests/unit/features/proposals/`): `model/rich-doc-spec.test.ts`,
+`model/schema.test.ts`, `model/variables.test.ts`,
+`model/migrate-v1.test.ts`, `model/presets.test.ts`,
+`render/embed-src.test.ts`, `render/rich-doc.test.tsx`,
+`render/section-style.test.ts`, `render/layout.test.tsx` cover the
+layout model, Zod validation, the v1-to-v2 migration, presets, and the
+public renderer. `tests/unit/app/proposal/proposal-page-layout.test.tsx`
+covers the public page's v2/v1 fallback; `tests/unit/app/proposals/proposals-nav.test.tsx`
+and `tests/unit/app/proposals/templates-list.test.tsx` cover the
+flag-gated nav and the Templates tab.
+
+Integration (local Supabase, real RLS): `tests/integration/rls/proposal-templates.test.ts`
+and `tests/integration/rls/proposal-settings.test.ts` cover
+cross-tenant denial on `proposal_templates` and `proposal_settings`.
+`tests/integration/proposals/get-public-proposal-layout.test.ts` and
+`tests/integration/proposals/templates-actions.test.ts` cover the
+`get_public_proposal_layout` RPC and the `features/proposals/data/templates.ts`
+server actions.
+
+#### Layout v2 (Phase 2, 2026-09-17)
+
+Full feature doc: `.claude/docs/proposals.md` (Layout v2 Phase 2
+section). Every test imports from `@/features/proposals` only (the
+ESLint feature-boundary rule covers `tests/**` too).
+
+Unit, `tests/unit/components/editor/`: `canvas-frame.test.tsx`,
+`number-stepper.test.tsx`, `resize-grip.test.tsx`, `resize-math.test.ts`,
+`slider.test.tsx`, `toolbar-primitives.test.tsx` cover the lifted
+primitives on their own (no editor around them).
+
+Unit, `tests/unit/features/proposals/editor/`: `state.test.ts`
+(`layoutReducer`, `newSectionFor`), `use-layout-editor.test.tsx` (the
+one-history split), `content-section-editor.test.tsx` (mount, emit,
+re-hydrate, registry), `extensions.test.ts` (schema/spec parity plus a
+round-trip of every node type through `normaliseEditorJSON` +
+`parseProposalLayout`), `slash-menu.test.ts` and
+`columns-commands.test.ts` (bare `@tiptap/core` `Editor` harness, no
+React), `section-canvas.test.tsx` (selection, deletion, insert lines),
+`add-palette.test.tsx` / `use-add-palette.test.ts`,
+`insert-items.test.ts`, `node-views.test.tsx`, `node-bar.test.tsx`,
+`section-bar.test.tsx`, `text-bar.test.tsx`, `section-resize.test.tsx`
+/ `section-resize-math.test.ts`, `mobile-canvas.test.tsx`,
+`keyboard.test.tsx`, `template-editor.test.tsx`,
+`use-template-autosave.test.tsx`. `tests/unit/features/proposals/data/media.test.ts`
+covers `uploadProposalMediaFile`/`MEDIA_LIMITS`.
+`tests/unit/branding/use-autosave.test.ts` covers the new
+`flushOnUnmount` option; `tests/unit/components/ui/button.test.tsx`
+covers `buttonClassName`; `tests/unit/app/proposals/templates-list.test.tsx`
+covers the Templates tab's Open link.
+
+**dnd-kit pattern:** `section-canvas.test.tsx` does not simulate a
+pointer drag through `DndContext` - jsdom has no layout, so dnd-kit's
+collision detection never fires meaningfully. Reordering is exercised
+through the same `Alt+ArrowUp/Down` keyboard path a real user has
+(`fireEvent.keyDown(window, { key: 'ArrowDown', altKey: true })`),
+which drives the identical `moveSection` dispatch the drag handler
+does. A future test asserting drag-specific behaviour (drag overlay,
+`closestCenter` itself) would need `@dnd-kit/core`'s own test utilities
+or a real browser (Playwright).
+
+**TipTap pattern:** two styles depending on whether React is under
+test. `content-section-editor.test.tsx` and friends mount the real
+component with RTL and read the live `Editor` back out of
+`editor-registry.ts` (`getEditor(sectionId)`, awaited via `waitFor`
+since registration happens in an effect after mount). `slash-menu.test.ts`
+and `columns-commands.test.ts` skip React entirely - `new Editor({
+extensions: buildRichDocExtensions({}), content: doc(...) })` against
+a bare `@tiptap/core` instance, asserting on `editor.state`/
+`editor.commands` directly. **Every editor created this second way
+must call `editor.destroy()` before the test ends** (each `it` in
+`columns-commands.test.ts` does, one per test) - an un-destroyed
+`Editor` leaves ProseMirror plugin timers running past teardown, which
+surfaces as async noise or an occasional non-zero exit code from a
+combined `unit` project run, not a failure in the offending test
+itself.
+
+Integration (local Supabase, real RLS):
+`tests/integration/proposals/template-editor-save.test.ts` round-trips
+a doc using every rich-doc node type through
+`updateTemplateLayoutAction` -> `getTemplateAction` byte-for-byte
+(normalised through `normaliseEditorJSON` first, matching what the
+live editor sends) and asserts a cross-tenant write is refused with
+the row untouched. No new RLS tables this phase - `proposal_templates`
+and `proposal_settings` coverage is unchanged from Phase 1.
 
 ## What NOT to Test
 - Supabase internals or DB queries

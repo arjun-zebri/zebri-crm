@@ -82,16 +82,20 @@ default emoji and routing.
 | `stripe_connect_onboarding_failed` | warn | Connect onboarding errored | `/api/stripe/connect/*` |
 | `stripe_connect_disabled` | warn | `account.updated` webhook reported a non-null `requirements.disabled_reason` — Stripe paused some capability and the MC needs to action it (Phase 2D.1) | `/api/stripe/webhook` (Connect branch) |
 | `stripe_connect_deauthorized` | warn | MC removed our platform from their Stripe account via the Stripe Dashboard (Phase 2D.1) | `/api/stripe/webhook` (Connect branch) |
-| `email_rate_limit_hit` | warn | Per-user send-quote / send-invoice / send-template limit hit (Phase 2C; `action` discriminates) | `/api/email/send-{quote,invoice,template}` |
+| `email_rate_limit_hit` | warn | Per-user send-proposal / send-invoice / send-template limit hit (Phase 2C; `action` discriminates) | `/api/email/send-{proposal,invoice,template}` |
 | `automation_paused_missing_variables` | warn | A `send_email` step using a saved template hit an unresolved variable for a couple. The step parks on a far-future wake time and never resumes by itself, so this alert is the only signal the email did not send; the MC fixes the data and retries the step from the couple's Workflow tab. `automationId` carries the template id (or the instance id for an ad-hoc workflow), `runId` the instance id | `lib/workflows/executor.ts` |
 | `resend_send_failed` | error | Resend API rejected / errored | `/api/email/*` |
 | `resend_bounced` | warn | Bounce reported | `/api/resend/webhook` |
 | `cron_job_failed` | error | Cron handler threw | `/api/cron/*` |
 | — (no alert) | — | The morning digest deliberately alerts on nothing. A failed send leaves `daily_digest_last_sent_on` unstamped so the next hourly run retries it, and the route returns `{considered, sent, skippedEmpty, failed}` for the cron log. A per-MC digest failure is not an incident | `/api/cron/workflow-digest` |
-| `cron_job_missed` | warn | Expected run did not arrive | scheduled checker (Phase 0.7) |
+| `cron_job_missed` | warn | Expected run did not arrive | `workflow-digest` route, when the tick heartbeat is older than 45 min (R1) |
 | `auth_anomaly` | warn | Failed-login spike, token reuse, … | middleware (Phase 0.8) |
 | `auth_rate_limit_hit` | warn | Per-action rate limit hit (login/signup/reset/update/change password) | `app/(auth)/actions.ts` + `app/(dashboard)/settings/account/actions.ts` (Phase 1) |
 | `rls_denied_spike` | warn | Cluster of RLS denials in a window | logs aggregator (Phase 0.8) |
+| `proposal_accepted` | info | A couple accepted a proposal option; the MC is emailed and gets a Slack heads-up with the total | `lib/proposals/notify.ts` (Proposals Phase C) |
+| `proposal_opened` | info | A couple opened the proposal's public page for the first time; the MC is emailed and gets a Slack heads-up | `lib/proposals/notify-opened.ts`, `app/api/proposal/events/route.ts` (Proposals Phase D) |
+| `proposal_declined` | info | A couple declined a proposal, with a reason and optional message | `lib/proposals/notify.ts` (Proposals Phase C) |
+| `proposal_close_failed` | error | A step of the accept/decline/finalize close sequence failed (`accept_rpc`, `publish`, or `finalize`); the couple-side row/signature already stands, this just flags a side effect (rendered contract, or booking) for a human to check | `app/api/proposal/accept/route.ts`, `lib/contracts/after-sign.ts` (Proposals Phase C) |
 | `lead_blocked_plan_limit` | warn | A website lead-capture submission was blocked by the MC's Starter couple cap; the MC is emailed to upgrade so the lead is not lost | `app/api/lead/submit/route.ts` (ZEB-2) |
 | `lead_new_enquiry` | info | A new website-form enquiry was received and a couple created; a Slack heads-up alongside the MC email so the team channel sees inbound leads | `app/api/lead/submit/route.ts` (Website form) |
 | `booking_created` | info | A new public booking was received (via /book/[token] form); includes booker name, time, couple match status | `app/api/booking/submit/route.ts` (Scheduler Phase C) |

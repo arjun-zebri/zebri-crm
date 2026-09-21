@@ -377,6 +377,20 @@ matches `text-sm`:
 | `--radius-control` | `rounded-control` | 6px | Everything with corners |
 | `--radius-pill` | `rounded-pill` | 9999px | Pills, chips, avatars, dots |
 
+### Container
+
+| Token | Utility | Value | Use |
+|---|---|---|---|
+| `--container-doc-page` | `max-w-doc-page` | 68.75rem (1100px) | Inner readable column of the `page` frame (proposals). Keep in sync with `DOC_PAGE_MAX_WIDTH_PX` in `lib/branding/document-frame.ts`. |
+| `--container-doc-prose` | `max-w-doc-prose` | 45rem (720px) | A readable measure for running text inside the page column (the personal note). Follows the text's alignment: `mx-auto` when centred, `ml-auto` when right-aligned. |
+| `--container-doc-narrow` | `max-w-doc-narrow` | 35rem (560px) | A single card or form inside the page column (a lone package). |
+
+### Motion
+
+| Token | Utility | Value | Use |
+|---|---|---|---|
+| `--animate-reveal-up` | `animate-reveal-up` | `reveal-up 700ms ease-out both` | Section reveal-on-scroll in the `page` frame (see `useReveal` in `lib/branding/page-section.tsx`). Respects `motion-reduce`; never applied to the hero or the `print` frame. |
+
 Spacing uses the Tailwind default scale; no custom spacing tokens.
 
 ### Dark mode (Phase 0.5b)
@@ -481,6 +495,11 @@ pages stay in lockstep:
   the public invoice / contract / run sheet / questionnaire pages. Apply it as
   `style={{ maxWidth: DOC_MAX_WIDTH_PX }}` with `mx-auto w-full`, not a
   `max-w-*` class, so there is one numeric source.
+- `DOC_PAGE_MAX_WIDTH_PX = 1100`  -  the inner readable column of the `page`
+  frame (proposals only). Unlike `DOC_MAX_WIDTH_PX`, this one does have a
+  Tailwind class, `max-w-doc-page` (`--container-doc-page` in
+  `app/globals.css`), because the page frame's sections are plain Tailwind
+  markup rather than an inline-styled card. Keep the two in sync.
 - `DOC_CANVAS_BG = '#F4F4F1'`  -  the light-grey page canvas the white document
   card sits on. The public invoice and contract pages set their page
   background to this (the card keeps its own `surface_color`) so the card
@@ -488,6 +507,54 @@ pages stay in lockstep:
   questionnaire share the width but not the canvas: they have no white card,
   so grey would leave their content floating (revisit if they gain a card).
 - The couple portal is intentionally wider (`max-w-5xl`) and is out of scope.
+
+### The `page` frame (Proposals, Phase B)
+
+The proposal surface is the one exception to the document-card model
+above: `PublicBlockRenderer` takes a `frame: 'document' | 'page' |
+'print'` prop, and in `page` mode every top-level block becomes its own
+full-width `<section>` (`PageSection` in `lib/branding/page-section.tsx`)
+that can carry a `sectionBackground` (colour and/or image with a 0-100
+overlay), with the readable content centred at `max-w-doc-page` (1100px,
+`--container-doc-page`, kept in sync with `DOC_PAGE_MAX_WIDTH_PX`). The
+hero block is the one exception within the exception: it owns the
+section's full width, with no inner column.
+
+Sections reveal on scroll with `animate-reveal-up` (`--animate-reveal-up`,
+a 700ms rise-and-fade), driven by `useReveal`: it respects
+`motion-reduce` and only ever runs once per section. The hero and the
+`print` frame never animate, and the animation falls back to "already
+revealed" when `IntersectionObserver` doesn't exist, so SSR and print
+always paint visible.
+
+The hero's height is dragged, not picked: `heightVh` (30-100) renders
+as `min-height: Nsvh` in the page frame (mobile-first `svh` units so
+the opening section fills the couple's actual visible viewport, not
+the address-bar-inflated `100vh`) and as a share of a 480px opening in
+the document and print frames, where there's no viewport to fill. The
+editor's `HeroResizeGrip` is the same bottom-edge grip the spacer and
+header banner use. See the "Page frame" entry on `/design-system` for
+the rendered demo, and `.claude/docs/proposals.md` for the full
+block/config table and the legacy `height` preset fallback.
+
+The personal note's toolbar is the same one-group row (`Heading` /
+`Note` chip by what was clicked, then typography), and the section
+background every non-hero proposal block shares is a caption-less
+group at the end of that row: colour swatch, image button (icon when
+empty, thumbnail + Remove when set), and an Overlay slider chip shown
+only once there is an image to darken. On the canvas the note itself
+is a muted stand-in under a mint "written per proposal" caption, since
+it is typed in the builder, not here.
+
+The hero's toolbar follows the general-block row (target chip, font,
+size, weight, colour, then `PositionControl`, a 3x3 grid for
+horizontal + vertical placement, the Overlay chip when there is media,
+and `IncludeDropdown` for the heading and subheading); it never shows
+captions above its controls, and the structural row hides spacing /
+radius / border because a full-bleed opening has no box to pad or
+frame. `IncludeDropdown` and `ToolbarDivider` live in
+`blocks/toolbar-primitives.tsx` and are the shared show/hide and
+separator controls for every block toolbar.
 
 Sidebar width: 240px (desktop expanded), 68px (desktop collapsed)
 
@@ -712,13 +779,18 @@ p-6
 
 ## Font catalogue
 
-`lib/branding/fonts.ts` provides 30+ curated Google fonts, each usable as heading or body:
+`lib/branding/fonts.ts` provides 40+ curated Google fonts: sans-serif, serif and (since 2026-09-19) script faces:
 
 - **FONT_IDS**: union of all available font IDs (e.g. `inter`, `poppins`, `montserrat`, `raleway`, `nunito`, `spectral`, `eb_garamond`, `cardo`, `dm_mono`, `figtree`, etc.)
+- **SCRIPT_FONT_IDS**: the cursive subset (`great_vibes`, `dancing_script`, `parisienne`, `allura`, `alex_brush`, `pinyon_script`, `sacramento`, `satisfy`). Stacks fall back to `"Brush Script MT", cursive`, the same fallback the signature stack uses.
 - **FONT_LABELS**: human-readable label per ID
 - **FONT_STACKS**: CSS font-family stack (Google Font family + fallbacks)
 - **GOOGLE_FONT_FAMILIES**: Google Fonts API family descriptor (with weight axis)
-- **HeadingFont / BodyFont**: type aliases for FontId (backward compatible; both roles share one list)
+- **HEADING_FONTS** is the whole catalogue; **BODY_FONTS** excludes the script faces so Branding's page-wide body font can never be cursive. The proposal builder's per-role and per-run font pickers read `FONT_IDS` directly, so a cursive run inside a paragraph is still possible there.
+- **fontIdFromStack(stack)**: maps a stored stack string back to its id (the proposal editor stores a `textStyle` mark's `fontFamily` as the raw stack).
+- **HeadingFont / BodyFont**: type aliases for FontId (backward compatible)
+
+Public surfaces load fonts through `useBrandingHead()` (`lib/branding/public-surface.ts`): Branding's heading + body pair, plus any `fonts` the caller names. The public proposal page passes `layoutFontIds(layout, branding)` (`features/proposals/model/layout-fonts.ts`): the theme's four roles plus every `textStyle` override in its content sections, so a face picked in the builder actually loads on the couple's page and in the PDF (the print window copies the page's stylesheets).
 
 ## Couple script documents
 
@@ -830,6 +902,107 @@ Each block type offers additional controls audited per surface:
 - **Submit button** (Website form surface): labelled toolbar controls on two rows: Button label + After sending (Select: show a success message / redirect to a URL, http(s) only), then the matching Success message / Redirect URL input full-width. Below them, action-style button styling: fill colour, fill/outline, size (S/M/L), alignment, radius, and width, each a block override falling back to the brand's global button settings. Editor preview and public page render the same `RenderFormSubmitButton` (`lib/branding/public-blocks/form-submit.tsx`)
 
 The **Website form** (`lead`) is a full branding surface with its own tab, edited exactly like the invoice/contract/questionnaire surfaces. Its palette is the General blocks plus one ready-made entry per enquiry question (each a `formField` preset with its role, input type, label, and required flag preset; name + email preset required), a Custom question, and the Submit button; the public `/lead/[token]` page renders the block tree. See `page-specs.md` (Lead Capture) for the public + ingest behaviour.
+
+------------------------------------------------------------------------
+
+# Editor primitives (`components/editor/`)
+
+The controls above (`PillToggle`, `ActiveTargetLabel`, `ToolbarDivider`,
+`IncludeDropdown`, `PositionControl`, `Select`, `Slider`,
+`NumberStepper`), the `ResizeGrip` resize handle and its drag maths,
+and the zoomable/pannable `CanvasFrame` used to live under
+`app/(dashboard)/branding/`. Proposal Layout v2 Phase 2 (spec 5.3)
+lifted them to `components/editor/` so the Branding editor and the
+proposal section editor share one set instead of drifting into two.
+Import from the barrel:
+
+```ts
+import { PillToggle, ToolbarDivider, CanvasFrame, type CanvasDevice } from '@/components/editor'
+```
+
+- `PillToggle`, `ActiveTargetLabel`, `VAlignIcon`, `ToolbarDivider`,
+  `IncludeDropdown` (+ `IncludeRow`): `components/editor/toolbar-primitives.tsx`.
+- `PositionControl`: `components/editor/position-control.tsx`. A 3x3
+  grid button placing text top/middle/bottom x left/centre/right.
+  Deliberately untyped against the Branding block model: it takes
+  plain `'left' | 'center' | 'right'` / `'top' | 'middle' | 'bottom'`
+  unions rather than importing `HeroBlock`, because `components/editor/`
+  must not import from `app/` or `features/`.
+- `Select`, `SelectOption`: `components/editor/select.tsx`. Popover
+  select with an optional custom label renderer and a meta column.
+- `Slider`: `components/editor/slider.tsx`. Pointer-drag + keyboard
+  (arrows, Page Up/Down, Home/End) slider over `[min, max]`.
+- `NumberStepper`: `components/editor/number-stepper.tsx`. An editable
+  numeric `<input type="number">` (role `spinbutton`), clamped to
+  `[min, max]`, flanked by Decrease/Increase buttons named
+  `Decrease ${ariaLabel}` / `Increase ${ariaLabel}`. An optional
+  `suffix` (e.g. `"px"`) renders as muted text after the input.
+- `ResizeGrip`, `ResizeGripProps`, plus the pure drag maths it's built
+  on (`Snap`, `zoomFactor`, `clamp`, `stepRound`, `applySnaps`,
+  `dragValue`): `components/editor/resize-grip.tsx` and
+  `resize-math.ts`. A `role="slider"` pill grip (`axis: 'y'` on the
+  bottom edge, `cursor-ns-resize`; `'x'` on the side edge,
+  `cursor-ew-resize`) draggable with the mouse or the arrow keys
+  (`step`, default 1), with an optional `scale` (layout px per unit
+  of `value`, e.g. a vh-based height), `snaps` (locks within
+  `tolerance` units and swaps the readout for the snap's `label`),
+  and `onCommit` (fires once on mouse up, the undo-history point).
+  `zoomFactor` recovers the CSS-`zoom` scale of a zoomed canvas from
+  an element's unzoomed layout height vs. its zoomed screen height
+  (1 in jsdom, which has no layout). The Branding hero's
+  `HeroResizeGrip` (`app/(dashboard)/branding/blocks/proposal/hero-resize.tsx`)
+  is a thin wrapper over it.
+- `CanvasFrame`, `CanvasFrameProps`, `CanvasDevice`:
+  `components/editor/canvas-frame.tsx`. The zoomable, pannable
+  document viewport (cursor-anchored zoom, space/middle-drag pan,
+  fit-to-width), with its zoom widget.
+
+**The Branding editor's old import paths still work.** Each one
+(`app/(dashboard)/branding/blocks/toolbar-primitives.tsx`,
+`app/(dashboard)/branding/blocks/proposal/position-control.tsx`,
+`app/(dashboard)/branding/components/{select,slider}.tsx`,
+`app/(dashboard)/branding/canvas-frame.tsx`) is now a compatibility
+re-export of `@/components/editor`, removed in Phase 5 when the
+Branding toolbar is rebuilt on these primitives directly. New code
+(the proposal section editor, and any Branding code touched from now
+on) should import from `@/components/editor`, not the old paths.
+
+Rendered on `/design-system` under "Editor primitives".
+
+## Control bars (Proposal Layout v2 Phase 2)
+
+The section, node and text bars in `features/proposals/editor/bars/`
+(section bar, node bar + its per-kind variants, text bar) share one
+rule set, enforced by `BarShell` (`features/proposals/editor/bars/bar-shell.tsx`):
+
+- **One 32px row.** `BarShell` lays out `h-8 items-center gap-1`; a bar
+  never wraps to a second row or grows taller to fit more controls.
+  Built only from `components/editor/` primitives plus `components/ui/`
+  (`Tooltip`, `ColorPopover`, `MenuPanel`/`MenuItem`, `Button`,
+  `ConfirmDialog`).
+- **No captions above controls.** A control's meaning comes from its
+  icon, its `aria-label`/`Tooltip`, or (for a `Select`) its own visible
+  value - never a label rendered above the row.
+  `ActiveTargetLabel` (`components/editor/toolbar-primitives.tsx`) is
+  the one exception: it names what a bar is currently acting on (e.g.
+  a selected image), inline in the row itself.
+- **Overflow `...` when a bar would not fit at 380px.** A control that
+  does not fit the row at that width moves behind the bar's own
+  trailing `...` menu (`BarShell`'s `overflow` slot), a `Popover`
+  anchored to the `...` trigger - `text-bar-overflow.tsx` (list
+  toggles + the `Aa` case choices) and `section-bar.tsx` (Hide on
+  phone, Duplicate, Reset style, Delete) both do this. The threshold
+  is the bar's own control order, not a runtime width measurement
+  (`BarShell`'s module doc has the why).
+- **Anything deeper than one step opens a popover from that control.**
+  A colour choice, a font pick, a link edit - each opens a `Popover`
+  anchored to the control that triggered it, never a second toolbar
+  row. `text-bar.tsx`'s `Link` control and `ColorPopover` follow this;
+  so does every `Select` in a bar.
+
+Rendered on `/design-system` alongside the editor primitives (the
+Templates editor itself, behind `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2`, is
+where the bars run for real - see `.claude/docs/page-specs.md`).
 
 ------------------------------------------------------------------------
 

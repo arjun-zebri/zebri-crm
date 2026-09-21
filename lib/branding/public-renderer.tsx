@@ -6,6 +6,7 @@ import { type ReactNode } from 'react'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 import { blockOuterStyle, hasOuterStyle, HPAD_EXEMPT_TYPES } from './block-outer-style'
+import { PageSection } from './page-section'
 import { RenderAction } from './public-blocks/action'
 import { RenderBusinessName } from './public-blocks/business-name'
 import { RenderDivider } from './public-blocks/divider'
@@ -15,10 +16,22 @@ import { RenderImage } from './public-blocks/image'
 import { RenderLineItems } from './public-blocks/line-items'
 import { RenderPaymentDetails } from './public-blocks/payment-details'
 import { RenderPaymentSchedule } from './public-blocks/payment-schedule'
+import { RenderAboutMe } from './public-blocks/proposal/about-me'
+import { RenderAccept } from './public-blocks/proposal/accept'
+import { RenderFaq } from './public-blocks/proposal/faq'
+import { RenderGallery } from './public-blocks/proposal/gallery'
+import { RenderHero } from './public-blocks/proposal/hero'
+import { RenderHowItWorks } from './public-blocks/proposal/how-it-works'
+import { RenderIntroNote } from './public-blocks/proposal/intro-note'
+import { RenderPackages } from './public-blocks/proposal/packages'
+import { RenderTestimonials } from './public-blocks/proposal/testimonials'
+import { RenderVideo } from './public-blocks/proposal/video'
 import {
   pad,
   type PublicDocData,
   type ActionSlotProps,
+  type FrameMode,
+  type ProposalSlotProps,
 } from './public-blocks/shared'
 import { RenderSpacer } from './public-blocks/spacer'
 import { RenderTagline } from './public-blocks/tagline'
@@ -34,9 +47,14 @@ interface PublicRendererProps extends ActionSlotProps {
   blocks: Block[]
   branding: PublicBranding
   doc: PublicDocData
+  /** Framing; defaults to the 720px document so existing surfaces are untouched. */
+  frame?: FrameMode | undefined
+  /** Selection state for the proposal's packages / accept blocks (public page only). */
+  proposal?: ProposalSlotProps | undefined
 }
 
 export function PublicBlockRenderer(props: PublicRendererProps) {
+  const frame = props.frame ?? 'document'
   return (
     <div
       style={{ ['--doc-link' as string]: props.branding.link_color }}
@@ -45,8 +63,8 @@ export function PublicBlockRenderer(props: PublicRendererProps) {
       {props.blocks
         .filter((b) => !b.hidden)
         .map((b) => (
-          <BlockOuter key={b.id} block={b} branding={props.branding}>
-            <BlockBody block={b} {...props} />
+          <BlockOuter key={b.id} block={b} branding={props.branding} frame={frame}>
+            <BlockBody block={b} {...props} frame={frame} />
           </BlockOuter>
         ))}
     </div>
@@ -62,12 +80,27 @@ export function PublicBlockRenderer(props: PublicRendererProps) {
 export function BlockOuter({
   block,
   branding,
+  frame = 'document',
   children,
 }: {
   block: Block
   branding: PublicBranding
+  frame?: FrameMode | undefined
   children: ReactNode
 }) {
+  // In the page frame, the section owns the horizontal inset (it wraps a
+  // centred `max-w-doc-page` column) so the shared docX padding below would
+  // double it up. Per-block outer styles (background, border, radius, …)
+  // still apply, nested inside the section's column.
+  if (frame === 'page') {
+    const style = hasOuterStyle(block) ? blockOuterStyle(block, { cornerRadius: branding.corner_radius }) : undefined
+    return (
+      <PageSection block={block} branding={branding} frame={frame}>
+        {style ? <div style={style}>{children}</div> : children}
+      </PageSection>
+    )
+  }
+
   // Horizontal document padding lives here, in one place, not in each block.
   // Every block is inset by the shared docX except the full-bleed types, which
   // render edge-to-edge. Vertical rhythm (blockY) stays inside each block.
@@ -91,8 +124,8 @@ export function BlockOuter({
   )
 }
 
-function BlockBody(props: PublicRendererProps & { block: Block }) {
-  const { block, branding, doc } = props
+function BlockBody(props: PublicRendererProps & { block: Block; frame: FrameMode }) {
+  const { block, branding, doc, frame } = props
   switch (block.type) {
     case 'headerBanner': return <RenderHeaderBanner block={block} branding={branding} />
     case 'businessName': return <RenderBusinessName block={block} branding={branding} />
@@ -137,6 +170,20 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     // controls at their positions, so the generic static renderer emits nothing.
     case 'formField': return null
     case 'formSubmit': return null
+    // Proposal blocks: the seven static ones are wired below (Task 4). The
+    // three data-bound ones (introNote/packages/accept) render from
+    // `doc.proposal` (Task 5) and emit null on every other surface, since
+    // only the proposal payload ever populates that field.
+    case 'hero':         return <RenderHero block={block} branding={branding} doc={doc} frame={frame} variableValues={buildVariableValues(branding, doc)} />
+    case 'introNote':    return <RenderIntroNote block={block} branding={branding} doc={doc} variableValues={buildVariableValues(branding, doc)} />
+    case 'video':        return <RenderVideo block={block} branding={branding} frame={frame} variableValues={buildVariableValues(branding, doc)} />
+    case 'gallery':      return <RenderGallery block={block} branding={branding} />
+    case 'testimonials': return <RenderTestimonials block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
+    case 'aboutMe':      return <RenderAboutMe block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
+    case 'howItWorks':   return <RenderHowItWorks block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
+    case 'faq':          return <RenderFaq block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
+    case 'packages':      return <RenderPackages block={block} branding={branding} doc={doc} proposal={props.proposal} variableValues={buildVariableValues(branding, doc)} />
+    case 'accept':        return <RenderAccept block={block} branding={branding} doc={doc} proposal={props.proposal} variableValues={buildVariableValues(branding, doc)} />
   }
 }
 

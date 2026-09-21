@@ -10,7 +10,7 @@ import {
  * Test the branding overhaul migration (20260717000000).
  *
  * Covers:
- * - enabled_surfaces defaults to all five surfaces on user_branding insert
+ * - enabled_surfaces defaults to every surface on user_branding insert
  * - get_vendor_timeline returns branding + branding_blocks keys for a valid portal token
  * - Cross-tenant RLS still denies reading another user's user_branding row
  */
@@ -58,7 +58,7 @@ describe('Branding overhaul migration', () => {
     await userB?.cleanup();
   });
 
-  it('enabled_surfaces defaults to all five surfaces on user_branding insert', async () => {
+  it('enabled_surfaces defaults to every surface on user_branding insert', async () => {
     const admin = serviceClient();
 
     // Get the user_branding row for userA
@@ -69,14 +69,17 @@ describe('Branding overhaul migration', () => {
       .single();
 
     expect(error).toBeNull();
-    // The proposals removal dropped 'proposal' from the default (see
-    // 20260731000000_remove_proposals).
+    // The default tracks the surface list: the website form and the
+    // proposals engine (20260924000000_proposal_surface) were added after the
+    // July proposals removal.
     expect(data?.enabled_surfaces).toEqual([
       'invoice',
       'contract',
       'portal',
       'vendorTimeline',
       'questionnaire',
+      'lead',
+      'proposal',
     ]);
   });
 

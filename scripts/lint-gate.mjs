@@ -229,7 +229,9 @@ const ERROR_BUDGET = 43;
 // suggestion cards took two import-order warnings with them (73 -> 71).
 // Email link labels + booking video-link alert: the budget had one
 // warning of slack on staging; locked in (71 -> 70).
-const WARNING_BUDGET = 70;
+// Proposals Layout v2 (R0) merged with staging: two warnings of slack;
+// locked in (70 -> 68).
+const WARNING_BUDGET = 68;
 
 function runEslintJson() {
   try {

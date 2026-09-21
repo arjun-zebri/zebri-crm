@@ -196,7 +196,7 @@ Nothing is created. `quotes` and `proposals` were both removed, and
 ## Reminders & expiry
 
 - Day-3 + day-7 reminder emails, capped at 2 reminders total (`reminder_count` column).
-- Nightly Vercel cron hits `/api/email/send-contract-reminders` + `/api/cron/expire-contracts` (auth via `CRON_SECRET`).
+- Nightly pg_cron jobs (`zebri:send-contract-reminders`, `zebri:expire-contracts`) hit `/api/email/send-contract-reminders` + `/api/cron/expire-contracts` (auth via `CRON_SECRET`).
 
 ## Plan gating
 
@@ -236,7 +236,7 @@ on contracts being Pro-only.
 - `lib/contract-variables.ts`
 - `lib/auth/entitlements.ts` (`hasContractsAccess`)
 - `lib/generate-pdf.ts` (`'contract'` branch)
-- `vercel.json`  -  cron schedules
+- `supabase/migrations/20261001000000_pg_cron_scheduler.sql`  -  cron schedules (pg_cron, R1)
 
 ---
 

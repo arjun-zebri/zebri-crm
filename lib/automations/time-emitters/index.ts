@@ -11,8 +11,9 @@
  * comparing the source row's timestamp to "now".
  *
  * This module hosts those computations. The {@link runTimeEmitters}
- * function is called from the cron tick once per minute, between the
- * dispatcher's event-pull pass and the runner's run-advance pass.
+ * function is called from the cron tick, pg_cron every 15 minutes,
+ * between the dispatcher's event-pull pass and the runner's
+ * run-advance pass.
  * Each registered emitter runs independently — one emitter throwing
  * doesn't prevent the others from firing — and the tick is monitored
  * for overall duration so a slow emitter doesn't go unnoticed.
@@ -93,6 +94,8 @@ export interface TimeEmittersResult {
   totalEmitted: number
   /** Number of emitters that threw. */
   failedEmitters: number
+  /** Emitters not run because the tick's deadline had passed. */
+  skippedEmitters: number
   /** Wall-clock duration of the full pass, ms. */
   durationMs: number
 }
@@ -102,16 +105,27 @@ export interface TimeEmittersResult {
  * doesn't abort the others: errors are logged via Slack and the
  * surviving emitters still get a chance to fire. The tick caller
  * keeps the result for its own slow-tick / backlog alerting.
+ *
+ * @param opts.deadline - epoch ms after which no further emitter starts.
+ *   The tick runs every 15 minutes inside a Vercel function with a hard
+ *   duration limit; an emitter skipped now simply runs on the next tick.
  */
 export async function runTimeEmitters(
   supabase: SupabaseClient<Database>,
+  opts: { deadline?: number } = {},
 ): Promise<TimeEmittersResult> {
   const started = Date.now()
   const emitted: Record<string, number> = {}
   let totalEmitted = 0
   let failedEmitters = 0
+  let skippedEmitters = 0
 
   for (const emitter of registry) {
+    if (opts.deadline !== undefined && Date.now() >= opts.deadline) {
+      skippedEmitters += 1
+      emitted[emitter.type] = 0
+      continue
+    }
     try {
       const n = await emitter.run(supabase)
       emitted[emitter.type] = n
@@ -119,7 +133,7 @@ export async function runTimeEmitters(
     } catch (err) {
       failedEmitters += 1
       emitted[emitter.type] = 0
-      // Best-effort alert — never block the rest of the tick.
+      // Best-effort alert: never block the rest of the tick.
       void sendAlert({
         type: 'app_error',
         severity: 'error',
@@ -131,10 +145,5 @@ export async function runTimeEmitters(
     }
   }
 
-  return {
-    emitted,
-    totalEmitted,
-    failedEmitters,
-    durationMs: Date.now() - started,
-  }
+  return { emitted, totalEmitted, failedEmitters, skippedEmitters, durationMs: Date.now() - started }
 }

@@ -35,6 +35,10 @@ export const CONTRACT_VARIABLES: ContractVariable[] = [
   { id: 'mc_address', label: 'Your address', description: 'Your business address from settings' },
   { id: 'mc_signature_name', label: 'Your signature name', description: 'Your typed signature name from settings' },
   { id: 'today', label: "Today's date", description: 'Date the contract was sent' },
+  // Filled from an accepted proposal (Phase C); a manual contract renders '-'.
+  { id: 'package_name', label: 'Package', description: 'The package title from the accepted proposal option' },
+  { id: 'total_amount', label: 'Total amount', description: 'The total amount from the accepted proposal' },
+  { id: 'deposit_amount', label: 'Deposit amount', description: 'The deposit amount from the accepted proposal' },
 ]
 
 export const VARIABLE_IDS = new Set(CONTRACT_VARIABLES.map((v) => v.id))
@@ -55,6 +59,9 @@ export interface ContractVariableValues {
   mc_address: string
   mc_signature_name: string
   today: string
+  package_name: string
+  total_amount: string
+  deposit_amount: string
 }
 
 /**
@@ -69,6 +76,9 @@ function text(...values: unknown[]): string {
   }
   return '-'
 }
+
+/** AUD currency, e.g. `$2,400.00`. Used for the proposal-sourced money variables. */
+const currency = (n: number) => new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-'
@@ -86,8 +96,10 @@ function formatDate(dateStr: string | null): string {
 /**
  * Build the substitution values for a contract's mention variables.
  *
- * A contract has no linked money source, so the seven variables are all
- * derived from the couple, their first event, and the MC's own settings.
+ * Most variables are derived from the couple, their first event, and the
+ * MC's own settings. The three `proposal` variables (Phase C) are filled only
+ * when the contract was generated from an accepted proposal; a manual
+ * contract has no money source for them and renders the dash placeholder.
  */
 export function buildContractVariables(input: {
   couple: {
@@ -101,6 +113,8 @@ export function buildContractVariables(input: {
   userMeta: Record<string, unknown>
   /** The account holder's login email. Not held in user metadata. */
   userEmail?: string | null
+  /** Set when the contract was generated from an accepted proposal. */
+  proposal?: { packageName: string; total: number; deposit: number } | null
 }): ContractVariableValues {
   return {
     // Both partners in full. The legacy `name` column is often one partner's
@@ -126,6 +140,9 @@ export function buildContractVariables(input: {
       (input.userMeta.business_name as string) ||
       '-',
     today: formatDate(new Date().toISOString().slice(0, 10)),
+    package_name: text(input.proposal?.packageName),
+    total_amount: input.proposal ? currency(input.proposal.total) : '-',
+    deposit_amount: input.proposal && input.proposal.deposit > 0 ? currency(input.proposal.deposit) : '-',
   }
 }
 

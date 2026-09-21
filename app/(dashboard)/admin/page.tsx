@@ -4,6 +4,7 @@ import {
   getAllUserStats,
   listUsersWithSubscription,
 } from '@/lib/admin/admin-analytics';
+import { loadSchedulerCard } from '@/lib/admin/scheduler';
 
 import { AdminDashboardView } from './admin-dashboard';
 
@@ -37,10 +38,11 @@ export const dynamic = 'force-dynamic';
  * helpers; the route is gated by middleware via `isAdmin(user)`.
  */
 export default async function AdminPage() {
-  const [users, dashboard, stats] = await Promise.all([
+  const [users, dashboard, stats, scheduler] = await Promise.all([
     listUsersWithSubscription(),
     getAdminDashboard(),
     getAllUserStats(),
+    loadSchedulerCard(),
   ]);
 
   return (
@@ -49,7 +51,12 @@ export default async function AdminPage() {
         <PageHeader title="Admin" />
       </div>
 
-      <AdminDashboardView users={users} dashboard={dashboard} stats={stats} />
+      <AdminDashboardView
+        users={users}
+        dashboard={dashboard}
+        stats={stats}
+        scheduler={scheduler}
+      />
     </div>
   );
 }

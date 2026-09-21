@@ -52,19 +52,16 @@ describe('localHour', () => {
 });
 
 describe('isDigestHour', () => {
-  it('follows daylight saving rather than a fixed UTC time', () => {
-    // Sydney is +10 in June and +11 in December, so the one daily run at
-    // 21:00 UTC is 7am in one half of the year and 8am in the other. Both
-    // have to pass, or half the year gets no digest.
+  it('is the local 7am hour, following daylight saving', () => {
+    // Sydney is +10 in June (7am = 21:00Z) and +11 in December (7am = 20:00Z).
     expect(isDigestHour(new Date('2026-06-09T21:00:00Z'), 'Australia/Sydney')).toBe(true);
-    expect(isDigestHour(new Date('2026-12-09T21:00:00Z'), 'Australia/Sydney')).toBe(true);
+    expect(isDigestHour(new Date('2026-12-09T20:00:00Z'), 'Australia/Sydney')).toBe(true);
+    expect(isDigestHour(new Date('2026-12-09T21:00:00Z'), 'Australia/Sydney')).toBe(false);
   });
 
-  it('absorbs the Hobby plan running the job up to 59 minutes late', () => {
-    // Vercel gives no timing precision below Pro: `0 21 * * *` fires
-    // anywhere in the 21:00 hour, and the local hour must not change.
-    expect(isDigestHour(new Date('2026-06-09T21:59:00Z'), 'Australia/Sydney')).toBe(true);
-    expect(isDigestHour(new Date('2026-12-09T21:59:00Z'), 'Australia/Sydney')).toBe(true);
+  it('gives Perth its own 7am on the hourly schedule', () => {
+    expect(isDigestHour(new Date('2026-06-09T23:00:00Z'), 'Australia/Perth')).toBe(true);
+    expect(isDigestHour(new Date('2026-06-09T21:00:00Z'), 'Australia/Perth')).toBe(false);
   });
 
   it('stays shut outside the morning window', () => {

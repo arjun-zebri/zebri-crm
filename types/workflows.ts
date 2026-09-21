@@ -51,22 +51,34 @@ export const TERMINAL_STEP_STATUSES: readonly StepStatus[] = [
   'errored',
 ];
 
+/** Units a chained delay accepts. Minutes are constrained to 15-minute steps by the schema. */
+export type DelayUnit = 'minutes' | 'hours' | 'days';
+
+/** Units a calendar-anchored step accepts. */
+export type CalendarUnit = 'days' | 'weeks' | 'months';
+
 /**
  * When a step comes due, relative to an anchor.
  *
  * `after_previous` is the default and the reason manual to-dos can gate
  * automated steps: an automated step anchored to its predecessor has no
  * `due_at` until that predecessor is ticked or skipped.
+ *
+ * `sendTime` is `HH:MM` on a 15-minute grid in the MC's timezone and only
+ * makes sense with a calendar unit; the schema in
+ * `lib/workflows/timing-schema.ts` enforces that. Omit the key rather than
+ * setting it to undefined (strict optional types).
  */
 export type StepTiming =
   | {
       mode: 'wedding_relative';
       direction: 'before' | 'after';
       amount: number;
-      unit: 'days' | 'weeks' | 'months';
+      unit: CalendarUnit;
+      sendTime?: string;
     }
-  | { mode: 'apply_relative'; amount: number; unit: 'days' | 'weeks' | 'months' }
-  | { mode: 'after_previous'; delayAmount: number; unit: 'hours' | 'days' };
+  | { mode: 'apply_relative'; amount: number; unit: DelayUnit | CalendarUnit; sendTime?: string }
+  | { mode: 'after_previous'; delayAmount: number; unit: DelayUnit };
 
 /** The timing every step gets when nothing else is chosen. */
 export const DEFAULT_STEP_TIMING: StepTiming = {

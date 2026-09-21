@@ -398,7 +398,7 @@ hiding the active tab falls the body back to the first visible tab. Derive logic
 tolerates drift (unknown stored keys dropped, newly added tabs appended).
 
 **Tabs:** Overview, Pulse, **Workflow**, **Time**, Contacts, Timeline,
-Songs, Files, Vows, **Scripts**, Payments, Contracts, **Templates**.
+Songs, Files, Vows, **Scripts**, **Proposals**, Payments, Contracts, **Templates**.
 
 The Workflow tab replaced the separate Tasks and Automations tabs
 (2026-09). Layouts saved against the old `tasks` / `automations` keys
@@ -1470,6 +1470,235 @@ Mutations no longer happen inline. Saves flow through:
 
 ---
 
+# Proposals Page
+
+Route: `/proposals` (list) and `/proposals/[id]` (detail). Full model,
+tables, RPCs, and gotchas: `.claude/docs/proposals.md`.
+
+Route group: `(dashboard)`
+
+Purpose: build and send a priced proposal to a couple (up to three
+options, add-ons, an intro note, an expiry, a deposit or payment
+schedule, and a contract template) and track it through
+draft/sent/viewed/accepted/declined/expired.
+
+**List** (`app/(dashboard)/proposals/page.tsx` orchestrator +
+`proposals-list.tsx`): `PageHeader` ("Proposals" + count), search (title,
+number, couple name, status), "New proposal" button. Table columns:
+number, couple, title, status pill (with a view count beside it once
+`view_count > 0`), headline total (the popular option's subtotal, else
+the first option's, else 0), expires. Row click routes to the detail
+page. Loading/empty/error come from `PaymentsTable` (the same
+desktop-table / mobile-list primitive Payments uses) and `ErrorState`.
+While `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2` is on, the page also renders a
+stat row, a templates shortcut, and a settings gear — see "Proposal
+Layout v2: single page" below.
+
+**Detail** (`app/(dashboard)/proposals/[id]/page.tsx` orchestrator +
+`proposal-detail.tsx`): title, proposal number, status pill, version,
+sent/viewed/expiry facts, an **engagement** summary and timeline
+(Phase D, below), options with subtotals and headline total (`proposal-
+options-summary.tsx`), decline reason and message when declined, links
+to the couple and (once Phase C populates them) the generated
+contract/invoice. Actions: Copy link / Open (once
+`share_token_enabled`), Revert to draft (any non-draft, non-accepted
+status: sent, viewed, declined, expired), Edit (hidden once accepted),
+**Download PDF** (`proposal-pdf-button.tsx`): fetches the full row,
+maps it to the public shape with `toPublicProposal`, and prints the
+exact same `ProposalPage` component the couple's link renders (in the
+`print` frame) via `printProposal`: there is no second PDF layout.
+
+**Engagement** (`proposal-engagement.tsx` +
+`proposal-engagement-timeline.tsx`, Phase D): reads raw
+`proposal_events` rows (`use-proposal-events.ts`) and aggregates them
+client-side. Below the facts line: a facts row ("2 views · first
+opened 15 Sep · last seen 15 Sep · 4m 12s reading"), the top four
+sections read as horizontal bars, the package lingered on longest, the
+furthest accept-stepper step reached with an Accepted/Declined pill
+once there's an outcome, and a calm newest-first timeline of every
+session. Empty state ("No opens yet") until the first open. Full
+model: `.claude/docs/proposals.md` (Phase D).
+
+**Builder** (`components/builders/proposal-builder-modal.tsx`): couple
+picker + expiry via `BuilderMetaRow` (shared with Quote/Invoice), title
+input (placeholder "Anna & Jake, your wedding"), intro note, options
+editor (apply from a package, mark one popular), add-ons editor, terms
+(deposit %, payment schedule, contract template), a readiness checklist,
+and the shared `ShareAndSend` footer ("Save changes" / "Send to
+couple", "Resend" once sent). The couple picker cannot be changed after
+the first save.
+
+**Couple profile:** a Proposals tab (`couple-proposals.tsx`, listed
+among the couple-profile tabs above) mirrors the couple's Contracts tab
+and opens the same builder pre-filled with that couple.
+
+**Public page** (`app/proposal/[token]/page.tsx`, unauthenticated): 404s
+via `notFound()` unless `get_public_proposal` returns a row (which it
+only does once `share_token_enabled` is set, i.e. after a send). Phase
+B (2026-09-14) replaced the Phase A document-frame render with the
+couple's full branded **page mode**: `ProposalPageClient` renders the
+MC's block tree (hero, intro note, packages, and whichever chrome
+blocks the MC added) full-bleed, with the couple's package selection
+and add-on toggles kept in this client component's state. Tapping the
+accept block's button opens the Phase C accept stepper
+(`AcceptStepper`): a `ProposalSheet` dialog named "Confirm your
+booking" that walks Choose (package + add-ons, total and deposit),
+Sign (the draft contract `accept_proposal` created, rendered and
+countersigned by `/api/proposal/accept`, signed inline through
+`/api/contract/sign`), Pay (the invoice `finalize_proposal_acceptance`
+generated: card via Stripe Connect when enabled, else bank details
+with the invoice number as reference), and Done (which offers
+"Download PDF" when a print callback is supplied). The decline link
+opens a second sheet, "Not the right fit?", posting a reason and an
+optional message to `/api/proposal/decline`. A reload mid-flow
+resumes on the right step from the payload's own close state; a
+signed contract whose finalize never landed is repaired by the server
+page before render. An engagement tracker (Phase D,
+`app/proposal/[token]/_components/`) watches visible sections and
+package cards, batches events, and posts them to `POST
+/api/proposal/events`; disabled in print/preview. Full model:
+`.claude/docs/proposals.md`.
+
+## Proposal Layout v2: single page (2026-09-18)
+
+Behind `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2` (`proposalLayoutV2Enabled()` in
+`app/(dashboard)/proposals/flags.ts`). While the flag is off,
+`/proposals` is exactly the List above with none of the sections
+below. This replaces an earlier plan for a 4-tab strip (Proposals,
+Templates, Analytics, Settings) under `proposals-nav.tsx` — Templates
+duplicated the sidebar's Templates hub, and Analytics/Settings were
+still `Empty`-state placeholders — with one page:
+
+- **Stats row** (`proposals-stats-row.tsx`): four cards — Total, Sent,
+  Viewed, Accepted — computed from the already-fetched list
+  (`computeProposalStats`, `proposals-stats.ts`). No trend/delta; there
+  is no historical comparison data yet.
+- **Templates shortcut** (`proposal-templates-shortcut.tsx`): the
+  default template plus the next couple most-recently-edited, each a
+  card linking to the section editor. "See all" links to
+  `/templates?tab=proposals` — full template management (duplicate,
+  delete, set default) lives on that hub's Proposals tab, not here.
+  Neither place renames: the name is plain text on the card, and
+  renaming happens in the builder's header only.
+- **Settings gear** on the header, opening a `Modal`
+  (`proposal-settings-modal.tsx`, scope `account`): password
+  protection, PDF-download, expiry days, deposit percent, link-preview
+  title/image, saved to `proposal_settings` (one row per user).
+  Persist-only: nothing on the public proposal page or the
+  proposal-creation path reads these values yet.
+- **Per-template settings**: "Settings" in a template card's `...`
+  menu opens the same modal in scope `template`, seeded from the
+  account defaults (or the template's own saved snapshot), saved to
+  `proposal_templates.settings`; "Reset to account defaults" clears it.
+  Every card-menu item carries an icon. The `...` menu sits over the
+  thumbnail's top-right corner; the outcomes (sent / accepted / won)
+  are icon chips over its top-left, each with the full reading in a
+  tooltip, and no chips at all when nothing has been sent. No "Sample
+  data" pill (the figures are still placeholders).
+
+Full model: `.claude/docs/proposals.md` ("Layout v2 (single-page
+consolidation)").
+
+## Templates editor (Phase 2)
+
+Route `/proposals/templates/[id]` (`app/(dashboard)/proposals/templates/[id]/page.tsx`,
+a server component; `notFound()` when `proposalLayoutV2Enabled()` is
+false). Full width: it opts out of `ProposalsFrame`'s gutter
+(`app/(dashboard)/proposals/proposals-frame.tsx`) and owns its own
+scroll, the canvas managing its own viewport. Feature code lives under
+`features/proposals/editor/`; full architecture, the one-history rule,
+and media limits: `.claude/docs/proposals.md` (Phase 2 section).
+
+**Header** (`editor-header.tsx`, one `h-12` row): Back to Proposals (`/proposals`),
+the template name (click to rename), autosave status ("Saving…" /
+"Saved" / "Saved Ns ago" / "Save failed" with a "Retry save" button /
+"Changed elsewhere" with a "Reload" button), Preview, and a
+Desktop/Mobile `PillToggle` switching the canvas preview device. No Save
+button (the editor autosaves) and no Undo/Redo buttons (⌘Z / ⌘⇧Z still
+work).
+
+**Global style** (`editor/global-style/`, 2026-09-18): a "Global style"
+button pinned to the top-left of the canvas workbench opens a 320px
+popover with a Page tab (page background, section gap None/S/M/L/Custom,
+section padding Compact/Cozy/Roomy/Custom, flow Stacked / One at a time,
+animation mode + Fade/Slide + Slow/Med/Fast) and a Text tab (Heading 1/2/3
+and Paragraph: font, size, weight, colour, case, letter spacing, line
+height, alignment, with a live sample line), plus "Reset to brand".
+Backed by `ProposalLayout.theme`; full model and rulings in
+`.claude/docs/proposals.md` ("Global style"). Sections no longer show a
+kind name tag at their corner (removed 2026-09-18 as redundant).
+
+**Canvas** (`section-canvas.tsx`, inside `CanvasFrame` with `page` and
+`wide`): one row per layout section, sortable via dnd-kit
+(`closestCenter`, pointer + keyboard sensors) or `Alt+ArrowUp/Down`,
+plus a hover "+" insert line between sections and a trailing "Add
+section" button. Sections cap at `LAYOUT_LIMITS.maxSections` (40,
+`features/proposals/model/rich-doc-spec.ts`); every add control
+disables past the cap with the tooltip "Templates hold up to 40
+sections" (`SECTION_CAP_MESSAGE`, `add-line.tsx`).
+
+**Selection model:** at most one section selected, and optionally one
+node within it (an image, button, embed, audio, spacer, or the
+`columns` row) - never both a section-level and unrelated node
+selection at once. Selecting is not undoable (only layout edits are;
+see `.claude/docs/proposals.md`). `Escape` steps the selection out one
+level: inside a section's text editor it exits to the section; with a
+node selected it clears the node; with only a section selected it
+clears entirely (`step-selection-out.ts`).
+
+**Add palette** (`add-palette.tsx` + `use-add-palette.ts`): Sections
+(the seven `SectionKind`s) and Presets (the seven starter `PresetId`s,
+flavoured by the fixed `role="mc"` - no role picker until Phase 4) tabs.
+Opened from a hover "+" line it is a `Popover` anchored to that line;
+from the trailing button (nothing to anchor to) it opens as a `Modal`.
+
+**Three control bars** (`features/proposals/editor/bars/`, each one
+`h-8` row via `BarShell`, floated over the canvas through `CanvasFrame`'s
+`overlay` slot): a section bar (background, padding, corner radius,
+hide-on-mobile, duplicate, reset style, delete), a node bar per node
+kind (image/button/embed/audio/columns/spacer - position, size,
+alt/caption/link, source), and a text bar (TipTap's own bubble menu:
+style, font, size, weight, colour, marks, alignment, lists, link,
+insert, text case). Every bar overflows low-frequency controls behind
+a trailing `...` menu once the row would not fit at 380px. Full rule
+set: `.claude/docs/frontend-design.md` ("Control bars").
+
+**Resizing** (`resize/`, `components/editor/resize-grip.tsx`): a
+section's height (drag or the grip's arrow keys) and width (narrow
+560 / medium 720 / wide 1100px, or a dragged px value); an image or
+spacer node's own resize grips. Values commit to the undo stack on
+mouse-up, not per pixel dragged.
+
+**Keyboard** (`use-canvas-keys.ts`, `use-editor-shortcuts.ts`, spec
+3.5): with a section selected and focus outside any editor - `Escape`
+(step selection out), `Alt+ArrowUp/Down` (reorder), `⌘D`/`Ctrl+D`
+(duplicate), `Backspace`/`Delete` (delete; an empty content section
+goes straight away, anything else asks via `ConfirmDialog` first).
+Inside a section's text editor - `⌘Z`/`⌘⇧Z` (layout undo/redo, forwarded
+through `HistoryKeymapExtension` since TipTap's own history is off) and
+`⌘K` (open the text bar's link popover).
+
+**Mobile canvas** (`device="mobile"`, spec 3.6): `CanvasFrame` renders
+a fixed 380px-wide wrapper stamped `data-canvas="mobile"`, which
+`EDITOR_PROSE_CLASS` (`editor-styles.ts`) keys off to stack a
+`columns` row and float image figures full-width - the same visual
+result as the public renderer's own `max-md:` classes, which never
+fire inside the fixed-width wrapper since it is not a real viewport
+resize.
+
+**Autosave** (`use-template-autosave.ts`): 800ms after the last
+change, `parseProposalLayout` re-validates the layout before every
+save; a failure logs `proposal_layout_invalid_editor` and surfaces as
+"Save failed" rather than reaching the server. A failed save retries on
+its own with backoff; unsaved content is flushed on unmount, beaconed
+on a hard unload, mirrored into a per-user `localStorage` draft that is
+restored on the next load, and every write carries the template's
+`revision` so a stale tab can never overwrite a newer copy. Full
+design: `.claude/docs/proposals.md`, "Nothing the MC types is ever held
+only in React state".
+
+---
+
 # Vendors Page
 
 Route: `/vendors`
@@ -2035,6 +2264,36 @@ The block palette has two labeled groups:
 - **Vendor Timeline**  -  Run sheet body
 - **Questionnaire**  -  Questionnaire body with mode toggle (form | oneAtATime)
 
+A sixth surface, **Proposal**, joined in Phase B (2026-09-14): see the
+next section, since it renders in a different frame and has its own
+first-open flow.
+
+## Proposal Surface (Phase B)
+
+Tab: `/branding?surface=proposal`. Unlike the other five, the Proposal
+surface renders in the **page frame** (full-bleed sections, not the
+720px document card) and its canvas shows sample data through the same
+`ProposalPage` component the couple's link uses, so what the MC edits
+is pixel-identical to what gets sent. Ten proposal-only block types
+(hero, intro note, video, gallery, testimonials, about me, how it
+works, FAQ, packages, accept) plus the general chrome blocks; full
+block/config table in `.claude/docs/proposals.md`.
+
+**Role chooser:** the first time an MC opens this tab (`proposal_role`
+null on `user_branding`), a non-dismissible modal titled "What do you
+offer?" asks which services they sell (MC / Celebrant / MC and
+Celebrant). The choice applies a role-flavoured starter block tree and,
+if the MC owns no packages yet, seeds two starter packages so the
+proposal builder has something to offer immediately. It never shows
+again once a role is chosen; reloading the tab after choosing shows the
+canvas directly.
+
+**Preview:** `/branding/preview/proposal` renders `ProposalPreview`
+(`app/branding/preview/[surface]/proposal-preview.tsx`), which builds
+its data with `sampleProposal(branding)` (`lib/proposals/sample-proposal.ts`)
+and renders it through the couple's own `ProposalPage` component in
+the `page` frame, the same component the public link uses.
+
 ## File Structure
 
 ```
@@ -2399,6 +2658,21 @@ set of **unresolved** variables. The library preview uses sample data
 (everything resolves); the gate that blocks an email with a missing
 variable applies at send time (manual modal + automation handler).
 
+**Link variables render as linked text, never the raw URL.** A body
+mention for `portal.link`, `portal.partner_link`, `portal.vendor_link`,
+`invoice.link`, `contract.link`, `questionnaire.link`, `quote.link` or
+`mc.review_link` becomes an anchor whose text is a fixed couple-facing
+label ("View your portal", "View and pay your invoice", "Review and
+sign your contract", "Fill in your questionnaire", "View the run
+sheet", "View your quote", "Leave a review") and whose `href` is the
+resolved URL. The map lives in `linkLabel()` in
+`lib/automations/variables.ts`; the editable compose preview seeds the
+same linked text so what the MC sees is what sends. The variable
+popover describes these as `Inserts a "…" link` rather than showing a
+sample address. Subject lines still get the plain URL (a subject cannot
+carry a link). Ticket: "Links in emails to questionnaires etc." (Sep
+2026).
+
 ## File Structure
 
 ```
@@ -2614,7 +2888,30 @@ detail slide-over.
   session for them, so a recently-shadowed user can look falsely active.
 - **Row 3  -  operational lists:** upcoming renewals, past due, Connect
   issues.
-- **Row 4  -  supporting lists:** dormant accounts, recent signups.
+- **Row 4  -  Scheduler card** (`sections/scheduler-card.tsx`): the one
+  place the founder configures the pg_cron scheduler. Shows a
+  Configured / Not configured badge (are the Vault secrets set), the
+  base URL pg_cron will call, the `automations-tick` heartbeat as
+  "Tick healthy" or "Tick stale" (older than `TICK_STALE_MS`, 45
+  minutes, or never run) with a relative timestamp plus "last tick
+  truncated" when the heartbeat's `detail.truncated` is true, and every
+  pg_cron job (`scheduler-job-list.tsx`) with its schedule, last start
+  and last outcome, labelled `queued` / `queue failed` (`failed` in the
+  danger tone). That label is pg_cron's own result of
+  `select public.cron_call(...)`, i.e. whether the request was handed
+  to pg_net, not whether the route it called returned 200 - the HTTP
+  outcome is observable today only for the tick, through its heartbeat;
+  the five daily jobs have no HTTP signal yet (see `cicd.md` "Scheduled
+  jobs (pg_cron)"). Data comes from the service-role `scheduler_status()`
+  RPC via `lib/admin/scheduler.ts`; `loadSchedulerCard()` never throws,
+  so a project without the scheduler migration shows an error line on
+  this card instead of taking `/admin` down. The **Sync scheduler**
+  button calls `syncSchedulerAction()`, which pushes the deployment's
+  own `NEXT_PUBLIC_APP_URL` and `CRON_SECRET` into Vault through
+  `set_scheduler_secrets()`; nothing is typed in, and the audit row
+  records only `{ ok }`. This is the first-deploy step for every
+  project, see `cicd.md`. A refresh button re-reads the status in place.
+- **Row 5  -  supporting lists:** dormant accounts, recent signups.
 
 ## Users tab
 

@@ -29,7 +29,7 @@ metadata_on_insert` trigger).
 
 Scalars returned by `_user_branding(uuid)` and merged into public RPCs. Migration `20260715000000_branding_editor_redesign.sql` extended the function with typography + layout fields. Migration `20260718100000_branding_colours.sql` replaced the old colour model with a role-based system: six user-set colours (heading, subheading, body, background, primary button, secondary button, plus link for the editor) with derived aliases for backward compatibility.
 
-**user_branding table** (Branding overhaul, Phase 11 onwards). One row per user, RLS-owned, stores the block tree + surface configuration for the branding editor. Columns: `user_id` (PK, FK auth.users cascade), `branding_blocks` (jsonb, keyed by surface: `quote`, `invoice`, `contract`, `vendorTimeline`, `questionnaire`), `enabled_surfaces` (text[], default `{quote,invoice,contract}`), `onboarded_at` (timestamptz, null until first save), `created_at`, `updated_at`.
+**user_branding table** (Branding overhaul, Phase 11 onwards). One row per user, RLS-owned, stores the block tree + surface configuration for the branding editor. Columns: `user_id` (PK, FK auth.users cascade), `branding_blocks` (jsonb, keyed by surface: `invoice`, `contract`, `portal`, `vendorTimeline`, `questionnaire`, `lead`, `proposal`), `enabled_surfaces` (jsonb, default now includes `proposal` as of `20260924000000_proposal_surface.sql`  -  see Proposals Phase B below), `proposal_role` (text, null; check `mc | celebrant | both`; set by the proposal branding tab's first-open role chooser, Phase B), `onboarded_at` (timestamptz, null until first save), `created_at`, `updated_at`.
 
 Surface-level reset: setting a surface's block tree to an empty array disables public render (the get_public_* RPCs treat it as null). `enabled_surfaces` tracks which surfaces the MC has opted into. The stored value has held three shapes over time (jsonb array column default, legacy true-only map, current explicit-boolean map); `lib/branding/enabled-surfaces.ts` (`resolveEnabledSurfaces` / `buildEnabledSurfacesMap`) is the single read/write path. A missing `lead` key resolves to enabled (the surface postdates the older shapes), so existing rows show the Website form tab by default; saves write an explicit boolean for every surface so a deliberate disable persists.
 
@@ -1916,3 +1916,275 @@ legacy tables drop so a rollback has somewhere to look. No RLS.
 
 Migrations: `20260908000000_workflow_digest_settings.sql`,
 `20260909000000_workflow_portal_milestones.sql`.
+
+------------------------------------------------------------------------
+
+# Proposals (2026-09-13, Phase A)
+
+Full feature doc: `.claude/docs/proposals.md`. Migration
+`20260923000000_create_proposals_engine.sql`. Later phases (B-E: page
+mode, acceptance, engagement, workflow triggers) add their own
+migrations.
+
+## `proposals`
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `user_id` | uuid | | Owner, cascade delete |
+| `couple_id` | uuid | | -> `couples`, cascade delete |
+| `event_id` | uuid | null | -> `events`, optional |
+| `proposal_number` | text | | `generate_proposal_number` |
+| `title` | text | | |
+| `status` | text | `'draft'` | check in `draft`, `sent`, `viewed`, `accepted`, `declined`, `expired` |
+| `intro_note` | jsonb | null | TipTap JSON, normalised with `toPlainJSON` before the save action |
+| `hero_override` | jsonb | null | `{ imagePath?, videoPath?, embedUrl? }`, rendered from Phase B |
+| `expires_at` | date | null | |
+| `deposit_percent` | numeric(5,2) | null | Used when no payment schedule is chosen |
+| `payment_schedule_id` | uuid | null | -> `payment_schedules`, set null |
+| `contract_template_id` | uuid | null | -> `contract_templates`, set null; required to send |
+| `version` | integer | 1 | Bumped when a sent/viewed proposal is saved again |
+| `share_token` | uuid | random | Unique. Public-page identity |
+| `share_token_enabled` | boolean | false | Off until the send route flips it |
+| `email_sent_at` | timestamptz | null | |
+| `first_viewed_at`, `view_count`, `last_viewed_at` | timestamptz / integer | null / 0 / null | Stamped by `get_public_proposal` |
+| `accepted_option_id` | uuid | null | -> `proposal_options`, set null (added via a second `alter table`, the two tables reference each other) |
+| `accepted_addon_selection` | jsonb | null | Array of item ids, Phase C |
+| `accepted_at`, `declined_at`, `declined_reason`, `declined_message` | timestamptz / text | null | Phase C |
+| `contract_id` | uuid | null | -> `contracts`, set null |
+| `invoice_id` | uuid | null | -> `invoices`, set null |
+| `created_at`, `updated_at` | timestamptz | now() | `updated_at` trigger |
+
+## `proposal_options`
+Snapshot of a package at save time (1-3 per proposal); later package
+edits never change a saved proposal.
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `proposal_id` | uuid | | -> `proposals`, cascade delete |
+| `user_id` | uuid | | |
+| `position` | integer | | |
+| `title`, `description` | text | | |
+| `source_package_id` | uuid | null | -> `packages`, set null; provenance only, never feeds rendering |
+| `pricing_mode` | text | `'itemised'` | check in `itemised`, `single` |
+| `fixed_price` | numeric(10,2) | null | |
+| `gst_inclusive` | boolean | true | |
+| `weekend_loading_percent` | numeric(5,2) | null | |
+| `is_popular` | boolean | false | |
+| `subtotal` | numeric(10,2) | 0 | Base (non add-on) total, denormalised for the list and chooser cards |
+
+## `proposal_option_items`
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `option_id` | uuid | | -> `proposal_options`, cascade delete |
+| `user_id` | uuid | | |
+| `description`, `note` | text | | `note` optional |
+| `amount` | numeric(10,2) | | |
+| `quantity` | numeric(8,2) | 1 | |
+| `is_addon` | boolean | false | |
+| `default_included` | boolean | true | |
+| `position` | integer | | |
+
+## Columns added to existing tables
+| Table | Column | Purpose |
+|---|---|---|
+| `contracts` | `proposal_id` (uuid, null, -> `proposals` set null, indexed) | Provenance on the contract a proposal generates (Phase C) |
+| `invoices` | `proposal_id` (uuid, null, -> `proposals` set null, indexed) | Provenance on the invoice a proposal generates (Phase C) |
+
+## RLS
+Owner-only (`auth.uid() = user_id`) for every verb on all three tables.
+`proposal_options` and `proposal_option_items` also carry a
+parent-ownership `exists` check (`_owns_proposal`, `_owns_proposal_option`)
+in `with check`, since a foreign key is validated with elevated
+privileges and does not consult RLS: without it a user could attach rows
+to another MC's proposal. Anonymous access is only through the
+`security definer` RPC below, never a table grant. See `security.md` for
+the coverage matrix and the integration test path.
+
+## Functions (Phase A)
+- `generate_proposal_number(p_user_id uuid)`  -  same shape as
+  `generate_invoice_number`: `PR-001`, sequential per user, guarded with
+  `nullif` so a malformed existing number cannot throw the cast.
+- `get_public_proposal(token uuid)`  -  `security definer`, granted to
+  `anon`. Returns `null` unless `share_token_enabled` is set. Merges
+  `_user_branding(user_id)` at the top level and `branding_blocks` from
+  `_user_branding_blocks(user_id, 'proposal')` (empty array until Phase B
+  registers the surface). Derives `expired` from `expires_at` rather than
+  trusting the `status` column. On a `sent` proposal's first read, bumps
+  `view_count`/`last_viewed_at`, stamps `first_viewed_at`, and flips
+  status to `viewed`.
+
+Two FK paths now exist between `proposals` and `proposal_options`
+(`proposal_options.proposal_id` and `proposals.accepted_option_id`), so
+PostgREST cannot infer which one an embed means: every embed of
+`proposal_options` from `proposals` must hint the relationship, e.g.
+`proposal_options!proposal_options_proposal_id_fkey(...)`.
+
+Phase C adds `accept_proposal`, `finalize_proposal_acceptance`,
+`decline_proposal`; Phase D adds `proposal_events` +
+`record_proposal_events`; Phase E adds the lifecycle trigger and the
+expiry cron. None of these exist yet.
+
+## Proposals Phase B additions (2026-09-14)
+
+Migration `20260924000000_proposal_surface.sql`. Full feature doc:
+`.claude/docs/proposals.md`.
+
+- `user_branding.enabled_surfaces` default gains `proposal`:
+  `'["invoice", "contract", "portal", "vendorTimeline", "questionnaire",
+  "lead", "proposal"]'::jsonb`. Existing rows are not rewritten;
+  `resolveEnabledSurfaces` (`lib/branding/enabled-surfaces.ts`) treats a
+  missing `proposal` key as enabled, the same rule `lead` uses (R8), so
+  no backfill is needed.
+- `user_branding.proposal_role` (text, null, check in `mc`,
+  `celebrant`, `both`) remembers the role chosen on first open of the
+  Proposal branding tab.
+- **`proposal-media` storage bucket**: public read, 50MB file size
+  limit, `allowed_mime_types` originally restricted to `video/mp4` and
+  `video/webm`, for uploaded hero/video block sources. Owner-write
+  storage policies (insert/update/delete require
+  `auth.uid()::text = split_part(name, '/', 1)`, i.e. the first path
+  segment is the uploader's own user id), select open to anyone  -  the
+  same shape as the existing `branding` bucket. See `security.md` for
+  the policy listing.
+  **Widened in `20260928000000_proposal_media_mime_types.sql`** (Layout
+  v2 Phase 2) to also accept the image and audio kinds the template
+  editor uploads (`features/proposals/data/media.ts` `MEDIA_LIMITS`):
+  `allowed_mime_types` is now `video/mp4`, `video/webm`, `image/jpeg`,
+  `image/png`, `image/webp`, `image/gif`, `audio/mpeg`, `audio/mp4`,
+  `audio/x-m4a`, `audio/wav`. `file_size_limit` stays 52428800 (50MB) -
+  that's the bucket-level ceiling, sized for the largest kind
+  (video/background); the smaller per-kind caps (image 10MB, audio
+  25MB) are enforced client-side in `MEDIA_LIMITS` before upload, not
+  at the bucket.
+
+## Proposals Phase D additions (2026-09-15)
+
+Migration `20260926000000_proposal_events.sql`. Full feature doc:
+`.claude/docs/proposals.md` (Phase D section).
+
+### `proposal_events`
+Raw engagement events from the public proposal page; aggregated
+client-side on the detail page, never queried per-column.
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `proposal_id` | uuid | | -> `proposals`, cascade delete |
+| `user_id` | uuid | | Owner, cascade delete |
+| `session_id` | text | | One browser session's id, from the tracker |
+| `type` | text | | One of the eight event types in `lib/proposals/engagement-events.ts` |
+| `payload` | jsonb | `'{}'` | Shape depends on `type`; see the vocabulary table in `proposals.md` |
+| `created_at` | timestamptz | now() | |
+| `client_event_id` | text | `gen_random_uuid()::text` | Client-generated idempotency key, stamped once when the tracker queues the event (not on flush); a replayed batch conflicts on this and inserts nothing. Defaults to a random value so a directly-seeded row (owner tooling, tests) never needs to supply one. |
+
+Indexes: `(proposal_id, created_at)` (the aggregation read pattern),
+`user_id` (every FK gets one), and a unique `(proposal_id,
+client_event_id)` (the idempotency constraint `record_proposal_events`
+inserts against with `on conflict do nothing`; scoped to `proposal_id`
+rather than a bare index on `client_event_id` since every other read
+and write on this table is already partitioned that way). See
+`proposals.md` (Phase D) for the full idempotency rationale.
+
+### RLS
+Owner-only `select`/`delete`; `insert` requires `auth.uid() = user_id`
+**and** a parent-ownership `exists` check that the target `proposal_id`
+belongs to the caller (same shape as `proposal_options`), since a
+foreign key is validated with elevated privileges and does not consult
+RLS. Anonymous access is only through `record_proposal_events` below,
+never a table grant. See `security.md` for the coverage matrix.
+
+### Functions (Phase D)
+- `record_proposal_events(p_token uuid, p_session_id text, p_events jsonb)`
+  -  `security definer`, granted to `anon`. Resolves the proposal by
+  `share_token` + `share_token_enabled = true`, locking the row (`for
+  update`) before reading whether an `opened` event already exists, so
+  two tabs flushing in the same second can never both report a first
+  open. Inserts every event whose `type` is recognised and whose `id`
+  is present and well-formed, `on conflict (proposal_id,
+  client_event_id) do nothing` (others silently dropped), and returns
+  `{ ok: true, inserted, first_open }` where `inserted` counts only
+  rows actually written, so a replayed batch reports 0; `first_open`
+  requires this call to have actually inserted an `opened` row, not
+  merely to have received one.
+
+## Proposal Layout v2, Phase 1 (2026-09-16)
+
+Migration `20260927000000_proposal_layout_v2.sql`. Full feature doc:
+`.claude/docs/proposals.md` (Layout v2 section). Adds v2 storage
+alongside the v1 tables above; nothing here drops or rewrites v1 data.
+
+### `proposal_templates`
+Named layouts per user.
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `id` | uuid | `gen_random_uuid()` | |
+| `user_id` | uuid | | Owner, cascade delete |
+| `name` | text | | |
+| `layout` | jsonb | | A `ProposalLayout` v2 document |
+| `is_default` | boolean | false | One default per user, enforced by the partial unique index `proposal_templates_one_default_idx on (user_id) where is_default` |
+| `settings` | jsonb | null | The template's own proposal-settings snapshot, same shape as a `proposal_settings` row (`password_enabled`, `allow_download`, `expiry_days`, `deposit_percent`, `link_preview`). Always a full snapshot (validated with `updateProposalSettingsSchema`), never a partial diff. `null` = follow the account defaults. Added `20260929000000_proposal_template_settings.sql` |
+| `revision` | integer | 0 | Optimistic-concurrency counter for layout writes. `updateTemplateLayoutAction` matches `revision = baseRevision` and sets `baseRevision + 1`; a miss is returned as a conflict carrying the current row, never written over. The unload beacon route matches on the same guard but does not bump (see `proposals.md`, "Nothing the MC types is ever held only in React state"). Added `20260930000000_proposal_template_revision.sql` |
+| `created_at`, `updated_at` | timestamptz | now() | |
+
+Index: `user_id`.
+
+### `proposal_settings`
+One row per user; account-level defaults for the public proposal page.
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `user_id` | uuid (PK) | | Owner, cascade delete |
+| `password_enabled` | boolean | false | |
+| `allow_download` | boolean | true | |
+| `section_nav` | boolean | false | |
+| `expiry_days` | integer | 14 | Check `between 1 and 365` |
+| `deposit_percent` | integer | 30 | Check `between 0 and 100` |
+| `link_preview` | jsonb | null | |
+| `updated_at` | timestamptz | now() | |
+
+### New columns
+| Table | Column | Purpose |
+|---|---|---|
+| `proposals` | `layout` (jsonb, null) | The proposal's own v2 layout copy. Reserved; nothing writes it until Phase 4, so `get_public_proposal_layout` returns null for every existing proposal until then |
+| `proposals` | `template_id` (uuid, null, -> `proposal_templates` set null, indexed) | Which template the proposal was created from. Reserved; nothing writes it until Phase 4 |
+| `user_branding` | `blocks_proposal_v1_backup` (jsonb, null) | The v1 `branding_blocks.proposal` tree, backed up once when an account is first migrated to v2 templates |
+| `user_branding` | `blocks_proposal_v1_backup_at` (timestamptz, null) | When the backup was taken |
+
+### RLS
+`proposal_templates` and `proposal_settings` are owner-only
+(`auth.uid() = user_id`) on all four verbs, no parent-ownership checks
+needed (neither table points at another owned row). See `security.md`
+for the coverage matrix and integration tests.
+
+### Functions (Phase 1)
+- `get_public_proposal_layout(token uuid)` - `sql`, `stable`,
+  `security definer`, `search_path public`, granted to `anon` and
+  `authenticated`. Share-token gated (`share_token_enabled = true`),
+  no side effects (unlike `get_public_proposal`, it never bumps
+  `view_count`). Returns the proposal's own `layout`, else null - no
+  fallback to a `proposal_templates` row, so a template never renders on
+  a couple's link; strips `page.passwordHash` from the returned jsonb
+  before it leaves the function, since the password gate is checked
+  server-side and the hash is never a public field.
+
+------------------------------------------------------------------------
+
+# Scheduler (R1, 2026-09-20)
+
+Migration `20261001000000_pg_cron_scheduler.sql`. Full context:
+`.claude/docs/cicd.md` (Scheduled jobs) and `workflows.md` (cron sweep).
+
+### system_heartbeats
+
+| column | type | notes |
+|---|---|---|
+| name | text pk | job name, e.g. `automations-tick` |
+| last_run_at | timestamptz | stamped by the job at the end of a run |
+| detail | jsonb | `{ truncated, durationMs }` for the tick |
+
+RLS on, no policies: service-role only. Written by `lib/workflows/heartbeat.ts`.
+
+### Scheduler functions (`20261001000000`)
+
+- `cron_call(p_path text) → bigint`: POSTs `<app_base_url><path>` via pg_net with the Vault bearer secret; returns the request id or null when unconfigured. Execute revoked from public, anon, authenticated.
+- `set_scheduler_secrets(p_base_url, p_secret)`: upserts the two Vault secrets. Service-role only.
+- `scheduler_status() → jsonb`: `{ configured, base_url, jobs[], heartbeats{} }`. Service-role only.

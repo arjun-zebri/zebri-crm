@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Paintbrush,
+  FileHeart,
   FileStack,
   RotateCcw,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import { createClient } from "@/lib/supabase/client";
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Couples", href: "/couples?view=board", icon: Target },
+  { label: "Proposals", href: "/proposals", icon: FileHeart },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Workflows", href: "/workflows", icon: ListChecks },
   { label: "Contacts", href: "/contacts", icon: Contact },

@@ -22,7 +22,7 @@ describe('policy', () => {
     expect(MARKER_TYPES.has('contractSign')).toBe(true)
   })
 
-  it('clearable markers include the contract/run-sheet/portal bodies + both questionnaire form blocks + the website form submit', () => {
+  it('clearable markers include the contract/run-sheet/portal bodies + both questionnaire form blocks + the website form submit + the proposal data-bound blocks', () => {
     expect([...CLEARABLE_MARKERS].sort()).toEqual(
       [
         'contractBody', 'vendorTimelineBody', 'couplePortal',
@@ -33,6 +33,10 @@ describe('policy', () => {
         // have one and must be able to remove it.
         'contractSign',
         'contractSignVendor', 'contractSignPrimary', 'contractSignSecondary',
+        // The proposal's per-couple note, live package options, and accept
+        // CTA (R4): markers because their content is injected at render
+        // time, clearable so the MC can remove and re-add them.
+        'introNote', 'packages', 'accept',
       ].sort(),
     )
     // Every clearable marker is also a marker.

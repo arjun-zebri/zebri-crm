@@ -57,7 +57,15 @@ export interface PrintDocumentOptions {
    * script, where nothing outside the text belongs on the page.
    */
   bare?: boolean
-  /** The document, as the public page renders it. Must be hook-free. */
+  /**
+   * The document, as the public page renders it. Rendered once through
+   * `renderToStaticMarkup`, which runs state hooks (`useState`,
+   * `useReducer`) at their initial value and never runs effects or layout
+   * effects, so a component with a `useState`/`useEffect` pair (like
+   * `ProposalPage`) still renders, just frozen at whatever its initial
+   * render shows. Any context it reads must already have a provider above
+   * it (or a default value), since nothing here mounts one.
+   */
   element: ReactElement
   /** Branding, for the page canvas, body font and the Google Fonts link. */
   branding: PublicBranding | null | undefined

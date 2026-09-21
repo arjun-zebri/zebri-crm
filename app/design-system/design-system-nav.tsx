@@ -18,6 +18,7 @@ export const NAV_ITEMS = [
   { id: 'editors', label: 'Editors and pickers' },
   { id: 'forms', label: 'Forms' },
   { id: 'patterns', label: 'Page patterns' },
+  { id: 'editor-primitives', label: 'Editor primitives' },
   { id: 'composites', label: 'Feature composites' },
 ];
 

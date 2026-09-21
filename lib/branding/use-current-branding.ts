@@ -43,6 +43,7 @@ import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import { repairBlocks } from '@/lib/branding/validate-blocks';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentUser } from '@/lib/supabase/current-user';
+import type { SurfaceTab } from '@/types/branding-preview';
 
 import { buildPublicBranding, type PublicBranding, type UserMetadata } from './public-branding';
 
@@ -51,7 +52,8 @@ import { buildPublicBranding, type PublicBranding, type UserMetadata } from './p
 export { buildPublicBranding } from './public-branding';
 export type { UserMetadata } from './public-branding';
 
-export type BuilderSurface = 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' | 'lead';
+/** Every surface the builder preview can request blocks/branding for. */
+export type BuilderSurface = SurfaceTab;
 
 export interface UseCurrentBrandingResult {
   branding: PublicBranding | null;
@@ -69,6 +71,7 @@ interface UserBrandingRow {
     vendorTimeline?: Block[];
     questionnaire?: Block[];
     lead?: Block[];
+    proposal?: Block[];
   } | null;
 }
 

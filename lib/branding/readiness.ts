@@ -15,7 +15,7 @@
 // readiness evaluator. Layering exception noted in `.claude/docs/component-library.md`.
 // eslint-disable-next-line no-restricted-imports
 import {
-  requiredTypesForSurface, atLeastOneForSurface, exactlyOneForSurface,
+  requiredTypesForSurface, atLeastOneForSurface, exactlyOneForSurface, atMostOneForSurface,
 } from '@/app/(dashboard)/branding/blocks/policy'
 // eslint-disable-next-line no-restricted-imports
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
@@ -63,7 +63,7 @@ export interface SurfaceReadiness {
  * - If action block is present on invoice, account.stripeConnected must be true.
  * - On contract surface, account.contractTemplateExists must be true.
  *
- * @param surface - The surface tab ('invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire').
+ * @param surface - The surface tab ('invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire', 'lead', 'proposal').
  * @param blocks - The block tree for this surface.
  * @param account - The MC's account readiness state.
  * @returns { ready, issues } — Layer A readiness + all issues (Layer A + Layer B).
@@ -121,16 +121,24 @@ export function evaluateSurface(
     }
   }
 
-  // Layer A: Exactly-one constraint (questionnaire form style). None means the
-  // couple has nothing to fill; both means the form style is ambiguous.
+  // Layer A: Exactly-one constraint (questionnaire form style; the proposal's
+  // single Hero). None means the couple has nothing to fill (or, for the
+  // proposal, no opening); more than one means the form style is ambiguous
+  // (or the proposal has two openings).
   const exactlyOne = exactlyOneForSurface(surface)
   if (exactlyOne !== null) {
+    // Count actual instances, not just distinct types present: the
+    // questionnaire's two form-style blocks are markers deduped to at most
+    // one instance each by repairBlocks, but the proposal's Hero is
+    // deliberately NOT a marker (R4, so it stays deletable), so a second
+    // Hero can genuinely exist in the tree and must be caught here.
+    const instanceCount = blocks.filter((b) => exactlyOne.includes(b.type)).length
     const present = exactlyOne.filter((type) => blockTypes.has(type))
     // "Form style" copy is questionnaire-specific (its set is a choice between
     // two styles); on other surfaces the set is a single mandatory block, so
     // the message just names it.
     const isStyleChoice = surface === 'questionnaire'
-    if (present.length === 0) {
+    if (instanceCount === 0) {
       layerAReady = false
       issues.push({
         kind: 'need-exactly-one',
@@ -138,13 +146,29 @@ export function evaluateSurface(
           ? `Add a form style: ${exactlyOne.map((t) => blockLabel(t, surface)).join(' or ')}`
           : `A ${exactlyOne.map((t) => blockLabel(t, surface)).join(' or ')}`,
       })
-    } else if (present.length > 1) {
+    } else if (instanceCount > 1) {
       layerAReady = false
       issues.push({
         kind: 'need-exactly-one',
         message: isStyleChoice
           ? `Pick one form style: remove ${present.map((t) => blockLabel(t, surface)).join(' or ')} so only one remains`
           : `Only one ${present.map((t) => blockLabel(t, surface)).join(' or ')}`,
+      })
+    }
+  }
+
+  // Layer A: At-most-one constraint (the proposal's Hero). Zero is fine, since
+  // an MC may open with something other than a hero; two would give the page
+  // two openings (R4).
+  const atMostOne = atMostOneForSurface(surface)
+  if (atMostOne !== null) {
+    const extra = blocks.filter((b) => atMostOne.includes(b.type))
+    if (extra.length > 1) {
+      layerAReady = false
+      const present = atMostOne.filter((type) => blockTypes.has(type))
+      issues.push({
+        kind: 'need-exactly-one',
+        message: `Only one ${present.map((t) => blockLabel(t, surface)).join(' or ')}`,
       })
     }
   }

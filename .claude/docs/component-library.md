@@ -20,7 +20,11 @@ Variants: `primary` (brand-fg / inverse text), `secondary` (subtle grey fill +
 border), `outline` (white fill + border), `ghost` (transparent), `danger`,
 `success`. Sizes: `sm` / `md` / `lg`. `loading` shows a spinner,
 sets `aria-busy`, and disables the click. Defaults `type="button"` to avoid
-accidental form submits.
+accidental form submits. `buttonClassName(options)` (same module) returns
+the exact class string `<Button>` itself renders, for a non-`<button>`
+element that must look identical (a `next/link` `Link` styled as a
+button being the main case, since `Button` has no `asChild`/`href`
+prop). Extend it (or `<Button>`) rather than hand-copying its classes.
 
 ### `<Input />` — `@/components/ui/input`
 Labelled input with optional `help` and `error`. All accessible wiring
@@ -190,6 +194,8 @@ Shared branded surface renderers. Each public surface (invoice, contract, client
 
 **Shared helper:** `upload-brand-asset(file, type)` in `lib/branding/upload.ts` handles logo/favicon/header/image uploads to Supabase Storage (`branding/{user_id}/{type}`), returns a public URL via signed URL (1-hour TTL cached in-memory). Used by the editor's file picker, brand-panel upload controls, and image-block drag-drop.
 
+**Per-surface dispatcher split (Proposals, Phase B  -  the pattern for future surfaces):** ten proposal-only block types would have bloated `block-renderer.tsx`'s and `block-toolbar.tsx`'s big per-type `switch`, so they dispatch out instead. `app/(dashboard)/branding/blocks/render-proposal.tsx` exports `renderProposalBlock`, one `case` per proposal block type, editor renderer components living one per file under `app/(dashboard)/branding/blocks/proposal/`; `app/(dashboard)/branding/blocks/proposal-controls.tsx` exports `ProposalBlockControls`, the matching toolbar-control dispatcher. Both return `undefined`/`null` for any type they don't recognise, so `block-renderer.tsx`'s `renderBlock` and `block-toolbar.tsx`'s `BlockSpecificControls` call the dispatcher first and fall through to their own switch for the rest of the block library (`render.tsx` itself only exports the individual `Render*` block components, not a dispatcher): the next surface with several block types of its own should add its own `render-<surface>.tsx` / `<surface>-controls.tsx` pair rather than growing the shared switches.
+
 ## Events components — `components/events/*` (Phase 4A)
 
 Shared event-related components used by the couples profile + the
@@ -207,6 +213,24 @@ of the `app/(dashboard)/events/` route group in Phase 4A (recon
 | `event-timeline-share.tsx` | Share-link affordance for an event timeline. |
 | `event-day-calendar.tsx` | Day-grid calendar visualisation of timeline items. |
 | `event-profile.tsx` | Full-screen event-detail modal with overview/vendors/tasks/timeline tabs. |
+
+## Editor primitives: `components/editor/*` (Proposal Layout v2 Phase 2)
+
+Toolbar and canvas primitives shared by the Branding editor and the proposal section editor, lifted out of `app/(dashboard)/branding/` (spec 5.3) so both build on one set. Import from the barrel: `import { ... } from '@/components/editor'`. Old Branding import paths still work as re-export shims until the Phase 5 toolbar rebuild.
+
+| Component | Notes |
+|---|---|
+| `PillToggle` | Segmented toggle, one pill lit; icon-only options get a `Tooltip`. |
+| `ActiveTargetLabel` | Non-interactive label naming the sub-element the style controls are acting on. |
+| `VAlignIcon` | Top/middle/bottom glyph for a `PillToggle` option. |
+| `ToolbarDivider` | Thin vertical rule between toolbar control groups. |
+| `IncludeDropdown` / `IncludeRow` | "Include ▾" checkbox list of a block's show/hide parts. |
+| `PositionControl` | One button opening a 3x3 grid to place text (top/middle/bottom x left/centre/right). |
+| `Select` / `SelectOption` | Popover select with an optional custom label renderer and meta column. |
+| `Slider` | Pointer-drag + keyboard slider over `[min, max]`. |
+| `NumberStepper` | Editable `<input type="number">` (spinbutton), clamped to `[min, max]`, with Decrease/Increase buttons and an optional unit `suffix`. |
+| `ResizeGrip` / `ResizeGripProps` | Draggable + keyboard `role="slider"` resize handle (`axis: 'x' \| 'y'`), with optional `step`, `snaps` and a floating readout. The one handle every section/image/spacer resize control and the Branding hero's height grip build on. |
+| `CanvasFrame` / `CanvasFrameProps` / `CanvasDevice` | Zoomable, pannable document viewport with its zoom widget (cursor-anchored zoom, space/middle-drag pan, fit-to-width). Optional `scrollRef` exposes the real scroll viewport element, so a control bar rendered through the `overlay` slot can use it as a Radix popover `collisionBoundary` and keep its popovers inside the canvas. |
 
 ---
 

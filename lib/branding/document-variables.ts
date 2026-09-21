@@ -65,6 +65,12 @@ const CONTRACT_DOC: DocumentVariable[] = [
   { id: 'signer_name', label: 'Signer name', group: 'Document', format: 'text', source: "The signer's name on the contract." },
 ]
 
+const PROPOSAL_DOC: DocumentVariable[] = [
+  { id: 'proposal_number', label: 'Proposal number', group: 'Document', format: 'text', source: 'The proposal number, assigned when the proposal is created.' },
+  { id: 'expiry_date', label: 'Expiry date', group: 'Document', format: 'date', source: "The proposal's expiry date, if one is set." },
+  { id: 'deposit_percent', label: 'Deposit', group: 'Document', format: 'text', source: 'The deposit percentage on this proposal, e.g. "25%".' },
+]
+
 /**
  * Variables offered on each surface. Line-item tables and totals stay
  * structured blocks; these are the text-shaped values that become inline chips.
@@ -78,6 +84,7 @@ export const VARIABLES_BY_SURFACE: Record<SurfaceTab, DocumentVariable[]> = {
   // The website form is filled by a visitor before any couple exists, so only
   // the MC's own business variables are offered (no couple chips).
   lead: [...BUSINESS],
+  proposal: [...COUPLE, ...PROPOSAL_DOC, ...BUSINESS],
 }
 
 /** Flat lookup of every known variable id to its definition, across all surfaces. */

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonClassName } from '@/components/ui/button';
 
 describe('<Button />', () => {
   it('renders children and defaults to type="button" (no accidental form submit)', () => {
@@ -69,6 +69,31 @@ describe('<Button /> height and icon-only', () => {
     const btn = screen.getByRole('button', { name: 'Close' });
     expect(btn).toHaveClass('h-8', 'w-8');
     expect(btn.className).not.toMatch(/\bpx-\d/);
+  });
+});
+
+describe('buttonClassName', () => {
+  // Non-`<button>` callers (a `next/link` `Link` styled as a button, since
+  // `Button` has no `asChild`/`href`) must render byte-identically to a
+  // real `Button` - these compare against the actual rendered className
+  // rather than duplicating the class strings here.
+  it('matches the class Button itself renders, for the default variant', () => {
+    render(<Button>a</Button>);
+    expect(buttonClassName()).toBe(screen.getByRole('button').className);
+  });
+
+  it('matches the class Button itself renders, for a variant + iconOnly combination', () => {
+    render(
+      <Button variant="ghost" iconOnly aria-label="Close">
+        <span aria-hidden>x</span>
+      </Button>,
+    );
+    const rendered = screen.getByRole('button', { name: 'Close' }).className;
+    expect(buttonClassName({ variant: 'ghost', iconOnly: true })).toBe(rendered);
+  });
+
+  it('appends an extra className after the computed classes', () => {
+    expect(buttonClassName({ className: 'extra-class' })).toContain('extra-class');
   });
 });
 

@@ -10,6 +10,10 @@ import {
   invoiceHtml,
   type LeadNotificationOpts,
   leadNotificationHtml,
+  proposalAcceptedHtml,
+  proposalDeclinedHtml,
+  proposalHtml,
+  proposalOpenedHtml,
   questionnaireHtml,
   type SignerLink,
 } from "./html";
@@ -30,6 +34,10 @@ export {
   contractHtml,
   invoiceHtml,
   leadNotificationHtml,
+  proposalAcceptedHtml,
+  proposalDeclinedHtml,
+  proposalHtml,
+  proposalOpenedHtml,
   questionnaireHtml,
   wrapTemplateHtml,
 } from "./html";
@@ -222,6 +230,104 @@ export async function sendInvoiceEmail(opts: {
     to: opts.coupleEmail,
     subject: `Invoice from ${opts.mcBusinessName} - ${opts.invoiceNumber}`,
     html: invoiceHtml(opts, opts.branding),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
+}
+
+/**
+ * Notify the MC that a couple accepted a proposal option. Sent to the MC
+ * themselves (not the couple), so `sender`/`branding` describe how the MC's
+ * own inbox is reached, mirroring the other MC-facing senders below.
+ */
+export async function sendProposalAcceptedEmail(opts: {
+  to: string;
+  coupleName: string;
+  proposalNumber: string;
+  proposalTitle: string;
+  packageName: string;
+  total: number;
+  /** The invoice generated on signature, named in the email body. */
+  invoiceNumber: string;
+  detailUrl: string;
+  mcBusinessName: string;
+  /** Resolved transport. Defaults to the shared Zebri address (Resend). */
+  sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
+    to: opts.to,
+    subject: `${opts.coupleName} accepted ${opts.proposalNumber}`,
+    html: proposalAcceptedHtml(opts, opts.branding),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
+}
+
+/** Notify the MC that a couple declined a proposal. See {@link sendProposalAcceptedEmail}. */
+export async function sendProposalDeclinedEmail(opts: {
+  to: string;
+  coupleName: string;
+  proposalNumber: string;
+  proposalTitle: string;
+  reasonLabel: string;
+  message: string | null;
+  detailUrl: string;
+  mcBusinessName: string;
+  /** Resolved transport. Defaults to the shared Zebri address (Resend). */
+  sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
+    to: opts.to,
+    subject: `${opts.coupleName} declined ${opts.proposalNumber}`,
+    html: proposalDeclinedHtml(opts, opts.branding),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
+}
+
+/**
+ * Notify the MC that a couple opened their proposal for the first time.
+ * Sent to the MC themselves, mirroring {@link sendProposalAcceptedEmail}.
+ */
+export async function sendProposalOpenedEmail(opts: {
+  to: string;
+  coupleName: string;
+  proposalNumber: string;
+  proposalTitle: string;
+  detailUrl: string;
+  mcBusinessName: string;
+  /** Resolved transport. Defaults to the shared Zebri address (Resend). */
+  sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
+    to: opts.to,
+    subject: `${opts.coupleName} opened ${opts.proposalNumber}`,
+    html: proposalOpenedHtml(opts, opts.branding),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
+}
+
+/** Email the couple their proposal link. */
+export async function sendProposalEmail(opts: {
+  coupleEmail: string;
+  coupleName: string;
+  proposalNumber: string;
+  proposalTitle: string;
+  expiresAt: string | null;
+  shareUrl: string;
+  mcBusinessName: string;
+  /** Resolved transport. Defaults to the shared Zebri address (Resend). */
+  sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
+    to: opts.coupleEmail,
+    subject: `A proposal from ${opts.mcBusinessName} - ${opts.proposalNumber}`,
+    html: proposalHtml(opts, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }

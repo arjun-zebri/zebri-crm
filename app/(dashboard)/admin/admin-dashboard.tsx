@@ -7,6 +7,7 @@ import type {
   AdminDashboard,
   AdminUser,
 } from '@/lib/admin/admin-analytics';
+import type { SchedulerCardData } from '@/lib/admin/scheduler';
 import type { UserStats } from '@/lib/admin/user-value';
 
 import { UserDetailPanel } from './components/user-detail-panel';
@@ -16,6 +17,7 @@ import { EngagementSection } from './sections/engagement-section';
 import { MetricCards } from './sections/metric-cards';
 import { PastDueList } from './sections/past-due-list';
 import { RecentSignupsList } from './sections/recent-signups-list';
+import { SchedulerCard } from './sections/scheduler-card';
 import { UpcomingRenewalsList } from './sections/upcoming-renewals-list';
 import { UsersTableView } from './sections/users-table-view';
 
@@ -38,10 +40,12 @@ export function AdminDashboardView({
   users,
   dashboard,
   stats,
+  scheduler,
 }: {
   users: AdminUser[];
   dashboard: AdminDashboard;
   stats: Record<string, UserStats>;
+  scheduler: SchedulerCardData;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -83,7 +87,11 @@ export function AdminDashboardView({
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hover">
         <div className="px-4 md:px-6 pt-6 pb-6">
           {activeTab === 'dashboard' ? (
-            <DashboardView dashboard={dashboard} onOpenUser={setOpenUserId} />
+            <DashboardView
+              dashboard={dashboard}
+              scheduler={scheduler}
+              onOpenUser={setOpenUserId}
+            />
           ) : (
             <UsersTableView users={users} stats={stats} onOpenUser={setOpenUserId} />
           )}
@@ -101,9 +109,11 @@ export function AdminDashboardView({
 
 function DashboardView({
   dashboard,
+  scheduler,
   onOpenUser,
 }: {
   dashboard: AdminDashboard;
+  scheduler: SchedulerCardData;
   onOpenUser: (userId: string) => void;
 }) {
   return (
@@ -132,7 +142,10 @@ function DashboardView({
         />
       </div>
 
-      {/* Row 4 — supporting lists */}
+      {/* Row 4: scheduler health, the one infrastructure card */}
+      <SchedulerCard status={scheduler.status} error={scheduler.error} />
+
+      {/* Row 5: supporting lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <DormantList rows={dashboard.dormantUsers} onOpenUser={onOpenUser} />
         <RecentSignupsList

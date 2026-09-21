@@ -209,7 +209,10 @@ describe('OnboardingWizard', () => {
       'vendorTimeline',
       'questionnaire',
       'lead',
+      'proposal',
     ])
+    // Skip never picks a proposal role: the in-editor chooser asks later.
+    expect(call.proposalRole).toBeNull()
   })
 })
 
