@@ -19,11 +19,19 @@ test.describe('proposals', () => {
     await page.getByRole('link', { name: 'Proposals' }).click()
     await expect(page.getByRole('heading', { name: 'Proposals' })).toBeVisible()
 
-    // `getByRole` with a name resolves to the single button regardless of
-    // breakpoint: `New proposal` carries `aria-label="New proposal"` so its
-    // accessible name is stable even where the visible label collapses to
-    // icon-only below `sm` (see proposals-header.tsx).
-    await page.getByRole('button', { name: 'New proposal' }).first().click()
+    // With Proposal Layout v2 on, the header's New control is a split
+    // button whose menu holds "New proposal" and "New template"; with it
+    // off, it is the single `aria-label="New proposal"` button (see
+    // new-proposal-menu.tsx). Both accessible names are stable across
+    // breakpoints, so this works where the visible label collapses to
+    // icon-only below `sm`.
+    const direct = page.getByRole('button', { name: 'New proposal' })
+    if (await direct.count()) {
+      await direct.first().click()
+    } else {
+      await page.getByRole('button', { name: 'New', exact: true }).click()
+      await page.getByRole('menuitem', { name: 'New proposal' }).click()
+    }
     const title = uniqueName('Proposal')
     await page.getByPlaceholder('Anna & Jake, your wedding').fill(title)
 
