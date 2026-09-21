@@ -12,15 +12,15 @@ import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import {
-  doc, layoutReducer, newSectionFor, paragraph, SectionCanvas, text,
-  type LayoutAction, type LayoutEditorState, type Section,
+  defaultTheme, doc, layoutReducer, newSectionFor, paragraph, SectionCanvas, text,
+  type LayoutAction, type LayoutEditorState, type ProposalTheme, type Section,
 } from '@/features/proposals'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 const branding = buildPublicBranding({ business_name: 'Sam MC' })
 
-function makeState(sections: Section[], sectionId: string | null = null): LayoutEditorState {
-  return { layout: { version: 2, sections }, selection: { sectionId, node: null }, externalVersion: 0 }
+function makeState(sections: Section[], sectionId: string | null = null, theme?: ProposalTheme): LayoutEditorState {
+  return { layout: { version: 2, sections, theme }, selection: { sectionId, node: null }, externalVersion: 0 }
 }
 
 /** A content section, optionally pre-filled with text (a doc with no text is "empty" per `isSectionEmpty`). */
@@ -56,11 +56,11 @@ describe('SectionCanvas', () => {
     expect(sectionIds(container)).toEqual(sections.map((s) => s.id))
   })
 
-  it("clicking a data section's overlay selects it", () => {
+  it('clicking anywhere in a data section (not a real control inside it) selects it', () => {
     const pkg = newSectionFor('packages')
     const { container } = render(<Harness initial={makeState([pkg])} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Select section' }))
     const wrapper = container.querySelector(`[data-canvas-section-id="${pkg.id}"]`)!
+    fireEvent.click(wrapper)
     expect(wrapper.className).toContain('ring-2')
     expect(wrapper.className).toContain('ring-brand-fg')
   })
@@ -99,13 +99,16 @@ describe('SectionCanvas', () => {
     expect(sectionIds(container)).toEqual([filled.id])
   })
 
-  it('the "Add section here" line opens the palette anchored at that index, and choosing a section inserts it there', () => {
+  it('a section\'s bottom edge "+" opens the palette anchored at that index, and choosing a section inserts it there', () => {
     const sections = [contentSection('A'), contentSection('B')]
     const { container } = render(<Harness initial={makeState(sections)} />)
-    const lines = screen.getAllByRole('button', { name: 'Add section here' })
-    expect(lines).toHaveLength(3) // before A, between A/B, after B
-    fireEvent.click(lines[1]!)
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Packages' }))
+    // Every section has a top and bottom edge button, all named "Add
+    // section" (`section-edge-add.tsx`), plus the trailing button:
+    // A-top(@0), A-bottom(@1), B-top(@1), B-bottom(@2), trailing(@2).
+    const edges = screen.getAllByRole('button', { name: 'Add section' })
+    expect(edges).toHaveLength(5)
+    fireEvent.click(edges[1]!) // A's bottom edge: insert between A and B
+    fireEvent.click(screen.getByRole('button', { name: 'Add Packages' }))
 
     const ids = sectionIds(container)
     expect(ids).toHaveLength(3)
@@ -119,18 +122,96 @@ describe('SectionCanvas', () => {
   it('the trailing "Add section" button opens the palette as a modal, appending the chosen section at the end', () => {
     const sections = [contentSection('A')]
     const { container } = render(<Harness initial={makeState(sections)} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Add section' }))
+    // The section's own top/bottom edge buttons share the same accessible
+    // name; the trailing button (outside every section) is the last one.
+    const buttons = screen.getAllByRole('button', { name: 'Add section' })
+    fireEvent.click(buttons.at(-1)!)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Text' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Text' }))
 
     const ids = sectionIds(container)
     expect(ids).toHaveLength(2)
     expect(ids[0]).toBe(sections[0]!.id)
   })
 
+  it('an empty layout shows the blank-page nudge instead of the bare trailing button, and its button inserts at index 0', () => {
+    const { container } = render(<Harness initial={makeState([])} />)
+    expect(container.querySelector('[data-canvas-empty]')).toBeInTheDocument()
+    expect(screen.getByText('A blank page, all yours')).toBeInTheDocument()
+    // Exactly one "Add section" entry point on a blank page: no section
+    // edge buttons exist yet, and the trailing line is swapped out.
+    const buttons = screen.getAllByRole('button', { name: 'Add section' })
+    expect(buttons).toHaveLength(1)
+    fireEvent.click(buttons[0]!)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Text' }))
+
+    expect(sectionIds(container)).toHaveLength(1)
+    // The nudge leaves once a section lands; the normal trailing line is back.
+    expect(container.querySelector('[data-canvas-empty]')).not.toBeInTheDocument()
+  })
+
   it('shows the "Hidden on phones" badge for a hideOnMobile section on the mobile device', () => {
     const hidden: Section = { ...contentSection('Desktop only'), hideOnMobile: true }
     render(<Harness initial={makeState([hidden])} device="mobile" />)
     expect(screen.getByText('Hidden on phones')).toBeInTheDocument()
+  })
+
+  describe('page breaks', () => {
+    it('the palette inserts a page break, which renders as a labelled row with a hint while the flow is Stacked', () => {
+      const a = contentSection('A')
+      const { container } = render(<Harness initial={makeState([a], null, defaultTheme(branding))} />)
+      fireEvent.click(screen.getAllByRole('button', { name: 'Add section' }).at(-1)!)
+      fireEvent.click(screen.getByRole('button', { name: 'Add Page break' }))
+      const ids = sectionIds(container)
+      expect(ids).toHaveLength(2)
+      const row = container.querySelector(`[data-canvas-section-id="${ids[1]}"]`)!
+      expect(row.getAttribute('data-section-kind')).toBe('pageBreak')
+      expect(row).toHaveTextContent('Page break')
+      expect(row).toHaveTextContent('Only shown in One at a time')
+      // No page wrappers in stack flow: the canvas is the flat list.
+      expect(container.querySelector('[data-page-id]')).toBeNull()
+    })
+
+    it('Delete on a selected page break removes it with no confirmation', () => {
+      const a = contentSection('A')
+      const pb = newSectionFor('pageBreak')
+      const { container } = render(<Harness initial={makeState([a, pb], pb.id)} />)
+      fireEvent.keyDown(window, { key: 'Delete' })
+      expect(sectionIds(container)).toEqual([a.id])
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    it('the row\'s own Remove button deletes it, and clicking the row selects it', () => {
+      const a = contentSection('A')
+      const pb = newSectionFor('pageBreak')
+      const { container } = render(<Harness initial={makeState([a, pb])} />)
+      const row = container.querySelector(`[data-canvas-section-id="${pb.id}"]`)!
+      fireEvent.click(row)
+      expect(row.className).toContain('ring-brand-fg')
+      fireEvent.click(screen.getByRole('button', { name: 'Remove page break' }))
+      expect(sectionIds(container)).toEqual([a.id])
+    })
+
+    it('in step flow the canvas groups sections into pages around the breaks, keeps an empty page\'s break visible, and drops the hint', () => {
+      const a = contentSection('A')
+      const b = contentSection('B')
+      const pb1 = newSectionFor('pageBreak')
+      const pb2 = newSectionFor('pageBreak')
+      const full: Section = { ...contentSection('Hero'), style: { height: 'full', contentWidth: 'medium' } }
+      const { container } = render(<Harness initial={makeState([a, pb1, b, full, pb2], null, { ...defaultTheme(branding), flow: 'step' })} />)
+      const pages = Array.from(container.querySelectorAll<HTMLElement>('[data-page-id]'))
+      // The trailing break opens a page with nothing on it: no page box, but its row still renders below.
+      expect(pages.map((p) => p.getAttribute('data-page-id'))).toEqual(['page-first', pb1.id])
+      for (const p of pages) expect(p.getAttribute('style')).toContain('min-height: 80svh')
+      // Sections keep their natural height on a page; only `height: 'full'` grows.
+      expect(container.querySelector(`[data-canvas-section-id="${a.id}"]`)!.className).not.toContain('grow')
+      expect(pages[0]!.querySelector(`[data-canvas-section-id="${a.id}"]`)).not.toBeNull()
+      expect(pages[1]!.querySelector(`[data-canvas-section-id="${b.id}"]`)).not.toBeNull()
+      // The break rows sit between the pages, never inside one.
+      expect(container.querySelector(`[data-page-id] [data-canvas-section-id="${pb1.id}"]`)).toBeNull()
+      expect(sectionIds(container)).toEqual([a.id, pb1.id, b.id, full.id, pb2.id])
+      expect(container.querySelector(`[data-canvas-section-id="${full.id}"]`)!.className).toContain('grow')
+      expect(screen.queryByText('Only shown in One at a time')).toBeNull()
+    })
   })
 })

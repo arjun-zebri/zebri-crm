@@ -2,38 +2,49 @@
 
 /**
  * The loaded template editor (Proposal Layout v2 Phase 2 Task 14): header,
- * canvas, and whichever control bar the current selection calls for.
+ * canvas, and the node bar when a node inside a section is selected.
  * Mounted by `template-editor.tsx` once the template and branding have
  * both loaded.
  *
- * The active bar's sticky-top placement uses `CanvasFrame`'s `overlay`
- * slot rather than a literal CSS `position: sticky` element inside the
- * scrolling canvas content: `overlay` already renders as a sibling of the
- * scroll viewport (see `components/editor/canvas-frame.tsx`), so it stays
- * put while the canvas scrolls and never rides along with the `zoom` CSS
- * property that scales the document - a real `position: sticky` node
- * living inside that zoomed subtree would visually scale the bar itself
- * with the canvas zoom, which is wrong for a 32px control row. The header
- * above `CanvasFrame` is a separate flex row, so the bar can never cover it.
+ * A selected *section*'s own toolbar is not hosted here (UX audit
+ * §3.2/3.5): it is anchored directly to the section on the canvas
+ * (`editable-section.tsx`'s `SectionToolbar`), not a detached strip at the
+ * top of the canvas - that was the "section bar 400px away from the click"
+ * gap the audit flagged. `NodeBar` (an atom/container node selected inside
+ * a section's rich-text content) gets the same treatment via
+ * `bars/node-bar-anchor.tsx`'s `NodeBarAnchor`, which places it directly
+ * above (or, flipped, below) the selected node's own rendered position -
+ * UX audit §3.6/§7.3 replaced this file's former fixed top-of-canvas strip
+ * with that anchored placement.
+ *
+ * `NodeBarAnchor` is still mounted through `CanvasFrame`'s `overlay` slot
+ * rather than a node living inside the scrolling canvas content: `overlay`
+ * renders as a sibling of the scroll viewport (see
+ * `components/editor/canvas-frame.tsx`), so it stays put while the canvas
+ * scrolls and never rides along with the `zoom` CSS property that scales
+ * the document - `NodeBarAnchor` measures screen coordinates directly and
+ * would double-scale itself if it were inside that zoomed subtree. The
+ * header above `CanvasFrame` is a separate flex row, so the bar can never
+ * cover it.
  *
  * @module features/proposals/editor/template-editor-body
  */
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { CanvasFrame, type CanvasDevice } from '@/components/editor'
+import type { CanvasDevice } from '@/components/editor'
+import { ensureBrandFontsStylesheet } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
 import { renameTemplateAction } from '../data/templates'
 import type { ProposalLayout } from '../model/layout'
+import { withTheme } from '../model/theme'
 
-import { NodeBar } from './bars/node-bar'
-import type { NodeBarSection } from './bars/node-bar-shared'
-import { SectionBar } from './bars/section-bar'
-import { TextBar, type TextBarHandle } from './bars/text-bar'
+import type { TextBarHandle } from './bars/text-bar'
+import { useNodeBarContent } from './bars/use-node-bar-content'
+import { FieldShortcutsProvider } from './data/field-shortcuts'
+import { EditorCanvasRegion } from './editor-canvas-region'
 import { EditorHeader } from './editor-header'
-import { useRegisteredEditor } from './editor-registry'
-import { InsertMediaHost, type InsertMediaHandle } from './insert-media-host'
-import { SectionCanvas } from './section-canvas'
+import type { InsertMediaHandle } from './insert-media-host'
 import { useEditorShortcuts } from './use-editor-shortcuts'
 import { useInsertMedia } from './use-insert-media'
 import { useLayoutEditor } from './use-layout-editor'
@@ -48,19 +59,35 @@ function swatchesFor(branding: PublicBranding): readonly string[] {
 /** Props for {@link TemplateEditorBody}. */
 export interface TemplateEditorBodyProps {
   templateId: string
+  /** Scopes the local draft (`use-template-autosave.ts`); `null` disables it. */
+  userId: string | null
   name: string
   initial: ProposalLayout
+  /** True when `initial` is a restored local draft the server does not hold yet. */
+  initialDirty: boolean
+  /** The template's `revision` as loaded: every autosave carries it back. */
+  revision: number
   branding: PublicBranding
   /** Refetches the template row once a rename lands, so the header shows the server-confirmed name. */
   onRenamed: () => void
 }
 
 /** The loaded editor: header, canvas, and the active control bar. */
-export function TemplateEditorBody({ templateId, name, initial, branding, onRenamed }: TemplateEditorBodyProps) {
-  const { state, dispatch, undo, redo, canUndo, canRedo } = useLayoutEditor(initial)
-  const { status, lastSavedAt, retry } = useTemplateAutosave(templateId, state.layout)
+export function TemplateEditorBody({ templateId, userId, name, initial, initialDirty, revision, branding, onRenamed }: TemplateEditorBodyProps) {
+  // A template saved before canvas themes existed gets one seeded from
+  // Branding here, once, so the Page style panel always has a full theme
+  // to edit and the first autosave writes it back.
+  const themed = useMemo(() => withTheme(initial, branding), [initial, branding])
+  const { state, dispatch, undo, redo } = useLayoutEditor(themed)
+  const { status, lastSavedAt, retry } = useTemplateAutosave(templateId, state.layout, { revision, userId, initialDirty })
   const [device, setDevice] = useState<CanvasDevice>('desktop')
   const [zoom, setZoom] = useState(1)
+  // Every branding face, not just the account's two: the text bar's Font
+  // list previews each option in its own typeface, and a per-run font
+  // override can be any of them.
+  useEffect(() => {
+    ensureBrandFontsStylesheet()
+  }, [])
   // The canvas's real scroll viewport (see `CanvasFrame`'s `scrollRef`
   // prop): the section bar's popovers collide against it, never the page
   // chrome above the header.
@@ -87,28 +114,9 @@ export function TemplateEditorBody({ templateId, name, initial, branding, onRena
     }
   }, [templateId, onRenamed])
 
-  const sectionEditor = useRegisteredEditor(state.selection.sectionId)
-  const selectedIndex = state.selection.sectionId ? state.layout.sections.findIndex((s) => s.id === state.selection.sectionId) : -1
-  const selectedSection = selectedIndex >= 0 ? state.layout.sections[selectedIndex] : null
-  // Spread `name` only when set: under `exactOptionalPropertyTypes`, an explicit `name: undefined` does not satisfy `name?: string`.
-  const sectionOptions: readonly NodeBarSection[] = state.layout.sections.map((s) => ({ id: s.id, kind: s.kind, ...(s.name !== undefined ? { name: s.name } : {}) }))
-
-  const barContent = state.selection.node && sectionEditor ? (
-    <NodeBar
-      key={`${state.selection.node.nodeType}@${state.selection.node.pos}`}
-      node={state.selection.node}
-      editor={sectionEditor}
-      sections={sectionOptions}
-      swatches={swatches}
-    />
-  ) : selectedSection ? (
-    // SectionBar carries no surface/border/shadow of its own (unlike
-    // NodeBar and TextBar, which do) - it is meant to be hosted, and this
-    // is that host, so the chrome is supplied here.
-    <div className="rounded-control border border-border bg-surface px-1 shadow-lg">
-      <SectionBar section={selectedSection} isFirst={selectedIndex === 0} dispatch={dispatch} boundsRef={scrollRef} swatches={swatches} />
-    </div>
-  ) : null
+  const { sectionEditor, barContent } = useNodeBarContent({ state, scrollRef, zoom, swatches })
+  // One stable object per undo/redo pair, so every `InlineField`'s effect re-runs only when they change (`data/field-shortcuts.tsx`).
+  const fieldShortcuts = useMemo(() => ({ undo, redo }), [undo, redo])
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -118,55 +126,27 @@ export function TemplateEditorBody({ templateId, name, initial, branding, onRena
         status={status}
         lastSavedAt={lastSavedAt}
         onRetry={retry}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={undo}
-        onRedo={redo}
         device={device}
         onDeviceChange={setDevice}
+        layout={state.layout}
+        branding={branding}
       />
-      {/* `flex flex-col`, not a plain block box: `CanvasFrame`'s root is
-          `relative flex-1 min-h-0 overflow-hidden` with no `h-full` of its
-          own - it only gets a real height when its parent is a flex
-          container with `align-items: stretch` (the Branding editor mounts
-          it the same way, `branding-editor.tsx`'s `flex flex-1 min-h-0`).
-          A block-box wrapper here let the frame fall back to content
-          height instead, so the canvas never scrolled and the zoom widget
-          landed off-screen below the fold (verified in headless Chromium
-          with a replica of this exact class stack). */}
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <CanvasFrame
+      <FieldShortcutsProvider value={fieldShortcuts}>
+        <EditorCanvasRegion
+          state={state}
+          dispatch={dispatch}
+          branding={branding}
           device={device}
           zoom={zoom}
           setZoom={setZoom}
-          page
-          wide
           scrollRef={scrollRef}
-          overlay={barContent ? (
-            <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-3">
-              <div className="pointer-events-auto w-full max-w-[720px]">{barContent}</div>
-            </div>
-          ) : null}
-        >
-          <SectionCanvas
-            state={state}
-            dispatch={dispatch}
-            branding={branding}
-            device={device}
-            // No role field is stored on a template's layout (only the
-            // starter it was built from picks one, once, at creation
-            // time); 'mc' just flavours the add palette's Presets tab, so
-            // a fixed fallback here is harmless.
-            role="mc"
-          />
-        </CanvasFrame>
-        {/* TipTap's own bubble menu: positions itself over the real text
-            selection inside the registered editor, independent of where
-            it sits in the tree. */}
-        {sectionEditor ? <TextBar editor={sectionEditor} swatches={swatches} ref={textBarRef} /> : null}
-        {/* No chrome of its own until Image/Audio/Embed requests it; unlike `TextBar`, mounts unconditionally. */}
-        <InsertMediaHost ref={insertMediaRef} />
-      </div>
+          barContent={barContent}
+          sectionEditor={sectionEditor}
+          swatches={swatches}
+          textBarRef={textBarRef}
+          insertMediaRef={insertMediaRef}
+        />
+      </FieldShortcutsProvider>
     </div>
   )
 }

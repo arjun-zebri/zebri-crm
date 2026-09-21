@@ -7,11 +7,27 @@
  * `tests/unit/app/branding/upload-proposal-media.test.ts`; this file only
  * covers what's new here (validation against `MEDIA_LIMITS`, per kind).
  *
+ * Also covers `listProposalImages` (the Image insert chooser):
+ * the session guard, the generic error on a failed Storage list, mapping
+ * each listed object to its public URL, and filtering out a folder
+ * placeholder's null-id entry.
+ *
  * @module tests/unit/features/proposals/data/media
  */
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { MEDIA_LIMITS, uploadProposalMediaFile } from '@/features/proposals'
+import { listProposalImages, MEDIA_LIMITS, uploadProposalMediaFile } from '@/features/proposals'
+
+const getSession = vi.fn()
+const list = vi.fn()
+const getPublicUrl = vi.fn()
+
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({
+    auth: { getSession },
+    storage: { from: () => ({ list, getPublicUrl }) },
+  }),
+}))
 
 /** A `File` reporting `sizeBytes` regardless of its real (tiny) content. */
 function fileOf(name: string, type: string, sizeBytes: number): File {
@@ -53,5 +69,53 @@ describe('uploadProposalMediaFile validation', () => {
   it('rejects a background (hero cover) file outside the video allowlist', async () => {
     const file = fileOf('cover.gif', 'image/gif', 100)
     await expect(uploadProposalMediaFile(file, 'background')).rejects.toThrow(/type/i)
+  })
+})
+
+describe('listProposalImages', () => {
+  afterEach(() => {
+    getSession.mockReset()
+    list.mockReset()
+    getPublicUrl.mockReset()
+  })
+
+  it('rejects when there is no session', async () => {
+    getSession.mockResolvedValue({ data: { session: null } })
+    await expect(listProposalImages()).rejects.toThrow(/signed in/i)
+    expect(list).not.toHaveBeenCalled()
+  })
+
+  it('throws a generic message when the Storage list call errors', async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
+    list.mockResolvedValue({ data: null, error: new Error('permission denied') })
+    await expect(listProposalImages()).rejects.toThrow(/could not load/i)
+  })
+
+  it('lists the signed-in user\'s image folder, newest first, and maps each object to its public url', async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
+    list.mockResolvedValue({
+      data: [
+        { id: '1', name: 'a.jpg', created_at: '2026-01-02T00:00:00Z' },
+        { id: '2', name: 'b.jpg', created_at: '2026-01-01T00:00:00Z' },
+      ],
+      error: null,
+    })
+    getPublicUrl.mockImplementation((path: string) => ({ data: { publicUrl: `https://cdn.example/${path}` } }))
+
+    const images = await listProposalImages()
+
+    expect(list).toHaveBeenCalledWith('u1/image', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } })
+    expect(images).toEqual([
+      { url: 'https://cdn.example/u1/image/a.jpg', name: 'a.jpg', createdAt: '2026-01-02T00:00:00Z' },
+      { url: 'https://cdn.example/u1/image/b.jpg', name: 'b.jpg', createdAt: '2026-01-01T00:00:00Z' },
+    ])
+  })
+
+  it('filters out a folder placeholder entry (null id)', async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
+    list.mockResolvedValue({ data: [{ id: null, name: '.emptyFolderPlaceholder', created_at: null }], error: null })
+    getPublicUrl.mockReturnValue({ data: { publicUrl: 'unused' } })
+
+    await expect(listProposalImages()).resolves.toEqual([])
   })
 })

@@ -1,12 +1,13 @@
 'use client'
 
 /**
- * The template editor header's rename field and save-status label
+ * The template editor header's rename field and autosave status label
  * (Proposal Layout v2 Phase 2 Task 14), split out of `editor-header.tsx`
  * to keep that file under the ~150-line guideline.
  *
  * @module features/proposals/editor/editor-header-name-field
  */
+import { Pencil } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -80,9 +81,16 @@ export function NameField({ value, onCommit }: { value: string; onCommit: (name:
           cancelledRef.current = false
           setEditing(true)
         }}
-        className="max-w-xs min-w-0 justify-start"
+        // `group`: the pencil (UX audit §3.7 - "no affordance" on the
+        // title's click-to-rename) brightens on hover of the whole button,
+        // not just the icon itself.
+        className="group max-w-xs min-w-0 justify-start gap-1.5"
       >
         <span className="min-w-0 truncate font-medium text-text">{draft}</span>
+        {/* Always visible at reduced opacity, full opacity on hover -
+            never hidden outright, so a first-time user sees the
+            affordance without having to discover it by hovering. */}
+        <Pencil size={14} strokeWidth={1.5} className="shrink-0 text-text-muted opacity-50 transition-opacity group-hover:opacity-100" />
       </Button>
     </Tooltip>
   )
@@ -98,9 +106,11 @@ export interface SaveStatusLabelProps {
 
 /**
  * The autosave status text, ticking every 30s so a "Saved Xm ago" label
- * ages without a remount. While `status === 'error'` the label is joined
- * by a "Retry save" button - without it, "Save failed" was a dead end: the
- * only way to recover was to make another edit.
+ * ages without a remount. Muted and silent almost all of the time; it
+ * grows a button only when the MC has to act: "Retry save" after a
+ * failure (the hook is already retrying on its own, this just skips the
+ * backoff), and "Reload" after a conflict, when another tab or device
+ * wrote a newer version and re-sending this one would overwrite it.
  */
 export function SaveStatusLabel({ status, lastSavedAt, onRetry }: SaveStatusLabelProps) {
   const [now, setNow] = useState(() => Date.now())
@@ -110,13 +120,16 @@ export function SaveStatusLabel({ status, lastSavedAt, onRetry }: SaveStatusLabe
   }, [])
   const label = formatSaveStatus(status, lastSavedAt, now)
   if (!label) return null
-  if (status === 'error') {
+  if (status === 'error' || status === 'conflict') {
+    const conflict = status === 'conflict'
     return (
-      <span className="flex shrink-0 items-center gap-1">
+      <span className="flex shrink-0 items-center gap-1" role="status">
         <span className="text-body text-danger">{label}</span>
-        <Button variant="ghost" onClick={onRetry}>Retry save</Button>
+        {conflict
+          ? <Button variant="ghost" onClick={() => window.location.reload()}>Reload</Button>
+          : <Button variant="ghost" onClick={onRetry}>Retry save</Button>}
       </span>
     )
   }
-  return <span className="shrink-0 text-body text-text-muted">{label}</span>
+  return <span className="shrink-0 text-body text-text-muted" role="status">{label}</span>
 }

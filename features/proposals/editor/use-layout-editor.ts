@@ -43,7 +43,7 @@ const NO_SELECTION: Selection = { sectionId: null, node: null }
 const SELECTION_ONLY: ReadonlySet<LayoutAction['type']> = new Set(['select', 'selectNode'])
 /** Action types whose reducer branch can only ever touch the layout, never the selection (see `layoutReducer`). */
 const LAYOUT_ONLY: ReadonlySet<LayoutAction['type']> = new Set([
-  'moveSection', 'updateStyle', 'resetStyle', 'setContent', 'setName', 'toggleHideOnMobile',
+  'moveSection', 'updateStyle', 'resetStyle', 'setContent', 'setData', 'setName', 'toggleHideOnMobile',
 ])
 
 /**

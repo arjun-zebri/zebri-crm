@@ -23,7 +23,12 @@ import type { EngagementRow } from '@/lib/proposals/engagement';
 import { summarizeEngagement } from '@/lib/proposals/engagement';
 import { blockTypeLabel, formatSeconds, stepLabel } from '@/lib/proposals/engagement-labels';
 
+import { SAMPLE_SECTION_ENGAGEMENT, samplePackageRows } from '../analytics-placeholders';
+import { proposalLayoutV2Enabled } from '../flags';
+
 import { ProposalEngagementTimeline } from './proposal-engagement-timeline';
+import { ProposalPackageComparison } from './proposal-package-comparison';
+import { ProposalSectionEngagement } from './proposal-section-engagement';
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 
@@ -138,6 +143,17 @@ export function ProposalEngagement({ proposal }: ProposalEngagementProps) {
     <section className="space-y-3">
       <h2 className="text-section text-text">Engagement</h2>
       {body}
+      {/* Placeholders (Layout v2 only): the two analytics Qwilr leads with,
+          rendered from sample data with a visible pill until the real
+          sources are wired (see analytics-placeholders.ts). They sit under
+          the real summary regardless of its state so the shape is visible
+          on a proposal with no opens too. */}
+      {proposalLayoutV2Enabled() ? (
+        <div className="space-y-5 pt-2">
+          <ProposalSectionEngagement rows={SAMPLE_SECTION_ENGAGEMENT} sample />
+          <ProposalPackageComparison rows={samplePackageRows(proposal.proposal_options)} sample />
+        </div>
+      ) : null}
     </section>
   );
 }

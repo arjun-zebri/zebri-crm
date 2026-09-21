@@ -8,11 +8,12 @@
 import { Editor } from '@tiptap/core'
 import { describe, expect, it } from 'vitest'
 
-import { buildRichDocExtensions, doc, filterInsertItems, paragraph, SLASH_MENU_PLUGIN_KEY } from '@/features/proposals'
+import { buildRichDocExtensions, doc, filterInsertItems, paragraph, PROPOSAL_VARIABLES, SLASH_MENU_PLUGIN_KEY } from '@/features/proposals'
 
 describe('filterInsertItems', () => {
   it('returns every item for an empty query', () => {
-    expect(filterInsertItems('')).toHaveLength(13)
+    // 12 blocks plus one row per proposal variable.
+    expect(filterInsertItems('')).toHaveLength(12 + PROPOSAL_VARIABLES.length)
   })
 
   it('filters to items whose label matches the query, e.g. "div" -> Divider only', () => {

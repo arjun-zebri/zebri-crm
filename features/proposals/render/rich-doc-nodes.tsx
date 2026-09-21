@@ -14,6 +14,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 
 import { getTextColor } from '@/lib/branding/contrast'
+import { resolveTemplateString } from '@/lib/branding/template-string'
 
 import type { ButtonAttrs, ImageAttrs } from '../model/doc'
 
@@ -46,19 +47,22 @@ export function ButtonNode({ attrs, ctx }: { attrs: ButtonAttrs; ctx: RichDocCon
   const style: CSSProperties = attrs.variant === 'outline'
     ? { borderColor: color, color, borderRadius: radius }
     : { background: color, color: getTextColor(color), borderRadius: radius }
+  // A button label is a plain string, so it carries `{{ id | fallback }}`
+  // text where rich text would carry a chip; resolved against the same values.
+  const label = resolveTemplateString(attrs.label, ctx.values)
   const cls = `inline-flex items-center font-medium border-2 ${attrs.variant === 'outline' ? 'bg-transparent' : 'border-transparent'} ${BUTTON_SIZE[attrs.size]}`
   const wrap = (child: ReactNode) => <div className={`flex ${ALIGN_CLASS[attrs.align]} my-4`}>{child}</div>
   if (attrs.action.kind === 'link') {
     // An unsafe href degrades to a plain, non-interactive label rather than
     // an inert anchor, so the button still reads correctly on the page.
     return isSafeHref(attrs.action.href)
-      ? wrap(<a href={attrs.action.href} target="_blank" rel="noopener noreferrer" className={cls} style={style}>{attrs.label}</a>)
-      : wrap(<span className={cls} style={style}>{attrs.label}</span>)
+      ? wrap(<a href={attrs.action.href} target="_blank" rel="noopener noreferrer" className={cls} style={style}>{label}</a>)
+      : wrap(<span className={cls} style={style}>{label}</span>)
   }
   const action = attrs.action
   return wrap(
     <button type="button" className={`${cls} cursor-pointer`} style={style} onClick={() => ctx.onAction?.(action)}>
-      {attrs.label}
+      {label}
     </button>,
   )
 }
@@ -124,12 +128,20 @@ export interface ColumnsFrameProps {
   children: ReactNode[]
 }
 
-/** Renders a `columns` row: the flex wrapper plus a per-column `flex-basis` derived from its `ratio`. */
+/**
+ * Renders a `columns` row: the flex wrapper plus a per-column `flex-basis`
+ * derived from its `ratio`. Stacks on a narrow `@container/doc` (not a
+ * viewport `max-md:`: the editor's mobile canvas and Preview are a
+ * fixed-width column inside a desktop browser, so a viewport breakpoint
+ * never fires there - live-found 2026-09-19, stayed side-by-side on
+ * mobile). The print-forced `stack` (3-up rows only, spec §6) is separate
+ * and always wins regardless of container width.
+ */
 export function ColumnsFrame({ stack, ratios, children }: ColumnsFrameProps) {
   return (
-    <div data-columns className={`my-4 ${stack ? 'flex flex-col' : 'flex max-md:flex-col'} gap-6`}>
+    <div data-columns className={`my-4 ${stack ? 'flex flex-col' : 'flex @max-3xl/doc:flex-col'} gap-6`}>
       {children.map((child, i) => (
-        <div key={i} style={{ flex: `${ratios[i] ?? 1 / ratios.length} 1 0%` }} className="min-w-0 max-md:!flex-auto">
+        <div key={i} style={{ flex: `${ratios[i] ?? 1 / ratios.length} 1 0%` }} className="min-w-0 @max-3xl/doc:!flex-auto">
           {child}
         </div>
       ))}

@@ -1,12 +1,14 @@
 'use client'
 
 /**
- * The image node view's six resize grips: two side edges plus four
- * corners, all writing the same `widthPct` (proportional: height follows
- * width automatically, so a corner grip needs no vertical axis of its
- * own: it is an `axis="x"` grip like the side ones, just repositioned).
- * Split out of `image-view.tsx` to keep both files near the ~120-line
- * guideline.
+ * The image node view's four corner resize grips, all writing the same
+ * `widthPct` (proportional: height follows width automatically, so a
+ * corner grip needs no vertical axis of its own: it is an `axis="x"`
+ * grip drawn as a corner dot). Just the four corners, no edge bars: the
+ * founder found the six-handle version (two full-height side bars plus
+ * corners) heavy and confusing on a tall image, and four dots is what
+ * every other canvas tool shows. Split out of `image-view.tsx` to keep
+ * both files near the ~120-line guideline.
  *
  * @module features/proposals/editor/node-views/image-grips
  */
@@ -23,15 +25,14 @@ const WIDTH_SNAPS: Snap[] = [
   { value: 100, label: '100%' },
 ]
 
-// Each corner overrides `ResizeGrip`'s axis="x" defaults (a full-height
-// bar on the right edge) with a small fixed-height hit box pinned to one
-// corner; `invert` on the two left corners matches the left edge grip
-// (dragging toward the image's own edge grows it, not shrinks it).
+// Each dot is centred on its corner (`-translate-*-1/2` off the edge it
+// pins to) with the matching diagonal cursor; `invert` on the two left
+// corners makes dragging away from the image grow it, as on the right.
 const CORNERS = [
-  { key: 'top-left', label: 'top-left corner', invert: true, className: '!top-0 !bottom-auto !left-0 !right-auto !h-3' },
-  { key: 'top-right', label: 'top-right corner', invert: false, className: '!top-0 !bottom-auto !right-0 !left-auto !h-3' },
-  { key: 'bottom-left', label: 'bottom-left corner', invert: true, className: '!bottom-0 !top-auto !left-0 !right-auto !h-3' },
-  { key: 'bottom-right', label: 'bottom-right corner', invert: false, className: '!bottom-0 !top-auto !right-0 !left-auto !h-3' },
+  { key: 'top-left', label: 'top-left corner', invert: true, className: 'left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize' },
+  { key: 'top-right', label: 'top-right corner', invert: false, className: 'right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-nesw-resize' },
+  { key: 'bottom-left', label: 'bottom-left corner', invert: true, className: 'left-0 bottom-0 -translate-x-1/2 translate-y-1/2 cursor-nesw-resize' },
+  { key: 'bottom-right', label: 'bottom-right corner', invert: false, className: 'right-0 bottom-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize' },
 ] as const
 
 /** Props for {@link ImageGrips}. */
@@ -42,23 +43,14 @@ export interface ImageGripsProps {
   onChange: (widthPct: number) => void
 }
 
-/** The image node view's side + corner width grips, rendered only while the node is selected. */
+/** The image node view's four corner width grips, rendered only while the node is selected. */
 export function ImageGrips({ widthPct, scale, onChange }: ImageGripsProps) {
   return (
     <NodeGrips>
-      <ResizeGrip
-        axis="x" invert value={widthPct} min={20} max={100} scale={scale}
-        snaps={WIDTH_SNAPS} tolerance={3} format={(v) => `${v}%`} onChange={onChange}
-        ariaLabel="Image width, left edge" className="!inset-y-0 !left-0 !right-auto"
-      />
-      <ResizeGrip
-        axis="x" value={widthPct} min={20} max={100} scale={scale}
-        snaps={WIDTH_SNAPS} tolerance={3} format={(v) => `${v}%`} onChange={onChange}
-        ariaLabel="Image width, right edge"
-      />
       {CORNERS.map(({ key, label, invert, className }) => (
         <ResizeGrip
           key={key}
+          shape="dot"
           axis="x" invert={invert} value={widthPct} min={20} max={100} scale={scale}
           snaps={WIDTH_SNAPS} tolerance={3} format={(v) => `${v}%`} onChange={onChange}
           ariaLabel={`Image size, ${label}`} className={className}

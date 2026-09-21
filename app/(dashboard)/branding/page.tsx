@@ -8,7 +8,7 @@ import {
   buildEnabledSurfacesMap,
   resolveEnabledSurfaces,
 } from '@/lib/branding/enabled-surfaces'
-import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
+import { HEADING_FONTS, BODY_FONTS, ensureBrandFontsStylesheet, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { shouldShowOnboarding } from '@/lib/branding/onboarding-gate'
 import type { TextCase } from '@/lib/branding/text-case'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
@@ -109,8 +109,6 @@ interface UserBrandingRow {
   onboarded_at: string | null
 }
 
-const fontsHref = googleFontsHref([...HEADING_FONTS, ...BODY_FONTS])
-
 /** localStorage key caching whether the last account seen in this browser
  *  finished branding onboarding, so the wizard frame can paint instantly
  *  instead of waiting for the first fetch.
@@ -158,14 +156,7 @@ export default function BrandingPage() {
   }, [])
 
   useEffect(() => {
-    if (typeof document === 'undefined') return
-    const id = 'zebri-brand-fonts'
-    if (document.getElementById(id)) return
-    const link = document.createElement('link')
-    link.id = id
-    link.rel = 'stylesheet'
-    link.href = fontsHref
-    document.head.appendChild(link)
+    ensureBrandFontsStylesheet()
   }, [])
 
   useEffect(() => {

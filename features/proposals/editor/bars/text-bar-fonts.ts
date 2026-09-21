@@ -6,10 +6,14 @@
  * verbatim with no lookup: see that file's `if (typeof a.fontFamily
  * === 'string') style.fontFamily = a.fontFamily`). Split out of
  * `text-bar-style.ts` to keep that file near the ~150-line guideline.
+ * The stack-to-id lookup itself lives in `lib/branding/fonts` (the public
+ * proposal page needs it too) and is re-exported here for the bar.
  *
  * @module features/proposals/editor/bars/text-bar-fonts
  */
 import { FONT_IDS, FONT_STACKS, type FontId } from '@/lib/branding/fonts'
+
+export { fontIdFromStack } from '@/lib/branding/fonts'
 
 /**
  * The Font select's "no override" option value. Not `''`: the shared
@@ -22,9 +26,3 @@ export const FONT_NONE = '__font_none__'
 
 /** Every `FontId` mapped to its CSS font-stack, for the Font select's options. Built once; the catalogue never changes at runtime. */
 export const FONT_OPTIONS: ReadonlyArray<{ value: FontId; stack: string }> = FONT_IDS.map((id) => ({ value: id, stack: FONT_STACKS[id] }))
-
-/** The `FontId` whose stack equals `stack` (the `textStyle` mark's raw `fontFamily`), or `null` when `stack` is unset or matches no known font. */
-export function fontIdFromStack(stack: string | null): FontId | null {
-  if (!stack) return null
-  return FONT_OPTIONS.find((f) => f.stack === stack)?.value ?? null
-}

@@ -705,6 +705,12 @@ token-attempt limiter (currently `/portal/[token]` only) to cover
 | `app/api/stripe/invoice-payment/route.ts` | ✅ `bodySchema` (invoiceId UUID, shareToken min/max, paymentType enum) | ✅ 10/min/IP via `inMemoryLimiter` | Generic 404 on missing-or-mismatched-token (no info leak). `success_url` carries `session_id={CHECKOUT_SESSION_ID}` for the payment-success re-verification. `metadata.connected_account_id` cross-checked on the success page. Stripe-failure path uses `logger.error`; raw error message NOT returned to the couple (returns generic 502). |
 | `app/invoice/payment-success/page.tsx` | n/a (server component) | n/a | Server-side `stripe.checkout.sessions.retrieve(session_id, { expand: ['payment_intent'] })`. Five-check verification: invoice exists + MC has Connect account + session.metadata.invoice_id matches + session.metadata.connected_account_id matches + payment_intent.status === 'succeeded'. Any mismatch → notFound() + `payment_success_param_tampered` Slack alert. Idempotent. |
 
+### Proposal template autosave beacon
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/proposals/templates/layout-beacon/route.ts` | ✅ `updateTemplateLayoutSchema` (same schema `updateTemplateLayoutAction` uses) | n/a — authenticated same-origin write, not a public/money surface | Exists only so `navigator.sendBeacon` (fired from a `beforeunload` handler, see `proposals.md`) has a plain endpoint to call, since a Server Action can't be a beacon target. Same auth (`supabase.auth.getUser()`) and ownership check (RLS via the user-context client, `.eq('id', ...)` + `count: 'exact'` returns 404 on a foreign or unknown id) as the action. Cross-tenant denial covered by `tests/integration/proposals/layout-beacon-route.test.ts`. Best-effort: the response is never read (the page is unloading). |
+
 ### Public questionnaire routes — Couple questionnaires
 
 | Route | Zod | Rate-limit | Notes |

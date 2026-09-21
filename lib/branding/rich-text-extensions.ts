@@ -49,6 +49,16 @@ export const Variable = Node.create({
         renderHTML: (attrs: { id?: string | null }) =>
           attrs.id ? { 'data-variable': attrs.id } : {},
       },
+      // Shown in place of the value when it resolves empty (a template
+      // with no couple yet, a venue never entered): `resolveVariablesInHtml`
+      // and the proposal renderer both read it. Optional, so every chip
+      // stored before it existed keeps parsing unchanged.
+      fallback: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-fallback'),
+        renderHTML: (attrs: { fallback?: string | null }) =>
+          attrs.fallback ? { 'data-fallback': attrs.fallback } : {},
+      },
     }
   },
 
@@ -65,7 +75,12 @@ export const Variable = Node.create({
  * The branding rich-text schema: StarterKit (bold, italic, lists, headings),
  * underline, text styling (colour, font family, font size), highlight,
  * alignment, and the variable node. `TextStyle` must precede the marks that
- * decorate it. This is the server-safe set used by `generateHTML`; the client
+ * decorate it. Font sizes stay plain px here on purpose: the server build
+ * of `generateHTML` runs on happy-dom, which drops a `clamp()` font-size
+ * from a style attribute, so the fluid form (`fluid-type.ts`) is applied
+ * to the sanitised string in `render-rich-text.ts` instead, identically on
+ * server and client; editors that need the canvas to match swap in
+ * `FluidFontSizeExtension` themselves. This is the server-safe set used by `generateHTML`; the client
  * editor extends `Variable` with a NodeView.
  */
 export const RICH_TEXT_EXTENSIONS: AnyExtension[] = [

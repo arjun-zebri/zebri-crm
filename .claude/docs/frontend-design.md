@@ -779,13 +779,18 @@ p-6
 
 ## Font catalogue
 
-`lib/branding/fonts.ts` provides 30+ curated Google fonts, each usable as heading or body:
+`lib/branding/fonts.ts` provides 40+ curated Google fonts: sans-serif, serif and (since 2026-09-19) script faces:
 
 - **FONT_IDS**: union of all available font IDs (e.g. `inter`, `poppins`, `montserrat`, `raleway`, `nunito`, `spectral`, `eb_garamond`, `cardo`, `dm_mono`, `figtree`, etc.)
+- **SCRIPT_FONT_IDS**: the cursive subset (`great_vibes`, `dancing_script`, `parisienne`, `allura`, `alex_brush`, `pinyon_script`, `sacramento`, `satisfy`). Stacks fall back to `"Brush Script MT", cursive`, the same fallback the signature stack uses.
 - **FONT_LABELS**: human-readable label per ID
 - **FONT_STACKS**: CSS font-family stack (Google Font family + fallbacks)
 - **GOOGLE_FONT_FAMILIES**: Google Fonts API family descriptor (with weight axis)
-- **HeadingFont / BodyFont**: type aliases for FontId (backward compatible; both roles share one list)
+- **HEADING_FONTS** is the whole catalogue; **BODY_FONTS** excludes the script faces so Branding's page-wide body font can never be cursive. The proposal builder's per-role and per-run font pickers read `FONT_IDS` directly, so a cursive run inside a paragraph is still possible there.
+- **fontIdFromStack(stack)**: maps a stored stack string back to its id (the proposal editor stores a `textStyle` mark's `fontFamily` as the raw stack).
+- **HeadingFont / BodyFont**: type aliases for FontId (backward compatible)
+
+Public surfaces load fonts through `useBrandingHead()` (`lib/branding/public-surface.ts`): Branding's heading + body pair, plus any `fonts` the caller names. The public proposal page passes `layoutFontIds(layout, branding)` (`features/proposals/model/layout-fonts.ts`): the theme's four roles plus every `textStyle` override in its content sections, so a face picked in the builder actually loads on the couple's page and in the PDF (the print window copies the page's stylesheets).
 
 ## Couple script documents
 

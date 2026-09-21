@@ -18,6 +18,12 @@ describe('RenderFaq', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('skips an item with a blank question on the public page (the editor still shows it through its slot)', () => {
+    const block: FaqBlock = { id: 'f', type: 'faq', heading: 'FAQ', items: [...items, { id: '3', question: '', answer: '' }] }
+    render(<RenderFaq block={block} branding={branding} />)
+    expect(screen.getAllByRole('button')).toHaveLength(2)
+  })
+
   it('renders each question collapsed, expanding on click', () => {
     const block: FaqBlock = { id: 'f', type: 'faq', heading: 'FAQ', items }
     render(<RenderFaq block={block} branding={branding} />)
@@ -25,10 +31,25 @@ describe('RenderFaq', () => {
     const buttons = screen.getAllByRole('button')
     expect(buttons).toHaveLength(2)
     buttons.forEach((btn) => expect(btn).toHaveAttribute('aria-expanded', 'false'))
-    expect(screen.getByText(items[0]?.answer ?? '')).not.toBeVisible()
+    // The closed panel is `inert`, not `hidden` (Tailwind grid-rows handles
+    // the collapsed-height animation instead) - jsdom has no layout engine
+    // to assert the animated height against, so `inert` is the visibility
+    // signal this test can actually see.
+    const panel = document.getElementById('faq-panel-1')
+    expect(panel).toHaveAttribute('inert')
 
     fireEvent.click(buttons[0] as HTMLElement)
     expect(buttons[0]).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText(items[0]?.answer ?? '')).toBeVisible()
+    expect(panel).not.toHaveAttribute('inert')
+  })
+
+  it('renders every answer open with no toggle when collapsible is off', () => {
+    const block: FaqBlock = { id: 'f', type: 'faq', heading: 'FAQ', items, collapsible: false }
+    render(<RenderFaq block={block} branding={branding} />)
+
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    expect(screen.getByText(items[0]?.question ?? '')).toBeInTheDocument()
+    expect(screen.getByText(items[0]?.answer ?? '')).toBeInTheDocument()
+    expect(screen.getByText(items[1]?.answer ?? '')).toBeInTheDocument()
   })
 })

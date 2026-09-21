@@ -4,6 +4,7 @@
  * validator. This test pins the editor side to `rich-doc-spec.ts`.
  */
 import { getSchema } from '@tiptap/core'
+import { DOMParser, DOMSerializer } from '@tiptap/pm/model'
 import { describe, expect, it } from 'vitest'
 
 import { buildRichDocExtensions, MARK_TYPES, newSectionId, NODE_TYPES, normaliseEditorJSON, parseProposalLayout } from '@/features/proposals'
@@ -62,5 +63,31 @@ describe('v2 editor extensions', () => {
     // The text node's mark carries a null attr value too, but marks are
     // never touched by normalisation.
     expect(result.content?.[0]?.content?.[0]?.marks?.[0]?.attrs).toEqual({ color: null, fontSize: '16px' })
+  })
+})
+
+describe('fontSize mark rendering', () => {
+  const schema = getSchema(buildRichDocExtensions({}))
+
+  it('renders a large size as the fluid clamp, keeps the stored px in a data attribute, and parses it back as px', () => {
+    const node = schema.text('Big', [schema.marks.textStyle!.create({ fontSize: '46px' })])
+    const wrap = document.createElement('div')
+    wrap.appendChild(DOMSerializer.fromSchema(schema).serializeNode(node))
+    const span = wrap.querySelector('span')!
+    expect(span.getAttribute('style')).toContain('font-size: clamp(32px, 8.21cqw, 46px)')
+    expect(span.getAttribute('data-font-size')).toBe('46px')
+    // The clipboard round-trips through this same HTML: a copy/paste must
+    // land the px value back, never the clamp string.
+    const parsed = DOMParser.fromSchema(schema).parse(wrap)
+    expect(parsed.firstChild?.firstChild?.marks[0]?.attrs.fontSize).toBe('46px')
+  })
+
+  it('pasted HTML carrying a plain px font-size still parses; anything else is dropped', () => {
+    const wrap = document.createElement('div')
+    wrap.innerHTML = '<p><span style="font-size: 18px">a</span><span style="font-size: clamp(32px, 8cqw, 46px)">b</span></p>'
+    const parsed = DOMParser.fromSchema(schema).parse(wrap)
+    const [a, b] = [parsed.firstChild?.child(0), parsed.firstChild?.child(1)]
+    expect(a?.marks[0]?.attrs.fontSize).toBe('18px')
+    expect(b?.marks.find((m) => m.type.name === 'textStyle')?.attrs.fontSize ?? null).toBeNull()
   })
 })

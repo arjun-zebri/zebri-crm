@@ -17,17 +17,35 @@ import { createClient } from '@/lib/supabase/server'
 import { toPlainJSON } from '@/lib/utils'
 import type { Json } from '@/types/database'
 
+import { cloneLayoutWithFreshIds } from '../model/clone-layout'
 import type { ProposalLayout } from '../model/layout'
 import { isLayoutV2, migrateProposalTreeToLayout } from '../model/migrate-v1'
 import { defaultTemplateLayout } from '../model/presets'
 import { parseProposalLayout } from '../model/schema'
 
-import { createTemplateSchema, idSchema, renameTemplateSchema, roleSchema, updateTemplateLayoutSchema } from './template-schemas'
+import { parseStoredSettings, updateTemplateSettingsSchema, type ProposalSettingsSnapshot } from './settings-schemas'
+import { createTemplateSchema, duplicateTemplateSchema, idSchema, renameTemplateSchema, roleSchema, updateTemplateLayoutSchema } from './template-schemas'
 
-/** A template's list-row shape: enough to render a picker without the layout payload. */
-export interface TemplateSummary { id: string; name: string; isDefault: boolean; updatedAt: string }
-/** A single template including its full, validated layout. */
-export interface TemplateRecord extends TemplateSummary { layout: ProposalLayout }
+/**
+ * A template's list-row shape: enough to render a picker without the
+ * layout payload. `settings` is the template's own proposal-settings
+ * snapshot, or `null` when it follows the account defaults
+ * (`proposal_settings`); see `resolveTemplateSettings`.
+ */
+export interface TemplateSummary { id: string; name: string; isDefault: boolean; updatedAt: string; settings: ProposalSettingsSnapshot | null }
+/**
+ * Result of a guarded layout write. `conflict` is present only when the
+ * row's `revision` no longer matched `baseRevision`: it carries the current
+ * server row so the client can reconcile (adopt it when the content is the
+ * same, warn when it is not) instead of overwriting it.
+ */
+export type SaveLayoutResult =
+  | { ok: true; revision: number }
+  | { ok: false; error: string; conflict?: { revision: number; layout: ProposalLayout } }
+/** A single template including its full, validated layout and the `revision` every layout write must carry back. */
+export interface TemplateRecord extends TemplateSummary { layout: ProposalLayout; revision: number }
+/** A list row plus its validated layout: the Templates tab renders a thumbnail per card, so the list carries the payload a picker would skip. */
+export interface TemplateListItem extends TemplateSummary { layout: ProposalLayout }
 type Fail = { ok: false; error: string }
 
 const DEFAULT_NAME = 'My proposal'
@@ -41,24 +59,39 @@ async function currentUserId(): Promise<{ supabase: Awaited<ReturnType<typeof cr
 }
 
 /** Parse a DB row's `layout` jsonb into a validated {@link ProposalLayout}, or fail. */
-function toRecord(row: { id: string; name: string; is_default: boolean; updated_at: string; layout: Json }): TemplateRecord | Fail {
+function toRecord(row: { id: string; name: string; is_default: boolean; updated_at: string; layout: Json; settings: Json | null; revision: number }): TemplateRecord | Fail {
   const parsed = parseProposalLayout(row.layout)
   if (!parsed.ok) return { ok: false, error: `Stored template is invalid: ${parsed.issues[0] ?? 'unknown'}` }
-  return { id: row.id, name: row.name, isDefault: row.is_default, updatedAt: row.updated_at, layout: parsed.layout }
+  return { id: row.id, name: row.name, isDefault: row.is_default, updatedAt: row.updated_at, layout: parsed.layout, settings: parseStoredSettings(row.settings), revision: row.revision }
 }
 
-/** List every template the signed-in user owns, default first, newest first. */
-export async function listTemplatesAction(): Promise<{ ok: true; templates: TemplateSummary[] } | Fail> {
+/** The columns every read below selects, so `toRecord`'s row shape has one source of truth. */
+const RECORD_COLUMNS = 'id, name, is_default, updated_at, layout, settings, revision'
+
+/** List every template the signed-in user owns, default first, newest first, each with its layout for the grid's thumbnails. */
+export async function listTemplatesAction(): Promise<{ ok: true; templates: TemplateListItem[] } | Fail> {
   const ctx = await currentUserId()
   if ('ok' in ctx) return ctx
-  const { data, error } = await ctx.supabase.from('proposal_templates').select('id, name, is_default, updated_at').order('is_default', { ascending: false }).order('updated_at', { ascending: false })
+  const { data, error } = await ctx.supabase.from('proposal_templates').select(RECORD_COLUMNS).order('is_default', { ascending: false }).order('updated_at', { ascending: false })
   if (error) {
     // Never surface a raw Postgres error to the client (may name columns /
     // constraints); log it for triage and return a short generic string.
     logger.error('proposal_templates_list_failed', error, { userId: ctx.userId })
     return { ok: false, error: 'Could not load your templates' }
   }
-  return { ok: true, templates: data.map((t) => ({ id: t.id, name: t.name, isDefault: t.is_default, updatedAt: t.updated_at })) }
+  // One corrupt row must not blank the whole tab: it is logged and
+  // skipped, the rest still list (`getTemplateAction` reports it properly
+  // when that one is opened).
+  const templates: TemplateListItem[] = []
+  for (const row of data) {
+    const record = toRecord(row)
+    if ('ok' in record) {
+      logger.error('proposal_templates_list_invalid_layout', new Error(record.error), { userId: ctx.userId, templateId: row.id })
+      continue
+    }
+    templates.push(record)
+  }
+  return { ok: true, templates }
 }
 
 /** Fetch one template (with its layout) by id. */
@@ -67,7 +100,7 @@ export async function getTemplateAction(id: string): Promise<{ ok: true; templat
   if (!input.success) return { ok: false, error: 'Invalid template id' }
   const ctx = await currentUserId()
   if ('ok' in ctx) return ctx
-  const { data, error } = await ctx.supabase.from('proposal_templates').select('id, name, is_default, updated_at, layout').eq('id', input.data.id).single()
+  const { data, error } = await ctx.supabase.from('proposal_templates').select(RECORD_COLUMNS).eq('id', input.data.id).single()
   if (error || !data) return { ok: false, error: 'Template not found' }
   const record = toRecord(data)
   return 'ok' in record ? record : { ok: true, template: record }
@@ -84,7 +117,7 @@ export async function createTemplateAction(raw: unknown): Promise<{ ok: true; te
   const { data, error } = await ctx.supabase
     .from('proposal_templates')
     .insert({ user_id: ctx.userId, name: input.data.name, layout: toPlainJSON(layout) as unknown as Json, is_default: (count ?? 0) === 0 })
-    .select('id, name, is_default, updated_at, layout')
+    .select(RECORD_COLUMNS)
     .single()
   if (error || !data) {
     if (error) logger.error('proposal_templates_create_failed', error, { userId: ctx.userId })
@@ -94,22 +127,98 @@ export async function createTemplateAction(raw: unknown): Promise<{ ok: true; te
   return 'ok' in record ? record : { ok: true, template: record }
 }
 
-/** Replace a template's layout wholesale (the editor autosave path). */
-export async function updateTemplateLayoutAction(raw: unknown): Promise<{ ok: true } | Fail> {
+/** Copy a template under `"<name> copy"` with fresh section ids; the copy is never the default. */
+export async function duplicateTemplateAction(raw: unknown): Promise<{ ok: true; template: TemplateRecord } | Fail> {
+  const input = duplicateTemplateSchema.safeParse(raw)
+  if (!input.success) return { ok: false, error: 'Invalid template id' }
+  const ctx = await currentUserId()
+  if ('ok' in ctx) return ctx
+  const { data: source, error: findError } = await ctx.supabase.from('proposal_templates').select(RECORD_COLUMNS).eq('id', input.data.id).maybeSingle()
+  if (findError || !source) return { ok: false, error: 'Template not found' }
+  const record = toRecord(source)
+  if ('ok' in record) return record
+  // Fresh ids on purpose: section ids are the editor's selection and
+  // history keys, and two templates sharing them would collide the moment
+  // both are open in one session's caches.
+  const layout = cloneLayoutWithFreshIds(record.layout)
+  const name = `${record.name} copy`.slice(0, 80)
+  const { data, error } = await ctx.supabase
+    .from('proposal_templates')
+    // The copy keeps the source's settings snapshot: a duplicate is "this
+    // template again", and its per-template settings are part of that.
+    .insert({ user_id: ctx.userId, name, layout: toPlainJSON(layout) as unknown as Json, is_default: false, settings: record.settings as unknown as Json })
+    .select(RECORD_COLUMNS)
+    .single()
+  if (error || !data) {
+    if (error) logger.error('proposal_templates_duplicate_failed', error, { userId: ctx.userId })
+    return { ok: false, error: 'Could not duplicate the template' }
+  }
+  const copy = toRecord(data)
+  return 'ok' in copy ? copy : { ok: true, template: copy }
+}
+
+/**
+ * Store a template's own proposal-settings snapshot, or `null` to put it
+ * back on the account defaults. The snapshot is validated in full (see
+ * `updateTemplateSettingsSchema`), so a stored value is never partial.
+ */
+export async function updateTemplateSettingsAction(raw: unknown): Promise<{ ok: true; settings: ProposalSettingsSnapshot | null } | Fail> {
+  const input = updateTemplateSettingsSchema.safeParse(raw)
+  if (!input.success) return { ok: false, error: input.error.issues[0]?.message ?? 'Invalid input' }
+  const ctx = await currentUserId()
+  if ('ok' in ctx) return ctx
+  const { data, error } = await ctx.supabase
+    .from('proposal_templates')
+    .update({ settings: input.data.settings as unknown as Json, updated_at: new Date().toISOString() })
+    .eq('id', input.data.id)
+    .select('settings')
+    .maybeSingle()
+  if (error || !data) {
+    if (error) logger.error('proposal_templates_settings_update_failed', error, { userId: ctx.userId, templateId: input.data.id })
+    return { ok: false, error: error ? 'Could not save the template settings' : 'Template not found' }
+  }
+  return { ok: true, settings: parseStoredSettings(data.settings) }
+}
+
+/**
+ * Replace a template's layout wholesale (the editor autosave path), guarded
+ * by `baseRevision`: the update only matches a row still at that revision
+ * and bumps it by one. A miss is not an error to retry - it means another
+ * tab or device wrote a newer version - so the current row comes back in
+ * `conflict` for the client to reconcile against (see
+ * `use-template-autosave.ts`). Without this guard a reloaded tab holding a
+ * stale copy could autosave it over the newer one wholesale (the 2026-09-20
+ * "lost on refresh" root cause).
+ */
+export async function updateTemplateLayoutAction(raw: unknown): Promise<SaveLayoutResult> {
   const input = updateTemplateLayoutSchema.safeParse(raw)
   if (!input.success) return { ok: false, error: input.error.issues[0]?.message ?? 'Invalid layout' }
   const ctx = await currentUserId()
   if ('ok' in ctx) return ctx
+  const { id, baseRevision } = input.data
+  const nextRevision = baseRevision + 1
   const { error, count } = await ctx.supabase
     .from('proposal_templates')
-    .update({ layout: toPlainJSON(input.data.layout) as unknown as Json, updated_at: new Date().toISOString() }, { count: 'exact' })
-    .eq('id', input.data.id)
+    .update({ layout: toPlainJSON(input.data.layout) as unknown as Json, revision: nextRevision, updated_at: new Date().toISOString() }, { count: 'exact' })
+    .eq('id', id)
+    .eq('revision', baseRevision)
   if (error) {
     logger.error('proposal_templates_update_layout_failed', error, { userId: ctx.userId })
     return { ok: false, error: 'Could not save the template' }
   }
-  if (!count) return { ok: false, error: 'Template not found' }
-  return { ok: true }
+  if (count) return { ok: true, revision: nextRevision }
+  // Zero rows: either the id is not ours / gone, or the revision moved on.
+  // A second read tells the two apart and hands the client the current
+  // row in the conflict case.
+  const { data: current, error: readError } = await ctx.supabase.from('proposal_templates').select(RECORD_COLUMNS).eq('id', id).maybeSingle()
+  if (readError) {
+    logger.error('proposal_templates_update_layout_failed', readError, { userId: ctx.userId, stage: 'conflict-read' })
+    return { ok: false, error: 'Could not save the template' }
+  }
+  if (!current) return { ok: false, error: 'Template not found' }
+  const record = toRecord(current)
+  if ('ok' in record) return record
+  return { ok: false, error: 'Template changed elsewhere', conflict: { revision: record.revision, layout: record.layout } }
 }
 
 /** Rename a template. */
@@ -168,17 +277,38 @@ export async function setDefaultTemplateAction(raw: unknown): Promise<{ ok: true
   return { ok: true }
 }
 
-/** Delete a template. Refuses to delete the default, or the account's last remaining template. */
+/**
+ * Delete a template. Refuses to delete the account's last remaining
+ * template, but the default itself is deletable (2026-09-19 feedback) -
+ * deleting it first promotes the most recently updated of the others,
+ * same "orphan promotion" rule `ensureDefaultTemplateAction` uses, so the
+ * account is never left without a default.
+ */
 export async function deleteTemplateAction(raw: unknown): Promise<{ ok: true } | Fail> {
   const input = idSchema.safeParse(raw)
   if (!input.success) return { ok: false, error: 'Invalid template id' }
   const ctx = await currentUserId()
   if ('ok' in ctx) return ctx
-  const { data: rows } = await ctx.supabase.from('proposal_templates').select('id, is_default')
+  const { data: rows } = await ctx.supabase.from('proposal_templates').select('id, is_default, updated_at')
   const target = rows?.find((r) => r.id === input.data.id)
   if (!target) return { ok: false, error: 'Template not found' }
-  if (target.is_default) return { ok: false, error: 'Make another template the default before deleting this one' }
   if ((rows?.length ?? 0) <= 1) return { ok: false, error: 'You need at least one template' }
+  if (target.is_default) {
+    const next = rows!.filter((r) => r.id !== target.id).sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0]!
+    // Two statements, same reason as `setDefaultTemplateAction`: the
+    // partial unique index refuses a second default, so the old one is
+    // cleared first.
+    const clear = await ctx.supabase.from('proposal_templates').update({ is_default: false }).eq('id', target.id)
+    if (clear.error) {
+      logger.error('proposal_templates_delete_promote_failed', clear.error, { userId: ctx.userId, stage: 'clear' })
+      return { ok: false, error: 'Could not set a new default template' }
+    }
+    const promote = await ctx.supabase.from('proposal_templates').update({ is_default: true }, { count: 'exact' }).eq('id', next.id)
+    if (promote.error || !promote.count) {
+      logger.error('proposal_templates_delete_promote_failed', promote.error, { userId: ctx.userId, stage: 'promote' })
+      return { ok: false, error: 'Could not set a new default template' }
+    }
+  }
   const { error } = await ctx.supabase.from('proposal_templates').delete().eq('id', input.data.id)
   if (error) {
     logger.error('proposal_templates_delete_failed', error, { userId: ctx.userId })
@@ -215,7 +345,7 @@ export async function ensureDefaultTemplateAction(roleRaw?: unknown): Promise<{ 
   const callerRole = roleSchema.safeParse(roleRaw)
   const ctx = await currentUserId()
   if ('ok' in ctx) return ctx
-  const { data: existing } = await ctx.supabase.from('proposal_templates').select('id, name, is_default, updated_at, layout').eq('is_default', true).maybeSingle()
+  const { data: existing } = await ctx.supabase.from('proposal_templates').select(RECORD_COLUMNS).eq('is_default', true).maybeSingle()
   if (existing) {
     const record = toRecord(existing)
     return 'ok' in record ? record : { ok: true, template: record, migratedFromV1: false }
@@ -223,7 +353,7 @@ export async function ensureDefaultTemplateAction(roleRaw?: unknown): Promise<{ 
 
   // Case 2: no default, but a template exists (a crash mid `setDefault`).
   // Promote it instead of touching the migration/backup path at all.
-  const { data: orphan } = await ctx.supabase.from('proposal_templates').select('id, name, is_default, updated_at, layout').order('updated_at', { ascending: false }).limit(1).maybeSingle()
+  const { data: orphan } = await ctx.supabase.from('proposal_templates').select(RECORD_COLUMNS).order('updated_at', { ascending: false }).limit(1).maybeSingle()
   if (orphan) {
     const { error: promoteError, count } = await ctx.supabase.from('proposal_templates').update({ is_default: true }, { count: 'exact' }).eq('id', orphan.id)
     if (promoteError || !count) {
@@ -300,7 +430,7 @@ export async function ensureDefaultTemplateAction(roleRaw?: unknown): Promise<{ 
   const { data, error } = await ctx.supabase
     .from('proposal_templates')
     .insert({ user_id: ctx.userId, name: DEFAULT_NAME, layout: toPlainJSON(layout) as unknown as Json, is_default: true })
-    .select('id, name, is_default, updated_at, layout')
+    .select(RECORD_COLUMNS)
     .single()
   if (error || !data) {
     if (error) logger.error('proposal_templates_ensure_default_failed', error, { userId: ctx.userId, stage: 'insert' })

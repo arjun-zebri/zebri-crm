@@ -2121,6 +2121,8 @@ Named layouts per user.
 | `name` | text | | |
 | `layout` | jsonb | | A `ProposalLayout` v2 document |
 | `is_default` | boolean | false | One default per user, enforced by the partial unique index `proposal_templates_one_default_idx on (user_id) where is_default` |
+| `settings` | jsonb | null | The template's own proposal-settings snapshot, same shape as a `proposal_settings` row (`password_enabled`, `allow_download`, `expiry_days`, `deposit_percent`, `link_preview`). Always a full snapshot (validated with `updateProposalSettingsSchema`), never a partial diff. `null` = follow the account defaults. Added `20260929000000_proposal_template_settings.sql` |
+| `revision` | integer | 0 | Optimistic-concurrency counter for layout writes. `updateTemplateLayoutAction` matches `revision = baseRevision` and sets `baseRevision + 1`; a miss is returned as a conflict carrying the current row, never written over. The unload beacon route matches on the same guard but does not bump (see `proposals.md`, "Nothing the MC types is ever held only in React state"). Added `20260930000000_proposal_template_revision.sql` |
 | `created_at`, `updated_at` | timestamptz | now() | |
 
 Index: `user_id`.

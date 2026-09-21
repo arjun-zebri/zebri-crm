@@ -10,11 +10,13 @@
  * can reach it regardless of which section is currently selected - same
  * split as `text-bar.tsx`'s `TextBarHandle` + `use-editor-shortcuts.ts`.
  *
- * Renders nothing visible until a request comes in: a hidden file input
- * for image/audio (upload via `uploadProposalMediaFile`, then
- * `insertAtomNode`), a floating upload-status pill
- * (`insert-media-status-pill.tsx`) while that upload is in flight or has
- * failed, and the embed url modal (`embed-insert-modal.tsx`).
+ * Renders nothing visible until a request comes in: the image chooser
+ * modal (`image-insert-modal.tsx`: the account's image library plus an
+ * Upload button), a hidden file input for audio (upload via
+ * `uploadProposalMediaFile`, then `insertAtomNode`), a floating
+ * upload-status pill (`insert-media-status-pill.tsx`) while that audio
+ * upload is in flight or has failed, and the embed url modal
+ * (`embed-insert-modal.tsx`).
  *
  * Before this host existed, `INSERT_ITEMS`' image/audio/embed items were
  * a silent no-op (final review Finding 3) and the slash menu's old direct
@@ -29,16 +31,17 @@ import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'reac
 import { MEDIA_LIMITS, uploadProposalMediaFile, type MediaKind } from '../data/media'
 
 import { EmbedInsertModal } from './embed-insert-modal'
+import { ImageInsertModal } from './image-insert-modal'
 import { insertAtomNode } from './insert-atom-node'
 import { InsertMediaStatusPill, type InsertMediaStatus } from './insert-media-status-pill'
 
-/** The two kinds this host uploads a file for; `embed` opens a url prompt instead, see {@link InsertMediaHandle.open}. */
-type FileKind = Extract<MediaKind, 'image' | 'audio'>
+/** The one kind this host uploads a file for directly; `image` opens the library chooser and `embed` a url prompt instead, see {@link InsertMediaHandle.open}. */
+type FileKind = Extract<MediaKind, 'audio'>
 
 /** Imperative handle `use-insert-media.ts` drives from any registered editor's storage callback. */
 export interface InsertMediaHandle {
-  /** Opens the file picker (`image`/`audio`) or the embed url modal (`embed`), targeting `editor` - the editor whose insert menu made the request, not necessarily the currently selected section. */
-  open: (kind: FileKind | 'embed', editor: Editor) => void
+  /** Opens the image chooser (`image`), the file picker (`audio`) or the embed url modal (`embed`), targeting `editor` - the editor whose insert menu made the request, not necessarily the currently selected section. */
+  open: (kind: FileKind | 'image' | 'embed', editor: Editor) => void
 }
 
 /** A pending file-pick request: set by `open`, cleared once the input's `change` event (or a cancelled dialog) resolves it. */
@@ -64,11 +67,16 @@ export function InsertMediaHost({ ref }: InsertMediaHostProps) {
   const [pick, setPick] = useState<FilePick | null>(null)
   const [status, setStatus] = useState<InsertMediaStatus | null>(null)
   const [embedEditor, setEmbedEditor] = useState<Editor | null>(null)
+  const [imageEditor, setImageEditor] = useState<Editor | null>(null)
 
   useImperativeHandle(ref, () => ({
     open: (kind, editor) => {
       if (kind === 'embed') {
         setEmbedEditor(editor)
+        return
+      }
+      if (kind === 'image') {
+        setImageEditor(editor)
         return
       }
       setPick({ kind, editor })
@@ -91,11 +99,7 @@ export function InsertMediaHost({ ref }: InsertMediaHostProps) {
     setStatus({ kind, pct: 0 })
     uploadProposalMediaFile(file, kind, (pct) => setStatus({ kind, pct }))
       .then((src) => {
-        insertAtomNode(
-          editor,
-          kind,
-          kind === 'image' ? { src, alt: '', layout: 'inline', widthPct: 100 } : { src, title: titleFromFileName(file.name) },
-        )
+        insertAtomNode(editor, kind, { src, title: titleFromFileName(file.name) })
         setStatus(null)
       })
       .catch((err: unknown) => setStatus({ kind, pct: 0, error: err instanceof Error ? err.message : 'Upload failed' }))
@@ -116,6 +120,7 @@ export function InsertMediaHost({ ref }: InsertMediaHostProps) {
         }}
       />
       {status ? <InsertMediaStatusPill status={status} onDismiss={() => setStatus(null)} /> : null}
+      <ImageInsertModal editor={imageEditor} onClose={() => setImageEditor(null)} />
       <EmbedInsertModal editor={embedEditor} onClose={() => setEmbedEditor(null)} />
     </>
   )

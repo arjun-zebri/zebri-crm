@@ -14,6 +14,45 @@ export type ProposalStatus = 'draft' | 'sent' | 'viewed' | 'accepted' | 'decline
 /** How a proposal option's base price is calculated: line items (itemised) or fixed amount (single). */
 export type ProposalPricingMode = 'itemised' | 'single';
 
+/**
+ * How often a fixed price recurs (2026-09-18 feedback, Qwilr-style price
+ * popover). Template-only for now: `PackageOption.priceFrequency` lives in
+ * the template's own block JSON, not a `proposal_options` column, so it
+ * shows in the editor and template preview but is dropped when a proposal
+ * is sent from that template until a later migration carries it through.
+ */
+export type PackagePriceFrequency = 'one_time' | 'weekly' | 'monthly' | 'yearly';
+
+/** Every {@link PackagePriceFrequency}, in the order shown in the picker. */
+export const PACKAGE_PRICE_FREQUENCIES: readonly PackagePriceFrequency[] = ['one_time', 'weekly', 'monthly', 'yearly'];
+
+/** Picker label for each {@link PackagePriceFrequency}. */
+export const PACKAGE_PRICE_FREQUENCY_LABELS: Record<PackagePriceFrequency, string> = {
+  one_time: 'One-time', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly',
+};
+
+/** The suffix appended after the price figure itself (e.g. `$150 / week`); empty for a one-time price, which reads as just the figure. */
+export const PACKAGE_PRICE_FREQUENCY_SUFFIX: Record<PackagePriceFrequency, string> = {
+  one_time: '', weekly: ' / week', monthly: ' / month', yearly: ' / year',
+};
+
+/**
+ * How many decimal places a card's amounts display with, and whether its
+ * amount fields accept a decimal point (2026-09-19 feedback,
+ * same popover as {@link PackagePriceFrequency}). Template-only for now, for
+ * the same reason: `PackageOption.priceDecimals` lives in the template's own
+ * block JSON, not a `proposal_options` column.
+ */
+export type PackagePriceDecimals = 'cents' | 'whole';
+
+/** Every {@link PackagePriceDecimals}, in the order shown in the picker. */
+export const PACKAGE_PRICE_DECIMALS: readonly PackagePriceDecimals[] = ['cents', 'whole'];
+
+/** Picker label for each {@link PackagePriceDecimals}. */
+export const PACKAGE_PRICE_DECIMALS_LABELS: Record<PackagePriceDecimals, string> = {
+  cents: 'Show cents', whole: 'Round numbers',
+};
+
 /** One line inside an option. `isAddon` lines are toggled by the couple. */
 export interface ProposalItemInput {
   /** DB uuid, or a `new-<uuid>` sentinel the action strips before insert. */

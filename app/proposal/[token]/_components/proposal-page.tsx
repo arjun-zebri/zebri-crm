@@ -10,14 +10,14 @@
  * @module app/proposal/[token]/_components/proposal-page
  */
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 // print-proposal imports ProposalPage back from this module (the PDF is the
 // same page in the print frame). The cycle is safe: both sides only touch
 // the other inside function bodies, never at module evaluation.
 import { printProposal } from '@/components/print/print-proposal';
-import { ProposalLayoutView, type ButtonAction, type ProposalLayout } from '@/features/proposals';
+import { layoutFontIds, pageSurfaceStyle, ProposalLayoutView, resolveTheme, type ButtonAction, type ProposalLayout } from '@/features/proposals';
 import { resolveSelection } from '@/lib/branding/public-blocks/proposal/packages';
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer';
 import { bodyFontFamily, useBrandingHead } from '@/lib/branding/public-surface';
@@ -74,7 +74,11 @@ export function ProposalPage({ proposal, blocks, layout, frame, token, onDownloa
     return state === 'signing' || state === 'paying';
   });
   const [declineOpen, setDeclineOpen] = useState(false);
-  useBrandingHead(frame === 'page' ? proposal : null, { favicon: !embedded });
+  // A v2 layout can use any catalogue font, not just Branding's heading +
+  // body pair, so name every face it draws with or the couple's page (and
+  // the PDF, which copies these stylesheets) falls back to a generic one.
+  const layoutFonts = useMemo(() => (layout ? layoutFontIds(layout, proposal) : []), [layout, proposal]);
+  useBrandingHead(frame === 'page' ? proposal : null, { favicon: !embedded, fonts: layoutFonts });
 
   const selectOption = (id: string) => {
     setSelectedOptionId(id);
@@ -105,7 +109,12 @@ export function ProposalPage({ proposal, blocks, layout, frame, token, onDownloa
   };
 
   return (
-    <div className="min-h-screen @container/doc" style={{ background: proposal.page_background, color: proposal.text_color, fontFamily: bodyFontFamily(proposal) }}>
+    // A v2 layout's page colour comes from its canvas theme; the legacy
+    // block tree has no theme and keeps Branding's page background.
+    <div
+      className="min-h-screen @container/doc"
+      style={layout ? pageSurfaceStyle(resolveTheme(layout, proposal), proposal) : { background: proposal.page_background, color: proposal.text_color, fontFamily: bodyFontFamily(proposal) }}
+    >
       {layout ? (
         <ProposalLayoutView
           layout={layout}

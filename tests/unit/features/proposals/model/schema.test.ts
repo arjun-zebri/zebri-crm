@@ -67,6 +67,26 @@ describe('parseProposalLayout', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('accepts the Qwilr-parity typography attrs: textStyle fontWeight/letterSpacing, and paragraph/heading lineHeight/topSpacing', () => {
+    const rich = doc(
+      paragraph(text('run', [{ type: 'textStyle', attrs: { fontWeight: '600', letterSpacing: '0.05em' } }]), { type: 'hardBreak' }),
+      { type: 'heading', attrs: { level: 2, lineHeight: '1.1', topSpacing: '0.5em' }, content: [text('Head')] },
+    )
+    const result = parseProposalLayout(layout([contentSection(rich)]))
+    expect(result.ok).toBe(true)
+  })
+
+  it('round-trips a table height and every cell colwidth (the resize grips and the column drag write them)', () => {
+    const cell = (w: number) => ({ type: 'tableCell', attrs: { colspan: 1, rowspan: 1, colwidth: [w] }, content: [paragraph(text('c'))] })
+    const rich = doc({ type: 'table', attrs: { height: 240 }, content: [{ type: 'tableRow', content: [cell(120), cell(200)] }] })
+    const result = parseProposalLayout(layout([contentSection(rich)]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const table = (result.layout.sections[0] as { content: { content: Array<{ attrs?: unknown; content?: Array<{ content?: Array<{ attrs?: unknown }> }> }> } }).content.content[0]
+    expect(table?.attrs).toEqual({ height: 240 })
+    expect(table?.content?.[0]?.content?.[1]?.attrs).toEqual({ colspan: 1, rowspan: 1, colwidth: [200] })
+  })
+
   it('rejects an unknown node type', () => {
     const result = parseProposalLayout(layout([contentSection(doc({ type: 'iframe', attrs: { src: 'https://x' } }))]))
     expect(result.ok).toBe(false)
@@ -84,6 +104,11 @@ describe('parseProposalLayout', () => {
     expect(parseProposalLayout(layout([contentSection(bad)])).ok).toBe(false)
     const badButton = doc(button({ label: 'Go', action: { kind: 'link', href: 'javascript:alert(1)' }, variant: 'fill', size: 'md', align: 'left' }))
     expect(parseProposalLayout(layout([contentSection(badButton)])).ok).toBe(false)
+  })
+
+  it('accepts a variable fallback up to 200 characters and rejects a longer one', () => {
+    expect(parseProposalLayout(layout([contentSection(doc(paragraph(variable('venue', 'x'.repeat(200)))))])).ok).toBe(true)
+    expect(parseProposalLayout(layout([contentSection(doc(paragraph(variable('venue', 'x'.repeat(201)))))])).ok).toBe(false)
   })
 
   it('rejects an image with an unsafe src', () => {
@@ -104,6 +129,13 @@ describe('parseProposalLayout', () => {
     expect(parseProposalLayout(layout([accept])).ok).toBe(false)
   })
 
+  it('round-trips a section\'s verticalAlign (live bug 2026-09-19: missing from sectionStyleSchema silently stripped it on every autosave, resetting "Align bottom" back to middle)', () => {
+    const section = contentSection()
+    const result = parseProposalLayout(layout([{ ...section, style: { ...section.style, verticalAlign: 'bottom' } }]))
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.layout.sections[0]?.style.verticalAlign).toBe('bottom')
+  })
+
   it('rejects a version other than 2', () => {
     expect(parseProposalLayout({ version: 1, sections: [] }).ok).toBe(false)
   })
@@ -113,5 +145,13 @@ describe('parseProposalLayout', () => {
     const result = parseProposalLayout(dup)
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.issues.some((i) => i.includes('unique'))).toBe(true)
+  })
+})
+
+describe('parseProposalLayout page breaks', () => {
+  it('accepts a page break section carrying neither content nor data', () => {
+    const result = parseProposalLayout(layout([contentSection(), { id: 'pb', kind: 'pageBreak', style: { height: 'fit', contentWidth: 'medium' } }]))
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.layout.sections[1]?.kind).toBe('pageBreak')
   })
 })

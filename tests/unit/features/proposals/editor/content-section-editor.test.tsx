@@ -11,10 +11,11 @@
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ContentSectionEditor, doc, getEditor, paragraph, spacer, text } from '@/features/proposals'
+import { CONTENT_PLACEHOLDER, ContentSectionEditor, doc, getEditor, paragraph, spacer, text, defaultTheme } from '@/features/proposals'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 const SAMPLE_BRANDING = buildPublicBranding({ business_name: 'Sam MC' })
+const SAMPLE_THEME = defaultTheme(SAMPLE_BRANDING)
 
 /** Wait for `sectionId`'s editor to be registered and return it. */
 async function waitForEditor(sectionId: string) {
@@ -30,6 +31,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s1"
         content={doc(paragraph(text('Hello')))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -53,6 +55,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s2"
         content={doc(paragraph(text('First')))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -70,6 +73,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s2"
         content={doc(paragraph(text('Second')))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={1}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -90,6 +94,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s3"
         content={content}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -113,6 +118,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s3"
         content={doc(paragraph(text('Stable')))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={1}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -135,6 +141,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s6"
         content={initial}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -161,6 +168,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s6"
         content={rawWithNullAttr}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={1}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -188,6 +196,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s7"
         content={doc(paragraph(text('Hello')))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -215,6 +224,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s7"
         content={doc(paragraph(text('Hello')))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -231,6 +241,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s7"
         content={contentB}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={1}
         onChange={onChange}
         onFocusSection={() => {}}
@@ -247,6 +258,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s4"
         content={doc(paragraph(text('Hi')), spacer(24))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -280,12 +292,54 @@ describe('ContentSectionEditor', () => {
     expect(onNodeSelect).not.toHaveBeenCalled()
   })
 
+  it('reports the enclosing table (at the table\'s own position) while the caret is in a cell, and null once it leaves', async () => {
+    const onNodeSelect = vi.fn()
+    const cell = (label: string) => ({ type: 'tableCell', content: [paragraph(text(label))] })
+    render(
+      <ContentSectionEditor
+        sectionId="s5"
+        content={doc(paragraph(text('Before')), { type: 'table', content: [{ type: 'tableRow', content: [cell('a'), cell('b')] }] })}
+        branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
+        externalVersion={0}
+        onChange={() => {}}
+        onFocusSection={() => {}}
+        onNodeSelect={onNodeSelect}
+      />,
+    )
+    const editor = await waitForEditor('s5')
+    let tablePos = -1
+    let secondCellText = -1
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'table') tablePos = pos
+      if (node.type.name === 'tableCell' && node.textContent === 'b') secondCellText = pos + 2
+    })
+
+    act(() => {
+      editor.commands.setTextSelection(secondCellText)
+    })
+    expect(onNodeSelect).toHaveBeenLastCalledWith({ sectionId: 's5', nodeType: 'table', pos: tablePos })
+
+    // Moving between cells of the same table is not a new report.
+    onNodeSelect.mockClear()
+    act(() => {
+      editor.commands.setTextSelection(tablePos + 4)
+    })
+    expect(onNodeSelect).not.toHaveBeenCalled()
+
+    act(() => {
+      editor.commands.setTextSelection(1)
+    })
+    expect(onNodeSelect).toHaveBeenLastCalledWith(null)
+  })
+
   it('unregisters its editor on unmount', async () => {
     const { unmount } = render(
       <ContentSectionEditor
         sectionId="s5"
         content={doc(paragraph(text('Bye')))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -304,6 +358,7 @@ describe('ContentSectionEditor', () => {
         sectionId="s5"
         content={doc(paragraph(text('Hi')), spacer(24))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={onFocusSection}
@@ -328,5 +383,24 @@ describe('ContentSectionEditor', () => {
       editor.view.dom.dispatchEvent(new FocusEvent('focus'))
     })
     expect(onFocusSection).toHaveBeenCalledWith('s5')
+  })
+
+  it('shows the empty-doc placeholder on a fresh, empty content section', async () => {
+    const { container } = render(
+      <ContentSectionEditor
+        sectionId="s6"
+        content={doc(paragraph())}
+        branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
+        externalVersion={0}
+        onChange={() => {}}
+        onFocusSection={() => {}}
+        onNodeSelect={() => {}}
+      />,
+    )
+    await waitForEditor('s6')
+    const placeholderNode = container.querySelector('[data-placeholder]')
+    expect(placeholderNode).not.toBeNull()
+    expect(placeholderNode).toHaveAttribute('data-placeholder', CONTENT_PLACEHOLDER)
   })
 })

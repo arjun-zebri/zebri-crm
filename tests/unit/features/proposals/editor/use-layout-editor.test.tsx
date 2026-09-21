@@ -35,7 +35,7 @@ describe('useLayoutEditor', () => {
     const initial = defaultTemplateLayout('mc')
     const { result } = renderHook(() => useLayoutEditor(initial))
     // sections[0] is the Hero preset, which already starts `height: 'full'`;
-    // sections[1] (Note) starts `fit`/`cozy`, so both patches below are real changes.
+    // sections[1] (Note) starts `fit` with inherited padding, so both patches below are real changes.
     const id = initial.sections[1]!.id
 
     act(() => { result.current.dispatch({ type: 'updateStyle', id, patch: { height: 'full' } }) })
@@ -48,7 +48,8 @@ describe('useLayoutEditor', () => {
     expect(result.current.state.layout.sections[1]?.style).toMatchObject({ height: 'full', padding: 'roomy' })
 
     act(() => { result.current.undo() })
-    expect(result.current.state.layout.sections[1]?.style).toMatchObject({ height: 'full', padding: initial.sections[1]!.style.padding })
+    expect(result.current.state.layout.sections[1]?.style.height).toBe('full')
+    expect(result.current.state.layout.sections[1]?.style.padding).toBe(initial.sections[1]!.style.padding)
 
     act(() => { result.current.undo() })
     expect(result.current.state.layout).toEqual(initial)

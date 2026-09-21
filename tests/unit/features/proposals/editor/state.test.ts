@@ -8,16 +8,20 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  defaultTemplateLayout, LAYOUT_LIMITS, layoutReducer, newSectionFor, type LayoutEditorState,
+  applyThemePatch, defaultTemplateLayout, defaultTheme, isSectionEmpty, KIND_LABELS, LAYOUT_LIMITS, layoutReducer, newSectionFor, type LayoutEditorState, type SectionData,
 } from '@/features/proposals'
+import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 const base = (): LayoutEditorState => ({ layout: defaultTemplateLayout('mc'), selection: { sectionId: null, node: null }, externalVersion: 0 })
 
 describe('newSectionFor', () => {
-  it('builds an empty content section with the kind default style', () => {
+  it('builds an empty content section that inherits padding and text colour from the theme', () => {
     const section = newSectionFor('content')
     expect(section.kind).toBe('content')
-    expect(section.style).toEqual({ height: 'fit', contentWidth: 'medium', padding: 'cozy' })
+    // Width, padding and text colour all inherit from the theme.
+    expect(section.style).toEqual({ height: 'fit' })
+    expect(section.style.padding).toBeUndefined()
+    expect(section.style.textColor).toBeUndefined()
     expect(section.content).toEqual({ type: 'doc', content: [{ type: 'paragraph', content: [] }] })
   })
 
@@ -27,6 +31,15 @@ describe('newSectionFor', () => {
       expect(section.kind).toBe(kind)
       expect(section.data?.kind).toBe(kind)
     }
+  })
+
+  it('builds a page break carrying neither content nor data, and counts it as empty for the delete flow', () => {
+    const section = newSectionFor('pageBreak')
+    expect(section.kind).toBe('pageBreak')
+    expect(section.content).toBeUndefined()
+    expect(section.data).toBeUndefined()
+    expect(isSectionEmpty(section)).toBe(true)
+    expect(KIND_LABELS.pageBreak).toBe('Page break')
   })
 
   it('builds a preset section', () => {
@@ -122,6 +135,17 @@ describe('layoutReducer', () => {
     expect(layoutReducer(s0, { type: 'moveSection', from: 99, to: 0 })).toBe(s0)
   })
 
+  it('updateStyle stores a value equal to the page default as "inherit", so the section keeps following Global style', () => {
+    const s0: LayoutEditorState = { ...base(), layout: { ...base().layout, theme: defaultTheme(buildPublicBranding({ business_name: 'Sam MC' })) } }
+    const id = s0.layout.sections[0]!.id
+    const s = layoutReducer(s0, { type: 'updateStyle', id, patch: { padding: 'cozy', paddingX: 32 } })
+    const section = s.layout.sections.find((sec) => sec.id === id)!
+    expect(section.style.padding).toBeUndefined()
+    expect(section.style.paddingX).toBeUndefined()
+    const s2 = layoutReducer(s0, { type: 'updateStyle', id, patch: { padding: 'roomy' } })
+    expect(s2.layout.sections.find((sec) => sec.id === id)!.style.padding).toBe('roomy')
+  })
+
   it('updateStyle merges a patch into the section style', () => {
     const s0 = base()
     const id = s0.layout.sections[0]!.id
@@ -157,6 +181,36 @@ describe('layoutReducer', () => {
     expect(s).toBe(s0)
   })
 
+  it('setData replaces a data section’s data when the kind matches', () => {
+    let s0 = base()
+    s0 = layoutReducer(s0, { type: 'addSection', at: 0, section: newSectionFor('faq') })
+    const id = s0.layout.sections[0]!.id
+    const original = s0.layout.sections[0]!.data as Extract<SectionData, { kind: 'faq' }>
+    const nextData: SectionData = { kind: 'faq', faq: { ...original.faq, items: [{ id: 'q1', question: 'When do you arrive?', answer: 'An hour early.' }] } }
+    const s = layoutReducer(s0, { type: 'setData', id, data: nextData })
+    expect(s.layout.sections.find((sec) => sec.id === id)?.data).toEqual(nextData)
+  })
+
+  it('setData is a no-op when the payload kind does not match the section’s own kind', () => {
+    let s0 = base()
+    s0 = layoutReducer(s0, { type: 'addSection', at: 0, section: newSectionFor('faq') })
+    const id = s0.layout.sections[0]!.id
+    const s = layoutReducer(s0, {
+      type: 'setData',
+      id,
+      data: { kind: 'accept', accept: { buttonLabel: 'Accept' } },
+    })
+    expect(s).toBe(s0)
+  })
+
+  it('setData on a content section is a no-op', () => {
+    let s0 = base()
+    s0 = layoutReducer(s0, { type: 'addSection', at: 0, section: newSectionFor('content') })
+    const id = s0.layout.sections[0]!.id
+    const s = layoutReducer(s0, { type: 'setData', id, data: { kind: 'faq', faq: { items: [] } } })
+    expect(s).toBe(s0)
+  })
+
   it('setName renames a section', () => {
     const s0 = base()
     const id = s0.layout.sections[0]!.id
@@ -181,5 +235,48 @@ describe('layoutReducer', () => {
     const s = layoutReducer(selected, { type: 'replaceLayout', layout: fresh })
     expect(s.layout).toBe(fresh)
     expect(s.selection).toEqual({ sectionId: null, node: null })
+  })
+})
+
+describe('setTheme', () => {
+  const branding = buildPublicBranding({ business_name: 'Sam MC' })
+  const themed = (): LayoutEditorState => ({ ...base(), layout: { ...base().layout, theme: defaultTheme(branding) } })
+
+  it('patches the top level, one animation field, and one text role without touching the rest', () => {
+    const start = themed()
+    const next = layoutReducer(start, { type: 'setTheme', patch: { sectionGap: 32, animation: { speed: 'fast' }, text: { paragraph: { size: 20 } } } })
+    expect(next.layout.theme?.sectionGap).toBe(32)
+    expect(next.layout.theme?.animation).toEqual({ ...start.layout.theme!.animation, speed: 'fast' })
+    expect(next.layout.theme?.text.paragraph).toEqual({ ...start.layout.theme!.text.paragraph, size: 20 })
+    expect(next.layout.theme?.text.heading1).toBe(start.layout.theme!.text.heading1)
+    expect(next.layout.sections).toBe(start.layout.sections)
+  })
+
+  it('a page-level width or padding change applies to every section: their own values for that field are cleared, other fields kept', () => {
+    const start = themed()
+    const id = start.layout.sections[0]!.id
+    const withOverrides = layoutReducer(start, { type: 'updateStyle', id, patch: { padding: 38, paddingX: 8, contentWidth: 'wide' } })
+    expect(withOverrides.layout.sections[0]!.style).toMatchObject({ padding: 38, paddingX: 8, contentWidth: 'wide' })
+
+    const next = layoutReducer(withOverrides, { type: 'setTheme', patch: { sectionPadding: 'roomy' } })
+    expect(next.layout.theme?.sectionPadding).toBe('roomy')
+    expect(next.layout.sections[0]!.style.padding).toBeUndefined()
+    expect(next.layout.sections[0]!.style).toMatchObject({ paddingX: 8, contentWidth: 'wide' })
+    // Untouched sections keep their identity (no needless re-render / churn).
+    expect(next.layout.sections[1]).toBe(withOverrides.layout.sections[1])
+
+    const last = layoutReducer(next, { type: 'setTheme', patch: { sectionPaddingX: 16, contentWidth: 'narrow' } })
+    expect(last.layout.sections[0]!.style.paddingX).toBeUndefined()
+    expect(last.layout.sections[0]!.style.contentWidth).toBeUndefined()
+  })
+
+  it('is a no-op on a layout with no theme (the editor seeds one before any dispatch)', () => {
+    const start = base()
+    expect(layoutReducer(start, { type: 'setTheme', patch: { sectionGap: 32 } })).toBe(start)
+  })
+
+  it('applyThemePatch with a whole theme replaces every field (what "Reset to default" sends)', () => {
+    const current = applyThemePatch(defaultTheme(branding), { background: '#000000', text: { heading1: { size: 99 } } })
+    expect(applyThemePatch(current, defaultTheme(branding))).toEqual(defaultTheme(branding))
   })
 })

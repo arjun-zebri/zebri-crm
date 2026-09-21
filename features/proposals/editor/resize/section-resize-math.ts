@@ -9,7 +9,7 @@
  */
 import type { Snap } from '@/components/editor'
 
-import type { SectionStyle } from '../../model/layout'
+import type { SectionPadding, SectionStyle } from '../../model/layout'
 import { CONTENT_WIDTH_PX, SECTION_PADDING_PX } from '../../model/rich-doc-spec'
 
 /** The padding stops the height grip's drag locks onto: compact, cozy, roomy. */
@@ -36,17 +36,17 @@ export const WIDTH_SNAPS: readonly Snap[] = [
 export const FULL_HEIGHT_THRESHOLD_PX = 720
 
 /** `padding`'s pixel value, resolving a named stop through `SECTION_PADDING_PX`; a dragged number passes through unchanged. */
-export function paddingToPx(padding: SectionStyle['padding']): number {
+export function paddingToPx(padding: SectionPadding): number {
   return typeof padding === 'number' ? padding : SECTION_PADDING_PX[padding]
 }
 
 /** `contentWidth`'s pixel value, resolving a named stop through `CONTENT_WIDTH_PX`; a dragged number passes through unchanged. */
-export function widthToPx(width: SectionStyle['contentWidth']): number {
+export function widthToPx(width: NonNullable<SectionStyle['contentWidth']>): number {
   return typeof width === 'number' ? width : CONTENT_WIDTH_PX[width]
 }
 
 /** A px value that lands exactly on a padding stop is stored as the stop's name, otherwise as the number itself. */
-export function pxToPadding(px: number): SectionStyle['padding'] {
+export function pxToPadding(px: number): SectionPadding {
   const entries = Object.entries(SECTION_PADDING_PX) as ['compact' | 'cozy' | 'roomy', number][]
   const hit = entries.find(([, stopPx]) => stopPx === px)
   return hit ? hit[0] : px

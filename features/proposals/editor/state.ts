@@ -15,11 +15,12 @@ import type { ProposalRole } from '@/lib/proposals/types'
 import { toPlainJSON } from '@/lib/utils'
 
 import { doc, paragraph } from '../model/doc'
-import type { ProposalLayout, Section, SectionKind, SectionStyle } from '../model/layout'
+import type { ProposalLayout, Section, SectionData, SectionKind, SectionStyle } from '../model/layout'
 import { migrateProposalTreeToLayout } from '../model/migrate-v1'
 import { presetSection, type PresetId } from '../model/presets'
 import { LAYOUT_LIMITS } from '../model/rich-doc-spec'
 import { newSectionId } from '../model/schema'
+import { inheritMatchingDefaults, type ProposalTheme, type ThemeTextRole, type ThemeTextStyle } from '../model/theme'
 
 /** A single selected node inside a section's rich doc (its TipTap type and document position), or none. */
 export type NodeSelection = { sectionId: string; nodeType: string; pos: number } | null
@@ -63,9 +64,51 @@ export type LayoutAction =
   | { type: 'updateStyle'; id: string; patch: Partial<SectionStyle> }
   | { type: 'resetStyle'; id: string }
   | { type: 'setContent'; id: string; content: JSONContent }
+  /**
+   * Replaces a data section's own `data` (Slice E1: FAQ/testimonials/
+   * accept/packages inline editing). A no-op when `id` names a content
+   * section, or a data section of a *different* kind than `data.kind` -
+   * the two must always agree (`sectionDataSchema`'s own
+   * `superRefine`), so this guard keeps the reducer from ever writing a
+   * layout the schema would then reject.
+   */
+  | { type: 'setData'; id: string; data: SectionData }
   | { type: 'setName'; id: string; name: string }
   | { type: 'toggleHideOnMobile'; id: string }
+  /**
+   * Patches the canvas theme (`model/theme.ts`). Shallow at the top level
+   * and one level into `animation` / `text.<role>`, so the Page style
+   * panel can send `{ animation: { speed: 'fast' } }` or
+   * `{ text: { paragraph: { size: 18 } } }` without re-sending the rest.
+   * A layout with no theme yet (saved before themes existed) is a no-op:
+   * the editor seeds one at load (`withTheme`), so this never happens
+   * through the UI.
+   */
+  | { type: 'setTheme'; patch: ThemePatch }
   | { type: 'replaceLayout'; layout: ProposalLayout }
+
+/** Which section-style field each inheritable theme field is the default for; `setTheme` clears the section field when the theme field changes. */
+const SECTION_FIELD_FOR_THEME_KEY: readonly (readonly [keyof ProposalTheme, 'padding' | 'paddingX' | 'contentWidth'])[] = [
+  ['sectionPadding', 'padding'],
+  ['sectionPaddingX', 'paddingX'],
+  ['contentWidth', 'contentWidth'],
+]
+
+/** A partial theme for `setTheme`: every level optional, see the action's doc. */
+export type ThemePatch = Partial<Omit<ProposalTheme, 'animation' | 'text'>> & {
+  animation?: Partial<ProposalTheme['animation']>
+  text?: Partial<Record<ThemeTextRole, Partial<ThemeTextStyle>>>
+}
+
+/** Merge `patch` into `theme` (see `ThemePatch` for the depth). Pure. */
+export function applyThemePatch(theme: ProposalTheme, patch: ThemePatch): ProposalTheme {
+  const { animation, text, ...top } = patch
+  const nextText = { ...theme.text }
+  for (const role of Object.keys(text ?? {}) as ThemeTextRole[]) {
+    nextText[role] = { ...theme.text[role], ...text?.[role] }
+  }
+  return { ...theme, ...top, animation: { ...theme.animation, ...animation }, text: nextText }
+}
 
 /** Replace the section at `id` with the result of `updater`, or return `state` unchanged if `id` is not found. */
 function updateSection(state: LayoutEditorState, id: string, updater: (section: Section) => Section): LayoutEditorState {
@@ -79,16 +122,23 @@ function updateSection(state: LayoutEditorState, id: string, updater: (section: 
 // Mirrors `presets.ts`'s `PRESET_BLOCK`: a typed map rather than a `kind as
 // BlockType` cast, so a future v2-only `SectionKind` with no v1 counterpart
 // is a compile error here instead of a runtime "produced no section" throw.
-const DATA_BLOCK: Record<Exclude<SectionKind, 'content'>, BlockType> = {
+const DATA_BLOCK: Record<Exclude<SectionKind, 'content' | 'pageBreak'>, BlockType> = {
   packages: 'packages', gallery: 'gallery', video: 'video', testimonials: 'testimonials', faq: 'faq', accept: 'accept',
 }
 
-/** One fresh section for `kind`: an empty content section, a data section seeded from its Phase 1 sample data, or a preset. */
+/** One fresh section for `kind`: an empty content section, a bare page break, a data section seeded from its Phase 1 sample data, or a preset. */
 export function newSectionFor(kind: SectionKind | { preset: PresetId }, role: ProposalRole = 'mc'): Section {
   if (typeof kind === 'object') return presetSection(kind.preset, role)
   if (kind === 'content') {
-    return { id: newSectionId(), kind: 'content', style: { height: 'fit', contentWidth: 'medium', padding: 'cozy' }, content: doc(paragraph()) }
+    // No `contentWidth`, `padding` or `textColor`: all three inherit from
+    // the canvas theme (`model/theme.ts`), so retuning the theme re-flows
+    // every untouched Text section.
+    return { id: newSectionId(), kind: 'content', style: { height: 'fit' }, content: doc(paragraph()) }
   }
+  // A page break has nothing to style; it carries the schema's required
+  // `style` at the content default so `resetStyle` and clone paths never
+  // meet a section without one.
+  if (kind === 'pageBreak') return { id: newSectionId(), kind: 'pageBreak', style: { height: 'fit', contentWidth: 'medium' } }
   // Every data kind's default is the v1 block default, run through the same
   // migration presets.ts already uses, so a fresh section and a migrated
   // one always agree on shape (there is no v2-native default yet).
@@ -149,8 +199,18 @@ export function layoutReducer(state: LayoutEditorState, action: LayoutAction): L
       return { ...state, layout: { ...state.layout, sections }, selection: { sectionId, node } }
     }
 
-    case 'updateStyle':
-      return updateSection(state, action.id, (s) => ({ ...s, style: { ...s.style, ...action.patch } }))
+    case 'updateStyle': {
+      // A value equal to the page default is stored as "inherit"
+      // (`inheritMatchingDefaults`): picking Cozy while the page is Cozy
+      // means "like the page", and the section keeps following Global
+      // style afterwards. A layout with no theme yet (a reducer test's bare
+      // state) has no default to match and stores the patch as given.
+      const theme = state.layout.theme
+      return updateSection(state, action.id, (s) => {
+        const style = { ...s.style, ...action.patch }
+        return { ...s, style: theme ? inheritMatchingDefaults(style, theme) : style }
+      })
+    }
 
     // Presets are not tracked on a section once inserted, so "reset" means
     // the plain kind default, not the preset's own starting style: a
@@ -166,8 +226,41 @@ export function layoutReducer(state: LayoutEditorState, action: LayoutAction): L
       return updateSection(state, action.id, (s) => ({ ...s, content: toPlainJSON(action.content) }))
     }
 
+    case 'setData': {
+      const target = state.layout.sections.find((s) => s.id === action.id)
+      if (!target || target.kind !== action.data.kind) return state
+      // Normalised here for the same reason `setContent` is: every path
+      // into the reducer must be safe even if a future caller (an
+      // `edit-*.tsx` slot builder today, something else later) forgets to
+      // normalise the TipTap JSON nested inside `data` before dispatching.
+      return updateSection(state, action.id, (s) => ({ ...s, data: toPlainJSON(action.data) }))
+    }
+
     case 'setName':
       return updateSection(state, action.id, (s) => ({ ...s, name: action.name }))
+
+    case 'setTheme': {
+      if (!state.layout.theme) return state
+      const theme = applyThemePatch(state.layout.theme, action.patch)
+      // A page-level width or padding change is "set this for every
+      // section": each section's own value for that field is cleared so
+      // the new page value reaches it (2026-09-19: "preview is respecting
+      // horizontal padding but not vertical" - the hero carried a 38px
+      // padding from an earlier drag the author had no way to see, so the
+      // Global control appeared dead). A section that should differ gets
+      // its own value set again afterwards, in its Style; the previous
+      // overrides come back with Cmd+Z, since this is one history step.
+      const cleared = SECTION_FIELD_FOR_THEME_KEY.filter(([themeKey]) => themeKey in action.patch).map(([, field]) => field)
+      const sections = cleared.length === 0
+        ? state.layout.sections
+        : state.layout.sections.map((s) => {
+            if (!cleared.some((field) => s.style[field] !== undefined)) return s
+            const style = { ...s.style }
+            for (const field of cleared) delete style[field]
+            return { ...s, style }
+          })
+      return { ...state, layout: { ...state.layout, theme, sections } }
+    }
 
     case 'toggleHideOnMobile':
       return updateSection(state, action.id, (s) => ({ ...s, hideOnMobile: !s.hideOnMobile }))

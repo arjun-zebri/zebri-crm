@@ -3235,6 +3235,8 @@ export type Database = {
           is_default: boolean
           layout: Json
           name: string
+          revision: number
+          settings: Json | null
           updated_at: string
           user_id: string
         }
@@ -3244,6 +3246,8 @@ export type Database = {
           is_default?: boolean
           layout: Json
           name: string
+          revision?: number
+          settings?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -3253,6 +3257,8 @@ export type Database = {
           is_default?: boolean
           layout?: Json
           name?: string
+          revision?: number
+          settings?: Json | null
           updated_at?: string
           user_id?: string
         }

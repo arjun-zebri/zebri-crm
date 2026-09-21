@@ -26,11 +26,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ContentSectionEditor, doc, getEditor, layoutReducer, LAYOUT_LIMITS, newSectionFor, paragraph, SectionCanvas,
   SECTION_CAP_MESSAGE, text, TextBarRow, useEditorShortcuts, useLayoutEditor, useRegisteredEditor,
-  type LayoutAction, type LayoutEditorState, type ProposalLayout, type Section, type TextBarHandle,
+  type LayoutAction, type LayoutEditorState, type ProposalLayout, type Section, type TextBarHandle, defaultTheme,
 } from '@/features/proposals'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 const branding = buildPublicBranding({ business_name: 'Sam MC' })
+const theme = defaultTheme(branding)
 
 /** A content section pre-filled with "Hello" - the harness's only section, so its id is known up front. */
 function helloSection(): Section {
@@ -87,11 +88,12 @@ function Harness({ initial, onState }: { initial: ProposalLayout; onState: (s: H
         content={section.content!}
         externalVersion={state.externalVersion}
         branding={branding}
+        theme={theme}
         onChange={(id, content) => dispatch({ type: 'setContent', id, content })}
         onFocusSection={(id) => dispatch({ type: 'select', sectionId: id })}
         onNodeSelect={() => {}}
       />
-      {sectionEditor ? <TextBarRow editor={sectionEditor} ref={textBarRef} /> : null}
+      {sectionEditor ? <TextBarRow editor={sectionEditor} theme={theme} ref={textBarRef} /> : null}
     </div>
   )
 }
@@ -127,13 +129,20 @@ describe('keyboard shortcuts inside a section editor', () => {
     act(() => { vi.advanceTimersByTime(550) })
     expect(latest.canUndo).toBe(true)
 
-    fireEvent.keyDown(editor.view.dom, { key: 'z', ctrlKey: true })
+    // `await act(async …)`: the layout state flips synchronously, but the
+    // editor re-hydrates one microtask later (`use-rehydrate-editor.ts`
+    // defers `setContent` past React's commit), so the DOM check waits a tick.
+    await act(async () => {
+      fireEvent.keyDown(editor.view.dom, { key: 'z', ctrlKey: true })
+    })
     expect(screen.getByText('Hello')).toBeInTheDocument()
     expect(screen.queryByText('Hello world')).not.toBeInTheDocument()
     expect(latest.canUndo).toBe(false)
     expect(latest.canRedo).toBe(true)
 
-    fireEvent.keyDown(editor.view.dom, { key: 'z', ctrlKey: true, shiftKey: true })
+    await act(async () => {
+      fireEvent.keyDown(editor.view.dom, { key: 'z', ctrlKey: true, shiftKey: true })
+    })
     expect(screen.getByText('Hello world')).toBeInTheDocument()
     expect(latest.canRedo).toBe(false)
     expect(latest.canUndo).toBe(true)
@@ -193,7 +202,10 @@ describe('the 40-section cap', () => {
     const sections = Array.from({ length: LAYOUT_LIMITS.maxSections }, () => newSectionFor('content'))
     render(<CanvasHarness sections={sections} />)
 
-    const addButton = screen.getByRole('button', { name: 'Add section' })
+    // Every section's own top/bottom edge "+" shares this accessible name
+    // too (`section-edge-add.tsx`); the trailing button is the last one.
+    const addButtons = screen.getAllByRole('button', { name: 'Add section' })
+    const addButton = addButtons.at(-1)!
     expect(addButton).toBeDisabled()
 
     // React derives onMouseEnter/onMouseLeave from the real `mouseover`/
@@ -209,6 +221,8 @@ describe('the 40-section cap', () => {
     const sections = [helloSection()]
     render(<CanvasHarness sections={sections} />)
 
-    expect(screen.getByRole('button', { name: 'Add section' })).not.toBeDisabled()
+    for (const button of screen.getAllByRole('button', { name: 'Add section' })) {
+      expect(button).not.toBeDisabled()
+    }
   })
 })

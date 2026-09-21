@@ -8,13 +8,20 @@
  * the section/node-bar overlay strip, so it never blocks a click on the
  * canvas beneath it except over its own pill.
  *
+ * `kind` widened to the full `MediaKind` (Slice E2): `data/use-media-upload.ts`
+ * reuses this same pill for a gallery photo, a video upload and a
+ * testimonial portrait, none of which are `InsertMediaHost`'s own
+ * image/audio insert menu.
+ *
  * @module features/proposals/editor/insert-media-status-pill
  */
 import { Button } from '@/components/ui/button'
 
-/** One upload's current state, as tracked by `InsertMediaHost`. */
+import type { MediaKind } from '../data/media'
+
+/** One upload's current state, as tracked by `InsertMediaHost` or `use-media-upload.ts`. */
 export interface InsertMediaStatus {
-  kind: 'image' | 'audio'
+  kind: MediaKind
   /** 0-100. Ignored once `error` is set. */
   pct: number
   error?: string

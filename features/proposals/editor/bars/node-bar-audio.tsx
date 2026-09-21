@@ -45,7 +45,7 @@ export function NodeBarAudio({ node, editor }: NodeBarAudioProps) {
         label="Replace"
         onUploaded={(src) => writeNodeAttrs(editor, node.pos, { src })}
       />
-      <Tooltip label="Remove">
+      <Tooltip side="top" label="Remove">
         <Button variant="ghost" iconOnly aria-label="Remove" onClick={() => removeNode(editor, node.pos)}>
           <Trash2 size={14} strokeWidth={1.5} />
         </Button>

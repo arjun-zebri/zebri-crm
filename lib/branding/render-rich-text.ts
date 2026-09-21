@@ -11,6 +11,7 @@
 import type { JSONContent } from '@tiptap/core'
 import { generateHTML } from '@tiptap/html'
 
+import { fluidFontSize } from './fluid-type'
 import { resolveVariablesInHtml } from './resolve-variables'
 import { RICH_TEXT_EXTENSIONS } from './rich-text-extensions'
 import { sanitizeRichHtml } from './rich-text-sanitize'
@@ -28,6 +29,11 @@ export type RichContent = JSONContent | string | null | undefined
  * @returns Sanitized HTML safe for `dangerouslySetInnerHTML`, or `''` when empty.
  */
 export function renderRichText(content: RichContent, values: Record<string, string> = {}): string {
+  return keepBlankLines(renderHtml(content, values))
+}
+
+// The shared pipeline behind both public renders: generate, sanitise, resolve.
+function renderHtml(content: RichContent, values: Record<string, string>): string {
   if (!content) return ''
   // Legacy plain string (pre-migration): escape and return, no marks/variables.
   if (typeof content === 'string') {
@@ -40,7 +46,38 @@ export function renderRichText(content: RichContent, values: Record<string, stri
     // Malformed JSON should never crash a public page.
     return ''
   }
-  return resolveVariablesInHtml(sanitizeRichHtml(html), values)
+  return resolveVariablesInHtml(fluidFontSizes(sanitizeRichHtml(html)), values)
+}
+
+/**
+ * Rewrite every sanitised `font-size:<n>px` to its fluid form
+ * (`fluidFontSize`: unchanged up to 32px, a container `clamp()` above),
+ * so a headline sized on a desktop shrinks on a phone the way the proposal
+ * renderer's does. Done here, on the sanitiser's normalised output, rather
+ * than in the extension set: the server build of `generateHTML` runs on
+ * happy-dom, which drops a `clamp()` font-size from a style attribute, and
+ * the client and server must produce the same string to hydrate. Only
+ * digits are captured, so nothing unvalidated can reach the page.
+ */
+function fluidFontSizes(html: string): string {
+  return html.replace(/font-size:(\d{1,3})px/g, (_, n: string) => `font-size:${fluidFontSize(Number(n))}`)
+}
+
+/**
+ * ProseMirror's own rule for keeping a block's last line open, applied to
+ * the generated HTML: an empty paragraph, or one ending in a hard break,
+ * gets a trailing `<br>` (the editor's `ProseMirror-trailingBreak`),
+ * because an empty `<p>` and a `<br>` at the very end of one both lay out
+ * at zero height. Without it the blank lines an author pressed Enter for
+ * showed in the editor and vanished from the public page. Same rule as
+ * `features/proposals/render/rich-doc.tsx`'s `needsTrailingBreak`.
+ */
+function keepBlankLines(html: string): string {
+  // Trailing breaks first, so the `<br>` an empty paragraph gains is not
+  // then doubled by the second pass.
+  return html
+    .replace(/<br><\/p>/g, '<br><br></p>')
+    .replace(/<p([^>]*)><\/p>/g, '<p$1><br></p>')
 }
 
 /**
@@ -55,14 +92,18 @@ export function renderRichText(content: RichContent, values: Record<string, stri
  * @returns Sanitized inline HTML, or `''` when empty.
  */
 export function renderRichTextInline(content: RichContent, values: Record<string, string> = {}): string {
-  const html = renderRichText(content, values)
+  const html = renderHtml(content, values)
   if (!html) return ''
-  return html
+  const inline = html
     // Paragraph boundaries become line breaks: the field is one line of
     // heading text, and separate paragraphs (legacy or pasted) read as lines.
     .replace(/<\/p>\s*<p(?: [^>]*)?>/g, '<br>')
     .replace(/^<p(?: [^>]*)?>/, '')
     .replace(/<\/p>$/, '')
+  // A trailing `<br>` alone (a hard break or an empty last paragraph) lays
+  // out at zero height; doubled it holds the blank line the editor shows -
+  // the inline form of `keepBlankLines` above.
+  return inline.endsWith('<br>') ? `${inline}<br>` : inline
 }
 
 /** True if this JSON node subtree carries any real content (text or a chip/image). */

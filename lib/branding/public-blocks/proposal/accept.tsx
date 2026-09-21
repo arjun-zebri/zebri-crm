@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
@@ -9,7 +9,8 @@ import type { AcceptBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { getTextColor } from '@/lib/branding/contrast'
 
 import type { PublicBranding } from '../../public-surface'
-import { renderRichText } from '../../render-rich-text'
+import { renderRichText, richTextHasContent } from '../../render-rich-text'
+import { resolveTemplateString } from '../../template-string'
 import { roleDefaults } from '../../type-defaults'
 import { Rich } from '../rich'
 import { fmtDate, type ProposalSlotProps, type PublicDocData } from '../shared'
@@ -32,29 +33,16 @@ function stateMessage(state: NonNullable<PublicDocData['proposal']>['state'], ac
 }
 
 /**
- * Calm, factual line about the proposal's expiry, shown under the button
- * while it is still open. Returns null with no expiry date at all, so a
- * proposal that never expires shows nothing extra.
- *
- * A same-day or next-day expiry is named ("today" / "tomorrow") and a
- * handful of days out gets a day count, since a bare date reads ambiguous
- * with that little runway. Anything further out is left as a plain date:
- * naming a day count for a date months away would read as a pushed
- * deadline rather than the fact it is.
- */
-function expiryMessage(expiresAt: string | null): ReactNode {
-  if (!expiresAt) return null
-  const today = new Date().toISOString().slice(0, 10)
-  const days = Math.round((Date.parse(`${expiresAt}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000)
-  const when = days <= 0 ? ' (today)' : days === 1 ? ' (tomorrow)' : days <= 3 ? ` (in ${days} days)` : ''
-  return `This offer is open until ${fmtDate(expiresAt)}${when}.`
-}
-
-/**
  * The proposal's call to action: a heading, an Accept button (or, once the
- * couple has acted, a plain status line in its place), an expiry line while
- * it is still open, and a reassurance line under it all. Renders nothing
- * without proposal data, same as the other data-bound blocks.
+ * couple has acted, a plain status line in its place) and a reassurance
+ * line under it. No expiry line (2026-09-19 feedback: "the accept section
+ * still has some text - remove this"): the section is the button alone,
+ * and any note around it is its own content section. Renders nothing
+ * without proposal data, same as the other data-bound blocks. The heading
+ * and the reassurance line each render only with content (or an editor
+ * slot), the same gate the packages/faq/video/testimonials blocks use: a
+ * v2 layout section strips both (`features/proposals/render/data-section.tsx`)
+ * and must not be left with an empty `<h2>` and a spare margin.
  */
 export function RenderAccept({
   block,
@@ -73,15 +61,30 @@ export function RenderAccept({
 }) {
   if (!doc.proposal) return null
   const { state, acceptedAt } = doc.proposal
-  const headingStyle = resolveTextStyle(block.headingStyle, roleDefaults(branding, 'sectionHeading'))
-  const finePrintStyle = resolveTextStyle(undefined, roleDefaults(branding, 'finePrint'))
+  // A centred call to action by default, but the section's alignment
+  // (`--doc-align`, published by the proposal content column) wins when
+  // set: the wrapper, heading and fine print all read it with `center`
+  // as the fallback, so a v1 tree (public-renderer.tsx), which sets no
+  // section alignment, stays centred exactly as before. Hard-coding
+  // `text-center` plus an inline centre on the fine print was why the
+  // Style popover's Alignment pill did nothing on this section (live
+  // bug, 2026-09-19). An explicit heading alignment the MC chose on the
+  // block still beats both.
+  // csstype's `TextAlign` union has no room for a `var()`; it is valid CSS.
+  const sectionAlign = 'var(--doc-align, center)' as CSSProperties['textAlign']
+  const headingStyle = {
+    ...resolveTextStyle(block.headingStyle, roleDefaults(branding, 'sectionHeading')),
+    ...(block.headingStyle?.align ? {} : { textAlign: sectionAlign }),
+  }
+  const finePrintStyle = { ...resolveTextStyle(undefined, roleDefaults(branding, 'finePrint')), textAlign: sectionAlign }
   const buttonColor = block.buttonColor ?? branding.brand_color
   const message = stateMessage(state, acceptedAt)
-  const expiry = state === 'open' ? expiryMessage(doc.expiresAt) : null
 
   return (
-    <div className="text-center">
-      <h2 className="m-0 mb-4" style={headingStyle}>{slots?.heading ?? <Rich value={block.heading} values={variableValues} inline />}</h2>
+    <div style={{ textAlign: sectionAlign }}>
+      {(richTextHasContent(block.heading) || slots?.heading) && (
+        <h2 className="m-0 mb-4" style={headingStyle}>{slots?.heading ?? <Rich value={block.heading} values={variableValues} inline />}</h2>
+      )}
       {state === 'open' ? (
         slots?.button ?? (
           <button
@@ -97,22 +100,24 @@ export function RenderAccept({
               fontWeight: headingStyle.fontWeight,
             }}
           >
-            {block.buttonLabel}
+            {resolveTemplateString(block.buttonLabel, variableValues ?? {})}
           </button>
         )
       ) : (
         <p className="m-0" style={{ ...finePrintStyle, color: branding.muted_color }}>{message}</p>
       )}
-      {expiry ? (
-        <p className="m-0 mt-2" style={{ ...finePrintStyle, color: branding.muted_color }}>{expiry}</p>
-      ) : null}
-      {slots?.reassurance ?? (
+      {slots?.reassurance ? (
+        // The editor's inline field sits in the same fine-print wrapper the
+        // public line uses, so it reads (size, colour, centring) exactly as
+        // the couple will see it rather than as body text.
+        <div className="mt-4" style={{ ...finePrintStyle, color: branding.muted_color }}>{slots.reassurance}</div>
+      ) : richTextHasContent(block.reassurance) ? (
         <div
           className="mt-4"
           style={{ ...finePrintStyle, color: branding.muted_color }}
           dangerouslySetInnerHTML={{ __html: renderRichText(block.reassurance, variableValues ?? {}) }}
         />
-      )}
+      ) : null}
       {state === 'open' && proposal?.onDecline ? (
         <button
           type="button"

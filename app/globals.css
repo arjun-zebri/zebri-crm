@@ -167,6 +167,34 @@
   to   { opacity: 1; transform: none; }
 }
 
+/* Proposal section reveal, driven by the layout's canvas theme
+   (features/proposals/model/theme.ts). `render/section.tsx` stamps
+   `data-reveal="pending"` until a section has scrolled into view, then
+   `"in"` with `data-anim` naming the keyframe; `--doc-anim-ms` is set once
+   on the layout root from the theme's speed. Reduced-motion users and
+   print get every section visible with no motion, exactly as the fixed
+   `animate-reveal-up` did before the theme made this adjustable. */
+@keyframes doc-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes doc-slide {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: none; }
+}
+[data-reveal="pending"] { opacity: 0; }
+[data-reveal="in"][data-anim="fade"] { animation: doc-fade var(--doc-anim-ms, 700ms) ease-out both; }
+[data-reveal="in"][data-anim="slide"] { animation: doc-slide var(--doc-anim-ms, 700ms) ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1; animation: none; }
+}
+
+/* Step flow (`theme.flow === 'step'`): the scroll container snaps section
+   to section. The public page scrolls the viewport itself, so the rule
+   lands on `html`; the editor's Preview overlay scrolls its own box and
+   marks it `data-doc-scroll`. Sections carry `snap-start` themselves. */
+:is(html, [data-doc-scroll]):has([data-flow="step"]) { scroll-snap-type: y mandatory; }
+
 @keyframes modal-in {
   from {
     opacity: 0;
@@ -554,6 +582,7 @@ ol ol ol ol[data-list-style="decimal-outline"] > li::marker {
 
 /* Keep rows off page breaks in the printed contract. */
 @media print {
+  [data-reveal] { opacity: 1 !important; animation: none !important; }
   .contract-content tr { page-break-inside: avoid; }
   .contract-content thead { display: table-header-group; }
 }

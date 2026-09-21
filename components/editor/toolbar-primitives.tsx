@@ -14,18 +14,26 @@ import { Tooltip } from '@/components/ui/tooltip'
  * @module components/editor/toolbar-primitives
  */
 
-/** A segmented toggle: one pill, one option lit. Options with an icon get a tooltip naming them. */
+/**
+ * A segmented toggle: one pill, one option lit. Options with an icon get a
+ * tooltip naming them. `stretch` fills the parent's width with equal
+ * segments, for a pill sitting under its own label in a panel (a pill that
+ * stops short of the panel's edge reads as unfinished next to one that
+ * reaches it).
+ */
 export function PillToggle<V extends string>({
   options,
   value,
   onChange,
+  stretch = false,
 }: {
   options: { value: V; label: string; icon?: React.ReactNode }[]
   value: V
   onChange: (v: V) => void
+  stretch?: boolean
 }) {
   return (
-    <div className="inline-flex bg-surface-emphasis rounded-control p-0.5">
+    <div className={`${stretch ? 'flex w-full' : 'inline-flex'} bg-surface-emphasis rounded-control p-0.5`}>
       {options.map((opt) => {
         const btn = (
           <button
@@ -36,7 +44,7 @@ export function PillToggle<V extends string>({
             aria-label={opt.icon ? opt.label : undefined}
             aria-pressed={value === opt.value}
             onClick={() => onChange(opt.value)}
-            className={`px-2 py-1 text-body rounded-control cursor-pointer transition ${
+            className={`px-2 py-1 text-body rounded-control cursor-pointer transition ${stretch ? 'flex-1' : ''} ${
               value === opt.value ? 'bg-surface text-text shadow-sm font-medium' : 'text-text-muted hover:text-text'
             }`}
           >

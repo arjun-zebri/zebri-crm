@@ -21,7 +21,7 @@ import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import type { PublicDocData } from '@/lib/branding/public-blocks/shared';
 import type { PublicBranding } from '@/lib/branding/public-surface';
 import type { PendingContract, PublicProposalInvoice } from '@/lib/proposals/close-types';
-import type { HeroOverride, ProposalPricingMode, ProposalStatus } from '@/lib/proposals/types';
+import type { HeroOverride, PackagePriceDecimals, PackagePriceFrequency, ProposalPricingMode, ProposalStatus } from '@/lib/proposals/types';
 
 export interface PublicProposalItem {
   id: string;
@@ -41,11 +41,19 @@ export interface PublicProposalOption {
   description: string | null;
   pricing_mode: ProposalPricingMode;
   fixed_price: number | null;
+  /** Template-only for now; undefined on every real (sent) proposal row - see {@link PackagePriceFrequency}. */
+  price_frequency?: PackagePriceFrequency | undefined;
+  /** Template-only for now; undefined on every real (sent) proposal row - see {@link PackagePriceDecimals}. */
+  price_decimals?: PackagePriceDecimals | undefined;
   gst_inclusive: boolean;
   weekend_loading_percent: number | null;
   is_popular: boolean;
   subtotal: number;
   items: PublicProposalItem[];
+  /** Overrides the section's shared CTA label/colours for this card only. Template-only for now, same as {@link PublicProposalOption.price_frequency}. */
+  cta_label?: string | undefined;
+  cta_background_color?: string | undefined;
+  cta_text_color?: string | undefined;
 }
 
 export interface PublicProposal extends PublicBranding {

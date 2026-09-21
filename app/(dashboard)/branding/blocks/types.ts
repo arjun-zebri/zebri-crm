@@ -762,8 +762,15 @@ export type VideoSource =
 export interface VideoBlock extends BaseBlock {
   type: 'video'
   source: VideoSource | null
+  /** Optional heading above the video, empty by default (2026-09-18: editable like the packages/accept/faq heading). */
+  heading: RichTextValue
+  headingStyle?: TextStyle
   caption: RichTextValue
   captionStyle?: TextStyle
+  /** The media box's own width in px, independent of the section's width/padding (2026-09-19 feedback: "resize just the video"). Unset keeps the box at 100% of the content column. */
+  widthPx?: number
+  /** Corner rounding of the media box in px, set from the section's Style popover. Unset follows `branding.corner_radius`. */
+  cornerRadius?: number
 }
 
 /** One photo in a {@link GalleryBlock}. */
@@ -779,6 +786,12 @@ export interface GalleryBlock extends BaseBlock {
   /** 0-12 images; the editor stops adding at 12. */
   images: GalleryImage[]
   layout: 'grid' | 'masonry' | 'carousel'
+  /** Row height in px for the grid/masonry tiles and the carousel frame. Unset keeps the original fixed aspect ratio (4:3 grid, 3:2 carousel) so a gallery saved before this field existed renders unchanged. */
+  tileHeight?: number
+  /** Carousel arrow/dot background colour (layout 'carousel' only). Unset keeps `branding.brand_color`. Explicitly `| undefined` so the "use brand colour" clear action can write it back under `exactOptionalPropertyTypes`. */
+  carouselBackgroundColor?: string | undefined
+  /** Carousel arrow icon colour (layout 'carousel' only). Unset keeps the auto black/white contrast against the resolved background. Explicitly `| undefined`, same reason as {@link carouselBackgroundColor}. */
+  carouselIconColor?: string | undefined
 }
 
 /** One quote in a {@link TestimonialsBlock}. */
@@ -796,7 +809,18 @@ export interface TestimonialsBlock extends BaseBlock {
   heading: RichTextValue
   items: TestimonialItem[]
   layout: 'carousel' | 'cards'
+  /** How multiple cards behave on a narrow (phone-width) screen: `stack` keeps every card visible, one after another (today's default); `carousel` shows one card at a time with Previous/Next paging. Optional so a proposal saved before this field existed keeps its current (`stack`) behaviour. Independent of `layout`, which governs the desktop arrangement (2026-09-19: brought to parity with {@link PackagesBlock.mobileLayout}). */
+  mobileLayout?: 'stack' | 'carousel'
   headingStyle?: TextStyle
+  /** Overrides every card's own surface; unset keeps `branding.surface_color` (parity with {@link PackagesBlock.cardBackgroundColor}). */
+  cardBackgroundColor?: string | undefined
+  /** Optional line below the quotes, e.g. "Ask us for more references". Empty hides it. */
+  textBelow: RichTextValue
+  textBelowStyle?: TextStyle
+  /** Carousel arrow/dot background colour (`layout` or `mobileLayout` 'carousel' only). Unset keeps `branding.brand_color`. Explicitly `| undefined`, same reason as {@link GalleryBlock.carouselBackgroundColor}. */
+  carouselBackgroundColor?: string | undefined
+  /** Carousel arrow icon colour (`layout` or `mobileLayout` 'carousel' only). Unset keeps the auto black/white contrast against the resolved background. */
+  carouselIconColor?: string | undefined
 }
 
 /** A portrait and a short story, introducing the MC or celebrant. */
@@ -842,6 +866,8 @@ export interface FaqBlock extends BaseBlock {
   heading: RichTextValue
   items: FaqItem[]
   headingStyle?: TextStyle
+  /** Whether each answer collapses behind its question until clicked. Unset (an existing block saved before this field existed) keeps today's always-collapsible behaviour, so this only ever needs writing to turn it *off*. */
+  collapsible?: boolean
 }
 
 /**
@@ -852,10 +878,22 @@ export interface PackagesBlock extends BaseBlock {
   type: 'packages'
   heading: RichTextValue
   layout: 'cards' | 'stacked'
+  /** How multiple cards behave on a narrow (phone-width) screen: `stack` keeps every card visible, one after another (today's default); `carousel` shows one card at a time with Previous/Next paging. Optional so a template saved before this field existed keeps its current (`stack`) behaviour. */
+  mobileLayout?: 'stack' | 'carousel'
   showInclusions: boolean
   /** Button label on each option card, e.g. "Choose this package". */
   ctaLabel: string
+  /** Overrides the CTA button's background; unset keeps today's `branding.brand_color`. Only the not-yet-selected state - a card's own "Selected" confirmation stays brand-derived (2026-09-18 feedback). */
+  ctaBackgroundColor?: string
+  /** Overrides the CTA button's text colour; unset keeps `getTextColor(ctaBackgroundColor ?? branding.brand_color)`. */
+  ctaTextColor?: string
+  /** Overrides every card's own surface (distinct from the section's own `style.background`, which sits behind the cards); unset keeps `branding.surface_color` (2026-09-18 feedback: "section background and card background instead of just background"). Explicitly `| undefined`, same reason as {@link GalleryBlock.carouselBackgroundColor} - the "Use brand surface" clear action passes `undefined` through. */
+  cardBackgroundColor?: string | undefined
   headingStyle?: TextStyle
+  /** Carousel arrow/dot background colour (mobileLayout 'carousel' only). Unset keeps `branding.brand_color`. Explicitly `| undefined`, same reason as {@link GalleryBlock.carouselBackgroundColor}. */
+  carouselBackgroundColor?: string | undefined
+  /** Carousel arrow icon colour (mobileLayout 'carousel' only). Unset keeps the auto black/white contrast against the resolved background. */
+  carouselIconColor?: string | undefined
 }
 
 /** Marker: the accept call to action. Phase C mounts the stepper behind it. */

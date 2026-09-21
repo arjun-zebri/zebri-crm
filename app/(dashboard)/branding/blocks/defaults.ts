@@ -162,7 +162,7 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
     case 'introNote':
       return { id: newId('in'), type: 'introNote', locked: true, heading: 'A note from me' }
     case 'video':
-      return { id: newId('vd'), type: 'video', source: null, caption: '' }
+      return { id: newId('vd'), type: 'video', source: null, heading: '', caption: '' }
     case 'gallery':
       return { id: newId('ga'), type: 'gallery', images: [], layout: 'grid' }
     case 'testimonials':
@@ -170,7 +170,7 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
       // couple's words, and only the MC knows what their couples actually
       // said. Starts empty; the public renderer hides an empty block and
       // the editor shows its add-item state so the MC opts in per quote.
-      return { id: newId('te'), type: 'testimonials', heading: 'Kind words', layout: 'cards', items: [] }
+      return { id: newId('te'), type: 'testimonials', heading: 'Kind words', layout: 'cards', mobileLayout: 'stack', items: [], textBelow: '' }
     case 'aboutMe':
       return { id: newId('am'), type: 'aboutMe', heading: 'Hi, I\'m your host', body: textDoc('Tell couples who you are and why you love this work.'), imageSide: 'left' }
     case 'howItWorks':
@@ -191,7 +191,7 @@ export function blockTemplate(type: BlockType, surface?: SurfaceTab): Block {
         ],
       }
     case 'packages':
-      return { id: newId('pk'), type: 'packages', locked: true, heading: 'Your options', layout: 'cards', showInclusions: true, ctaLabel: 'Choose this package' }
+      return { id: newId('pk'), type: 'packages', locked: true, heading: 'Your options', layout: 'cards', mobileLayout: 'stack', showInclusions: true, ctaLabel: 'Choose this package' }
     case 'accept':
       return {
         id: newId('ac2'), type: 'accept', locked: true, heading: 'Ready to lock in your date?', buttonLabel: 'Accept and sign',

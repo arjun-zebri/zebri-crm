@@ -54,7 +54,9 @@ export const HistoryKeymapExtension = Extension.create({
     // fresh on every keypress rather than captured once, since the same
     // extension instance's `this.editor` never changes but its storage's
     // callbacks are rewritten on every selection/editor-list change.
-    const callbacks = (): ProposalEditorCallbacks => this.editor.storage.proposalEditor.callbacks
+    // Optional-chained: an editor built without `ProposalEditorStorageExtension`
+    // (a bare test harness) must fall through, not throw on its first key.
+    const callbacks = (): ProposalEditorCallbacks => this.editor.storage.proposalEditor?.callbacks ?? {}
     /** Calls `fn` and reports the key handled only when it existed - see the module doc for why an unregistered callback must not swallow the key. */
     const forward = (fn: (() => void) | undefined): boolean => {
       if (!fn) return false

@@ -53,6 +53,11 @@ function clampZoom(v: number): number {
   return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(v * 100) / 100))
 }
 
+/** Widest the fluid page canvas gets: the 1100px content column plus a 50px background bleed a side. */
+const PAGE_MAX_WIDTH = 1200
+/** Narrowest the fluid page canvas gets before the fit zoom scales it instead. */
+const PAGE_MIN_WIDTH = 720
+
 /** A zoomable, pannable canvas: dotted backdrop, centred content, fit-to-width and cursor-anchored zoom. */
 export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overlay, scrollRef: externalScrollRef }: CanvasFrameProps) {
   // Portal uses a wider surface (it's a real-app dashboard preview); documents
@@ -61,7 +66,14 @@ export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overl
   // visibly bleed past the content while editing, but only by 50px a side:
   // at 1280 it was a hair wider than the canvas viewport on a common
   // editor layout, so "100%" cropped the page edges behind a scrollbar.
-  const desktopWidth = page ? 1200 : wide ? 920 : DOC_MAX_WIDTH_PX
+  // The page canvas is fluid: it takes the viewport's usable width (720 to
+  // 1200px) at 100% and reflows, like the public page on a real screen.
+  // A fixed 1200px page auto-fitted to ~69% on a laptop, which shrank every
+  // piece of editing chrome inside the sheet (section toolbars, name tags,
+  // the text bar) along with it. `PAGE_MAX_WIDTH` keeps section backgrounds
+  // bleeding 50px past the 1100px content column on wide screens.
+  const [pageWidth, setPageWidth] = useState(PAGE_MAX_WIDTH)
+  const desktopWidth = page ? pageWidth : wide ? 920 : DOC_MAX_WIDTH_PX
 
   // The scroll viewport. Pan writes directly to its scrollLeft/scrollTop, and
   // cursor-anchored zoom reads its scroll + rect to keep the point under the
@@ -104,17 +116,27 @@ export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overl
     if (!viewport || !pad) return
     const measure = () => {
       const style = getComputedStyle(pad)
+      // `|| 0`: an environment with no computed padding (jsdom) reports '',
+      // and a NaN here silently turned every fit into `null`.
       const available =
-        viewport.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+        viewport.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0)
       if (available <= 0) return
-      const fit = Math.min(1, Math.round((available / desktopWidth) * 100) / 100)
+      if (page) setPageWidth(Math.max(PAGE_MIN_WIDTH, Math.min(PAGE_MAX_WIDTH, Math.floor(available))))
+      // A fluid page fits by construction; below its minimum width the fit
+      // zoom still shrinks it rather than overflow.
+      const fit = page
+        ? Math.min(1, Math.round((available / PAGE_MIN_WIDTH) * 100) / 100)
+        : Math.min(1, Math.round((available / desktopWidth) * 100) / 100)
       setFitZoom(fit)
       // Apply the fit here, off a real measurement, rather than in a separate
       // effect: `fitZoom` still holds the previous canvas's value on the first
       // render after a surface change, so an effect keyed on it would mark this
       // width as fitted using a stale number and never correct itself.
-      if (fittedFor.current !== desktopWidth) {
-        fittedFor.current = desktopWidth
+      // Keyed on the mode's nominal width (the page's fluid width changes on
+      // every resize and must not re-apply the fit each time).
+      const fitKey = page ? PAGE_MAX_WIDTH : desktopWidth
+      if (fittedFor.current !== fitKey) {
+        fittedFor.current = fitKey
         setZoom(clampZoom(fit))
       }
     }
@@ -122,7 +144,7 @@ export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overl
     const ro = new ResizeObserver(measure)
     ro.observe(viewport)
     return () => ro.disconnect()
-  }, [desktopWidth, setZoom])
+  }, [desktopWidth, page, setZoom])
 
   // Latest zoom, read inside the native wheel listener below without making it
   // a dependency (so the listener attaches once and never detaches mid-gesture).
@@ -251,17 +273,32 @@ export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overl
   const panCursor = panning ? 'grabbing' : spaceHeld ? 'grab' : undefined
 
   return (
-    <div className="relative flex-1 min-h-0 overflow-hidden" style={{ backgroundColor: DOC_CANVAS_BG }}>
-      {/* Subtle dotted backdrop, ala Canva / Figma */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-50"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(15,23,42,0.08) 1px, transparent 1px)',
-          backgroundSize: '16px 16px',
-        }}
-      />
+    <div
+      className={`relative flex-1 min-h-0 overflow-hidden ${page ? 'bg-surface-emphasis' : ''}`}
+      // The document/Branding-editor workbench keeps its own fixed grey
+      // (`DOC_CANVAS_BG`) via inline style; the proposal page canvas uses
+      // the cooler `bg-surface-emphasis` token class instead (UX audit
+      // §3.10: the old grey "read warm and muddy behind the beige default
+      // page"). `surface-muted` is too close to a white sheet to separate
+      // the two; `surface-emphasis` is the lightest token that still does.
+      style={page ? undefined : { backgroundColor: DOC_CANVAS_BG }}
+    >
+      {/* Subtle dotted backdrop, ala Canva / Figma - the page canvas skips
+          it: the sheet itself (`page-sheet.tsx`) now supplies the "this is
+          a document" read, and the dots showed through a page with no
+          section background, competing with the sheet's own edge. */}
+      {page ? null : (
+        <div
+          data-canvas-dots
+          aria-hidden
+          className="absolute inset-0 opacity-50"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, rgba(15,23,42,0.08) 1px, transparent 1px)',
+            backgroundSize: '16px 16px',
+          }}
+        />
+      )}
 
       <div
         ref={setScrollRef}

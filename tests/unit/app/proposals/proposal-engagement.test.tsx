@@ -40,6 +40,28 @@ const rows: EngagementRow[] = [
 ];
 
 describe('ProposalEngagement', () => {
+  it('mounts the section and package analytics placeholders (sample-marked) under Layout v2, even with no opens', () => {
+    vi.stubEnv('NEXT_PUBLIC_PROPOSAL_LAYOUT_V2', '1');
+    try {
+      useProposalEvents.mockReturnValue({ data: [], isLoading: false, error: null });
+      render(<ProposalEngagement proposal={proposal} />);
+      expect(screen.getByText('No opens yet')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Reading by section' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Packages' })).toBeInTheDocument();
+      // The comparison borrows the proposal's real package title.
+      expect(screen.getByText('Full Day MC')).toBeInTheDocument();
+      expect(screen.getAllByText('Sample data')).toHaveLength(2);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('hides the placeholders when Layout v2 is off', () => {
+    useProposalEvents.mockReturnValue({ data: [], isLoading: false, error: null });
+    render(<ProposalEngagement proposal={proposal} />);
+    expect(screen.queryByText('Sample data')).not.toBeInTheDocument();
+  });
+
   it('shows the error state with a retry when the query fails', () => {
     const refetch = vi.fn()
     useProposalEvents.mockReturnValue({ data: undefined, isLoading: false, error: new Error('nope'), refetch })

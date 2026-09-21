@@ -28,7 +28,7 @@ export interface TextBarToggleButtonProps {
 /** One icon-only toggle: lit when `active`, with a tooltip naming it. */
 export function TextBarToggleButton({ label, active, onClick, children }: TextBarToggleButtonProps) {
   return (
-    <Tooltip label={label}>
+    <Tooltip side="top" label={label}>
       <button type="button" aria-label={label} aria-pressed={active} onClick={onClick} className={toggleButtonClass(active)}>
         {children}
       </button>

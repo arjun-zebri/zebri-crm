@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { blockTemplate } from '@/app/(dashboard)/branding/blocks/defaults'
 import type { AcceptBlock } from '@/app/(dashboard)/branding/blocks/types'
@@ -35,10 +35,44 @@ describe('RenderAccept', () => {
     expect(screen.getByText(/25%/)).toBeInTheDocument()
   })
 
+  it('renders no heading and no reassurance line when both are empty (a v2 layout section strips them), keeping the button', () => {
+    const { container } = render(
+      <RenderAccept block={{ ...block, heading: '', reassurance: '' }} branding={branding} doc={doc} variableValues={variableValues} />,
+    )
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: block.buttonLabel })).toBeInTheDocument()
+    // No stray empty fine-print wrapper carrying its `mt-4` under the button.
+    expect(container.querySelectorAll('.mt-4')).toHaveLength(0)
+  })
+
+  it('follows the section alignment (`--doc-align`), centred when nothing sets one, for the wrapper, heading and fine print', () => {
+    // 2026-09-19 live bug: the block hard-coded `text-center` and pinned
+    // the fine print centre inline, so the section Style popover's
+    // Alignment pill did nothing here. A v1 tree (public-renderer.tsx)
+    // sets no `--doc-align`, so the fallback keeps it centred there.
+    const { container } = render(<RenderAccept block={block} branding={branding} doc={doc} variableValues={variableValues} />)
+    const wrapper = container.firstElementChild as HTMLElement
+    expect(wrapper.style.textAlign).toBe('var(--doc-align, center)')
+    expect(wrapper.className).not.toContain('text-center')
+    expect((screen.getByRole('heading', { level: 2 }) as HTMLElement).style.textAlign).toBe('var(--doc-align, center)')
+    expect((screen.getByText(/25%/).closest('[style]') as HTMLElement).style.textAlign).toBe('var(--doc-align, center)')
+  })
+
+  it('an explicit heading alignment on the block still wins over the section', () => {
+    render(<RenderAccept block={{ ...block, headingStyle: { align: 'right' } }} branding={branding} doc={doc} variableValues={variableValues} />)
+    expect((screen.getByRole('heading', { level: 2 }) as HTMLElement).style.textAlign).toBe('right')
+  })
+
   it('uses block.buttonColor over the brand color when set', () => {
     render(<RenderAccept block={{ ...block, buttonColor: '#ff0000' }} branding={branding} doc={doc} variableValues={variableValues} />)
     const button = screen.getByRole('button', { name: block.buttonLabel })
     expect(button.getAttribute('style')).toContain(hexToRgb('#ff0000'))
+  })
+
+  it('resolves {{ id | fallback }} tokens in the button label', () => {
+    const templated = { ...block, buttonLabel: 'Book {{couple_name | us}} in' }
+    render(<RenderAccept block={templated} branding={branding} doc={doc} variableValues={{ ...variableValues, couple_name: 'Ada & Bo' }} />)
+    expect(screen.getByRole('button', { name: 'Book Ada & Bo in' })).toBeInTheDocument()
   })
 
   it('calls onAccept when clicked', () => {
@@ -83,50 +117,8 @@ describe('RenderAccept', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })
 
-  describe('expiry message', () => {
-    beforeEach(() => {
-      vi.useFakeTimers()
-      vi.setSystemTime(new Date('2026-09-15T00:00:00Z'))
-    })
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    it('shows nothing when there is no expiry date', () => {
-      const noExpiryDoc = { ...doc, expiresAt: null }
-      render(<RenderAccept block={block} branding={branding} doc={noExpiryDoc} variableValues={variableValues} />)
-      expect(screen.queryByText(/This offer is open until/)).toBeNull()
-    })
-
-    it('states a plain date when the expiry is months away', () => {
-      // SAMPLE_PROPOSAL_DOC carries expires_at 2026-12-01, well past the
-      // near-term window, so no day count is appended.
-      render(<RenderAccept block={block} branding={branding} doc={doc} variableValues={variableValues} />)
-      expect(screen.getByText(`This offer is open until ${fmtDate('2026-12-01')}.`)).toBeInTheDocument()
-    })
-
-    it('names "today" when the proposal expires today', () => {
-      const todayDoc = { ...doc, expiresAt: '2026-09-15' }
-      render(<RenderAccept block={block} branding={branding} doc={todayDoc} variableValues={variableValues} />)
-      expect(screen.getByText(`This offer is open until ${fmtDate('2026-09-15')} (today).`)).toBeInTheDocument()
-    })
-
-    it('names "tomorrow" the day before expiry', () => {
-      const tomorrowDoc = { ...doc, expiresAt: '2026-09-16' }
-      render(<RenderAccept block={block} branding={branding} doc={tomorrowDoc} variableValues={variableValues} />)
-      expect(screen.getByText(`This offer is open until ${fmtDate('2026-09-16')} (tomorrow).`)).toBeInTheDocument()
-    })
-
-    it('counts the days when expiry is a few days out', () => {
-      const soonDoc = { ...doc, expiresAt: '2026-09-18' }
-      render(<RenderAccept block={block} branding={branding} doc={soonDoc} variableValues={variableValues} />)
-      expect(screen.getByText(`This offer is open until ${fmtDate('2026-09-18')} (in 3 days).`)).toBeInTheDocument()
-    })
-
-    it('never shows the expiry line once the proposal has left the open state', () => {
-      const expiredDoc = { ...doc, expiresAt: '2026-12-01', proposal: { ...doc.proposal!, state: 'expired' as const } }
-      render(<RenderAccept block={block} branding={branding} doc={expiredDoc} variableValues={variableValues} />)
-      expect(screen.queryByText(/This offer is open until/)).toBeNull()
-    })
+  it('never renders an expiry line under the button (2026-09-19: the section is the button alone)', () => {
+    render(<RenderAccept block={block} branding={branding} doc={{ ...doc, expiresAt: '2026-12-01' }} variableValues={variableValues} />)
+    expect(screen.queryByText(/This offer is open until/)).toBeNull()
   })
 })

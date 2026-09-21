@@ -36,6 +36,14 @@ describe('migrateProposalTreeToLayout', () => {
     expect(s?.content?.content?.[1]).toMatchObject({ type: 'paragraph' })
   })
 
+  it('gives a medialess hero a solid fallback fill and white text (UX audit §3.1, a real default hero)', () => {
+    const layout = migrateProposalTreeToLayout([hero({ background: { kind: 'none' } })])
+    const s = layout.sections[0]!
+    expect(s.style.background).toEqual({ color: '#111827' })
+    expect(s.style.textColor).toBe('#FFFFFF')
+    expect(s.style.height).toBe('full')
+  })
+
   it('turns an embed hero cover into an embed node first, with no background media', () => {
     const layout = migrateProposalTreeToLayout([hero({ background: { kind: 'embed', url: 'https://www.youtube.com/watch?v=abc123' } })])
     const s = layout.sections[0]!
@@ -132,6 +140,23 @@ describe('migrateProposalTreeToLayout', () => {
   it('carries a section background onto the data section', () => {
     const layout = migrateProposalTreeToLayout([{ ...blockTemplate('faq'), sectionBackground: { color: '#112233', overlay: 10 } }])
     expect(layout.sections[0]?.style.background).toEqual({ color: '#112233', overlay: 10 })
+  })
+
+  it('drops a data block\'s own heading / caption / text-below / reassurance: a v2 data section has no text of its own (2026-09-19)', () => {
+    const blocks: Block[] = [
+      blockTemplate('packages'), blockTemplate('faq'), blockTemplate('testimonials'), blockTemplate('video'), blockTemplate('accept'),
+    ]
+    const layout = migrateProposalTreeToLayout(blocks)
+    expect(layout.sections.map((s) => s.kind)).toEqual(['packages', 'faq', 'testimonials', 'video', 'accept'])
+    for (const section of layout.sections) {
+      const data = (section.data as unknown as Record<string, Record<string, unknown>>)[section.kind]!
+      for (const key of ['heading', 'headingStyle', 'caption', 'captionStyle', 'textBelow', 'textBelowStyle', 'reassurance']) {
+        expect(data, `${section.kind}.${key}`).not.toHaveProperty(key)
+      }
+    }
+    // The rest of the block still carries over.
+    const accept = (layout.sections[4]!.data as unknown as { accept: { buttonLabel: string } }).accept
+    expect(accept.buttonLabel).toBe((blockTemplate('accept') as { buttonLabel: string }).buttonLabel)
   })
 
   it('isLayoutV2 recognises a v2 layout and nothing else', () => {

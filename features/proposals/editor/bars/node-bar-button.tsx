@@ -43,7 +43,9 @@ export function NodeBarButton({ node, editor, sections = [], swatches = [] }: No
 
   return (
     <>
-      <Input aria-label="Button label" value={attrs.label} className="w-28 shrink-0" onChange={(e) => set({ label: e.target.value })} />
+      {/* Writes per keystroke like every other attr here (the editor's own
+          history debounce coalesces them). */}
+      <Input aria-label="Button label" value={attrs.label} className="w-44 shrink-0" onChange={(e) => set({ label: e.target.value })} />
       <NodeBarButtonAction action={attrs.action} sections={sections} onChange={(action) => set({ action })} />
       <PillToggle<'fill' | 'outline'>
         value={attrs.variant}
@@ -62,7 +64,7 @@ export function NodeBarButton({ node, editor, sections = [], swatches = [] }: No
           { value: 'lg', label: 'L' },
         ]}
       />
-      <Tooltip label="Colour">
+      <Tooltip side="top" label="Colour">
         <ColorPopover
           value={attrs.color ?? DEFAULT_COLOR}
           onChange={(color) => set({ color })}
@@ -87,7 +89,7 @@ export function NodeBarButton({ node, editor, sections = [], swatches = [] }: No
           { value: 'right', label: 'Align right', icon: <AlignRight size={12} strokeWidth={1.5} /> },
         ]}
       />
-      <Tooltip label="Remove">
+      <Tooltip side="top" label="Remove">
         <Button variant="ghost" iconOnly aria-label="Remove" onClick={() => removeNode(editor, node.pos)}>
           <Trash2 size={14} strokeWidth={1.5} />
         </Button>

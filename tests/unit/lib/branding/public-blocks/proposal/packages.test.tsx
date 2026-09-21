@@ -61,6 +61,31 @@ describe('RenderPackages', () => {
     expect(within(articles[0] as HTMLElement).queryByText('Most popular')).toBeNull()
   })
 
+  it('card text inherits the section alignment instead of pinning the role default left (title, description, price, fine print)', () => {
+    render(<RenderPackages block={block} branding={branding} doc={doc} />)
+    const card = screen.getAllByRole('article')[1] as HTMLElement
+    expect((within(card).getByRole('heading', { level: 3 }) as HTMLElement).style.textAlign).toBe('inherit')
+    expect((within(card).getByText(totalFor('opt-2', ['i-7'])).closest('[style]') as HTMLElement).style.textAlign).toBe('inherit')
+    expect((within(card).getByText('incl. GST') as HTMLElement).style.textAlign).toBe('inherit')
+  })
+
+  it('the card grid parks a partial row where the section alignment says (`--doc-box-justify`), at the start when unset', () => {
+    const { container } = render(<RenderPackages block={block} branding={branding} doc={doc} />)
+    const grid = container.querySelector('.grid') as HTMLElement
+    expect(grid.className).toContain('[justify-content:var(--doc-box-justify,start)]')
+    // `auto-fit` over fixed-width tracks, not `grid-cols-3`: three `1fr`
+    // tracks always fill the row, so `justify-content` could never move
+    // a lone card. The two-column and three-column breakpoints both
+    // keep their card widths.
+    expect(grid.className).toContain('@md/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-1rem)/2-0.02px)))]')
+    expect(grid.className).toContain('@lg/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-2rem)/3-0.02px)))]')
+  })
+
+  it('resolves {{ id | fallback }} tokens in the CTA label', () => {
+    render(<RenderPackages block={{ ...block, ctaLabel: 'Choose for {{couple_name | us}}' }} branding={branding} doc={doc} variableValues={{}} />)
+    expect(screen.getAllByRole('button', { name: 'Choose for us' }).length).toBeGreaterThan(0)
+  })
+
   it('defaults to the popular option selected, with default-included add-ons ticked, and the matching total', () => {
     render(<RenderPackages block={block} branding={branding} doc={doc} />)
     const articles = screen.getAllByRole('article')
@@ -130,8 +155,53 @@ describe('RenderPackages', () => {
     for (const cb of screen.getAllByRole('checkbox')) expect(cb).toBeDisabled()
   })
 
-  it('renders the deposit line from depositPercent', () => {
-    render(<RenderPackages block={block} branding={branding} doc={doc} proposal={{ selectedOptionId: 'opt-2', selectedAddonIds: ['i-7'] }} />)
-    expect(screen.getByText(/deposit/)).toBeInTheDocument()
+  it('no longer renders the old hardcoded deposit line, or any text-below field (2026-09-19 feedback: "remove the text from all these sections")', () => {
+    render(<RenderPackages block={block} branding={branding} doc={doc} />)
+    expect(screen.queryByText(/deposit/i)).toBeNull()
+  })
+
+  it('mobileLayout carousel: carouselBackgroundColor/carouselIconColor override the arrow buttons (2026-09-19 feedback)', () => {
+    render(
+      <RenderPackages
+        block={{ ...block, mobileLayout: 'carousel', carouselBackgroundColor: '#FF00AA', carouselIconColor: '#00FF00' }}
+        branding={branding}
+        doc={doc}
+      />,
+    )
+    const next = screen.getByRole('button', { name: 'Next package' })
+    expect(next.style.background).toBe('rgb(255, 0, 170)')
+    expect(next.style.color).toBe('rgb(0, 255, 0)')
+  })
+})
+
+describe('RenderPackages: section-owned options and card slots', () => {
+  const own = [
+    { ...optionA!, id: 'own-1', title: 'Own one', is_popular: true, items: [] },
+    { ...optionB!, id: 'own-2', title: 'Own two', is_popular: false, items: [] },
+  ]
+
+  it('renders `options` in place of the proposal\'s own, and resolves the selection among them', () => {
+    render(<RenderPackages block={block} branding={branding} doc={doc} options={own} />)
+    const articles = screen.getAllByRole('article')
+    expect(articles.map((a) => a.getAttribute('data-option-id'))).toEqual(['own-1', 'own-2'])
+    expect(articles[0]).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText('Full day')).toBeNull()
+  })
+
+  it('hands each card its slots by option and index, and renders the trailing cell after the cards', () => {
+    const card = vi.fn((option: { id: string }, index: number) => ({ title: <span>SLOT {option.id} #{index}</span> }))
+    render(<RenderPackages block={block} branding={branding} doc={doc} options={own} slots={{ card, trailing: <div>TRAILING</div> }} />)
+    expect(card).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('heading', { level: 3, name: 'SLOT own-2 #1' })).toBeInTheDocument()
+    expect(screen.getByText('TRAILING')).toBeInTheDocument()
+  })
+
+  it('a card slot replaces only the row content: the inclusion list still renders while empty, and the corner/footer land inside the article', () => {
+    const slots = { card: () => ({ item: () => <span>ROW</span>, corner: <button type="button">CORNER</button>, footer: <span>FOOTER</span> }) }
+    render(<RenderPackages block={block} branding={branding} doc={doc} options={[own[0]!]} slots={slots} />)
+    const article = screen.getByRole('article')
+    expect(within(article).getByRole('button', { name: 'CORNER' })).toBeInTheDocument()
+    expect(within(article).getByText('FOOTER')).toBeInTheDocument()
+    expect(within(article).getByRole('list')).toBeInTheDocument()
   })
 })

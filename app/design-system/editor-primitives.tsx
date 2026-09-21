@@ -34,6 +34,8 @@ export function EditorPrimitives() {
   const [h, setH] = useState<'left' | 'center' | 'right'>('center');
   const [v, setV] = useState<'top' | 'middle' | 'bottom'>('middle');
   const [font, setFont] = useState('inter');
+  const [style, setStyle] = useState('p');
+  const [gripWidth, setGripWidth] = useState(60);
   const [slider, setSlider] = useState(40);
   const [padding, setPadding] = useState(48);
   const [gripHeight, setGripHeight] = useState(96);
@@ -57,6 +59,22 @@ export function EditorPrimitives() {
               value={pill}
               onChange={setPill}
             />
+          </SampleFrame>
+        </Example>
+        <Example code={`<PillToggle stretch options={[...]} value={pill} onChange={setPill} />`}>
+          <SampleFrame>
+            <div className="w-64">
+              <PillToggle
+                stretch
+                options={[
+                  { value: 'left', label: 'Compact' },
+                  { value: 'center', label: 'Cozy' },
+                  { value: 'right', label: 'Roomy' },
+                ]}
+                value={pill}
+                onChange={setPill}
+              />
+            </div>
           </SampleFrame>
         </Example>
       </Spec>
@@ -118,6 +136,24 @@ export function EditorPrimitives() {
             </div>
           </SampleFrame>
         </Example>
+        <Example code={`<Select size="xs" value={style} options={[...]} renderOption={(o) => <span className={o.value === 'h1' ? 'text-display font-semibold' : 'text-body'}>{o.label}</span>} onChange={setStyle} />`}>
+          <SampleFrame>
+            <div className="w-40">
+              <Select
+                size="xs"
+                value={style}
+                options={[
+                  { value: 'h1', label: 'Heading 1' },
+                  { value: 'p', label: 'Paragraph' },
+                ]}
+                // `renderOption` styles the open list's rows only; the
+                // closed trigger stays a plain label so it fits 32px.
+                renderOption={(o) => <span className={o.value === 'h1' ? 'text-display font-semibold' : 'text-body'}>{o.label}</span>}
+                onChange={setStyle}
+              />
+            </div>
+          </SampleFrame>
+        </Example>
       </Spec>
 
       <Spec name="Slider" importPath="@/components/editor">
@@ -158,6 +194,27 @@ export function EditorPrimitives() {
                 format={(v) => `${v}px`}
                 onChange={setGripHeight}
                 ariaLabel="Section height"
+              />
+            </div>
+          </SampleFrame>
+        </Example>
+        <Example code={`<ResizeGrip shape="dot" axis="x" value={w} min={20} max={100} format={(v) => \`\${v}%\`} onChange={setW} ariaLabel="Image size, bottom-right corner" className="right-0 bottom-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize" />`}>
+          <SampleFrame>
+            {/* `shape="dot"`: a corner handle. The caller pins it to the
+                corner and picks the diagonal cursor; the image node view
+                uses four of these and no edge bars. */}
+            <div className="relative h-24 rounded-control border border-border bg-surface-muted" style={{ width: `${gripWidth}%` }}>
+              <div className="flex h-full items-center justify-center text-body text-text-muted">{gripWidth}%</div>
+              <ResizeGrip
+                shape="dot"
+                axis="x"
+                value={gripWidth}
+                min={20}
+                max={100}
+                format={(v) => `${v}%`}
+                onChange={setGripWidth}
+                ariaLabel="Image size, bottom-right corner"
+                className="right-0 bottom-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize"
               />
             </div>
           </SampleFrame>

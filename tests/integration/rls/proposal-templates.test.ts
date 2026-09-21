@@ -53,6 +53,23 @@ describe('RLS: proposal_templates', () => {
     expect(error?.code).toBe('23505')
   })
 
+  it('the owner can store a per-template settings snapshot and clear it back to null', async () => {
+    const settings = { password_enabled: true, allow_download: false, expiry_days: 30, deposit_percent: 50, link_preview: null }
+    const { error } = await a.client.from('proposal_templates').update({ settings }).eq('id', aTemplateId)
+    expect(error).toBeNull()
+    const { data } = await a.client.from('proposal_templates').select('settings').eq('id', aTemplateId).single()
+    expect(data?.settings).toEqual(settings)
+    const { error: clearError } = await a.client.from('proposal_templates').update({ settings: null }).eq('id', aTemplateId)
+    expect(clearError).toBeNull()
+    const { data: cleared } = await a.client.from('proposal_templates').select('settings').eq('id', aTemplateId).single()
+    expect(cleared?.settings).toBeNull()
+  })
+
+  it('another user cannot write a template\'s settings', async () => {
+    const { data } = await b.client.from('proposal_templates').update({ settings: { password_enabled: true } }).eq('id', aTemplateId).select('id')
+    expect(data).toEqual([])
+  })
+
   it('the owner can delete their template', async () => {
     const { error } = await a.client.from('proposal_templates').delete().eq('id', aTemplateId)
     expect(error).toBeNull()

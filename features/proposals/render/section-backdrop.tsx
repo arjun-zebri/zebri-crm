@@ -32,7 +32,16 @@ export function SectionBackdrop({ background, index, mode }: SectionBackdropProp
     <>
       {background?.image && isHttpUrl(background.image) ? (
         // eslint-disable-next-line @next/next/no-img-element -- MC-uploaded section background
-        <img src={background.image} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" fetchPriority={index === 0 ? 'high' : 'auto'} />
+        <img
+          src={background.image}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+          // The MC's focal point (`section-background-media.tsx`); the
+          // browser's own default is already `50% 50%`, so unset stays unset.
+          style={background.position ? { objectPosition: `${background.position.x}% ${background.position.y}%` } : undefined}
+          fetchPriority={index === 0 ? 'high' : 'auto'}
+        />
       ) : null}
       {background?.video && isHttpUrl(background.video) ? (
         <div className="absolute inset-0">

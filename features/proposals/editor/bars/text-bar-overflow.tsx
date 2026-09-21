@@ -2,13 +2,15 @@
 
 /**
  * The text bar's trailing `...` overflow menu: the Bulleted/Numbered
- * list toggles and the five `Aa` case choices (None/Sentence/
- * Capitalize/UPPER/lower). Both moved out of the primary row on
- * review: `constraints.md`'s "Overflow `...` when a bar would not fit
- * at 380px" rule applies to this bar too, and the full control set
- * (Style, Font, Size, Weight, Colour, Italic, Underline, Strike,
- * Align, list toggles, Link, Insert, case) does not fit in one 32px
- * row at that width. The list toggles keep a checkbox reading (each is
+ * list toggles, the Typography section (font weight, line height,
+ * letter spacing, top spacing - `text-bar-typography-panel.tsx`, the
+ * Qwilr-parity pass) and the five `Aa` case choices (None/Sentence/
+ * Capitalize/UPPER/lower). All moved out of the primary row on review:
+ * `constraints.md`'s "Overflow `...` when a bar would not fit at 380px"
+ * rule applies to this bar too, and the full control set (Style, Font,
+ * Size, Weight, Colour, Italic, Underline, Strike, Align, list toggles,
+ * Link, Insert, case, typography) does not fit in one 32px row at that
+ * width. The list toggles keep a checkbox reading (each is
  * independently on or off); the case choices are mutually exclusive,
  * so they use a selected/trailing-check reading instead.
  *
@@ -19,11 +21,14 @@ import type { Editor } from '@tiptap/react'
 import { Check, List, ListOrdered, MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 
-import { MenuItem, MenuPanel, MenuSeparator } from '@/components/ui/menu'
+import { MenuItem, MenuLabel, MenuPanel, MenuSeparator } from '@/components/ui/menu'
 import { Tooltip } from '@/components/ui/tooltip'
+
+import type { ProposalTheme } from '../../model/theme'
 
 import type { CaseValue, TextState } from './text-bar-style'
 import { applyTextStyle, TEXT_BAR_MENU_ATTR, toggleButtonClass } from './text-bar-style'
+import { TextBarTypographyPanel } from './text-bar-typography-panel'
 
 /** The `Aa` case select's five choices, in menu order. */
 const CASE_ITEMS: ReadonlyArray<{ value: CaseValue; label: string }> = [
@@ -38,15 +43,17 @@ const CASE_ITEMS: ReadonlyArray<{ value: CaseValue; label: string }> = [
 export interface TextBarOverflowProps {
   editor: Editor
   state: TextState
+  /** Fed straight to `TextBarTypographyPanel`'s theme-default seeding. */
+  theme: ProposalTheme
 }
 
-/** The bar's trailing `...` menu: the list toggles, then the `Aa` case choices. */
-export function TextBarOverflow({ editor, state }: TextBarOverflowProps) {
+/** The bar's trailing `...` menu: the list toggles, the Typography section, then the `Aa` case choices. */
+export function TextBarOverflow({ editor, state, theme }: TextBarOverflowProps) {
   const [open, setOpen] = useState(false)
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Tooltip label="More">
+      <Tooltip side="top" label="More">
         <Popover.Trigger asChild>
           <button type="button" aria-label="More" className={toggleButtonClass(false)}>
             <MoreHorizontal size={14} strokeWidth={1.5} />
@@ -55,7 +62,7 @@ export function TextBarOverflow({ editor, state }: TextBarOverflowProps) {
       </Tooltip>
       <Popover.Portal>
         <Popover.Content {...TEXT_BAR_MENU_ATTR} align="end" sideOffset={6} className="z-[60] animate-modal-in">
-          <MenuPanel width="sm">
+          <MenuPanel width="lg">
             <MenuItem
               checked={state.bulletList}
               onClick={() => applyTextStyle(editor, { bulletList: !state.bulletList })}
@@ -74,6 +81,9 @@ export function TextBarOverflow({ editor, state }: TextBarOverflowProps) {
                 Numbered list
               </span>
             </MenuItem>
+            <MenuSeparator />
+            <MenuLabel>Typography</MenuLabel>
+            <TextBarTypographyPanel editor={editor} state={state} theme={theme} />
             <MenuSeparator />
             {CASE_ITEMS.map((item) => {
               const active = state.textCase === item.value

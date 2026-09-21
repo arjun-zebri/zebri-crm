@@ -6,12 +6,15 @@
  * The rules are in the table in the Phase 1 plan; the short version is
  * that fixed-purpose blocks become content sections with equivalent rich
  * text, chrome blocks merge into the open content section, and the six
- * data blocks become data sections carrying their old fields.
+ * data blocks become data sections carrying their old fields minus their
+ * own heading / caption / text-below / reassurance (`DATA_TEXT_FIELDS`).
  *
  * One-way, not lossless: text, media and data all carry over (including a
  * hero's embed cover as an `embed` node and a video cover's poster image),
- * with one known gap - {@link inlineOf} only keeps the first paragraph of a
- * multi-paragraph v1 heading, since a v2 heading is a single line.
+ * with two known gaps - {@link inlineOf} only keeps the first paragraph of
+ * a multi-paragraph v1 heading, since a v2 heading is a single line, and a
+ * data block's own text is dropped (2026-09-19 founder ruling: drop, do
+ * not hoist into text sections).
  *
  * @module features/proposals/model/migrate-v1
  */
@@ -25,7 +28,7 @@ import { htmlToPlainText } from '@/lib/branding/sanitize'
 import type { HeroOverride } from '@/lib/proposals/types'
 
 import { button, column, columns, doc, embed, heading, hr, image, paragraph, spacer, text, variable } from './doc'
-import type { ProposalLayout, Section, SectionBackground, SectionData, SectionStyle } from './layout'
+import { DATA_TEXT_FIELDS, type ProposalLayout, type Section, type SectionBackground, type SectionData, type SectionStyle } from './layout'
 import { newSectionId } from './schema'
 
 /** Per-proposal overrides applied while migrating a v1 tree to v2. */
@@ -70,7 +73,12 @@ function baseStyle(block: Block, overrides: Partial<SectionStyle> = {}): Section
         ...(bg.overlay ? { overlay: bg.overlay } : {}),
       }
     : undefined
-  return { height: 'fit', contentWidth: 'medium', padding: 'cozy', ...(background ? { background } : {}), ...overrides }
+  // No `padding`: a migrated or freshly created data section inherits the
+  // theme's vertical padding (`effectivePadding`), which is the same 'cozy'
+  // this used to stamp, so nothing renders differently and Global style's
+  // control reaches it. A block that means a specific padding (the hero's
+  // dragged height) passes it in `overrides`.
+  return { height: 'fit', contentWidth: 'medium', ...(background ? { background } : {}), ...overrides }
 }
 
 /** What the hero's background resolves to once an override is applied. */
@@ -108,8 +116,16 @@ function heroSection(block: HeroBlock, override: HeroOverride | null | undefined
     ? { image: media.url }
     : media.kind === 'video'
       ? { video: media.url, ...(media.poster ? { poster: media.poster } : {}) }
-      : {}
+      // No media at all - the fresh/default starter hero, never given a
+      // cover photo: a solid fill so the first screen a new account sees
+      // is a real hero instead of an empty viewport-tall box (UX audit
+      // §3.1, a blocker). An embed cover (`media.kind === 'embed'`) keeps
+      // the old bare background: the embed itself is the visual there.
+      : media.kind === 'none'
+        ? { color: '#111827' }
+        : {}
   const hasMedia = media.kind === 'image' || media.kind === 'video'
+  const hasFallbackFill = media.kind === 'none'
   if (hasMedia && block.overlay) background.overlay = block.overlay
   // A dragged height under a full screen becomes padding on a fit section:
   // 720 is the canvas viewport the drag was measured against.
@@ -131,7 +147,7 @@ function heroSection(block: HeroBlock, override: HeroOverride | null | undefined
     style: {
       ...baseStyle(block, { height, padding, contentWidth: 'medium' }),
       ...(Object.keys(background).length ? { background } : {}),
-      ...(hasMedia ? { textColor: '#FFFFFF' } : {}),
+      ...(hasMedia || hasFallbackFill ? { textColor: '#FFFFFF' } : {}),
       align: block.textAlign === 'center' ? 'center' : 'left',
     },
     content: doc(...content),
@@ -235,9 +251,21 @@ function dataSection(block: Block): Section {
   // Strip the chrome the v2 section owns; the rest is the kind's data.
   const { id: _id, type, locked: _l, hidden: _h, sectionBackground: _sb, ...rest } = block as Block & Record<string, unknown>
   void _id; void _l; void _h; void _sb
+  // The v1 block's heading / caption / text-below / reassurance are dropped,
+  // not carried: a v2 data section has no text of its own (`DATA_TEXT_FIELDS`
+  // in `layout.ts`), and the founder chose to drop rather than hoist the old
+  // copy into text sections (2026-09-19), so a fresh section from the palette
+  // and a starter template both arrive without it.
+  for (const key of DATA_TEXT_FIELDS) delete rest[key]
   const kind = type as 'packages' | 'gallery' | 'video' | 'testimonials' | 'faq' | 'accept'
   return {
-    id: newSectionId(), kind, style: baseStyle(block, { contentWidth: kind === 'packages' ? 'wide' : 'medium' }),
+    id: newSectionId(), kind,
+    // `accept.tsx` renders centred by a hardcoded `var(--doc-align, center)`
+    // fallback when `style.align` is unset (legacy v1 back-compat); setting
+    // it explicitly here keeps a fresh accept section's stored value in
+    // sync with how it actually renders, so the Style popover's Alignment
+    // pill shows "Center" instead of defaulting to "Left" (2026-09-19 live-found bug).
+    style: baseStyle(block, { contentWidth: kind === 'packages' ? 'wide' : 'medium', ...(kind === 'accept' ? { align: 'center' } : {}) }),
     // Cast to the non-optional `SectionData` (not `Section['data']`, which
     // includes `undefined` and trips exactOptionalPropertyTypes on assignment).
     data: { kind, [kind]: rest } as SectionData,

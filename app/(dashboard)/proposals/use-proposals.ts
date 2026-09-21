@@ -20,6 +20,7 @@ export interface ProposalListRow {
   expires_at: string | null;
   email_sent_at: string | null;
   last_viewed_at: string | null;
+  view_count: number;
   created_at: string;
   couple: { id: string; name: string };
   proposal_options: { subtotal: number; is_popular: boolean; position: number }[];
@@ -59,7 +60,7 @@ export function useProposals() {
       const { data, error } = await supabase
         .from('proposals')
         .select(
-          'id, proposal_number, title, status, expires_at, email_sent_at, last_viewed_at, created_at, couple:couple_id(id, name), proposal_options!proposal_options_proposal_id_fkey(subtotal, is_popular, position)',
+          'id, proposal_number, title, status, expires_at, email_sent_at, last_viewed_at, view_count, created_at, couple:couple_id(id, name), proposal_options!proposal_options_proposal_id_fkey(subtotal, is_popular, position)',
         )
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });

@@ -2,101 +2,54 @@
 
 /**
  * The add-section palette's actual content (Task 8, split out for the
- * final review's Finding 4): the Sections/Presets tab strip plus the
- * matching list of `MenuItem`s. `add-palette.tsx` renders this bare
- * inside `Modal` (no `MenuPanel` around it there - see that file's module
- * doc for why) and inside `MenuPanel` for the Popover branch, so the two
- * presentations never drift out of sync with each other.
+ * final review's Finding 4; redesigned to a visual card grid per the
+ * Qwilr-parity pass): a `LibraryItemCard` grid of the seven
+ * `SectionKind`s (`library/library-items.ts`), so a user sees what a
+ * section looks like before adding it instead of a bare label. The
+ * Presets tab that used to sit above this grid was removed (design
+ * feedback: presets added a second, rarely-used tab to a palette whose
+ * only job is picking a section shape); `presetLibraryEntries` still
+ * exists in `library-items.ts` but nothing calls it. `add-palette.tsx`
+ * renders this bare inside `Modal` (no `MenuPanel` around it there - see
+ * that file's module doc for why) and inside `MenuPanel` for the Popover
+ * branch, so the two presentations never drift out of sync with each
+ * other.
  *
  * @module features/proposals/editor/palette-body
  */
-import {
-  CircleCheck, FileText, HelpCircle, ImageIcon, MessageSquareQuote, Package, Video, type LucideIcon,
-} from 'lucide-react'
-
-import { MenuItem, MenuSeparator } from '@/components/ui/menu'
+import type { PublicBranding } from '@/lib/branding/public-branding'
 import type { ProposalRole } from '@/lib/proposals/types'
 
-import type { Section, SectionKind } from '../model/layout'
-import { PRESET_IDS, PRESET_LABELS, presetSection } from '../model/presets'
+import type { Section } from '../model/layout'
 
-import { newSectionFor } from './state'
-
-/** Which tab of the palette is showing. */
-export type PaletteTab = 'sections' | 'presets'
-
-/** One row of the Sections tab. */
-interface SectionItem {
-  kind: SectionKind
-  label: string
-  icon: LucideIcon
-}
-
-/** The seven `SectionKind`s, in the order the tab lists them. */
-const SECTION_ITEMS: readonly SectionItem[] = [
-  { kind: 'content', label: 'Text', icon: FileText },
-  { kind: 'packages', label: 'Packages', icon: Package },
-  { kind: 'gallery', label: 'Gallery', icon: ImageIcon },
-  { kind: 'video', label: 'Video', icon: Video },
-  { kind: 'testimonials', label: 'Testimonials', icon: MessageSquareQuote },
-  { kind: 'faq', label: 'FAQ', icon: HelpCircle },
-  { kind: 'accept', label: 'Accept', icon: CircleCheck },
-]
-
-/** One tab button in the palette's `role="tablist"` strip. */
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`rounded-control px-2.5 py-1 text-body transition-colors ${
-        active ? 'bg-surface-emphasis font-medium text-text' : 'text-text-muted hover:text-text'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
+import { LibraryItemCard } from './library/library-item-card'
+import { sectionLibraryEntries } from './library/library-items'
 
 /** Props for {@link PaletteBody}. */
 export interface PaletteBodyProps {
-  tab: PaletteTab
-  onTabChange: (tab: PaletteTab) => void
-  /** Flavours preset copy (`presetSection`'s `role` param) and the about/how-it-works section starters. */
+  /** Flavours the about/how-it-works section starters. */
   role: ProposalRole
+  /** Fed straight to each card's `LayoutThumbnail`. */
+  branding: PublicBranding
+  /** Disables every card once the layout is at `LAYOUT_LIMITS.maxSections`, same cap `AddLine`/`LibraryItemCard` already enforce. Defaults to false for callers that don't track the cap. */
+  atCap?: boolean
   onChoose: (section: Section) => void
 }
 
-/** Two-tab section/preset list. Presentation only: never dispatches, just hands the chosen section to `onChoose`. */
-export function PaletteBody({ tab, onTabChange, role, onChoose }: PaletteBodyProps) {
+/** The section card grid. Presentation only: never dispatches, just hands the chosen section to `onChoose`. */
+export function PaletteBody({ role, branding, atCap = false, onChoose }: PaletteBodyProps) {
+  const entries = sectionLibraryEntries(role)
+
   return (
-    <>
-      <div role="tablist" className="flex gap-1 px-1 pb-1">
-        <TabButton active={tab === 'sections'} onClick={() => onTabChange('sections')}>Sections</TabButton>
-        <TabButton active={tab === 'presets'} onClick={() => onTabChange('presets')}>Presets</TabButton>
-      </div>
-      <MenuSeparator />
-      <div role="tabpanel">
-        {tab === 'sections'
-          ? SECTION_ITEMS.map(({ kind, label, icon: Icon }) => (
-              <MenuItem key={kind} onClick={() => onChoose(newSectionFor(kind, role))}>
-                <span className="flex items-center gap-2">
-                  <Icon size={14} strokeWidth={1.5} />
-                  {label}
-                </span>
-              </MenuItem>
-            ))
-          : PRESET_IDS.map((id) => (
-              <MenuItem key={id} onClick={() => onChoose(presetSection(id, role))}>
-                <span className="flex flex-col items-start">
-                  <span>{PRESET_LABELS[id].label}</span>
-                  <span className="text-text-subtle">{PRESET_LABELS[id].description}</span>
-                </span>
-              </MenuItem>
-            ))}
-      </div>
-    </>
+    // No horizontal padding here or on `LibraryItemCard`'s root: this
+    // grid renders with zero side inset of its own, so its left edge
+    // lands exactly on whatever inset the caller wraps `PaletteBody` in -
+    // the Modal branch's own `px-4 sm:px-6` (matching its title), or the
+    // Popover branch's own padding wrapper.
+    <div className="grid grid-cols-2 gap-2 py-2">
+      {entries.map((entry) => (
+        <LibraryItemCard key={entry.id} entry={entry} branding={branding} disabled={atCap} onInsert={onChoose} />
+      ))}
+    </div>
   )
 }

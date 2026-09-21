@@ -21,27 +21,83 @@
  */
 import { getSchema, type AnyExtension } from '@tiptap/core'
 import { Highlight } from '@tiptap/extension-highlight'
-import { Placeholder } from '@tiptap/extension-placeholder'
-import { TableKit } from '@tiptap/extension-table'
-import { TextAlign } from '@tiptap/extension-text-align'
-import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-style'
+import { Placeholder, type PlaceholderOptions } from '@tiptap/extension-placeholder'
+import { Color, FontFamily, TextStyle } from '@tiptap/extension-text-style'
+import { ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 
-import { Variable } from '@/lib/branding/rich-text-extensions'
+import { FluidFontSizeExtension } from '@/lib/branding/fluid-font-size'
+import { Variable as VariableBase } from '@/lib/branding/rich-text-extensions'
+
+import { VariableView } from '../node-views/variable-view'
 
 import { AudioExtension } from './audio'
 import { ButtonExtension } from './button'
 import { ColumnExtension, ColumnsExtension } from './columns'
 import { EmbedExtension } from './embed'
+import { FontWeightExtension } from './font-weight'
 import { HistoryKeymapExtension } from './history-keymap'
 import { ImageExtension } from './image'
+import { LetterSpacingExtension } from './letter-spacing'
+import { LineHeightExtension } from './line-height'
+import { LinkClickExtension } from './link-click'
 import { ProposalEditorStorageExtension } from './proposal-editor-storage'
 import { SlashMenuExtension } from './slash-menu'
 import { SpacerExtension } from './spacer'
+import { TABLE_EXTENSIONS } from './table'
+import { TextAlignExtension } from './text-align'
 import { TextCaseExtension } from './text-case'
+import { TopSpacingExtension } from './top-spacing'
+import { TrailingParagraphExtension } from './trailing-paragraph'
+import { VariableSuggestionExtension } from './variable-suggestion'
+
+// The shared `Variable` node (`lib/branding/rich-text-extensions.ts`) has no
+// node view of its own - the branding rich-text editor layers its own mint
+// chip on top the same way (`rich-text.tsx`'s `Variable.extend(...)`). This
+// is the proposal editor's equivalent, gated by the same `nodeViews` option
+// every other node view here uses (see `RichDocExtensionOptions`), so a
+// schema-only build (the parity test, `getSchema`) never needs React.
+const Variable = VariableBase.extend<{ nodeViews: boolean }>({
+  addOptions() {
+    return { nodeViews: false }
+  },
+  addNodeView() {
+    return this.options.nodeViews ? ReactNodeViewRenderer(VariableView) : null
+  },
+})
+
+/**
+ * The `Placeholder` options for the rich doc. TipTap's defaults
+ * (`showOnlyCurrent`, no `includeChildren`) never walk into a `columns`
+ * row, so a freshly inserted 2/3-up read as a blank gap with no hint at
+ * all. Walking children and deciding per block instead: an empty column
+ * (a `column` whose only block is empty) always carries the hint, caret
+ * or not, so every cell says what `/` does the moment the row lands;
+ * elsewhere (a top-level line, a line inside a filled column) the hint
+ * still follows the caret only. Blocks nested anywhere else (a list item,
+ * a blockquote, a table cell) get no hint, exactly as before.
+ */
+function placeholderOptions(hint: string): Partial<PlaceholderOptions> {
+  return {
+    includeChildren: true,
+    showOnlyCurrent: false,
+    placeholder: ({ editor, pos, hasAnchor }) => {
+      // `editor.state` is the state the decoration pass is running
+      // against: ProseMirror assigns `view.state` before it redraws.
+      const parent = editor.state.doc.resolve(pos).parent
+      const inColumn = parent.type.name === 'column'
+      if (inColumn && parent.childCount === 1) return hint
+      if ((inColumn || parent.type.name === 'doc') && hasAnchor) return hint
+      return ''
+    },
+  }
+}
 
 export { normaliseEditorJSON } from './normalise'
 export { SLASH_MENU_PLUGIN_KEY, SlashMenuExtension } from './slash-menu'
+export {
+  filterProposalVariables, InlineFieldSlashVariableExtension, VARIABLE_AT_PLUGIN_KEY, VARIABLE_BRACES_PLUGIN_KEY, VARIABLE_SLASH_PLUGIN_KEY, VariableSuggestionExtension,
+} from './variable-suggestion'
 
 /** Options `buildRichDocExtensions` accepts. */
 export interface RichDocExtensionOptions {
@@ -68,17 +124,29 @@ export function buildRichDocExtensions(o: RichDocExtensionOptions): AnyExtension
       undoRedo: false,
       codeBlock: false,
       code: false,
-      link: { openOnClick: false, autolink: true, protocols: ['https', 'mailto', 'tel'] },
+      // `openOnClick: false`: TipTap's own click-to-open fires on any plain
+      // click, which fights editing - a click meant to place the caret
+      // inside link text instead navigated away from the document. A
+      // Cmd/Ctrl click still opens it, via `LinkClickExtension` below. The
+      // `underline` class matches the public render (`render/rich-doc.tsx`'s
+      // link mark) so a link reads as one on the canvas exactly as it will
+      // for the couple.
+      link: { openOnClick: false, autolink: true, protocols: ['https', 'mailto', 'tel'], HTMLAttributes: { class: 'underline' } },
     }),
     TextStyle,
     Color,
     FontFamily,
-    FontSize,
+    FluidFontSizeExtension,
+    FontWeightExtension,
+    LetterSpacingExtension,
+    LineHeightExtension,
+    TopSpacingExtension,
     Highlight.configure({ multicolor: true }),
-    TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    TableKit.configure({ table: { resizable: false } }),
-    Placeholder.configure({ placeholder: o.placeholder ?? '' }),
-    Variable,
+    TextAlignExtension.configure({ types: ['heading', 'paragraph'] }),
+    ...TABLE_EXTENSIONS,
+    TrailingParagraphExtension,
+    Placeholder.configure(placeholderOptions(o.placeholder ?? '')),
+    Variable.configure({ nodeViews }),
     ProposalEditorStorageExtension,
     HistoryKeymapExtension,
     ImageExtension.configure({ nodeViews }),
@@ -93,6 +161,11 @@ export function buildRichDocExtensions(o: RichDocExtensionOptions): AnyExtension
     // no node/mark, so it is safe to include unconditionally without
     // touching `EDITOR_NODE_NAMES`/`EDITOR_MARK_NAMES` below.
     SlashMenuExtension,
+    // The `@` / `{{` variable trigger: the same kind of plugin-only extension.
+    VariableSuggestionExtension,
+    // Cmd/Ctrl-gates the Link mark's click-to-open (`openOnClick: false`
+    // above); a plugin-only extension like the two above it.
+    LinkClickExtension,
   ]
 }
 

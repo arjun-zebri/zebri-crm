@@ -12,12 +12,17 @@
 import type { SuggestionKeyDownProps } from '@tiptap/suggestion'
 import { forwardRef, useImperativeHandle, useState } from 'react'
 
+import { MenuItem, MenuLabel, MenuPanel } from '@/components/ui/menu'
+
 import type { InsertItem } from '../insert-items'
 
 /** Props for {@link SlashMenuList}. */
 export interface SlashMenuListProps {
+  /** Rows in display order; a row's `group` (when set) becomes a heading above the first row of each run. */
   items: readonly InsertItem[]
   command: (item: InsertItem) => void
+  /** Shown when `items` is empty; the `/` menu says "No matching blocks", the `@` trigger "No matching variables". */
+  emptyLabel?: string
 }
 
 /** Imperative handle: route a keydown into the list's navigation, mirroring `components/ui/variable-suggestion.tsx`'s `ListHandle`. */
@@ -27,7 +32,7 @@ export interface SlashMenuListHandle {
 
 /** The floating list: arrow keys move, Enter or a click selects. */
 export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>(function SlashMenuList(
-  { items, command },
+  { items, command, emptyLabel = 'No matching blocks' },
   ref,
 ) {
   const [selected, setSelected] = useState(0)
@@ -56,30 +61,36 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
 
   if (items.length === 0) {
     return (
-      <div className="w-56 rounded-control border border-border bg-surface p-3 shadow-lg">
-        <p className="text-body text-text-muted">No matching blocks</p>
-      </div>
+      <MenuPanel className="p-3">
+        <p className="text-body text-text-muted">{emptyLabel}</p>
+      </MenuPanel>
     )
   }
 
+  // Built on the shared menu primitives (`MenuPanel`/`MenuItem`/`MenuLabel`)
+  // rather than hand-rolled rows, so the `/` menu reads as the same
+  // control as every other dropdown in the app - the group headings in
+  // particular are `MenuLabel`, not a home-grown heading style.
   return (
-    <div role="menu" className="max-h-72 w-56 overflow-y-auto rounded-control border border-border bg-surface p-1 shadow-lg">
+    <MenuPanel className="max-h-72 overflow-y-auto">
       {items.map((item, i) => {
         const Icon = item.icon
+        // A group heading above the first row of each group. Only the
+        // `@` / `{{` variable trigger passes ungrouped items (every row
+        // is a variable there), and those get no headings at all.
+        const heading = item.group && item.group !== items[i - 1]?.group ? item.group : null
         return (
-          <button
-            key={item.id}
-            type="button"
-            role="menuitem"
-            onClick={() => command(item)}
-            onMouseEnter={() => setSelected(i)}
-            className={`flex w-full cursor-pointer items-center gap-2 rounded-control px-2 py-1 text-left ${i === active ? 'bg-surface-emphasis' : ''}`}
-          >
-            <Icon size={14} strokeWidth={1.5} />
-            <span className="truncate text-body text-text">{item.label}</span>
-          </button>
+          <div key={item.id} onMouseEnter={() => setSelected(i)}>
+            {heading ? <MenuLabel>{heading}</MenuLabel> : null}
+            <MenuItem size="sm" selected={i === active} onClick={() => command(item)}>
+              <span className="flex items-center gap-2">
+                <Icon size={14} strokeWidth={1.5} className="shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </span>
+            </MenuItem>
+          </div>
         )
       })}
-    </div>
+    </MenuPanel>
   )
 })

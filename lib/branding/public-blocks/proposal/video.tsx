@@ -17,8 +17,9 @@ import type { FrameMode } from '../shared'
 
 import { EmbedFrame, VideoPlayer } from './media'
 
-/** Editor slots that replace the static media / caption with live inline editors. */
+/** Editor slots that replace the static heading / media / caption with live inline editors. */
 export interface VideoSlots {
+  heading?: ReactNode
   media?: ReactNode
   caption?: ReactNode
 }
@@ -35,9 +36,11 @@ function hasPlayableSource(source: VideoBlock['source']): boolean {
 }
 
 /**
- * A single video section: an uploaded file or a YouTube/Vimeo embed in a
- * 16:9 box, with an optional caption underneath. Renders nothing on an
- * untouched block (no source) so a sent proposal never shows an empty box.
+ * A single video section: an optional heading, an uploaded file or a
+ * YouTube/Vimeo embed in a 16:9 box, and an optional caption underneath.
+ * Both heading and caption are free-form multi-line text (2026-09-18),
+ * not one-liners. Renders nothing on an untouched block (no source) so a
+ * sent proposal never shows an empty box.
  */
 export function RenderVideo({
   block,
@@ -58,24 +61,59 @@ export function RenderVideo({
   if (!hasMedia) return null
 
   const p = pad(branding)
+  const headingStyle = resolveTextStyle(block.headingStyle, roleDefaults(branding, 'sectionHeading'))
 
   return (
     <div className={p.blockY}>
-      <div className="relative aspect-video w-full overflow-hidden" style={{ borderRadius: branding.corner_radius }}>
-        {slots?.media ??
-          (block.source?.kind === 'upload' ? (
-            <VideoPlayer url={block.source.url} posterUrl={block.source.posterUrl} frame={frame} />
-          ) : block.source?.kind === 'embed' ? (
-            <EmbedFrame url={block.source.url} frame={frame} title={richContentToPlainText(block.caption) || 'Video'} />
-          ) : null)}
-      </div>
+      {(richTextHasContent(block.heading) || slots?.heading) && (
+        // Same `<div>`-when-slotted split as the caption below: the heading
+        // is multi-line editable text now, not a one-line title, so the
+        // live `InlineField`'s own block-level `<p>` markup needs a `<div>`
+        // to sit in, not a `<h2>` (invalid HTML). The unslotted path keeps
+        // `<h2>` with `Rich`'s `inline` mode, which already flattens
+        // multiple paragraphs to `<br>` for a heading-safe phrasing context.
+        slots?.heading ? (
+          <div className="m-0 mb-4" style={headingStyle}>{slots.heading}</div>
+        ) : (
+          <h2 className="m-0 mb-4" style={headingStyle}><Rich value={block.heading} values={variableValues} inline /></h2>
+        )
+      )}
+      {/* `widthPx` resizes just the media box (2026-09-19 feedback: "resize
+          just the video ... without resizing the whole section padding"),
+          independent of the section's own width/padding controls.
+          `max-width: 100%` keeps a wide value from overflowing a narrower
+          column (a saved widthPx from a wider template/device). Unlike
+          heading/caption, the slotted `media` is rendered bare: it sizes
+          and clips its own box (`video-media-slot.tsx`'s module doc has
+          why - a live drag has to drive the width from local state, and
+          its corner grips must sit outside the `overflow-hidden` that
+          rounds the video's corners), so this wrapper and box are the
+          unslotted path only. */}
+      {slots?.media ?? (
+        <div style={block.widthPx ? { width: `${block.widthPx}px`, maxWidth: '100%', marginInline: 'var(--doc-box-margin, auto)' } : undefined}>
+          <div className="relative aspect-video w-full overflow-hidden" style={{ borderRadius: block.cornerRadius ?? branding.corner_radius }}>
+            {block.source?.kind === 'upload' ? (
+              <VideoPlayer url={block.source.url} posterUrl={block.source.posterUrl} frame={frame} />
+            ) : block.source?.kind === 'embed' ? (
+              <EmbedFrame url={block.source.url} frame={frame} title={richContentToPlainText(block.caption) || 'Video'} />
+            ) : null}
+          </div>
+        </div>
+      )}
       {(richTextHasContent(block.caption) || slots?.caption) && (
-        <p
-          className="m-0 mt-2"
-          style={resolveTextStyle(block.captionStyle, { ...roleDefaults(branding, 'body'), color: branding.muted_color })}
-        >
-          {slots?.caption ?? <Rich value={block.caption} values={variableValues} inline />}
-        </p>
+        // A slotted caption (Slice E2's `InlineField`) renders a `<div>`
+        // wrapper around TipTap's own block-level markup, which is invalid
+        // inside a `<p>`; the unslotted path keeps `<p>`, matching every
+        // other public-page paragraph.
+        slots?.caption ? (
+          <div className="m-0 mt-2" style={resolveTextStyle(block.captionStyle, { ...roleDefaults(branding, 'body'), color: branding.muted_color })}>
+            {slots.caption}
+          </div>
+        ) : (
+          <p className="m-0 mt-2" style={resolveTextStyle(block.captionStyle, { ...roleDefaults(branding, 'body'), color: branding.muted_color })}>
+            <Rich value={block.caption} values={variableValues} inline />
+          </p>
+        )
       )}
       {chrome}
     </div>

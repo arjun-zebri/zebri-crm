@@ -13,6 +13,7 @@
  *
  * @module features/proposals/editor/insert-atom-node
  */
+import { NodeSelection } from '@tiptap/pm/state'
 import type { Editor } from '@tiptap/react'
 
 /**
@@ -32,7 +33,14 @@ import type { Editor } from '@tiptap/react'
  * just validated).
  */
 export function insertAtomNode(editor: Editor, type: string, attrs: Record<string, unknown>): void {
-  const { from, to } = editor.state.selection
+  const { selection } = editor.state
+  // A node selection is never replaced, only inserted after: a section
+  // whose doc starts with an image holds a NodeSelection on it before
+  // anyone clicks in (ProseMirror's `Selection.atStart`), and replacing
+  // the selection there silently swapped that image for the new one when
+  // an image was inserted from the library (audit pass 2 live check).
+  const from = selection instanceof NodeSelection ? selection.to : selection.from
+  const to = selection.to
   editor.chain().focus().insertContentAt({ from, to }, { type, attrs }).run()
   const pos = findNodeByAttrs(editor, type, attrs)
   if (pos !== null) editor.commands.setNodeSelection(pos)

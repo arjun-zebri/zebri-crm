@@ -3,16 +3,15 @@
  * needs for its WYSIWYG render (the shared renderer components take a
  * `RichDocContext`-shaped `branding`, but a node view has no
  * `RichDocContext` of its own), plus the picker/upload callbacks
- * `INSERT_ITEMS` (`../insert-items.ts`) invokes for the four items that
- * cannot insert a node on their own (image, audio, embed, variable), plus
+ * `INSERT_ITEMS` (`../insert-items.ts`) invokes for the three items that
+ * cannot insert a node on their own (image, audio, embed), plus
  * the `undo`/`redo`/`openLink`/`escape` callbacks
  * `extensions/history-keymap.ts` (Task 15) forwards
  * Meta+Z/Shift+Meta+Z/Meta+Y/Meta+K/Escape to, since TipTap's own history
  * is off and those keys otherwise reach no handler at all while an editor
  * has focus. `requestImage`/`requestAudio`/`requestEmbed` are registered
  * once, for the life of the editor, by `use-insert-media.ts`
- * (`insert-media-host.tsx` is the UI it drives); `requestVariable` by
- * `bars/text-bar-insert.tsx`; `use-editor-shortcuts.ts` (Task 15)
+ * (`insert-media-host.tsx` is the UI it drives); `use-editor-shortcuts.ts` (Task 15)
  * registers the keyboard slice. Until registered, every callback is
  * called through an optional chain and does nothing.
  *
@@ -41,8 +40,8 @@ import type { PublicBranding } from '@/lib/branding/public-branding'
 /**
  * Picker/upload callbacks a node view or insert item can trigger without
  * owning the picker UI itself. `setProposalEditorCallbacks` merges a
- * partial patch in, so the bar that owns the image picker and the one
- * that owns the variable list (different components) can each register
+ * partial patch in, so the host that owns the media pickers and the hook
+ * that owns the keyboard slice (different components) can each register
  * their own slice independently.
  */
 export interface ProposalEditorCallbacks {
@@ -52,8 +51,6 @@ export interface ProposalEditorCallbacks {
   requestAudio?: () => void
   /** Opens the "Embed a video" URL modal (`insert-media-host.tsx`'s `EmbedInsertModal`). */
   requestEmbed?: () => void
-  /** Opens the variable list. */
-  requestVariable?: () => void
   /** Undoes the layout editor's last committed edit (`useLayoutEditor`'s `undo`). Bound to `Mod-z` by `history-keymap.ts`. */
   undo?: () => void
   /** Redoes the last undone edit (`useLayoutEditor`'s `redo`). Bound to `Shift-Mod-z` and `Mod-y`. */

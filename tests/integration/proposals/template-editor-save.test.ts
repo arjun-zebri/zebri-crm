@@ -90,7 +90,7 @@ describe('template editor save path', () => {
     if (!created.ok) return
 
     const withEveryNode = layoutWith(everyNodeTypeDoc())
-    const updated = await updateTemplateLayoutAction({ id: created.template.id, layout: withEveryNode })
+    const updated = await updateTemplateLayoutAction({ id: created.template.id, layout: withEveryNode, baseRevision: created.template.revision })
     expect(updated.ok).toBe(true)
 
     const reread = await getTemplateAction(created.template.id)
@@ -107,7 +107,7 @@ describe('template editor save path', () => {
 
     const intruder = await newUser()
     activeUser = intruder
-    const attack = await updateTemplateLayoutAction({ id: created.template.id, layout: layoutWith(doc(paragraph(text('Hacked')))) })
+    const attack = await updateTemplateLayoutAction({ id: created.template.id, layout: layoutWith(doc(paragraph(text('Hacked')))), baseRevision: created.template.revision })
     expect(attack.ok).toBe(false)
 
     activeUser = owner

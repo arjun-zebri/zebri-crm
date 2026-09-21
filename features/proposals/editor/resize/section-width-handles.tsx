@@ -30,10 +30,15 @@ export interface ColumnRect {
   height: number
 }
 
+// Faded at rest: two solid black bars either side of the text column read
+// as stray cursors (audit pass 2). Full strength on hover/focus/drag.
+const GRIP_REST = 'opacity-40 transition-opacity hover:opacity-100 focus-visible:opacity-100 data-[dragging=true]:opacity-100'
+
 /** Props for {@link SectionWidthHandles}. */
 export interface SectionWidthHandlesProps {
   sectionId: string
-  contentWidth: SectionStyle['contentWidth']
+  /** The section's width resolved through the theme (`effectiveWidth`): a section that inherits still needs a number to drag from. */
+  contentWidth: NonNullable<SectionStyle['contentWidth']>
   /** The measured column box from `SectionResizeOverlay`, or `null` before the first measurement (nothing renders yet). */
   rect: ColumnRect | null
   dispatch: (action: LayoutAction, opts?: { commit?: boolean }) => void
@@ -52,12 +57,12 @@ export function SectionWidthHandles({ sectionId, contentWidth, rect, dispatch }:
         <ResizeGrip
           axis="x" invert value={value} min={320} max={1400} scale={0.5}
           snaps={WIDTH_SNAPS} tolerance={16} format={(v) => `${v}px`} onChange={onChange} onCommit={onCommit}
-          ariaLabel="Section width, left edge" className="!inset-y-0 !left-0 !right-auto"
+          ariaLabel="Section width, left edge" className={`!inset-y-0 !left-0 !right-auto ${GRIP_REST}`}
         />
         <ResizeGrip
           axis="x" value={value} min={320} max={1400} scale={0.5}
           snaps={WIDTH_SNAPS} tolerance={16} format={(v) => `${v}px`} onChange={onChange} onCommit={onCommit}
-          ariaLabel="Section width, right edge"
+          ariaLabel="Section width, right edge" className={GRIP_REST}
         />
       </NodeGrips>
     </div>

@@ -123,3 +123,43 @@ export async function uploadProposalMediaFile(
   const { data } = supabase.storage.from('proposal-media').getPublicUrl(path)
   return `${data.publicUrl}?t=${Date.now()}`
 }
+
+/** One uploaded image in the account's `proposal-media` image library, as listed by {@link listProposalImages}. */
+export interface ProposalImage {
+  /** Public URL, the same shape `uploadProposalMediaFile` returns (minus its cache-buster). */
+  url: string
+  /** Storage object name (the file name under `${userId}/image/`), used as the thumbnail's accessible label. */
+  name: string
+  /** ISO timestamp from Storage, or `''` if the object carries none. */
+  createdAt: string
+}
+
+/**
+ * List the signed-in account's uploaded images from the `proposal-media`
+ * bucket's `${userId}/image/` folder, newest first - the Image insert
+ * chooser (`editor/image-insert-modal.tsx`) reads this.
+ *
+ * @throws Error with a short, human-safe message when the session lookup
+ *   or the storage list call fails.
+ */
+export async function listProposalImages(): Promise<ProposalImage[]> {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Not signed in')
+
+  const userId = session.user.id
+  const { data, error } = await supabase.storage
+    .from('proposal-media')
+    .list(`${userId}/image`, { limit: 200, sortBy: { column: 'created_at', order: 'desc' } })
+  if (error) throw new Error('Could not load your images')
+
+  return (data ?? [])
+    // A folder placeholder object (none expected at this leaf level, but
+    // Storage's `list` contract allows one) carries a null `id`; only real
+    // file objects do not, so this is the same guard the Storage docs use.
+    .filter((object) => object.id !== null)
+    .map((object) => {
+      const { data: pub } = supabase.storage.from('proposal-media').getPublicUrl(`${userId}/image/${object.name}`)
+      return { url: pub.publicUrl, name: object.name, createdAt: object.created_at ?? '' }
+    })
+}

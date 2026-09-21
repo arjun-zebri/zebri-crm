@@ -2,7 +2,7 @@
 
 /**
  * The section bar's name field: a ghost `Button` that turns into an
- * `Input` on click, mirroring `app/(dashboard)/proposals/templates/template-row.tsx`'s
+ * `Input` on click, mirroring `app/(dashboard)/proposals/templates/template-card.tsx`'s
  * rename pattern. Split out of `section-bar.tsx` to keep that file within
  * its line budget.
  *
@@ -14,14 +14,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip } from '@/components/ui/tooltip'
 
-import type { Section, SectionKind } from '../../model/layout'
+import type { Section } from '../../model/layout'
+import { KIND_LABELS, sectionLabel } from '../../model/section-labels'
 import type { SectionCanvasProps } from '../section-canvas'
 
-/** Fallback label for a section with no name of its own, by kind. */
-const KIND_LABELS: Record<SectionKind, string> = {
-  content: 'Text', packages: 'Packages', gallery: 'Gallery', video: 'Video',
-  testimonials: 'Testimonials', faq: 'FAQ', accept: 'Accept',
-}
+// Re-exported so existing importers (this file's
+// own callers) keep working unchanged; the mapping itself now lives in
+// `model/section-labels.ts` so the starter catalogue (a pure model file)
+// can use it too without pulling this `'use client'` component into the
+// model layer.
+export { KIND_LABELS, sectionLabel }
 
 /** Props for {@link SectionNameField}. */
 export interface SectionNameFieldProps {
@@ -35,7 +37,7 @@ export function SectionNameField({ section, dispatch }: SectionNameFieldProps) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(section.name ?? fallback)
   // Adopts an externally-driven rename (e.g. undo) once it lands; mirrors
-  // `template-row.tsx`'s own render-phase sync for the same reason.
+  // `template-card.tsx`'s own render-phase sync for the same reason.
   const [synced, setSynced] = useState(section.name)
   if (section.name !== synced) {
     setSynced(section.name)
@@ -79,7 +81,7 @@ export function SectionNameField({ section, dispatch }: SectionNameFieldProps) {
   }
 
   return (
-    <Tooltip label="Click to rename" className="shrink-0">
+    <Tooltip side="top" label="Click to rename" className="shrink-0">
       <Button
         variant="ghost"
         aria-label={`Rename ${value}`}

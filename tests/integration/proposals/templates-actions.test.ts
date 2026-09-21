@@ -101,9 +101,9 @@ describe('template actions', () => {
     const list = await listTemplatesAction()
     expect(list.ok && list.templates).toHaveLength(2)
 
-    const updated = await updateTemplateLayoutAction({ id: created.template.id, layout: { version: 2, sections: [] } })
+    const updated = await updateTemplateLayoutAction({ id: created.template.id, layout: { version: 2, sections: [] }, baseRevision: created.template.revision })
     expect(updated.ok).toBe(true)
-    const bad = await updateTemplateLayoutAction({ id: created.template.id, layout: { version: 1, sections: [] } as never })
+    const bad = await updateTemplateLayoutAction({ id: created.template.id, layout: { version: 1, sections: [] } as never, baseRevision: 1 })
     expect(bad.ok).toBe(false)
 
     const setDefault = await setDefaultTemplateAction({ id: created.template.id })
@@ -111,26 +111,20 @@ describe('template actions', () => {
     const afterDefault = await listTemplatesAction()
     expect(afterDefault.ok && afterDefault.templates.filter((t) => t.isDefault).map((t) => t.id)).toEqual([created.template.id])
 
-    const refused = await deleteTemplateAction({ id: created.template.id })
-    expect(refused.ok).toBe(false)   // it is the default now
+    // Deleting the current default, with another template around, now
+    // succeeds (2026-09-19 feedback: it used to be refused outright) -
+    // promoting the other template to default as part of the delete.
     const other = afterDefault.ok ? afterDefault.templates.find((t) => !t.isDefault)! : null
-    const deleted = await deleteTemplateAction({ id: other!.id })
-    expect(deleted.ok).toBe(true)
+    const deletedDefault = await deleteTemplateAction({ id: created.template.id })
+    expect(deletedDefault.ok).toBe(true)
+    const afterPromote = await listTemplatesAction()
+    expect(afterPromote.ok && afterPromote.templates).toHaveLength(1)
+    expect(afterPromote.ok && afterPromote.templates[0]!.id).toBe(other!.id)
+    expect(afterPromote.ok && afterPromote.templates[0]!.isDefault).toBe(true)
 
-    // Only `created.template` remains, and it is still the default: the
-    // is_default check is reached before the last-template count check, so
-    // this still refuses as "make another the default first", not "last
-    // template", the count check needs a non-default lone row (below).
-    const stillDefault = await deleteTemplateAction({ id: created.template.id })
-    expect(stillDefault.ok).toBe(false)
-    expect(!stillDefault.ok && stillDefault.error).toBe('Make another template the default before deleting this one')
-
-    // Exercise the last-template branch directly: clear is_default on the
-    // one remaining row (bypassing the actions, mirroring the state a
-    // crashed setDefault call could leave) so delete reaches the count
-    // check instead of the is_default check.
-    await activeUser.client.from('proposal_templates').update({ is_default: false }).eq('id', created.template.id)
-    const last = await deleteTemplateAction({ id: created.template.id })
+    // The account's last remaining template still can't be deleted, default
+    // or not.
+    const last = await deleteTemplateAction({ id: other!.id })
     expect(last.ok).toBe(false)
     expect(!last.ok && last.error).toBe('You need at least one template')
   })

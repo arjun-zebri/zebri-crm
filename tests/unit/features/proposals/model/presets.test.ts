@@ -30,4 +30,12 @@ describe('presets', () => {
       expect(layout.sections.at(-1)?.name).toBe('Footer')
     }
   })
+
+  // UX audit §3.1: the starter hero has no cover photo, so without a fill
+  // the first screen a new account sees is an empty viewport-tall box.
+  it('the default template opens with a real hero fill, not an empty box', () => {
+    const layout = defaultTemplateLayout('mc')
+    expect(layout.sections[0]?.style.background).toEqual({ color: '#111827' })
+    expect(layout.sections[0]?.style.textColor).toBe('#FFFFFF')
+  })
 })

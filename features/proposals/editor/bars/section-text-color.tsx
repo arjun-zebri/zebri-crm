@@ -5,6 +5,11 @@
  * "Use page colour" clear action, split out of `section-bar.tsx` to keep
  * that file within its line budget.
  *
+ * No override dot here (unlike the other Style popover rows): a section
+ * defaults to the page's text colour and only carries its own when one is
+ * explicitly set, so the swatch + "Use page colour" X already show that
+ * state without a separate indicator (2026-09-18 feedback).
+ *
  * @module features/proposals/editor/bars/section-text-color
  */
 import { X } from 'lucide-react'
@@ -12,27 +17,23 @@ import { X } from 'lucide-react'
 import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
 
-import { ControlDot } from './override-dot'
+import { CONTENT_TEXT_COLOR } from '../../model/rich-doc-spec'
 
 /** Props for {@link SectionTextColorControl}. */
 export interface SectionTextColorControlProps {
   color: string | undefined
-  /** The section kind's starting text colour, for the override dot. */
-  baseline: string | undefined
   /** `undefined` clears the section's own colour back to the page default ("Use page colour"). */
   onChange: (color: string | undefined) => void
   swatches: readonly string[]
 }
 
 /** The Text colour swatch and its "Use page colour" clear action. */
-export function SectionTextColorControl({ color, baseline, onChange, swatches }: SectionTextColorControlProps) {
-  const active = Boolean(color) && color !== baseline
-
+export function SectionTextColorControl({ color, onChange, swatches }: SectionTextColorControlProps) {
   return (
-    <ControlDot testId="text-color-control" active={active}>
-      <Tooltip label="Text colour">
+    <span data-testid="text-color-control" className="relative inline-flex shrink-0 items-center">
+      <Tooltip side="top" label="Text colour">
         <ColorPopover
-          value={color ?? '#111827'}
+          value={color ?? CONTENT_TEXT_COLOR}
           onChange={onChange}
           swatches={swatches}
           trigger={
@@ -41,13 +42,13 @@ export function SectionTextColorControl({ color, baseline, onChange, swatches }:
               aria-label="Text colour"
               className="inline-flex h-8 w-8 items-center justify-center rounded-control hover:bg-surface-emphasis"
             >
-              <span className="h-4 w-4 rounded-control ring-1 ring-black/10" style={{ background: color ?? '#111827' }} />
+              <span className="h-4 w-4 rounded-control ring-1 ring-black/10" style={{ background: color ?? CONTENT_TEXT_COLOR }} />
             </button>
           }
         />
       </Tooltip>
       {color ? (
-        <Tooltip label="Use page colour">
+        <Tooltip side="top" label="Use page colour">
           <button
             type="button"
             aria-label="Use page colour"
@@ -58,6 +59,6 @@ export function SectionTextColorControl({ color, baseline, onChange, swatches }:
           </button>
         </Tooltip>
       ) : null}
-    </ControlDot>
+    </span>
   )
 }

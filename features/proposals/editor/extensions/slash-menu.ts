@@ -12,33 +12,21 @@
  * `components/ui/variable-suggestion.tsx`; unlike that trigger, this one
  * runs an arbitrary `InsertItem.run` rather than inserting a mention
  * node, so it is its own small extension instead of a `Mention` config.
- * The floating list itself is `slash-menu-list.tsx` (JSX; this file has
- * none, so it stays a plain `.ts` module).
+ * The floating list itself is `slash-menu-list.tsx`, mounted by
+ * `suggestion-float.ts` (shared with the `@` variable trigger).
  *
  * @module features/proposals/editor/extensions/slash-menu
  */
 import { Extension, type Editor } from '@tiptap/core'
 import { PluginKey } from '@tiptap/pm/state'
-import { ReactRenderer } from '@tiptap/react'
-import { Suggestion, type SuggestionKeyDownProps, type SuggestionProps } from '@tiptap/suggestion'
+import { Suggestion } from '@tiptap/suggestion'
 
 import { filterInsertItems, type InsertItem } from '../insert-items'
 
-import { SlashMenuList, type SlashMenuListHandle } from './slash-menu-list'
+import { floatingListRenderer } from './suggestion-float'
 
 /** The suggestion plugin's key, exported so a caller (or a test) can read its live `{ active, query, range }` state via `SLASH_MENU_PLUGIN_KEY.getState(editor.state)`. */
 export const SLASH_MENU_PLUGIN_KEY = new PluginKey('proposal-slash-menu')
-
-/** Positions the floating list under (or, near the viewport bottom, above) the caret rect. */
-function place(container: HTMLDivElement | null, clientRect: (() => DOMRect | null) | null | undefined): void {
-  const rect = clientRect?.()
-  if (!rect || !container) return
-  const listHeight = Math.min(container.offsetHeight || 288, 288)
-  const below = rect.bottom + 6
-  const top = below + listHeight > window.innerHeight ? rect.top - listHeight - 6 : below
-  container.style.top = `${Math.max(8, top)}px`
-  container.style.left = `${Math.min(rect.left, window.innerWidth - 240)}px`
-}
 
 /**
  * The TipTap extension registering the `/` suggestion plugin. A plain
@@ -62,43 +50,7 @@ export const SlashMenuExtension = Extension.create({
           editor.chain().focus().deleteRange(range).run()
           props.run(editor)
         },
-        render: () => {
-          let component: ReactRenderer<SlashMenuListHandle, { items: readonly InsertItem[]; command: (item: InsertItem) => void }> | null = null
-          let container: HTMLDivElement | null = null
-
-          const destroy = () => {
-            component?.destroy()
-            container?.remove()
-            component = null
-            container = null
-          }
-
-          return {
-            onStart(props: SuggestionProps<InsertItem, InsertItem>) {
-              component = new ReactRenderer(SlashMenuList, {
-                props: { items: props.items, command: props.command },
-                editor: props.editor,
-              })
-              container = document.createElement('div')
-              container.className = 'fixed z-[95]'
-              container.appendChild(component.element)
-              document.body.appendChild(container)
-              place(container, props.clientRect)
-            },
-            onUpdate(props: SuggestionProps<InsertItem, InsertItem>) {
-              component?.updateProps({ items: props.items, command: props.command })
-              place(container, props.clientRect)
-            },
-            onKeyDown(props: SuggestionKeyDownProps) {
-              if (props.event.key === 'Escape') {
-                destroy()
-                return true
-              }
-              return component?.ref?.onKeyDown(props) ?? false
-            },
-            onExit: destroy,
-          }
-        },
+        render: floatingListRenderer('No matching blocks'),
       }),
     ]
   },

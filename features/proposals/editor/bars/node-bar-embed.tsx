@@ -63,7 +63,7 @@ export function NodeBarEmbed({ node, editor }: NodeBarEmbedProps) {
           }
         }}
       >
-        <Tooltip label="Replace link">
+        <Tooltip side="top" label="Replace link">
           <Popover.Trigger asChild>
             <button
               type="button"
@@ -100,7 +100,7 @@ export function NodeBarEmbed({ node, editor }: NodeBarEmbedProps) {
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
-      <Tooltip label="Remove">
+      <Tooltip side="top" label="Remove">
         <Button variant="ghost" iconOnly aria-label="Remove" onClick={() => removeNode(editor, node.pos)}>
           <Trash2 size={14} strokeWidth={1.5} />
         </Button>

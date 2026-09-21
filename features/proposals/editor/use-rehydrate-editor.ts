@@ -18,11 +18,23 @@ import type { JSONContent } from '@tiptap/core'
 import type { Editor } from '@tiptap/react'
 import { useEffect, useRef } from 'react'
 
-import { normaliseEditorJSON } from './extensions'
-
-/** Normalised, stringified form of a rich doc, for the cheap editor/content comparison below. */
-function fingerprint(json: JSONContent): string {
-  return JSON.stringify(normaliseEditorJSON(json))
+/**
+ * True when `editor` already shows `content`. Compared as ProseMirror
+ * nodes (`Node.eq`), not as stringified JSON: the editor's own JSON
+ * carries schema defaults the stored doc never had (`title: null` on a
+ * link, `caption: ''` on an image) and orders keys differently
+ * (`marks` before `text`), so a string comparison called every section
+ * holding a link or an image "changed" on mount and forced a needless
+ * `setContent` - which reset the caret and rebuilt every node view. An
+ * unparseable `content` (never expected: it came through the schema)
+ * counts as different, so the `setContent` below still gets to try.
+ */
+function alreadyShowing(editor: Editor, content: JSONContent): boolean {
+  try {
+    return editor.state.doc.eq(editor.schema.nodeFromJSON(content))
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -48,16 +60,25 @@ export function useRehydrateEditor(editor: Editor | null, content: JSONContent, 
 
   useEffect(() => {
     if (!editor || editor.isDestroyed) return
-    // Both sides normalised: the reducer's `setContent` case only runs
-    // `toPlainJSON` (never strips null attrs), and `replaceLayout`
-    // (undo/redo, a freshly loaded template) runs no normalisation at
-    // all, so an un-normalised `content` is a real possibility, not just
-    // a hypothetical. Comparing raw JSON against the normalised editor
-    // JSON would treat an unchanged doc as "changed" and force a
-    // needless `setContent`.
-    if (fingerprint(editor.getJSON()) === fingerprint(contentRef.current)) return
-    const prevFrom = editor.state.selection.from
-    editor.commands.setContent(contentRef.current, { emitUpdate: false })
-    editor.commands.setTextSelection(Math.min(prevFrom, editor.state.doc.content.size))
+    if (alreadyShowing(editor, contentRef.current)) return
+    // Deferred to a microtask, not run inside the effect: React flushes
+    // the passive effects of a sync render (an undo click) while it is
+    // still committing, and `setContent` builds the doc's node views
+    // through TipTap's `ReactRenderer`, whose constructor calls
+    // `flushSync` - which React refuses ("flushSync was called from
+    // inside a lifecycle method") when it is already mid-commit. A
+    // microtask runs the moment the commit finishes, before the browser
+    // paints, so nothing can be observed in between; the guards re-check
+    // the editor in case the section unmounted or a newer version landed.
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled || editor.isDestroyed) return
+      const prevFrom = editor.state.selection.from
+      editor.commands.setContent(contentRef.current, { emitUpdate: false })
+      editor.commands.setTextSelection(Math.min(prevFrom, editor.state.doc.content.size))
+    })
+    return () => {
+      cancelled = true
+    }
   }, [editor, externalVersion])
 }

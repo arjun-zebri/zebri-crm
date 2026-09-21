@@ -37,6 +37,10 @@ export interface TextState {
   fontFamily: string | null
   /** The `textStyle` mark's `fontSize` (e.g. `'16px'`), or `null` when unset. */
   fontSize: string | null
+  /** The `textStyle` mark's `fontWeight` (e.g. `'300'`), or `null` when unset. Independent of `bold`: a presentational weight override, not the semantic emphasis mark. */
+  fontWeight: string | null
+  /** The `textStyle` mark's `letterSpacing` (e.g. `'0.5px'`), or `null` when unset. */
+  letterSpacing: string | null
   bold: boolean
   italic: boolean
   underline: boolean
@@ -49,13 +53,23 @@ export interface TextState {
   /** The `link` mark's `href` at the selection, or `null` when the selection is not linked. */
   linkHref: string | null
   textCase: CaseValue
+  /** The active paragraph/heading's `lineHeight` (e.g. `'1.4'`), or `null` when unset. A block attribute, not a `textStyle` one - see `extensions/line-height.ts`. */
+  lineHeight: string | null
+  /** The active paragraph/heading's `topSpacing` (e.g. `'0.5em'`), or `null` when unset. See `extensions/top-spacing.ts`. */
+  topSpacing: string | null
 }
 
 /** Reads every value the text bar's controls need from `editor`'s current selection. */
 export function readTextState(editor: Editor): TextState {
-  const textStyle = editor.getAttributes('textStyle') as { color?: string; fontFamily?: string; fontSize?: string }
+  const textStyle = editor.getAttributes('textStyle') as { color?: string; fontFamily?: string; fontSize?: string; fontWeight?: string; letterSpacing?: string }
   const link = editor.getAttributes('link') as { href?: string }
   const textCase = editor.getAttributes('textCase') as { value?: TextCaseValue }
+  const isHeading = editor.isActive('heading')
+  // `lineHeight`/`topSpacing` live on whichever block node the selection is
+  // actually inside (paragraph or heading), not on both - `getAttributes`
+  // for the other one would just return `{}` here, but this is the same
+  // "ask the active node" shape `style` above already uses.
+  const block = editor.getAttributes(isHeading ? 'heading' : 'paragraph') as { lineHeight?: string; topSpacing?: string }
 
   return {
     style: editor.isActive('heading', { level: 1 })
@@ -67,6 +81,8 @@ export function readTextState(editor: Editor): TextState {
           : 'paragraph',
     fontFamily: textStyle.fontFamily ?? null,
     fontSize: textStyle.fontSize ?? null,
+    fontWeight: textStyle.fontWeight ?? null,
+    letterSpacing: textStyle.letterSpacing ?? null,
     bold: editor.isActive('bold'),
     italic: editor.isActive('italic'),
     underline: editor.isActive('underline'),
@@ -77,6 +93,8 @@ export function readTextState(editor: Editor): TextState {
     orderedList: editor.isActive('orderedList'),
     linkHref: link.href ?? null,
     textCase: editor.isActive('textCase') ? (textCase.value ?? 'sentence') : 'none',
+    lineHeight: block.lineHeight ?? null,
+    topSpacing: block.topSpacing ?? null,
   }
 }
 
@@ -102,6 +120,14 @@ export interface TextStylePatch {
   bulletList?: boolean
   orderedList?: boolean
   textCase?: CaseValue
+  /** `null` unsets the override, matching `fontFamily`/`fontSize` above. */
+  fontWeight?: string | null
+  /** `null` unsets the override, matching `fontFamily`/`fontSize` above. */
+  letterSpacing?: string | null
+  /** `null` unsets the override. Written to whichever of `paragraph`/`heading` the selection is in - see {@link applyTextStyle}. */
+  lineHeight?: string | null
+  /** `null` unsets the override. Written the same way as `lineHeight`. */
+  topSpacing?: string | null
 }
 
 /** The heading level for each non-paragraph {@link StyleValue}. */
@@ -132,12 +158,37 @@ export function applyTextStyle(editor: Editor, patch: TextStylePatch): void {
   if (patch.underline !== undefined) { if (patch.underline) chain.setUnderline(); else chain.unsetUnderline() }
   if (patch.strike !== undefined) { if (patch.strike) chain.setStrike(); else chain.unsetStrike() }
   if (patch.color !== undefined) chain.setColor(patch.color)
-  if (patch.align !== undefined) chain.setTextAlign(patch.align)
+  // `textAlign` is a hand-rolled node attribute (`extensions/text-align.ts`),
+  // not the stock extension's own mark/command - written the same way
+  // `lineHeight`/`topSpacing` are below: to whichever of `paragraph`/
+  // `heading` the selection is in, the other call a no-op.
+  if (patch.align !== undefined) {
+    chain.updateAttributes('paragraph', { textAlign: patch.align }).updateAttributes('heading', { textAlign: patch.align })
+  }
   if (patch.bulletList !== undefined && editor.isActive('bulletList') !== patch.bulletList) chain.toggleBulletList()
   if (patch.orderedList !== undefined && editor.isActive('orderedList') !== patch.orderedList) chain.toggleOrderedList()
   if (patch.textCase !== undefined) {
     if (patch.textCase === 'none') chain.unsetMark('textCase')
     else chain.setMark('textCase', { value: patch.textCase })
+  }
+  // `.removeEmptyTextStyle()` after each: unsetting the one `textStyle`
+  // attr a run had left behind an empty `<span>` with no styling on it
+  // (harmless visually, since `renderHTML` drops falsy attrs, but the
+  // same untidy-mark case `unsetFontSize`/`unsetFontFamily`'s own
+  // `removeEmptyTextStyle` call exists to avoid). A no-op when the run
+  // still carries other `textStyle` attrs (colour, font, size).
+  if (patch.fontWeight !== undefined) chain.setMark('textStyle', { fontWeight: patch.fontWeight }).removeEmptyTextStyle()
+  if (patch.letterSpacing !== undefined) chain.setMark('textStyle', { letterSpacing: patch.letterSpacing }).removeEmptyTextStyle()
+  // `lineHeight`/`topSpacing` are block attributes, not `textStyle` mark
+  // attributes: `updateAttributes` only touches a node that's actually of
+  // the given type within the selection, so calling it for both
+  // `paragraph` and `heading` is safe even though only one is ever active
+  // at once - the other call is simply a no-op.
+  if (patch.lineHeight !== undefined) {
+    chain.updateAttributes('paragraph', { lineHeight: patch.lineHeight }).updateAttributes('heading', { lineHeight: patch.lineHeight })
+  }
+  if (patch.topSpacing !== undefined) {
+    chain.updateAttributes('paragraph', { topSpacing: patch.topSpacing }).updateAttributes('heading', { topSpacing: patch.topSpacing })
   }
 
   chain.run()

@@ -1465,10 +1465,14 @@ draft/sent/viewed/accepted/declined/expired.
 **List** (`app/(dashboard)/proposals/page.tsx` orchestrator +
 `proposals-list.tsx`): `PageHeader` ("Proposals" + count), search (title,
 number, couple name, status), "New proposal" button. Table columns:
-number, couple, title, status pill, headline total (the popular option's
-subtotal, else the first option's, else 0), expires. Row click routes to
-the detail page. Loading/empty/error come from `PaymentsTable` (the same
+number, couple, title, status pill (with a view count beside it once
+`view_count > 0`), headline total (the popular option's subtotal, else
+the first option's, else 0), expires. Row click routes to the detail
+page. Loading/empty/error come from `PaymentsTable` (the same
 desktop-table / mobile-list primitive Payments uses) and `ErrorState`.
+While `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2` is on, the page also renders a
+stat row, a templates shortcut, and a settings gear — see "Proposal
+Layout v2: single page" below.
 
 **Detail** (`app/(dashboard)/proposals/[id]/page.tsx` orchestrator +
 `proposal-detail.tsx`): title, proposal number, status pill, version,
@@ -1535,34 +1539,45 @@ package cards, batches events, and posts them to `POST
 /api/proposal/events`; disabled in print/preview. Full model:
 `.claude/docs/proposals.md`.
 
-## Proposal Layout v2 shell (Phase 1)
+## Proposal Layout v2: single page (2026-09-18)
 
-Behind `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2` (`proposalLayoutV2Enabled()`
-in `app/(dashboard)/proposals/flags.ts`); every route below 404s via
-`notFound()` while the flag is off, and `ProposalsNav`
-(`app/(dashboard)/proposals/proposals-nav.tsx`) renders nothing, so
-`/proposals` is unchanged in production until Phase 1 ships. With the
-flag on, the Proposals feature gains a link-based tab strip: Proposals,
-Templates, Analytics, Settings. Every tab keeps the one "Proposals"
-`PageHeader` (count and primary action belong to the active tab, as on
-`/payments`) with the strip directly under it; tabs do not repeat their
-label as a heading. All `/proposals` routes share the dashboard gutter
-and scroll container from `app/(dashboard)/proposals/layout.tsx`.
+Behind `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2` (`proposalLayoutV2Enabled()` in
+`app/(dashboard)/proposals/flags.ts`). While the flag is off,
+`/proposals` is exactly the List above with none of the sections
+below. This replaces an earlier plan for a 4-tab strip (Proposals,
+Templates, Analytics, Settings) under `proposals-nav.tsx` — Templates
+duplicated the sidebar's Templates hub, and Analytics/Settings were
+still `Empty`-state placeholders — with one page:
 
-- **Templates** (`/proposals/templates`,
-  `app/(dashboard)/proposals/templates/templates-list.tsx`): lists the
-  account's `proposal_templates`. First visit ensures a default exists
-  (creating it by migrating the v1 branding block tree, or a role
-  starter, if none does). New template, rename (click the name,
-  Enter/blur commits, Escape cancels), Make default, Delete (refuses
-  the default and the last remaining template, `ConfirmDialog`
-  confirmation). Open (`template-row.tsx`, a `next/link` `Link` styled
-  through `buttonClassName`) opens the section editor at
-  `/proposals/templates/[id]` (Phase 2, below).
-- **Analytics** (`/proposals/analytics`) and **Settings**
-  (`/proposals/settings`): `Empty`-state placeholders until Phase 4/5.
+- **Stats row** (`proposals-stats-row.tsx`): four cards — Total, Sent,
+  Viewed, Accepted — computed from the already-fetched list
+  (`computeProposalStats`, `proposals-stats.ts`). No trend/delta; there
+  is no historical comparison data yet.
+- **Templates shortcut** (`proposal-templates-shortcut.tsx`): the
+  default template plus the next couple most-recently-edited, each a
+  card linking to the section editor. "See all" links to
+  `/templates?tab=proposals` — full template management (duplicate,
+  delete, set default) lives on that hub's Proposals tab, not here.
+  Neither place renames: the name is plain text on the card, and
+  renaming happens in the builder's header only.
+- **Settings gear** on the header, opening a `Modal`
+  (`proposal-settings-modal.tsx`, scope `account`): password
+  protection, PDF-download, expiry days, deposit percent, link-preview
+  title/image, saved to `proposal_settings` (one row per user).
+  Persist-only: nothing on the public proposal page or the
+  proposal-creation path reads these values yet.
+- **Per-template settings**: "Settings" in a template card's `...`
+  menu opens the same modal in scope `template`, seeded from the
+  account defaults (or the template's own saved snapshot), saved to
+  `proposal_templates.settings`; "Reset to account defaults" clears it.
+  Every card-menu item carries an icon. The `...` menu sits over the
+  thumbnail's top-right corner; the outcomes (sent / accepted / won)
+  are icon chips over its top-left, each with the full reading in a
+  tooltip, and no chips at all when nothing has been sent. No "Sample
+  data" pill (the figures are still placeholders).
 
-Full model: `.claude/docs/proposals.md` (Layout v2 section).
+Full model: `.claude/docs/proposals.md` ("Layout v2 (single-page
+consolidation)").
 
 ## Templates editor (Phase 2)
 
@@ -1574,12 +1589,24 @@ scroll, the canvas managing its own viewport. Feature code lives under
 `features/proposals/editor/`; full architecture, the one-history rule,
 and media limits: `.claude/docs/proposals.md` (Phase 2 section).
 
-**Header** (`editor-header.tsx`, one `h-12` row): Back to Templates,
+**Header** (`editor-header.tsx`, one `h-12` row): Back to Proposals (`/proposals`),
 the template name (click to rename), autosave status ("Saving…" /
-"Saved" / "Saved Ns ago" / "Save failed" with a Retry button), Undo /
-Redo (⌘Z / ⌘⇧Z), and a Desktop/Mobile `PillToggle` switching the canvas
-preview device. No Save button (the editor autosaves) and no Preview
-yet (the public page stays on v1 until Phase 4).
+"Saved" / "Saved Ns ago" / "Save failed" with a "Retry save" button /
+"Changed elsewhere" with a "Reload" button), Preview, and a
+Desktop/Mobile `PillToggle` switching the canvas preview device. No Save
+button (the editor autosaves) and no Undo/Redo buttons (⌘Z / ⌘⇧Z still
+work).
+
+**Global style** (`editor/global-style/`, 2026-09-18): a "Global style"
+button pinned to the top-left of the canvas workbench opens a 320px
+popover with a Page tab (page background, section gap None/S/M/L/Custom,
+section padding Compact/Cozy/Roomy/Custom, flow Stacked / One at a time,
+animation mode + Fade/Slide + Slow/Med/Fast) and a Text tab (Heading 1/2/3
+and Paragraph: font, size, weight, colour, case, letter spacing, line
+height, alignment, with a live sample line), plus "Reset to brand".
+Backed by `ProposalLayout.theme`; full model and rulings in
+`.claude/docs/proposals.md` ("Global style"). Sections no longer show a
+kind name tag at their corner (removed 2026-09-18 as redundant).
 
 **Canvas** (`section-canvas.tsx`, inside `CanvasFrame` with `page` and
 `wide`): one row per layout section, sortable via dnd-kit
@@ -1642,9 +1669,13 @@ resize.
 **Autosave** (`use-template-autosave.ts`): 800ms after the last
 change, `parseProposalLayout` re-validates the layout before every
 save; a failure logs `proposal_layout_invalid_editor` and surfaces as
-"Save failed" rather than reaching the server. A save still pending on
-unmount (e.g. clicking Back within the debounce window) is flushed via
-`useAutosave`'s `flushOnUnmount` option rather than dropped.
+"Save failed" rather than reaching the server. A failed save retries on
+its own with backoff; unsaved content is flushed on unmount, beaconed
+on a hard unload, mirrored into a per-user `localStorage` draft that is
+restored on the next load, and every write carries the template's
+`revision` so a stale tab can never overwrite a newer copy. Full
+design: `.claude/docs/proposals.md`, "Nothing the MC types is ever held
+only in React state".
 
 ---
 

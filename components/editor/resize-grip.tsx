@@ -33,6 +33,13 @@ export interface ResizeGripProps {
   onCommit?: (value: number) => void
   ariaLabel: string
   className?: string
+  /**
+   * `'bar'` (default) draws the edge bar and sizes the hit box to that
+   * edge; `'dot'` draws a small round corner handle in a 16px hit box
+   * with no edge placement of its own, so the caller positions it on the
+   * corner it wants (and sets the diagonal cursor) via `className`.
+   */
+  shape?: 'bar' | 'dot'
 }
 
 /**
@@ -69,6 +76,7 @@ export function ResizeGrip({
   onCommit,
   ariaLabel,
   className = '',
+  shape = 'bar',
 }: ResizeGripProps) {
   const [dragging, setDragging] = useState<number | null>(null)
   // Holds the current drag's listener-removal function, if a drag is in
@@ -159,7 +167,9 @@ export function ResizeGrip({
       onMouseDown={startDrag}
       onKeyDown={onKeyDown}
       className={`absolute z-10 flex items-center justify-center outline-none ${
-        isY ? 'inset-x-0 bottom-0 h-3 cursor-ns-resize' : 'inset-y-0 right-0 w-3 cursor-ew-resize'
+        shape === 'dot'
+          ? 'h-4 w-4'
+          : isY ? 'inset-x-0 bottom-0 h-3 cursor-ns-resize' : 'inset-y-0 right-0 w-3 cursor-ew-resize'
       } ${className}`}
     >
       {dragging !== null && (
@@ -171,7 +181,11 @@ export function ResizeGrip({
           {snapLabel ?? format(shown)}
         </span>
       )}
-      <div className={`rounded-pill bg-brand-fg shadow-sm ${isY ? 'h-1 w-10' : 'h-10 w-1'}`} />
+      {shape === 'dot' ? (
+        <div className="h-2.5 w-2.5 rounded-pill border-2 border-brand-fg bg-surface shadow-sm" />
+      ) : (
+        <div className={`rounded-pill bg-brand-fg shadow-sm ${isY ? 'h-1 w-10' : 'h-10 w-1'}`} />
+      )}
     </div>
   )
 }

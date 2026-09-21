@@ -2,20 +2,19 @@
 
 /**
  * Node view for the `columns` node: renders the same flex row the public
- * page renders (the Tailwind classes on `NodeViewContent`, so ProseMirror
- * keeps managing the child `column` nodes as real editable content) and,
+ * page renders (the Tailwind classes on `NodeViewContent`, aimed at
+ * TipTap's own contentDOM child, so ProseMirror keeps managing the child
+ * `column` nodes as real editable content) and,
  * while selected, one gutter grip per boundary that resizes the two
  * neighbouring columns' `ratio`s, keeping their sum fixed. The grip maths
  * and the ProseMirror write live in `columns-math.ts`.
  *
- * An unselected row whose every column holds nothing but a single empty
- * paragraph reads as a blank gap in the document; `isEveryColumnEmpty`
- * (final review Finding 6) drives a dashed placeholder for that state so
- * it stays discoverable without a click.
+ * An empty column is not this view's concern: the `Placeholder` options in
+ * `extensions/index.ts` put the "Type / to add content" hint inside every
+ * empty cell, caret or not, so the row never reads as a blank gap.
  *
  * @module features/proposals/editor/node-views/columns-view
  */
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { useLayoutEffect, useRef, useState } from 'react'
 
@@ -27,20 +26,6 @@ import { selectNodeOnClick } from './select-node'
 
 /** Fallback row width (px) when the wrapper cannot be measured (jsdom, or not yet laid out). */
 const FALLBACK_ROW_PX = 720
-
-/** True when `column` (a `column` node) holds nothing but one empty paragraph - the state a freshly-inserted columns row starts in. */
-function isColumnEmpty(column: ProseMirrorNode): boolean {
-  return column.childCount === 1 && column.firstChild?.type.name === 'paragraph' && column.firstChild.content.size === 0
-}
-
-/** True when every child of `columns` (the row node itself) is empty per {@link isColumnEmpty}. */
-function isEveryColumnEmpty(columns: ProseMirrorNode): boolean {
-  let empty = true
-  columns.forEach((column) => {
-    if (!isColumnEmpty(column)) empty = false
-  })
-  return empty
-}
 
 /** Editor node view for the `columns` node (registered by `extensions/columns.ts` when `nodeViews` is on). */
 export function ColumnsView({ node, selected, editor, getPos }: NodeViewProps) {
@@ -67,7 +52,6 @@ export function ColumnsView({ node, selected, editor, getPos }: NodeViewProps) {
   // actual write re-reads `getPos()` fresh, see `writeNeighbourRatios`.
   const hasPos = typeof getPos() === 'number'
   const count = node.childCount
-  const showEmptyPlaceholder = !selected && isEveryColumnEmpty(node)
 
   let cumulative = 0
   const boundaries = Array.from({ length: Math.max(count - 1, 0) }, (_, index) => {
@@ -79,12 +63,20 @@ export function ColumnsView({ node, selected, editor, getPos }: NodeViewProps) {
   return (
     <NodeViewWrapper as="div" data-node-type="columns" className="relative cursor-pointer" onClickCapture={selectNodeOnClick(editor, getPos)}>
       <div ref={rowRef} className="pointer-events-none absolute inset-0" />
-      <NodeViewContent as="div" data-columns className="my-4 flex max-md:flex-col gap-6" />
-      {showEmptyPlaceholder ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-control border border-dashed border-border">
-          <span className="text-body text-text-subtle">Empty columns</span>
-        </div>
-      ) : null}
+      {/* TipTap 3's React renderer appends its own contentDOM `<div>`
+          (`[data-node-view-content-react]`) inside `NodeViewContent` and
+          puts the `column` cells in there, so the flex row has to be that
+          child (`*:`), not this wrapper: `flex` on the wrapper made the
+          contentDOM its one flex item and left the cells stacked as plain
+          blocks. `[data-columns]` stays on the wrapper; `editor-styles.ts`'s
+          mobile-canvas rule targets the same `>*` child.
+          `@max-3xl/doc:` (not `max-md:`), matching `ColumnsFrame`'s public
+          render: the editor's mobile canvas is a fixed-width column inside
+          a desktop browser window, so a real viewport breakpoint never
+          fires there (live-found 2026-09-19 - stayed side-by-side on
+          mobile). `@container/doc` reflects the canvas's simulated width
+          instead. */}
+      <NodeViewContent as="div" data-columns className="my-4 *:flex *:gap-6 @max-3xl/doc:*:flex-col" />
       {selected ? (
         <>
           <div className="pointer-events-none absolute inset-0 rounded-control ring-2 ring-brand-fg" />
@@ -98,7 +90,11 @@ export function ColumnsView({ node, selected, editor, getPos }: NodeViewProps) {
                 // percent offset), so the grip itself carries the
                 // centring `-translate-x-1/2`: translating this wrapper
                 // instead would be a no-op against its own 0 width.
-                <div key={index} className="absolute inset-y-0" style={{ left: `${leftPct}%` }}>
+                // `@max-3xl/doc:hidden`: once the row stacks, a boundary
+                // "split" grip sitting mid-row reads as a stray divider
+                // line rather than a drag handle for a split that no
+                // longer exists left/right of anything.
+                <div key={index} className="absolute inset-y-0 @max-3xl/doc:hidden" style={{ left: `${leftPct}%` }}>
                   <ResizeGrip
                     axis="x" value={a * 100} min={FLOOR_PCT} max={sumPct - FLOOR_PCT} scale={rowWidthPx / 100}
                     snaps={gutterSnaps(sumPct)} tolerance={SPLIT_TOLERANCE_PCT} format={(v) => splitLabel(v, sumPct)}

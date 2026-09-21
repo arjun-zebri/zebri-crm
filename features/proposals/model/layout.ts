@@ -14,11 +14,20 @@ import type {
   AcceptBlock, FaqBlock, GalleryBlock, PackagesBlock, TestimonialsBlock, VideoBlock,
 } from '@/app/(dashboard)/branding/blocks/types'
 
+import type { PackageOption } from './packages'
+import type { ProposalTheme } from './theme'
+
 /** A TipTap document. Always normalised with `toPlainJSON` before storage. */
 export type RichDoc = JSONContent
 
-/** Kind of section determining its visual rendering and data fields. */
-export type SectionKind = 'content' | 'packages' | 'gallery' | 'video' | 'testimonials' | 'faq' | 'accept'
+/**
+ * Kind of section determining its visual rendering and data fields.
+ * `pageBreak` is the one kind with nothing to render: it marks where the
+ * next page starts in step flow (`./pages.ts`) and is skipped everywhere
+ * else. It still lives in `sections[]` so the editor's reorder, select,
+ * delete and undo all cover it with no special casing.
+ */
+export type SectionKind = 'content' | 'packages' | 'gallery' | 'video' | 'testimonials' | 'faq' | 'accept' | 'pageBreak'
 
 /** Named column widths; a number is a dragged px width (Phase 2). */
 export type ContentWidth = 'narrow' | 'medium' | 'wide' | number
@@ -40,6 +49,12 @@ export interface SectionBackground {
   poster?: string
   /** 0-100 black overlay over image / video. */
   overlay?: number
+  /**
+   * Focal point of `image`, as `object-position` percentages (0-100 each,
+   * `{ x: 50, y: 50 }` when unset): which part of the photo survives the
+   * `object-cover` crop when the section is a different shape to it.
+   */
+  position?: { x: number; y: number }
 }
 
 /** Visual styling for one section: background, height, width, padding and text colour/alignment. */
@@ -47,8 +62,30 @@ export interface SectionStyle {
   background?: SectionBackground
   /** `full` pins the section to one screen (`100svh`); the hero case. */
   height: 'fit' | 'full'
-  contentWidth: ContentWidth
-  padding: SectionPadding
+  /**
+   * Content column width. Absent means "inherit the theme's `contentWidth`"
+   * (the Page width in Global style), the same inheritance as `padding`
+   * below, so retuning the page re-flows every section that never chose
+   * its own. Data sections set theirs deliberately (packages wide, video
+   * narrow) and so keep it.
+   */
+  contentWidth?: ContentWidth | undefined
+  /**
+   * Vertical padding. Absent means "inherit the theme's `sectionPadding`"
+   * (`model/theme.ts`), so retuning the canvas default re-flows every
+   * section that never set its own. `| undefined` for the same
+   * `exactOptionalPropertyTypes` reason as `textColor` below.
+   */
+  padding?: SectionPadding | undefined
+  /**
+   * Horizontal padding of the content column, in px. Absent means
+   * "inherit the theme's `sectionPaddingX`", exactly as `padding` above
+   * inherits `sectionPadding`. A plain number (no named stops in the
+   * stored value): the Style popover's control snaps to
+   * `SECTION_PADDING_X_PX` for display, and the renderer caps the value
+   * on a narrow container (`render/section-style.ts`).
+   */
+  paddingX?: number | undefined
   /**
    * One colour for every text node in the section (white over a photo).
    * The `| undefined` (not just the `?`) is deliberate: the section bar's
@@ -60,7 +97,14 @@ export interface SectionStyle {
    */
   textColor?: string | undefined
   /** Default alignment for the section's text. */
-  align?: 'left' | 'center'
+  align?: 'left' | 'center' | 'right'
+  /**
+   * Vertical placement of the section's content within the section box.
+   * Only visible when the section has extra vertical space (e.g. `height:
+   * 'full'`); defaults to `'middle'`, matching the pre-existing hardcoded
+   * behaviour.
+   */
+  verticalAlign?: 'top' | 'middle' | 'bottom'
 }
 
 /**
@@ -69,12 +113,31 @@ export interface SectionStyle {
  * render them through an adapter; Phase 3 replaces these with v2 shapes.
  */
 type V1Data<B> = Omit<B, 'id' | 'type' | 'locked' | 'hidden' | 'sectionBackground'>
-export type PackagesData = V1Data<PackagesBlock>
+/**
+ * The v1 blocks' own text-above/text-below fields, which a v2 data section
+ * does not carry (2026-09-19 feedback: "remove the text from all these
+ * sections... we can always add text sections around them"). A heading,
+ * caption or reassurance line is its own `content` section stacked
+ * above/below the data, never embedded in it. Omitted from every data
+ * type so no editor can read or write them; `render/data-section.tsx`
+ * blanks them at runtime too, for a layout saved before this rule.
+ */
+export const DATA_TEXT_FIELDS = ['heading', 'headingStyle', 'caption', 'captionStyle', 'textBelow', 'textBelowStyle', 'reassurance'] as const
+type NoText<B> = Omit<B, (typeof DATA_TEXT_FIELDS)[number]>
+/**
+ * The packages section: the v1 block's display fields (layout,
+ * inclusions, CTA label) plus `options`, the packages the template authors
+ * itself (`./packages.ts`). `options` absent means a template saved before
+ * packages lived in the block; every surface then renders
+ * `starterPackages()` (`resolvePackageOptions`) and the editor commits
+ * them on the first edit.
+ */
+export type PackagesData = NoText<V1Data<PackagesBlock>> & { options?: PackageOption[] }
 export type GalleryData = V1Data<GalleryBlock>
-export type VideoData = V1Data<VideoBlock>
-export type TestimonialsData = V1Data<TestimonialsBlock>
-export type FaqData = V1Data<FaqBlock>
-export type AcceptData = V1Data<AcceptBlock>
+export type VideoData = NoText<V1Data<VideoBlock>>
+export type TestimonialsData = NoText<V1Data<TestimonialsBlock>>
+export type FaqData = NoText<V1Data<FaqBlock>>
+export type AcceptData = NoText<V1Data<AcceptBlock>>
 
 /** Discriminated union of data content for each data section kind. */
 export type SectionData =
@@ -85,7 +148,7 @@ export type SectionData =
   | { kind: 'faq'; faq: FaqData }
   | { kind: 'accept'; accept: AcceptData }
 
-/** A single section within a proposal, containing either rich content or data. */
+/** A single section within a proposal: rich content, data, or a bare page break (`kind: 'pageBreak'`, which carries only `id` and the schema-required `style`). */
 export interface Section {
   /** Unique identifier for the section. */
   id: string
@@ -120,9 +183,16 @@ export interface PageSettings {
   depositPercent?: number
 }
 
-/** Root structure of a proposal: sections and page configuration. */
+/** Root structure of a proposal: sections, canvas theme, and page configuration. */
 export interface ProposalLayout {
   version: 2
   sections: Section[]
+  /**
+   * Canvas-level styling (`model/theme.ts`). Optional only for layouts
+   * saved before themes existed: the editor and every renderer resolve a
+   * missing one to `defaultTheme(branding)` via `resolveTheme`, and the
+   * editor writes the resolved theme back on its first save.
+   */
+  theme?: ProposalTheme | undefined
   page?: PageSettings
 }

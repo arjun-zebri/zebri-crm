@@ -27,10 +27,19 @@ interface SelectProps<V extends string> {
   /** Optional custom label renderer (e.g. render font names in their own
    *  typeface). Falls back to the plain label. */
   renderLabel?: (option: SelectOption<V>) => React.ReactNode
+  /**
+   * Optional renderer for the rows in the open list only; the closed
+   * trigger keeps `renderLabel`/the plain label. For a list whose rows
+   * preview the choice at its real size (a heading-style picker) where
+   * the same treatment would not fit in the 32px trigger.
+   */
+  renderOption?: (option: SelectOption<V>) => React.ReactNode
   className?: string
   size?: 'xs' | 'sm' | 'md'
   align?: 'start' | 'end'
   placeholder?: string
+  /** Extra attributes for the portalled list (e.g. a `data-*` marker so a bubble menu can tell "click inside my own dropdown" from "click outside"), same as `ColorPopover`'s. */
+  contentProps?: Record<`data-${string}`, string>
 }
 
 /** A popover select with an optional custom label renderer and meta column. */
@@ -38,11 +47,13 @@ export function Select<V extends string>({
   value,
   options,
   renderLabel,
+  renderOption,
   onChange,
   className = '',
   size = 'sm',
   align = 'start',
   placeholder,
+  contentProps,
 }: SelectProps<V>) {
   const [open, setOpen] = useState(false)
   const selected = options.find(o => o.value === value)
@@ -64,6 +75,7 @@ export function Select<V extends string>({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          {...contentProps}
           align={align}
           sideOffset={4}
           className="bg-surface border border-border rounded-control shadow-xl p-1 z-[60] animate-modal-in"
@@ -88,7 +100,7 @@ export function Select<V extends string>({
                 }`}
                 style={opt.fontFamily ? { fontFamily: opt.fontFamily } : undefined}
               >
-                <span className="flex-1 text-left truncate">{renderLabel ? renderLabel(opt) : opt.label}</span>
+                <span className="flex-1 text-left truncate">{renderOption ? renderOption(opt) : renderLabel ? renderLabel(opt) : opt.label}</span>
                 {opt.meta && (
                   <span className="text-[11px] text-text-subtle" style={opt.fontFamily ? { fontFamily: 'inherit' } : undefined}>
                     {opt.meta}

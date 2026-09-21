@@ -121,7 +121,7 @@ export function NodeBarUpload({ kind, accept, label, onUploaded }: NodeBarUpload
             .finally(() => setUploading(false))
         }}
       />
-      <Tooltip label={error ?? label}>
+      <Tooltip side="top" label={error ?? label}>
         <Button variant="ghost" iconOnly loading={uploading} aria-label={label} onClick={() => inputRef.current?.click()}>
           <Upload size={14} strokeWidth={1.5} />
         </Button>

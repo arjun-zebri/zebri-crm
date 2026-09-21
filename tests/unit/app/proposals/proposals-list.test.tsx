@@ -11,6 +11,7 @@ const row = (over: Partial<ProposalListRow> = {}): ProposalListRow => ({
   expires_at: '2027-01-01',
   email_sent_at: '2026-09-01T00:00:00Z',
   last_viewed_at: null,
+  view_count: 0,
   created_at: '2026-09-01T00:00:00Z',
   couple: { id: 'c1', name: 'Anna & Jake' },
   proposal_options: [
@@ -28,7 +29,7 @@ describe('proposals list', () => {
   });
 
   it('renders number, couple, status pill and total', () => {
-    render(<ProposalsList loading={false} proposals={[row()]} searching={false} onOpen={vi.fn()} />);
+    render(<ProposalsList loading={false} proposals={[row()]} searching={false} onOpen={vi.fn()} onNew={vi.fn()} />);
     // PaymentsTable renders both the desktop table and the mobile card list
     // at once (CSS toggles which is visible), so the number appears twice.
     expect(screen.getAllByText('PR-001').length).toBeGreaterThan(0);
@@ -37,8 +38,30 @@ describe('proposals list', () => {
     expect(screen.getAllByText('$1,500').length).toBeGreaterThan(0);
   });
 
-  it('shows the empty state', () => {
-    render(<ProposalsList loading={false} proposals={[]} searching={false} onOpen={vi.fn()} />);
+  it('shows the empty state with a New proposal button', () => {
+    const onNew = vi.fn();
+    render(<ProposalsList loading={false} proposals={[]} searching={false} onOpen={vi.fn()} onNew={onNew} />);
     expect(screen.getByText(/No proposals yet/)).toBeInTheDocument();
+    screen.getByRole('button', { name: 'New proposal' }).click();
+    expect(onNew).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show the New proposal button when searching turned up nothing', () => {
+    render(<ProposalsList loading={false} proposals={[]} searching onOpen={vi.fn()} onNew={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'New proposal' })).not.toBeInTheDocument();
+  });
+
+  it('shows a view count next to the status pill once the proposal has been viewed', () => {
+    render(
+      <ProposalsList loading={false} proposals={[row({ view_count: 3 })]} searching={false} onOpen={vi.fn()} onNew={vi.fn()} />,
+    );
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0);
+  });
+
+  it('renders no view count when the proposal has never been viewed', () => {
+    render(
+      <ProposalsList loading={false} proposals={[row({ view_count: 0 })]} searching={false} onOpen={vi.fn()} onNew={vi.fn()} />,
+    );
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 });

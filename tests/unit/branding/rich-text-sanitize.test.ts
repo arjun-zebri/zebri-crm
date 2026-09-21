@@ -35,6 +35,18 @@ describe('sanitizeRichHtml — allowed content', () => {
     expect(sanitizeRichHtml('<span data-variable="evil"></span>')).toBe('<span></span>')
   })
 
+  it('keeps a chip fallback, escaped, and drops one over 200 characters', () => {
+    expect(sanitizeRichHtml('<span data-variable="couple_name" data-fallback="you &amp; me"></span>')).toBe(
+      '<span data-variable="couple_name" data-fallback="you &amp; me"></span>',
+    )
+    expect(sanitizeRichHtml('<span data-variable="couple_name" data-fallback="a<b"></span>')).toBe(
+      '<span data-variable="couple_name" data-fallback="a&lt;b"></span>',
+    )
+    expect(sanitizeRichHtml(`<span data-variable="couple_name" data-fallback="${'x'.repeat(201)}"></span>`)).toBe(
+      '<span data-variable="couple_name"></span>',
+    )
+  })
+
   it('keeps a text-align on a paragraph', () => {
     expect(sanitizeRichHtml('<p style="text-align:center">x</p>')).toBe(
       '<p style="text-align:center">x</p>',

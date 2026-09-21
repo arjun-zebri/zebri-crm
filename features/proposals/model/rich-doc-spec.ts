@@ -73,3 +73,12 @@ export const LAYOUT_LIMITS = {
 export const CONTENT_WIDTH_PX = { narrow: 560, medium: 720, wide: 1100 } as const
 /** Named vertical padding stops in px (compact / cozy / roomy). */
 export const SECTION_PADDING_PX = { compact: 32, cozy: 48, roomy: 64 } as const
+/**
+ * The paragraph colour a fresh canvas theme starts with
+ * (`model/theme.ts`'s `defaultTheme`), rather than Branding's body colour:
+ * the Minimal theme's body colour is a mid grey (`#6B7280`, the "muted"
+ * role), which is right for a quote's fine print but reads as washed-out
+ * for a proposal's main copy. Proposals only - the brand body colour still
+ * governs quotes, invoices, contracts and the portal.
+ */
+export const CONTENT_TEXT_COLOR = '#111827'

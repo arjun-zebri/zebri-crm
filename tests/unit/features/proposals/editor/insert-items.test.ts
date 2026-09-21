@@ -1,10 +1,11 @@
 // tests/unit/features/proposals/editor/insert-items.test.ts
 /**
- * Task 8: `INSERT_ITEMS`, the single list the slash menu and the text
- * bar's `+` both run. Covers one item per insertable node type;
- * `divider` is exercised end to end against a real (headless) TipTap
- * editor, and the picker-backed items (image/audio/embed/variable)
- * against the `proposalEditor` storage callback they call - `embed` in
+ * Task 8: `INSERT_ITEMS`, the single list the `/` slash menu runs.
+ * Covers one item per insertable node type; `divider` is exercised end
+ * to end against a real (headless) TipTap editor, the picker-backed
+ * items (image/audio/embed) against the `proposalEditor` storage
+ * callback they call, and every proposal variable as its own row -
+ * `embed` in
  * particular never inserts a node of its own (final review Finding 2:
  * `insert-media-host.tsx`'s `EmbedInsertModal` is the only thing that
  * inserts one, covered end to end in `insert-media.test.tsx`).
@@ -12,7 +13,7 @@
 import { Editor } from '@tiptap/core'
 import { describe, expect, it } from 'vitest'
 
-import { buildRichDocExtensions, doc, INSERT_ITEMS, paragraph } from '@/features/proposals'
+import { buildRichDocExtensions, doc, INSERT_ITEMS, paragraph, PROPOSAL_VARIABLES } from '@/features/proposals'
 
 /** A fresh headless editor over one empty paragraph, with the full v2 extension set. */
 function makeEditor(): Editor {
@@ -29,11 +30,27 @@ function nodeTypeNames(editor: Editor): Set<string> {
 }
 
 describe('INSERT_ITEMS', () => {
-  it('covers heading (x3), image, button, columns (x2), embed, audio, divider, spacer, table and variable', () => {
+  it('covers heading (x3), image, columns (x2), table, divider, spacer, embed, audio, button, then one row per proposal variable, grouped', () => {
     expect(INSERT_ITEMS.map((item) => item.id)).toEqual([
-      'heading1', 'heading2', 'heading3', 'image', 'button', 'columns2', 'columns3',
-      'embed', 'audio', 'divider', 'spacer', 'table', 'variable',
+      'heading1', 'heading2', 'heading3', 'image', 'columns2', 'columns3', 'table', 'divider', 'spacer',
+      'embed', 'audio', 'button', ...PROPOSAL_VARIABLES.map((v) => `var:${v.id}`),
     ])
+    expect(INSERT_ITEMS.map((item) => item.group)).toEqual([
+      'Text', 'Text', 'Text', 'Content', 'Content', 'Content', 'Content', 'Content', 'Content',
+      'Media', 'Media', 'Interactive', ...PROPOSAL_VARIABLES.map(() => 'Variables'),
+    ])
+  })
+
+  it('running a variable row inserts that variable chip', () => {
+    const editor = makeEditor()
+    const first = PROPOSAL_VARIABLES[0]!
+    INSERT_ITEMS.find((i) => i.id === `var:${first.id}`)!.run(editor)
+    let inserted: unknown
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'variable') inserted = node.attrs.id
+    })
+    expect(inserted).toBe(first.id)
+    editor.destroy()
   })
 
   it('running the divider item inserts a horizontalRule', () => {
@@ -90,12 +107,11 @@ describe('INSERT_ITEMS', () => {
     editor.destroy()
   })
 
-  it('image/audio/embed/variable items are a silent no-op before a bar registers their callback', () => {
+  it('image/audio/embed items are a silent no-op before the media host registers their callback', () => {
     const editor = makeEditor()
     expect(() => INSERT_ITEMS.find((i) => i.id === 'image')!.run(editor)).not.toThrow()
     expect(() => INSERT_ITEMS.find((i) => i.id === 'audio')!.run(editor)).not.toThrow()
     expect(() => INSERT_ITEMS.find((i) => i.id === 'embed')!.run(editor)).not.toThrow()
-    expect(() => INSERT_ITEMS.find((i) => i.id === 'variable')!.run(editor)).not.toThrow()
     editor.destroy()
   })
 

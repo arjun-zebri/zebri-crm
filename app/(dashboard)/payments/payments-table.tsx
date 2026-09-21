@@ -50,6 +50,8 @@ export interface PaymentsTableProps<T extends PaymentsTableItem> {
   rows: T[];
   emptyIcon: ReactNode;
   emptyMessage: string;
+  /** Optional call-to-action rendered under the empty message (e.g. a "New" button), instead of naming a specific header control in the message text. */
+  emptyAction?: ReactNode;
   valueColLabel: string;
   valueColIcon: ReactNode;
   lastColLabel: string;
@@ -79,6 +81,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
   rows,
   emptyIcon,
   emptyMessage,
+  emptyAction,
   valueColLabel,
   valueColIcon,
   lastColLabel,
@@ -90,6 +93,7 @@ export function PaymentsTable<T extends PaymentsTableItem>({
       <div className="py-16 text-center">
         {emptyIcon}
         <p className="text-body text-text-subtle">{emptyMessage}</p>
+        {emptyAction ? <div className="mt-3">{emptyAction}</div> : null}
       </div>
     );
   }

@@ -8,13 +8,14 @@
  * @module features/proposals/editor/bars/section-background-tabs
  */
 import { Image as ImageIcon, Palette, Video as VideoIcon } from 'lucide-react'
-import { useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import { Button } from '@/components/ui/button'
 import { ColorPopover } from '@/components/ui/color-popover'
 
 import { MEDIA_LIMITS } from '../../data/media'
 import type { SectionBackground } from '../../model/layout'
+
+import { BackgroundMediaTab } from './section-background-media'
 
 /** The Background popover's three tabs. */
 export type BackgroundTab = 'colour' | 'image' | 'video'
@@ -37,37 +38,6 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 }
 
 /** The Image and Video tabs' shared shape: a hidden file input plus an upload/replace `Button`. */
-function UploadTab({
-  accept, current, label, uploading, onPick,
-}: {
-  accept: string
-  current: string | undefined
-  label: string
-  uploading: boolean
-  onPick: (file: File) => void
-}) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  return (
-    <div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          e.target.value = ''
-          if (file) onPick(file)
-        }}
-      />
-      <Button variant="outline" loading={uploading} className="w-full" onClick={() => inputRef.current?.click()}>
-        {current ? `Replace ${label}` : `Upload ${label}`}
-      </Button>
-    </div>
-  )
-}
-
-/** Props for {@link BackgroundTabs}. */
 export interface BackgroundTabsProps {
   tab: BackgroundTab
   onTabChange: (tab: BackgroundTab) => void
@@ -77,10 +47,14 @@ export interface BackgroundTabsProps {
   onColorChange: (color: string) => void
   /** `kind` is the media-kind passed to `uploadProposalMediaFile`; see `section-background.tsx`'s module doc for why it differs from `field`. */
   onUpload: (file: File, kind: 'image' | 'video', field: 'image' | 'video') => void
+  /** Clears the media (the tabs are exclusive, so there is only ever one to clear). */
+  onRemove: () => void
+  /** Image only: starts the on-canvas drag (`../background-reposition.tsx`); the popover closes itself first. Omitted where no canvas hosts one. */
+  onReposition?: (() => void) | undefined
 }
 
 /** The tab strip plus whichever of the three tab bodies is active. */
-export function BackgroundTabs({ tab, onTabChange, background, swatches, uploading, onColorChange, onUpload }: BackgroundTabsProps) {
+export function BackgroundTabs({ tab, onTabChange, background, swatches, uploading, onColorChange, onUpload, onRemove, onReposition }: BackgroundTabsProps) {
   return (
     <>
       <div role="tablist" className="mb-2 flex gap-1">
@@ -110,21 +84,25 @@ export function BackgroundTabs({ tab, onTabChange, background, swatches, uploadi
           />
         )}
         {tab === 'image' && (
-          <UploadTab
+          <BackgroundMediaTab
+            kind="image"
             accept={MEDIA_LIMITS.image.types.join(',')}
             current={background?.image}
-            label="image"
             uploading={uploading}
             onPick={(file) => onUpload(file, 'image', 'image')}
+            onRemove={onRemove}
+            position={background?.position}
+            onReposition={onReposition}
           />
         )}
         {tab === 'video' && (
-          <UploadTab
+          <BackgroundMediaTab
+            kind="video"
             accept={MEDIA_LIMITS.background.types.join(',')}
             current={background?.video}
-            label="video"
             uploading={uploading}
             onPick={(file) => onUpload(file, 'video', 'video')}
+            onRemove={onRemove}
           />
         )}
       </div>

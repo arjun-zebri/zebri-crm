@@ -95,3 +95,26 @@ describe('mobile canvas', () => {
     expect(screen.getByRole('slider', { name: 'Section width, right edge' })).toBeInTheDocument()
   })
 })
+
+describe('section alignment on the canvas column', () => {
+  // A placeholder is a `::before` floated left (TipTap's recipe, so the
+  // caret sits before it) - which ignores `text-align`, so a centred
+  // section's empty fields read as left-aligned (live bug 2026-09-19).
+  // The column stamps `data-align` so the prose rules can switch a
+  // centred/right section's placeholders to inline instead.
+  it('a content section and a data section both stamp the alignment on the column, and the placeholder rules key off it', () => {
+    const content = newSectionFor('content')
+    const packages = newSectionFor('packages')
+    const sections: Section[] = [
+      { ...content, style: { ...content.style, align: 'center' } },
+      { ...packages, style: { ...packages.style, align: 'right' } },
+      newSectionFor('faq'),
+    ]
+    const { container } = render(<Harness initial={makeState(sections)} />)
+    const columns = [...container.querySelectorAll('[data-content-column]')] as HTMLElement[]
+    expect(columns.map((c) => c.getAttribute('data-align'))).toEqual(['center', 'right', null])
+    const prose = container.querySelector('.ProseMirror') as HTMLElement
+    expect(prose.className).toContain('[[data-align=center]_&_.is-empty::before]:float-none')
+    expect(prose.className).toContain('[[data-align=right]_&_.is-empty::before]:float-none')
+  })
+})

@@ -1,13 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import {
-  FONT_STACKS,
-  googleFontsHref,
-  type HeadingFont,
-  type BodyFont,
-  type FontWeight,
-} from './fonts'
+import { FONT_STACKS, googleFontsHref, type FontId } from './fonts'
 import type { Density } from './themes'
 
 export type { Density }
@@ -45,6 +39,14 @@ export interface UseBrandingHeadOptions {
    * favicon for the MC's branded one while the modal is open.
    */
   favicon?: boolean
+  /**
+   * Catalogue fonts to load alongside Branding's heading + body pair. The
+   * proposal page passes what its layout actually renders with
+   * (`layoutFontIds`), since a template may pick any face in the builder,
+   * not just the two Branding names. Duplicates are fine; the href is
+   * built from the unique set.
+   */
+  fonts?: readonly FontId[]
 }
 
 /**
@@ -57,6 +59,9 @@ export function useBrandingHead(branding: PublicBranding | null | undefined, opt
   const favicon = applyFavicon ? (branding?.favicon_url ?? null) : null
   const heading = branding?.font_heading
   const body = branding?.font_body
+  // Joined into one string so a caller rebuilding the array each render
+  // (the usual case) does not re-run the effect and flash the stylesheet.
+  const extraKey = (options?.fonts ?? []).join(',')
   useEffect(() => {
     if (typeof document === 'undefined') return
 
@@ -89,7 +94,8 @@ export function useBrandingHead(branding: PublicBranding | null | undefined, opt
 
     // Fonts: replace any existing branded-fonts link with the new one.
     if (heading && body) {
-      const href = googleFontsHref([heading, body])
+      const extra = extraKey ? (extraKey.split(',') as FontId[]) : []
+      const href = googleFontsHref([heading, body, ...extra])
       const existing = document.getElementById(BRANDING_FONTS_ID) as HTMLLinkElement | null
       if (existing && existing.href !== href) existing.remove()
       if (!document.getElementById(BRANDING_FONTS_ID)) {
@@ -107,5 +113,5 @@ export function useBrandingHead(branding: PublicBranding | null | undefined, opt
       document.getElementById(BRANDING_FAVICON_ID)?.remove()
       document.getElementById(BRANDING_FONTS_ID)?.remove()
     }
-  }, [favicon, heading, body, applyFavicon])
+  }, [favicon, heading, body, applyFavicon, extraKey])
 }

@@ -22,14 +22,18 @@
  */
 import type { JSONContent } from '@tiptap/core'
 import { NodeSelection } from '@tiptap/pm/state'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { useEffect, useMemo, useRef } from 'react'
 
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
+import type { ProposalTheme } from '../model/theme'
+
 import { getEditor, registerEditor, unregisterEditor } from './editor-registry'
 import { docTypeVars, EDITOR_PROSE_CLASS } from './editor-styles'
 import { buildRichDocExtensions, normaliseEditorJSON } from './extensions'
+import { LinkHoverTooltip } from './link-hover-tooltip'
+import { nodeSelectionFor } from './node-selection-for'
 import { ProposalEditorBrandingProvider } from './node-views/branding-context'
 import { useRehydrateEditor } from './use-rehydrate-editor'
 
@@ -39,6 +43,15 @@ export interface EditorNodeSelection {
   nodeType: string
   pos: number
 }
+
+/**
+ * Shown (via TipTap's `Placeholder` extension + the `data-placeholder` CSS
+ * in `editor-styles.ts`) on the empty block holding the caret - so an
+ * empty content section (the "Start from scratch" starter, a fresh "Text"
+ * section from the add palette) and any blank line the caret lands on
+ * both say what `/` does, the way Qwilr's editor does.
+ */
+export const CONTENT_PLACEHOLDER = 'Type / to add content'
 
 /** Props for {@link ContentSectionEditor}. */
 export interface ContentSectionEditorProps {
@@ -50,15 +63,17 @@ export interface ContentSectionEditorProps {
   externalVersion: number
   /** Resolved branding, for the doc's heading/body type roles (`editor-styles.ts`). */
   branding: PublicBranding
+  /** The layout's canvas theme: Heading 1/2/3 and Paragraph come from here (`editor-styles.ts`'s `docTypeVars`). */
+  theme: ProposalTheme
   /** Section-level colour override for every text node (mirrors `RichDocContext.textColor`). */
   textColor?: string | undefined
   /** Section-level default alignment (mirrors `RichDocContext.align`). */
-  align?: 'left' | 'center' | undefined
+  align?: 'left' | 'center' | 'right' | undefined
   /** Fired on every document change with normalised JSON (already `toPlainJSON`ed, null attrs dropped). */
   onChange: (sectionId: string, content: JSONContent) => void
   /** Fired when this editor gains focus, so the layout editor can select its owning section. */
   onFocusSection: (sectionId: string) => void
-  /** Fired when the selection becomes a `NodeSelection` on an atom node, or on the `columns` container (the one non-atom node view: a click on its own gutter/box, not on a child's text, still selects the row, see `node-views/select-node.ts`); fired with `null` for any other selection. Only called when the reported value actually changes. */
+  /** Fired when the selection becomes a `NodeSelection` on an atom node, or on the `columns` container (the one non-atom node view: a click on its own gutter/box, not on a child's text, still selects the row, see `node-views/select-node.ts`), or when the caret is inside a `table` (reported at the table's position); fired with `null` for any other selection. Only called when the reported value actually changes. */
   onNodeSelect: (node: EditorNodeSelection | null) => void
 }
 
@@ -71,7 +86,7 @@ export interface ContentSectionEditorProps {
  * elements this component can style per node.
  */
 export function ContentSectionEditor(props: ContentSectionEditorProps) {
-  const { sectionId, content, externalVersion, branding, textColor, align, onChange, onFocusSection, onNodeSelect } = props
+  const { sectionId, content, externalVersion, branding, theme, textColor, align, onChange, onFocusSection, onNodeSelect } = props
 
   // The last node-selection value reported, keyed by node type + position
   // (not object identity: a fresh `{ sectionId, nodeType, pos }` literal
@@ -80,11 +95,21 @@ export function ContentSectionEditor(props: ContentSectionEditorProps) {
   // paragraphs - does not re-fire the callback on every keystroke.
   const lastReportedRef = useRef<string | null>(null)
 
+  /** Reports the node the selection is on (`nodeSelectionFor`), deduped by the key above. */
+  const reportSelection = (ed: Editor) => {
+    const report = nodeSelectionFor(ed.state)
+    const node = report ? { sectionId, ...report } : null
+    const key = node ? `${node.nodeType}@${node.pos}` : null
+    if (key === lastReportedRef.current) return
+    lastReportedRef.current = key
+    onNodeSelect(node)
+  }
+
   // Built once, not on every render (matches the Branding editor's
   // `rich-text.tsx`): a fresh array of freshly-`.configure()`d extension
   // instances on every keystroke is needless allocation, even though
   // `useEditor`'s default `deps: []` would otherwise ignore the change.
-  const extensions = useMemo(() => buildRichDocExtensions({ nodeViews: true }), [])
+  const extensions = useMemo(() => buildRichDocExtensions({ nodeViews: true, placeholder: CONTENT_PLACEHOLDER }), [])
 
   const editor = useEditor({
     extensions,
@@ -108,16 +133,17 @@ export function ContentSectionEditor(props: ContentSectionEditorProps) {
       // already set the section id.
       if (ed.state.selection instanceof NodeSelection) return
       onFocusSection(sectionId)
+      // `select` just cleared the layout's node selection, so the last
+      // reported value is now "nothing", and the caret may already be
+      // inside a table without any `selectionUpdate` to follow: a click
+      // back onto the very spot the caret left (after a click on the
+      // workbench blurred the editor) changes nothing in ProseMirror's
+      // selection, so it emits no event. Re-reporting from here is what
+      // brings the table bar back in that case.
+      lastReportedRef.current = null
+      reportSelection(ed)
     },
-    onSelectionUpdate: ({ editor: ed }) => {
-      const { selection } = ed.state
-      const reportable = selection instanceof NodeSelection && (selection.node.isAtom || selection.node.type.name === 'columns')
-      const node = reportable ? { sectionId, nodeType: (selection as NodeSelection).node.type.name, pos: selection.from } : null
-      const key = node ? `${node.nodeType}@${node.pos}` : null
-      if (key === lastReportedRef.current) return
-      lastReportedRef.current = key
-      onNodeSelect(node)
-    },
+    onSelectionUpdate: ({ editor: ed }) => reportSelection(ed),
   })
 
   // Node views (Task 7) render through the shared renderer components,
@@ -162,8 +188,9 @@ export function ContentSectionEditor(props: ContentSectionEditorProps) {
     <ProposalEditorBrandingProvider branding={branding}>
       <EditorContent
         editor={editor}
-        style={{ ...docTypeVars(branding, textColor), ...(align ? { textAlign: align } : {}) }}
+        style={{ ...docTypeVars(branding, theme, textColor, align), ...(align ? { textAlign: align } : {}) }}
       />
+      <LinkHoverTooltip editor={editor} />
     </ProposalEditorBrandingProvider>
   )
 }

@@ -88,13 +88,35 @@ function attr(raw: string, name: string): string | null {
   return m[2] ?? m[3] ?? ''
 }
 
+/** Longest fallback a chip may carry; matches the proposal layout schema's cap. */
+const MAX_FALLBACK = 200
+
+/** Decode the entities TipTap's serialiser emits inside an attribute value, so the text can be re-escaped once here. */
+function decodeAttr(s: string): string {
+  return s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+}
+
+/** Escape text for an attribute value. */
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 /** Build the sanitized attribute string for an allowed tag. */
 function keepAttrs(tag: string, raw: string): string {
   const kind = TAG_ATTRS[tag]
   const out: string[] = []
   if (tag === 'span') {
     const id = attr(raw, 'data-variable')
-    if (id !== null && isKnownVariable(id)) return ` data-variable="${id}"` // chip: no style needed
+    if (id !== null && isKnownVariable(id)) {
+      // Chip: id plus an optional fallback shown when the value is empty
+      // (`resolveVariablesInHtml`); no style needed. The fallback is plain
+      // text the MC typed, re-escaped here so it can never close the tag.
+      const fallback = attr(raw, 'data-fallback')
+      const text = fallback ? decodeAttr(fallback) : ''
+      return text && text.length <= MAX_FALLBACK
+        ? ` data-variable="${id}" data-fallback="${escapeAttr(text)}"`
+        : ` data-variable="${id}"`
+    }
     const style = attr(raw, 'style')
     if (style) { const s = safeStyle(style); if (s) out.push(`style="${s}"`) }
   } else if (kind === 'style') {

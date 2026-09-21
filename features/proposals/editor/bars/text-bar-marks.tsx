@@ -1,35 +1,33 @@
 'use client'
 
 /**
- * The text bar's inline mark controls: Weight (Regular/Bold, via the
- * `bold` mark), the text colour picker, and Italic/Underline/Strike.
- * Split into three exports (rather than one) so `text-bar.tsx` can
- * place Colour between Weight and the I/U/S cluster, per the row order
- * the controller ruled on.
+ * The text bar's inline mark controls: Bold (via the `bold` mark), the
+ * text colour picker, and Italic/Underline/Strike. Split into three
+ * exports (rather than one) so `text-bar.tsx` can order Colour, then
+ * Bold, then the I/U/S cluster. Bold is a plain icon toggle like its
+ * I/U/S neighbours, not the
+ * Regular/Bold pill it started as: the founder found the pill odd next
+ * to three icon toggles doing the same job.
  *
  * @module features/proposals/editor/bars/text-bar-marks
  */
 import type { Editor } from '@tiptap/react'
-import { Italic, Strikethrough, Underline } from 'lucide-react'
+import { Bold, Italic, Strikethrough, Underline } from 'lucide-react'
 
-import { PillToggle } from '@/components/editor'
 import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
+
+import type { ProposalTheme } from '../../model/theme'
 
 import { applyTextStyle, TEXT_BAR_MENU_ATTR, type TextState } from './text-bar-style'
 import { TextBarToggleButton } from './text-bar-toggle-button'
 
-/** Weight pill: Regular / Bold, via the `bold` mark. */
-export function TextBarWeightPill({ editor, state }: { editor: Editor; state: TextState }) {
+/** Bold toggle, via the `bold` mark. */
+export function TextBarBoldToggle({ editor, state }: { editor: Editor; state: TextState }) {
   return (
-    <PillToggle<'regular' | 'bold'>
-      value={state.bold ? 'bold' : 'regular'}
-      onChange={(v) => applyTextStyle(editor, { bold: v === 'bold' })}
-      options={[
-        { value: 'regular', label: 'Regular' },
-        { value: 'bold', label: 'Bold' },
-      ]}
-    />
+    <TextBarToggleButton label="Bold" active={state.bold} onClick={() => applyTextStyle(editor, { bold: !state.bold })}>
+      <Bold size={14} strokeWidth={1.5} />
+    </TextBarToggleButton>
   )
 }
 
@@ -50,21 +48,20 @@ export function TextBarInlineToggles({ editor, state }: { editor: Editor; state:
   )
 }
 
-/** Default text colour offered when the selection has none of its own. */
-const DEFAULT_COLOR = '#111827'
-
 /** Props for {@link TextBarColor}. */
 export interface TextBarColorProps {
   editor: Editor
   state: TextState
   swatches: readonly string[]
+  /** Seeds the swatch from the selection's role when no colour override is set (`StyleValue` and `ThemeTextRole` share the same four values), so it tracks a Global style edit. */
+  theme: ProposalTheme
 }
 
 /** The Text colour `ColorPopover`. Focus is deliberately not forced on pick (mirrors the Branding bubble's `CaretSafeColor`): forcing it while dragging the picker would fight the picker's own inputs. */
-export function TextBarColor({ editor, state, swatches }: TextBarColorProps) {
-  const value = state.color ?? DEFAULT_COLOR
+export function TextBarColor({ editor, state, swatches, theme }: TextBarColorProps) {
+  const value = state.color ?? theme.text[state.style].color
   return (
-    <Tooltip label="Text colour">
+    <Tooltip side="top" label="Text colour">
       <ColorPopover
         value={value}
         onChange={(c) => editor.chain().setColor(c).run()}

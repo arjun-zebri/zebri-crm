@@ -10,47 +10,51 @@
  * Wires one `ContentSectionEditor` up to one `InsertMediaHost` the same
  * way `template-editor-body.tsx` does: a ref, not a shared context.
  */
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { NodeSelection } from '@tiptap/pm/state'
 import type { Editor } from '@tiptap/react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  ContentSectionEditor, doc, getEditor, InsertMediaHost, MEDIA_LIMITS, paragraph, text, uploadProposalMediaFile,
-  useInsertMedia, type InsertMediaHandle,
+  ContentSectionEditor, doc, getEditor, InsertMediaHost, listProposalImages, MEDIA_LIMITS, paragraph, text,
+  uploadProposalMediaFile, useInsertMedia, type InsertMediaHandle, defaultTheme,
 } from '@/features/proposals'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 vi.mock('@/features/proposals/data/media', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/proposals/data/media')>()
-  return { ...actual, uploadProposalMediaFile: vi.fn() }
+  return { ...actual, uploadProposalMediaFile: vi.fn(), listProposalImages: vi.fn() }
 })
 
 const SAMPLE_BRANDING = buildPublicBranding({ business_name: 'Sam MC' })
+const SAMPLE_THEME = defaultTheme(SAMPLE_BRANDING)
 // `MEDIA_LIMITS[kind].types` is a non-empty readonly tuple in practice;
 // `noUncheckedIndexedAccess` still types a plain index as possibly
 // `undefined`, so these are pinned once here instead of at every call site.
 const IMAGE_MIME = MEDIA_LIMITS.image.types[0]!
 const AUDIO_MIME = MEDIA_LIMITS.audio.types[0]!
 
-/** Mounts one section editor plus the insert-media host, wired together exactly as `template-editor-body.tsx` does. */
+/** Mounts one section editor plus the insert-media host, wired together exactly as `template-editor-body.tsx` does; the provider is for the image chooser's library query. */
 function Harness({ sectionId }: { sectionId: string }) {
   const hostRef = useRef<InsertMediaHandle>(null)
   useInsertMedia({ hostRef })
+  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
   return (
-    <>
+    <QueryClientProvider client={client}>
       <ContentSectionEditor
         sectionId={sectionId}
         content={doc(paragraph(text('Hi')))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
         onNodeSelect={() => {}}
       />
       <InsertMediaHost ref={hostRef} />
-    </>
+    </QueryClientProvider>
   )
 }
 
@@ -71,17 +75,23 @@ function findNode(editor: Editor, type: string): { pos: number; attrs: Record<st
 describe('InsertMediaHost + useInsertMedia', () => {
   afterEach(() => {
     vi.mocked(uploadProposalMediaFile).mockReset()
+    vi.mocked(listProposalImages).mockReset()
   })
 
-  it('uploads and inserts a new image node, node-selected, on requestImage', async () => {
+  it('requestImage opens the "Add an image" chooser; Upload inserts the new image node, node-selected, and closes it', async () => {
+    vi.mocked(listProposalImages).mockResolvedValue([])
     vi.mocked(uploadProposalMediaFile).mockResolvedValue('https://cdn.example/a.jpg')
-    const { container } = render(<Harness sectionId="im1" />)
+    render(<Harness sectionId="im1" />)
     const editor = await waitForEditor('im1')
 
     act(() => {
       editor.storage.proposalEditor.callbacks.requestImage?.()
     })
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+    expect(await screen.findByRole('dialog', { name: 'Add an image' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Upload image' }))
+    // The chooser's own input, not the host's audio one: the modal is
+    // portalled outside `container`, so query from the dialog itself.
+    const input = screen.getByRole('dialog', { name: 'Add an image' }).querySelector('input[type="file"]') as HTMLInputElement
     const file = new File(['x'], 'photo.jpg', { type: IMAGE_MIME })
     fireEvent.change(input, { target: { files: [file] } })
 
@@ -92,6 +102,25 @@ describe('InsertMediaHost + useInsertMedia', () => {
     expect(image.attrs.widthPct).toBe(100)
     expect(editor.state.selection).toBeInstanceOf(NodeSelection)
     expect((editor.state.selection as NodeSelection).from).toBe(image.pos)
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add an image' })).toBeNull())
+  })
+
+  it('clicking a library thumbnail in the chooser inserts that image without an upload', async () => {
+    vi.mocked(listProposalImages).mockResolvedValue([{ url: 'https://cdn.example/sunset.jpg', name: 'sunset.jpg', createdAt: '' }])
+    render(<Harness sectionId="im3" />)
+    const editor = await waitForEditor('im3')
+
+    act(() => {
+      editor.storage.proposalEditor.callbacks.requestImage?.()
+    })
+    const thumb = await screen.findByRole('button', { name: 'Insert sunset.jpg' })
+    await act(async () => {
+      fireEvent.click(thumb)
+    })
+
+    expect(findNode(editor, 'image')?.attrs.src).toBe('https://cdn.example/sunset.jpg')
+    expect(uploadProposalMediaFile).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: 'Add an image' })).toBeNull()
   })
 
   it('uploads and inserts a new audio node, titled from the file name, node-selected, on requestAudio', async () => {
@@ -116,13 +145,15 @@ describe('InsertMediaHost + useInsertMedia', () => {
 
   it('shows an inline error with Dismiss when the upload fails, and Dismiss clears it', async () => {
     vi.mocked(uploadProposalMediaFile).mockRejectedValue(new Error('Upload failed: network error'))
-    const { container } = render(<Harness sectionId="im2" />)
+    render(<Harness sectionId="im2" />)
     const editor = await waitForEditor('im2')
 
+    vi.mocked(listProposalImages).mockResolvedValue([])
     act(() => {
       editor.storage.proposalEditor.callbacks.requestImage?.()
     })
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.click(await screen.findByRole('button', { name: 'Upload image' }))
+    const input = screen.getByRole('dialog', { name: 'Add an image' }).querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, { target: { files: [new File(['x'], 'a.jpg', { type: IMAGE_MIME })] } })
 
     expect(await screen.findByText('Upload failed: network error')).toBeInTheDocument()

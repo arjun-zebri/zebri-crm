@@ -22,15 +22,16 @@
  * @module features/proposals/editor/template-editor
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 
 import { Empty } from '@/components/ui/empty'
 import { ErrorState } from '@/components/ui/error-state'
-import { Loading } from '@/components/ui/loading'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 
 import { getTemplateAction, type TemplateRecord } from '../data/templates'
 
+import { EditorSkeleton } from './editor-skeleton'
+import { draftKey, readDraft, reconcileDraft } from './local-draft'
 import { TemplateEditorBody } from './template-editor-body'
 
 /** react-query key for one template, shared by the load and the rename-triggered refetch. */
@@ -47,10 +48,13 @@ const TEMPLATES_LIST_QUERY_KEY = ['proposal-templates'] as const
 /** Props for {@link TemplateEditor}. */
 export interface TemplateEditorProps {
   templateId: string
+  /** The signed-in user's id, scoping the local draft. `null` disables the draft. */
+  userId: string | null
 }
 
 /**
- * Centres a `Loading` / `ErrorState` / `Empty` gate state. Every other
+ * Centres an `ErrorState` / `Empty` gate state (loading is the
+ * editor-shaped `EditorSkeleton`, which fills the frame itself). Every other
  * `/proposals` route keeps its padding through `ProposalsFrame`, which this
  * route opts out of for the loaded editor (it needs the full width) - but
  * these transient states are not the editor, so they get their own gutter
@@ -60,8 +64,8 @@ function GateState({ children }: { children: ReactNode }) {
   return <div className="flex h-full items-center justify-center p-6">{children}</div>
 }
 
-/** Loads template `templateId`; renders `Loading` / `ErrorState` / `Empty` until it and the branding are both ready. */
-export function TemplateEditor({ templateId }: TemplateEditorProps) {
+/** Loads template `templateId`; renders `EditorSkeleton` / `ErrorState` / `Empty` until it and the branding are both ready. */
+export function TemplateEditor({ templateId, userId }: TemplateEditorProps) {
   const qc = useQueryClient()
   const query = useQuery({
     queryKey: queryKey(templateId),
@@ -87,8 +91,20 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
     },
   })
   const { branding, loading: brandingLoading } = useCurrentBranding('proposal')
+  // The local draft is reconciled once per loaded row (see
+  // `local-draft.ts`): a draft edited on top of the revision the server
+  // still holds is what the editor mounts with, and is saved straight
+  // away (`initialDirty`); anything older is stale and the row wins.
+  // Memoised on the row itself so a rename-triggered refetch (same
+  // revision, same layout) never re-reads storage mid-session.
+  const loaded = query.data
+  const mounted = useMemo(() => {
+    if (!loaded) return null
+    const draft = userId ? readDraft(draftKey(userId, loaded.id)) : null
+    return reconcileDraft({ layout: loaded.layout, revision: loaded.revision }, draft)
+  }, [loaded, userId])
 
-  if (query.isLoading) return <GateState><Loading label="Loading template" /></GateState>
+  if (query.isLoading) return <EditorSkeleton />
   // `query.error && !query.data`, not just `query.error`: a *background*
   // refetch failure must not unmount `TemplateEditorBody` while a good
   // cached copy is still sitting in `query.data` - that would drop undo
@@ -100,8 +116,8 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
       </GateState>
     )
   }
-  if (!query.data) return <GateState><Empty title="Template not found" description="It may have been deleted." /></GateState>
-  if (brandingLoading) return <GateState><Loading label="Loading template" /></GateState>
+  if (!query.data || !mounted) return <GateState><Empty title="Template not found" description="It may have been deleted." /></GateState>
+  if (brandingLoading) return <EditorSkeleton />
   if (!branding) {
     // `useCurrentBranding` exposes no `error`: a failed branding fetch is
     // indistinguishable from "still loading" (`loading: false`, `branding:
@@ -114,8 +130,11 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
   return (
     <TemplateEditorBody
       templateId={templateId}
+      userId={userId}
       name={query.data.name}
-      initial={query.data.layout}
+      initial={mounted.layout}
+      initialDirty={mounted.dirty}
+      revision={query.data.revision}
       branding={branding}
       onRenamed={() => {
         void qc.invalidateQueries({ queryKey: queryKey(templateId) })

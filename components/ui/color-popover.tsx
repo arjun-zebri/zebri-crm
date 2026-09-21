@@ -43,6 +43,10 @@ export function ColorPopover({
           {...contentProps}
           align={align}
           sideOffset={6}
+          // Radix's default is 0, which let a picker opened from a control
+          // near the window edge (a section's style popover, the text bar)
+          // sit flush against it. Same inset the other editor popovers use.
+          collisionPadding={16}
           className={`bg-surface border border-border rounded-control shadow-xl p-3 ${zClassName} w-[280px] text-body animate-modal-in`}
         >
           <ColorPickerBody value={value} onChange={onChange} swatches={swatches} />

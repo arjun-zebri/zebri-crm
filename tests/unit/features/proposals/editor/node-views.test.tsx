@@ -21,10 +21,11 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { NodeSelection, TextSelection } from '@tiptap/pm/state'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { button, column, columns, ContentSectionEditor, doc, getEditor, image, paragraph, spacer, text } from '@/features/proposals'
+import { button, column, columns, CONTENT_PLACEHOLDER, ContentSectionEditor, doc, getEditor, image, paragraph, spacer, text, variable, defaultTheme } from '@/features/proposals'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 const SAMPLE_BRANDING = buildPublicBranding({ business_name: 'Sam MC' })
+const SAMPLE_THEME = defaultTheme(SAMPLE_BRANDING)
 
 /** Wait for `sectionId`'s editor to be registered and return it (mirrors `content-section-editor.test.tsx`). */
 async function waitForEditor(sectionId: string) {
@@ -63,6 +64,7 @@ describe('rich doc node views', () => {
         sectionId="nv1"
         content={doc(paragraph(text('Note')), image({ src: 'https://x/a.jpg', alt: 'A', layout: 'inline', widthPct: 40 }))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -89,6 +91,7 @@ describe('rich doc node views', () => {
           sectionId="nv8"
           content={doc(paragraph(text('Note')), spacer(24))}
           branding={SAMPLE_BRANDING}
+          theme={SAMPLE_THEME}
           externalVersion={0}
           onChange={() => {}}
           onFocusSection={() => {}}
@@ -108,6 +111,7 @@ describe('rich doc node views', () => {
         sectionId="nv13"
         content={doc(columns(column(0.5, paragraph(text('Left'))), column(0.5, paragraph(text('Right')))))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -150,6 +154,7 @@ describe('rich doc node views', () => {
         sectionId="nv5"
         content={doc(columns(column(0.5, paragraph(text('Left'))), column(0.5, paragraph(text('Right')))))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -168,6 +173,7 @@ describe('rich doc node views', () => {
         sectionId="nv14"
         content={doc(paragraph(text('Note')), image({ src: 'https://x/a.jpg', alt: 'A', layout: 'inline', widthPct: 40 }))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -196,14 +202,16 @@ describe('rich doc node views', () => {
     })
 
     expect(wrapper.querySelector('.ring-brand-fg')).not.toBeNull()
-    expect(screen.getByRole('slider', { name: 'Image width, right edge' })).toBeInTheDocument()
+    // Four corner dots, no edge bars.
+    expect(screen.getAllByRole('slider', { name: /^Image size, / })).toHaveLength(4)
+    expect(screen.queryByRole('slider', { name: /edge$/ })).toBeNull()
     // The overlay still is not itself a wrapper around the figure: it is
     // an absolutely positioned sibling, so it does not appear between the
     // wrapper and the figure in the tree.
     expect(figure!.parentElement).toBe(wrapper)
   })
 
-  it("drags the image's side grip to resize widthPct, snapping near 50", async () => {
+  it("drags the image's bottom-right corner grip to resize widthPct, snapping near 50", async () => {
     // The grip's scale comes from a dedicated full-column measuring
     // overlay (`image-view.tsx`'s `columnRef`); jsdom does no layout
     // (clientWidth is 0 without a stub), so this stubs a 300px column to
@@ -215,6 +223,7 @@ describe('rich doc node views', () => {
         sectionId="nv2"
         content={doc(paragraph(text('Note')), image({ src: 'https://x/a.jpg', alt: 'A', layout: 'inline', widthPct: 40 }))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -230,7 +239,7 @@ describe('rich doc node views', () => {
       editor.commands.setNodeSelection(imagePos)
     })
 
-    const grip = screen.getByRole('slider', { name: 'Image width, right edge' })
+    const grip = screen.getByRole('slider', { name: 'Image size, bottom-right corner' })
     // scale = 300 / 100 = 3px per percentage point; a 30px drag is +10.
     fireEvent.mouseDown(grip, { clientX: 100 })
     fireEvent.mouseMove(window, { clientX: 130 })
@@ -251,6 +260,7 @@ describe('rich doc node views', () => {
         sectionId="nv10"
         content={doc(paragraph(text('Note')), image({ src: 'https://x/a.jpg', alt: 'A', layout: 'inline', widthPct: 40 }))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -281,6 +291,7 @@ describe('rich doc node views', () => {
         sectionId="nv3"
         content={doc(paragraph(text('Note')), spacer(24))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -306,6 +317,7 @@ describe('rich doc node views', () => {
         sectionId="nv7"
         content={doc(paragraph(text('Note')), spacer(24))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -339,6 +351,7 @@ describe('rich doc node views', () => {
         sectionId="nv4"
         content={doc(columns(column(0.5, paragraph(text('L'))), column(0.5, paragraph(text('R')))))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -371,6 +384,7 @@ describe('rich doc node views', () => {
         sectionId="nv11"
         content={doc(columns(column(0.47, paragraph(text('L'))), column(0.53, paragraph(text('R')))))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -399,6 +413,7 @@ describe('rich doc node views', () => {
         sectionId="nv12"
         content={doc(columns(column(0.35, paragraph(text('L'))), column(0.65, paragraph(text('R')))))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -421,12 +436,20 @@ describe('rich doc node views', () => {
     expect(ratios[1]).toBeCloseTo(2 / 3, 2)
   })
 
-  it('shows an "Empty columns" placeholder when unselected and every column holds only an empty paragraph (final review Finding 6)', async () => {
-    render(
+  /** The visible hint (`data-placeholder`, `''` folded to `null`: the CSS renders `attr()` of an empty value as nothing) on each element `selector` matches, in document order. */
+  function hintsOf(container: HTMLElement, selector: string): (string | null)[] {
+    return Array.from(container.querySelectorAll(selector)).map((el) => el.getAttribute('data-placeholder') || null)
+  }
+  /** {@link hintsOf} for every `column` cell's first block. */
+  const columnPlaceholders = (container: HTMLElement) => hintsOf(container, '[data-node="column"] > :first-child')
+
+  it('shows the "Type / to add content" hint in every empty column, caret or not (no "Empty columns" overlay)', async () => {
+    const { container } = render(
       <ContentSectionEditor
         sectionId="nv15"
-        content={doc(columns(column(0.5, paragraph()), column(0.5, paragraph())))}
+        content={doc(paragraph(text('Intro')), columns(column(0.5, paragraph()), column(0.5, paragraph())))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -434,15 +457,19 @@ describe('rich doc node views', () => {
       />,
     )
     await waitForEditor('nv15')
-    expect(screen.getByText('Empty columns')).toBeInTheDocument()
+    expect(screen.queryByText('Empty columns')).toBeNull()
+    // The caret sits at the doc start (inside "Intro"), nowhere near the
+    // row: each cell still carries its own hint.
+    expect(columnPlaceholders(container)).toEqual([CONTENT_PLACEHOLDER, CONTENT_PLACEHOLDER])
   })
 
-  it('hides the "Empty columns" placeholder once a column has content', async () => {
-    render(
+  it('drops the hint from a column once it has content, and keeps it on the still-empty one', async () => {
+    const { container } = render(
       <ContentSectionEditor
         sectionId="nv16"
         content={doc(columns(column(0.5, paragraph(text('Left'))), column(0.5, paragraph())))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -450,15 +477,16 @@ describe('rich doc node views', () => {
       />,
     )
     await waitForEditor('nv16')
-    expect(screen.queryByText('Empty columns')).toBeNull()
+    expect(columnPlaceholders(container)).toEqual([null, CONTENT_PLACEHOLDER])
   })
 
-  it('hides the "Empty columns" placeholder while the (otherwise empty) row is selected', async () => {
-    render(
+  it('keeps the hint on empty columns while the row is selected', async () => {
+    const { container } = render(
       <ContentSectionEditor
         sectionId="nv17"
         content={doc(columns(column(0.5, paragraph()), column(0.5, paragraph())))}
         branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -466,8 +494,6 @@ describe('rich doc node views', () => {
       />,
     )
     const editor = await waitForEditor('nv17')
-    expect(screen.getByText('Empty columns')).toBeInTheDocument()
-
     let columnsPos = -1
     editor.state.doc.descendants((n, pos) => {
       if (n.type.name === 'columns') columnsPos = pos
@@ -475,9 +501,53 @@ describe('rich doc node views', () => {
     act(() => {
       editor.commands.setNodeSelection(columnsPos)
     })
-    // Selecting an otherwise-empty row hides the placeholder: the
-    // selection ring is the "you're looking at this" signal instead.
-    expect(screen.queryByText('Empty columns')).toBeNull()
+    expect(columnPlaceholders(container)).toEqual([CONTENT_PLACEHOLDER, CONTENT_PLACEHOLDER])
+  })
+
+  it('lays the column cells out inside the flex row TipTap\'s contentDOM child carries (the cells were stacking under a `flex` wrapper)', async () => {
+    const { container } = render(
+      <ContentSectionEditor
+        sectionId="nv19"
+        content={doc(columns(column(0.5, paragraph(text('Left'))), column(0.5, paragraph(text('Right')))))}
+        branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
+        externalVersion={0}
+        onChange={() => {}}
+        onFocusSection={() => {}}
+        onNodeSelect={() => {}}
+      />,
+    )
+    await waitForEditor('nv19')
+    const wrapper = container.querySelector('[data-columns]')!
+    // TipTap 3 appends its own contentDOM element inside `NodeViewContent`
+    // and the `column` cells land in there, one level below the wrapper.
+    const contentDom = wrapper.querySelector(':scope > [data-node-view-content-react]')!
+    expect(contentDom).not.toBeNull()
+    expect(contentDom.querySelectorAll(':scope > [data-node="column"]')).toHaveLength(2)
+    // So the row classes have to reach that child, not sit on the wrapper.
+    expect(wrapper.className).toContain('*:flex')
+    expect(wrapper.className).toContain('@max-3xl/doc:*:flex-col')
+    expect(wrapper.className).not.toMatch(/(^|\s)flex(\s|$)/)
+  })
+
+  it('still shows the hint only on the caret\'s line at the top level (an empty line elsewhere stays blank)', async () => {
+    const { container } = render(
+      <ContentSectionEditor
+        sectionId="nv18"
+        content={doc(paragraph(), paragraph(text('Body')), paragraph())}
+        branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
+        externalVersion={0}
+        onChange={() => {}}
+        onFocusSection={() => {}}
+        onNodeSelect={() => {}}
+      />,
+    )
+    const editor = await waitForEditor('nv18')
+    act(() => {
+      editor.commands.setTextSelection(1)
+    })
+    expect(hintsOf(container, '.ProseMirror > p')).toEqual([CONTENT_PLACEHOLDER, null, null])
   })
 
   it('a mounted button view re-renders with a live branding change through context', async () => {
@@ -487,6 +557,7 @@ describe('rich doc node views', () => {
         sectionId="nv9"
         content={content}
         branding={buildPublicBranding({ business_name: 'Sam MC', brand_color: '#111827' })}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -500,6 +571,7 @@ describe('rich doc node views', () => {
         sectionId="nv9"
         content={content}
         branding={buildPublicBranding({ business_name: 'Sam MC', brand_color: '#0b5fff' })}
+        theme={SAMPLE_THEME}
         externalVersion={0}
         onChange={() => {}}
         onFocusSection={() => {}}
@@ -511,5 +583,95 @@ describe('rich doc node views', () => {
     expect(control).not.toBeNull()
     // jsdom normalises the hex colour in the `style` attribute to rgb(...): #0b5fff -> rgb(11, 95, 255).
     expect(control!.getAttribute('style')).toContain('background: rgb(11, 95, 255)')
+  })
+
+  // UX audit §3.1: with no node view a `variable` renders as an empty span
+  // (the server-safe `renderHTML` in `lib/branding/rich-text-extensions.ts`)
+  // - invisible until the id is resolved on send. `VariableView` labels it.
+  it('renders a variable node as a labelled chip, not an empty span', async () => {
+    render(
+      <ContentSectionEditor
+        sectionId="nv10"
+        content={doc(paragraph(text('Hi '), variable('couple_name')))}
+        branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
+        externalVersion={0}
+        onChange={() => {}}
+        onFocusSection={() => {}}
+        onNodeSelect={() => {}}
+      />,
+    )
+    await waitForEditor('nv10')
+    const chip = screen.getByText('Couple name')
+    expect(chip).toBeInTheDocument()
+    // The house variable chip (the email composer's mention token): mint
+    // on the control radius, never a grey pill.
+    expect(chip.className).toContain('bg-emerald-50')
+    expect(chip.className).toContain('rounded-control')
+    expect(chip.className).not.toContain('rounded-pill')
+  })
+
+  it('selects a variable node on click and reports it through onNodeSelect', async () => {
+    const onNodeSelect = vi.fn()
+    render(
+      <ContentSectionEditor
+        sectionId="nv11"
+        content={doc(paragraph(variable('couple_name')))}
+        branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
+        externalVersion={0}
+        onChange={() => {}}
+        onFocusSection={() => {}}
+        onNodeSelect={onNodeSelect}
+      />,
+    )
+    await waitForEditor('nv11')
+    fireEvent.click(screen.getByText('Couple name'))
+    expect(onNodeSelect).toHaveBeenCalledWith(expect.objectContaining({ nodeType: 'variable' }))
+  })
+
+  it('clicking a chip opens its popover; the fallback commits on blur and shows on the chip', async () => {
+    render(
+      <ContentSectionEditor
+        sectionId="nv12"
+        content={doc(paragraph(variable('venue')))}
+        branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
+        externalVersion={0}
+        onChange={() => {}}
+        onFocusSection={() => {}}
+        onNodeSelect={() => {}}
+      />,
+    )
+    await waitForEditor('nv12')
+    fireEvent.click(screen.getByText('Venue'))
+    const input = await screen.findByLabelText('If empty, show')
+    fireEvent.change(input, { target: { value: 'your venue' } })
+    // Buffered while typing: nothing lands in the doc per keystroke.
+    expect(JSON.stringify(getEditor('nv12')!.getJSON())).not.toContain('your venue')
+    fireEvent.blur(input)
+    expect(getEditor('nv12')!.getJSON()).toMatchObject(doc(paragraph(variable('venue', 'your venue'))))
+    // The fallback reads on the canvas too, not only inside the popover.
+    expect(screen.getByText('your venue', { selector: '[data-variable] *' })).toBeInTheDocument()
+  })
+
+  it('the chip popover removes the variable', async () => {
+    render(
+      <ContentSectionEditor
+        sectionId="nv13"
+        content={doc(paragraph(text('Hi '), variable('couple_name')))}
+        branding={SAMPLE_BRANDING}
+        theme={SAMPLE_THEME}
+        externalVersion={0}
+        onChange={() => {}}
+        onFocusSection={() => {}}
+        onNodeSelect={() => {}}
+      />,
+    )
+    await waitForEditor('nv13')
+    fireEvent.click(screen.getByText('Couple name'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove variable' }))
+    expect(getEditor('nv13')!.getJSON()).toMatchObject(doc(paragraph(text('Hi '))))
+    expect(JSON.stringify(getEditor('nv13')!.getJSON())).not.toContain('variable')
   })
 })

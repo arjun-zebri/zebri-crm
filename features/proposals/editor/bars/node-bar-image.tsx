@@ -60,7 +60,7 @@ export function NodeBarImage({ node, editor }: NodeBarImageProps) {
       />
       <NumberStepper value={attrs.widthPct} min={20} max={100} step={5} suffix="%" ariaLabel="Width" onChange={(widthPct) => set({ widthPct })} />
       <Popover.Root>
-        <Tooltip label={missingAlt ? ALT_WARNING : 'Caption & alt text'}>
+        <Tooltip side="top" label={missingAlt ? ALT_WARNING : 'Caption & alt text'}>
           <Popover.Trigger asChild>
             <span data-testid="image-text-control" className="relative inline-flex shrink-0">
               <button
@@ -89,7 +89,7 @@ export function NodeBarImage({ node, editor }: NodeBarImageProps) {
         </Popover.Portal>
       </Popover.Root>
       <NodeBarUpload kind="image" accept={MEDIA_LIMITS.image.types.join(',')} label="Replace" onUploaded={(src) => set({ src })} />
-      <Tooltip label="Remove">
+      <Tooltip side="top" label="Remove">
         <Button variant="ghost" iconOnly aria-label="Remove" onClick={() => removeNode(editor, node.pos)}>
           <Trash2 size={14} strokeWidth={1.5} />
         </Button>

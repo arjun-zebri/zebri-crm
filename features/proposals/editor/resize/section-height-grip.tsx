@@ -15,7 +15,7 @@
  */
 import { ResizeGrip } from '@/components/editor'
 
-import type { SectionStyle } from '../../model/layout'
+import type { SectionPadding } from '../../model/layout'
 import type { LayoutAction } from '../state'
 
 import { FULL_HEIGHT_THRESHOLD_PX, PADDING_SNAPS, paddingToPx, pxToPadding } from './section-resize-math'
@@ -23,7 +23,7 @@ import { FULL_HEIGHT_THRESHOLD_PX, PADDING_SNAPS, paddingToPx, pxToPadding } fro
 /** Props for {@link SectionHeightGrip}. */
 export interface SectionHeightGripProps {
   sectionId: string
-  padding: SectionStyle['padding']
+  padding: SectionPadding
   /** The section wrapper's live rendered height in px, 0 before `SectionResizeOverlay` has measured it. */
   heightPx: number
   dispatch: (action: LayoutAction, opts?: { commit?: boolean }) => void

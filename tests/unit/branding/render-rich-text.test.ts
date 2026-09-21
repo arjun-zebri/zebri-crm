@@ -35,6 +35,15 @@ describe('renderRichText', () => {
     expect(out).not.toContain('{{')
   })
 
+  it('shows a chip fallback when its variable is empty (the full JSON to HTML to resolved path)', () => {
+    const json = { type: 'doc', content: [{ type: 'paragraph', content: [
+      { type: 'text', text: 'Hi ' },
+      { type: 'variable', attrs: { id: 'couple_name', fallback: 'you & yours' } },
+    ] }] }
+    expect(renderRichText(json, {})).toBe('<p>Hi you &amp; yours</p>')
+    expect(renderRichText(json, { couple_name: 'Ada' })).toBe('<p>Hi Ada</p>')
+  })
+
   it('renders a validated colour mark and strips nothing legitimate', () => {
     const d = doc([para([text('x', [{ type: 'textStyle', attrs: { color: '#C0392B' } }])])])
     expect(renderRichText(d)).toContain('color:#C0392B')
@@ -74,5 +83,24 @@ describe('renderRichTextInline', () => {
   it('returns empty string for empty content', () => {
     expect(renderRichTextInline(null)).toBe('')
     expect(renderRichTextInline(doc([para([])]))).toBe('')
+  })
+})
+
+describe('blank lines and fluid sizes (parity with the editor and the proposal renderer)', () => {
+  it('an empty paragraph and a paragraph ending in a hard break each keep their blank line', () => {
+    const d = doc([para([text('a')]), para([]), para([text('b'), { type: 'hardBreak' }])])
+    expect(renderRichText(d)).toBe('<p>a</p><p><br></p><p>b<br><br></p>')
+  })
+
+  it('inline: paragraph boundaries stay single breaks (one blank line per empty paragraph), and a trailing break holds its line', () => {
+    expect(renderRichTextInline(doc([para([text('a')]), para([]), para([text('b')])]))).toBe('a<br><br>b')
+    expect(renderRichTextInline(doc([para([text('a'), { type: 'hardBreak' }])]))).toBe('a<br><br>')
+  })
+
+  it('every font size renders as a container clamp and survives the sanitiser: a headline scales steeply, a body-range size only a little', () => {
+    const big = doc([para([text('Big', [{ type: 'textStyle', attrs: { fontSize: '46px' } }])])])
+    expect(renderRichText(big)).toBe('<p><span style="font-size:clamp(32px, 8.21cqw, 46px)">Big</span></p>')
+    const small = doc([para([text('Small', [{ type: 'textStyle', attrs: { fontSize: '16px' } }])])])
+    expect(renderRichText(small)).toBe('<p><span style="font-size:clamp(14px, 2.86cqw, 16px)">Small</span></p>')
   })
 })

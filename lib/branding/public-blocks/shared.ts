@@ -2,6 +2,7 @@
 // lives in its own file; this is the common surface they all import.
 
 import type { JSONContent } from '@tiptap/core'
+import type { CSSProperties } from 'react'
 
 // Note: this is a type-only import of `PublicProposalOption` from
 // `lib/proposals/public-types`, and that module imports `PublicDocData` (below)
@@ -15,8 +16,10 @@ import type { PublicBranding } from '../public-surface'
 
 export const HEADER_HEIGHTS = { sm: 80, md: 128, lg: 192 } as const
 
-export function fmt(n: number): string {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
+export function fmt(n: number, decimals: 0 | 2 = 2): string {
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency', currency: 'AUD', minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+  }).format(n)
 }
 
 /**
@@ -35,6 +38,21 @@ export function fmtDate(dateStr: string): string {
 
 export function pad(branding: PublicBranding) {
   return DENSITY_PADDING[branding.density]
+}
+
+/**
+ * A resolved text style whose alignment follows its container instead of
+ * the type role default. `resolveTextStyle` always pins an inline
+ * `text-align` (the role default is `left`), which is right for a block's
+ * own headline styles - a proposal section's alignment reaches those
+ * through the block's `*Style` fields - but wrong for item text that has
+ * no style field of its own (an FAQ question/answer, a testimonial
+ * quote): pinned `left`, it ignored the section's alignment on the sent
+ * page while the editor's inline fields for the same text inherited it
+ * and moved (live bug, 2026-09-19).
+ */
+export function inheritAlign(css: CSSProperties): CSSProperties {
+  return { ...css, textAlign: 'inherit' }
 }
 
 /**

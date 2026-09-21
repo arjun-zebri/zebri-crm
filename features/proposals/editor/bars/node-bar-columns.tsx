@@ -44,7 +44,7 @@ export function NodeBarColumns({ node, editor }: NodeBarColumnsProps) {
           { value: '3', label: '3' },
         ]}
       />
-      <Tooltip label="Reset ratio">
+      <Tooltip side="top" label="Reset ratio">
         <Button variant="ghost" iconOnly aria-label="Reset ratio" onClick={() => editor.commands.resetColumnRatios(node.pos)}>
           <RotateCcw size={14} strokeWidth={1.5} />
         </Button>

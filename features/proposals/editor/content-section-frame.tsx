@@ -12,6 +12,7 @@
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
 import type { Section } from '../model/layout'
+import type { ProposalTheme } from '../model/theme'
 import { SectionBackdrop } from '../render/section-backdrop'
 import { sectionCss } from '../render/section-style'
 
@@ -23,16 +24,19 @@ export interface ContentSectionFrameProps {
   section: Section
   index: number
   branding: PublicBranding
+  /** The layout's canvas theme (`model/theme.ts`): default padding, step flow, and the text roles. */
+  theme: ProposalTheme
   /** `LayoutEditorState.externalVersion` (`./state.ts`), passed straight through to `ContentSectionEditor` - see its module doc for what it gates. */
   externalVersion: number
   dispatch: (action: LayoutAction, opts?: { commit?: boolean }) => void
 }
 
 /** The section's own background/padding/column frame around its live `ContentSectionEditor`, mirroring `SectionView`'s `mode: 'edit'` chrome exactly. */
-export function ContentSectionFrame({ section, index, branding, externalVersion, dispatch }: ContentSectionFrameProps) {
-  const { section: frameStyle, column, columnClass } = sectionCss(section.style, 'edit')
+export function ContentSectionFrame({ section, index, branding, theme, externalVersion, dispatch }: ContentSectionFrameProps) {
+  const { section: frameStyle, column, columnClass, justifyClass } = sectionCss(section.style, 'edit', theme)
   return (
-    <section className="relative flex w-full overflow-hidden" style={frameStyle}>
+    // `grow` mirrors `render/section.tsx`: in step flow a `full` section fills its page.
+    <section className={`relative flex w-full overflow-hidden ${theme.flow === 'step' && section.style.height === 'full' ? 'grow' : ''}`} style={frameStyle}>
       <SectionBackdrop background={section.style.background} index={index} mode="edit" />
       {/* `contentWidth`/`padding` stay whatever the layout stores (see
           `column`/`columnClass` above): switching device never mutates the
@@ -44,12 +48,13 @@ export function ContentSectionFrame({ section, index, branding, externalVersion,
           `contentWidth` sets on `column`, because Tailwind's `!` prefix
           emits `!important` and an `!important` class always outranks a
           plain inline style. */}
-      <div data-content-column className={`relative mx-auto flex w-full flex-col justify-center px-4 @sm/doc:px-8 ${columnClass} [[data-canvas=mobile]_&]:!max-w-full`} style={column}>
+      <div data-content-column data-align={section.style.align} className={`relative mx-auto flex w-full flex-col ${justifyClass} ${columnClass} [[data-canvas=mobile]_&]:!max-w-full`} style={column}>
         <ContentSectionEditor
           sectionId={section.id}
           content={section.content ?? { type: 'doc', content: [] }}
           externalVersion={externalVersion}
           branding={branding}
+          theme={theme}
           textColor={section.style.textColor}
           align={section.style.align}
           onChange={(id, content) => dispatch({ type: 'setContent', id, content })}

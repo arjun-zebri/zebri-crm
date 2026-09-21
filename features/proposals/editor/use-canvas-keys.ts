@@ -48,6 +48,8 @@ function hasContent(node: DocNode): boolean {
  * sections are never empty - they always carry their kind's data.
  */
 export function isSectionEmpty(section: Section): boolean {
+  // A page break holds nothing, so deleting one never needs confirming.
+  if (section.kind === 'pageBreak') return true
   if (section.kind !== 'content') return false
   return !section.content || !hasContent(section.content)
 }

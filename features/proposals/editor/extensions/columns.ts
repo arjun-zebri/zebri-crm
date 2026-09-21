@@ -36,7 +36,7 @@ export const ColumnExtension = Node.create({
     return {
       // `style`/`class` mirror `render/rich-doc-nodes.tsx`'s `ColumnsFrame`
       // (the public renderer's per-column `flex` rule and its
-      // `min-w-0 max-md:!flex-auto` classes): the editor's own
+      // `min-w-0 @max-3xl/doc:!flex-auto` classes): the editor's own
       // contentEditable DOM has no React tree to apply those from, so
       // they are carried as plain attributes here instead, keeping the
       // editable columns visually proportional to their `ratio` (and not
@@ -48,7 +48,7 @@ export const ColumnExtension = Node.create({
         renderHTML: (attrs: ColumnNodeAttrs) => ({
           'data-ratio': attrs.ratio,
           style: `flex: ${attrs.ratio} 1 0%`,
-          class: 'min-w-0 max-md:!flex-auto',
+          class: 'min-w-0 @max-3xl/doc:!flex-auto',
         }),
       },
     }
