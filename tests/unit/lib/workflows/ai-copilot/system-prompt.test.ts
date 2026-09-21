@@ -49,6 +49,11 @@ describe('buildCopilotSystemPrompt', () => {
     expect(prompt).toMatch(/moves? the date/i)
   })
 
+  it('teaches the model minutes and sendTime', () => {
+    expect(prompt).toContain('"minutes"')
+    expect(prompt).toContain('sendTime')
+  })
+
   it('offers the review gate on sends', () => {
     expect(prompt).toContain('requiresApproval')
   })

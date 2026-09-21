@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { assertAdmin } from "@/lib/admin/assert-admin";
 import { recordAdminAction } from "@/lib/admin/audit";
 import { sendAlert } from "@/lib/alerts";
 import {
   accountType,
-  isAdmin,
   stripeCustomerId,
   stripeSubscriptionId,
   subscriptionStatus,
@@ -26,19 +26,6 @@ function createAdminClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
-}
-
-async function assertAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  // Read via the entitlements helper so an attacker can't grant
-  // themselves admin by writing `user_metadata.account_type` (§7.4).
-  if (!user || !isAdmin(user)) {
-    throw new Error("Unauthorized");
-  }
-  return user;
 }
 
 export async function listUsers() {

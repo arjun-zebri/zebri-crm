@@ -244,26 +244,60 @@ or 2 above.
 
 ---
 
-## Cron Routes (Vercel Crons)
+## Scheduled jobs (pg_cron)
 
-Scheduled jobs run via `vercel.json` cron configuration. Each route is guarded by `isCronAuthorized(request)` (constant-time comparison of `Authorization: Bearer CRON_SECRET`).
+Scheduling lives in Postgres, not Vercel. `supabase/migrations/20261001000000_pg_cron_scheduler.sql`
+registers one pg_cron job per route; each job runs `public.cron_call('<path>')`, which POSTs to
+`<app_base_url><path>` through pg_net with `Authorization: Bearer <cron_secret>`. The routes and
+`isCronAuthorized` are unchanged from the Vercel era. Vercel Hobby caps its own scheduler at one
+run per day; an incoming request is not capped, which is why the tick can run every 15 minutes.
 
-| Route | Schedule | Purpose | Auth |
+| Job | Route | Schedule (UTC) | Purpose |
 |---|---|---|---|
-| `/api/cron/expire-contracts` | `0 22 * * *` (10 PM UTC) | Flip contract status from sent to expired if `expires_at < now()`, emit automation events | CRON_SECRET |
-| `/api/email/send-contract-reminders` | `15 22 * * *` (10:15 PM UTC) | Fetch contracts due for reminder (5 days before expiry), send reminders | CRON_SECRET |
-| `/api/cron/prune-stripe-events` | `0 3 * * *` (3 AM UTC) | Delete archived Stripe webhook events older than 90 days to keep ledger size bounded | CRON_SECRET |
-| `/api/cron/booking-reminders` | `22 30 * * *` (10:30 PM UTC, Scheduler Phase D) | Fetch confirmed bookings due for reminder (0 36 hours before starts_at, reminder not yet sent), send reminder emails, mark `reminder_sent_at` | CRON_SECRET |
+| `zebri:automations-tick` | `/api/cron/automations-tick` | `*/15 * * * *` | Time emitters, dispatch, advance due steps, heartbeat |
+| `zebri:expire-contracts` | `/api/cron/expire-contracts` | `0 22 * * *` | Sent contracts past `expires_at` become expired |
+| `zebri:send-contract-reminders` | `/api/email/send-contract-reminders` | `15 22 * * *` | Reminder emails 5 days before contract expiry |
+| `zebri:booking-reminders` | `/api/cron/booking-reminders` | `30 22 * * *` | Scheduler booking reminders |
+| `zebri:prune-stripe-events` | `/api/cron/prune-stripe-events` | `0 3 * * *` | Archived Stripe events older than 90 days |
+| `zebri:workflow-digest` | `/api/cron/workflow-digest` | `0 * * * *` | Morning digest at each MC's local 7am; tick heartbeat check |
+| `zebri:cron-history-prune` | (SQL only) | `0 4 * * *` | Trims `cron.job_run_details` to 14 days |
 
-**Setup:**
-1. Add `CRON_SECRET` to `.env.production` in Vercel dashboard (project Settings → Environment Variables → Production). Generate a secure random string; same value across all cron routes.
-2. The schedule format is standard cron (5 fields: minute hour dayofmonth month dayofweek, UTC).
-3. Each cron route must call `isCronAuthorized(request)` at the start and respond with `401` if the bearer token is invalid.
+**Secrets.** `app_base_url` and `cron_secret` live in Supabase Vault. They are never typed into the
+dashboard: `/admin` has a "Scheduler" card whose **Sync scheduler** button calls
+`set_scheduler_secrets()` with the app's own `NEXT_PUBLIC_APP_URL` and `CRON_SECRET`. Until they are
+set, every job is a silent no-op and `supabase db push` prints
+`WARNING: Scheduler secrets are not set on this project`.
 
-**Testing locally:**
-Cron routes are not triggered by `npm run dev`. To test: manually send a request with the `Authorization: Bearer <CRON_SECRET>` header:
+**First deploy on a project (dev, staging, prod):**
+1. Make sure `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` are set in that Vercel environment.
+2. Vercel Deployment Protection (Vercel Authentication or a password) must be **off** for that
+   deployment. `pg_net`'s outbound request carries the cron secret, not Vercel's own cron bypass
+   header, so a protected deployment answers every job with Vercel's 401 HTML page while
+   `cron.job_run_details` still reads `succeeded` (`cron_call` only sees that pg_net enqueued the
+   request, not what it got back). If protection is ever required on a project, `cron_call` needs
+   to send `x-vercel-protection-bypass` from a Vault secret first; that is not implemented.
+3. Let CI push the migration.
+4. Open `/admin` on that deployment and press **Sync scheduler**. The card shows `Configured`,
+   the base URL, every job with its last run, and the tick heartbeat.
+
+**Health.** The tick stamps `system_heartbeats.automations-tick` after every run. The hourly digest
+sends a `cron_job_missed` Slack alert when that stamp is older than 45 minutes. The Admin card shows
+the same data, including `detail.truncated` from that heartbeat as "last tick truncated" (see
+`.claude/docs/workflows.md` "The cron sweep").
+
+**What the job list's outcome actually means.** Each job's "last outcome" on the Admin card is
+pg_cron's own result of `select public.cron_call(...)` - whether the request was handed to pg_net,
+not whether the route it called returned 200 (`cron_call` never raises). The HTTP outcome is
+observable today only for the automations tick, through its heartbeat; the five daily jobs
+(`expire-contracts`, `send-contract-reminders`, `booking-reminders`, `prune-stripe-events`,
+`workflow-digest`) have no HTTP signal at all yet. Follow-up: record `cron_call`'s pg_net request id
+per job and join `net._http_response.status_code` into `scheduler_status`.
+
+**Local.** `supabase start` has pg_cron and pg_net. To drive a dev server from local Postgres set
+`NEXT_PUBLIC_APP_URL=http://host.docker.internal:3000` on that server and press Sync on its `/admin`;
+otherwise the jobs no-op. A route can still be hit by hand:
 ```bash
-curl -H "Authorization: Bearer your-secret" http://localhost:3000/api/cron/booking-reminders
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/automations-tick
 ```
 
 ## Why no Sentry release tagging / source-map upload

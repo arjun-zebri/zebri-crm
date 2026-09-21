@@ -37,7 +37,8 @@ export type AdminActionType =
   | 'refund_last_invoice'
   | 'update_user_profile'
   | 'send_password_reset'
-  | 'delete_user';
+  | 'delete_user'
+  | 'sync_scheduler';
 
 export interface RecordAdminActionInput {
   /** The admin who performed the action — required. */

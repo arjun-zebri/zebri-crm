@@ -319,6 +319,10 @@ One file per feature area. Do not create test files for sub-features  -  add to 
 | Wizard "Next" button | `button:has-text("Next")` (context-specific inside modal) |
 | Wizard "Done" button | `button:has-text("Done")` (step 8 close action) |
 | Settings phone input | `input[placeholder="Phone"]` (placeholder selector; label association pending Settings hardening) |
+| Step timing "Send at" | `getByRole('combobox', { name: 'Send at' })` (Radix Select trigger) |
+| Step timing "How many" | `getByRole('spinbutton', { name: 'How many' })` (`step=15` when the unit is minutes) |
+| Admin "Sync scheduler" | `getByRole('button', { name: 'Sync scheduler' })` |
+| Admin "Refresh" (scheduler card) | `getByRole('button', { name: 'Refresh' })` (icon-only, on `/admin`) |
 
 ## Helpers
 
@@ -334,6 +338,7 @@ One file per feature area. Do not create test files for sub-features  -  add to 
 | `deleteVendor(page, name)` | Opens profile, Edit modal, two-click delete |
 | `search(page, term)` | Types into `input[placeholder="Search..."]` |
 | `uniqueName(prefix)` | Returns `"prefix + timestamp"` for test isolation |
+| `runSql(sql)` (`tests/integration/helpers/sql.ts`) | Runs raw SQL against the **local** Supabase database as `postgres`, via `docker exec` into the `supabase_db_zebri-crm` container. For integration tests that need schemas PostgREST never exposes (`vault`, `cron`, `net`): scheduler state inspection and cleanup. Everything else keeps using the PostgREST clients in `./supabase`. |
 
 ---
 

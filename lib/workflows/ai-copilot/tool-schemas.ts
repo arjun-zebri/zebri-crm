@@ -33,6 +33,7 @@ import {
   isTriggerLaunchVisible,
 } from '@/lib/automations/launch-catalogue'
 import { getTriggerSpec } from '@/lib/automations/triggers'
+import { parseStepTiming } from '@/lib/workflows/timing-schema'
 import type { ActionType, TriggerType } from '@/types/automations'
 
 /** Result of validating a model-authored config. */
@@ -158,25 +159,6 @@ export function validateStepConfig(type: string, config: unknown): ValidationRes
   return validateActionConfig(type as ActionType, config)
 }
 
-const timingSchema = z.discriminatedUnion('mode', [
-  z.object({
-    mode: z.literal('wedding_relative'),
-    direction: z.enum(['before', 'after']),
-    amount: z.number().int().min(0).max(999),
-    unit: z.enum(['days', 'weeks', 'months']),
-  }),
-  z.object({
-    mode: z.literal('apply_relative'),
-    amount: z.number().int().min(0).max(999),
-    unit: z.enum(['days', 'weeks', 'months']),
-  }),
-  z.object({
-    mode: z.literal('after_previous'),
-    delayAmount: z.number().int().min(0).max(999),
-    unit: z.enum(['hours', 'days']),
-  }),
-])
-
 /**
  * Validate a model-authored step timing.
  *
@@ -184,11 +166,14 @@ const timingSchema = z.discriminatedUnion('mode', [
  * matters: a timing the engine cannot parse falls back to the default,
  * so "two weeks before the wedding" would silently become "immediately"
  * and nobody would find out until the email arrived six months early.
+ *
+ * Delegates to the shared {@link parseStepTiming} (the same schema the
+ * builder's save path and the engine use) rather than keeping a second,
+ * looser copy: that duplication is exactly what let the copilot reject
+ * `minutes` and `sendTime` long after the engine learned them.
  */
 export function validateTiming(timing: unknown): ValidationResult {
-  const parsed = timingSchema.safeParse(timing)
-  if (!parsed.success) {
-    return { ok: false, error: `Invalid timing: ${zodIssues(parsed.error)}` }
-  }
-  return { ok: true, config: parsed.data as unknown as Record<string, unknown> }
+  const parsed = parseStepTiming(timing)
+  if (!parsed.ok) return { ok: false, error: `Invalid timing: ${parsed.error}` }
+  return { ok: true, config: parsed.timing as unknown as Record<string, unknown> }
 }

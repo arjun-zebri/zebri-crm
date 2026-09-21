@@ -28,21 +28,15 @@ const DEFAULT_TIMEZONE = 'Australia/Sydney';
 export const DIGEST_LOCAL_HOUR = 7;
 
 /**
- * The local hours a digest may actually go out in.
+ * The local hours in which the digest sends.
  *
- * A window rather than the single hour above, because the cron that
- * drives this can only run **once a day** on Vercel's Hobby plan, and
- * that one run has to cover both halves of the Australian year:
- * `0 21 * * *` is 8am in Sydney under AEDT and 7am under AEST. Hobby
- * also gives no timing precision -- a job set for 21:00 fires anywhere
- * up to 21:59 -- and the window absorbs that too.
- *
- * The consequence, stated plainly: on Hobby only an MC whose zone puts
- * them inside this window gets a digest at all. Moving to Pro restores
- * the hourly tick, and with it a true 7am for every timezone; widening
- * this window instead would just mail somebody at 4am.
+ * The job is hourly (pg_cron `zebri:workflow-digest`), so every timezone
+ * gets its own 7am. This was `[7, 8]` while Vercel Hobby capped the job
+ * at one daily run and the window had to cover both halves of the
+ * Australian daylight-saving year. One send per MC per day is guaranteed
+ * by `daily_digest_last_sent_on`, not by this list.
  */
-export const DIGEST_LOCAL_HOURS: readonly number[] = [7, 8];
+export const DIGEST_LOCAL_HOURS: readonly number[] = [DIGEST_LOCAL_HOUR];
 
 /** One user's digest, ready to render. */
 export interface DigestPayload {
@@ -73,8 +67,8 @@ export function digestSize(payload: DigestPayload): number {
  * converting a fixed UTC time is what keeps this correct across
  * daylight saving, where a fixed UTC send drifts an hour twice a year.
  *
- * See {@link DIGEST_LOCAL_HOURS} for why this is a window and what it
- * costs on the Hobby plan. One send per MC per day is guaranteed by
+ * See {@link DIGEST_LOCAL_HOURS} for why this is a list rather than a
+ * single number. One send per MC per day is guaranteed by
  * `daily_digest_last_sent_on` holding the local date, not by this.
  */
 export function isDigestHour(now: Date, timezone: string): boolean {

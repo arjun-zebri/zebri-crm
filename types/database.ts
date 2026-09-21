@@ -2799,6 +2799,24 @@ export type Database = {
         }
         Relationships: []
       }
+      system_heartbeats: {
+        Row: {
+          detail: Json | null
+          last_run_at: string
+          name: string
+        }
+        Insert: {
+          detail?: Json | null
+          last_run_at?: string
+          name: string
+        }
+        Update: {
+          detail?: Json | null
+          last_run_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
       task_groups: {
         Row: {
           color: string
@@ -3834,6 +3852,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      cron_call: { Args: { p_path: string }; Returns: number }
       decline_contract: {
         Args: {
           p_actor_ip?: string
@@ -4067,12 +4086,17 @@ export type Database = {
         Args: { p_responses: Json; token: string }
         Returns: Json
       }
+      scheduler_status: { Args: never; Returns: Json }
       seed_default_contract_template: {
         Args: { p_user_id: string }
         Returns: undefined
       }
       seed_default_payment_schedule: {
         Args: { p_user_id: string }
+        Returns: undefined
+      }
+      set_scheduler_secrets: {
+        Args: { p_base_url: string; p_secret: string }
         Returns: undefined
       }
       sign_contract: {
