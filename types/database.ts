@@ -4855,7 +4855,11 @@ export type Database = {
         Returns: undefined
       }
       set_scheduler_secrets: {
-        Args: { p_base_url: string; p_secret: string }
+        Args: {
+          p_base_url: string
+          p_secret: string
+          p_slack_webhook_url?: string
+        }
         Returns: undefined
       }
       sign_contract: {
@@ -4893,6 +4897,7 @@ export type Database = {
         Args: { p_responses: Json; token: string }
         Returns: Json
       }
+      tick_watchdog: { Args: never; Returns: number }
       toggle_meeting_checklist_item: {
         Args: { p_done: boolean; p_item_id: string; p_meeting_id: string }
         Returns: Json

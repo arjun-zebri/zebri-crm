@@ -88,7 +88,8 @@ default emoji and routing.
 | `resend_bounced` | warn | Bounce reported | `/api/resend/webhook` |
 | `cron_job_failed` | error | Cron handler threw | `/api/cron/*` |
 | — (no alert) | — | The morning digest deliberately alerts on nothing. A failed send leaves `daily_digest_last_sent_on` unstamped so the next hourly run retries it, and the route returns `{considered, sent, skippedEmpty, failed}` for the cron log. A per-MC digest failure is not an incident | `/api/cron/workflow-digest` |
-| `cron_job_missed` | warn | Expected run did not arrive | `workflow-digest` route, when the tick heartbeat is older than 45 min (R1) |
+| `cron_job_missed` | warn | Expected run did not arrive | `workflow-digest` route, when the tick heartbeat is older than 5 min (`TICK_STALE_MS`) |
+| — (Postgres, not `sendAlert()`) | warn | **Tick watchdog.** `tick_watchdog()` (pg_cron `zebri:tick-watchdog`, every 5 min) posts to the Slack webhook through pg_net when the tick heartbeat is missing or older than 5 min, once an hour while it stays down, and once more when it recovers. Runs without the app, so it is the alert that fires when the deployment itself is unreachable. Silent until `slack_webhook_url` is in Vault (Admin "Sync scheduler" with `SLACK_WEBHOOK_URL` set) | `supabase/migrations/20261001200000_tick_every_minute.sql` |
 | `auth_anomaly` | warn | Failed-login spike, token reuse, … | middleware (Phase 0.8) |
 | `auth_rate_limit_hit` | warn | Per-action rate limit hit (login/signup/reset/update/change password) | `app/(auth)/actions.ts` + `app/(dashboard)/settings/account/actions.ts` (Phase 1) |
 | `rls_denied_spike` | warn | Cluster of RLS denials in a window | logs aggregator (Phase 0.8) |

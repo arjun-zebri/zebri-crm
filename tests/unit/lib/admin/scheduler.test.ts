@@ -11,11 +11,12 @@ describe('parseSchedulerStatus', () => {
   it('reads the RPC shape and defaults anything missing', () => {
     const status = parseSchedulerStatus({
       configured: true,
+      slack_configured: true,
       base_url: 'https://app.zebri.com.au',
       jobs: [
         {
           name: 'zebri:automations-tick',
-          schedule: '*/15 * * * *',
+          schedule: '* * * * *',
           active: true,
           last_status: 'succeeded',
           last_start: '2026-09-20T09:45:00Z',
@@ -27,6 +28,7 @@ describe('parseSchedulerStatus', () => {
       },
     })
     expect(status.configured).toBe(true)
+    expect(status.slackConfigured).toBe(true)
     expect(status.jobs[0]?.lastStatus).toBe('succeeded')
     expect(status.tickHeartbeat).toBe('2026-09-20T09:45:03Z')
     expect(status.tickTruncated).toBe(true)
@@ -46,6 +48,7 @@ describe('parseSchedulerStatus', () => {
   it('treats null and garbage as unconfigured with no jobs', () => {
     expect(parseSchedulerStatus(null)).toEqual({
       configured: false,
+      slackConfigured: false,
       baseUrl: null,
       jobs: [],
       tickHeartbeat: null,

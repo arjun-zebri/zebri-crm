@@ -37,6 +37,17 @@ import { recomputeDueDates } from './timing';
 /** How many steps one tick will execute before yielding. */
 const STEP_BUDGET_PER_TICK = 200;
 
+/**
+ * How many follow-on steps one instance may run in the same pass after a
+ * step completes. "Wait 15 minutes, then send" is two steps; without the
+ * chain the send ran on the pass after the wait completed, so a
+ * 15-minute wait was really 15 minutes plus a tick (and the tick was 15
+ * minutes at the time). The cap keeps a
+ * template of a hundred zero-delay steps from pinning one instance to
+ * the whole tick.
+ */
+const DEFAULT_MAX_CHAIN_DEPTH = 25;
+
 /** Fallback when the MC has never saved a timezone. */
 const DEFAULT_TIMEZONE = 'Australia/Sydney';
 
@@ -84,10 +95,13 @@ export function isExecutable(step: WorkflowStepRow, now: Date): boolean {
  * @param opts.deadline - epoch ms after which no further step starts.
  *   Steps not reached keep `due_at` in the past and are picked up next
  *   tick, oldest first, because the query already orders by `due_at`.
+ * @param opts.maxChainDepth - how many steps an instance may chain
+ *   through after one completes in this pass (default
+ *   {@link DEFAULT_MAX_CHAIN_DEPTH}). Zero restores one step per pass.
  */
 export async function advanceDueSteps(
   supabase: SupabaseClient<Database>,
-  opts: { userId?: string; deadline?: number } = {},
+  opts: { userId?: string; deadline?: number; maxChainDepth?: number } = {},
 ): Promise<ExecutorResult> {
   const now = new Date();
 
@@ -139,18 +153,17 @@ export async function advanceDueSteps(
   let errors = 0;
   let truncated = false;
   const touchedInstances = new Set<string>();
+  // Steps this pass has already run, or that a chain reached before the
+  // outer loop did. A chained follower can also be in `candidates` (two
+  // zero-offset steps due together), and must not run twice.
+  const handled = new Set<string>();
+  const maxChainDepth = opts.maxChainDepth ?? DEFAULT_MAX_CHAIN_DEPTH;
 
-  for (const step of candidates) {
-    if (opts.deadline !== undefined && Date.now() >= opts.deadline) {
-      truncated = true;
-      break;
-    }
-    const instance = await loadInstance(supabase, step.instance_id);
-    // A cancelled or completed instance keeps its steps but must not run
-    // them. Guarding here rather than in the query keeps the hot index
-    // simple.
-    if (!instance || instance.status !== 'active') continue;
+  const pastDeadline = () => opts.deadline !== undefined && Date.now() >= opts.deadline;
 
+  /** Run one step, counting the outcome. */
+  async function run(instance: WorkflowInstanceRow, step: WorkflowStepRow): Promise<void> {
+    handled.add(step.id);
     touchedInstances.add(instance.id);
     try {
       await runOneStep(supabase, instance, step);
@@ -167,6 +180,43 @@ export async function advanceDueSteps(
     }
   }
 
+  for (const step of candidates) {
+    if (handled.has(step.id)) continue;
+    if (pastDeadline()) {
+      truncated = true;
+      break;
+    }
+    const instance = await loadInstance(supabase, step.instance_id);
+    // A cancelled or completed instance keeps its steps but must not run
+    // them. Guarding here rather than in the query keeps the hot index
+    // simple.
+    if (!instance || instance.status !== 'active') continue;
+
+    await run(instance, step);
+
+    // Chain: a completed step's recompute may have stamped the next one
+    // due right now (an "after previous, 0 delay" follower, or the send
+    // behind a wait). Run it in this pass rather than the next.
+    for (let depth = 0; depth < maxChainDepth; depth += 1) {
+      if (pastDeadline()) {
+        truncated = true;
+        break;
+      }
+      const next = await nextDueStep(supabase, instance.id, handled);
+      if (!next) break;
+      // Reload rather than reuse: the step just run merged its output
+      // into `instance.context` in the database, and a follower reads
+      // that context (`update_task` finds the to-do `create_task` made
+      // through it). The in-memory row is from before that write, and
+      // handing it on would both hide the output and overwrite it. The
+      // step may also have ended the instance.
+      const fresh = await loadInstance(supabase, instance.id);
+      if (!fresh || fresh.status !== 'active') break;
+      await run(fresh, next);
+    }
+    if (truncated) break;
+  }
+
   let instancesCompleted = 0;
   for (const instanceId of touchedInstances) {
     if (await completeInstanceIfDone(supabase, instanceId)) instancesCompleted += 1;
@@ -176,6 +226,34 @@ export async function advanceDueSteps(
 }
 
 /** Execute one step and write its outcome. */
+/**
+ * The earliest automated step of one instance that is due now and has
+ * not run in this pass, or null. Read fresh: the previous step's
+ * recompute may have just stamped it.
+ */
+async function nextDueStep(
+  supabase: SupabaseClient<Database>,
+  instanceId: string,
+  handled: Set<string>,
+): Promise<WorkflowStepRow | null> {
+  const now = new Date();
+  const { data } = await supabase
+    .from('workflow_steps')
+    .select('*')
+    .eq('instance_id', instanceId)
+    .in('status', ['pending', 'waiting'])
+    .in('type', AUTOMATED_STEP_TYPES)
+    .eq('requires_approval', false)
+    .not('due_at', 'is', null)
+    .lte('due_at', now.toISOString())
+    .order('position', { ascending: true })
+    .limit(10);
+  const rows = ((data ?? []) as unknown as WorkflowStepRow[]).filter(
+    (s) => !handled.has(s.id) && isExecutable(s, now),
+  );
+  return rows[0] ?? null;
+}
+
 async function runOneStep(
   supabase: SupabaseClient<Database>,
   instance: WorkflowInstanceRow,

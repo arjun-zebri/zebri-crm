@@ -220,6 +220,37 @@ describe('dispatchPendingEvents', () => {
     expect(data!.every((e) => e.processed_at !== null)).toBe(true);
   });
 
+  it('skips an event older than the replay window instead of applying it', async () => {
+    // Production went three months without a tick and then replayed a
+    // June enquiry against a workflow switched on in September, which
+    // would have emailed a real couple about a stale enquiry. A note
+    // nobody read for a day is history, not a trigger.
+    await template(user, 'on_couple_created', {});
+    const coupleId = await newCouple(user, 'Dispatch Stale');
+    const { data: before } = await admin
+      .from('automation_events')
+      .select('id')
+      .eq('couple_id', coupleId)
+      .is('processed_at', null);
+    expect(before!.length).toBeGreaterThan(0);
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+    await admin
+      .from('automation_events')
+      .update({ created_at: twoDaysAgo })
+      .in('id', before!.map((e) => e.id));
+
+    const result = await dispatchPendingEvents(admin);
+
+    expect(await appliedInstances(coupleId)).toHaveLength(0);
+    expect(result.staleEvents).toBeGreaterThanOrEqual(before!.length);
+    const { data: after } = await admin
+      .from('automation_events')
+      .select('processed_at, error_message')
+      .eq('couple_id', coupleId);
+    expect(after!.every((e) => e.processed_at !== null)).toBe(true);
+    expect(after!.every((e) => (e.error_message ?? '').startsWith('skipped: stale'))).toBe(true);
+  });
+
   it('does not apply the same template twice across ticks', async () => {
     const templateId = await template(user, 'on_couple_created', {});
     const coupleId = await newCouple(user, 'Dispatch Twice');

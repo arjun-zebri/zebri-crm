@@ -109,9 +109,12 @@ RPC.
 
 ## The tick
 
-`app/api/cron/automations-tick/route.ts` fires every 15 minutes via
-pg_cron (`.claude/docs/cicd.md` "Scheduled jobs (pg_cron)"). Bearer-auth
-via `isCronAuthorized`.
+`app/api/cron/automations-tick/route.ts` fires every minute via
+pg_cron (`.claude/docs/cicd.md` "Scheduled jobs (pg_cron)"); the
+time-based emitters run on the quarter hour only. Bearer-auth via
+`isCronAuthorized`. The current pass order and budgets are in
+`.claude/docs/workflows.md` "The cron sweep"; the description below is
+the legacy automations engine's view.
 
 Each tick:
 
@@ -127,7 +130,7 @@ Each tick:
 Slack alerts:
 
 - `automation_tick_slow` if a tick takes >30s
-- `automation_tick_backlog` if unprocessed events >1000
+- `automation_tick_backlog` if unprocessed events >100 after dispatch
 - `automation_failed` when a run errors
 
 ## Triggers
@@ -454,7 +457,7 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 ## API surface
 
 - `POST /api/cron/automations-tick` - bearer-auth tick (pg_cron,
-  every 15 minutes)
+  every minute)
 - `POST /api/automations/test-run` - rate-limited preview that
   renders templates against a real couple without sending
 - `GET /api/automations/approve/[token]?decision=approve|deny` -

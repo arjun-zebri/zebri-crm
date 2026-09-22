@@ -40,6 +40,44 @@ export interface DispatchResult {
   appointmentsCompleted: number;
   /** True when the deadline stopped the pass before the batch was done. */
   truncated: boolean;
+  /** Events older than {@link STALE_EVENT_MS} marked skipped, not dispatched. */
+  staleEvents: number;
+}
+
+/**
+ * How old a bus event may be and still open a workflow. A note nobody
+ * read for a day is history, not a trigger: production went three
+ * months without a tick and, once it ran, replayed June enquiries
+ * against workflows switched on in September. Anything older is
+ * stamped processed with a reason and left for the audit trail.
+ */
+export const STALE_EVENT_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Stamp every unread event older than the replay window as skipped.
+ * One statement, before the batch is loaded, so a stale pile never
+ * costs the tick a round trip per event.
+ */
+async function skipStaleEvents(
+  supabase: SupabaseClient<Database>,
+  opts: { userId?: string },
+): Promise<number> {
+  const cutoff = new Date(Date.now() - STALE_EVENT_MS).toISOString();
+  let query = supabase
+    .from('automation_events')
+    .update(
+      {
+        processed_at: new Date().toISOString(),
+        error_message: `skipped: stale (older than ${STALE_EVENT_MS / 3_600_000}h when first read)`,
+      },
+      { count: 'exact' },
+    )
+    .is('processed_at', null)
+    .lt('created_at', cutoff);
+  if (opts.userId) query = query.eq('user_id', opts.userId);
+  const { count, error } = await query;
+  if (error) throw new Error(`skip stale events: ${error.message}`);
+  return count ?? 0;
 }
 
 /**
@@ -65,6 +103,7 @@ export async function dispatchPendingEvents(
   limit = 500,
   opts: { userId?: string; since?: string; deadline?: number } = {},
 ): Promise<DispatchResult> {
+  const staleEvents = await skipStaleEvents(supabase, opts);
   const events = await loadUndispatchedEvents(supabase, limit, opts);
 
   let matchedTemplates = 0;
@@ -120,6 +159,7 @@ export async function dispatchPendingEvents(
     openedInstances,
     appointmentsCompleted,
     truncated,
+    staleEvents,
   };
 }
 
