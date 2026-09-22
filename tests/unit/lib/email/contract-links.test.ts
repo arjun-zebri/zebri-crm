@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { buildPublicBranding } from '@/lib/branding/public-branding'
-import { contractHtml, contractReminderHtml } from '@/lib/email/html'
+import { contractHtml } from '@/lib/email/html'
 
 const base = {
   coupleName: 'Sarah',
@@ -92,29 +92,3 @@ describe('contractHtml', () => {
   })
 })
 
-describe('contractReminderHtml', () => {
-  it('keeps its single-button output unchanged', () => {
-    const html = contractReminderHtml(base)
-    expect(html).toContain('Review &amp; Sign')
-    expect(html).toContain('Or copy this link:')
-    expect(contractReminderHtml({ ...base, links: [{ name: 'Sarah', url: base.shareUrl }] })).toBe(
-      html,
-    )
-  })
-
-  it('chases both outstanding signers at a shared address', () => {
-    // The reminder cron had the identical dedup bug, so partner 2 was never
-    // nudged either.
-    const html = contractReminderHtml({
-      ...base,
-      links: [
-        { name: 'Sarah', url: 'https://app.test/contract/tok-a' },
-        { name: 'James', url: 'https://app.test/contract/tok-b' },
-      ],
-    })
-    expect(html).toContain('Sign as Sarah')
-    expect(html).toContain('Sign as James')
-    expect(html).toContain('tok-a')
-    expect(html).toContain('tok-b')
-  })
-})

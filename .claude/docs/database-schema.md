@@ -732,8 +732,8 @@ Indexes: `(contract_id, event_at desc)` for per-contract reads,
 RLS: SELECT-only for the owner. No INSERT/UPDATE/DELETE policies —
 the only sanctioned writer is `emit_contract_audit_event(...)`
 (SECURITY DEFINER), called from inside `sign_contract`,
-`decline_contract`, `revoke_contract`, `expire_contracts`, and
-`mark_contract_reminder_sent`. The `/api/email/send-contract` route
+`decline_contract`, `revoke_contract` and `expire_contracts`. The
+`/api/email/send-contract` route
 also calls `emit_contract_audit_event` directly to log the 'sent'
 event when the contract locks.
 

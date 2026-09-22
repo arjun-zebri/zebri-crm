@@ -256,7 +256,6 @@ run per day; an incoming request is not capped, which is why the tick can run ev
 |---|---|---|---|
 | `zebri:automations-tick` | `/api/cron/automations-tick` | `*/15 * * * *` | Time emitters, dispatch, advance due steps, heartbeat |
 | `zebri:expire-contracts` | `/api/cron/expire-contracts` | `0 22 * * *` | Sent contracts past `expires_at` become expired |
-| `zebri:send-contract-reminders` | `/api/email/send-contract-reminders` | `15 22 * * *` | Reminder emails 5 days before contract expiry |
 | `zebri:booking-reminders` | `/api/cron/booking-reminders` | `30 22 * * *` | Scheduler booking reminders |
 | `zebri:prune-stripe-events` | `/api/cron/prune-stripe-events` | `0 3 * * *` | Archived Stripe events older than 90 days |
 | `zebri:workflow-digest` | `/api/cron/workflow-digest` | `0 * * * *` | Morning digest at each MC's local 7am; tick heartbeat check |
@@ -288,8 +287,8 @@ the same data, including `detail.truncated` from that heartbeat as "last tick tr
 **What the job list's outcome actually means.** Each job's "last outcome" on the Admin card is
 pg_cron's own result of `select public.cron_call(...)` - whether the request was handed to pg_net,
 not whether the route it called returned 200 (`cron_call` never raises). The HTTP outcome is
-observable today only for the automations tick, through its heartbeat; the five daily jobs
-(`expire-contracts`, `send-contract-reminders`, `booking-reminders`, `prune-stripe-events`,
+observable today only for the automations tick, through its heartbeat; the four daily jobs
+(`expire-contracts`, `booking-reminders`, `prune-stripe-events`,
 `workflow-digest`) have no HTTP signal at all yet. Follow-up: record `cron_call`'s pg_net request id
 per job and join `net._http_response.status_code` into `scheduler_status`.
 
