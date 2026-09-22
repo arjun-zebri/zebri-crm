@@ -113,6 +113,11 @@ export function SchedulerCard({
           : ', never run'}
         {status.tickTruncated ? ', last tick truncated' : ''}
       </p>
+      <p className={`text-body ${status.slackConfigured ? 'text-text-muted' : 'text-warning'}`}>
+        {status.slackConfigured
+          ? 'Watchdog posts to Slack if the tick stops.'
+          : 'Watchdog has no Slack webhook: set SLACK_WEBHOOK_URL and sync.'}
+      </p>
 
       <SchedulerJobList jobs={status.jobs} now={clock} />
 

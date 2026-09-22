@@ -10,11 +10,11 @@ describe('isHeartbeatStale', () => {
   })
 
   it('is fresh inside the window and stale past it', () => {
-    expect(isHeartbeatStale('2026-09-20T09:30:00Z', now, TICK_STALE_MS)).toBe(false)
-    expect(isHeartbeatStale('2026-09-20T09:14:59Z', now, TICK_STALE_MS)).toBe(true)
+    expect(isHeartbeatStale('2026-09-20T09:57:00Z', now, TICK_STALE_MS)).toBe(false)
+    expect(isHeartbeatStale('2026-09-20T09:54:59Z', now, TICK_STALE_MS)).toBe(true)
   })
 
-  it('is 45 minutes: three missed 15-minute ticks', () => {
-    expect(TICK_STALE_MS).toBe(45 * 60_000)
+  it('is 5 minutes: five missed one-minute ticks, the same window as tick_watchdog()', () => {
+    expect(TICK_STALE_MS).toBe(5 * 60_000)
   })
 })

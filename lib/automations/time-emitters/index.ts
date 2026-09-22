@@ -11,9 +11,11 @@
  * comparing the source row's timestamp to "now".
  *
  * This module hosts those computations. The {@link runTimeEmitters}
- * function is called from the cron tick, pg_cron every 15 minutes,
- * between the dispatcher's event-pull pass and the runner's
- * run-advance pass.
+ * function is called from the cron tick on the quarter hour (the tick
+ * itself runs every minute; every emitter here is day-granular, so
+ * running them 96 times a day rather than 1,440 costs nothing), after
+ * the executor's run-advance pass and before the dispatcher's
+ * event-pull pass, so what it emits is dispatched in the same tick.
  * Each registered emitter runs independently — one emitter throwing
  * doesn't prevent the others from firing — and the tick is monitored
  * for overall duration so a slow emitter doesn't go unnoticed.
@@ -107,8 +109,8 @@ export interface TimeEmittersResult {
  * keeps the result for its own slow-tick / backlog alerting.
  *
  * @param opts.deadline - epoch ms after which no further emitter starts.
- *   The tick runs every 15 minutes inside a Vercel function with a hard
- *   duration limit; an emitter skipped now simply runs on the next tick.
+ *   The tick runs inside a Vercel function with a hard duration limit;
+ *   an emitter skipped now simply runs on the next quarter hour.
  */
 export async function runTimeEmitters(
   supabase: SupabaseClient<Database>,

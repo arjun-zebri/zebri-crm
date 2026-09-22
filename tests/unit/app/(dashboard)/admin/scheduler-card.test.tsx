@@ -14,6 +14,7 @@ vi.mock('@/app/admin/scheduler-actions', () => ({
   syncSchedulerAction: vi.fn(async () => ({ ok: true })),
   refreshSchedulerStatusAction: vi.fn(async () => ({
     configured: true,
+    slackConfigured: true,
     baseUrl: 'https://x',
     jobs: [],
     tickHeartbeat: null,
@@ -28,10 +29,11 @@ describe('SchedulerCard', () => {
     render(
       <SchedulerCard
         now={now}
-        status={{ configured: false, baseUrl: null, jobs: [], tickHeartbeat: null, tickTruncated: null }}
+        status={{ configured: false, slackConfigured: false, baseUrl: null, jobs: [], tickHeartbeat: null, tickTruncated: null }}
       />,
     )
     expect(screen.getByText('Not configured')).toBeInTheDocument()
+    expect(screen.getByText(/Watchdog has no Slack webhook/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sync scheduler' })).toBeInTheDocument()
   })
 
@@ -41,6 +43,7 @@ describe('SchedulerCard', () => {
         now={now}
         status={{
           configured: true,
+          slackConfigured: true,
           baseUrl: 'https://app.zebri.com.au',
           jobs: [
             {
@@ -71,9 +74,10 @@ describe('SchedulerCard', () => {
         now={now}
         status={{
           configured: true,
+          slackConfigured: true,
           baseUrl: 'https://x',
           jobs: [],
-          tickHeartbeat: '2026-09-20T09:50:00Z',
+          tickHeartbeat: '2026-09-20T09:58:00Z',
           tickTruncated: null,
         }}
       />,
@@ -87,9 +91,10 @@ describe('SchedulerCard', () => {
         now={now}
         status={{
           configured: true,
+          slackConfigured: true,
           baseUrl: 'https://x',
           jobs: [],
-          tickHeartbeat: '2026-09-20T09:50:00Z',
+          tickHeartbeat: '2026-09-20T09:58:00Z',
           tickTruncated: true,
         }}
       />,

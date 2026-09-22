@@ -250,25 +250,31 @@ Scheduling lives in Postgres, not Vercel. `supabase/migrations/20261001000000_pg
 registers one pg_cron job per route; each job runs `public.cron_call('<path>')`, which POSTs to
 `<app_base_url><path>` through pg_net with `Authorization: Bearer <cron_secret>`. The routes and
 `isCronAuthorized` are unchanged from the Vercel era. Vercel Hobby caps its own scheduler at one
-run per day; an incoming request is not capped, which is why the tick can run every 15 minutes.
+run per day; an incoming request is not capped, which is why the tick can run every minute
+(`20261001200000_tick_every_minute.sql` moved it from every 15 minutes).
 
 | Job | Route | Schedule (UTC) | Purpose |
 |---|---|---|---|
-| `zebri:automations-tick` | `/api/cron/automations-tick` | `*/15 * * * *` | Time emitters, dispatch, advance due steps, heartbeat |
+| `zebri:automations-tick` | `/api/cron/automations-tick` | `* * * * *` | Advance due steps, time emitters (quarter hour only), dispatch, heartbeat |
+| `zebri:tick-watchdog` | (SQL only, `tick_watchdog()`) | `*/5 * * * *` | Posts to Slack through pg_net when the tick heartbeat is older than 5 minutes; independent of the app |
 | `zebri:expire-contracts` | `/api/cron/expire-contracts` | `0 22 * * *` | Sent contracts past `expires_at` become expired |
 | `zebri:booking-reminders` | `/api/cron/booking-reminders` | `30 22 * * *` | Scheduler booking reminders |
 | `zebri:prune-stripe-events` | `/api/cron/prune-stripe-events` | `0 3 * * *` | Archived Stripe events older than 90 days |
 | `zebri:workflow-digest` | `/api/cron/workflow-digest` | `0 * * * *` | Morning digest at each MC's local 7am; tick heartbeat check |
-| `zebri:cron-history-prune` | (SQL only) | `0 4 * * *` | Trims `cron.job_run_details` to 14 days |
+| `zebri:cron-history-prune` | (SQL only) | `0 4 * * *` | Trims `cron.job_run_details` to 3 days |
 
-**Secrets.** `app_base_url` and `cron_secret` live in Supabase Vault. They are never typed into the
-dashboard: `/admin` has a "Scheduler" card whose **Sync scheduler** button calls
-`set_scheduler_secrets()` with the app's own `NEXT_PUBLIC_APP_URL` and `CRON_SECRET`. Until they are
-set, every job is a silent no-op and `supabase db push` prints
-`WARNING: Scheduler secrets are not set on this project`.
+**Secrets.** `app_base_url`, `cron_secret` and `slack_webhook_url` live in Supabase Vault. They are
+never typed into the dashboard: `/admin` has a "Scheduler" card whose **Sync scheduler** button
+calls `set_scheduler_secrets()` with the app's own `NEXT_PUBLIC_APP_URL`, `CRON_SECRET` and
+`SLACK_WEBHOOK_URL`. Until the first two are set, every job is a silent no-op and
+`supabase db push` prints `WARNING: Scheduler secrets are not set on this project`. Until the
+Slack webhook is set the watchdog is silent and the push prints
+`WARNING: The tick watchdog has no Slack webhook`; a re-sync without `SLACK_WEBHOOK_URL` leaves the
+stored webhook alone.
 
 **First deploy on a project (dev, staging, prod):**
-1. Make sure `CRON_SECRET` and `NEXT_PUBLIC_APP_URL` are set in that Vercel environment.
+1. Make sure `CRON_SECRET`, `NEXT_PUBLIC_APP_URL` and `SLACK_WEBHOOK_URL` are set in that Vercel
+   environment.
 2. Vercel Deployment Protection (Vercel Authentication or a password) must be **off** for that
    deployment. `pg_net`'s outbound request carries the cron secret, not Vercel's own cron bypass
    header, so a protected deployment answers every job with Vercel's 401 HTML page while
@@ -279,10 +285,22 @@ set, every job is a silent no-op and `supabase db push` prints
 4. Open `/admin` on that deployment and press **Sync scheduler**. The card shows `Configured`,
    the base URL, every job with its last run, and the tick heartbeat.
 
-**Health.** The tick stamps `system_heartbeats.automations-tick` after every run. The hourly digest
-sends a `cron_job_missed` Slack alert when that stamp is older than 45 minutes. The Admin card shows
-the same data, including `detail.truncated` from that heartbeat as "last tick truncated" (see
-`.claude/docs/workflows.md` "The cron sweep").
+**Health.** The tick stamps `system_heartbeats.automations-tick` after every run. Two independent
+watchers read it, both on the same 5-minute window (`TICK_STALE_MS`):
+
+- `tick_watchdog()` in Postgres, every 5 minutes. Posts straight to the Slack webhook through
+  pg_net, so it still fires when the deployment itself is what broke (wrong base URL, missing
+  `CRON_SECRET`, 401 on every request: the failure production sat in unnoticed for three months
+  before this existed). One post per hour while the tick stays down, one "back" post on recovery.
+  Its own state (`open`, `alerted_at`, `recovered_at`) is the `tick-watchdog` heartbeat row.
+- The hourly digest route, which sends `cron_job_missed` through `sendAlert()`.
+
+The Admin card shows the heartbeat, `detail.truncated` as "last tick truncated", and whether the
+watchdog has a Slack webhook (see `.claude/docs/workflows.md` "The cron sweep").
+
+**Region.** `vercel.json` pins functions to `syd1`. The database is in Sydney and the tick is a
+chain of small queries; from a US region each one paid ~200 ms of round trip, and a tick that
+should take a second took thirty.
 
 **What the job list's outcome actually means.** Each job's "last outcome" on the Admin card is
 pg_cron's own result of `select public.cron_call(...)` - whether the request was handed to pg_net,

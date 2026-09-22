@@ -263,6 +263,67 @@ describe('advanceDueSteps / completeStep', () => {
     expect((await step(waitId)).status).toBe('done');
   });
 
+  it('runs the step behind a completed wait in the same pass', async () => {
+    // "Wait 15 minutes, then send" must not cost a tick per step. Before
+    // the chain existed the wait completed on one pass, the recompute
+    // stamped the next step due, and the send ran on the pass after: a
+    // 15-minute wait was really 15 to 30 minutes.
+    const { coupleId, instanceId } = await scenario('Executor Chain');
+    const waitId = await addStep(instanceId, {
+      position: 0,
+      type: 'wait',
+      title: 'Wait',
+      config: { mode: 'duration', durationMinutes: 15 },
+      status: 'waiting',
+      due_at: PAST,
+    });
+    const nextId = await addStep(instanceId, {
+      position: 1,
+      type: 'action',
+      title: 'Move to Booked',
+      config: { actionType: 'update_couple_stage', toStatus: 'Booked' },
+      timing: { mode: 'after_previous', delayAmount: 0, unit: 'days' },
+      due_at: null,
+    });
+
+    const result = await advanceDueSteps(admin);
+
+    expect((await step(waitId)).status).toBe('done');
+    expect((await step(nextId)).status).toBe('done');
+    expect(result.stepsExecuted).toBeGreaterThanOrEqual(2);
+    const { data: couple } = await admin
+      .from('couples').select('status').eq('id', coupleId).single();
+    expect(couple!.status).toBe('Booked');
+  });
+
+  it('leaves the follower for the next pass when the chain budget is zero', async () => {
+    // The chain has a depth cap so a template of a hundred zero-delay
+    // steps cannot pin one instance to the whole tick; with the cap at
+    // zero the follower waits for the next pass exactly as it used to.
+    const { instanceId } = await scenario('Executor Chain Cap');
+    const waitId = await addStep(instanceId, {
+      position: 0,
+      type: 'wait',
+      title: 'Wait',
+      config: { mode: 'duration', durationMinutes: 15 },
+      status: 'waiting',
+      due_at: PAST,
+    });
+    const nextId = await addStep(instanceId, {
+      position: 1,
+      type: 'action',
+      title: 'Move to Booked',
+      config: { actionType: 'update_couple_stage', toStatus: 'Booked' },
+      timing: { mode: 'after_previous', delayAmount: 0, unit: 'days' },
+      due_at: null,
+    });
+
+    await advanceDueSteps(admin, { maxChainDepth: 0 });
+
+    expect((await step(waitId)).status).toBe('done');
+    expect((await step(nextId)).status).toBe('pending');
+  });
+
   it('a branch takes one path and skips the other', async () => {
     const { instanceId } = await scenario('Executor Branch');
     const branchId = await addStep(instanceId, {

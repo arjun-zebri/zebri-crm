@@ -8,8 +8,9 @@
  * whatever landed. One schema, one set of rules:
  *
  * - `minutes` is a unit on the two delay modes only, in steps of
- *   {@link MINUTE_STEP}, because the tick runs every 15 minutes and a
- *   promise of "7 minutes" would be a lie.
+ *   {@link MINUTE_STEP}. The tick now runs every minute, so the grid is
+ *   a product choice (the inspector's picker stays short and a delay
+ *   reads as a round number), not an engine limit.
  * - `sendTime` is `HH:MM` on the same grid and only rides on a calendar
  *   unit. "30 minutes after start, at 9am" is a contradiction.
  *

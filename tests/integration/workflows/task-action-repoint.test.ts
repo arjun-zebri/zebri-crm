@@ -148,9 +148,9 @@ describe('to-do actions write workflow steps', () => {
       config: { actionType: 'update_task', status: 'done', title: 'Run sheet sent' },
     });
 
-    await advanceDueSteps(admin);
-    // The second step is gated behind the first, so the tick has to run
-    // twice for the chain to complete.
+    // One pass: the executor chains the follower behind the step it just
+    // ran, and the follower must see that step's output (the to-do id)
+    // through a freshly loaded instance context, not the stale row.
     await advanceDueSteps(admin);
 
     const todos = await stepsOn(defaultInstanceId);
