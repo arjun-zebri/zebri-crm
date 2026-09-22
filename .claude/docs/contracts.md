@@ -152,7 +152,6 @@ columns. Triggered by these RPCs (each one calls
 | `decline_contract` | `declined` | `couple` | Captures `decline_reason` + IP/UA. |
 | `revoke_contract` | `revoked` | `mc` | Captures `revoked_from_status` so the trail records "this was sent then revoked" (signing is non-revocable — guarded server-side). |
 | `expire_contracts` (cron) | `expired` | `system` | One row per contract the cron flips. |
-| `mark_contract_reminder_sent` | `reminder_sent` | `system` | Captures `reminder_number` (1 or 2). |
 | `/api/email/send-contract` (route) | `sent` | `mc` | Written on the locking step (status → 'sent'). |
 
 `'viewed'` is written by `record_contract_view(token, ip, ua)`, called from
@@ -195,8 +194,15 @@ Nothing is created. `quotes` and `proposals` were both removed, and
 
 ## Reminders & expiry
 
-- Day-3 + day-7 reminder emails, capped at 2 reminders total (`reminder_count` column).
-- Nightly pg_cron jobs (`zebri:send-contract-reminders`, `zebri:expire-contracts`) hit `/api/email/send-contract-reminders` + `/api/cron/expire-contracts` (auth via `CRON_SECRET`).
+- No system-wide reminder emails. The day-3 / day-7 reminder cron
+  (`zebri:send-contract-reminders`) was retired in
+  `20261001100000_retire_contract_reminder_job.sql`: it emailed every
+  MC's couples with no opt-in or setting. Chasing an unsigned contract is
+  the MC's decision, expressed as a workflow on "Contract sent" with a
+  wait step and a "Send contract" or "Send email" (`{{contract.link}}`)
+  step. `contracts.reminder_count` / `last_reminder_at` remain as unused
+  columns until a contracts hardening pass drops them.
+- Nightly pg_cron job `zebri:expire-contracts` hits `/api/cron/expire-contracts` (auth via `CRON_SECRET`); sent contracts past `expires_at` become `expired`, which fires the `contract_expired` trigger.
 
 ## Plan gating
 
@@ -230,7 +236,6 @@ on contracts being Pro-only.
 - `app/api/contract/view/route.ts`
 - `app/api/contract/decline/route.ts`
 - `app/api/cron/expire-contracts/route.ts`
-- `app/api/email/send-contract-reminders/route.ts`
 - `app/portal/[token]/contracts-section.tsx`
 - `components/ui/rich-text-editor.tsx`
 - `lib/contract-variables.ts`

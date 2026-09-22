@@ -1458,9 +1458,9 @@ Action for 0.1: relocate the three builder modals + the `events` module to hones
 
 `GET`: drive-time, places/{autocomplete,address-autocomplete,details}, stripe/{billing-history,connect,connect/callback}.
 `POST`: alerts/slack, contract/{decline,sign}, email/{send-contract,send-invoice,send-quote}, portal/upload, stripe/{checkout,invoice-payment,portal,webhook}.
-`GET+POST` (via `export const GET/POST = handle`): cron/expire-contracts, email/send-contract-reminders.
+`GET+POST` (via `export const GET/POST = handle`): cron/expire-contracts.
 
-**Public (unauthenticated) prefixes** (middleware allowlist): `/api/alerts`, `/api/stripe/invoice-payment`, `/api/stripe/webhook`, `/api/portal`, `/api/contract`, `/api/cron`, `/api/email/send-contract-reminders`, plus public *pages* `/quote /invoice /portal /contract /timeline`. → 0.8 must verify each public route's own auth (webhook signature / `CRON_SECRET` / share-token), since middleware does **not** protect them.
+**Public (unauthenticated) prefixes** (middleware allowlist): `/api/alerts`, `/api/stripe/invoice-payment`, `/api/stripe/webhook`, `/api/portal`, `/api/contract`, `/api/cron`, plus public *pages* `/quote /invoice /portal /contract /timeline`. → 0.8 must verify each public route's own auth (webhook signature / `CRON_SECRET` / share-token), since middleware does **not** protect them.
 
 ### 7.3 RLS state
 

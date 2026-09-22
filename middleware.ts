@@ -16,7 +16,6 @@ const PUBLIC_ROUTES = [
   "/api/portal",
   "/api/contract",
   "/api/cron",
-  "/api/email/send-contract-reminders",
   "/timeline",
   "/invoice",
   "/portal",
