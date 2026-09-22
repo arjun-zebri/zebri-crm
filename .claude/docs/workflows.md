@@ -124,8 +124,8 @@ One schema, `lib/workflows/timing-schema.ts`, validates every writer
 (builder save, copilot, converter); `toStepTiming` still coerces on read
 so a row from before a mode existed renders. Quiet hours apply after
 timing: a 9:15pm send inside the couple's quiet window is deferred as
-before. The 15-minute grid exists because the tick runs every 15
-minutes; a finer promise would be a lie.
+before. The 15-minute grid is a product choice (a short picker, round
+numbers), not an engine limit now that the tick runs every minute.
 
 Never do date arithmetic by hand here. Compose `zonedTimeToUtc`,
 `localMidnight`, `addDaysToDateString` and `addMonthsToDateString` from
@@ -232,22 +232,38 @@ sweep; adding one is a single `scheduleKick(user.id)`.
 
 `app/api/cron/automations-tick/route.ts` keeps its path (it is named in
 the scheduler migration; renaming a live cron endpoint is a needless
-outage risk). pg_cron calls it every 15 minutes. It stays the sweeper: it
-owns the time-based emitters, catches every event whose emitter does not
-kick, and re-tries anything a kick dropped. The three passes share one
-45-second deadline (`TICK_BUDGET_MS`): work not reached is left exactly
-where it was and the next tick takes it, oldest first. The response and
-the `automations-tick` heartbeat both carry `truncated`, so a tick that
-keeps running out of time is visible on the Admin Scheduler card and in
-the `cron_job_missed` alert the hourly digest raises when the heartbeat
-goes stale. Each tick:
+outage risk). pg_cron calls it **every minute**
+(`20261001200000_tick_every_minute.sql`; it was every 15 minutes until
+2026-09-22, when "wait 15 minutes, then send" was observed landing 30 to
+45 minutes late in production). It stays the sweeper: it owns the
+time-based emitters, catches every event whose emitter does not kick,
+and re-tries anything a kick dropped. The passes share one 45-second
+deadline (`TICK_BUDGET_MS`), but the executor runs first on a 30-second
+slice of its own (`EXECUTOR_BUDGET_MS`): a due step is what an MC is
+waiting on, and nothing else in the tick may starve it. Work not reached
+is left exactly where it was and the next tick takes it a minute later,
+oldest first. The response and the `automations-tick` heartbeat both
+carry `truncated` plus the pass counts (`stepsExecuted`,
+`processedEvents`, `staleEvents`), so a tick that keeps running out of
+time is visible on the Admin Scheduler card. Each tick:
 
-1. `runTimeEmitters` — compute what should fire now for triggers with no
-   source-row change (`invoice_due`, `step_overdue`, …).
-2. `dispatchPendingEvents` — match bus events to active templates and
+1. `advanceDueSteps` — run every step whose `due_at` has passed, and
+   **chain**: after a step completes, any follower now due on the same
+   instance (a zero-delay step behind a wait) runs in the same pass, up
+   to `maxChainDepth` (25). "Wait 15 minutes, then send" is therefore
+   one tick, not two.
+2. `runTimeEmitters`, **on the quarter hour only** — compute what should
+   fire now for triggers with no source-row change (`invoice_due`,
+   `step_overdue`, …). Every emitter is day-granular, so 96 runs a day
+   is already generous and the other 56 ticks an hour stay cheap.
+3. `dispatchPendingEvents` — match bus events to active templates and
    apply them. Automatic applies dedupe per couple: a second copy means
-   a second set of emails.
-3. `advanceDueSteps` — run every step whose `due_at` has passed.
+   a second set of emails. Before reading the bus it stamps every event
+   older than 24 hours (`STALE_EVENT_MS`) as
+   `skipped: stale` instead of applying it: production once replayed
+   three months of June enquiries against workflows switched on in
+   September, and a note nobody read for a day is history, not a
+   trigger.
 
 `advanceDueSteps` takes the oldest due steps up to a budget of 200, so
 its query refuses in SQL everything `isExecutable` would refuse anyway:
@@ -257,6 +273,13 @@ to-dos would otherwise fill every slot with work the engine cannot do
 and never run another send.
 
 Each pass is isolated, so one throwing does not cost the other its turn.
+
+Two watchers read the heartbeat (`TICK_STALE_MS`, 5 minutes):
+`tick_watchdog()` in Postgres posts to Slack through pg_net every 5
+minutes the tick is down (hourly dedupe, one "back" post on recovery)
+and keeps working when the app itself is unreachable; the hourly digest
+raises `cron_job_missed` through `sendAlert()`. Details in
+`.claude/docs/cicd.md` "Health".
 
 The time emitters ask which lead times anyone configured through
 `loadActiveTriggerConfigs` (`lib/workflows/trigger-configs.ts`), which
@@ -549,9 +572,10 @@ be, so every timezone gets its own real 7am instead of the shared UTC
 window the old daily run needed.
 
 The hourly run also checks the tick's health: when
-`system_heartbeats.automations-tick` is older than 45 minutes, the
-digest route sends a `cron_job_missed` Slack alert, since a stalled tick
-is otherwise invisible until an MC notices nothing fired.
+`system_heartbeats.automations-tick` is older than 5 minutes
+(`TICK_STALE_MS`), the digest route sends a `cron_job_missed` Slack
+alert. It is the in-app half of the check; `tick_watchdog()` in Postgres
+is the half that survives the app being down.
 
 Two guards keep it to one per MC per day:
 

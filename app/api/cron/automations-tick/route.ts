@@ -1,25 +1,33 @@
 /**
  * Cron route: tick the workflows engine once.
  *
- * pg_cron calls this every 15 minutes (`zebri:automations-tick` in
- * `supabase/migrations/20261001000000_pg_cron_scheduler.sql`). It runs
- * inside a Vercel function with a hard duration limit, so the three
- * passes share one deadline: whatever is not reached stays where it is
- * (events unprocessed, steps due) and the next tick takes it, oldest
- * first. A tick that keeps truncating is a capacity signal, which is why
- * the response and the heartbeat both record it.
+ * pg_cron calls this every minute (`zebri:automations-tick`, rescheduled
+ * in `supabase/migrations/20261001200000_tick_every_minute.sql`). It runs
+ * inside a Vercel function with a hard duration limit, so the passes
+ * share one 45-second budget, but not equally: the executor goes first
+ * with a slice of its own, because a due step is what an MC is waiting
+ * on ("wait 15 minutes, then send") and nothing else in the tick may
+ * starve it. Whatever a pass does not reach stays where it is (steps
+ * due, events unprocessed) and the next tick takes it a minute later,
+ * oldest first. A tick that keeps truncating is a capacity signal, which
+ * is why the response and the heartbeat both record it.
  *
  * Each tick:
  *
- *   1. Runs the time-based emitters: computes "what should fire now" for
- *      triggers like `invoice_due` / `step_overdue` that have no
- *      source-row state change to hook a DB trigger off. New events land
- *      in the bus and are dispatched on this same tick.
- *   2. Dispatches up to N unprocessed events from the bus, matching them
- *      to active workflow templates and opening applied instances.
- *   3. Advances every due workflow step.
+ *   1. Advances every due workflow step, chaining through zero-delay
+ *      followers, within {@link EXECUTOR_BUDGET_MS}.
+ *   2. On the quarter hour only, runs the time-based emitters: "what
+ *      should fire now" for triggers like `invoice_due` / `step_overdue`
+ *      that have no source-row change to hook a DB trigger off. They are
+ *      all day-granular, so once every 15 minutes is already generous,
+ *      and it keeps the other 56 ticks an hour cheap.
+ *   3. Dispatches unprocessed bus events (stale ones are stamped skipped
+ *      first), matching them to active workflow templates and opening
+ *      applied instances. A newly opened instance's first step runs on
+ *      the next tick, one minute later; the immediate kick covers the
+ *      cases where the MC is watching.
  *   4. Stamps the `automations-tick` heartbeat, which the hourly digest
- *      watches (`lib/workflows/heartbeat.ts`).
+ *      and the pg_cron watchdog both watch (`lib/workflows/heartbeat.ts`).
  *
  * The route keeps its `automations-tick` path: it is named in the
  * scheduler migration, and renaming a live cron endpoint is a needless
@@ -32,7 +40,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { sendAlert } from '@/lib/alerts/send-alert'
 import { isCronAuthorized } from '@/lib/api/cron-auth'
-import { runTimeEmitters } from '@/lib/automations/time-emitters'
+import { runTimeEmitters, type TimeEmittersResult } from '@/lib/automations/time-emitters'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dispatchPendingEvents as dispatchWorkflowEvents } from '@/lib/workflows/dispatcher'
 import { advanceDueSteps } from '@/lib/workflows/executor'
@@ -45,9 +53,38 @@ export const maxDuration = 60
  * The passes stop starting new work at this point, leaving 15 seconds
  * for the item in flight, the heartbeat write and the response.
  */
-const TICK_BUDGET_MS = 45_000
+export const TICK_BUDGET_MS = 45_000
+
+/**
+ * The executor's own slice. It runs first, so this is a cap rather than
+ * a reservation: it can never use more, which guarantees dispatch at
+ * least the remainder. With one tick a minute, 30 seconds of due steps
+ * is far more than a healthy system ever needs.
+ */
+export const EXECUTOR_BUDGET_MS = 30_000
+
 const TICK_SLOW_THRESHOLD_MS = 30_000
-const TICK_BACKLOG_THRESHOLD = 1_000
+
+/**
+ * Unread events after dispatch. With a tick a minute and stale events
+ * stamped rather than replayed, a backlog this size means dispatch is
+ * losing ground and someone should look.
+ */
+const TICK_BACKLOG_THRESHOLD = 100
+
+/** The emitters are day-granular; every quarter hour is plenty. */
+export function shouldRunEmitters(at: Date): boolean {
+  return at.getUTCMinutes() % 15 === 0
+}
+
+/** What the response carries for a tick that did not run the emitters. */
+const EMITTERS_NOT_RUN: TimeEmittersResult = {
+  emitted: {},
+  totalEmitted: 0,
+  failedEmitters: 0,
+  skippedEmitters: 0,
+  durationMs: 0,
+}
 
 async function handle(request: NextRequest) {
   if (!isCronAuthorized(request)) {
@@ -58,18 +95,21 @@ async function handle(request: NextRequest) {
   const started = Date.now()
   const deadline = started + TICK_BUDGET_MS
 
-  // Run time-emitters BEFORE the dispatcher so events emitted on
-  // this tick are picked up in the same pass, which keeps the
-  // worst-case delivery latency to one tick rather than two.
-  const emitters = await runTimeEmitters(supabase, { deadline })
+  // Executor first, on its own slice: a due step is what the MC is
+  // waiting on. Each pass is isolated: one throwing must not cost the
+  // others their turn.
+  const workflowExecutor = await guard('workflows.executor', () =>
+    advanceDueSteps(supabase, { deadline: Math.min(deadline, started + EXECUTOR_BUDGET_MS) }),
+  )
 
-  // Each pass is isolated: dispatch throwing must not cost every due
-  // step its turn, and vice versa.
+  // Emitters before dispatch so events emitted on this tick are picked
+  // up in the same pass.
+  const emitters = shouldRunEmitters(new Date(started))
+    ? await runTimeEmitters(supabase, { deadline })
+    : EMITTERS_NOT_RUN
+
   const workflowDispatch = await guard('workflows.dispatch', () =>
     dispatchWorkflowEvents(supabase, 500, { deadline }),
-  )
-  const workflowExecutor = await guard('workflows.executor', () =>
-    advanceDueSteps(supabase, { deadline }),
   )
 
   const durationMs = Date.now() - started
@@ -107,7 +147,13 @@ async function handle(request: NextRequest) {
 
   // Stamp last, so a run that died mid-way reads as missed, not healthy.
   await guard('workflows.heartbeat', () =>
-    recordHeartbeat(supabase, TICK_HEARTBEAT, { truncated, durationMs }),
+    recordHeartbeat(supabase, TICK_HEARTBEAT, {
+      truncated,
+      durationMs,
+      stepsExecuted: workflowExecutor?.stepsExecuted ?? 0,
+      processedEvents: workflowDispatch?.processedEvents ?? 0,
+      staleEvents: workflowDispatch?.staleEvents ?? 0,
+    }),
   )
 
   return NextResponse.json({

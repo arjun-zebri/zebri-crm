@@ -3,11 +3,11 @@
  *
  * The engine's apply rules are driven off the event bus, and until this
  * existed the only thing that read that bus was the cron tick
- * (`/api/cron/automations-tick`, pg_cron every 15 minutes). So a
- * workflow that "starts when a couple is added" opened its instance up
- * to 15 minutes after the couple was added - and never at all against a
- * dev server, which no cron reaches. Adding a couple and watching
- * nothing happen is the whole of that bug.
+ * (`/api/cron/automations-tick`, pg_cron, every 15 minutes at the time
+ * and every minute now). So a workflow that "starts when a couple is
+ * added" opened its instance up to a tick after the couple was added -
+ * and never at all against a dev server, which no cron reaches. Adding
+ * a couple and watching nothing happen is the whole of that bug.
  *
  * So the mutation that causes the event now kicks the same two passes
  * the cron runs, scoped to the MC who made it, and the cron stays on as

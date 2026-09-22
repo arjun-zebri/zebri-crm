@@ -17,9 +17,11 @@ import { isHeartbeatStale, readHeartbeat, TICK_HEARTBEAT, TICK_STALE_MS } from '
  * hour twice a year.
  *
  * It runs hourly, which is what gives every timezone its own 7am. It
- * also carries the scheduler's own health check: the tick stamps a
- * heartbeat every 15 minutes and this route, being the other job that
- * runs often, alerts when that stamp is older than three ticks.
+ * also carries one of the scheduler's two health checks: the tick
+ * stamps a heartbeat every minute and this route alerts when that stamp
+ * is older than `TICK_STALE_MS`. The other check is `tick_watchdog()` in
+ * Postgres, which still posts to Slack when this deployment itself is
+ * the thing that cannot be reached.
  *
  * Two guards keep it to one send per MC per day:
  *

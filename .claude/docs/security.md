@@ -338,7 +338,7 @@ entitlement fields.
 
 ### Cron-secret enforcement
 
-Six cron-triggered routes, scheduled by pg_cron rather than
+Five cron-triggered routes, scheduled by pg_cron rather than
 `vercel.json` (see `.claude/docs/cicd.md` "Scheduled jobs (pg_cron)"
 for the full job table and secret-sync flow):
 
@@ -347,11 +347,11 @@ for the full job table and secret-sync flow):
 | `/api/cron/expire-contracts` | `0 22 * * *` |
 | `/api/cron/booking-reminders` | `30 22 * * *` (Scheduler Phase D) |
 | `/api/cron/prune-stripe-events` | `0 3 * * *` (Phase 2A) |
-| `/api/cron/automations-tick` | `*/15 * * * *` (the workflow tick; keeps its legacy path because renaming a live cron endpoint is a needless outage risk) |
+| `/api/cron/automations-tick` | `* * * * *` (the workflow tick; keeps its legacy path because renaming a live cron endpoint is a needless outage risk) |
 | `/api/cron/workflow-digest` | `0 * * * *` (Workflows) |
 
 pg_cron is not capped the way Vercel's Hobby scheduler was, so the tick
-runs every 15 minutes and the digest runs hourly, gating on each MC's
+runs every minute and the digest runs hourly, gating on each MC's
 local 7am: see `.claude/docs/workflows.md`. A per-user local-date
 stamp (`user_public_settings.daily_digest_last_sent_on`) keeps that to
 one send per MC per day, including through the repeated hour daylight

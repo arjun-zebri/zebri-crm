@@ -25,7 +25,7 @@ interface Recorded {
 function fakeSupabase(recorded: Recorded) {
   const builder = () => {
     const chain: Record<string, unknown> = {};
-    for (const method of ['select', 'is', 'order', 'limit', 'in', 'not', 'lte', 'neq', 'update']) {
+    for (const method of ['select', 'is', 'order', 'limit', 'in', 'not', 'lt', 'lte', 'neq', 'update']) {
       chain[method] = () => chain;
     }
     chain['eq'] = (column: string, value: unknown) => {

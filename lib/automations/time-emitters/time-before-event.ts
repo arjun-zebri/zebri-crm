@@ -10,8 +10,9 @@
  * # Day-grain only
  *
  * The offset is measured in **days** (locked 2026-06-14, see
- * `automations-wiring.md`). pg_cron runs the tick every 15 minutes, but
- * this emitter stays day-grain only by that same locked decision, so it
+ * `automations-wiring.md`). The tick runs the emitters every quarter
+ * hour, but this emitter stays day-grain only by that same locked
+ * decision, so it
  * ignores any automation whose `unit` isn't `days`. The inspector offers
  * no unit picker, and `calendarConfig.unit` defaults to `days`.
  *
@@ -89,8 +90,8 @@ function eventDateForLeadDays(days: number): string {
  * Defers to the trigger spec's Zod schema so `unit`'s `.default('days')`
  * is applied uniformly. Returns null (the automation is skipped) when
  * the config is invalid, the amount is out of range, or the unit isn't
- * `days` (this emitter is day-grain only, locked 2026-06-14; pg_cron's
- * 15-minute tick does not change that).
+ * `days` (this emitter is day-grain only, locked 2026-06-14; the tick's
+ * cadence does not change that).
  */
 function parseLeadDays(config: unknown): number | null {
   const spec = getTriggerSpec('time_before_event')

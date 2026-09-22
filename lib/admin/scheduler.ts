@@ -33,6 +33,8 @@ export interface SchedulerJob {
 /** The parsed `scheduler_status()` result. */
 export interface SchedulerStatus {
   configured: boolean
+  /** Whether the Slack webhook is in Vault, i.e. the pg_cron watchdog can post. */
+  slackConfigured: boolean
   baseUrl: string | null
   jobs: SchedulerJob[]
   /** `system_heartbeats.automations-tick.last_run_at`, or null when it has never run. */
@@ -50,6 +52,7 @@ export type SyncResult = { ok: true } | { ok: false; error: string }
 
 const EMPTY: SchedulerStatus = {
   configured: false,
+  slackConfigured: false,
   baseUrl: null,
   jobs: [],
   tickHeartbeat: null,
@@ -77,6 +80,7 @@ export function parseSchedulerStatus(raw: unknown): SchedulerStatus {
       : null
   return {
     configured: v['configured'] === true,
+    slackConfigured: v['slack_configured'] === true,
     baseUrl: typeof v['base_url'] === 'string' ? v['base_url'] : null,
     jobs: jobsRaw.map((j) => ({
       name: String(j['name'] ?? ''),
@@ -122,19 +126,23 @@ export async function loadSchedulerCard(): Promise<SchedulerCardData> {
 }
 
 /**
- * Push this deployment's own URL and cron secret into Vault.
+ * Push this deployment's own URL, cron secret and Slack webhook into Vault.
  *
  * Reads env rather than taking arguments so the value pg_cron sends is
- * the value `isCronAuthorized` checks, by construction.
+ * the value `isCronAuthorized` checks, by construction. The Slack webhook
+ * is optional: when `SLACK_WEBHOOK_URL` is unset the RPC leaves any
+ * existing Vault value alone, so a re-sync never silences the watchdog.
  */
 export async function syncSchedulerSecrets(): Promise<SyncResult> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL
   const secret = process.env.CRON_SECRET
+  const slack = process.env.SLACK_WEBHOOK_URL
   if (!baseUrl) return { ok: false, error: 'NEXT_PUBLIC_APP_URL is not set on this deployment' }
   if (!secret) return { ok: false, error: 'CRON_SECRET is not set on this deployment' }
   const { error } = await createAdminClient().rpc('set_scheduler_secrets', {
     p_base_url: baseUrl,
     p_secret: secret,
+    ...(slack ? { p_slack_webhook_url: slack } : {}),
   })
   if (error) return { ok: false, error: error.message }
   return { ok: true }
