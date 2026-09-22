@@ -154,7 +154,6 @@ anyway, but we cap on our side so the alert fires on our schedule.
 | `app/api/email/send-invoice/route.ts` | ✅ `z.object({ invoiceId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendInvoice` | Same RLS scoping |
 | `app/api/email/send-contract/route.ts` | ☐ Phase 3 (Contracts) | ☐ Phase 3 | Not in 2C scope |
 | `app/api/email/send-template/route.ts` | ✅ `z.object({ coupleId, templateId?, inlineSubject?, inlineBody?, overrides, sendAnyway, attachmentFileIds })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendTemplate`; hit fires `email_rate_limit_hit` (`action: 'sendTemplate'`) | RLS scopes template + couple loads to the caller. **Safety property:** the send is **blocked (422)** when `detectMissingVariables` finds an unresolved variable, unless `sendAnyway` is set — re-checked server-side so the client can't bypass it. Static attachments downloaded via the owner-only `email-template-files` bucket |
-| `app/api/email/send-contract-reminders/route.ts` | n/a (cron) | n/a (cron-secret gated) | Already uses `isCronAuthorized` |
 
 ### Public lead-capture ingest — `get_lead_form` / `submit_lead` (ZEB-2)
 
@@ -346,7 +345,6 @@ for the full job table and secret-sync flow):
 | Route | Schedule (UTC) |
 |---|---|
 | `/api/cron/expire-contracts` | `0 22 * * *` |
-| `/api/email/send-contract-reminders` | `15 22 * * *` |
 | `/api/cron/booking-reminders` | `30 22 * * *` (Scheduler Phase D) |
 | `/api/cron/prune-stripe-events` | `0 3 * * *` (Phase 2A) |
 | `/api/cron/automations-tick` | `*/15 * * * *` (the workflow tick; keeps its legacy path because renaming a live cron endpoint is a needless outage risk) |

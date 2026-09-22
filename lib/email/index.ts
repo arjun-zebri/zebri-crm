@@ -5,7 +5,6 @@ import { dispatchEmail, type DispatchResult, type EmailAttachment } from "./disp
 import {
   contractHtml,
   contractOtpHtml,
-  contractReminderHtml,
   contractSignedHtml,
   invoiceHtml,
   type LeadNotificationOpts,
@@ -162,29 +161,6 @@ export async function sendContractOtpEmail(opts: {
     html: contractOtpHtml({ ...opts, minutes: Math.round(OTP_TTL_SECONDS / 60) }, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? 'Send failed' };
-}
-
-export async function sendContractReminderEmail(opts: {
-  coupleEmail: string;
-  coupleName: string;
-  contractNumber: string;
-  contractTitle: string;
-  expiresAt: string | null;
-  shareUrl: string;
-  mcBusinessName: string;
-  /** Every outstanding signer at this address. See {@link sendContractEmail}. */
-  links?: SignerLink[];
-  /** Resolved transport. Defaults to the shared Zebri address (Resend). */
-  sender?: ResolvedSender;
-  /** Optional sender's branding for branded emails. */
-  branding?: PublicBranding | null;
-}): Promise<{ ok: boolean; error?: string }> {
-  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
-    to: opts.coupleEmail,
-    subject: `Reminder: please sign your contract - ${opts.contractNumber}`,
-    html: contractReminderHtml(opts, opts.branding),
-  });
-  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
 
 /**

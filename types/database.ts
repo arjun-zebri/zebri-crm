@@ -4599,24 +4599,6 @@ export type Database = {
         }
         Returns: Json
       }
-      contracts_due_for_reminder: {
-        Args: never
-        Returns: {
-          contract_number: string
-          couple_email: string
-          couple_id: string
-          couple_name: string
-          email_sent_at: string
-          expires_at: string
-          id: string
-          last_reminder_at: string
-          mc_business_name: string
-          reminder_count: number
-          share_token: string
-          title: string
-          user_id: string
-        }[]
-      }
       cron_call: { Args: { p_path: string }; Returns: number }
       decline_contract: {
         Args: {
@@ -4726,10 +4708,6 @@ export type Database = {
       }
       mark_booking_reminder_sent: {
         Args: { p_booking_id: string }
-        Returns: undefined
-      }
-      mark_contract_reminder_sent: {
-        Args: { p_contract_id: string }
         Returns: undefined
       }
       peek_signer_otp: { Args: { p_token: string }; Returns: Json }
