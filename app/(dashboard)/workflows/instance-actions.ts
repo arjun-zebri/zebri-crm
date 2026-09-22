@@ -26,6 +26,7 @@ import { buildStepContext } from '@/lib/workflows/context'
 import {
   advanceDueSteps,
   completeStep,
+  recomputeInstance,
   reopenStep,
   runStepNow,
 } from '@/lib/workflows/executor'
@@ -49,7 +50,7 @@ import {
 } from '@/lib/workflows/review'
 import { stepDisplayTitle } from '@/lib/workflows/step-label'
 import type { Json } from '@/types/database'
-import type { WorkflowInstanceWithSteps, WorkflowStepRow } from '@/types/workflows'
+import type { WorkflowInstanceRow, WorkflowInstanceWithSteps, WorkflowStepRow } from '@/types/workflows'
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -283,11 +284,35 @@ export async function deleteInstanceStepAction(
   const parsed = deleteStepSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: parsed.error.message }
   const supabase = await createClient()
+  // Read the row first: the delete nulls the audit log's step_id, so the
+  // title has to travel in the entry itself, and the instance is needed
+  // to re-anchor whatever was timed from this step.
+  const { data: step } = await supabase
+    .from('workflow_steps')
+    .select('id, title, type, config, timing, instance_id, workflow_instances!inner(*)')
+    .eq('id', parsed.data.stepId)
+    .maybeSingle()
+  if (!step) return { ok: false, error: 'Step not found.' }
+  const instance = step.workflow_instances as unknown as WorkflowInstanceRow
+
   const { error } = await supabase
     .from('workflow_steps')
     .delete()
     .eq('id', parsed.data.stepId)
   if (error) return { ok: false, error: error.message }
+
+  const admin = createAdminClient()
+  await writeAudit(admin, {
+    userId: instance.user_id,
+    instanceId: instance.id,
+    coupleId: instance.couple_id,
+    event: 'step_removed',
+    detail: { manual: true, title: stepDisplayTitle(step), type: step.type },
+  })
+  // The steps timed "straight after" this one now follow whatever is
+  // above it. Re-anchor now rather than on the next tick, so the MC sees
+  // the consequence straight away (and the confirm dialog warned of it).
+  await recomputeInstance(admin, instance)
   revalidatePath('/couples')
   return { ok: true, data: null }
 }

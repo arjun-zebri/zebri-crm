@@ -494,9 +494,37 @@ not due for a fortnight.
 (`app/(dashboard)/couples/couple-workflow-buckets.ts`, pure and
 unit-tested) merges every visible instance's steps into three groups:
 
-- **Needs you now** — held sends, failures, anything overdue.
+- **Needs you now**: held sends, failures, the MC's own overdue steps.
 - **Next** — everything still to come, soonest first, undated last.
 - **Done (n)** — a collapsed strip, most recent first.
+
+**An engine step is never "overdue" to the MC.** `isOverdueForMc`
+(`step-labels.ts`) counts only manual steps: a branch timed "6 months
+before the wedding" on a couple booked 3 months out is past its date
+the day it is applied, and that is the engine's cue, not a missed
+deadline. Such a step sits under *Next* labelled **Due to run** (or
+**Runs today**) and stays out of the red count. An untitled branch is
+named by its timing ("Branch · 6mo before wedding") through the shared
+`stepDisplayTitle`, so it never renders as a blank row.
+
+Why this is strict: on 2026-09-16 an MC applied a workflow whose
+wedding-relative timers were branches with no condition. The tab
+painted them red and blank, he removed them to tidy up, and every
+"straight after" email behind them re-anchored to the last finished
+step and became due that morning (a "2 months out" email for a
+December wedding). The engine was also not sweeping, so nothing
+self-corrected.
+
+**Removing or skipping a step warns about what moves.** `timedDependents`
+and `nestedSteps` (`lib/workflows/step-dependents.ts`, pure) name the
+"straight after" run behind a step and, for a branch, the head of each
+nested lane; `StepConsequenceDialog` puts that in the confirm ("… are
+timed from this step. Without it they move up to follow the step above,
+which can mean becoming due straight away"). A step nothing depends on
+removes or skips with no dialog. `deleteInstanceStepAction` now writes a
+`step_removed` audit row (the title travels in `detail`, since the
+delete nulls `step_id`) and re-anchors the instance at once via the
+exported `recomputeInstance`, rather than on the next transition.
 
 The workflow's name is demoted to a chip on the row, and only when the
 instance is not the default one, so "General" is never a heading.

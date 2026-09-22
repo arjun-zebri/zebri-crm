@@ -405,8 +405,14 @@ The Workflow tab replaced the separate Tasks and Automations tabs
 are migrated on read.
 
 It is **one list**, not one checklist per applied workflow: **Needs you
-now** (held sends, failures, anything overdue), **Next** (soonest
-first, undated last) and a collapsed **Done (n)**. A row carries the
+now** (held sends, failures, the MC's own overdue steps), **Next**
+(soonest first, undated last) and a collapsed **Done (n)**. Engine
+steps (action, branch, wait) are never labelled or counted as overdue;
+past their date they read **Due to run**, and an untitled branch is
+named by its timing ("Branch · 6mo before wedding"). **Remove** and
+**Skip** on a step that others are timed from open a confirm naming
+what moves (`step-consequence-dialog.tsx`); removal is audited as
+`step_removed` and re-anchors the instance immediately. A row carries the
 workflow's name as a chip only when the MC started that workflow, so
 the auto-created default instance ("General") is never a heading for
 something they never made. Rows open the shared `StepDetailModal`,

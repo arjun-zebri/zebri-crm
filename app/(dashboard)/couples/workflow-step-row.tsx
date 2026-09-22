@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { RowActionsMenu, type RowAction } from '@/components/ui/row-actions-menu';
 import { StatePill } from '@/components/ui/state-pill';
+import { stepDisplayTitle } from '@/lib/workflows/step-label';
 import { isAutomated } from '@/lib/workflows/steps';
 import type { WorkflowStepRow as StepRow } from '@/types/workflows';
 
@@ -171,7 +172,7 @@ export function WorkflowStepRow({
                 done || skipped ? 'text-text-subtle line-through' : 'text-text'
               }`}
             >
-              {step.title || 'Untitled step'}
+              {stepDisplayTitle(step)}
             </span>
             {/* Whose move it is, before whose workflow it came from. */}
             {step.requires_approval && step.status === 'pending' ? (

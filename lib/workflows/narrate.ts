@@ -60,6 +60,10 @@ export function narrateWorkflowEvent(
       return withName('Started', step);
     case 'step_completed':
       return withName('Done', step);
+    case 'step_removed':
+      // The row's step_id is nulled by the delete, so the title travels
+      // in the detail; the join has nothing left to find.
+      return withName('Removed', step ?? detailString(detail, 'title'));
     case 'step_skipped': {
       const reason = detailString(detail, 'reason');
       const base = withName('Skipped', step);

@@ -82,4 +82,14 @@ describe('stepDisplayTitle', () => {
     ).toBe('Step');
     expect(stepDisplayTitle({ title: null, type: 'action', config: null })).toBe('Step');
   });
+
+  it('names a branch by its own date, and plainly when it has none', () => {
+    const timing = { mode: 'wedding_relative', direction: 'before', amount: 6, unit: 'months' };
+    expect(stepDisplayTitle({ title: '', type: 'branch', config: {}, timing })).toBe(
+      'Branch · 6mo before wedding',
+    );
+    const chained = { mode: 'after_previous', delayAmount: 0, unit: 'days' };
+    expect(stepDisplayTitle({ title: '', type: 'branch', config: {}, timing: chained })).toBe('Branch');
+    expect(stepDisplayTitle({ title: '', type: 'branch', config: {} })).toBe('Branch');
+  });
 });

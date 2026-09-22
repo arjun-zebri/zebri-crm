@@ -21,6 +21,7 @@
 
 import { configWithDefaults } from '@/lib/automations/action-defaults';
 import { actionUi } from '@/lib/automations/actions/ui';
+import { isDefaultTiming, shortTiming, toStepTiming } from '@/lib/workflows/timing-summary';
 import type { ActionType } from '@/types/automations';
 
 /** The parts of a step row this needs. */
@@ -31,6 +32,12 @@ export interface StepLabelInput {
   type: string;
   /** The step's config; an `action` carries its slug in `actionType`. */
   config: unknown;
+  /**
+   * The step's timing, when the caller has it. A branch with a date of
+   * its own is named by that date: on a couple's list it is the timer
+   * in front of whatever follows, and "Branch" alone reads as junk.
+   */
+  timing?: unknown;
 }
 
 /** Names for the step types that are not actions. */
@@ -86,6 +93,11 @@ export function stepDisplayTitle(step: StepLabelInput): string {
     step.type === 'action' && typeof config['actionType'] === 'string'
       ? (config['actionType'] as string)
       : step.type;
+
+  if (slug === 'branch' && step.timing !== undefined) {
+    const timing = toStepTiming(step.timing);
+    if (!isDefaultTiming(timing)) return `Branch · ${shortTiming(timing)}`;
+  }
 
   const native = NATIVE_LABELS[slug];
   if (native) return native;

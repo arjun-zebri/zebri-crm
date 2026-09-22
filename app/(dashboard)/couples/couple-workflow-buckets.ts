@@ -18,6 +18,7 @@
  * @module app/(dashboard)/couples/couple-workflow-buckets
  */
 
+import { isOverdueForMc } from '@/app/(dashboard)/couples/step-labels';
 import { zonedDateParts } from '@/lib/scheduling/timezone';
 import { needsReview } from '@/lib/workflows/review';
 import type {
@@ -97,9 +98,9 @@ export function bucketCoupleSteps(
         continue;
       }
 
-      const overdue =
-        step.due_at !== null &&
-        zonedDateParts(new Date(step.due_at), timezone).date < today;
+      // An engine step past its date is waiting on the next sweep, not on
+      // the MC; only their own steps count as overdue here.
+      const overdue = isOverdueForMc(step, today, timezone);
 
       if (step.status === 'errored' || needsReview(step, now) || overdue) {
         buckets.needsYouNow.push(row);

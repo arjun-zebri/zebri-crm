@@ -29,6 +29,12 @@ import type { WorkflowStepRow } from '@/types/workflows';
 import { CoupleTabShell, tabStat, type TabStat } from './couple-tab-shell';
 import { CoupleTodoModal } from './couple-todo-modal';
 import { CoupleWorkflowList } from './couple-workflow-list';
+import {
+  describeConsequence,
+  StepConsequenceDialog,
+  type PendingStepAction,
+} from './step-consequence-dialog';
+import { isOverdueForMc, stepDueLabel } from './step-labels';
 import { useCoupleWorkflows } from './use-couple-workflows';
 import { useUserTimezone } from './use-user-timezone';
 import { WorkflowActivity } from './workflow-activity';
@@ -59,6 +65,7 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
   const [todoOpen, setTodoOpen] = useState(false);
   const [openStepId, setOpenStepId] = useState<string | null>(null);
   const [confirmStopAll, setConfirmStopAll] = useState(false);
+  const [pendingStep, setPendingStep] = useState<PendingStepAction | null>(null);
 
   const visible = useMemo(
     // A cancelled workflow stays in the data so the audit trail makes
@@ -75,24 +82,35 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
     [workflows.instances],
   );
 
+  const allSteps = useMemo(() => visible.flatMap((i) => i.steps), [visible]);
+
+  /** Run a skip or remove, asking first when other steps are timed from it. */
+  function perform(pending: PendingStepAction) {
+    if (pending.op === 'skip') workflows.skip(pending.step.id);
+    else workflows.removeStep(pending.step.id);
+    setPendingStep(null);
+  }
+  function runOrConfirm(op: PendingStepAction['op'], stepId: string) {
+    const step = allSteps.find((s) => s.id === stepId);
+    if (!step) return;
+    const pending = { op, step };
+    if (describeConsequence(pending, allSteps) === null) perform(pending);
+    else setPendingStep(pending);
+  }
+
   const stats = useMemo<TabStat[] | undefined>(() => {
-    const steps = visible.flatMap((i) => i.steps);
+    const steps = allSteps;
     if (steps.length === 0) return undefined;
     const open = steps.filter(
       (s) => s.status === 'pending' || s.status === 'waiting',
     ).length;
     const today = zonedDateParts(new Date(), timezone).date;
-    const overdue = steps.filter(
-      (s) =>
-        s.status === 'pending' &&
-        s.due_at !== null &&
-        zonedDateParts(new Date(s.due_at), timezone).date < today,
-    ).length;
+    const overdue = steps.filter((s) => isOverdueForMc(s, today, timezone)).length;
 
     const out: TabStat[] = [{ label: tabStat(open, 'open') }];
     if (overdue > 0) out.push({ label: `${overdue} overdue`, tone: 'danger' });
     return out;
-  }, [visible, timezone]);
+  }, [allSteps, timezone]);
 
   const nudges = useMemo(() => {
     if (workflows.isLoading) return [];
@@ -114,13 +132,7 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
 
   /** Relative due wording for one step. */
   function dueLabel(step: WorkflowStepRow): string {
-    if (step.status === 'errored') return 'Failed';
-    if (step.status === 'done' || step.status === 'skipped') return '';
-    if (step.due_at === null) return '';
-    const today = zonedDateParts(new Date(), timezone).date;
-    const due = zonedDateParts(new Date(step.due_at), timezone).date;
-    if (due === today) return 'Today';
-    return due < today ? `Overdue · ${due}` : due;
+    return stepDueLabel(step, timezone);
   }
 
   const runningCount = visible.filter(
@@ -168,9 +180,9 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
             onOpen={setOpenStepId}
             onTick={workflows.tick}
             onUntick={workflows.untick}
-            onSkip={workflows.skip}
+            onSkip={(stepId) => runOrConfirm('skip', stepId)}
             onRetry={workflows.retry}
-            onRemove={workflows.removeStep}
+            onRemove={(stepId) => runOrConfirm('remove', stepId)}
             onReschedule={workflows.reschedule}
             onRename={workflows.rename}
             onCancelInstance={workflows.cancelInstance}
@@ -197,6 +209,13 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
         onClose={() => setPickerOpen(false)}
         appliedTemplateIds={appliedTemplateIds}
         onApply={workflows.applyTemplate}
+      />
+
+      <StepConsequenceDialog
+        pending={pendingStep}
+        steps={allSteps}
+        onConfirm={perform}
+        onCancel={() => setPendingStep(null)}
       />
 
       <ConfirmDialog

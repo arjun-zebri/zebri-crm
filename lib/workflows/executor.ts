@@ -450,8 +450,14 @@ export async function reopenStep(
   await recomputeInstance(supabase, instance);
 }
 
-/** Recompute `due_at` across an instance after any step transition. */
-async function recomputeInstance(
+/**
+ * Recompute `due_at` across an instance after any step transition.
+ *
+ * Exported for the one mutation that is not a transition: removing a
+ * step. Its neighbours re-anchor the moment it is gone, and leaving that
+ * to the next tick meant the MC saw stale dates until then.
+ */
+export async function recomputeInstance(
   supabase: SupabaseClient<Database>,
   instance: WorkflowInstanceRow,
 ): Promise<void> {

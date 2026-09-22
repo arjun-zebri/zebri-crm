@@ -173,4 +173,27 @@ describe('bucketCoupleSteps', () => {
     expect(buckets.needsYouNow).toHaveLength(0);
     expect(buckets.next.map((r) => r.step.id)).toEqual(['tonight']);
   });
+
+  it('leaves an engine step past its date to the engine, not the MC', () => {
+    // A "6 months before" timer applied 3 months out is past on day one.
+    // It is the engine's to run on its next sweep; putting it in front
+    // of the MC as overdue is what got timers deleted on 2026-09-16.
+    const buckets = bucketCoupleSteps(
+      [
+        instance([
+          step('timer', {
+            type: 'branch',
+            due_at: '2026-03-26T13:00:00Z',
+            timing: { mode: 'wedding_relative', direction: 'before', amount: 6, unit: 'months' },
+          }),
+          step('send', { type: 'action', due_at: '2026-09-01T02:00:00Z' }),
+          step('failed', { type: 'action', status: 'errored', due_at: '2026-09-01T02:00:00Z' }),
+        ]),
+      ],
+      TZ,
+      NOW,
+    );
+    expect(buckets.needsYouNow.map((r) => r.step.id)).toEqual(['failed']);
+    expect(buckets.next.map((r) => r.step.id)).toEqual(['timer', 'send']);
+  });
 });
