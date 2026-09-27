@@ -130,7 +130,8 @@ jobs:
 
       - name: Start local Supabase
         id: supabase_start
-        run: supabase start --workdir .
+        # Registry fallback + trimmed service list; see the script header.
+        run: ./scripts/ci-supabase-start.sh
 
       - name: Integration tests (RLS + DB)
         run: npm run test:integration
@@ -247,7 +248,8 @@ jobs:
 
       - name: Start local Supabase
         id: supabase_start
-        run: supabase start --workdir .
+        # Registry fallback + trimmed service list; see the script header.
+        run: ./scripts/ci-supabase-start.sh
 
       # The local stack's keys are generated per stack, so read them back
       # rather than hard-coding them. Masked anyway: they grant full access
