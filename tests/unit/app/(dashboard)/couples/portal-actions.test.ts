@@ -246,3 +246,15 @@ describe('approveTimelineItemAction', () => {
     expect(updateMock).toHaveBeenCalledWith({ pending_review: false });
   });
 });
+
+/** Task 31 (audit M5): a contact edited from the couple's profile. */
+describe('updateContactAction line breaks (M5)', () => {
+  it.each([['name'], ['contact_name'], ['email']])('rejects a line break in %s', async (field) => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { updateContactAction } = await load();
+    const result = await updateContactAction({ id: validUuid, patch: { [field]: 'a\nb' } });
+    // The same plain message the couples and contacts actions give.
+    expect(result).toEqual({ ok: false, error: 'Names and email addresses must be on one line.' });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+});

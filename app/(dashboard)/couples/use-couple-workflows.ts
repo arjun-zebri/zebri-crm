@@ -28,6 +28,7 @@ import {
   tickStepAction,
   untickStepAction,
 } from '@/app/(dashboard)/workflows/instance-actions';
+import { useActionErrorToast } from '@/app/(dashboard)/workflows/use-action-error-toast';
 import type { WorkflowInstanceWithSteps } from '@/types/workflows';
 
 export interface CoupleWorkflows {
@@ -76,6 +77,7 @@ type StepMutation =
 /** Load a couple's workflows and expose their mutations. */
 export function useCoupleWorkflows(coupleId: string): CoupleWorkflows {
   const queryClient = useQueryClient();
+  const onError = useActionErrorToast();
   const key = ['couple-workflows', coupleId] as const;
 
   const query = useQuery<WorkflowInstanceWithSteps[]>({
@@ -99,6 +101,9 @@ export function useCoupleWorkflows(coupleId: string): CoupleWorkflows {
       if (!res.ok) throw new Error(res.error);
     },
     onSuccess: invalidate,
+    // Without it a failed tick left the checkbox as it was and said
+    // nothing (review I2).
+    onError,
   });
 
   const apply = useMutation({
@@ -112,6 +117,8 @@ export function useCoupleWorkflows(coupleId: string): CoupleWorkflows {
       return res.data.instanceId;
     },
     onSuccess: invalidate,
+    // The picker stays open on a failure; this says why.
+    onError,
   });
 
   return {

@@ -152,6 +152,44 @@ describe('executeCopilotTool — draft guard', () => {
   })
 })
 
+/* ─── set_trigger and exit stages ────────────────────────────────── */
+
+describe('executeCopilotTool, set_trigger against the stop stages', () => {
+  it('refuses a stage trigger on a stage the workflow stops on, and writes nothing', async () => {
+    const { client, calls } = mockSupabase((call) => {
+      if (call.table === 'workflow_templates' && call.op === 'select') {
+        return { data: { ...draftAutomation(), exit_statuses: ['lost'] } }
+      }
+      if (call.table === 'couple_statuses') return { data: [{ slug: 'lost', name: 'Lost' }] }
+      return { data: null }
+    })
+    const res = await executeCopilotTool(
+      'set_trigger',
+      { triggerType: 'couple_stage_changed', triggerConfig: { toStatus: 'lost' } },
+      { automationId: AUTOMATION_ID, supabase: client },
+    )
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error).toMatch(/starts when a couple moves to Lost/)
+    expect(calls.some((c) => c.op === 'update')).toBe(false)
+  })
+
+  it('sets a stage trigger on a stage the workflow does not stop on', async () => {
+    const { client, calls } = mockSupabase((call) => {
+      if (call.table === 'workflow_templates' && call.op === 'select') {
+        return { data: { ...draftAutomation(), exit_statuses: ['lost'] } }
+      }
+      return { data: null }
+    })
+    const res = await executeCopilotTool(
+      'set_trigger',
+      { triggerType: 'couple_stage_changed', triggerConfig: { toStatus: 'confirmed' } },
+      { automationId: AUTOMATION_ID, supabase: client },
+    )
+    expect(res.ok).toBe(true)
+    expect(calls.some((c) => c.op === 'update')).toBe(true)
+  })
+})
+
 /* ─── add_action ─────────────────────────────────────────────────── */
 
 describe('executeCopilotTool — add_action', () => {
@@ -168,6 +206,24 @@ describe('executeCopilotTool — add_action', () => {
     )
     expect(res.ok).toBe(false)
     expect(calls.some((c) => c.op === 'insert')).toBe(false)
+  })
+
+  it('refuses a step the workflow runner cannot run, before any write (Task 33)', async () => {
+    // `stop` passes the copilot's own flow-control schema, but a workflow
+    // step of that kind errors at run time as an unknown action. The
+    // shared save-time check refuses it, as it does in the builder.
+    const { client, calls } = mockSupabase((call) => {
+      if (call.table === 'workflow_templates') return { data: draftAutomation() }
+      if (call.table === 'workflow_template_steps' && call.op === 'select') return { data: [] }
+      throw new Error(`unexpected call ${call.table}/${call.op}`)
+    })
+    const res = await executeCopilotTool(
+      'add_action',
+      { type: 'stop', config: {} },
+      { automationId: AUTOMATION_ID, supabase: client },
+    )
+    expect(res.ok).toBe(false)
+    expect(calls.some((c) => c.op === 'insert' || c.op === 'update')).toBe(false)
   })
 
   it('appends to the top-level slot with both parent and branch null', async () => {
@@ -325,6 +381,37 @@ describe('executeCopilotTool — add_action', () => {
     expect((inserts[0]!.values as Record<string, unknown>).requires_approval).toBe(true)
   })
 
+  it('folds a start offset into a Wait and never holds one for review', async () => {
+    // A Wait has one number. An offset the model asks for is added to the
+    // duration, so the total delay is what it meant, and the Wait starts
+    // straight after the step above.
+    const inserts: Call[] = []
+    const { client } = mockSupabase((call) => {
+      if (call.table === 'workflow_templates') return { data: draftAutomation() }
+      if (call.table === 'workflow_template_steps' && call.op === 'select') return { data: [] }
+      if (call.table === 'workflow_template_steps' && call.op === 'insert') {
+        inserts.push(call)
+        return { data: { id: 'new-id' } }
+      }
+      throw new Error(`unexpected call ${call.table}/${call.op}`)
+    })
+    const res = await executeCopilotTool(
+      'add_action',
+      {
+        type: 'wait',
+        config: { mode: 'duration', durationMinutes: 60 },
+        timing: { mode: 'after_previous', delayAmount: 2, unit: 'hours' },
+        requiresApproval: true,
+      },
+      { automationId: AUTOMATION_ID, supabase: client },
+    )
+    expect(res.ok).toBe(true)
+    const inserted = inserts[0]!.values as Record<string, unknown>
+    expect((inserted.config as Record<string, unknown>).durationMinutes).toBe(180)
+    expect(inserted.timing).toEqual({ mode: 'after_previous', delayAmount: 0, unit: 'days' })
+    expect(inserted.requires_approval).toBe(false)
+  })
+
   it('appends into a branch side when afterActionId is a branch + branchPath', async () => {
     const inserts: Call[] = []
     const { client } = mockSupabase((call) => {
@@ -451,6 +538,33 @@ describe('executeCopilotTool — update_action_config', () => {
     )
     expect(res.ok).toBe(false)
     expect(calls.some((c) => c.op === 'update')).toBe(false)
+  })
+})
+
+describe('executeCopilotTool — update_action_config on a Wait', () => {
+  it('folds a new start offset into the stored duration', async () => {
+    const { client, calls } = mockSupabase((call) => {
+      if (call.table === 'workflow_templates') return { data: draftAutomation() }
+      if (call.table === 'workflow_template_steps' && call.op === 'select') {
+        return { data: { id: ACTION_A, type: 'wait', config: { mode: 'duration', durationMinutes: 60 } } }
+      }
+      if (call.table === 'workflow_template_steps' && call.op === 'update') return { data: null }
+      throw new Error(`unexpected call ${call.table}/${call.op}`)
+    })
+    const res = await executeCopilotTool(
+      'update_action_config',
+      {
+        actionId: ACTION_A,
+        timing: { mode: 'after_previous', delayAmount: 1, unit: 'days' },
+        requiresApproval: true,
+      },
+      { automationId: AUTOMATION_ID, supabase: client },
+    )
+    expect(res.ok).toBe(true)
+    const patch = calls.find((c) => c.op === 'update')!.values as Record<string, unknown>
+    expect(patch.config).toEqual({ mode: 'duration', durationMinutes: 60 + 24 * 60 })
+    expect(patch.timing).toEqual({ mode: 'after_previous', delayAmount: 0, unit: 'days' })
+    expect(patch.requires_approval).toBe(false)
   })
 })
 

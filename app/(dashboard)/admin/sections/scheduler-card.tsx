@@ -8,10 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { SchedulerStatus } from '@/lib/admin/scheduler';
-import { formatRelativeTime } from '@/lib/utils';
 import { isHeartbeatStale, TICK_STALE_MS } from '@/lib/workflows/heartbeat';
 
 import { SchedulerJobList } from './scheduler-job-list';
+import { SchedulerTickDetail } from './scheduler-tick-detail';
 
 /** A line of feedback under the Sync button. */
 interface Notice {
@@ -21,7 +21,8 @@ interface Notice {
 
 /**
  * Scheduler health: are the Vault secrets set, what did each pg_cron job
- * do last, and is the tick heartbeat fresh. The one place the founder
+ * do last, is the tick heartbeat fresh, and when stale bus events were
+ * last dropped ({@link SchedulerTickDetail}). The one place the founder
  * configures the scheduler; nothing is typed, Sync pushes the
  * deployment's own env values.
  */
@@ -106,13 +107,7 @@ export function SchedulerCard({
       <p className="text-body text-text-muted font-mono truncate">
         {status.baseUrl ?? 'No base URL in Vault.'}
       </p>
-      <p className={`text-body ${stale ? 'text-danger' : 'text-text-muted'}`}>
-        {stale ? 'Tick stale' : 'Tick healthy'}
-        {status.tickHeartbeat
-          ? `, last ${formatRelativeTime(status.tickHeartbeat, clock.getTime())}`
-          : ', never run'}
-        {status.tickTruncated ? ', last tick truncated' : ''}
-      </p>
+      <SchedulerTickDetail status={status} stale={stale} clock={clock} />
       <p className={`text-body ${status.slackConfigured ? 'text-text-muted' : 'text-warning'}`}>
         {status.slackConfigured
           ? 'Watchdog posts to Slack if the tick stops.'

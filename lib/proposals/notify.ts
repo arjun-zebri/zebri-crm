@@ -32,7 +32,7 @@ export async function loadNotifyContext(admin: Admin, proposalId: string) {
   const { data } = await admin
     .from('proposals')
     .select(
-      'id, user_id, proposal_number, title, declined_reason, declined_message, accepted_option_id, couple:couple_id(name), proposal_options!proposal_options_proposal_id_fkey(id, title)',
+      'id, user_id, couple_id, proposal_number, title, declined_reason, declined_message, accepted_option_id, couple:couple_id(name), proposal_options!proposal_options_proposal_id_fkey(id, title)',
     )
     .eq('id', proposalId)
     .maybeSingle()
@@ -43,6 +43,8 @@ export async function loadNotifyContext(admin: Admin, proposalId: string) {
   // always has a business, but the metadata key predates a hard requirement.
   const businessName = (mc?.user?.user_metadata?.business_name as string | undefined) || 'Zebri'
   const couple = Array.isArray(data.couple) ? data.couple[0] : data.couple
+  // coupleName is for the couple/MC-facing email templates below; the
+  // Slack alerts never see it (T27) and use `row.couple_id` instead.
   return { row: data, email, businessName, coupleName: couple?.name ?? 'The couple' }
 }
 
@@ -90,7 +92,7 @@ export async function notifyProposalAccepted(admin: Admin, proposalId: string, t
     severity: 'info',
     userId: ctx.row.user_id,
     proposalNumber: ctx.row.proposal_number,
-    coupleName: ctx.coupleName,
+    coupleId: ctx.row.couple_id,
     total,
   })
 }
@@ -132,7 +134,7 @@ export async function notifyProposalDeclined(admin: Admin, proposalId: string): 
     severity: 'info',
     userId: ctx.row.user_id,
     proposalNumber: ctx.row.proposal_number,
-    coupleName: ctx.coupleName,
+    coupleId: ctx.row.couple_id,
     reason,
   })
 }

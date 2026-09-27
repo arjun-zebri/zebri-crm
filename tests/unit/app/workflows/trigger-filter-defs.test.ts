@@ -202,6 +202,20 @@ describe('offered comparison operators', () => {
   })
 })
 
+describe('invoice_overdue filters', () => {
+  // Task 35 (workflows audit M8): every couple-shaped trigger with a
+  // wedding date on its payload offers the "Days until the wedding"
+  // chip via EVENT_DATE_FILTERS. invoice_overdue deliberately does
+  // not: its payload carries no event_date (see
+  // `lib/automations/time-emitters/invoice-overdue.ts`), so the chip
+  // would sit on screen and never do anything. Pinning the exact key
+  // list here means the chip can't quietly come back without a test
+  // failing to explain why.
+  it('offers only the overdue depth and the final-balance narrowing', () => {
+    expect(INVOICE_OVERDUE_FILTERS.map((f) => f.key)).toEqual(['daysOverdueMin', 'isFinalBalance'])
+  })
+})
+
 describe('couple_stage_changed filters', () => {
   const filters = coupleStageFilters(STATUSES)
 

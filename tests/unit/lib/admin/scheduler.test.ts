@@ -53,7 +53,67 @@ describe('parseSchedulerStatus', () => {
       jobs: [],
       tickHeartbeat: null,
       tickTruncated: null,
+      tickFailedPasses: [],
+      tickFailedReads: 0,
+      tickFailedReadSite: null,
+      staleEvents: null,
     })
     expect(parseSchedulerStatus('nope').jobs).toEqual([])
+  })
+
+  // Task 36 (audit M4): the last stale-event skip and the tick's failed
+  // passes both ride on heartbeat rows the RPC already returns, so the
+  // card shows them without a query of its own.
+  it('reads the last stale-event skip and the failed passes from the heartbeats', () => {
+    const status = parseSchedulerStatus({
+      configured: true,
+      jobs: [],
+      heartbeats: {
+        'automations-tick': {
+          last_run_at: '2026-09-20T09:45:03Z',
+          detail: { truncated: false, failedPasses: ['workflows.executor'] },
+        },
+        'workflow-stale-events': { last_run_at: '2026-09-20T08:00:00Z', detail: { count: 12 } },
+      },
+    })
+    expect(status.staleEvents).toEqual({ count: 12, at: '2026-09-20T08:00:00Z' })
+    expect(status.tickFailedPasses).toEqual(['workflows.executor'])
+  })
+
+  it('reads a malformed stale record as none, and odd failed passes as none', () => {
+    const status = parseSchedulerStatus({
+      configured: true,
+      jobs: [],
+      heartbeats: {
+        'automations-tick': { last_run_at: '2026-09-20T09:45:03Z', detail: { failedPasses: 'executor' } },
+        'workflow-stale-events': { last_run_at: '2026-09-20T08:00:00Z', detail: { count: 'lots' } },
+      },
+    })
+    expect(status.staleEvents).toBeNull()
+    expect(status.tickFailedPasses).toEqual([])
+  })
+
+  // Phase 6 review I2: a failed read must be visible without Slack.
+  it('reads the last tick\'s failed read count and site from its heartbeat', () => {
+    const status = parseSchedulerStatus({
+      configured: true,
+      jobs: [],
+      heartbeats: {
+        'automations-tick': {
+          last_run_at: '2026-09-20T09:45:03Z',
+          detail: { failedReads: 3, failedReadSite: 'executor.load_instance' },
+        },
+      },
+    })
+    expect(status.tickFailedReads).toBe(3)
+    expect(status.tickFailedReadSite).toBe('executor.load_instance')
+
+    const old = parseSchedulerStatus({
+      configured: true,
+      jobs: [],
+      heartbeats: { 'automations-tick': { last_run_at: '2026-09-20T09:45:03Z', detail: { failedReads: 'x' } } },
+    })
+    expect(old.tickFailedReads).toBe(0)
+    expect(old.tickFailedReadSite).toBeNull()
   })
 })

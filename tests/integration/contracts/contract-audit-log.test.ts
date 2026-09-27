@@ -152,7 +152,10 @@ describe('contract_audit_log — integration', () => {
     // — that's the by-design guarantee: a signed contract is
     // binding and the audit trail can't be retroactively rewritten
     // via revoke→sign cycles). So the realistic test is from 'sent'.
-    const { data, error } = await user.client.rpc('revoke_contract', {
+    // Service role, as revokeContractAction calls it: revoke_contract is
+    // SECURITY INVOKER and its audit write needs EXECUTE on
+    // emit_contract_audit_event, which clients lost in 20261001310000.
+    const { data, error } = await serviceClient().rpc('revoke_contract', {
       p_contract_id: fixture.contractId,
     });
     expect(error).toBeNull();

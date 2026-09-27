@@ -10,6 +10,7 @@ import {
 } from '@/lib/branding/enabled-surfaces'
 import { HEADING_FONTS, BODY_FONTS, ensureBrandFontsStylesheet, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { shouldShowOnboarding } from '@/lib/branding/onboarding-gate'
+import { withoutPaymentDetails } from '@/lib/branding/payment-details'
 import type { TextCase } from '@/lib/branding/text-case'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
@@ -49,6 +50,7 @@ interface UserMetadata {
   secondary_color?: string
   tagline?: string
   abn?: string
+  postal_address?: string
   show_contact_on_documents?: boolean
   font_heading?: string
   font_body?: string
@@ -226,7 +228,10 @@ export default function BrandingPage() {
       return
     }
 
-    const existing = user.user_metadata || {}
+    // The payment details are left out (Task 23c): only
+    // set_my_payment_details() may change them, and a bank save landing
+    // between getUser() and this write would otherwise fail the wizard.
+    const existing = withoutPaymentDetails(user.user_metadata)
 
     // Step (a): Update auth metadata FIRST.
     // If this fails, surface error and do not proceed to branding upsert.
@@ -402,6 +407,7 @@ export default function BrandingPage() {
             secondaryColor: metadata?.secondary_color || '#6B7280',
             tagline: metadata?.tagline || '',
             abn: metadata?.abn || '',
+            postalAddress: metadata?.postal_address || '',
             showContactOnDocuments: true,
             fontHeading: sanitizeHeading(metadata?.font_heading),
             fontBody: sanitizeBody(metadata?.font_body),

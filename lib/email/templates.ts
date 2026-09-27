@@ -428,18 +428,57 @@ function applySignatureFragments(html: string, fragments: string[]): string {
   return html.replace(pattern, (_m, index: string) => fragments[Number(index)] ?? '')
 }
 
-/** Swap missing-variable sentinels for amber highlight spans. */
-function applyMissingHighlights(html: string): string {
-  const pattern = new RegExp(`${MISSING_OPEN}([^${MISSING_CLOSE}]*)${MISSING_CLOSE}`, 'g')
-  return html.replace(
-    pattern,
-    (_m, label: string) =>
-      `<span class="rounded-control bg-amber-100 px-1 text-amber-900" data-missing-var="true">${escapeText(
-        label,
-      )}</span>`,
-  )
+/**
+ * Wrap a missing variable's label in the highlight sentinels, for a
+ * caller that builds its own text (the legacy plain-text send body) and
+ * then swaps them with {@link applyMissingHighlights} after its HTML is
+ * assembled. Preview only: nothing on a send path calls this.
+ */
+export function markMissing(label: string): string {
+  return `${MISSING_OPEN}${label}${MISSING_CLOSE}`
 }
 
-function escapeText(s: string): string {
+/**
+ * Inline styling for the highlight, beside the class. The class serves
+ * the in-app previews, which have the app's stylesheet; the review
+ * preview renders the whole email in a sandboxed frame with none, so the
+ * mark has to carry its own colours to be seen there at all. Hex values
+ * because this is email HTML, like the shell in `./html`.
+ */
+const MISSING_STYLE = 'background:#fef3c7;color:#78350f;border-radius:4px;padding:0 4px;'
+
+/**
+ * Swap missing-variable sentinels for amber highlight spans.
+ *
+ * Exported for the review preview's plain-text path (see
+ * {@link markMissing}). A string with no sentinels comes back unchanged,
+ * which is what keeps a send's HTML free of this markup.
+ *
+ * `html` is already HTML, so the label between the sentinels is already
+ * escaped by whatever produced it (TipTap and the sanitiser here, the
+ * branded shell or `markTextGaps` on the legacy text path). It goes into
+ * the span as it is: escaping it again showed "A & b" as "A &amp;amp; b"
+ * (Task 29 review M1, closed in the Phase 5 fix wave).
+ */
+export function applyMissingHighlights(html: string): string {
+  // The label may not contain either sentinel, so a stray opener (one
+  // left by an excerpt that cut a marked gap in half) can never reach
+  // across markup to a later gap's closer and swallow the email between
+  // them into one span. Whatever sentinels are left unpaired are dropped.
+  const pattern = new RegExp(
+    `${MISSING_OPEN}([^${MISSING_OPEN}${MISSING_CLOSE}]*)${MISSING_CLOSE}`,
+    'g',
+  )
+  return html
+    .replace(
+      pattern,
+      (_m, label: string) =>
+        `<span class="rounded-control bg-amber-100 px-1 text-amber-900" style="${MISSING_STYLE}" data-missing-var="true">${label}</span>`,
+    )
+    .replace(new RegExp(`[${MISSING_OPEN}${MISSING_CLOSE}]`, 'g'), '')
+}
+
+/** Escape text for an HTML text node. */
+export function escapeText(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }

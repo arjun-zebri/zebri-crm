@@ -98,6 +98,8 @@ function CardBody({
           <div className="mt-1.5 flex items-center gap-1.5 text-body text-text-subtle">
             {progress.hasFailure ? (
               <AlertTriangle size={12} strokeWidth={1.5} className="shrink-0 text-danger" />
+            ) : progress.partialSends > 0 ? (
+              <AlertTriangle size={12} strokeWidth={1.5} className="shrink-0 text-warning" />
             ) : progress.needsReview ? (
               <ShieldCheck size={12} strokeWidth={1.5} className="shrink-0 text-warning" />
             ) : (
@@ -105,6 +107,7 @@ function CardBody({
             )}
             <span className="truncate">
               {progress.done} of {progress.total}
+              {progress.partialSends > 0 ? ` · ${progress.partialSends} partly failed` : ''}
               {progress.nextTitle ? ` · next: ${progress.nextTitle}` : ''}
             </span>
           </div>

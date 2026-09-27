@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { isCronAuthorized } from '@/lib/api/cron-auth'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 async function handle(request: NextRequest) {
   // Constant-time bearer-token check via the shared helper.
@@ -9,7 +9,10 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = await createServerClient()
+  // Service role: expire_contracts() touches every tenant's contracts, so
+  // clients (anon, authenticated) no longer have EXECUTE on it
+  // (migration 20261001310000). The cron secret above is the gate.
+  const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('expire_contracts')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

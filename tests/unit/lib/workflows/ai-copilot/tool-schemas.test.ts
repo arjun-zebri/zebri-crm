@@ -31,6 +31,22 @@ describe('validateActionConfig', () => {
     if (!res.ok) expect(res.error).toMatch(/mode/i)
   })
 
+  it('refuses a new "Until a specific date" wait (owner ruling 2026-09-27)', () => {
+    // Saved ones still run and still pass the runner's schema; the copilot
+    // just no longer writes them.
+    const res = validateActionConfig('wait', { mode: 'until_date', untilDate: '2027-01-03' })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.error).toMatch(/relative date/i)
+  })
+
+  it('accepts a relative-date wait in months', () => {
+    const res = validateActionConfig('wait', {
+      mode: 'relative_to_event',
+      relative: { amount: 3, unit: 'months', direction: 'before', anchor: 'event_date' },
+    })
+    expect(res.ok).toBe(true)
+  })
+
   it('accepts a valid branch config with a predicate', () => {
     const res = validateActionConfig('branch', {
       predicate: { kind: 'has_signed_contract' },

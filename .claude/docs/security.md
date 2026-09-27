@@ -8,6 +8,495 @@ references this doc for the per-page security checklist.
 
 ## Active findings
 
+### Fixed (Phase 5 whole review, closed in the Phase 5 fix wave): the MC's bcc copy could unsubscribe the couple
+
+`send_email` with `bccSelf` put the MC on the couple's message as a
+bcc, so the MC's copy carried the couple's footer link and
+`List-Unsubscribe` / `List-Unsubscribe-Post` headers. Gmail and Apple
+Mail surface a native Unsubscribe control for those headers; the MC
+pressing it on their own copy POSTed the couple's one-click URL and
+opted the couple out of every future workflow email (P1). The same
+shared message let a Resend event about the MC's mailbox move the
+couple's delivery row (I1). The MC's copy is now its own message
+(`lib/automations/actions/messaging.ts`, `planRecipients.mcCopy`):
+rendered with no unsubscribe link and no `List-Unsubscribe`, its own
+idempotency key, tagged `mc_copy`, never logged, and ignored by the
+webhook. Tested in `tests/unit/lib/automations/actions/send-email.test.ts`
+and `tests/integration/email/automated-send-log.test.ts`.
+
+### Fixed (Phase 5 whole review, M7): a broken mailbox connection silently changed the sender
+
+Any failure to reach the MC's connected Gmail or Outlook (a settings
+read error, a token that would not decrypt, a failed refresh) quietly
+sent automated email from the shared Zebri address, with the
+connection still showing connected and the step envelope naming the
+MC's mailbox. `resolveSenderForSend` (`lib/email/sender-identity.ts`)
+now tells the cases apart: a transient failure errors the step
+(`resolveStepSender`), and a dead connection (`invalid_grant`, an
+undecryptable token) is marked `oauth_status = 'failed'` and alerted
+once (`mailbox_disconnected`) before the shared address is used.
+
+### Fixed (found in the Task 30 review, closed in Task 30 fix round 1): suppression gated on the display-log write
+
+The Resend webhook wrote the `couple_emails` delivery status first and
+answered 500 on any failure before reaching suppression. A persistent
+error (the app deployed ahead of its migration gives 42703 on every
+event) meant permanent bounces and complaints were never suppressed,
+and Svix eventually disables an endpoint that keeps failing, which
+would end suppression for good. The failure was also silent (a log
+line, no alert).
+
+The fix (`app/api/resend/webhook/route.ts`): the delivery write's
+outcome is held while suppression runs; a failed write raises a deduped
+`app_error` (`source: 'resend_webhook_delivery'`, one per ten minutes);
+only a transient failure then answers 500 (both halves are idempotent,
+so Resend's retry only finishes the record); a schema-shaped failure
+(42703, 42P01, 42501, PGRST204, PGRST205) answers 200 plus the alert.
+Tested in `tests/integration/email/automated-send-log.test.ts` with an
+injected update failure: the suppression row is written and alerted
+either way.
+
+### Fixed (found in Task 23b, closed in Task 23c, migration 20261022000000): an aal1 token could rewrite the MC's bank details
+
+GoTrue refuses email and password changes and factor removal below
+`aal2`, but not `user_metadata` updates: `auth.updateUser({ data: {
+bank_bsb } })` on an `aal1` session of a 2FA MC succeeded (probed
+2026-09-25). `user_metadata` holds the bank details and ABN that
+`get_public_invoice`, `get_public_proposal` and the branding blocks show
+to couples, so a password thief could redirect couple payments. GoTrue
+writes as `supabase_auth_admin` with no JWT, so `require_mfa` never saw
+it.
+
+The fix is a write-path lock; every reader is unchanged:
+
+- **Protected keys:** `bank_account_name`, `bank_bsb`,
+  `bank_account_number`, `abn` (in `raw_user_meta_data`).
+- **`lock_payment_details`**, a BEFORE UPDATE trigger on `auth.users`
+  (`WHEN old.raw_user_meta_data is distinct from new...`), raises 42501
+  "payment details can only be changed from Settings" when any protected
+  key's value changes and the transaction-local GUC
+  `zebri.payment_details_write` is not `on`. Absent, JSON null and `""`
+  count as the same "not set". A save that resends the keys unchanged
+  passes, so every profile save that spreads the whole metadata keeps
+  working. GoTrue's user API, its admin API (service role) and raw SQL
+  are all refused.
+- **`set_my_payment_details(p_details jsonb)`** is the only writer:
+  SECURITY DEFINER, `search_path ''`, EXECUTE for `authenticated` only,
+  first statement the `mfa_satisfied()` guard (so an `aal1` session of a
+  2FA MC gets 42501; the shadow waiver applies as everywhere else). It
+  validates each CHANGED value (BSB 6 digits, account number 4 to 10
+  digits, ABN 11 digits, spaces and hyphens allowed as separators;
+  account name at most 200 characters; 22023 otherwise), sets the GUC for
+  its one UPDATE, merges only the keys sent (null or `""` clears) and
+  returns all four values.
+- **No service-role writer exists** (Stripe and `updateEntitlements`
+  write `app_metadata`; the admin profile edit writes `display_name` and
+  `business_name`), so there is no service-role overload. A support fix
+  by hand runs `select set_config('zebri.payment_details_write', 'on',
+  true);` in the same transaction as its UPDATE.
+- **Shadow mode:** the RPC's UPDATE fires the existing
+  `zz_log_shadow_auth_user` trigger, so a change made through a shadow
+  session is logged (key names only) and alerted as before. Since fix
+  round 1 (`20261022100000`) an `abn` change counts as sensitive too, so
+  it pages Slack like a `bank_*` or email change.
+- **App:** Settings → Payments and the Branding editor's ABN save through
+  `savePaymentDetails` (`lib/branding/payment-details.ts`). Every
+  whole-metadata spread on this branch strips the keys with
+  `withoutPaymentDetails`, so a stale copy can neither revert them nor
+  fail the save: the Settings sections, the welcome gate, the Branding
+  editor and its first-run wizard (`branding/page.tsx`), and the admin
+  profile edit (`patchUserDisplay` in `app/admin/actions.ts`). **Not yet
+  on this branch:** the two onboarding writers on `feature/onboarding`
+  (`couples/setup/actions.ts`, `load-setup.ts`) spread a fresh
+  `getUser()` copy unstripped; they pass (an unchanged resend is
+  allowed) but can fail on a bank save racing them. Wrap them in
+  `withoutPaymentDetails` when that branch merges.
+- **Public RPCs read `stripe_connect_enabled` from `app_metadata`**
+  (fix round 1, `20261022100000`). `get_public_invoice` read the
+  `user_metadata` copy, and `get_public_proposal` fell back to it, so an
+  `aal1` token could hide card payment (set it false) or break every
+  public invoice of the MC (a non-boolean made the `::boolean` cast
+  raise). Both now follow the §7.4 rule: `app_metadata` only when it
+  carries the `account_type` sentinel (every user since Phase 0.8b),
+  the legacy `user_metadata` copy only without it; the value is compared
+  as text to `'true'`, so anything else is false and never raises.
+- **Deploy guard:** `20261022100000` fails the push when the migration
+  role cannot UPDATE `auth.users` (without it every bank save would fail
+  at runtime).
+- **Tests:** `tests/integration/rls/payment-details-lock.test.ts` (aal1
+  refused on both paths with the value unchanged, aal2 and no-2FA
+  succeed, unchanged resend succeeds, service role refused, shadow
+  logging including the ABN alert, public invoice shows the new values,
+  a `user_metadata` `stripe_connect_enabled` flip or garbage value leaves
+  the public invoice and proposal unchanged and working);
+  `require-mfa-coverage.test.ts` lists the RPC as guarded.
+
+**Residual:** an `aal1` token can still READ the values through `GET
+/auth/v1/user` (they are printed on every public invoice anyway). The
+rest of `user_metadata` stays writable at `aal1`: see the open P1 below.
+Deploy check: the migration creates a trigger
+on `auth.users` as the migration role; it works locally (postgres is
+not a superuser there either, and the shadow triggers prove it), and if
+a hosted project refused it the push fails loudly rather than shipping
+without the lock.
+
+### P1 (open, found in the Task 23c review): an aal1 token can still put payment instructions in front of couples through free-text metadata
+
+Task 23c locked the structured payment details, so the couple always
+sees the MC's real BSB, account and ABN. But a password thief with only
+an `aal1` session of a 2FA MC can still rewrite, through
+`auth.updateUser({ data })`, the free text couples read:
+
+- `email_signature`: appended to every automated workflow email and
+  manual email to every couple (`lib/automations/context.ts`,
+  `lib/email/send-context.ts`). The worst vector: "Our bank details
+  have changed, please pay BSB 999-999 / 12345678" reaches every couple
+  with no action from the MC.
+- `business_name`, `tagline`, `postal_address` (and `phone`): printed on
+  public invoices and proposals via `_user_branding` /
+  `buildPublicBranding`.
+
+Rated P1, below the 23b P0: the couple has to act on text rather than a
+silently swapped field, and the genuine bank details are printed beside
+it. (The related `stripe_connect_enabled` mirror, P2, is fixed: see the
+23c entry above.)
+
+**Owner decision needed:** which of these to build.
+
+1. **Notify on change (recommended first, medium):** an AFTER UPDATE
+   trigger on `auth.users` that enqueues an email to the MC's own
+   address whenever `email_signature`, `business_name`, `tagline` or
+   `postal_address` changes. It gives the victim a signal within
+   minutes and moves no writer.
+2. **Generalise the 23c lock (structural):** refuse ANY `user_metadata`
+   change for a user with a verified factor unless a guarded GUC is on,
+   and move the profile and branding saves behind one guarded
+   `set_my_profile(patch)` RPC. Closes the class, but touches about
+   eight writers (Settings sections, Branding editor and wizard, welcome
+   gate, email appearance, template categories, onboarding) and is its
+   own task.
+
+Until decided, 2FA protects tables, Storage, RPCs and the payment
+details, but not the free text around them.
+
+### Fixed (found in Task 23b, closed 2026-09-25 by the fix/exit-shadow-takeover hotfix, migration 20261001310000): definer RPCs callable by any client with no revoke
+
+Supabase's default privileges grant EXECUTE on every new `public`
+function to `anon` and `authenticated`, so `grant ... to service_role`
+alone does not make a function service-role only; it needs an explicit
+`revoke execute ... from anon, authenticated`. These `SECURITY DEFINER`
+functions had none in any migration:
+
+- `bookings_due_for_reminder()`: returned every tenant's upcoming
+  bookings with couple names, emails and `manage_token` (which cancels or
+  reschedules the booking). Called only by the cron route's service-role
+  client. The "Service-role-only reminder RPCs" section below assumed
+  otherwise.
+- `mark_booking_reminder_sent(p_booking_id)`: let anyone suppress a
+  reminder by booking id.
+- `seed_default_contract_template(p_user_id)`: seeded a template into any
+  user's account.
+- `emit_contract_audit_event(...)`: explicitly granted to
+  `authenticated`; any signed-in user could append audit rows to any
+  contract by id.
+- `expire_contracts()`: granted to `anon` on purpose (the cron route
+  called it through an anon server client).
+
+Not a two-factor issue (anon could call them), so Task 23b did not guard
+them; they were allowlisted with a "pre-existing exposure" reason in
+`tests/integration/rls/require-mfa-coverage.test.ts`. Fixed: migration
+`20261001310000_revoke_client_execute_internal_functions` revokes
+EXECUTE from `anon, authenticated` on all five and grants `service_role`
+(full writeup below, under "P0 - internal SECURITY DEFINER functions
+executable by clients"). The require-mfa ratchet's allowlist entries for
+these five now read `SERVICE_ONLY`, matching the reason already used for
+the other service-role-only definer functions, since the local
+grant-repair script still re-opens `authenticated` EXECUTE on this dev
+machine.
+
+### Fixed in Task 23b (2026-09-25): aal1 tokens reached data directly for 2FA users (Task 23 review C2)
+
+Two-factor sign-in (Task 23) was enforced only in `middleware.ts`. A
+password thief could call `signInWithPassword` with the publishable key
+and use the `aal1` JWT against PostgREST, Storage and definer RPCs. Now
+(`20261019000000_require_mfa_at_database.sql`):
+
+- `public.mfa_satisfied()` is true at `aal2`, for a user with no
+  verified factor, for an open `admin_shadow_sessions` row matching the
+  JWT `session_id` and user whose admin is still an admin (the shadow
+  waiver; demotion ends it, fix round 1), and with no user JWT.
+- A RESTRICTIVE `require_mfa` policy for `authenticated` on every public
+  RLS table and on `storage.objects`. `ensure_require_mfa_policies()`
+  re-attaches after every deploy push, replacing any policy whose
+  expression is not exactly `(select public.mfa_satisfied())`; the
+  deploy fails if `storage.objects` lacks it.
+- The definer RPCs that act for `auth.uid()` (`increment_ai_copilot_usage`,
+  `set_my_payment_details`) raise 42501 `second factor required` first. Every
+  other client-executable definer function is guarded or allowlisted
+  with a reason by the ratchet test.
+- Tests: `tests/integration/rls/require-mfa.test.ts` (aal1 reads nothing,
+  writes refused, guarded RPC 42501, Storage refused; aal2 normal; no
+  factor unaffected; open shadow waived, ended or expired not; token RPCs
+  and service role unaffected) and `require-mfa-coverage.test.ts`.
+
+Still open: Supabase's own `/factors/{id}/verify` endpoint is reachable
+directly with the `aal1` token and limited only by Supabase's per-IP
+rate limit; and the `user_metadata` gap above.
+
+### Fixed in Task 25 (2026-09-25): shadow mode was unlogged
+
+Shadow mode bypasses the MC's password and second factor, yet only the
+entry left a trace, nothing an admin changed inside was attributable,
+and the MC could not tell support had been in. Now:
+
+- `enterShadow` records the minted session in `admin_shadow_sessions`
+  (session id read from the token Auth returned, never the request) and
+  **refuses entry if it cannot**, signing that session out locally.
+- Coverage, exactly (fix round 1 corrected an overclaim; full table in
+  `shadow-mode.md`):
+  - **Row writes under the shadow JWT, exact.** A definer trigger,
+    `log_shadow_mutation()`, on every public base table (minus
+    `admin_audit_log` / `admin_shadow_sessions`) writes a
+    `shadow_mutation` row naming the admin (actor) and the MC (target).
+    Ids only. Attributed for the life of the session id, not just until
+    exit: writes after exit or expiry are flagged `after_end` and alert
+    Slack. Exit and expiry revoke the target session, but an access
+    token already issued stays valid for up to an hour.
+  - **Account changes, by session window.** Triggers on `auth.users`
+    and `auth.mfa_factors` log changed key names (never values) while
+    the MC has an open shadow session, labelled `during_session`
+    (GoTrue writes carry no JWT). After exit, an `auth.users` change is
+    still logged, labelled `unrevoked_shadow_session` with `after_end`,
+    while any recorded shadow session's `auth.sessions` row for that
+    user is live (fix round 2, N1), except `app_metadata` keys, which
+    only the service role can write and are never attributed after exit
+    (Phase 4 fix wave, I2, `20261020000000`). A `bank_*` or email change alerts
+    Slack (key names sanitised). The trigger bodies are guarded: a
+    logging failure warns and never aborts GoTrue's write.
+  - **Server actions and API routes, per request.** Middleware writes
+    one `shadow_request` row per non-GET request under a verified grant,
+    which is the only trail for service-role writes.
+  - **Storage bytes, not covered.** Storage API writes `storage.objects`
+    under service_role claims; the rows pointing at files are logged.
+- Coverage cannot lapse: `ensure_shadow_triggers()` runs at the end of
+  the migration and after every deploy's `db push`; the ratchet
+  `tests/integration/admin/shadow-trigger-coverage.test.ts` fails if any
+  public table lacks the trigger or has RLS off.
+- `exitShadow` (genuine path only; the refusal path is unchanged) closes
+  the record and logs `exit_shadow` with the session id; a close that
+  matches no row alerts.
+- **Revoked on exit and at grant expiry (Phase 4 fix wave, ruling on
+  review I1 and I2).** `exitShadow`'s genuine path revokes the target
+  session (`auth.admin.signOut(<target access token>, 'local')`, added
+  lines only; the hotfix refusal path is byte-identical) and alerts
+  `app_error` (ids only) if that fails, still completing the exit.
+  `enterShadow` sets the httpOnly `zebri_shadow_session` marker (168h),
+  HMAC-signed over the session id and target with a key of its own label
+  (fix-2, N1): the session id alone is readable by its holder, so an
+  unsigned marker proved nothing. When the marker verifies and names the
+  request's session and no grant verifies, middleware signs it out
+  locally and redirects to `/login`; a failed revoke there alerts Slack
+  (ids only, once an hour per session). The verified marker also binds
+  the Next 2FA waiver and the `shadow_request` log to the session
+  (review M1). The workflow tick sweeps every ended or expired shadow
+  session server side (`revoke_expired_shadow_sessions()`, service role
+  only, fix-2 N2), so a closed or idle browser is revoked within a
+  minute too. Residual: a copied access token works until its own expiry
+  (up to 1 hour); its row writes are logged `after_end`. Every sign-out reachable while shadowing is
+  `local`. Hosted caveat: the sweep deletes `auth.sessions` rows as
+  `postgres`; if a project refuses that, the tick alerts
+  `shadow.revoke_expired` every run.
+- The MC is never shown a visit (owner ruling 2026-09-27): the
+  Settings "Support access" card and its `my_support_access()` read were
+  removed (`20261024800000`). The record and the Slack alerts are
+  internal to Zebri.
+
+### Fixed in Task 31 (2026-09-25): header injection on the Gmail transport (audit M5)
+
+The Gmail transport is the one place the app writes raw RFC 822 header
+lines, and `encodeHeaderWord` only encoded non-ASCII, so an ASCII `\r\n`
+in a rendered subject (a couple name from a lead form interpolated through
+a variable), a contact's address in `To:`, or the MC's display name in
+`From:` became an extra header, a hidden `Bcc:` included. Resend and
+Microsoft Graph take JSON and were never affected.
+
+- **Transport backstop.** `buildMime` (`lib/email/mime.ts`, split out of
+  `lib/email/dispatch.ts`) passes every header value (From and its display
+  name, To, Cc, Bcc, Reply-To, Subject, each attachment filename) through
+  `headerValue`, which turns CR, LF and every other C0 control character or
+  DEL into a space (tab is kept). A filename also loses `"` and `\` so it
+  cannot close its quoted parameter. The `List-Unsubscribe` URL was already
+  refused on CR or LF (`validateHeaderUrl`). Tested in
+  `tests/unit/lib/email/dispatch.test.ts` ("header hardening").
+- **Zod boundary.** A line break in a couple's or contact's name or email is
+  refused where it enters, with the message "Names and email addresses must
+  be on one line." (`singleLineText` / `SINGLE_LINE_MESSAGE` in
+  `lib/utils/single-line.ts`; values are trimmed first, so only a break
+  inside the value is an error):
+
+  | Schema | Fields |
+  |---|---|
+  | `coupleInputSchema` (`app/(dashboard)/couples/actions.ts`: create, update, and the CSV import, which reports the row in `invalidRows` rather than failing the import) | `name`, `email`, `primary_name`, `primary_email`, `secondary_name`, `secondary_email` |
+  | `contactInputSchema` (`app/(dashboard)/contacts/actions.ts`: create, update) | `name`, `contact_name`, `email` |
+  | `updateContactSchema` (`app/(dashboard)/couples/portal-actions.ts`) | `name`, `contact_name`, `email` |
+  | `leadSubmitSchema` (`lib/lead-capture/schema.ts`: the public form and the lead-capture API) | `name`, `partner_name` (`email` was already `z.email()`) |
+  | `bookingSubmitSchema` (`app/api/booking/submit-schema.ts`) | `name`, `partnerName` (`email` was already `z.email()`) |
+
+  The couple and contact actions (the portal contact patch included)
+  return that message rather than their generic "Invalid couple data." so
+  the MC knows what to fix. Tested in the couples, contacts and portal
+  action tests and `tests/unit/lib/lead-capture/single-line.test.ts`.
+
+- **Not covered at the boundary (the transport backstop only).** These
+  write the same name and email columns that feed `To:` and subject
+  variables, with no line-break check. `headerValue` in `buildMime` is the
+  control for all of them; no SQL guard was added (Task 31 fix round 1
+  ruling). Listed so nobody reads the table above as complete:
+
+  | Writer | What it writes | Why it matters |
+  |---|---|---|
+  | `save_portal_couple_details` RPC (`supabase/migrations/20260617000000_portal_couple_details.sql`) | `couples.primary_name`, `primary_email`, `secondary_name`, `secondary_email`, only trimmed and cut to 200 | The public, token-gated couple portal: the one surface an outsider types into, the same threat class as the lead form |
+  | `save_portal_contact` RPC (`supabase/migrations/20260616000000_per_partner_portal_tokens.sql`) | vendor `contacts.name` and `email` | Same portal |
+  | `app/(dashboard)/couples/contact-popover.tsx` (client-direct `contacts` insert) | `name`, `contact_name`, `email` | MC-side, straight from the browser under RLS with no server Zod |
+  | `app/(dashboard)/couples/mc-portal-contacts.tsx` (client-direct `contacts` insert) | `name`, `contact_name`, `email` | Same |
+  | `app/(dashboard)/couples/couple-events.tsx` (client-direct venue `contacts` insert) | `name` (the venue) | Same |
+  | The `create_couple` workflow action | `name` from MC-authored config rendered at run time | Not a Zod-validated user input |
+  | Rows written before Task 31 | any of the above | Written before the rule existed |
+
+### Fixed in Task 27 (2026-09-25): Slack alerts leaked couple PII
+
+Several `AlertEvent` payloads carried a couple's name or a couple/
+contact/vendor's email address straight into Slack: `booking_created`
+(`bookerName`), `workflow_email_sent` (`to`, `coupleName`, and a
+rendered `subject` that can interpolate a couple's name),
+`automation_paused_missing_variables` (`coupleName`),
+`proposal_accepted` / `proposal_opened` / `proposal_declined`
+(`coupleName`), and `resend_bounced` / `resend_send_failed` (`to`, and
+the same rendered-subject risk). A Slack workspace is a much wider
+trust boundary than the app's own RLS: every teammate with channel
+access could read a couple's details for every alert that happened to
+mention one. Now:
+
+- Every one of those fields is gone. Where the alert used to name who
+  it was about, it carries the id instead (`coupleId`, `contactId`,
+  `bookingId`, the tenant's own `userId`); see the field-by-field table
+  in `alerts.md`'s [PII policy](./alerts.md#pii-policy-phase-4-task-27).
+  `workflow_email_sent.subject` was replaced with `stepTitle` (fix
+  round 1, I2, Q2): the step's own display title
+  (`stepDisplayTitle()` in `lib/workflows/step-label.ts`), written once
+  in the builder and never per-couple. `resend_send_failed.subject` and
+  `resend_bounced.subject` carried the identical risk and were simply
+  dropped (fix round 1, I2): `userId` plus `reason` are enough to find
+  the suppression row and the original message in the app.
+- **MC account emails stay.** `email` (signup, subscription, payment,
+  lead-notification and booking-notification alerts), `targetEmail`
+  (every `admin_*` event, the target `auth.users` row is always an MC)
+  and `reporter` (the in-app bug-report alerts, "Name (email)" built
+  from the logged-in MC's own account) are the allowlisted exception:
+  the MC is Zebri's own paying customer, not the person this policy
+  protects, and the founder's signup/billing alerts depend on reading
+  them. The allowlist is keyed by `${event.type}:${field}`, not the
+  field name alone (fix round 1, I1): a future event that happens to
+  reuse the name `email` for a couple/contact/vendor address is not
+  waved through just because `email` is safe on a different event.
+- **Compile-time guard:** `lib/alerts/events.ts` exports two type-level
+  assertions built from a `KeysOf<AlertEvent>` union distribution; the
+  file fails to typecheck if `coupleName` or `bookerName` ever
+  reappears on any `AlertEvent` member.
+- **Runtime guard:** `assertNoCouplePii()` in `lib/alerts/send-alert.ts`
+  runs on every event before the log record and the Slack line are
+  built. It scans every field, recursively into arrays and plain
+  objects up to a small depth cap (fix round 1, M1: no current field
+  nests that deep, but the guard exists to catch the next regression,
+  not just today's shapes). A field not allowlisted for its exact
+  `type:field` pair that looks like an email address throws in the
+  test environment (fails the suite that introduced the regression)
+  and redacts to `[redacted]` everywhere else, so a still-unknown
+  regression degrades to a masked field instead of a leaked address.
+- Covered by `tests/unit/lib/alerts/no-couple-pii.test.ts`: one
+  fixture per `AlertEvent` type (a mapped type over `AlertEvent['type']`
+  makes a missing fixture a compile error), asserting none carries
+  couple-side PII and that the guard passes every one through
+  untouched, plus direct tests for the type+field keying and the
+  nested-array/object recursion.
+- **Known residual risk, not fixed here:** a free-text field rendered
+  from the MC's own template could still contain a couple's name if
+  the template interpolates one into a field the guard cannot
+  recognise as an address. The guard only catches an email-*shaped*
+  string, not a name inside prose, so reliably closing this would need
+  more than a "last line of defence" function; the three fields where
+  this was concretely true (`workflow_email_sent.subject` and both
+  `resend_*.subject` fields) were fixed directly above instead of left
+  as a residual.
+- Changed formatters give an id but no clickable app link (checked
+  during fix round 1, M2: no app-URL-building helper exists in
+  `lib/alerts/send-alert.ts` today to hang one off), so restoring the
+  "act on it from Slack" glanceability the removed names had is a
+  follow-up, not attempted here.
+- `admin_shadow_exit_refused` is unchanged: it already carried ids
+  only (see the entry above) and is byte-identical with a live
+  production hotfix, so this task left it alone on purpose.
+
+### Fixed in Task 23 fix round 1 (2026-09-24)
+
+- **P0 `exitShadow` account takeover (C1).** It minted a session for
+  whatever id the unsigned `zebri_shadow_admin_id` cookie named. It now
+  requires the signed shadow grant (8 h), bound to the session's own user
+  and the admin-id cookie, from a current admin. A refusal signs the
+  browser out (`scope: 'local'`) and alerts `admin_shadow_exit_refused`,
+  capped at 5 per minute per IP and 10 per 10 minutes overall
+  (`SHADOW_RATE_LIMITS`). This branch carries the production hotfix
+  (`fix/exit-shadow-takeover`) verbatim for this path.
+- **P1 past-due paywall skip on the bare shadow cookie (I2).** Now skipped
+  only when the signed grant verifies and names the session's user (the
+  hotfix rule). The 2FA waiver is stricter: it also needs the admin
+  cookie to match and the admin to still be one.
+- **P2 open redirect via `next` (I1).** `sameOriginPathSchema` now
+  rejects backslashes, control characters (including an encoded tab),
+  protocol-relative and encoded forms, anything resolving off-origin, and
+  (round 2) anything whose resolved path starts with `//`, such as
+  `/..//evil.com`.
+- **Admin password as the single factor for every 2FA MC (I3).**
+  `enterShadow` requires the admin to have a verified factor and an
+  `aal2` session.
+
+**Shadow mode rule:** the signed `zebri_shadow_grant` cookie
+(`lib/auth/shadow-grant.ts`) is the only trusted shadow signal. The bare
+`zebri_shadow_admin_id` cookie must never authorise anything on its own.
+Every shadow session is recorded in `admin_shadow_sessions` and every
+write through it is logged (Task 25, above); a new owned table must
+attach the `zz_log_shadow_mutation` trigger.
+
+### P0 - internal SECURITY DEFINER functions executable by clients (fixed 2026-09-25, same hotfix)
+
+Five SECURITY DEFINER functions kept Postgres's default PUBLIC EXECUTE,
+so anyone with the anon key could call them through `/rest/v1/rpc`:
+`bookings_due_for_reminder()` returned every tenant's confirmed bookings
+with booker name, email and `manage_token`; `mark_booking_reminder_sent(uuid)`
+suppressed any booking's reminder; `seed_default_contract_template(uuid)`
+wrote into any account; `emit_contract_audit_event(...)` (also granted to
+`authenticated`) could forge rows such as 'signed' in any tenant's
+contract audit log; `expire_contracts()` (granted to `anon`) expired every
+tenant's overdue contracts. Migration
+`20261001310000_revoke_client_execute_internal_functions` revokes
+EXECUTE from `public, anon, authenticated` and grants `service_role`,
+and does the same for `revoke_contract(uuid)` (SECURITY INVOKER, now
+called only by the service role; a direct client call returns 42501).
+App callers moved to the service role: the expire-contracts cron (still
+gated by `isCronAuthorized`), send-contract's 'sent' audit row, and
+`revokeContractAction` (which now proves ownership with the user's
+client first, because `revoke_contract` is SECURITY INVOKER and calls the
+audit writer). All other SQL callers are SECURITY DEFINER. Signup
+seeding still works (the trigger function is SECURITY DEFINER), checked
+in a rolled-back transaction on local Postgres. Tests:
+`tests/unit/app/api/cron/expire-contracts.test.ts`,
+`tests/unit/app/api/email/send-contract-audit.test.ts`,
+`tests/unit/app/(dashboard)/payments/contract-actions.test.ts`.
+Follow-up: an integration test that asserts `anon` and `authenticated`
+get permission denied on all five, and a sweep of every other public
+SECURITY DEFINER function for the same missing revoke. Owner to check
+`bookings`/`contract_audit_log` access logs for the exposure window.
+
 ### 🟥 P0 — user_metadata privilege escalation (deferred to 0.8b)
 
 `account_type` (incl. `admin`), `subscription_*`, `stripe_connect_*`,
@@ -115,7 +604,7 @@ happen in a later tightening phase.
 | `app/api/stripe/connect/disconnect/route.ts` | ✅ POST, auth required, rate-limited 5/min/IP. **Replaces the §7.4 client-side `user_metadata` write** — clears `app_metadata.stripe_connect_*` server-side via `updateEntitlements`. |
 | `app/api/stripe/connect/status/route.ts` | ✅ GET, auth required. Reads `connect_accounts` for the current user via `readConnectAccount`. RLS-scoped. |
 | `app/api/stripe/invoice-payment/route.ts` | n/a — public payment-link route; auth via `share_token` (capability URL). Rate-limit + signed return URLs added in PR 2D.2. |
-| `app/api/resend/webhook/route.ts` | **Does not exist** — Resend bounce/delivery webhooks not wired. Tracked in `alerts.md` matrix as a planned alert source. |
+| `app/api/resend/webhook/route.ts` | ✅ Verifies the Svix signature (`svix-id`, `svix-timestamp`, `svix-signature`) over the raw body with `RESEND_WEBHOOK_SECRET`, constant-time, five minute timestamp tolerance; 500 when the secret is unset, 400 on any failure. Implemented directly; the integration test signs with the real `svix` library. Phase 2, Task 14: see the section below. |
 
 ### Authenticated Stripe routes — validation + rate-limit audit (Phase 2A)
 
@@ -234,7 +723,7 @@ Backs the public `/book/manage/[manage_token]` page for booker self-service cont
 
 ### Service-role-only reminder RPCs (Scheduler Phase D)
 
-Two RPCs for the `/api/cron/booking-reminders` endpoint; neither is callable by anon:
+Two RPCs for the `/api/cron/booking-reminders` endpoint. Service-role only: client EXECUTE was left in place until migration `20261001310000` revoked it from `public`, `anon` and `authenticated` (see the Task 23b finding under Fixed):
 
 - **`bookings_due_for_reminder()`**: service_role only. Returns all confirmed bookings whose meeting type has `reminder_enabled = true`, whose `starts_at` is 0 to 36 hours away, and whose `reminder_sent_at` is null. Used by cron to batch-fetch remindable bookings. Returns `manage_token` alongside `booking_id`: the reminder email's reschedule link is `/book/manage/<manage_token>`, and building it from the booking id instead shipped a dead link in every reminder (fixed 20260821030000).
 - **`mark_booking_reminder_sent(p_booking_id uuid)`**: service_role only. Sets `reminder_sent_at = now()`. Called after sending the reminder email so the booking is not re-sent on the next tick.
@@ -251,7 +740,85 @@ Three functions in `20261001000000_pg_cron_scheduler.sql`, all `security definer
 
 pg_net's `net.http_request_queue` / `net._http_response` are granted to PUBLIC by `supabase_admin` and `postgres` cannot revoke that on a hosted project; the queue row briefly holds the bearer header. The protection is that `net` is not a PostgREST-exposed schema and no `public` security-invoker function reads it.
 
+**`acquire_scheduler_lease(p_name text, p_ttl_seconds int, p_token uuid)`**
+and **`release_scheduler_lease(p_name text, p_token uuid)`**
+(`20261003200000_scheduler_lease.sql`), the lease the tick takes before
+touching a single row and hands back when it is done: `security
+definer`, `set search_path = public`, and granted to `service_role`
+alone. Releasing somebody else's lease is as damaging as taking theirs,
+so the release is locked down exactly like the acquire and only matches
+on the caller's own token. `revoke ... from public, anon,
+authenticated` is explicit rather than left to the `public` revoke,
+because Supabase's local and hosted projects both run `alter default
+privileges` for `public` that grants EXECUTE on every new function to
+`anon` and `authenticated` on creation, the same shape as the audit
+finding that `emit_automation_event` was reachable by `authenticated`
+(see Phase 2's release step, `docs/superpowers/plans/2026-09-23-workflows-trust-remediation.md`).
+Backs the `scheduler_leases` table in the RLS matrix below.
+
 Vercel Deployment Protection must stay off on any deployment pg_cron calls: `pg_net`'s request carries only the `cron_secret` bearer, never Vercel's own cron-bypass header, so a protected deployment silently 401s every job behind Vercel's own auth page while `cron.job_run_details` still reads `succeeded` (see `.claude/docs/cicd.md` "First deploy on a project").
+
+### Workflow stop-control RPCs (workflows trust remediation, Phase 3)
+
+All `security invoker` unless noted, and all take the template row lock
+before the instance row lock (one global order, so none can deadlock
+against `delete_workflow_template` or `set_workflow_template_status`).
+
+**Turn on is server-only (Task 34, `20261023600000`).** A client cannot
+set a workflow template's `status` to `active`: the
+`workflow_templates_activation_lock` trigger refuses it for the
+`authenticated` and `anon` roles, and `set_workflow_template_status` is
+service role only. `setTemplateStatusAction` does the RLS ownership
+read, the pre-flight, then the flip with the admin client; the function
+scopes its pause sweep to the template owner's instances. Since
+`20261024200000` the trigger is an **allowlist** (`service_role`,
+`postgres`, `supabase_admin`), so a role nobody planned for is refused
+rather than let through, and the flip checks `steps_revision` (bumped
+by a trigger inside every step write) instead of a step count and
+timestamp. Nothing else can write that counter: a guard trigger
+(`20261024300000`) refuses any insert or update that sets it, from every
+role including the service role, unless it comes from the bump trigger
+itself, so a client cannot reset it under an in-flight step edit and
+pass the check (re-review F1; `steps-revision-guard.test.ts` runs it as
+the signed-in client). The bump itself is `security definer` with an
+empty search_path (`20261024400000`): a user delete cascades through it
+as `supabase_auth_admin`, which has no grant on `workflow_templates`. It
+only increments the counter of the template the changed step belongs
+to, and a client can only write steps under its own templates, so it
+cannot be aimed at another tenant (`user-delete-cascade.test.ts`). A `SECURITY DEFINER` function owned by `postgres` passes the
+lock, so one that switches a workflow on must run the pre-flight
+itself. Integration: `tests/integration/workflows/activation-lock.test.ts`
+(including the allowlist, probed with a throwaway role in a rolled-back
+transaction).
+
+**Engine-only step RPCs (Phase 6 fix wave).** `workflow_claim_step`,
+`workflow_finish_wait`, `workflow_hold_wait`, `_workflow_lock_live_instance`
+(`20261023800000`) and `workflow_merge_step_outputs` (`20261023900000`)
+are `security invoker` and executable by `service_role` only (revoked
+from public, anon and authenticated), because they bypass the MC's own
+edit paths. A signed-in user calling one gets a permission error
+(`claim-requires-active.test.ts`).
+
+- **`resume_workflow_instance(uuid, text)`** (`20261011100000`):
+  `authenticated` + `service_role`, RLS applies. Refuses, in SQL, a
+  paused instance with no reason and a `setup_interrupted` stop, so a
+  direct call cannot bring one live without the app's settle.
+- **`reopen_completed_workflow_instance(uuid, boolean)`**
+  (`20261011100000`): `service_role` only; the un-tick action checks
+  ownership first. Never makes a finished instance live on an off or
+  deleted workflow.
+- **`activate_applied_workflow_instance(uuid, boolean, text)`**
+  (`20261010000000`): `service_role` only.
+- **`_workflow_recompute_wedding_steps(uuid)`** and
+  **`_workflow_wait_relative_wake(jsonb, date)`** (`20261007000000`):
+  revoked from `public`, `anon` and `authenticated`. The recompute is
+  `security definer` and takes any couple id: callable over PostgREST, it
+  let anyone holding another tenant's couple id re-date that tenant's
+  steps, undoing a manual reschedule so a snoozed send went out on its
+  past date. Only the `couples` and `events` recompute triggers (definer,
+  run as the owner) call it. `create or replace` keeps the default
+  grants, so the revoke has to be explicit. Covered by
+  `tests/integration/workflows/recompute-grants.test.ts`.
 
 ### Cron auth gate: `/api/cron/booking-reminders` (Scheduler Phase D)
 
@@ -437,6 +1004,19 @@ interface stays stable so call sites don't change.
 **Per-page adoption** during hardening of: `/api/stripe/invoice-payment`,
 `/api/contract/{sign,decline}`, `/api/portal/upload`, auth routes
 (login/signup/reset).
+
+**Two-factor (Phase 4 Task 23):** `AUTH_RATE_LIMITS.redeemRecoveryCode`
+(5 per 15 minutes, keyed per user: the caller already holds the
+password, so every guess is against the last line of defence),
+`AUTH_RATE_LIMITS.issueRecoveryCodes` (5 a minute per user; each call
+runs ten scrypt hashes), and `verifyTotpUser` / `verifyTotpIp` (10 per
+user and 30 per IP per 15 minutes, both checked by
+`beginTotpAttemptAction` before every authenticator code check in the
+app). Hits raise `auth_rate_limit_hit`. Supabase applies its own per-IP
+limit to the verify call; a caller going to Supabase directly meets only
+that one. Task 23b's database enforcement does not change that (the
+endpoint is GoTrue's); see "Fixed in Task 23b" above.
+Design and threat notes: `authentication.md`, "Two-factor sign-in".
 
 ### Public token-attempt limiter — `@/lib/api/public-token-limiter` (Phase 2D.2)
 
@@ -738,6 +1318,123 @@ loads via the `get_public_questionnaire` RPC (anon, branding-merged).
 bounced logged-out couples to `/login`). The MC can revoke access per
 questionnaire via the "Turn link off" row action (`share_token_enabled`).
 
+### Public unsubscribe endpoint + page (Phase 2, Task 11)
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/unsubscribe/route.ts` (`POST`) | ✅ `bodySchema` (`token`, from a form body via `parseFormDataBody`) | ✅ `UNSUBSCRIBE_RATE_LIMITS.confirm`, 20/min/IP, applied only to invalid tokens after verification (a valid token is never limited: the write is idempotent, and one-click POSTs arrive from shared provider IPs; Task 15c) | Public, unauthenticated by design: the Spam Act Regulations forbid requiring a login to opt out. Token is a signed, stateless HMAC-SHA256 capability (`lib/email/unsubscribe-token.ts`), not a DB-stored one, so verification needs no lookup. Writes through `recordUnsubscribe` (`lib/email/record-unsubscribe.ts`, shared with the one-click route): `email_suppression` (reason `unsubscribed`, admin client, unique-violation on a repeat treated as success) and `couples.do_not_email` for every couple of that owner whose stored address IS the address (case and surrounding whitespace folded, compared in TypeScript; ILIKE only narrows candidates, with `_`, `%` and `\` escaped, because as a pattern `john_smith@` matched `johnXsmith@`). A failed suppression write alerts `app_error` (`source: 'unsubscribe'`) and redirects with `?error=write_failed`, which the page renders. Invalid tokens count toward `recordInvalidTokenAttempt` (`surface: 'unsubscribe'`, new value added to `PublicSurface` and the `public_token_attempt_burst` alert union). |
+| `app/api/unsubscribe/[token]/route.ts` (`POST`, `GET`) | n/a: the token is the path segment and the RFC 8058 body (`List-Unsubscribe=One-Click`) carries nothing to validate; it is deliberately not required, since the signed token is the capability and a strict body check could only lose an opt-out | ✅ `UNSUBSCRIBE_RATE_LIMITS.confirm`, 20/min/IP, applied only to invalid tokens after verification (a valid token is never limited: the write is idempotent, and one-click POSTs arrive from shared provider IPs; Task 15c) | The URL every commercial automated email advertises in `List-Unsubscribe`. `POST` is the mailbox provider's one-click unsubscribe (no cookie, no person): verifies the token, records through `recordUnsubscribe`, answers 200, 400 (invalid token, counted by `recordInvalidTokenAttempt`), 429 or 500 (write failed, alerted, so the provider can retry). `GET` never writes: 303 to the page. Proven end to end in `tests/integration/email/legal-floor.test.ts`, which POSTs exactly what Gmail sends to exactly the URL a real step's header carried. |
+| `app/unsubscribe/[token]/page.tsx` (`GET`) | n/a, read-only | n/a | Never mutates: mailbox providers and link scanners pre-fetch `GET` links, so the page only decodes the token and reads current suppression state, rendering invalid / already-unsubscribed / confirm-form. The confirm form is a plain HTML `POST` to the route above (`action="/api/unsubscribe"`), needing no client JS, so a scanner following the `GET` link can never trigger the write, and a real confirming click is the one action that does. A second visit after confirming reads the row back and renders the done state instead of the form, which is what makes a repeat visit or a second partner clicking harmless. |
+
+Both routes are on the middleware `PUBLIC_ROUTES` allowlist (`/unsubscribe`,
+`/api/unsubscribe`), added in the same change as the routes themselves. RLS
+coverage for the tables this writes (`email_suppression`, `couples`) is
+unchanged from Task 10; this endpoint writes through the service-role admin
+client, same as every other public-surface write in this codebase, and does
+not depend on RLS to scope the write, the token payload does. Cross-tenant
+behaviour (an owner's suppression and `do_not_email` writes never touch
+another owner's rows) follows from scoping every write by `payload.uid` taken
+from the verified token, never from client input. Tested end to end in
+`tests/integration/email/unsubscribe.test.ts`: valid token suppresses and
+flips every same-address couple, tampered token writes nothing, repeat
+confirm is a no-op, and a burst from one IP trips the rate limit.
+
+### Resend bounce and complaint webhook (Phase 2, Task 14)
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/resend/webhook/route.ts` (`POST`) | ✅ `resendEventSchema`, applied after signature verification (the body is read as text for the signature, so `@/lib/api/validate` is not used) | ✅ `inMemoryLimiter`, 1000/min/IP (Resend delivers a campaign's bounces from a small address pool) | Public, unauthenticated by design: Resend sends no session, and the Svix signature is the capability. On the middleware `PUBLIC_ROUTES` allowlist as the full path `/api/resend/webhook`, not the `/api/resend` prefix; `tests/unit/middleware.test.ts` proves a sessionless request reaches it and private paths still redirect. Writes `email_suppression` (reason `bounced` / `complained`) through the service-role admin client, owner taken only from the `tenant` tag the send path sets, and only when that tag is a uuid. Never guesses an owner from the recipient address. Suppresses a bounce only when `data.bounce.type` is `Permanent`; a transient, undetermined or untyped bounce alerts `app_error` and writes nothing, since a suppression row is permanent. Refuses to suppress on a message tagged `copies` (sent with cc or bcc, tag added in `lib/email/dispatch.ts`), because the event lists only `to` and the dead mailbox may be a copy's. Ignores every event on a message tagged `mc_copy` (the MC's own paper-trail copy of a `send_email` step, Phase 5 fix wave): it suppresses nobody and moves no delivery row. An automated message (`src=auto`) whose `couple_emails` row does not exist yet answers 500 while the event is under ten minutes old so Resend retries it, then 200 (M3); a forged event cannot use this to do more than ask for a retry, since the request is signature-verified first. Untagged, malformed-tag, copies and multi-recipient events all alert `app_error` and write nothing. Replays are no-ops through the `(user_id, lower(email), reason)` unique index. Tested in `tests/integration/email/resend-webhook.test.ts`, including cross-tenant denial. |
+
+### Send-path suppression check (Phase 2, Task 12; whole-phase fix wave)
+
+Every automated send checks suppression before dispatch: the actions that go
+through the gate in `lib/email/automation-send.ts` (`sendAutomationEmail` for
+one recipient, `openAutomationSend` for a step with several: the six
+post-event emails, the portal link, request information, the run sheet to
+vendors and couple, the run-sheet link to the couple, the questionnaire), and
+the `send_email` action, which runs the same checks inline. If the recipient's
+address is in `email_suppression` for that tenant (case- and
+whitespace-insensitive), or the recipient is the couple's own address and the
+couple has `do_not_email` set, the send is skipped and reported as
+deliberately skipped (ok:true with a skipped reason, counted apart from sends),
+not as a failure to retry. A couple's `do_not_email` never drops mail to their
+vendors. Emails an MC composes and sends by hand in the app
+(`/api/email/send-template`, send-proposal) are deliberately not checked, as
+those are human-deliberate actions; the `send_email` workflow action is
+automated and is checked.
+
+The gate also decides whether a send is commercial, from the action type,
+through `isTransactionalSend` (`lib/email/commercial-classification.ts`), and
+for a commercial send mints a token per recipient (so every copy's link
+unsubscribes the person it was sent to), puts the page link in the body
+(appending the identity and unsubscribe block when the renderer did not),
+and advertises the one-click route in `List-Unsubscribe`. It then charges the
+tenant's shared-domain send-rate limit once per step, after the opt-out check,
+and turns a breach into a `send_rate_limited` sleep.
+
+Transactional sends are also deliberately not checked, and this is worth
+stating because it looks like an omission. `send_invoice` and
+`send_contract` live in `lib/automations/actions/documents.ts` and call
+`dispatchEmail` themselves rather than going through `sendAutomationEmail`,
+so an unsubscribed couple still receives their invoice and their contract.
+That is the intended behaviour: the Spam Act's unsubscribe requirement
+covers commercial messages, and withholding somebody's bill because they
+opted out of marketing would be a worse outcome than the one the opt-out
+exists to prevent. The same structure is what keeps the List-Unsubscribe
+headers off those messages: `documents.ts` never sets `listUnsubscribeUrl`,
+so no invoice carries an unsubscribe header without anyone having to
+remember to suppress one. Everything else is commercial, and
+`isTransactionalSend` (`lib/email/commercial-classification.ts`) is the
+single place that says so: the gate consults it on every send, so the
+lawyer's eventual answer edits only that allow-list.
+
+**Case-insensitivity is enforced in Postgres, not in TypeScript.** The
+`email_suppression.email` column stores the address exactly as the provider or
+the unsubscribe click reported it, so either side of a comparison can carry
+mixed case and lower-casing the search term in application code fixes only half
+the problem. PostgREST cannot express `lower(email) = lower($1)` as a filter, so
+the lookup goes through `public.is_email_suppressed(p_user_id uuid, p_email
+text) returns boolean` (`20261006000000_is_email_suppressed_function.sql`),
+whose predicate matches the `(user_id, lower(email), reason)` functional index
+and therefore stays an index lookup. The function is `security invoker`, not
+definer: the send path calls it with the service-role client, which bypasses RLS
+anyway, so definer would buy nothing and would hand a future authenticated
+caller a read across every tenant's suppression list. `execute` is revoked from
+`public` and from `anon` explicitly, because Supabase's default grants hand it
+to `anon` and `authenticated` directly rather than by inheritance.
+
+**The check has three outcomes, and failing to determine one never sends.**
+`isEmailSuppressed` and `isCoupleOptedOut` return a tagged
+`{ status: 'blocked' | 'clear' | 'unknown' }` rather than a boolean. A boolean
+forced a failed lookup to be reported as one of the other two and both are
+wrong: reporting "not suppressed" mails somebody who unsubscribed, and reporting
+"suppressed" writes a permanent, never-retried skip for a couple who never
+opted out. `unknown` is turned by both call sites into an action error with
+`recoverable: true`, so the executor defers the step onto its existing backoff
+and tries again rather than sending or skipping.
+
+`lib/email/suppression.ts`: `isEmailSuppressed`, `isCoupleOptedOut` helpers and
+the `SendGateResult` type.
+`lib/email/automation-send.ts`: `sendAutomationEmail` obtains its own admin
+client and checks both gates before dispatch.
+`lib/automations/actions/messaging.ts` (send_email): resolves both gates for
+every recipient BEFORE the first dispatch, so an indeterminate lookup on the
+second recipient cannot arrive after the first has already been mailed. The
+couple's `do_not_email` flag drops the `primary` and `spouse` recipients only:
+it records that the couple asked to stop hearing from the MC and says nothing
+about the family contacts or vendors a step may also address.
+`tests/unit/lib/email/automation-send-suppression.test.ts` (6 tests): all three
+outcomes on both gates at the shared-address chokepoint, asserting on the
+transport.
+`tests/integration/automations/messaging-send-email.test.ts` (8 tests, 6 of them
+the gate): suppressed address blocks dispatch, couple `do_not_email` blocks
+dispatch, case-insensitive matching proven in BOTH directions against the real
+index (a mixed-case stored row against a lowercase send and the reverse, since a
+naive `toLowerCase()` passes only one of them), an indeterminate lookup leaves
+the step `pending` with `attempt_count` 1 and a future `due_at` rather than
+sending or marking it skipped, and a two-recipient step with one suppressed
+sends to exactly one.
+
 ---
 
 ## RLS coverage matrix
@@ -745,6 +1442,12 @@ questionnaire via the "Turn link off" row action (`share_token_enabled`).
 All app tables enable RLS. The owner column is `user_id uuid` on each.
 The base policy is `auth.uid() = user_id` for SELECT/INSERT/UPDATE/
 DELETE (sampled clean across the migrations).
+
+On top of each table's own policies, every public RLS table (and
+`storage.objects`) carries the RESTRICTIVE `require_mfa` policy for
+`authenticated` (Task 23b): an `aal1` session of an MC with a verified
+factor gets nothing unless it is an open shadow session. The last two
+rows below cover it.
 
 | Table | RLS enabled | Owner column | Integration test | Per-page phase |
 |---|---|---|---|---|
@@ -766,7 +1469,7 @@ DELETE (sampled clean across the migrations).
 | `package_items` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (covered via parent) | Templates |
 | `invoice_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (6 tests) | Templates |
 | `invoice_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (covered via parent) | Templates |
-| `couple_emails` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-emails.test.ts` (6 tests) | Couples & Events |
+| `couple_emails` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-emails.test.ts` (6 tests) + `tests/integration/email/automated-send-log.test.ts` (Task 30). Policies: owner SELECT; INSERT `source = 'manual'` only, parent couple owned (EXISTS, so a null `couple_id` is refused), engine-only columns null or default (status `sent`, no provider id, attempt key, transport, step, instance, error, delivery timestamps or `superseded_at`); DELETE manual rows only; no UPDATE policy. `couple_id` is `on delete set null` (Phase 5 fix wave M2), so deleting a couple no longer erases automated rows and cannot reset the tenant's daily cap; orphaned rows stay owner-only by `user_id`, and (residual pass R2, `20261023300000`) are scrubbed of the couple's personal details by the `couple_emails_scrub_on_couple_delete` trigger as the set null runs: address to a placeholder, subject blank, template name, error, provider id and attempt key (which embeds the address) null, so nothing identifying outlives the MC's deletion (APP 11.2) while the cap still counts the row; tested in `automated-send-log.test.ts`. Any future UPDATE policy must restrict the writable columns or use column grants. `require_mfa` restrictive policy and the shadow-mutation trigger attached. TRUNCATE, REFERENCES and TRIGGER revoked from `authenticated`; `anon` holds SELECT only. Automated rows are written only by the service-role `log_automated_send` function and the webhook | Couples & Events |
 | `questionnaire_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/questionnaire-templates.test.ts` (6 tests) | Questionnaires |
 | `couple_questionnaires` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-questionnaires.test.ts` (8 tests — RLS + public RPC token gating + submit/double-submit) + `tests/integration/rls/portal-questionnaires.test.ts` (3 tests — portal RPC) | Questionnaires |
 | `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
@@ -784,10 +1487,10 @@ DELETE (sampled clean across the migrations).
 | `task_statuses` / `task_priorities` / `task_types` | ✅ SELECT only (frozen 2026-09) | `user_id` | ✅ `tests/integration/workflows/legacy-frozen.test.ts` | Retired → Workflows |
 | `automations` / `automation_actions` / `automation_runs` | ✅ SELECT only (frozen 2026-09) | `user_id` | ✅ `tests/integration/workflows/legacy-frozen.test.ts` | Retired → Workflows |
 | `workflow_tags` | ✅ | `user_id` | ✅ `tests/integration/rls/workflows.test.ts` (10 tests, all seven tables) | Workflows |
-| `workflow_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
+| `workflow_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/workflows.test.ts`; exit stages (save refused for another tenant, exits never cross tenants): `tests/integration/workflows/exit-rules.test.ts` | Workflows |
 | `workflow_template_tags` | ✅ (checks **both** sides: template and tag ownership) | (join) | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
 | `workflow_template_steps` | ✅ (+ parent-ownership via `_owns_workflow_template_or_null`) | (via template) | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
-| `workflow_instances` | ✅ (+ parent-ownership on `couple_id` and `template_id`) | `user_id` | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
+| `workflow_instances` | ✅ (+ parent-ownership on `couple_id` and `template_id`) | `user_id` | ✅ `tests/integration/rls/workflows.test.ts`; cancel, pause and resume actions: `tests/integration/workflows/instance-cancel.test.ts` | Workflows |
 | `workflow_steps` | ✅ (via instance ownership) | (via instance) | ✅ `tests/integration/rls/workflows.test.ts` + `tests/integration/portal/milestones.test.ts` (a `visible_to_couple` step is still owner-only to a signed-in MC; the RPC is the only door) + `tests/integration/workflows/done-list.test.ts` (the Done list and its count are both scoped to the caller) | Workflows |
 | `workflow_audit_log` | ✅ (SELECT-only for owner; service-role writes) | `user_id` | ✅ `tests/integration/rls/workflows.test.ts` | Workflows |
 | `workflow_conversion_ledger` | ✅ RLS enabled, no policy — migrations + service role only | — | ✅ `tests/integration/workflows/converter.test.ts` (16 tests) | Workflows |
@@ -802,7 +1505,7 @@ DELETE (sampled clean across the migrations).
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
 | `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) + `tests/integration/branding/user-branding-rls.test.ts` (cross-tenant denial + RPC scoping, 4 tests) | Branding |
 | `storage.objects` (`proposal-media` bucket) | ✅ (public read; insert/update/delete require the object's first path segment `= auth.uid()`) | path prefix (`<user_id>/…`) | ✅ `tests/integration/rls/proposal-media-storage.test.ts` (5 tests: owner upload, cross-tenant upload denial, anon public read, cross-tenant delete denial, owner delete) | Proposals Engine Phase B |
-| `user_public_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/user-public-settings.test.ts` (5 tests — cross-tenant read/update/insert denial incl. encrypted OAuth tokens + global subdomain uniqueness) | Settings — Public Page |
+| `user_public_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/user-public-settings.test.ts` (5 tests — cross-tenant read/update/insert denial incl. encrypted OAuth tokens + global subdomain uniqueness) + `tests/integration/workflows/account-pause.test.ts` (the account-wide workflow stop columns: another MC can neither read, update nor upsert them) | Settings — Public Page |
 | `calendar_connections` | ✅ | `user_id` | ✅ `tests/integration/rls/calendar-connections.test.ts` (cross-tenant read/update/delete denial incl. encrypted tokens) | Scheduler Phase A |
 | `meeting_types` | ✅ | `user_id` | ✅ `tests/integration/rls/scheduling-tables.test.ts` (Scheduler Phase B: cross-tenant read/insert/update/delete denial) | Scheduler Phase B |
 | `availability_rules` | ✅ | `user_id` | ✅ `tests/integration/rls/scheduling-tables.test.ts` (Scheduler Phase B) | Scheduler Phase B |
@@ -821,6 +1524,12 @@ DELETE (sampled clean across the migrations).
 | `proposal_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/proposal-templates.test.ts` (5 tests: owner read/update, owner delete, cross-tenant SELECT/UPDATE/DELETE denial, cross-tenant forged-`user_id` insert rejected, anon locked out, one-default-per-user unique-index refusal) | Proposal Layout v2 Phase 1 |
 | `proposal_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/proposal-settings.test.ts` (1 test: owner read/update, cross-tenant read/update/delete denial, cross-tenant forged-`user_id` insert rejected, anon locked out) | Proposal Layout v2 Phase 1 |
 | `system_heartbeats` | RLS on, no policies (service only) | n/a | `tests/integration/cron/scheduler.test.ts` | Scheduler (R1) |
+| `scheduler_leases` | RLS on, no policies (service only) | n/a | `tests/integration/workflows/tick-lease.test.ts` (6 tests: grants to the first caller and refuses the second; lets the next minute's tick in once the previous run released; refuses a release from a run that does not hold it; grants again once expired; an expired run cannot release its successor; `anon` and `authenticated` are refused EXECUTE on both functions) | Workflows trust remediation |
+| `mfa_recovery_codes` | ✅ RLS on, no policies, every `anon`/`authenticated` grant revoked (service role only; not even the owner can read the hashes); writers `replace_mfa_recovery_codes` / `spend_mfa_recovery_code` are service-role-only `security invoker` functions | `user_id` | ✅ `tests/integration/rls/mfa-recovery-codes.test.ts` (22 tests: owner, other tenant and anon each refused SELECT/INSERT/UPDATE/DELETE; client roles refused both functions with 42501; plain codes never stored; a code spends once, only for its owner; one winner per batch, including two concurrent redemptions of the same code and of different codes; a released code works again; re-issue voids earlier codes; two concurrent issues leave ten codes; a real verified TOTP factor removed via the admin API) | Account security floor (Phase 4 Task 23) |
+| `admin_shadow_sessions` | ✅ RLS on, no policies, every `anon`/`authenticated` grant revoked (service role only); the MC has no read path at all (`my_support_access()` dropped in `20261024800000`, owner ruling 2026-09-27) | `target_user_id` (and `admin_id`) | ✅ `tests/integration/admin/shadow-mutation-log.test.ts` (21 tests: a real shadow session's insert/update/delete each write a `shadow_mutation` row naming admin and MC with ids only; knock-on trigger rows not logged (knock-on row asserted to exist); RPC writes logged; primary-key `row_id` for id-less tables; writes after exit or expiry logged with `after_end` and the alert throttle stamped; `auth.users` metadata change logged by key name with `sensitive`, values never stored; 2FA enrolment logged; no rows for normal sessions, other tenants, a mismatched target, or account changes with no open session; the MC is refused SELECT/INSERT/UPDATE on the table, sees no `admin_audit_log` rows, and cannot call the internal functions; a shadowed MC cannot read their own visits by any route while the internal record holds them; after exit an `app_metadata` change is never attributed; during a session a service-role `app_metadata` change is logged) + `tests/integration/admin/shadow-session-revoke.test.ts` (10 tests: the revoked target refresh token no longer refreshes while the MC's other session does; a global sign-out with the revoked token cannot end other sessions; the tick sweep deletes an expired or unrevoked-ended shadow session's auth session, stamps it, stops attributing the MC's later edits, leaves open sessions and the MC's other session alone, and is refused to an MC; middleware with a signed matching marker and no grant revokes the session and redirects to /login; an unsigned marker equal to the session id, or a marker for another session, does nothing) + `tests/integration/admin/shadow-trigger-coverage.test.ts` (6 tests: trigger on every public base table minus an allowlist, every public table has RLS on, a scratch non-RLS table is caught and fixed by `ensure_shadow_triggers()`, auth triggers present, function ACLs) | Account security floor (Phase 4 Task 25) |
+| `email_suppression` | ✅ (SELECT/INSERT/DELETE owner-isolated; no UPDATE policy, since a suppression row is a fact, cleared by deleting it) | `user_id` (keyed with `email`, not `couple_id`; see `database-schema.md`) | ✅ `tests/integration/email/suppression.test.ts` (10 tests: owner read-back, cross-tenant SELECT/DELETE denial, forged `user_id` insert rejected, anon locked out, owner can clear their own row, case-insensitive unique index rejects a case-variant duplicate, distinct reasons for the same address are separate rows clearable independently, plus `couples.do_not_email` default + owner round-trip) | Email legal floor (Phase 2 Task 10) |
+| *every public RLS table*: `require_mfa` | ✅ RESTRICTIVE, `for all to authenticated`, `using`/`with check ((select public.mfa_satisfied()))`; attached by `ensure_require_mfa_policies()` | n/a (checks the session, not the row) | ✅ `tests/integration/rls/require-mfa.test.ts` (19 tests: a 2FA MC at `aal1` reads zero rows, insert refused 42501, update/delete touch nothing, guarded RPCs raise 42501, Storage upload refused, a private-bucket object can be neither downloaded nor listed, token RPC still works; the same MC at `aal2` reads, writes, calls RPCs and uploads; a no-factor MC, and an MC with only an unverified (mid-enrolment) factor, are unaffected at `aal1`; an open shadow session is waived and loses it at Exit and at the admin's demotion; an expired one, a row for another session, and a row for this session with another target are not waived; anon token RPC and service role unaffected) + `tests/integration/rls/require-mfa-coverage.test.ts` (13 tests: policy on every RLS table and `storage.objects` with the exact expression, a scratch table caught and fixed idempotently, a permissive or loosened (`... or true`) same-named policy replaced, function ACLs, every client-executable definer function guarded as its first statement or allowlisted with a reason, and only known allowlisted functions read the caller identity) | Account security floor (Phase 4 Task 23b) |
+| `storage.objects`: `require_mfa` | ✅ same restrictive policy, attached once by `20261019000000`; the deploy step warns if it is missing | n/a | ✅ `require-mfa.test.ts` (upload refused at `aal1` for a 2FA MC, allowed at `aal2` and for a no-factor MC; private `email-template-files` object unreadable and unlisted at `aal1`, readable at `aal2`) | Account security floor (Phase 4 Task 23b) |
 
 **Four tables need more than `auth.uid() = user_id` in WITH CHECK.**
 Foreign keys are checked with elevated privileges and ignore RLS, so an
@@ -858,7 +1567,11 @@ authorize→callback flow is CSRF-protected by a random `state` pinned in a
 signed httpOnly cookie and re-checked on callback; the callback binds the
 tokens to the MC via their existing Supabase session. Both routes are
 per-user rate-limited; `disconnectMailboxAction` best-effort revokes at
-the provider. Scopes are minimal (Google `gmail.send` send-only; Microsoft
+the provider. At send time a connection that is dead for good (a refresh
+answering `invalid_grant`, or a stored token that no longer decrypts) is
+flipped to `oauth_status = 'failed'` and alerted (`mailbox_disconnected`);
+a transient failure errors an automated step rather than switching it to
+the shared address (Phase 5 fix wave, M7). Scopes are minimal (Google `gmail.send` send-only; Microsoft
 `Mail.Send`).
 
 The Templates starter-add server actions (`addStarterPackagesAction`,

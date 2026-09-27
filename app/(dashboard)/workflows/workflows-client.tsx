@@ -13,9 +13,8 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useState } from 'react';
 
-import { PageHeader } from '@/components/ui/page-header';
-
 import { useWorkflowLibrary } from './use-workflow-library';
+import { WorkflowsHeader } from './workflows-header';
 import { WorkflowsQueue } from './workflows-queue';
 import { WorkflowsTemplates } from './workflows-templates';
 
@@ -63,7 +62,7 @@ export function WorkflowsClient({ initialTab, timezone }: WorkflowsClientProps) 
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-6">
-      <PageHeader title="Workflows" />
+      <WorkflowsHeader />
 
       <div
         role="tablist"

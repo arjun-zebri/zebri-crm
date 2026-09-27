@@ -98,17 +98,17 @@ describe('formatSlackMessage', () => {
     expect(payload.text).toContain('proposal=unknown');
   });
 
-  it('formats a proposal_opened event', () => {
+  it('formats a proposal_opened event with the couple id, never a name', () => {
     const payload = formatSlackMessage({
       type: 'proposal_opened',
       severity: 'info',
       userId: 'u1',
       proposalNumber: 'PR-001',
-      coupleName: 'Anna & Jake',
+      coupleId: 'couple-1',
     });
     expect(payload.text).toContain(':information_source:');
     expect(payload.text).toContain('user=u1');
-    expect(payload.text).toContain('PR-001 opened by Anna & Jake');
+    expect(payload.text).toContain('PR-001 opened by couple=couple-1');
   });
 
   it('uses the warning emoji for warn severity', () => {
@@ -162,8 +162,7 @@ describe('sendAlert', () => {
     await sendAlert({
       type: 'resend_bounced',
       severity: 'warn',
-      to: 'a@b.com',
-      subject: 'Quote',
+      userId: 'user-1',
     });
     expect(console.warn).toHaveBeenCalled();
   });
@@ -187,7 +186,7 @@ describe('sendAlert structured log', () => {
         severity: 'info',
         userId: 'user-1',
         email: 'mc@example.com',
-        bookerName: 'Alice',
+        bookingId: 'booking-1',
         manageToken: '11111111-2222-3333-4444-555555555555',
       });
     } finally {
@@ -211,7 +210,7 @@ describe('sendAlert structured log', () => {
         severity: 'info',
         userId: 'user-1',
         email: 'mc@example.com',
-        bookerName: 'Alice',
+        bookingId: 'booking-1',
         manageToken: '11111111-2222-3333-4444-555555555555',
       });
     } finally {
@@ -220,7 +219,7 @@ describe('sendAlert structured log', () => {
 
     const record = records.find((r) => r.message === 'alert: booking_created')!;
     expect(record.context.email).toBe('mc@example.com');
-    expect(record.context.bookerName).toBe('Alice');
+    expect(record.context.bookingId).toBe('booking-1');
     expect(record.context.userId).toBe('user-1');
   });
 
@@ -230,7 +229,7 @@ describe('sendAlert structured log', () => {
       severity: 'info',
       userId: 'user-1',
       email: 'mc@example.com',
-      bookerName: 'Alice',
+      bookingId: 'booking-1',
       manageToken: '11111111-2222-3333-4444-555555555555',
     });
     expect(payload.text).not.toContain('11111111');

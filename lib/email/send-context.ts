@@ -28,6 +28,41 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
 const DEFAULT_TIMEZONE = 'Australia/Sydney'
 
 /**
+ * The ids of the files linked to a saved email template, which a send of
+ * that template attaches. Scoped to the owner as well as the template so
+ * the send's service-role read cannot reach another tenant's files.
+ */
+export async function templateFileIds(
+  supabase: SupabaseClient<Database>,
+  templateId: string,
+  userId: string,
+): Promise<string[]> {
+  const { data: files } = await supabase
+    .from('email_template_files')
+    .select('id')
+    .eq('template_id', templateId)
+    .eq('user_id', userId)
+  return (files ?? []).map((f: { id: string }) => f.id)
+}
+
+/**
+ * The attachment rows a send would download, in the order it attaches
+ * them. {@link downloadStaticAttachments} downloads exactly these, and
+ * the step envelope lists their names, so both read one query.
+ */
+export async function listAttachmentFiles(
+  supabase: SupabaseClient<Database>,
+  fileIds: string[],
+): Promise<{ file_name: string; storage_path: string }[]> {
+  if (fileIds.length === 0) return []
+  const { data: rows } = await supabase
+    .from('email_template_files')
+    .select('file_name, storage_path')
+    .in('id', fileIds)
+  return rows ?? []
+}
+
+/**
  * Download the chosen static attachments from storage (RLS via the
  * `email_template_files` metadata read + the owner-only bucket
  * policies). Unreadable files are skipped rather than failing the send.
@@ -36,12 +71,8 @@ export async function downloadStaticAttachments(
   supabase: SupabaseClient<Database>,
   fileIds: string[],
 ): Promise<EmailAttachment[]> {
-  if (fileIds.length === 0) return []
-  const { data: rows } = await supabase
-    .from('email_template_files')
-    .select('file_name, storage_path')
-    .in('id', fileIds)
-  if (!rows?.length) return []
+  const rows = await listAttachmentFiles(supabase, fileIds)
+  if (!rows.length) return []
 
   const out: EmailAttachment[] = []
   for (const row of rows) {
@@ -146,8 +177,11 @@ export async function buildManualSendContext(
       phone: (meta['phone'] as string) ?? null,
       brandColor: (meta['brand_color'] as string) ?? null,
       logoUrl: (meta['logo_url'] as string) ?? null,
-      quietHoursStart: (meta['quiet_hours_start'] as string) ?? '21:00',
-      quietHoursEnd: (meta['quiet_hours_end'] as string) ?? '08:00',
+      // No fallback on purpose, matching `loadMcSnapshot` in
+      // `lib/automations/context.ts`: an MC who never set quiet hours
+      // gets none, not a fabricated 21:00-08:00 window.
+      quietHoursStart: (meta['quiet_hours_start'] as string) ?? null,
+      quietHoursEnd: (meta['quiet_hours_end'] as string) ?? null,
       quietHoursTimezone: (meta['timezone'] as string) ?? DEFAULT_TIMEZONE,
       signature: (meta['email_signature'] as RunContext['mc']['signature']) ?? null,
       // Resolved branding for the branded email shell — the compose

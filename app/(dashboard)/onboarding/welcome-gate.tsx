@@ -3,6 +3,7 @@
 import type { User } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 
+import { withoutPaymentDetails } from '@/lib/branding/payment-details'
 import { createClient } from '@/lib/supabase/client'
 
 import type { WelcomeProfile } from './steps/step-details'
@@ -81,7 +82,7 @@ export function WelcomeGate() {
     const supabase = createClient()
     const { error } = await supabase.auth.updateUser({
       data: {
-        ...(user.user_metadata ?? {}),
+        ...withoutPaymentDetails(user.user_metadata),
         display_name: profile.displayName,
         business_name: profile.businessName,
         phone: profile.phone,
@@ -103,7 +104,7 @@ export function WelcomeGate() {
     // change even if the write is slow or fails.
     localStorage.setItem(cacheKeyFor(user.id), 'true')
     void createClient().auth.updateUser({
-      data: { ...(user.user_metadata ?? {}), welcome_onboarded_at: new Date().toISOString() },
+      data: { ...withoutPaymentDetails(user.user_metadata), welcome_onboarded_at: new Date().toISOString() },
     })
   }
 

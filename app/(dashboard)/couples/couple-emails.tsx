@@ -2,9 +2,11 @@
  * Emails tab on the Couple Profile.
  *
  * Send a saved email template to this couple, send a test to your own
- * inbox, and see the sent-history below — all in one place (the manual
+ * inbox, and see the sent-history below, all in one place (the manual
  * compose flow moved here off the Overview). Calm card list mirroring
- * the Automations tab; backed by `couple_emails`.
+ * the Automations tab; backed by `couple_emails`. Automated workflow
+ * sends are logged there too (Task 30), with a delivery status the
+ * Resend webhook keeps current; each row renders in `./couple-email-row`.
  *
  * @module app/(dashboard)/couples/couple-emails
  */
@@ -15,29 +17,12 @@ import { Mail } from 'lucide-react'
 import { useState } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
-import { StatePill, type StatePillTone } from '@/components/ui/state-pill'
 import { createClient } from '@/lib/supabase/client'
-import { formatRelativeTime } from '@/lib/utils'
 
+import { CoupleEmailRow, emailOutcome, type CoupleEmail } from './couple-email-row'
 import { CoupleSendEmail } from './couple-send-email'
 import { CoupleTabEmpty, CoupleTabShell, type TabStat } from './couple-tab-shell'
 import { CoupleTemplatePicker } from './couple-template-picker'
-
-/** One logged send. */
-interface CoupleEmail {
-  id: string
-  subject: string
-  template_name: string | null
-  to_email: string
-  source: string
-  status: string
-  sent_at: string
-}
-
-const STATUS_TONE: Record<string, StatePillTone> = {
-  sent: 'success',
-  failed: 'danger',
-}
 
 interface CoupleEmailsProps {
   coupleId: string
@@ -55,7 +40,11 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('couple_emails')
-        .select('id, subject, template_name, to_email, source, status, sent_at')
+        // The step title rides along through the step_id foreign key: one
+        // request, and null once the step (or its workflow) is deleted.
+        .select(
+          'id, subject, template_name, to_email, source, status, sent_at, transport, error, superseded_at, workflow_steps(title)',
+        )
         .eq('couple_id', coupleId)
         .order('sent_at', { ascending: false })
       if (error) throw error
@@ -63,11 +52,21 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
     },
   })
 
-  const sentCount = emails.filter((e) => e.status === 'sent').length
-  const failedCount = emails.filter((e) => e.status === 'failed').length
-  const stats: TabStat[] = [{ label: `${emails.length} total` }]
+  // Separate buckets, so the success-toned figure only ever counts mail
+  // that went out cleanly: a delayed send is still in doubt, and says so,
+  // and a failure a later send replaced is history, counted in neither.
+  const count = (outcome: ReturnType<typeof emailOutcome>) =>
+    emails.filter((e) => emailOutcome(e) === outcome).length
+  const undeliveredCount = count('undelivered')
+  const delayedCount = count('delayed')
+  const sentCount = count('sent')
+  // The total is what the figures add up to, so it leaves replaced rows
+  // out too; they still list below, labelled as replaced.
+  const total = sentCount + delayedCount + undeliveredCount
+  const stats: TabStat[] = [{ label: `${total} total` }]
   if (sentCount > 0) stats.push({ label: `${sentCount} sent`, tone: 'success' })
-  if (failedCount > 0) stats.push({ label: `${failedCount} failed` })
+  if (delayedCount > 0) stats.push({ label: `${delayedCount} delayed` })
+  if (undeliveredCount > 0) stats.push({ label: `${undeliveredCount} not delivered` })
 
   return (
     <CoupleTabShell
@@ -99,32 +98,12 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
         <CoupleTabEmpty
           icon={Mail}
           title="No emails sent yet"
-          description="Send this couple a template above. Sent templates will show up here."
+          description="Send this couple a template above. Sent templates and workflow emails show up here."
         />
       ) : (
         <div className="space-y-3">
           {emails.map((email) => (
-            <div key={email.id} className="flex items-start gap-3 rounded-control border border-border bg-card px-4 py-3.5">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-surface-muted">
-                <Mail size={15} strokeWidth={1.5} className="text-text-subtle" />
-              </span>
-              <div className="min-w-0 flex-1">
-                {/* Lead with the template name (falling back to the subject for
-                    inline sends); the subject sits underneath. */}
-                <p className="truncate text-body font-medium text-text">{email.template_name ?? email.subject}</p>
-                <p className="mt-0.5 truncate text-body text-text-muted">
-                  {email.template_name ? `${email.subject} · ` : ''}to {email.to_email}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1">
-                <StatePill
-                  tone={STATUS_TONE[email.status] ?? 'neutral'}
-                  label={email.status === 'sent' ? 'Sent' : email.status}
-                  dot="filled"
-                />
-                <span className="text-body text-text-subtle">{formatRelativeTime(email.sent_at, nowMs) || '—'}</span>
-              </div>
-            </div>
+            <CoupleEmailRow key={email.id} email={email} nowMs={nowMs} />
           ))}
         </div>
       )}

@@ -242,3 +242,55 @@ describe('bulk actions', () => {
     expect(result.ok).toBe(false);
   });
 });
+
+/**
+ * Task 31 (audit M5): a name or address is written into email headers on
+ * the Gmail and Microsoft transports, so a line break in one could add a
+ * header. The dispatch layer strips them too; this is the boundary that
+ * stops them reaching the table at all.
+ */
+describe('couple names and emails must be on one line (M5)', () => {
+  const LINE_MESSAGE = 'Names and email addresses must be on one line.';
+
+  it.each([
+    ['name', 'Anna\n& Jake'],
+    ['email', 'a@example.com\r\nBcc: spy@evil.test'],
+    ['primary_name', 'Anna\rSmith'],
+    ['primary_email', 'a@example.com\nX: 1'],
+    ['secondary_name', 'Jake\nBrown'],
+    ['secondary_email', 'j@example.com\nX: 1'],
+  ])('createCoupleAction rejects a line break in %s, with a clear message', async (field, value) => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { createCoupleAction } = await loadActions();
+    const result = await createCoupleAction({ ...baseInput, [field]: value });
+    expect(result).toEqual({ ok: false, error: LINE_MESSAGE });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it('updateCoupleAction rejects a line break in the name', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { updateCoupleAction } = await loadActions();
+    const result = await updateCoupleAction({ ...baseInput, id: validUuid, name: 'Anna\nJake' });
+    expect(result).toEqual({ ok: false, error: LINE_MESSAGE });
+  });
+
+  it('a CSV import reports the row instead of failing the whole import', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1', app_metadata: {} } } });
+    // `select('id')` after the insert; `select('*', { count })` for the
+    // Starter cap count.
+    selectMock.mockReset().mockImplementation((columns: string) =>
+      columns === 'id'
+        ? Promise.resolve({ data: [{ id: validUuid }], error: null })
+        : { eq: () => Promise.resolve({ count: 0, error: null }) },
+    );
+    const { bulkCreateCouplesAction } = await loadActions();
+    const result = await bulkCreateCouplesAction([
+      { ...baseInput, name: 'Good Couple' },
+      { ...baseInput, name: 'Bad\nCouple' },
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.invalidRows).toEqual([{ index: 1, reason: LINE_MESSAGE }]);
+    }
+  });
+});

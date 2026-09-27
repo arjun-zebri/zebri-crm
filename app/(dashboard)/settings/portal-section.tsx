@@ -6,6 +6,7 @@ import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { Toggle } from '@/components/ui/toggle';
+import { withoutPaymentDetails } from '@/lib/branding/payment-details'
 import { createClient } from '@/lib/supabase/client'
 
 interface PortalSectionSettings {
@@ -64,7 +65,7 @@ export function PortalSection({ initialSettings }: PortalSectionProps) {
       return
     }
     const { error } = await supabase.auth.updateUser({
-      data: { ...user.user_metadata, portal_sections: settings },
+      data: { ...withoutPaymentDetails(user.user_metadata), portal_sections: settings },
     })
     if (error) {
       toast(error.message, 'error')

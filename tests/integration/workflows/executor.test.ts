@@ -143,11 +143,17 @@ describe('advanceDueSteps / completeStep', () => {
 
   it('marks a failing step errored and leaves the instance active', async () => {
     const { instanceId } = await scenario('Executor Failure');
+    // An unknown action is a permanent, not a transient, failure, but the
+    // executor cannot tell those apart: it retries every failure the same
+    // way (see executor-retry.test.ts). Attempts already spent means this
+    // call is the last one, so it lands on `errored` instead of being
+    // rescheduled, which is what this test cares about.
     const badId = await addStep(instanceId, {
       type: 'action',
       title: 'Broken',
       config: { actionType: 'not_a_real_action' },
       due_at: PAST,
+      attempt_count: 2,
     });
 
     await advanceDueSteps(admin);
@@ -406,7 +412,9 @@ describe('advanceDueSteps / completeStep', () => {
 
     await advanceDueSteps(admin);
 
-    expect((await step(stepId)).status).toBe('pending');
+    // Cancelling marks the open step `cancelled` (Task 22, 20261011000000);
+    // not run means it is still that, never `done`.
+    expect((await step(stepId)).status).toBe('cancelled');
   });
 
   it('holds a step that requires approval', async () => {

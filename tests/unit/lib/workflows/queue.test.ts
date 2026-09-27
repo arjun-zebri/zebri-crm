@@ -166,6 +166,26 @@ describe('groupQueueItems — the engine half of the day', () => {
     expect(out.sendingToday).toHaveLength(0);
   });
 
+  it('lists a send due after today, so every send is visible', () => {
+    const out = groupQueueItems(
+      [item({ type: 'action', dueAt: '2026-09-20T00:00:00Z' })],
+      now,
+      SYDNEY,
+    );
+    expect(out.scheduled).toHaveLength(1);
+    expect(out.upcoming).toHaveLength(0);
+    expect(out.sendingToday).toHaveLength(0);
+  });
+
+  it('lists a send gated on the MC, with no date', () => {
+    const out = groupQueueItems(
+      [item({ type: 'action', dueAt: null, gate: 'After you finish Call the venue' })],
+      now,
+      SYDNEY,
+    );
+    expect(out.scheduled).toHaveLength(1);
+  });
+
   it('does not surface a held send before it is due', () => {
     const out = groupQueueItems(
       [item({ type: 'action', requiresApproval: true, dueAt: '2026-09-20T00:00:00Z' })],

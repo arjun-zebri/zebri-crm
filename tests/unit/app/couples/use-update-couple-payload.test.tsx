@@ -75,4 +75,50 @@ describe('useUpdateCouple payload', () => {
     expect('selected_package_id' in payload).toBe(true)
     expect(payload.selected_package_id).toBeNull()
   })
+
+  it('normalises null email/phone/venue/notes to empty strings instead of failing the save', async () => {
+    // `email`/`phone`/`venue`/`notes` are typed as plain `string` on
+    // `Couple`, but the DB columns are nullable, so a couple can reach the
+    // app with one of them still `null` (e.g. a lead submitted with no
+    // venue). `updateCoupleAction`'s Zod schema requires a string for
+    // these fields, so a `null` here used to fail the whole save with
+    // "Invalid couple data" (reported live against the inline
+    // couple-name rename in couple-profile-header.tsx). Cast past the
+    // type to model that real runtime shape.
+    const nullFieldCouple = {
+      ...couple,
+      email: null,
+      phone: null,
+      venue: null,
+      notes: null,
+    } as unknown as Couple
+
+    const { result } = renderHook(() => useUpdateCouple(), { wrapper })
+
+    await result.current.mutateAsync(nullFieldCouple)
+
+    await waitFor(() => expect(updateCoupleAction).toHaveBeenCalledTimes(1))
+    // Exact payload: the null fields normalise to '', and nothing else
+    // about the couple changes value in the process.
+    expect(updateCoupleAction.mock.calls[0]![0]).toEqual({
+      id: couple.id,
+      name: couple.name,
+      email: '',
+      phone: '',
+      primary_name: null,
+      primary_email: null,
+      primary_phone: null,
+      secondary_name: null,
+      secondary_email: null,
+      secondary_phone: null,
+      event_date: couple.event_date,
+      venue: '',
+      notes: '',
+      status: couple.status,
+      lead_source: couple.lead_source,
+      referral_source: null,
+      selected_package_id: couple.selected_package_id,
+      kanban_position: couple.kanban_position,
+    })
+  })
 })

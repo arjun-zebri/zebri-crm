@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { stepSummary } from '@/app/(dashboard)/workflows/[id]/step-summary'
+import { stepSummary, timingChip } from '@/app/(dashboard)/workflows/[id]/step-summary'
 import type { AutomationActionRow } from '@/types/automations'
 
 function row(type: string, config: Record<string, unknown>): AutomationActionRow {
@@ -47,6 +47,13 @@ describe('the questionnaire step summary', () => {
 })
 
 describe('other step summaries', () => {
+  it('says a saved Stop is not a step Zebri runs, never "End the run here" (Phase 6 residual F2)', () => {
+    expect(stepSummary(row('stop', {}))).toBe(
+      "Stop isn't a step Zebri runs. Remove it; a workflow ends once its last step is done.",
+    )
+    expect(stepSummary(row('stop', { reason: 'Booked elsewhere' }))).not.toMatch(/End the run/)
+  })
+
   it('names the run sheet audience', () => {
     expect(stepSummary(row('send_timeline_to_vendors', {}))).toBe('Sends the run sheet to vendors')
     expect(
@@ -79,5 +86,33 @@ describe('other step summaries', () => {
   it('names the couple a create step will make', () => {
     expect(stepSummary(row('create_couple', { name: 'Anna & Jake' }))).toBe('Creates Anna & Jake')
     expect(stepSummary(row('create_couple', {}))).toBe('No couple name yet')
+  })
+})
+
+describe('the timing chip (audit M7)', () => {
+  function timed(type: string, timing: unknown): AutomationActionRow {
+    return { id: 'a1', type, config: {}, label: null, timing } as unknown as AutomationActionRow
+  }
+
+  it('says "Immediately" for the default, so "sends straight away" is on the card', () => {
+    expect(timingChip(timed('send_email', { mode: 'after_previous', delayAmount: 0, unit: 'days' }))).toBe(
+      'Immediately',
+    )
+    expect(timingChip(timed('todo', null))).toBe('Immediately')
+  })
+
+  it('keeps the short phrase for a deliberate schedule', () => {
+    expect(timingChip(timed('send_email', { mode: 'after_previous', delayAmount: 2, unit: 'days' }))).toBe('+2d')
+  })
+
+  it('shows nothing on a wait or a branch, whose timing is not when anything is sent', () => {
+    expect(timingChip(timed('wait', null))).toBeUndefined()
+    expect(timingChip(timed('branch', null))).toBeUndefined()
+  })
+
+  it('shows no second number on a Wait saved with a start offset', () => {
+    // A Wait's one number is its duration; a legacy offset is folded into
+    // it on the card, so a "+2d" chip beside it would count it twice.
+    expect(timingChip(timed('wait', { mode: 'after_previous', delayAmount: 2, unit: 'days' }))).toBeUndefined()
   })
 })

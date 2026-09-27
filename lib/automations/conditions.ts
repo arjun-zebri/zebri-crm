@@ -22,11 +22,13 @@
 
 import { z } from 'zod'
 
+import { addMonthsToDateString } from '@/lib/scheduling/timezone'
 import type {
   ActionResult,
   ApprovalActionConfig,
   BranchPredicate,
   BranchActionConfig,
+  CoupleSnapshot,
   RunContext,
   StopActionConfig,
   SubFlowActionConfig,
@@ -43,8 +45,13 @@ export const waitConfigSchema = z.object({
   untilDate: z.string().optional(),
   relative: z
     .object({
-      amount: z.number().int().min(0),
-      unit: z.enum(['minutes', 'hours', 'days', 'weeks']),
+      // Capped at the same ceiling as `durationMinutes`: past a few
+      // million months the wake date is not a valid Date and
+      // computeWaitWakeAt throws, and SQL's relative wake returns null.
+      amount: z.number().int().min(0).max(525_600),
+      // `months` is calendar months on the event date (owner ruling
+      // 2026-09-27); see computeWaitWakeAt.
+      unit: z.enum(['minutes', 'hours', 'days', 'weeks', 'months']),
       direction: z.enum(['before', 'after']),
       anchor: z.enum(['event_date']),
     })
@@ -103,10 +110,15 @@ export const approvalConfigSchema = z.object({
  * Compute the wake time for a wait action. The runner uses this to
  * decide whether the action has already elapsed (advance immediately)
  * or needs to sleep.
+ *
+ * Only the couple's wedding date is read from the context, so the
+ * parameter asks for no more: applying a workflow judges a wait's date
+ * with this same function before any run context exists
+ * (`isPastWait` in `lib/workflows/apply-skips.ts`).
  */
 export function computeWaitWakeAt(
   config: WaitActionConfig,
-  ctx: RunContext,
+  ctx: { couple: Pick<CoupleSnapshot, 'eventDate'> | null },
   now: Date = new Date(),
 ): Date {
   switch (config.mode) {
@@ -123,8 +135,18 @@ export function computeWaitWakeAt(
       const r = config.relative
       const anchor = ctx.couple?.eventDate
       if (!r || !anchor) return now
-      const base = new Date(`${anchor}T09:00:00`)
       const direction = r.direction === 'before' ? -1 : 1
+      if (r.unit === 'months') {
+        // A month has no fixed length, so it is calendar arithmetic on the
+        // event's own date (the MC's calendar day), clamped to the end of
+        // a shorter month: 31 March minus 1 month is 28 or 29 February.
+        // Then the same 09:00 as every other unit, so the SQL recompute
+        // (`_workflow_wait_relative_wake`, 20261024600000) derives the
+        // same instant and never moves a sleeping wake it did not need to.
+        const shifted = addMonthsToDateString(anchor, direction * r.amount)
+        return new Date(`${shifted}T09:00:00`)
+      }
+      const base = new Date(`${anchor}T09:00:00`)
       const unitMs = { minutes: 60_000, hours: 3_600_000, days: 86_400_000, weeks: 604_800_000 }[r.unit]
       return new Date(base.getTime() + direction * r.amount * unitMs)
     }

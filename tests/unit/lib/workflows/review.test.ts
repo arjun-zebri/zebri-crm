@@ -27,6 +27,7 @@ function step(over: Partial<WorkflowStepRow> = {}): WorkflowStepRow {
     completed_at: null,
     error_message: null,
     output: null,
+    attempt_count: 0,
     created_at: '2026-09-01T00:00:00Z',
     updated_at: '2026-09-01T00:00:00Z',
     ...over,
@@ -63,75 +64,90 @@ describe('needsReview', () => {
   });
 });
 
-describe('applyReviewEdits', () => {
-  it('writes the edit onto the step as a rich body', () => {
-    const out = applyReviewEdits(
-      { actionType: 'send_email', subject: 'Old', recipients: { roles: ['primary'] } },
-      { subject: 'New', body: 'Line one\n\nLine two' },
-    ) as Record<string, unknown>;
+/** A rich body with a link variable, bold and a list, as the composer stores it. */
+const RICH = {
+  type: 'doc',
+  content: [
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'Your portal: ' },
+        { type: 'mention', attrs: { id: 'portal.link', label: null } },
+        { type: 'text', marks: [{ type: 'bold' }], text: ' see you soon' },
+      ],
+    },
+    {
+      type: 'bulletList',
+      content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'One' }] }] }],
+    },
+  ],
+};
 
+/**
+ * Per-field edits (Phase 5 live check B2). Before, every edit rewrote the
+ * body from the rendered text, one plain paragraph per line: formatting,
+ * list structure, the signature and the variables were all lost.
+ */
+describe('applyReviewEdits', () => {
+  it('writes a subject-only edit and leaves the stored body exactly as it was', () => {
+    const out = applyReviewEdits(
+      { actionType: 'send_email', subject: 'Old', content: RICH, recipients: { roles: ['primary'] } },
+      { subject: 'New' },
+      null,
+    ) as Record<string, unknown>;
     expect(out['subject']).toBe('New');
+    expect(out['content']).toEqual(RICH);
     expect(out['actionType']).toBe('send_email');
     expect(out['recipients']).toEqual({ roles: ['primary'] });
-    // `content` is the field the send path renders. Writing to `body`
-    // (the legacy plain string) would fail the action's own schema.
-    expect(out['content']).toEqual({
-      type: 'doc',
-      content: [
-        { type: 'paragraph', content: [{ type: 'text', text: 'Line one' }] },
-        { type: 'paragraph' },
-        { type: 'paragraph', content: [{ type: 'text', text: 'Line two' }] },
-      ],
-    });
   });
 
-  it('detaches the step from its saved template', () => {
-    // The MC is fixing this one message for this one couple, not
-    // rewriting the wording for everybody. Leaving templateId behind
-    // would make the send ignore what they just typed.
+  it('writes a body edit as the editor doc, variables and marks intact', () => {
+    const out = applyReviewEdits(
+      { actionType: 'send_email', subject: 'Keep me', content: { type: 'doc', content: [] } },
+      { content: RICH },
+      null,
+    ) as Record<string, unknown>;
+    expect(out['subject']).toBe('Keep me');
+    // The link variable is still a variable, not its URL flattened to text.
+    expect(out['content']).toEqual(RICH);
+  });
+
+  it('changes nothing with no edits', () => {
+    const config = { actionType: 'send_email', subject: 'S', content: RICH };
+    expect(applyReviewEdits(config, {}, null)).toBe(config);
+  });
+
+  it('detaches a template step, copying its words under the edit', () => {
+    // The send prefers a template over the step's words, so leaving
+    // templateId would ignore the edit; the template's body is copied so a
+    // subject edit still sends it.
     const out = applyReviewEdits(
       { actionType: 'send_email', templateId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
-      { subject: 'New', body: 'Hi' },
+      { subject: 'New' },
+      { subject: 'Template subject', content: RICH },
     ) as Record<string, unknown>;
     expect(out['templateId']).toBeUndefined();
+    expect(out['subject']).toBe('New');
+    expect(out['content']).toEqual(RICH);
   });
 
-  // The preview shows a link variable as its URL, so after an edit the
-  // address is all that remains of {{portal.link}}. It must still reach
-  // the couple as the labelled link, not the bare address.
-  it('sends an app share link in edited copy as its couple-facing label', () => {
-    const url = 'https://app.zebri.com.au/portal/tok-1';
+  it('keeps a legacy plain-text body on a subject-only edit', () => {
     const out = applyReviewEdits(
-      { actionType: 'send_email' },
-      { subject: 'S', body: `Your portal: ${url} - see you soon` },
-    ) as { content: { content: { content?: unknown[] }[] } };
-    expect(out.content.content[0]?.content).toEqual([
-      { type: 'text', text: 'Your portal: ' },
-      { type: 'text', text: 'View your portal', marks: [{ type: 'link', attrs: { href: url } }] },
-      { type: 'text', text: ' - see you soon' },
-    ]);
+      { actionType: 'send_email', subject: 'Old', body: 'the old plain text' },
+      { subject: 'New' },
+      null,
+    ) as Record<string, unknown>;
+    expect(out['body']).toBe('the old plain text');
+    expect(out['content']).toBeUndefined();
   });
 
-  it('keeps any other URL as clickable text', () => {
-    const out = applyReviewEdits(
-      { actionType: 'send_email' },
-      { subject: 'S', body: 'Our site: https://example.com/portal/x' },
-    ) as { content: { content: { content?: unknown[] }[] } };
-    expect(out.content.content[0]?.content).toEqual([
-      { type: 'text', text: 'Our site: ' },
-      {
-        type: 'text',
-        text: 'https://example.com/portal/x',
-        marks: [{ type: 'link', attrs: { href: 'https://example.com/portal/x' } }],
-      },
-    ]);
-  });
-
-  it('drops a stale legacy body so the send cannot pick it', () => {
+  it('drops a stale legacy body once the body is edited, so the send cannot pick it', () => {
     const out = applyReviewEdits(
       { actionType: 'send_email', body: 'the old plain text' },
-      { subject: 'New', body: 'the new text' },
+      { content: RICH },
+      null,
     ) as Record<string, unknown>;
     expect(out['body']).toBeUndefined();
+    expect(out['content']).toEqual(RICH);
   });
 });

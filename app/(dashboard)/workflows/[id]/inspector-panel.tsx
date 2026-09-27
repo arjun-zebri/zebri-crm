@@ -22,6 +22,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/toast'
 import { Toggle } from '@/components/ui/toggle'
 import { configWithDefaults } from '@/lib/automations/action-defaults'
 import { actionUi } from '@/lib/automations/actions/ui'
@@ -41,7 +42,9 @@ import {
 } from '@/lib/automations/trigger-constants'
 import { VARIABLE_CATALOGUE } from '@/lib/automations/variables'
 import { createClient } from '@/lib/supabase/client'
+import { toPlainJSON } from '@/lib/utils'
 import { toStepTiming } from '@/lib/workflows/timing-summary'
+import { WAIT_TIMING, foldWaitConfig } from '@/lib/workflows/wait-step'
 import type {
   ActionType,
   AutomationActionRow,
@@ -509,10 +512,21 @@ function ActionConfigForm({
   onSaved: (payload: SavedPayload) => void
   modal?: { open: boolean; onClose: () => void }
 }) {
-  const [config, setConfig] = useState<Record<string, unknown>>((action.config as Record<string, unknown>) ?? {})
-  const [timing, setTiming] = useState<StepTiming>(() => toStepTiming(action.timing))
+  // A Wait has one number, its duration: it always starts straight after
+  // the step above and never asks for review (see lib/workflows/wait-step).
+  // A Wait saved before that rule is folded here as well as on the
+  // server, so its card shows the whole delay rather than the part left
+  // in the config.
+  const isWait = action.type === 'wait'
+  const [config, setConfig] = useState<Record<string, unknown>>(() => {
+    const stored = (action.config as Record<string, unknown>) ?? {}
+    return isWait ? foldWaitConfig(stored, action.timing) : stored
+  })
+  const [timing, setTiming] = useState<StepTiming>(() =>
+    isWait ? WAIT_TIMING : toStepTiming(action.timing),
+  )
   const [needsReview, setNeedsReview] = useState<boolean>(
-    action.requires_approval ?? false,
+    !isWait && (action.requires_approval ?? false),
   )
   // The step's title. Only the manual steps let the MC write one - for
   // every other step the title is the action's own name - but it saves
@@ -520,22 +534,57 @@ function ActionConfigForm({
   // composer.
   const [label, setLabel] = useState<string>(action.label ?? '')
   const automated = !isManualStep(action.type) && action.type !== 'stop'
+  // Only a step that sends something can be held for review.
+  const reviewable = automated && !isWait
 
   // Timing, the review flag and the config all save through one upsert,
   // so a change to any of them cannot land without the others.
+  const { toast } = useToast()
+  // Which save is the latest, so a slow earlier answer cannot put an
+  // older config on the card after a newer one landed.
+  const saveSeqRef = useRef(0)
+  // The refusal last toasted, so retyping a required field does not
+  // stack the same toast once per keystroke (review M1).
+  const lastRefusalRef = useRef<string | null>(null)
   useDebouncedAutosave({ config, timing, needsReview, label }, () => {
-    onSaved({ kind: 'action', stepId: action.id, config, label })
+    // Captured when the save fires: the card is updated with exactly
+    // what was sent, and only once the server has accepted it (review
+    // I1). A refused save leaves the card on its stored values, so the
+    // canvas never shows an unsaved value as saved; the form keeps the
+    // draft for the MC to fix.
+    const sent = { config, label }
+    const seq = ++saveSeqRef.current
     void upsertTemplateStepRow({
       stepId: action.id,
       templateId,
       position: action.position,
       type: action.type,
-      config: config as never,
-      label: label || undefined,
+      // Plain objects only across the server-action boundary: a TipTap
+      // doc's null-prototype attrs would otherwise be dropped in transit.
+      config: toPlainJSON(sent.config) as never,
+      label: sent.label || undefined,
       parentStepId: action.parent_action_id,
       branchPath: action.branch_path,
       timing,
       requiresApproval: needsReview,
+    }).then((res) => {
+      if (res.ok) {
+        lastRefusalRef.current = null
+        if (seq === saveSeqRef.current) onSaved({ kind: 'action', stepId: action.id, ...sent })
+        return
+      }
+      // A newer save has been sent since this one: its answer is the one
+      // that counts, and a stale refusal would toast an error right after
+      // the MC saw the step save (Task 33 re-review).
+      if (seq !== saveSeqRef.current) return
+      // Refused because the runner would reject the config (Task 33).
+      // The composer has closed by the time this debounced save lands,
+      // so a toast is the one place left to say so.
+      if (res.error === lastRefusalRef.current) return
+      lastRefusalRef.current = res.error
+      toast(res.error, 'error')
+    }, () => {
+      if (seq === saveSeqRef.current) toast('That change did not save. Try again in a moment.', 'error')
     })
   })
 
@@ -562,13 +611,15 @@ function ActionConfigForm({
 
   return (
     <div className="space-y-3">
-      <TimingControl
-        value={timing}
-        onChange={setTiming}
-        allowAfterPrevious={action.position > 0 || action.parent_action_id !== null}
-      />
+      {isWait ? null : (
+        <TimingControl
+          value={timing}
+          onChange={setTiming}
+          allowAfterPrevious={action.position > 0 || action.parent_action_id !== null}
+        />
+      )}
 
-      {automated ? (
+      {reviewable ? (
         <Toggle
           checked={needsReview}
           onChange={setNeedsReview}
@@ -595,7 +646,7 @@ function ActionConfigForm({
           config={config}
           setConfig={setConfig}
           {...(modal ? { modal } : {})}
-          {...(modal && automated
+          {...(modal && reviewable
             ? { review: { checked: needsReview, onChange: setNeedsReview } }
             : {})}
         />

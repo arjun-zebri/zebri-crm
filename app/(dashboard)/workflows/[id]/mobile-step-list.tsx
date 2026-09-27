@@ -35,6 +35,7 @@ import type { BranchPath } from '@/types/automations'
 
 import type { FlowNodeApi, FlowNodeData } from './flow-node'
 import { getLucideIcon } from './lucide-lookup'
+import { StepCardChips } from './step-card-chips'
 
 /** One row of the list: a card plus where it sits in the branch tree. */
 export interface MobileStepItem {
@@ -158,20 +159,7 @@ function StepCard({ item, api }: { item: MobileStepItem; api: FlowNodeApi }) {
           <span className="min-w-0 flex-1">
             <span className="block truncate text-body font-semibold text-text">{d.title}</span>
             <span className="block text-body text-text-muted">{d.summary}</span>
-            {d.timingLabel || d.needsReview ? (
-              <span className="mt-1 flex flex-wrap items-center gap-1">
-                {d.timingLabel ? (
-                  <span className="rounded-pill bg-surface-muted px-2 py-0.5 text-body text-text-muted">
-                    {d.timingLabel}
-                  </span>
-                ) : null}
-                {d.needsReview ? (
-                  <span className="rounded-pill bg-surface-muted px-2 py-0.5 text-body text-text-muted">
-                    Asks you first
-                  </span>
-                ) : null}
-              </span>
-            ) : null}
+            <StepCardChips data={d} />
           </span>
         </button>
 

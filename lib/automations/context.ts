@@ -6,6 +6,15 @@
  * the couple row on every iteration so a wait → email sequence
  * picks up any field changes made by earlier actions.
  *
+ * Every read here throws a `WorkflowReadError` when it fails. These
+ * snapshots decide what a step sends and which branch it takes, and each
+ * used to read a failed query as "nothing there": a couple with no
+ * spouse, an MC called "Your business" with no quiet hours, a contract
+ * never signed. A step built on that sends the wrong thing, or takes the
+ * wrong branch for good, with nothing to say the read failed. Thrown,
+ * the executor marks the step errored before anything is sent (or, for
+ * a woken wait, leaves it asleep), and the tick alerts.
+ *
  * @module lib/automations/context
  */
 
@@ -13,6 +22,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding'
 import { resolveCoupleEmail } from '@/lib/couples/email'
+import { CONTEXT_UNREADABLE, throwIfReadFailed, WorkflowReadError } from '@/lib/workflows/read-failure'
 import type {
   AutomationEventRow,
   AutomationRunRow,
@@ -68,7 +78,7 @@ export async function loadContractSignedAt(
   supabase: SupabaseClient<Database>,
   coupleId: string,
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('contracts')
     .select('signed_at')
     .eq('couple_id', coupleId)
@@ -76,6 +86,7 @@ export async function loadContractSignedAt(
     .order('signed_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+  throwIfReadFailed('context.contract_signed', error, CONTEXT_UNREADABLE)
   return (data?.signed_at as string | null) ?? null
 }
 
@@ -83,13 +94,16 @@ export async function loadCoupleSnapshot(
   supabase: SupabaseClient<Database>,
   coupleId: string,
 ): Promise<CoupleSnapshot | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('couples')
     .select(
       'id, user_id, name, email, phone, event_date, venue, notes, status, lead_source, primary_name, primary_email, primary_phone, secondary_name, secondary_email, secondary_phone, portal_token, secondary_portal_token, portal_token_enabled',
     )
     .eq('id', coupleId)
-    .single()
+    // maybeSingle, not single: "no such couple" is an answer (null), and
+    // `single` reports it as an error, which would now throw.
+    .maybeSingle()
+  throwIfReadFailed('context.couple', error, CONTEXT_UNREADABLE)
   if (!data) return null
 
   const { primaryName, spouseName } = splitCoupleName(data.name)
@@ -147,13 +161,15 @@ async function loadPrimaryEvent(
   shareToken: string | null
   shareEnabled: boolean
 } | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('events')
     .select('date, venue, share_token, share_token_enabled')
     .eq('couple_id', coupleId)
     .order('date', { ascending: true })
     .limit(1)
     .maybeSingle()
+  // Null would fall back to the legacy couple-level date: the wrong date.
+  throwIfReadFailed('context.primary_event', error, CONTEXT_UNREADABLE)
   if (!data) return null
   return {
     date: data.date,
@@ -172,7 +188,7 @@ async function loadSpouseDetails(
   supabase: SupabaseClient<Database>,
   coupleId: string,
 ): Promise<{ name: string | null; email: string | null; phone: string | null }> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('portal_people' as never)
     .select('full_name, email, phone')
     .eq('couple_id', coupleId)
@@ -180,6 +196,8 @@ async function loadSpouseDetails(
     .order('position', { ascending: true })
     .limit(1)
     .maybeSingle()
+  // Null would drop the spouse the couple typed in themselves.
+  throwIfReadFailed('context.spouse', error, CONTEXT_UNREADABLE)
   const row = data as { full_name?: string; email?: string; phone?: string } | null
   return {
     name: row?.full_name ?? null,
@@ -216,16 +234,19 @@ export async function loadInvoiceSnapshot(
 
   let invoice: { id: string; status?: string } | null = null
 
+  // Every read throws on failure: a null invoice or stage makes "has
+  // paid deposit" false, and the branch goes the unpaid way for good.
   if (invoiceId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('invoices')
       .select('id, status')
       .eq('id', invoiceId)
       .eq('couple_id', coupleId)
-      .single()
+      .maybeSingle()
+    throwIfReadFailed('context.invoice', error, CONTEXT_UNREADABLE)
     invoice = data
   } else {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('invoices')
       .select('id, status')
       .eq('couple_id', coupleId)
@@ -233,18 +254,20 @@ export async function loadInvoiceSnapshot(
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+    throwIfReadFailed('context.invoice', error, CONTEXT_UNREADABLE)
     invoice = data
   }
 
   if (!invoice) return null
 
-  const { data: stages } = await supabase
+  const { data: stages, error: stagesError } = await supabase
     .from('invoice_payment_stages')
     .select('position, paid_at')
     .eq('invoice_id', invoice.id)
     .order('position', { ascending: true })
     .limit(1)
     .maybeSingle()
+  throwIfReadFailed('context.invoice_stage', stagesError, CONTEXT_UNREADABLE)
 
   return {
     id: invoice.id,
@@ -277,7 +300,13 @@ export async function loadMcSnapshot(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<McSnapshot> {
-  const { data: userRow } = await supabase.auth.admin.getUserById(userId)
+  const { data: userRow, error } = await supabase.auth.admin.getUserById(userId)
+  // The fallbacks below are for an MC who never set a field. On a failed
+  // read they would send as "Your business", unsigned, ignoring quiet
+  // hours.
+  if (error) {
+    throw new WorkflowReadError('context.mc', { message: error.message, code: error.code ?? null }, CONTEXT_UNREADABLE)
+  }
   const user = userRow?.user
   const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>
   const appMetadata = (user?.app_metadata ?? {}) as Record<string, unknown>
@@ -290,8 +319,13 @@ export async function loadMcSnapshot(
     phone: (metadata['phone'] as string) ?? null,
     brandColor: (metadata['brand_color'] as string) ?? null,
     logoUrl: (metadata['logo_url'] as string) ?? null,
-    quietHoursStart: (metadata['quiet_hours_start'] as string) ?? '21:00',
-    quietHoursEnd: (metadata['quiet_hours_end'] as string) ?? '08:00',
+    // No fallback on purpose. A quiet window the MC never set, and has
+    // no screen to see or clear, silently held an evening "wait five
+    // minutes, then send" until eight the next morning. `resolveQuietHours`
+    // reads null as "send any time", which is what an MC who has
+    // configured nothing means.
+    quietHoursStart: (metadata['quiet_hours_start'] as string) ?? null,
+    quietHoursEnd: (metadata['quiet_hours_end'] as string) ?? null,
     quietHoursTimezone: (metadata['timezone'] as string) ?? (appMetadata['timezone'] as string) ?? DEFAULT_TIMEZONE,
     signature: (metadata['email_signature'] as McSnapshot['signature']) ?? null,
     // Resolved branding for the branded email shell — automation sends

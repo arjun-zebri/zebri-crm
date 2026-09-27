@@ -14,8 +14,9 @@
 /coverage
 
 # playwright
-test-results/
-playwright-report/
+# The CI config writes one of each per pass (test-results-signout/, ...).
+test-results*/
+playwright-report*/
 blob-report/
 playwright/.cache/
 playwright/.auth/

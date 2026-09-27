@@ -1,11 +1,14 @@
 'use client';
 
 /**
- * "Apply workflow" picker for a couple.
+ * "Start a workflow" picker for a couple.
  *
- * Lists the MC's non-archived templates. A template already running on
- * this couple is shown as such and needs a confirm to apply again,
- * because a second copy means a second set of emails.
+ * Lists the MC's non-archived templates. Start (or "Start again") opens a
+ * preview of when each step will run for this couple, in the same modal,
+ * with any step whose date has already passed flagged as skipped; only
+ * "Start workflow" applies it. A template already running on this couple
+ * still needs a confirm to apply again, because a second copy means a
+ * second set of emails.
  *
  * @module app/(dashboard)/couples/workflow-apply-picker
  */
@@ -21,9 +24,15 @@ import { ErrorState } from '@/components/ui/error-state';
 import { Loading } from '@/components/ui/loading';
 import { Modal } from '@/components/ui/modal';
 
+import { useApplyPreview } from './use-apply-preview';
+import { WorkflowApplyList, type ApplicableTemplate } from './workflow-apply-list';
+import { WorkflowApplyPreview } from './workflow-apply-preview';
+
 export interface WorkflowApplyPickerProps {
   isOpen: boolean;
   onClose: () => void;
+  /** The couple the workflow would start on, for the preview. */
+  coupleId: string;
   /** Template ids already applied to this couple and not cancelled. */
   appliedTemplateIds: string[];
   onApply: (templateId: string, force: boolean) => Promise<string | null>;
@@ -33,13 +42,15 @@ export interface WorkflowApplyPickerProps {
 export function WorkflowApplyPicker({
   isOpen,
   onClose,
+  coupleId,
   appliedTemplateIds,
   onApply,
 }: WorkflowApplyPickerProps) {
-  const [confirming, setConfirming] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<ApplicableTemplate | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const query = useQuery({
+  const templates = useQuery({
     enabled: isOpen,
     queryKey: ['applicable-workflow-templates'],
     queryFn: async () => {
@@ -49,72 +60,82 @@ export function WorkflowApplyPicker({
     },
   });
 
-  async function apply(templateId: string, force: boolean) {
-    setBusyId(templateId);
+  const chosenId = isOpen ? (chosen?.id ?? null) : null;
+  const preview = useApplyPreview(chosenId, coupleId);
+
+  function close() {
+    setChosen(null);
+    onClose();
+  }
+
+  async function apply(force: boolean) {
+    if (!chosenId) return;
+    setBusy(true);
     try {
-      const id = await onApply(templateId, force);
-      if (id) onClose();
+      const id = await onApply(chosenId, force);
+      if (id) close();
     } finally {
-      setBusyId(null);
+      setBusy(false);
     }
   }
 
+  const already = chosenId !== null && appliedTemplateIds.includes(chosenId);
+
+  const footer = chosen ? (
+    <div className="flex justify-end gap-2">
+      <Button variant="ghost" onClick={() => setChosen(null)}>
+        Back
+      </Button>
+      <Button
+        loading={busy}
+        disabled={!preview.data}
+        onClick={() => (already ? setConfirming(true) : void apply(false))}
+      >
+        Start workflow
+      </Button>
+    </div>
+  ) : undefined;
+
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title="Start a workflow" size="md">
-        {query.isLoading ? (
+      <Modal
+        isOpen={isOpen}
+        onClose={close}
+        title={chosen ? chosen.name : 'Start a workflow'}
+        size="md"
+        footer={footer}
+      >
+        {chosen ? (
+          <WorkflowApplyPreview query={preview} />
+        ) : templates.isLoading ? (
           <Loading label="Loading your workflows" />
-        ) : query.error ? (
+        ) : templates.error ? (
           <ErrorState
             title="Could not load your workflows"
-            error={query.error as Error}
-            onRetry={() => void query.refetch()}
+            error={templates.error as Error}
+            onRetry={() => void templates.refetch()}
           />
-        ) : (query.data ?? []).length === 0 ? (
+        ) : (templates.data ?? []).length === 0 ? (
           <Empty
             title="No workflows ready yet"
             description="Turn one on from the Workflows page and it will show up here."
             size="sm"
           />
         ) : (
-          <ul className="divide-y divide-border">
-            {(query.data ?? []).map((template) => {
-              const already = appliedTemplateIds.includes(template.id);
-              return (
-                <li key={template.id} className="flex items-center gap-3 py-3">
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-body text-text">{template.name}</span>
-                    {template.description ? (
-                      <span className="block truncate text-body text-text-muted">
-                        {template.description}
-                      </span>
-                    ) : already ? (
-                      <span className="block text-body text-text-muted">Already running</span>
-                    ) : null}
-                  </div>
-                  <Button
-                    variant={already ? 'outline' : 'primary'}
-                    loading={busyId === template.id}
-                    onClick={() => {
-                      if (already) setConfirming(template.id);
-                      else void apply(template.id, false);
-                    }}
-                  >
-                    {already ? 'Start again' : 'Start'}
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
+          <WorkflowApplyList
+            templates={templates.data ?? []}
+            appliedTemplateIds={appliedTemplateIds}
+            onChoose={setChosen}
+          />
         )}
       </Modal>
 
       <ConfirmDialog
-        open={confirming !== null}
-        onCancel={() => setConfirming(null)}
+        open={confirming}
+        onCancel={() => setConfirming(false)}
         onConfirm={() => {
-          if (confirming) void apply(confirming, true);
-          setConfirming(null);
+          setConfirming(false);
+          void apply(true);
         }}
         title="Start this workflow again?"
         description="This couple already has it running. Starting it again creates a second copy, so any automated emails in it will send twice."

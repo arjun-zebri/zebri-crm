@@ -246,11 +246,11 @@ max_frequency = "5s"
 # 4152127777 = "123456"
 
 # Configure logged in session timeouts.
-# [auth.sessions]
+[auth.sessions]
 # Force log out after the specified duration.
-# timebox = "24h"
+timebox = "168h"
 # Force log out if the user has been inactive longer than the specified duration.
-# inactivity_timeout = "8h"
+inactivity_timeout = "72h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]
@@ -275,10 +275,12 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 # Control how many MFA factors can be enrolled at once per user.
 max_enrolled_factors = 10
 
-# Control MFA via App Authenticator (TOTP)
+# Control MFA via App Authenticator (TOTP). Opt-in per MC from
+# Settings, Account (Phase 4, Task 23). The hosted project needs the same
+# switch in Dashboard, Authentication, Multi-Factor.
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

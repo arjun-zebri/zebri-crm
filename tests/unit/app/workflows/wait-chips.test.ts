@@ -39,8 +39,9 @@ describe('wait chips', () => {
     expect(waitChip.summary({ mode: 'duration', durationMinutes: 60 * 24 * 7 })).toBe(
       '1 week later',
     )
+    // No longer offered, but a saved one still reads as what it does.
     expect(waitChip.summary({ mode: 'until_date', untilDate: '2027-01-03' })).toBe(
-      'on 2027-01-03',
+      'until 3 Jan 2027',
     )
     expect(
       waitChip.summary({

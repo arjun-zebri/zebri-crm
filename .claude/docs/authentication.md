@@ -117,7 +117,13 @@ outside these sites, it's a §7.4 regression — fix it.
 
 Bank / business / branding fields are **user-owned** — the user is
 allowed to set them. They appear on the user's own public-surface
-documents only. Editing them via `auth.updateUser({ data })` is fine.
+documents only. Editing them via `auth.updateUser({ data })` is fine,
+**except the payment details** (`bank_account_name`, `bank_bsb`,
+`bank_account_number`, `abn`): a trigger on `auth.users` refuses any
+change to those unless it comes from the 2FA-guarded
+`set_my_payment_details` RPC (Task 23c). Use `savePaymentDetails` and
+strip them from every `updateUser` spread with `withoutPaymentDetails`
+(`lib/branding/payment-details.ts`). See "Two-factor sign-in".
 
 ---
 
@@ -169,7 +175,8 @@ Login posts to **`loginAction`** in `app/(auth)/actions.ts`:
    raw Supabase message — Supabase returns the same string for
    "wrong password" and "unknown email" so we don't leak which
    accounts exist.
-4. `redirect(next ?? '/')` on success.
+4. If the user has a verified TOTP factor, `redirect('/login/mfa?next=…')`
+   (see "Two-factor sign-in" below); otherwise `redirect(next ?? '/')`.
 
 Logout calls `supabase.auth.signOut()` from the sidebar; no server
 action needed.
@@ -299,6 +306,14 @@ helper, reads `app_metadata.account_type === 'admin'`). Wrong
 account type → redirect to `/`. **Never** reads
 `user.user_metadata.account_type`.
 
+### Two-factor gate
+
+Runs for every signed-in, non-public request. If the user has a
+verified TOTP factor and the session is still `aal1`, pages redirect
+to `/login/mfa?next=<path>` and `/api/*` answers `401
+{"error":"second_factor_required"}`. The only exception is a verified
+shadow grant (see "Two-factor sign-in"). Full design below.
+
 ### Subscription paywall
 
 Skipped for `/settings`, `/admin`, `/api/stripe/*`, `/api/alerts/*`,
@@ -310,6 +325,251 @@ a real long-term state, not a paywall block — feature limits (e.g.
 the 5-couple cap) are enforced at the data layer via the
 `enforce_starter_couple_limit` Postgres function, which also reads
 from `app_metadata`.
+
+---
+
+## Two-factor sign-in (TOTP, Phase 4 Task 23)
+
+Opt-in per MC from Settings, Account. Supabase Auth provides the
+TOTP factor and the `aal1` / `aal2` session levels; Zebri adds the
+gate, the recovery codes and the shadow waiver.
+
+Config: `[auth.mfa.totp] enroll_enabled = true, verify_enabled = true`
+in `supabase/config.toml`. The hosted project needs the same switch
+(Dashboard, Authentication, Multi-Factor, TOTP); that is an owner step,
+not a deploy step.
+
+### Enrolment (`app/(dashboard)/settings/two-factor-*.tsx`)
+
+1. "Turn on two-factor sign-in" opens `TwoFactorEnrolModal`, which
+   removes any abandoned unverified TOTP factor, then calls
+   `mfa.enroll({ factorType: 'totp' })` in the browser and shows the QR
+   code plus the text secret.
+2. The MC types a code; `mfa.challengeAndVerify` verifies the factor and
+   raises this session to `aal2`.
+3. Only then `issueRecoveryCodesAction` (server, requires `aal2` and a
+   verified factor, rate-limited) creates ten recovery codes and
+   returns them once.
+
+2FA is never left on without recovery codes: closing the modal before
+the codes are on screen unenrols the factor, whether it was still
+unverified or verified but code issuing failed (the session is `aal2`
+by then, which Supabase needs to remove a verified factor). The steps
+live in `use-totp-enrolment.ts`; the modal and the scan step are thin.
+If that removal fails, the modal stays open and says 2FA is on with no
+codes. As a backstop, the Settings card warns whenever 2FA is on with
+zero unused recovery codes and makes **New recovery codes** the
+primary action.
+
+The card then shows "On since <date>. N of 10 recovery codes left."
+with **New recovery codes** (replaces all codes, requires `aal2`) and
+**Turn off** (unenrols as the user, which Supabase itself refuses
+below `aal2`, then deletes the unused codes). Both sit behind a
+`ConfirmDialog`.
+
+### Enforcement (`middleware.ts`, `lib/auth/mfa.ts`)
+
+`needsSecondFactor(user, accessToken)` is true when the user has a
+verified factor and the access token's `aal` claim is not `aal2`. The
+factor list comes from the `user` that `getUser()` returned (validated
+by the Auth server), never from `session.user` in the cookie: that copy
+is browser-editable JSON, and deleting its factors would make
+`mfa.getAuthenticatorAssuranceLevel()` (no-argument form) report
+`nextLevel: aal1`. A missing or unreadable token counts as owing the
+factor (fail closed).
+
+`/login/mfa` (under the public `/login` prefix, so the gate never loops)
+asks for the 6-digit code, verifies it in the browser with
+`challengeAndVerify`, and does a full navigation to `next` so the
+middleware sees the upgraded cookie. `next` must pass the hardened
+`sameOriginPathSchema` (see below).
+
+Code checks are rate-limited in the app as well as by Supabase:
+`beginTotpAttemptAction` (`app/(auth)/login/mfa/totp-attempt.ts`) runs
+before every verify on the code screen and in the enrolment modal, and
+refuses past 10 tries per user or 30 per IP in 15 minutes. The verify
+itself stays in the browser so Supabase's own per-IP limit sees the MC's
+IP, not Vercel's shared egress addresses.
+
+**Database-level enforcement (Task 23b, `20261019000000`).** The Next
+gate only sees requests that go through Next. A password thief can call
+`signInWithPassword` with the publishable key and use the `aal1` token
+against PostgREST, Storage and RPCs directly, so the database enforces
+the same rule:
+
+- `public.mfa_satisfied()` (definer, stable, `search_path = ''`) is true
+  when the JWT `aal` is `aal2`, when the user has no **verified** factor
+  in `auth.mfa_factors`, or when the JWT `session_id` is an **open**
+  `admin_shadow_sessions` row for that user (`ended_at` null, before
+  `expires_at`) whose admin is **still** an admin (`app_metadata`
+  `account_type = 'admin'`, as `isAdmin` reads it; `20261019100000`):
+  the same shadow waiver as the Next layer, bound to one GoTrue session
+  instead of a cookie. Demoting the admin ends it immediately, even
+  though the row stays open. An unverified (mid-enrolment) factor does
+  not count, so enrolling never locks the MC out. It is also true with no user in
+  the JWT (anon, service role, cron, migrations, GoTrue).
+- Every public RLS table carries a RESTRICTIVE policy `require_mfa`,
+  `for all to authenticated using ((select public.mfa_satisfied())) with
+  check (...)`, ANDed with the table's own policies. An `aal1` session of
+  a 2FA MC reads zero rows and has every write refused (42501). The same
+  policy sits on `storage.objects`.
+- Definer RPCs bypass RLS, so the ones that act for `auth.uid()`
+  (`increment_ai_copilot_usage`, `set_my_payment_details`) start with
+  `if not public.mfa_satisfied() then raise exception using errcode =
+  '42501', message = 'second factor required'`. Every other definer
+  function a signed-in caller can execute is token-gated, a trigger, a
+  helper, or service-role only; the list and reasons are in
+  `tests/integration/rls/require-mfa-coverage.test.ts`.
+- `ensure_require_mfa_policies()` attaches the policy to any RLS table
+  that lacks it (or whose USING / WITH CHECK is anything other than
+  exactly `(select public.mfa_satisfied())`), runs at the end of the migration and after every deploy
+  push. Tests: `tests/integration/rls/require-mfa.test.ts` (behaviour)
+  and `require-mfa-coverage.test.ts` (ratchet).
+
+What it still does not cover:
+
+- **GoTrue's own endpoints.** Supabase's `/factors/{id}/verify` is
+  reachable directly with the `aal1` token, and its rate limits there are
+  Supabase's (per IP), not Zebri's per-user limiter. GoTrue itself
+  refuses email and password changes and factor removal below `aal2`,
+  but **not `user_metadata` updates**: an `aal1` token can still read
+  `user_metadata` and rewrite most of it (branding, business name)
+  through `PUT /auth/v1/user`.
+- **Except the payment details (fixed in Task 23c).** The bank details
+  and ABN couples pay into can no longer be changed that way: the
+  `lock_payment_details` trigger on `auth.users` refuses any change to
+  `bank_account_name`, `bank_bsb`, `bank_account_number` or `abn` that
+  does not come from `set_my_payment_details(p_details jsonb)`, and that
+  RPC carries the `mfa_satisfied()` guard, so an `aal1` session of a 2FA
+  MC is refused on both paths. Details in `security.md` and
+  `database-schema.md`.
+- Realtime `postgres_changes` applies the same RLS, so it is covered;
+  nothing else in Realtime is used.
+
+### Recovery codes (`lib/auth/recovery-codes.ts`)
+
+Supabase has no recovery codes, so Zebri keeps its own in
+`mfa_recovery_codes` (service role only: RLS on, no policies, every
+client grant revoked; see `database-schema.md`).
+
+- Ten codes, `xxxxx-xxxxx` over a 31-symbol alphabet without 0/o/1/l/i
+  (about 49.5 bits each). Shown once; only a per-code-salted scrypt hash
+  is stored.
+- Matching forgives case, spaces and the hyphen, hashes against every
+  unused row (no early exit), and the spend is an atomic
+  `update ... where used_at is null` claim so a code cannot be used twice.
+- Issuing new codes replaces every earlier code in one transaction
+  (`replace_mfa_recovery_codes`, per-user lock): a failure leaves the old
+  codes, and two concurrent issues leave ten codes, not twenty.
+- Spending is `spend_mfa_recovery_code`, per-user lock, single winner per
+  batch: once any code of the current batch is used, every other one is
+  refused, so two concurrent redemptions with different codes cannot both
+  proceed. If removing the factor then fails, the action clears `used_at`
+  on its code so the MC can retry with it.
+  Both writers are `security invoker` with EXECUTE for `service_role`
+  only: their sole caller already has table DML, so definer rights would
+  only add risk.
+
+Redemption is `redeemRecoveryCodeAction` in
+`app/(auth)/login/mfa/actions.ts`: Zod-validated, requires the same
+user's `aal1` session (the code is only ever checked against that
+user's own rows), rate-limited to 5 per 15 minutes per user. On success
+it marks the code used, removes every TOTP factor through the admin API
+(`auth.admin.mfa.deleteFactor`, which also ends all the user's
+sessions), deletes the remaining unused codes, sends
+`mfa_recovery_code_used` to Slack (ids only), emails the MC at their own
+address (`lib/email/account-security.ts`: whoever did it held the
+password, so the owner has to know; best effort), signs the browser out and
+redirects to `/login?recovered=1`, which explains that 2FA is now off.
+The next password sign-in needs no code.
+
+### Shadow waiver (`lib/auth/shadow-grant.ts`)
+
+Shadow sessions are minted through a magic-link OTP, so they are `aal1`
+and the admin does not hold the MC's phone. `enterShadow` sets an
+httpOnly `zebri_shadow_grant` cookie (the production hotfix format,
+`v1.<adminId>.<targetUserId>.<expiresAt>.<HMAC-SHA256>`, keyed by a
+label-derived key from `SUPABASE_SERVICE_ROLE_KEY`) beside
+`zebri_shadow_admin_id` and the banner flag `zebri_is_shadowing`; all
+three last 8 hours (`SHADOW_GRANT_TTL_MS`). The middleware waives the
+2FA gate only when `evaluateShadowGrant` accepts: the grant verifies
+and is in date, names this session's user, its admin equals the
+`zebri_shadow_admin_id` cookie, and that admin is still `isAdmin()`
+today (a service-role lookup, made only when the gate would otherwise
+fire). Refusal reasons are the `admin_shadow_exit_refused` alert's
+closed list.
+
+The bare `zebri_shadow_admin_id` cookie authorises nothing on its own:
+it is an unsigned user id that anyone knowing an admin's id could set.
+The grant is the only trusted shadow signal, everywhere:
+
+- **Past-due paywall skip** (middleware, hotfix rule): only when the
+  grant verifies and names this session's user. It used to trust the
+  bare cookie, which let a past-due MC skip billing from devtools.
+- **2FA gate** (middleware): stricter, the full `evaluateShadowGrant`
+  check above (admin cookie must match, admin must still be one).
+- **`exitShadow`** (production hotfix, verbatim) mints the admin's
+  session only when a signed-in session exists, the grant verifies and
+  is in date, its target is that session's user, its admin equals the
+  admin-id cookie, and that admin is still `isAdmin()`. Otherwise it
+  clears the three shadow cookies, signs this browser out
+  (`scope: 'local'`, never global), redirects to `/login` and mints
+  nothing; it alerts `admin_shadow_exit_refused` (`warn`, ids only)
+  unless the per-IP (5/min) or global (10 per 10 min) cap in
+  `SHADOW_RATE_LIMITS` is spent. Before this, a hand-set admin-id cookie
+  signed the caller in as whoever it named.
+- **`enterShadow`** requires the admin to have a verified TOTP factor
+  and this session to be `aal2`, and returns `{ error }` otherwise:
+  shadow waives the MC's factor, so one phished admin password must not
+  open every 2FA account. The founder must enrol 2FA before shadowing.
+
+`exitShadow`, `clearShadowCookies` and the middleware's stale-shadow
+cleanup all clear the grant. A shadow session still cannot issue codes
+or turn 2FA off (both need `aal2`). Exiting shadow re-mints the admin's
+session at `aal1`, so the admin passes the code screen again.
+
+**Session binding (Phase 4 fix wave, review M1; fix-2, N1).**
+`enterShadow` also sets `zebri_shadow_session` (httpOnly, 168h) to a
+signed marker, `v1.<session_id>.<targetUserId>.<hmac>` (HMAC-SHA256 over
+`v1|session_id|targetUserId`, keyed from `shadowGrantSecret()` under a
+label of its own; `signShadowMarker` / `verifyShadowMarker` in
+`lib/auth/shadow-grant.ts`, below the hotfix head). The middleware 2FA
+waiver additionally requires that marker to verify (constant time) and
+to name the request's `session_id` and user. A stolen grant and admin
+cookie replayed on another `aal1` sign-in of the MC therefore waive
+nothing, even with a hand-set marker holding that sign-in's own session
+id: only the server can sign one. The grant format itself is unchanged,
+so the hotfix merges cleanly. When the
+marker matches and the grant has gone, middleware signs that session
+out locally and redirects to `/login`; `exitShadow` revokes the target
+session with the service role (`scope: 'local'`) on its genuine path;
+and the workflow tick's sweep (`revoke_expired_shadow_sessions()`)
+deletes the auth session of every ended or expired shadow visit within
+a minute, for browsers that never come back.
+See `shadow-mode.md`. The `/login/mfa` sign-out is always `local`, and
+the sidebar and Settings sign-outs are local while shadowing
+(`lib/auth/sign-out-scope.ts`). Still parked: the waiver's admin lookup
+runs per request (Task 38).
+
+### Safe `next` paths
+
+`sameOriginPathSchema` (`lib/auth/schemas.ts`, used by `loginAction`,
+the login and code pages, and middleware) accepts a path only when it
+starts with a single `/` not followed by `/` or `\`, contains no
+backslash and no control character (tab, CR, LF, any C0, DEL), passes
+the same checks after percent-decoding, resolves to the origin it
+started from, and does not resolve to a path starting with `//` (dot
+segments such as `/..//evil.com` collapse to one). A WHATWG URL parser
+treats `\` as `/` and strips tab and newlines, so `/\evil.com` and
+`/<tab>/evil.com` both used to navigate to `//evil.com` after sign-in.
+
+### Password change with 2FA
+
+`changePasswordAction` re-checks the current password on a throwaway,
+non-persisting client. Signing in on the cookie-bound client (the old
+behaviour) replaced an `aal2` session with an `aal1` one, after which
+Supabase refused the update ("AAL2 session is required to update email
+or password when MFA is enabled").
 
 ---
 
@@ -377,6 +637,56 @@ window the entitlement helper's fallback to `user_metadata` smooths
 this; in steady state, post-migration, app_metadata is always
 authoritative.
 
+### Session timebox and inactivity timeout
+
+`supabase/config.toml` sets `[auth.sessions]`:
+
+```toml
+[auth.sessions]
+timebox = "168h"
+inactivity_timeout = "72h"
+```
+
+- **`timebox = "168h"` (7 days)**: a hard session lifetime, independent
+  of activity. This is the owner's August 2026 choice (see the
+  `last_sign_in_at` fix below) and is already live on the hosted
+  project. Without it, middleware's per-request refresh-token rotation
+  kept sessions alive forever, which had a side effect: GoTrue only
+  stamps `auth.users.last_sign_in_at` on a real credential exchange, so
+  with no expiry the "Last sign-in" column froze at first login. The
+  fix was the timebox, not a derived "Last active" column (that
+  alternative was explicitly rejected: the owner wants the real
+  sign-in date).
+- **`inactivity_timeout = "72h"` (3 days)**: logs an MC out after 3
+  days of no activity, even inside the 7-day timebox window. Chosen so
+  a normal weekend away does not force a re-login, but a session left
+  idle for the better part of a week does. If this value turns out to
+  be wrong in practice, it is a one-line config change.
+
+**Change the SQL copy in the same PR.** Both intervals are hard-coded
+in `public.live_shadow_session_for()` (migration `20261018000000`,
+`interval '168 hours'` and `interval '72 hours'`), which decides whether
+a shadow session's auth session is still live. A new timebox or
+inactivity value, here or in the dashboard, needs a migration that
+updates that function too, or the after-exit shadow logging drifts.
+
+Local (`supabase/config.toml`) takes effect on the next `supabase
+start`. No stack restart is required to land the file change, but the
+running local GoTrue container does not pick it up until it is next
+restarted. The hosted projects are configured separately in the
+Supabase Dashboard (Sessions is a Pro-plan feature, not driven by
+`config.toml`):
+
+1. Dashboard, the project (zebri-crm-dev or the production project),
+   then **Authentication** then **Sessions**.
+2. Confirm **Time-box user sessions** is 7 days (168h) on both
+   projects. The August 2026 fix set this on production to stop
+   `last_sign_in_at` from freezing; that fix was never confirmed as
+   applied to zebri-crm-dev specifically, so check it there too and set
+   it to 168h if it isn't already.
+3. Set **Inactivity timeout** to 3 days (72h) on both the dev project
+   and the production project, and save.
+
 ---
 
 ## Settings page
@@ -388,10 +698,13 @@ behaviour spec.
 - **Personal Info** writes to `user_metadata` (display_name,
   business_name, phone, avatar_url). Safe — these are user-owned.
 - **Account** changes password via
-  `supabase.auth.updateUser({ password })`.
+  `supabase.auth.updateUser({ password })`, and turns two-factor
+  sign-in on or off (see "Two-factor sign-in").
 - **Plans & Billing** is read-only in the UI; subscription state
   changes via Stripe webhook → `updateEntitlements()`.
-- **Payments** writes bank details to `user_metadata` (user-owned).
+- **Payments** writes bank details to `user_metadata` (user-owned)
+  through the 2FA-guarded `set_my_payment_details` RPC, never
+  `auth.updateUser` (Task 23c).
   Stripe Connect onboarding redirects to Stripe; the callback
   writes `stripe_connect_*` to `app_metadata` via
   `updateEntitlements()`.

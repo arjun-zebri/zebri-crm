@@ -19,7 +19,8 @@
  */
 
 import { zonedDateParts } from '@/lib/scheduling/timezone';
-import { needsReview } from '@/lib/workflows/review';
+import { needsReview } from '@/lib/workflows/needs-review';
+import { resumeRefusal } from '@/lib/workflows/resume-eligibility';
 import type {
   WorkflowInstanceWithSteps,
   WorkflowStepRow,
@@ -36,8 +37,25 @@ export interface CoupleStepRow {
    * A loose to-do simply carries no chip.
    */
   workflowName: string | null;
-  /** True when the row's workflow is running and can still be stopped. */
+  /** True when the row's workflow is running or paused and can still be stopped. */
   canStop: boolean;
+  /**
+   * True when the row's workflow is running and one the MC started, so it
+   * can be paused. Never the couple's own to-do list: that holds their
+   * loose to-dos, not a sequence, and pausing it would hide them.
+   */
+  canPause: boolean;
+  /**
+   * True when the row's workflow is paused and the server would resume
+   * it (see `resumeRefusal`). A pause an apply is still building is not.
+   */
+  canResume: boolean;
+  /**
+   * True when the row's workflow is paused. Nothing on it runs until it
+   * is resumed, so the row has to say so rather than look like any
+   * other upcoming step.
+   */
+  paused: boolean;
   instanceId: string;
 }
 
@@ -88,9 +106,20 @@ export function bucketCoupleSteps(
       const row: CoupleStepRow = {
         step,
         workflowName: instance.is_default ? null : instance.name,
-        canStop: !instance.is_default && instance.status === 'active',
+        canStop:
+          !instance.is_default &&
+          (instance.status === 'active' || instance.status === 'paused'),
+        canPause:
+          !instance.is_default && !instance.is_personal && instance.status === 'active',
+        canResume: instance.status === 'paused' && resumeRefusal(instance) === null,
+        paused: instance.status === 'paused',
         instanceId: instance.id,
       };
+
+      // A cancelled step is a stopped workflow's, and the tab lists those
+      // separately. It is not done (nobody did it), not work (nothing will
+      // run it) and not a failure.
+      if (step.status === 'cancelled') continue;
 
       if (step.status === 'done' || step.status === 'skipped') {
         buckets.done.push(row);

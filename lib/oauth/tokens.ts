@@ -27,6 +27,34 @@ interface TokenEndpointResponse {
   error_description?: string;
 }
 
+/**
+ * A token endpoint refused a request. `code` is the provider's OAuth
+ * error (`invalid_grant`, `invalid_client`, ...) or null when it named
+ * none; `status` is the HTTP status. Callers classify on `code`: only
+ * {@link isPermanentGrantError} means the stored grant itself is dead.
+ */
+export class OAuthTokenError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'OAuthTokenError';
+  }
+}
+
+/**
+ * Does this refresh failure mean the MC's stored grant can never work
+ * again? True only for `invalid_grant`, which both Google and Microsoft
+ * return when the refresh token was revoked, expired or the password
+ * changed. Everything else (a network error, a 5xx, a misconfigured
+ * client on our side) says nothing about the MC's connection.
+ */
+export function isPermanentGrantError(err: unknown): boolean {
+  return err instanceof OAuthTokenError && err.code === 'invalid_grant';
+}
+
 async function postToken(
   provider: OAuthProvider,
   body: Record<string, string>,
@@ -43,7 +71,11 @@ async function postToken(
   });
   const data = (await res.json()) as TokenEndpointResponse;
   if (!res.ok || !data.access_token) {
-    throw new Error(data.error_description || data.error || `token request failed (${res.status})`);
+    throw new OAuthTokenError(
+      data.error_description || data.error || `token request failed (${res.status})`,
+      data.error ?? null,
+      res.status,
+    );
   }
   return {
     accessToken: data.access_token,

@@ -57,6 +57,31 @@ Fields: Email, Password
 
 Actions: Sign In, "Forgot password?" link to `/reset-password`, "Sign up" link to `/signup`
 
+With `?recovered=1` (set after a 2FA recovery code was used) a success
+callout says two-factor sign-in is now off and can be turned back on in
+Settings.
+
+---
+
+# Two-factor sign-in
+
+Route: `/login/mfa` (Phase 4 Task 23)
+
+Route group: `(auth)`, same card as Login.
+
+Shown only to a signed-in session that still owes its second factor
+(verified TOTP factor, session `aal1`); anyone else is redirected to
+`/login` (signed out) or to `next` (nothing owed). Reached from
+`loginAction` or from the middleware gate, carrying `?next=`.
+
+- Default: "Authentication code" (6 digits, numeric keypad,
+  `one-time-code` autofill) and **Verify**. A wrong code clears the
+  field and says to try the newest one.
+- **Use a recovery code**: a warning callout (using one turns 2FA off),
+  "Recovery code" field, **Use recovery code**. Success signs out and
+  lands on `/login?recovered=1`.
+- **Sign out** at the bottom, for someone with neither.
+
 ---
 
 # Sign Up
@@ -411,10 +436,44 @@ workflow's name as a chip only when the MC started that workflow, so
 the auto-created default instance ("General") is never a heading for
 something they never made. Rows open the shared `StepDetailModal`,
 where a manual step's name, note and due date can be edited; the row
-`⋯` gains **Stop this workflow** for a step from a started workflow.
+`⋯` gains **Pause this workflow** or **Resume this workflow** (with a
+confirm that overdue steps are skipped, not sent) and **Stop this
+workflow** for a step from a started workflow. Stopped workflows are
+listed in a collapsed **Stopped (n)** strip under the list, each with
+Resume or the reason it cannot be resumed.
+
+**A send that reached only some of its recipients** (Task 31, audit M6)
+is still `done`, since re-running it would double-send the ones it
+reached, but it never wears the plain green tick. Its row shows a
+warning triangle (`text-warning`, labelled "Sent, but not to
+everyone") and, under the title, "Sent to 1 of 2, 1 failed: <the
+provider's reason>" in muted text. There is no new step status: the row,
+the step detail and the activity feed all derive it from the step's
+output with `partialSendFailure` (`lib/workflows/send-outcome.ts`). The
+activity feed line reads "Done: <step> (sent to 1 of 2, 1 failed:
+<reason>)". Each failed recipient also has its own `failed` row on the
+Emails tab. Such a step stays in the collapsed **Done** strip (not "Needs
+you now": Try again would re-send to the recipients who got it), so the
+strip header says "Done (7) · 1 partly failed" in `text-warning` and the
+tab's stat line adds "1 partly failed" in the same tone, both visible
+without opening anything (`workflowTabStats`,
+`couple-workflow-stats.ts`). Its title is not struck through.
+
+The stat line reads "2 open · 1 overdue · 1 partly failed" ("open" is
+an adjective, never "2 opens"). Below `sm` every couple tab header
+(`CoupleTabShell`) stacks: the title and its stat line take the full
+width and wrap rather than truncate, and the actions sit under them and
+wrap onto more lines, so at 390px "1 partly failed" on this tab and
+"2 not delivered" on the Emails tab are readable (Phase 5 live check B3,
+B4). On a phone a step row's pills ("Needs your OK", "Paused") wrap
+under its title, so the title keeps its line instead of shrinking to
+one letter (live check B6).
 
 The tab header carries **Start a workflow** and **Add a to-do**, both
-buttons opening modals. The classifier is
+buttons opening modals. Choosing a workflow in the Start picker shows a
+preview of its dates for this couple first, with past-dated steps
+flagged as skipped; only **Start workflow** applies it (see
+`workflows.md`, "The Start preview shows the calendar first"). The classifier is
 `couple-workflow-buckets.ts`, pure and unit-tested. Below the list sits
 the engine's audit feed.
 
@@ -575,11 +634,40 @@ The **Templates** tab (Mail icon, after Contracts) is where the MC
 emails this couple. Header has two actions: **Send email** (compose from
 a saved template → sends to the couple) and **Test template** (same
 compose, but sends to the MC's own inbox with a `[Test]` subject, not
-logged). Below is the sent-history  -  newest first, each row showing
+logged). Below is the sent-history, newest first, each row showing
 subject, source template, recipient, a status pill, and relative sent
-time (calm card list). Backed by `couple_emails`;
-the send route logs a row on each real send. (The "Send email" entry
-point moved here off the Overview's General section.)
+time (calm card list, one `CoupleEmailRow` per send in
+`couple-email-row.tsx`). Backed by `couple_emails`; the send route logs
+a row on each real send. (The "Send email" entry point moved here off
+the Overview's General section.)
+
+Automated workflow sends show in the same list (Task 30), with a
+workflow icon and "Workflow: <step title> · to <address>" underneath
+(the step title read through the `step_id` join, omitted when the step
+has no title or was deleted). For a send through the shared Zebri
+address the pill is the delivery status the Resend webhook keeps
+current: **Sent** (info, hollow dot: no word back yet), **Delayed**
+(warning), **Delivered** (success), **Bounced**, **Complained** and
+**Failed** (danger). A send from the MC's own Gmail or Outlook never
+hears back (those transports raise no delivery events), so instead of
+Sent it reads **Sent from your mailbox** (neutral, filled dot: final,
+not awaiting) with a muted line "Delivery isn't tracked for your own
+mailbox." A **Failed** row shows why under it, muted and wrapped in
+full ("Not sent: <the transport's reason>", `couple_emails.error`): no
+hover title, since a phone has no hover. Below `sm` the pill and time
+sit on their own line under the text instead of in a right-hand column,
+so a long pill never squeezes the subject (residual pass R1). A failed row that a later send for the same
+step and address replaced (the MC fixed the content and sent again,
+`superseded_at` set) reads **Replaced by a later send** (neutral)
+instead of Failed. The header stats count "N sent" (sent, delivered, or
+sent from the MC's mailbox), "N delayed" and "N not delivered" (failed,
+bounced or complained, a replaced failure excluded); a replaced failure
+counts in neither, and "N total" is the sum of those three, so the
+figures add up (the replaced row still lists, labelled). A retried send is one row: a success after a failure
+with the same content replaces it (Phase 5 fix wave, I2, M4; the row
+logic is `emailPill` / `emailOutcome` in `couple-email-row.tsx`). Loading skeleton, empty
+state ("Sent templates and workflow emails show up here.") and error
+state are unchanged.
 
 **Overview tab (default):**
 - Two-column grid on `lg+` (`grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16`), stacks to 1-col on mobile
@@ -1012,7 +1100,19 @@ from what it does and what it says, in the loaders, so every surface
 agrees.
 
 Automated steps sit in the day they will run rather than in a section
-of their own. The old five-section layout (held sends, overdue, due
+of their own, **every one of them, at the time it will go**, including a
+send behind a Wait (dated from the Wait's end, quiet hours included).
+Waits and branches are not rows. A step only a person can release
+shows why in place of a time ("After you finish Call the venue",
+"After you OK Quote", "Depends on Paid deposit?"), in the No date band;
+the reason truncates with the full sentence on hover, and on a phone it
+wraps onto its own line under the title (there is no hover on touch).
+A send that is still behind an earlier step, or has only a projected
+time, has no Tomorrow / Next week in its `⋯`, and its detail modal
+offers neither Snooze nor Send & complete, saying why instead: either
+would send it out of order (`lib/workflows/release.ts`). Rules:
+`lib/workflows/schedule-projection.ts`, described in `workflows.md`
+"The Upcoming view". The old five-section layout (held sends, overdue, due
 today, coming up, sending by itself) was five answers to a question the
 MC was not asking.
 
@@ -1127,12 +1227,118 @@ message.
   Booked to wedding day · step 4 of 11".
 - A warning callout on a held send ("This is waiting on you. Nothing
   goes out until you send it."), a danger one carrying the error on a
-  step that failed, and a warning naming any variable that could not be
-  filled in.
+  step that failed, a warning one on a send that reached only some of its
+  recipients ("Sent to 1 of 2, 1 failed: <reason>", from
+  `StepDetail.sendWarning`; no Try again, which would re-send to the
+  people it reached). Variables that could not be filled in are listed
+  on the envelope instead (see below), beside the preview that marks
+  them.
 - **It opens editable.** The step's own words are already in the
-  fields: a send shows its rendered subject and body, a to-do its name,
-  note and due date, any other action its own fields. There is no Edit
-  button to find first.
+  fields: a send shows its subject and message as written, a to-do its
+  name, note and due date, any other action its own fields. There is no
+  Edit button to find first.
+- **A save the send would reject is refused (Task 33).** Save and Send &
+  complete parse the edited config against the action's runner schema
+  first; a blanked subject or a cleared stage is refused with a sentence
+  naming the field ("The "Send email" step has invalid settings: Subject
+  is required. Fix this before saving."), shown inline under the fields
+  as an alert that is scrolled into view and focused on every refusal
+  (`step-detail-failure.tsx`, Phase 6 live check B3): it sits below the
+  preview, off screen on a long step, and pressing Save used to change
+  nothing visible.
+  The modal stays open with the draft and nothing is written, sent or
+  un-held. The builder canvas runs the same check on a step edit, toasts
+  the sentence, and leaves the card on its stored values.
+  See `workflows.md`, "Save-time config validation".
+- **A send is edited in the Compose editor (Phase 5 live check B2).**
+  The subject is the builder's `SubjectField` holding the subject as
+  written (`{{variables}}` and all) and the message is the same
+  `RichTextEditor` the Compose email modal uses, holding the stored
+  TipTap doc (`StepPreview.source`), so bold, lists, links, the signature
+  and every variable survive an edit (`step-email-edit.tsx`,
+  `use-step-email-form.ts`). Edits are **per field**: only a field that
+  changed travels (`ReviewEdits`), so a subject edit never rewrites the
+  body, and a body edit is the editor's doc (through `toPlainJSON`), never
+  plain paragraphs. An unfilled variable in an edited rich message still
+  holds the send. A legacy plain-text step is lifted into the editor and
+  keeps sending as plain text until its message is edited; the editor
+  says that editing it saves it as rich text, after which a missing
+  detail holds it. A template-backed step is detached on any edit, with
+  the template's subject and body copied onto the step under the edit.
+- **A send shows the email itself (Task 28).** Under the subject and
+  message fields, `StepEmailPreview` shows the whole email in the shared
+  `EmailPreview` frame: the branded shell, the MC's signature and the
+  legal footer, rendered on the server by the same functions the send
+  calls (see `email-system.md`), with links inert and the caption
+  "Exactly what <couple> receives." Once the MC edits the subject or
+  message it re-renders, debounced, with those edits applied the way
+  approving would apply them ("With your edits."). An untouched message
+  is approved and saved with no edits at all, and Save on an untouched
+  message writes nothing. "Edited" is measured against what the fields
+  were seeded with, not the live query, and for the message against the
+  editor's own form of it (`RichTextEditor`'s `onReady`), so a refetch
+  (window focus) while untouched re-seeds the fields, never makes them
+  edits, and edit-then-undo counts as untouched. While an edited render
+  is on its way the frame keeps the previous render (the saved one until
+  the first edited render lands), dimmed under "Updating the preview with
+  your edits.", and is never unmounted, so it never goes blank (live
+  check B1); reverting forgets every edited render. The caption says
+  "Exactly what <couple> receives." only over a current, non-empty
+  render. A send whose rich body has an unfilled variable parks rather
+  than going out when Send & complete is pressed (the send's own rule),
+  edited or not, so the unfilled-variable line on the envelope is the
+  MC's cue to fill it first.
+- **The envelope (Task 29).** Above the frame, `StepEnvelope`
+  (`step-envelope.tsx`) lists, as plain label and value lines with no
+  box: **From** (name, address, and "via Zebri shared address", "your
+  Gmail" or "your Outlook"), **To** (every recipient in send order: the
+  primary, the partner, and each cc or bcc address marked "its own
+  email" because the send mails it separately; anyone left out stays in
+  the list, dimmed, with the reason: "the couple opted out of email" or
+  "unsubscribed or bounced"), **Your copy** (the MC's own copy, marked
+  "its own email": it is a separate message sent after the couple's,
+  never a bcc on theirs), **Reply-to**,
+  **When** ("Now" once due or for Try again, else the due time in the
+  MC's own timezone from Settings, e.g. "Thu, 10 Sept, 4:00 pm AWST",
+  "Once the step before it is done" with no due time, or "Held until the
+  missing details are filled in" for a send parked on a gap) and
+  **Attached** (file names). Once a step has run, been skipped or been
+  cancelled, the envelope is a single line instead ("This step has run.
+  The couple's Emails tab lists who it reached.", or that nothing was
+  sent): working out recipients from today's contacts and opt-outs would
+  misreport who a past send reached. Addresses break anywhere,
+  so a long one wraps at phone width instead of widening the modal. A
+  plain notice replaces an empty To line ("No one to send this to, so
+  this step will be skipped.", or that the step will stop with an error,
+  or that the opt-out check could not run just now). Unfilled variables
+  are listed last, in danger text, saying what the engine will do: a
+  rich-text email "will not send until" they are filled (it parks), a
+  legacy plain-text one "will send with these left blank". A variable
+  Zebri does not know at all (a typo, or `{{event.venue}}` for
+  `{{venue.name}}`) is listed on its own line as "`{{event.venue}}` is
+  not a variable Zebri knows", with the advice to edit the message, never
+  to add the detail to the couple, which could not release it (live
+  check B7, `step-envelope-gaps.tsx`). They are
+  marked amber in the preview itself, including in legacy plain-text
+  steps. The envelope arrives with the step (`StepPreview.envelope`); an
+  edited render carries only what an edit can change (the attachments,
+  once a saved template is dropped, and the unfilled list, as
+  `StepPreview.envelopePatch`) and the modal lays it over the saved
+  envelope, so a keystroke burst never re-reads the sender and every
+  recipient; a pending edited render dims it with the frame. When a
+  refresh fails, the error shows with **Try again**, over the dimmed
+  earlier render when there is one (captioned "The last preview, from
+  before your latest edits."), in its place when not; the builder's
+  Compose email preview does the same.
+- **A held pre-composed email** (portal link, request for information,
+  questionnaire, contract, invoice, payment reminder, run sheet, the
+  post-event emails) is not previewed yet (Phase 5 review I3, owner
+  ticket in `email-system.md`). Above its settings the modal says what it
+  sends in words (e.g. "A link to their client portal"), its envelope
+  (From by the handler's own sender rule, To by its own recipient rule,
+  When) and "Preview not available for this email type yet."
+  (`step-precomposed-note.tsx`, `lib/workflows/precomposed-envelope.ts`). Every value is decided
+  server-side by the send's own functions (see `email-system.md`).
 - Actions: **Open the couple** on the left; then **Snooze**, **Save**
   (keeps an edit without acting on it), and the primary — **Send &
   complete** for an automated step, **Mark done** for a to-do, **Try
@@ -1144,6 +1350,24 @@ message.
 The review gate lives here rather than in a section of the list. A held
 send is not a different kind of work, it is a step whose button says
 Send instead of Done.
+
+While the account-wide stop is on, an automated step's modal also
+shows an info callout: "All workflows are paused. Pressing Send &
+complete still runs this step, because you chose to."
+
+### Header and the account-wide stop
+
+The page header (`workflows-header.tsx`) carries **Pause all
+workflows** (outline) while running. While stopped, the button is gone
+and a warning `Callout` stays under the title ("All workflows are
+paused ... Invoices and contracts you send yourself still go.")
+with **Resume all**. Both confirm through `AccountPauseDialog`; the
+resume copy says steps that came due while paused are skipped, not
+sent. The same switch is in Settings, Account ("Workflow automation",
+`workflow-pause-card.tsx`), and both read one React Query key so they
+never disagree. A failed read of the stop shows an error with Try
+again (a danger `Callout` on the page, `ErrorState` in Settings), never
+the "running" controls. See `workflows.md`, "The account-wide stop".
 
 ## Workflows (tab key `templates`)
 
@@ -1243,8 +1467,39 @@ branch step's two sides render as two columns.
 A workflow has two states, draft and active. The header toggle flips
 between them; only an active workflow applies automatically.
 
+**Turn on is refused while anything is unfinished** (Task 34): no
+steps, a send or task with required fields empty, a branch with no
+condition, a to-do or appointment with no name (or still "Give it a
+name"), a step type that cannot run yet (SMS, WhatsApp), or a Stop step
+saved before Stop was removed from the picker (named as "Stop isn't a
+step Zebri runs. Remove it"). The header button and the library card
+switch open "Finish these steps first", listing each step and what to
+do (the intro reads "Finish this, then turn it on." for one step), and the server refuses the
+switch the same way (`setTemplateStatusAction`). Each unfinished card
+carries a warning chip with the fix. A workflow that is already on and
+has an unfinished step shows a warning above the flow naming it.
+Turning off is never blocked. Full rules:
+`.claude/docs/workflows.md`, "The Turn on pre-flight".
+
+The step picker no longer offers a Stop step (Phase 6 ruling: the engine
+never ran one; a workflow ends once its last step is done, and "Stop
+this workflow" ends one by hand). See `workflows.md`, "The Stop step was
+removed".
+
+On a couple's workflow, a step's **Take the date off** is a hold: the
+step stays undated through every re-date (a sibling finishing, the
+wedding date moving, the heal) and the engine never runs it until the
+MC sets a date or presses Send now. See `workflows.md`, "Take the date
+off is a hold".
+
 "Applied to" opens the drawer listing the couples this workflow is
 running on, with any failed step surfaced inline.
+
+There is no workflow settings panel: the gear and its "Workflow
+settings" drawer were removed (owner ruling 2026-09-27), so the builder
+has no control for the stop stages. Stop stages already saved on a
+workflow still apply, and changing the trigger to one of them is still
+refused, shown as a toast, with the saved trigger reloaded.
 
 **Preview dates** runs the workflow against one couple's real wedding
 date and shows the calendar it would produce, before it is switched on.
@@ -1254,7 +1509,20 @@ flagged, because that is an assumption and not a date.
 Each step's inspector carries its **timing** (straight after the step
 above / relative to the apply date / relative to the wedding day) and
 an **"Ask me before this runs"** toggle for automated steps. The card
-shows a short chip for anything that is not the default timing.
+shows a short timing chip, and "Immediately" for the default (straight
+after the step above), so a send that goes at once says so (audit M7).
+A wait or a branch shows no chip for the default.
+
+A **Wait** card has one number, its duration: no timing block and no
+"Ask me before this runs" toggle, because a Wait always starts straight
+after the step above and sends nothing. A Wait saved with a start
+offset shows the offset folded into its duration, and saves that way
+(see workflows.md, "The Wait step has one number"). Its chips are the
+wait itself ("A fixed amount of time", or a "Relative date" before or
+after the event in minutes up to months) and an optional quiet-hours
+chip ("hold until they end" / "ignored"; options "Hold until quiet hours
+end" and "Ignore quiet hours"). "Until a specific date" is not offered; a
+saved one reads "Until <date>" and can be switched to a supported mode.
 
 No step can be shown to the couple. The workflow is the MC's own list
 end to end, so the old "Show this to the couple" toggle is gone from
@@ -1284,6 +1552,17 @@ composer (`manual-step-modal.tsx`) is where a to-do or an appointment
 gets its **name** - the card reads "Give it a name" until it has one -
 along with its notes, its timing and, for an appointment, the meeting
 type that ticks it automatically.
+
+The **Compose email** modal (`send_email`) ends with a preview of the
+draft as the couple receives it (`compose-email-preview.tsx`): rendered
+on the server by the send's own chain, debounced as the MC types, in
+the shared `EmailPreview` frame. A workflow belongs to no couple, so it
+renders for the MC's most recent couple ("Shown as Sam & Priya would
+receive it.") or, with none, a sample couple labelled as one; variables
+that couple cannot fill are named under the frame, since a couple
+missing one is held rather than mailed. The pre-composed sends that
+reuse this modal have no preview here: their handlers build their own
+emails.
 
 **On a phone** (below `md`) the canvas is replaced by a plain vertical
 list of the same cards, in run order with branch legs indented
@@ -2087,10 +2366,20 @@ never blocks a send (it is exempt from the missing-variable gate). See
 
 ### Account (`?tab=account`)
 
-Change password + email preferences + danger zone.
+Change password, two-factor sign-in, email
+preferences, daily digest, workflow automation, danger zone.
 
 - **Change password**  -  explicit `Change password` button (security
   action: requires the current password; not auto-saved).
+- **Two-factor sign-in** (Phase 4 Task 23)  -  off: **Turn on
+  two-factor sign-in** opens a modal (QR code + text key, 6-digit code,
+  **Verify and turn on**, then the ten recovery codes once with **Copy
+  codes** and **I have saved my codes**). On: "On since <date>. N of 10
+  recovery codes left." with **New recovery codes** and **Turn off**,
+  each behind a `ConfirmDialog`. Loading and error states via `Loading`
+  and `ErrorState`.
+- There is no Support access card: shadow-mode visits are logged for
+  Zebri only and never shown to the MC (owner ruling 2026-09-27).
 - **Email preferences**  -  toggles **auto-save** immediately on change.
 - **Danger zone**  -  explicit `Delete account` button (destructive).
 
@@ -2155,7 +2444,7 @@ opens.
 
 Two sections:
 
-**Bank details**  -  Account name, BSB, Account number inputs. **Auto-save on blur** (no Save button)  -  updates `user_metadata` (user-owned fields  -  `bank_account_name`, `bank_bsb`, `bank_account_number`), with the shared inline "Saving… / Saved" hint. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
+**Bank details**  -  Account name, BSB, Account number inputs. **Auto-save on blur** (no Save button)  -  updates `user_metadata` (user-owned fields  -  `bank_account_name`, `bank_bsb`, `bank_account_number`), with the shared inline "Saving… / Saved" hint. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice." Saves go through the 2FA-guarded `set_my_payment_details` RPC with only the fields that changed (Task 23c; `auth.updateUser` is refused by the database for these keys). A changed value must have a valid shape (BSB 6 digits, account number 4 to 10 digits; spaces and hyphens allowed); otherwise the save is skipped and a toast names the problem ("BSB must be 6 digits"). A password-only session of a 2FA MC gets "Confirm your two-factor code, then try again."
 
 **Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. The Connect callback writes `stripe_connect_account_id` and `stripe_connect_enabled` to **`app_metadata`** via `updateEntitlements()` (entitlements, not user-owned  -  they govern access to the public Pay button). Disconnect clears those fields the same way.
 
@@ -2202,7 +2491,7 @@ Three-pane: **Header** (five surface tabs: Invoice, Contract, Portal, Run sheet,
 
 ## Brand Rail (left sidebar)
 
-1. **Your business**  -  Logo, favicon, business name, tagline, ABN, phone, website, Instagram/Facebook URLs.
+1. **Your business**  -  Logo, favicon, business name, tagline, ABN, phone, website, Instagram/Facebook URLs. The ABN saves through the 2FA-guarded `set_my_payment_details` RPC (Task 23c), only once it is 11 digits (spaces allowed); until then the field shows "ABN must be 11 digits", the rest of the branding still autosaves, and the save indicator shows its failed state (not "Saved", and no "Could not save" toast) until the ABN is valid or cleared.
 2. **Brand colours**  -  Six role-based colour pickers (all required, no toggles):
    - **Heading colour**  -  for h1, h2, h3 across all surfaces; default: black (#111827)
    - **Subheading colour**  -  for section titles and secondary headings; default: black (#111827)
@@ -2894,7 +3183,9 @@ detail slide-over.
   base URL pg_cron will call, the `automations-tick` heartbeat as
   "Tick healthy" or "Tick stale" (older than `TICK_STALE_MS`, 45
   minutes, or never run) with a relative timestamp plus "last tick
-  truncated" when the heartbeat's `detail.truncated` is true, and every
+  truncated" when the heartbeat's `detail.truncated` is true, a danger
+  line "{n} failed read(s) in the last tick, first at {site}" when the
+  heartbeat's `failedReads` is above zero (Phase 6 review I2), and every
   pg_cron job (`scheduler-job-list.tsx`) with its schedule, last start
   and last outcome, labelled `queued` / `queue failed` (`failed` in the
   danger tone). That label is pg_cron's own result of
@@ -3227,3 +3518,51 @@ If the slot-generation service is down:
 - Time zone display always visible
 
 Migration: `20260821000000_booking_lifecycle.sql`.
+
+## Public unsubscribe page: `/unsubscribe/[token]` (Phase 2, Task 11)
+
+No sidebar chrome, same style family as `/timeline/[token]` and
+`/book/[token]`: centred column, Zebri logo, `bg-surface`. No session, no
+login: the Spam Act Regulations forbid requiring either to opt out of
+commercial email. The token is a signed, stateless capability
+(`lib/email/unsubscribe-token.ts`), not a DB-stored one; see that module's
+TSDoc for why, and `security.md` for the full route + page writeup.
+
+Three states, decided server-side on every load, never by a query flag:
+
+1. **Invalid token**: "This link isn't valid" plus a suggestion to reply to
+   the email directly. Malformed and well-formed-but-wrong-signature render
+   identically, so a forged attempt learns nothing.
+2. **Already unsubscribed**: a fresh read of `email_suppression` finds the
+   row already there (an earlier visit, the other partner clicking first, or
+   a reload after confirming). No form; a statement of fact.
+3. **Not yet suppressed**: one line naming the address and, when the couple
+   still resolves, whose wedding it is, saying it will stop receiving
+   marketing and automated emails (invoices and contracts still arrive, by
+   ruling, so the copy never promises "any more emails"), plus a single
+   `Unsubscribe me` button. The button submits a plain HTML form (`method="POST"`,
+   `action="/api/unsubscribe"`), not a `fetch` call, so the page needs no
+   client JS and works in a stripped-down mail-client in-app browser too.
+
+Loading the page (a `GET`) never writes anything, on purpose: mailbox
+providers and corporate link scanners pre-fetch every link in an email
+before a person sees it, and a `GET` that unsubscribed on load would opt
+people out of mail they never touched. Only the form's `POST` writes. A
+`?error=rate_limited` query param (set by the route's redirect) renders a
+warning `Callout` above the form, and `?error=write_failed` (the opt-out
+could not be recorded; already alerted) a danger `Callout` saying the person
+is not unsubscribed yet and should try again. Neither appears on first load
+from a real email link. "Already unsubscribed" matches the address exactly,
+ignoring case and surrounding whitespace, never as an ILIKE pattern.
+
+The page is what the email FOOTER links to. The `List-Unsubscribe` header
+names a different URL, `/api/unsubscribe/[token]`, a route handler that
+records the opt-out on the RFC 8058 one-click POST Gmail and Yahoo send
+(a page cannot accept that POST); a `GET` there redirects here.
+
+Mobile: the column is `max-w-md` with side padding from the shared page
+shell, so it reads the same on a phone-width viewport with no separate
+layout.
+
+`/unsubscribe` and `/api/unsubscribe` are on the middleware `PUBLIC_ROUTES`
+allowlist (`middleware.ts`), added in the same change as the page itself.

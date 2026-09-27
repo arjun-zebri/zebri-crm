@@ -54,6 +54,29 @@ describe('nextAllowedSendAt', () => {
   })
 })
 
+/**
+ * A template's own quiet hours are a Postgres `time` column, which comes
+ * back as `HH:MM:SS` (Phase 3 fix wave, M10). Read as `HH:MM` only, the
+ * window parsed to nothing and a template's quiet hours never applied.
+ */
+describe('a window read from a Postgres time column', () => {
+  const fromDb = { start: '21:00:00', end: '08:00:00', timezone: 'Australia/Sydney' }
+
+  it('holds a time inside it', () => {
+    expect(isInsideQuietHours(makeSydneyDate(2026, 6, 1, 23, 0), fromDb)).toBe(true)
+  })
+
+  it('moves a send out of it to the end of the window', () => {
+    const t = makeSydneyDate(2026, 6, 1, 7, 30)
+    expect(nextAllowedSendAt(t, fromDb).getTime()).toBe(makeSydneyDate(2026, 6, 1, 8, 0).getTime())
+  })
+
+  it('still refuses a time that is not a time', () => {
+    const bad = { ...fromDb, start: '25:00:00' }
+    expect(isInsideQuietHours(makeSydneyDate(2026, 6, 1, 23, 0), bad)).toBe(false)
+  })
+})
+
 /** Helper: build a Date that, in Sydney, reads as the given wall-clock time. */
 function makeSydneyDate(y: number, m: number, d: number, h: number, min: number): Date {
   // Sydney is currently UTC+10 (winter) or UTC+11 (summer). For the

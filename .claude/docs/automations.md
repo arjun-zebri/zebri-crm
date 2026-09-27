@@ -171,23 +171,29 @@ one at a time per `.claude/docs/automations-wiring.md`.
   but **not enforced** — quote view tracking doesn't exist yet, and
   the inspector hides the checkbox until it does. Day boundaries
   are UTC (same caveat as `quote_due`).
-- `invoice_due` (A3) — fires for `invoices` with `status = 'sent'`
-  whose `due_date` lands `config.days` from today. Emits one event
+- `invoice_due` (A3): fires for `invoices` with `status` `'sent'` or
+  `'deposit_paid'` whose `due_date` lands `config.days` from today. Emits one event
   per (invoice, days-lead-time, calendar day); narrowing via
-  `payload.days_until_due === config.days`. Anchored on the
-  top-level `due_date` only — payment-schedule installment dates
-  (`deposit_due_date` / `final_due_date`) and the `isFinalBalance`
-  filter are accepted but **not enforced** yet. Day boundaries are
-  UTC.
+  `payload.days_until_due === config.days`. Anchored on each
+  payment stage's own `due_date` (an invoice with no stages fires off
+  its top-level `due_date`). The `isFinalBalance` filter **is
+  enforced**: the emitter stamps `stage_is_final` on the payload and
+  `invoiceDue.match()` checks it through `matchesFinalBalance`, the
+  same check `invoice_overdue` uses. Day boundaries are UTC.
 - `invoice_overdue` (A4) — fires once for `invoices` with
   `status = 'sent'` on the day they cross
   `max(1, daysOverdueMin ?? 1)` days past `due_date` (a min of 0 is
   clamped to 1 — the due date itself belongs to `invoice_due`).
   Emits one event per (invoice, threshold, calendar day); narrowing
-  via `payload.days_overdue === threshold`, plus a `daysOverdueMax`
-  window guard. `isFinalBalance` and the `daysUntilEvent*` filters
-  are accepted but **not enforced** (same `due_date`-only anchor as
-  `invoice_due`). Day boundaries are UTC.
+  via `payload.days_overdue === threshold`. `isFinalBalance` is
+  enforced. `daysUntilEvent*` was dropped from the config and the
+  chip list in the trigger sweep (Task 35, workflows audit M8): the
+  emitter never puts the couple's wedding date on the payload, so
+  there is nothing for the trigger to narrow on; see
+  `.claude/docs/workflows.md` for the current decision. Day
+  boundaries are UTC. This paragraph otherwise still describes the
+  Phase 14a shape and predates the stage-level rework in
+  `lib/automations/time-emitters/invoice-overdue.ts`.
 - `task_overdue` (A5) — fires once for `tasks` whose `status != 'done'`
   on the day they cross `max(1, daysOverdueMin ?? 1)` days past
   `due_date` (a min of 0 is clamped to 1 — a task due today isn't yet

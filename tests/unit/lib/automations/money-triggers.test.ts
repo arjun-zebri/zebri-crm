@@ -100,4 +100,20 @@ describe('invoice_overdue', () => {
     const legacy = { daysOverdueMin: 3, daysOverdueMax: 10, daysUntilEventOp: 'lte' }
     expect(spec.configSchema.safeParse(legacy).success).toBe(true)
   })
+
+  // Task 35 (workflows audit M8): the emitter puts no couple event
+  // date on the payload, so `daysUntilEvent*` was dropped from the
+  // chip list and the config schema, not wired into match(). A
+  // legacy automation saved with it must still fire on its
+  // daysOverdueMin as if the field were never there. `lte -90` is
+  // deliberately a filter that would reject every event if it were
+  // ever enforced (the payload has no `event_date` for
+  // `daysUntilEventMatches` to compare), so this fails loudly if
+  // someone wires the field back in without also teaching the
+  // emitter to carry the wedding date.
+  it('ignores a legacy daysUntilEvent filter even when honouring it would reject the event', () => {
+    const legacyConfig = { daysOverdueMin: 7, daysUntilEventOp: 'lte', daysUntilEventValue: -90 }
+    expect(spec.configSchema.safeParse(legacyConfig).success).toBe(true)
+    expect(spec.match(event({ days_overdue: 7 }), legacyConfig)).toBe(true)
+  })
 })

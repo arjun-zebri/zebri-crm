@@ -33,6 +33,13 @@ describe('buildCopilotSystemPrompt', () => {
     expect(prompt).toContain('branch')
   })
 
+  it('teaches the Wait as one number, a relative date in months, and no until_date', () => {
+    expect(prompt).toContain('never pass `timing` or `requiresApproval` on a wait')
+    expect(prompt).toContain('Relative date')
+    expect(prompt).toMatch(/unit: minutes\|hours\|days\|weeks\|months/)
+    expect(prompt).not.toContain('until_date')
+  })
+
   it('teaches the manual step types, which are the point of workflows', () => {
     // A copilot that can only add actions cannot build the gate that
     // makes a workflow different from a list of automations.

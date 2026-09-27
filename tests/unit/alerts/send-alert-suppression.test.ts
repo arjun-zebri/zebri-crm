@@ -19,7 +19,7 @@ const EVENT = {
 
 describe('sendAlert Slack suppression', () => {
   beforeEach(() => {
-    vi.spyOn(slack, 'sendSlackAlert').mockResolvedValue(undefined)
+    vi.spyOn(slack, 'sendSlackAlert').mockResolvedValue(true)
   })
 
   afterEach(() => {

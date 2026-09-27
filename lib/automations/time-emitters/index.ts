@@ -70,23 +70,48 @@ export interface TimeEmitter {
   /**
    * Run one pass of the emitter. Returns the number of new events
    * emitted on this tick — used by the cron route for metrics.
+   *
+   * @param opts.deadline - epoch ms after which the emitter should stop
+   *   starting work and return what it has. An emitter that walks an
+   *   unbounded number of rows, one round trip each, must honour this:
+   *   the tick runs inside a function with a hard duration limit, and
+   *   being killed mid-pass costs the whole tick its heartbeat and its
+   *   scheduler lease. Emitters whose work is bounded and small may
+   *   ignore it. Everything left behind is picked up on the next pass,
+   *   fifteen minutes later; every trigger here is day-granular.
    */
-  run(supabase: SupabaseClient<Database>): Promise<number>
+  run(supabase: SupabaseClient<Database>, opts?: { deadline?: number }): Promise<number>
 }
 
 /**
- * Registry of all time-based emitters. Adding a new time-based
- * trigger (e.g. `invoice_overdue`) is "implement the
- * {@link TimeEmitter} and append it here" — no other wiring.
+ * Registry of all time-based emitters, in the order they run. Adding a
+ * new time-based trigger is "implement the {@link TimeEmitter} and put
+ * it in this list", with no other wiring.
+ *
+ * **Order is a correctness property, not a preference.** The pass runs
+ * on a slice of the tick, and an emitter that does not finish takes the
+ * ones behind it with it. For most of these a skipped run is a
+ * permanent miss rather than deferred work: `time_before_event`,
+ * `time_after_event` and `anniversary_of_event` all fire on a wedding
+ * being exactly so many days away, and that day does not come round
+ * again. So the bounded emitters, which cost a query or two each, go
+ * first, and `step_overdue` goes **last**, because it is the only one
+ * whose work grows with the backlog (thousands of rows, an RPC apiece)
+ * and the only one that can consume the whole slice. It is also the one
+ * that loses least by waiting: its day-bucket dedupe means an
+ * unfinished run simply carries on fifteen minutes later.
+ *
+ * Exported so that ordering can be pinned by a test rather than by a
+ * comment somebody has to notice.
  */
-const registry: readonly TimeEmitter[] = [
+export const timeEmitterRegistry: readonly TimeEmitter[] = [
   invoiceDueEmitter,
   invoiceOverdueEmitter,
-  stepOverdueEmitter,
   timeBeforeEventEmitter,
   timeAfterEventEmitter,
   anniversaryOfEventEmitter,
   consultationCompletedEmitter,
+  stepOverdueEmitter,
 ]
 
 export interface TimeEmittersResult {
@@ -98,6 +123,15 @@ export interface TimeEmittersResult {
   failedEmitters: number
   /** Emitters not run because the tick's deadline had passed. */
   skippedEmitters: number
+  /**
+   * Which ones, by trigger type. The count alone only ever reached the
+   * tick's `truncated` flag, which reads as "there is more work waiting"
+   * and is true of a dispatch backlog too. For most of these emitters a
+   * skipped run is not deferred work at all: they fire on a wedding
+   * being exactly so many days out, so the run that did not happen is a
+   * day nobody gets back. Naming them is what makes that visible.
+   */
+  skipped: string[]
   /** Wall-clock duration of the full pass, ms. */
   durationMs: number
 }
@@ -110,7 +144,10 @@ export interface TimeEmittersResult {
  *
  * @param opts.deadline - epoch ms after which no further emitter starts.
  *   The tick runs inside a Vercel function with a hard duration limit;
- *   an emitter skipped now simply runs on the next quarter hour.
+ *   an emitter skipped now simply runs on the next quarter hour. Passed
+ *   down to each emitter as well as checked between them: a single
+ *   emitter can have thousands of rows to walk, so stopping only at the
+ *   boundaries between emitters is not a deadline the pass respects.
  */
 export async function runTimeEmitters(
   supabase: SupabaseClient<Database>,
@@ -120,16 +157,19 @@ export async function runTimeEmitters(
   const emitted: Record<string, number> = {}
   let totalEmitted = 0
   let failedEmitters = 0
-  let skippedEmitters = 0
+  const skipped: string[] = []
 
-  for (const emitter of registry) {
+  for (const emitter of timeEmitterRegistry) {
     if (opts.deadline !== undefined && Date.now() >= opts.deadline) {
-      skippedEmitters += 1
+      skipped.push(emitter.type)
       emitted[emitter.type] = 0
       continue
     }
     try {
-      const n = await emitter.run(supabase)
+      const n = await emitter.run(
+        supabase,
+        opts.deadline !== undefined ? { deadline: opts.deadline } : {},
+      )
       emitted[emitter.type] = n
       totalEmitted += n
     } catch (err) {
@@ -147,5 +187,27 @@ export async function runTimeEmitters(
     }
   }
 
-  return { emitted, totalEmitted, failedEmitters, skippedEmitters, durationMs: Date.now() - started }
+  if (skipped.length > 0) {
+    // Not folded into the tick's `truncated` flag and left there: that
+    // flag also means "dispatch has a backlog", which is ordinary and
+    // self-correcting. This is not. Most of these emitters fire on a
+    // date being exactly so many days away, so an emitter that did not
+    // get its turn has missed that day for every couple it would have
+    // matched, and nothing replays it.
+    void sendAlert({
+      type: 'automation_emitters_skipped',
+      severity: 'warn',
+      skipped,
+      ran: timeEmitterRegistry.length - skipped.length,
+    })
+  }
+
+  return {
+    emitted,
+    totalEmitted,
+    failedEmitters,
+    skippedEmitters: skipped.length,
+    skipped,
+    durationMs: Date.now() - started,
+  }
 }

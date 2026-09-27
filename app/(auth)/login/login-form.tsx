@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useActionState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Callout } from '@/components/ui/callout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
@@ -23,9 +24,11 @@ import { loginAction } from '../actions';
 export interface LoginFormProps {
   /** Optional `?next` value forwarded as a hidden field. */
   next?: string;
+  /** True after a 2FA recovery code was used: explains why a code is no longer asked for. */
+  recovered?: boolean;
 }
 
-export function LoginForm({ next }: LoginFormProps) {
+export function LoginForm({ next, recovered = false }: LoginFormProps) {
   const [state, formAction, pending] = useActionState(loginAction, emptyAuthState);
   return (
     <Card className="shadow-sm sm:p-8">
@@ -33,6 +36,13 @@ export function LoginForm({ next }: LoginFormProps) {
         <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
       </div>
       <h1 className="mb-6 text-center text-section font-semibold text-text">Sign in</h1>
+
+      {recovered ? (
+        <Callout tone="success" className="mb-4">
+          Recovery code accepted and two-factor sign-in is off. Sign in with your password, then
+          turn it back on in Settings.
+        </Callout>
+      ) : null}
 
       {state.error && !state.fieldErrors ? (
         <div

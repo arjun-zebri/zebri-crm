@@ -6,8 +6,9 @@
  * for top-level layout. Two sections:
  *
  * 1. **Bank details**: auto-filled into invoice notes. Stored in
- *    `user_metadata`. The Save button lives at the section footer
- *    (right-aligned), not in the middle of the form.
+ *    `user_metadata`, but written only through the 2FA-guarded
+ *    `set_my_payment_details` RPC (`lib/branding/payment-details`).
+ *    Saves on blur.
  *
  * 2. **Card payments via Stripe Connect**: Phase 2D.1. Mounts the
  *    Stripe embedded Connect components (`<ConnectAccountOnboarding>`
@@ -49,6 +50,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { ConnectStatusPanel } from '@/components/settings/connect-status-panel';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
+import { savePaymentDetails, type PaymentDetailsPatch } from '@/lib/branding/payment-details';
 import type { ConnectAccountState } from '@/lib/payments/connect-account';
 import { createClient } from '@/lib/supabase/client';
 
@@ -169,24 +171,17 @@ export function PaymentSettingsSection({
     if (bankSavingRef.current || !dirty) return;
     bankSavingRef.current = true;
     setBankSaveState('saving');
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setBankSaveState('error');
-      bankSavingRef.current = false;
-      return;
-    }
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        ...user.user_metadata,
-        bank_account_name: bankAccountName,
-        bank_bsb: bankBsb,
-        bank_account_number: bankAccountNumber,
-      },
-    });
-    if (error) {
-      toast(error.message, 'error');
+    // Bank details can only change through the 2FA-guarded RPC (Task 23c);
+    // auth.updateUser is refused by the database. Only the fields that
+    // changed are sent, so an older value that predates the shape rules
+    // never blocks saving a different field.
+    const patch: PaymentDetailsPatch = {};
+    if (bankAccountName !== s.name) patch.bank_account_name = bankAccountName;
+    if (bankBsb !== s.bsb) patch.bank_bsb = bankBsb;
+    if (bankAccountNumber !== s.number) patch.bank_account_number = bankAccountNumber;
+    const result = await savePaymentDetails(supabase, patch);
+    if (!result.ok) {
+      toast(result.message, 'error');
       setBankSaveState('error');
     } else {
       savedBankRef.current = { name: bankAccountName, bsb: bankBsb, number: bankAccountNumber };

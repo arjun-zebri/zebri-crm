@@ -26,6 +26,7 @@ import type { QueueItem } from '@/lib/workflows/queue';
 import { DoneList } from './done-list';
 import { countDoneAction, loadDoneAction, untickStepAction } from './instance-actions';
 import { groupDoneItems } from './queue-grouping';
+import { useActionErrorToast } from './use-action-error-toast';
 
 /** Shared with the queue so un-ticking refreshes both lists. */
 export const DONE_KEY = ['workflow-done'] as const;
@@ -43,6 +44,7 @@ export interface DoneSectionProps {
 /** The collapsible Done strip. See {@link DoneSectionProps}. */
 export function DoneSection({ timezone, onOpen, onRestored }: DoneSectionProps) {
   const queryClient = useQueryClient();
+  const onError = useActionErrorToast();
   const [open, setOpen] = useState(false);
 
   const count = useQuery({
@@ -75,6 +77,7 @@ export function DoneSection({ timezone, onOpen, onRestored }: DoneSectionProps) 
       void queryClient.invalidateQueries({ queryKey: DONE_COUNT_KEY });
       onRestored();
     },
+    onError,
   });
 
   const buckets = useMemo(() => groupDoneItems(rows.data ?? [], timezone), [rows.data, timezone]);

@@ -2,6 +2,7 @@ import { PrimitivesEditors } from './primitives-editors';
 import { PrimitivesFeedback } from './primitives-feedback';
 import { PrimitivesForms } from './primitives-forms';
 import { PrimitivesLayout } from './primitives-layout';
+import { PrimitivesMultiSelect } from './primitives-multi-select';
 import { PrimitivesOverlays } from './primitives-overlays';
 import { Section } from './showroom';
 
@@ -27,9 +28,10 @@ export function SectionPrimitives() {
       <Section
         id="controls"
         title="Primitives · Form controls"
-        description="Button, Input, Select, Checkbox and DatePicker, with every variant and state rendered."
+        description="Button, Input, Select, MultiSelect, Checkbox and DatePicker, with every variant and state rendered."
       >
         <PrimitivesForms />
+        <PrimitivesMultiSelect />
       </Section>
 
       <Section

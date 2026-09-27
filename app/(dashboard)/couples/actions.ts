@@ -33,6 +33,7 @@ import { sendAlert } from '@/lib/alerts';
 import { logger } from '@/lib/alerts/logger';
 import { currentPlan } from '@/lib/auth/entitlements';
 import { createClient } from '@/lib/supabase/server';
+import { singleLineIssue, singleLineText } from '@/lib/utils/single-line';
 import { scheduleKick } from '@/lib/workflows/kick';
 import type { Couple } from '@/types/couple';
 
@@ -69,13 +70,15 @@ const dateOrNull = z
 // Partner contact triple (name + email + phone), each nullable so
 // the user can fill them in over time. Defaulted at the schema
 // level so the Supabase Insert spread always has the keys.
-const partnerName = z.string().trim().max(200).nullable().default(null);
-const partnerEmail = z.string().trim().max(200).nullable().default(null);
+// Names and addresses reach email headers, so a line break in one is
+// refused here (audit M5, see lib/utils/single-line).
+const partnerName = singleLineText(200).nullable().default(null);
+const partnerEmail = singleLineText(200).nullable().default(null);
 const partnerPhone = z.string().trim().max(50).nullable().default(null);
 
 const coupleInputSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(200),
-  email: z.string().trim().max(200).default(''),
+  name: singleLineText(200).min(1, 'Name is required'),
+  email: singleLineText(200).default(''),
   phone: z.string().trim().max(50).default(''),
   primary_name: partnerName,
   primary_email: partnerEmail,
@@ -121,7 +124,7 @@ export async function createCoupleAction(
 ): Promise<ActionResult<Couple>> {
   const parsed = coupleInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Invalid couple data.' };
+    return { ok: false, error: singleLineIssue(parsed.error) ?? 'Invalid couple data.' };
   }
 
   const supabase = await createClient();
@@ -495,7 +498,7 @@ export async function updateCoupleAction(
 ): Promise<ActionResult<Couple>> {
   const parsed = updateCoupleSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Invalid couple data.' };
+    return { ok: false, error: singleLineIssue(parsed.error) ?? 'Invalid couple data.' };
   }
   const { id, ...rest } = parsed.data;
 

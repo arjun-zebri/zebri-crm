@@ -75,13 +75,48 @@ export function describeConfigIssues(issues: ConfigIssueLike[]): string {
 }
 
 /**
- * Build the `error_message` the runner stores when a step's saved
- * config fails schema validation.
+ * Where a config failure is being reported, which decides what the MC is
+ * asked to do about it.
+ *
+ * - `send`: the runner, writing a run's `error_message`. The step has
+ *   already failed, so the MC is sent back to the builder.
+ * - `save`: a save refused before the write (Task 33). The MC is already
+ *   editing, so being told to go and edit reads as nonsense.
+ * - `checklist`: one line of the Turn on pre-flight (Task 34). The list
+ *   already names the step and says what to do, so the line is only the
+ *   field clause, as its own sentence.
+ */
+export type ConfigErrorContext = 'send' | 'save' | 'checklist'
+
+/** The closing clause per sentence-style {@link ConfigErrorContext}. */
+const CONFIG_ERROR_ACTION: Record<Exclude<ConfigErrorContext, 'checklist'>, string> = {
+  send: 'Edit the automation to fix it.',
+  save: 'Fix this before saving.',
+}
+
+/**
+ * Build the sentence for a step config that fails schema validation.
+ *
+ * The field clause is the same in every context, so a refusal at save
+ * names exactly what the send would have failed on.
  *
  * @param stepLabel - The action's UI label ('Send email', 'Wait', …).
+ *   Unused in the `checklist` context, whose row carries the step's name.
+ * @param context - Who is reporting it; defaults to the runner, whose
+ *   stored text must not change.
  */
-export function configErrorMessage(stepLabel: string, error: ZodError): string {
-  return `The "${stepLabel}" step has invalid settings: ${describeConfigError(error)}. Edit the automation to fix it.`
+export function configErrorMessage(
+  stepLabel: string,
+  error: ZodError,
+  context: ConfigErrorContext = 'send',
+): string {
+  if (context === 'checklist') {
+    // "no condition chosen" is lower-cased for the middle of a sentence;
+    // here it starts one.
+    const clause = describeConfigError(error)
+    return `${clause.charAt(0).toUpperCase()}${clause.slice(1)}.`
+  }
+  return `The "${stepLabel}" step has invalid settings: ${describeConfigError(error)}. ${CONFIG_ERROR_ACTION[context]}`
 }
 
 /**

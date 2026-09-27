@@ -18,6 +18,26 @@ import type { Database, Json } from '@/types/database'
 export const TICK_HEARTBEAT = 'automations-tick'
 
 /**
+ * The row the dispatcher stamps when it drops stale bus events, with the
+ * count in `detail` (Task 36, audit M4). A heartbeat row rather than a
+ * query of its own: the Admin scheduler card already reads every row
+ * through `scheduler_status()`, so the count costs it nothing, and the
+ * row is only written when a batch was actually dropped. Its
+ * `last_run_at` is when that was. Neither watcher reads it: it is a
+ * record, not a liveness signal.
+ */
+export const STALE_EVENTS_HEARTBEAT = 'workflow-stale-events'
+
+/**
+ * How old a bus event may be and still open a workflow. A note nobody
+ * read for a day is history, not a trigger: production went three
+ * months without a tick and, once it ran, replayed June enquiries
+ * against workflows switched on in September. Anything older is
+ * stamped processed with a reason and left for the audit trail.
+ */
+export const STALE_EVENT_MS = 24 * 60 * 60 * 1000
+
+/**
  * Five missed one-minute ticks. One missed tick is pg_net timing out on a
  * slow route; five in a row is the scheduler not reaching the app. The
  * same window the pg_cron watchdog uses (`tick_watchdog()`), so the Admin
@@ -37,16 +57,24 @@ export async function recordHeartbeat(
   if (error) throw new Error(`heartbeat ${name}: ${error.message}`)
 }
 
-/** The last stamped instant for `name`, or null when it has never run. */
+/**
+ * The last stamped instant for `name`, or null when it has never run.
+ *
+ * Throws when the read fails. Null means "never ran", which the digest
+ * reports as a missed tick; a failed read reported that way sends the
+ * on-call person looking at the scheduler when the database is the
+ * problem.
+ */
 export async function readHeartbeat(
   supabase: SupabaseClient<Database>,
   name: string,
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('system_heartbeats')
     .select('last_run_at')
     .eq('name', name)
     .maybeSingle()
+  if (error) throw new Error(`read heartbeat ${name}: ${error.message}`)
   return data?.last_run_at ?? null
 }
 

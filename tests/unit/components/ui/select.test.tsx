@@ -61,4 +61,9 @@ describe('<Select />', () => {
     expect(screen.getByRole('combobox', { name: 'Status' })).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('alert')).toHaveTextContent('Required');
   });
+
+  it('draws its chevron at the icon stroke width, 1.5', () => {
+    const { container } = render(<Select label="Status" options={OPTIONS} />);
+    expect(container.querySelector('svg.lucide-chevron-down')).toHaveAttribute('stroke-width', '1.5');
+  });
 });

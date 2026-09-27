@@ -50,6 +50,7 @@ const mockQuestionnaire: PublicQuestionnaire = {
   tagline: '',
   abn: '',
   phone: '',
+  postal_address: '',
   website: '',
   instagram_url: '',
   facebook_url: '',

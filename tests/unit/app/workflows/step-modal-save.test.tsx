@@ -13,10 +13,12 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { StepConfigForm } from '@/app/(dashboard)/workflows/[id]/inspector-panel'
+import { ToastProvider } from '@/components/ui/toast'
 import type { AutomationActionRow } from '@/types/automations'
 
 type UpsertInput = { config: Record<string, unknown>; requiresApproval?: boolean }
-const upsertMock = vi.fn<(input: UpsertInput) => Promise<{ ok: true }>>(async () => ({ ok: true }))
+type UpsertResult = { ok: true } | { ok: false; error: string }
+const upsertMock = vi.fn<(input: UpsertInput) => Promise<UpsertResult>>(async () => ({ ok: true }))
 
 vi.mock('@/app/(dashboard)/workflows/actions', () => ({
   upsertTemplateStepRow: (input: UpsertInput) => upsertMock(input),
@@ -73,7 +75,9 @@ function renderStep(type: string, config: Record<string, unknown> = {}) {
   const onSaved = vi.fn()
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    <QueryClientProvider client={client}>
+      <ToastProvider>{children}</ToastProvider>
+    </QueryClientProvider>
   )
   render(
     <Wrapper>
@@ -190,5 +194,95 @@ describe('a step whose copy lives in its schema', () => {
     const config = composerProps.current!['config'] as Record<string, unknown>
     expect(String(config['subject']).length).toBeGreaterThan(0)
     expect(String(config['body'])).toContain('{{couple.primary_name}}')
+  })
+})
+
+describe('a save the runner would reject (Task 33)', () => {
+  beforeEach(() => {
+    upsertMock.mockReset()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+  })
+
+  it('says why, rather than failing silently', async () => {
+    const refusal =
+      'The "Send couple questionnaire" step has invalid settings: Title is required. Fix this before saving.'
+    upsertMock.mockResolvedValue({ ok: false, error: refusal })
+    renderStep('send_couple_questionnaire', { questionnaireTemplateId: 'q1' })
+    fireEvent.change(screen.getByLabelText('Title (optional)'), { target: { value: 'x' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await act(async () => {
+      vi.advanceTimersByTime(400)
+    })
+    expect(await screen.findByText(refusal)).toBeInTheDocument()
+  })
+
+  it('leaves the canvas card on its stored values when refused (review I1)', async () => {
+    upsertMock.mockResolvedValue({ ok: false, error: 'Refused.' })
+    const onSaved = renderStep('send_couple_questionnaire', { questionnaireTemplateId: 'q1' })
+    fireEvent.change(screen.getByLabelText('Title (optional)'), { target: { value: 'Never saved' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await act(async () => {
+      vi.advanceTimersByTime(400)
+    })
+    await waitFor(() => expect(upsertMock).toHaveBeenCalled())
+    await screen.findByText('Refused.')
+    expect(onSaved).not.toHaveBeenCalled()
+  })
+
+  it('updates the card with exactly what the server accepted', async () => {
+    let resolve: (v: UpsertResult) => void = () => {}
+    upsertMock.mockImplementation(() => new Promise<UpsertResult>((r) => { resolve = r }))
+    const onSaved = renderStep('send_couple_questionnaire', { questionnaireTemplateId: 'q1' })
+    fireEvent.change(screen.getByLabelText('Title (optional)'), { target: { value: 'Accepted' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await act(async () => {
+      vi.advanceTimersByTime(400)
+    })
+    await waitFor(() => expect(upsertMock).toHaveBeenCalled())
+    // Not before the server answers.
+    expect(onSaved).not.toHaveBeenCalled()
+    await act(async () => {
+      resolve({ ok: true })
+    })
+    expect(onSaved).toHaveBeenCalledTimes(1)
+    const payload = onSaved.mock.calls[0]![0] as { config: Record<string, unknown> }
+    expect(payload.config['title']).toBe('Accepted')
+  })
+
+  it('does not toast a refusal for a save a newer one already replaced (Task 33 re-review)', async () => {
+    // The first save is slow and refused; the second is fast and accepted.
+    const answers: ((v: UpsertResult) => void)[] = []
+    upsertMock.mockImplementation(() => new Promise<UpsertResult>((r) => answers.push(r)))
+    renderStep('send_couple_questionnaire', { questionnaireTemplateId: 'q1' })
+    for (const value of ['old', 'new']) {
+      fireEvent.change(screen.getByLabelText('Title (optional)'), { target: { value } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      await act(async () => {
+        vi.advanceTimersByTime(400)
+      })
+    }
+    await waitFor(() => expect(answers).toHaveLength(2))
+    await act(async () => {
+      answers[1]!({ ok: true })
+    })
+    await act(async () => {
+      answers[0]!({ ok: false, error: 'Stale refusal.' })
+    })
+    expect(screen.queryByText('Stale refusal.')).not.toBeInTheDocument()
+  })
+
+  it('does not repeat the same refusal toast while the MC keeps typing (review M1)', async () => {
+    upsertMock.mockResolvedValue({ ok: false, error: 'Refused again.' })
+    renderStep('send_couple_questionnaire', { questionnaireTemplateId: 'q1' })
+    for (const value of ['a', 'ab']) {
+      fireEvent.change(screen.getByLabelText('Title (optional)'), { target: { value } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      await act(async () => {
+        vi.advanceTimersByTime(400)
+      })
+      await waitFor(() => expect(upsertMock).toHaveBeenCalled())
+    }
+    await screen.findByText('Refused again.')
+    expect(screen.getAllByText('Refused again.')).toHaveLength(1)
   })
 })

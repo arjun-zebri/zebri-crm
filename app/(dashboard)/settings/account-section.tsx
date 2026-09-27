@@ -6,6 +6,8 @@
  *      (server action) which re-authenticates with the current
  *      password before updating, rate-limits per session, and
  *      validates against the shared {@link changePasswordSchema}.
+ *   1b. **Two-factor sign-in**: opt-in TOTP with recovery codes
+ *      ({@link TwoFactorCard}, Phase 4 Task 23).
  *   2. **Email preferences**: toggle which email categories the
  *      user wants (user-owned data, `user_metadata.email_preferences`).
  *   3. **Danger zone**: request account deletion. Currently
@@ -28,12 +30,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
+import { signOutScope } from '@/lib/auth/sign-out-scope';
+import { withoutPaymentDetails } from '@/lib/branding/payment-details';
 import { createClient } from '@/lib/supabase/client';
 
 import type { ChangePasswordResult } from './account/action-state';
 import { changePasswordAction } from './account/actions';
 import { AutoSaveStatus, type SaveState } from './auto-save-status';
 import { DailyDigestCard } from './daily-digest-card';
+import { TwoFactorCard } from './two-factor-card';
+import { WorkflowPauseCard } from './workflow-pause-card';
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -51,12 +57,14 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
   return (
     <div className="space-y-10">
       <ChangePasswordCard />
+      <TwoFactorCard />
       {initialEmailPreferences ? (
         <EmailPreferencesCard initial={initialEmailPreferences} />
       ) : (
         <EmailPreferencesCard />
       )}
       <DailyDigestCard />
+      <WorkflowPauseCard />
       <DangerZoneCard />
     </div>
   );
@@ -184,7 +192,7 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
     }
     const { error } = await supabase.auth.updateUser({
       data: {
-        ...(user.user_metadata ?? {}),
+        ...withoutPaymentDetails(user.user_metadata),
         email_preferences: {
           product_updates: next.productUpdates,
           booking_reminders: next.bookingReminders,
@@ -245,7 +253,9 @@ function DangerZoneCard() {
   async function doDelete() {
     setLoading(true);
     const supabase = createClient();
-    await supabase.auth.signOut();
+    // Support can reach Settings while shadowing; never end the MC's
+    // other sessions from there.
+    await supabase.auth.signOut({ scope: signOutScope(document.cookie) });
     router.push('/login');
   }
 

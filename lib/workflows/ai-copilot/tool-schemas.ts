@@ -24,7 +24,6 @@ import { actionUi } from '@/lib/automations/actions/ui'
 import {
   approvalConfigSchema,
   branchConfigSchema,
-  stopConfigSchema,
   subFlowConfigSchema,
   waitConfigSchema,
 } from '@/lib/automations/conditions'
@@ -43,12 +42,25 @@ export type ValidationResult =
 
 /**
  * Flow-control actions are runner-evaluated (not in the action
- * registry) and always available to the copilot.
+ * registry) and always available to the copilot. Not `stop`: the
+ * workflow engine has no handler for it, and it was taken out of the
+ * picker and the prompt (Phase 6 ruling), so a model that still asks for
+ * one is told it is not a step it can add.
  */
+/**
+ * The Wait the copilot may write: the runner's schema minus "Until a
+ * specific date", which the builder no longer offers (owner ruling
+ * 2026-09-27). The runner still accepts a saved one, so this refusal
+ * lives here, not in `waitConfigSchema`.
+ */
+const copilotWaitConfigSchema = waitConfigSchema.refine((c) => c.mode !== 'until_date', {
+  path: ['mode'],
+  message: 'until_date is no longer offered. Use a duration, or a Relative date (relative_to_event) before or after the event.',
+})
+
 const FLOW_CONTROL_SCHEMAS: Partial<Record<ActionType, z.ZodType<unknown>>> = {
-  wait: waitConfigSchema,
+  wait: copilotWaitConfigSchema,
   branch: branchConfigSchema,
-  stop: stopConfigSchema,
   sub_flow: subFlowConfigSchema,
   approval: approvalConfigSchema,
 }

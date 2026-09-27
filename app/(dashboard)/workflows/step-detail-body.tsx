@@ -3,18 +3,18 @@
 /**
  * What surrounds the step's own fields in the detail modal.
  *
- * Where it sits (couple, wedding date, workflow), whose move it is, why
- * it failed if it did, and anything the message could not fill in. The
- * step's content is a form below this, not a read view: the modal opens
- * editable.
+ * Where it sits (couple, wedding date, workflow), whose move it is, and
+ * why it failed if it did. The step's content is a form below this, not
+ * a read view: the modal opens editable. What a send could not fill in
+ * is listed on its envelope (`./step-envelope`), beside the preview that
+ * marks it, so the list always describes the render on screen.
  *
  * @module app/(dashboard)/workflows/step-detail-body
  */
 
-import { AlertTriangle } from 'lucide-react';
-
 import { Callout } from '@/components/ui/callout';
 import { Skeleton, SkeletonRegion, SkeletonText } from '@/components/ui/skeleton';
+import { partialSendFailureLabel } from '@/lib/workflows/send-outcome';
 
 import type { StepDetail } from './instance-actions';
 
@@ -56,8 +56,6 @@ export function StepDetailBody({ data }: StepDetailBodyProps) {
     .filter(Boolean)
     .join(' · ');
 
-  const unresolved = data.preview?.unresolved ?? [];
-
   return (
     <div className="space-y-3">
       <p className="text-body text-text-muted">{context}</p>
@@ -74,18 +72,17 @@ export function StepDetailBody({ data }: StepDetailBodyProps) {
         <Callout tone="danger">{data.errorMessage}</Callout>
       ) : null}
 
-      {data.description && data.type === 'action' ? (
-        <p className="whitespace-pre-wrap text-body text-text-muted">{data.description}</p>
+      {/* Done, but not for everyone. Try again would re-send to the
+          people it reached, so it is not offered. */}
+      {data.sendWarning ? (
+        <Callout tone="warning">
+          {partialSendFailureLabel(data.sendWarning)}
+          {data.sendWarning.reason ? `: ${data.sendWarning.reason}` : ''}
+        </Callout>
       ) : null}
 
-      {unresolved.length > 0 ? (
-        <p className="flex items-start gap-2 text-body text-danger">
-          <AlertTriangle size={14} strokeWidth={1.5} className="mt-0.5 shrink-0" />
-          <span>
-            {unresolved.join(', ')} could not be filled in. Edit the message or add the
-            detail to the couple before sending.
-          </span>
-        </p>
+      {data.description && data.type === 'action' ? (
+        <p className="whitespace-pre-wrap text-body text-text-muted">{data.description}</p>
       ) : null}
     </div>
   );

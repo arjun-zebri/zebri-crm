@@ -29,6 +29,7 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
 import { createClient } from '@/lib/supabase/server';
+import { singleLineIssue, singleLineText } from '@/lib/utils/single-line';
 
 /* ─── Tagged result type ───────────────────────────────────────── */
 
@@ -541,10 +542,11 @@ const updateContactSchema = z.object({
   id: uuidSchema,
   patch: z
     .object({
-      name: z.string().trim().min(1).max(200).optional(),
-      email: z.string().trim().max(200).optional(),
+      // Names and addresses reach email headers (audit M5).
+      name: singleLineText(200).min(1).optional(),
+      email: singleLineText(200).optional(),
       phone: z.string().trim().max(50).optional(),
-      contact_name: z.string().trim().max(200).optional(),
+      contact_name: singleLineText(200).optional(),
       category: z.string().trim().min(1).max(100).optional(),
       notes: z.string().max(5000).optional(),
     })
@@ -557,7 +559,7 @@ export async function updateContactAction(
   input: z.input<typeof updateContactSchema>,
 ): Promise<ActionResult<void>> {
   const parsed = updateContactSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: 'Invalid contact patch.' };
+  if (!parsed.success) return { ok: false, error: singleLineIssue(parsed.error) ?? 'Invalid contact patch.' };
   const { id, patch } = parsed.data;
 
   const supabase = await createClient();

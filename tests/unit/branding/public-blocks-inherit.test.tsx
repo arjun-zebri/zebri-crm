@@ -24,6 +24,7 @@ const createMockBranding = (overrides: Partial<PublicBranding> = {}): PublicBran
   tagline: null,
   abn: null,
   phone: null,
+  postal_address: null,
   website: null,
   instagram_url: null,
   facebook_url: null, twitter_url: null, pinterest_url: null, website_url: null,

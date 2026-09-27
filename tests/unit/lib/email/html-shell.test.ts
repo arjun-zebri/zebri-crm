@@ -118,3 +118,103 @@ describe('wrapTemplateHtml', () => {
     expect(html).toContain('margin:0 auto;')
   })
 })
+
+/**
+ * Sender-identification footer (Task 13).
+ *
+ * The Spam Act requires a commercial electronic message to identify who
+ * sent it and how to reach them. These assertions cover the three parts
+ * this task owns: the identification line (ABN, phone, postal address),
+ * graceful degradation when the MC has not filled those fields in yet,
+ * and the unsubscribe link rendering only when a caller supplies one.
+ */
+describe('wrapTemplateHtml sender-identification footer', () => {
+  it('renders ABN, phone and postal address when branding has them', () => {
+    const branding = buildPublicBranding({
+      business_name: 'Acme MC Co',
+      abn: '12 345 678 901',
+      phone: '+61 2 9000 0000',
+      postal_address: '12 Smith St, Sydney NSW 2000',
+    })
+    const html = wrapTemplateHtml(BODY, 'Acme MC Co', branding)
+    expect(html).toContain('ABN 12 345 678 901')
+    expect(html).toContain('+61 2 9000 0000')
+    expect(html).toContain('12 Smith St, Sydney NSW 2000')
+  })
+
+  // A legally required field left blank is worse than an obviously
+  // incomplete footer, and blocking the send entirely would break every
+  // existing user the moment this ships. So an MC who has not filled in
+  // ABN/phone/postal address yet still sends mail: each blank field is
+  // simply left out of the footer rather than shown empty or rendered as
+  // a placeholder, and the send is never blocked on it.
+  it('omits blank identification fields instead of blocking the send or showing them empty', () => {
+    const branding = buildPublicBranding({ business_name: 'Acme MC Co' })
+    const html = wrapTemplateHtml(BODY, 'Acme MC Co', branding)
+    expect(html).toContain('Sent by Acme MC Co via Zebri')
+    expect(html).not.toContain('ABN')
+    expect(html).not.toMatch(/<p[^>]*>\s*<\/p>/)
+  })
+
+  it('renders nothing extra when there is no branding at all', () => {
+    const html = wrapTemplateHtml(BODY, 'Acme MC Co')
+    expect(html).toContain('Sent by Acme MC Co via Zebri')
+    expect(html).not.toContain('ABN')
+    expect(html).not.toContain('Unsubscribe')
+  })
+
+  it('renders the unsubscribe link only when the caller supplies one', () => {
+    const withLink = wrapTemplateHtml(BODY, 'Acme MC Co', null, 'https://app.zebri.com.au/unsubscribe/abc.def')
+    expect(withLink).toContain('Unsubscribe')
+    expect(withLink).toContain('https://app.zebri.com.au/unsubscribe/abc.def')
+
+    const withoutLink = wrapTemplateHtml(BODY, 'Acme MC Co', null)
+    expect(withoutLink).not.toContain('Unsubscribe')
+  })
+
+  it('rejects a non-http unsubscribe URL and escapes a hostile postal address', () => {
+    const branding = buildPublicBranding({ postal_address: '<script>alert(1)</script>' })
+    const html = wrapTemplateHtml(BODY, 'Acme MC Co', branding, 'javascript:alert(1)')
+    expect(html).not.toContain('javascript:')
+    expect(html).not.toContain('<script>')
+    expect(html).toContain('&lt;script&gt;')
+  })
+
+  it('business name with double quote does not break the alt attribute', () => {
+    const branding = buildPublicBranding({
+      logo_url: 'https://cdn.example.com/logo.png',
+      business_name: 'Sarah & Co "Creative"',
+    })
+    const html = wrapTemplateHtml(BODY, 'Sarah & Co "Creative"', branding)
+    // The alt attribute must be properly quoted and not contain a raw "
+    expect(html).toMatch(/alt="[^"]*Sarah &amp; Co &quot;Creative&quot;[^"]*"/)
+    // Should not contain an unescaped quote that would terminate the alt attribute
+    expect(html).not.toContain('alt="Sarah & Co "')
+  })
+
+  it('renders partial footer fields: ABN and phone without postal address', () => {
+    const branding = buildPublicBranding({
+      business_name: 'Acme MC Co',
+      abn: '12 345 678 901',
+      phone: '+61 2 9000 0000',
+    })
+    const html = wrapTemplateHtml(BODY, 'Acme MC Co', branding)
+    expect(html).toContain('ABN 12 345 678 901')
+    expect(html).toContain('+61 2 9000 0000')
+    // Check that the separator is present between the two fields
+    expect(html).toMatch(/ABN 12 345 678 901 &middot; \+61 2 9000 0000/)
+    expect(html).not.toContain('Smith St')
+  })
+
+  it('renders partial footer fields: only phone', () => {
+    const branding = buildPublicBranding({
+      business_name: 'Acme MC Co',
+      phone: '+61 2 9000 0000',
+    })
+    const html = wrapTemplateHtml(BODY, 'Acme MC Co', branding)
+    // Verify the phone is present but not as a joined list with separators
+    expect(html).toContain('+61 2 9000 0000')
+    // Should not have stray separators with empty fields
+    expect(html).not.toMatch(/&middot;\s*&middot;/)
+  })
+})

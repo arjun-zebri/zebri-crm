@@ -33,10 +33,13 @@ const detail = {
   stepIndex: 2,
   stepTotal: 4,
   preview: null,
+  blockedReason: null,
 };
 
 const loadMock = vi.fn(async () => ({ ok: true as const, data: detail }));
-const updateConfigMock = vi.fn(async () => ({ ok: true as const, data: null }));
+const updateConfigMock = vi.fn<() => Promise<{ ok: true; data: null } | { ok: false; error: string }>>(
+  async () => ({ ok: true as const, data: null }),
+);
 
 vi.mock('@/app/(dashboard)/workflows/instance-actions', () => ({
   loadStepDetailAction: (...args: unknown[]) => loadMock(...(args as [])),
@@ -50,6 +53,18 @@ vi.mock('@/app/(dashboard)/workflows/instance-actions', () => ({
 }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
+// The account-wide workflow stop (Task 18). Running unless a case says
+// otherwise.
+const stopState = { paused: false };
+vi.mock('@/app/(dashboard)/workflows/account-pause-actions', () => ({
+  getAccountPauseAction: async () => ({
+    ok: true,
+    data: { paused: stopState.paused, pausedAt: stopState.paused ? '2026-09-24T01:00:00.000Z' : null },
+  }),
+  pauseAccountWorkflowsAction: async () => ({ ok: true, data: null }),
+  resumeAccountWorkflowsAction: async () => ({ ok: true, data: null }),
+}));
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -69,6 +84,21 @@ describe('StepDetailModal', () => {
   beforeEach(() => {
     loadMock.mockClear();
     updateConfigMock.mockClear();
+    stopState.paused = false;
+  });
+
+  it('says, next to Send, that the account stop does not hold back a send the MC presses', async () => {
+    stopState.paused = true;
+    renderModal();
+    expect(
+      await screen.findByText(/All workflows are paused\. Pressing Send & complete still runs this step/),
+    ).toBeInTheDocument();
+  });
+
+  it('says nothing about the stop while the account is running', async () => {
+    renderModal();
+    await screen.findByRole('button', { name: /Send & complete/ });
+    expect(screen.queryByText(/All workflows are paused/)).not.toBeInTheDocument();
   });
 
   it('names the step in the header rather than in an empty body', async () => {
@@ -108,5 +138,50 @@ describe('StepDetailModal', () => {
     expect(input.config['text']).toBe('Rang them, all sorted');
     // Changing what a step *is* stays a builder decision.
     expect(input.config['actionType']).toBe('add_note');
+  });
+
+  it('shows a refused save inline and stays open, so the draft is not lost (Task 33)', async () => {
+    const refusal = 'The "Add note" step has invalid settings: Text is required. Fix this before saving.';
+    updateConfigMock.mockResolvedValueOnce({ ok: false, error: refusal });
+    const { onSettled } = renderModal();
+
+    const note = await screen.findByLabelText('Note text');
+    fireEvent.change(note, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(refusal)).toBeInTheDocument();
+    expect(onSettled).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Note text')).toHaveValue('');
+  });
+
+  it('brings a refused save into view and focuses it, every time Save is refused (live check B3)', async () => {
+    // The message sits under the preview, far below the fold of a long
+    // step: without this, pressing Save changed nothing on screen.
+    const scrolled = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrolled;
+    try {
+      const refusal = 'The "Add note" step has invalid settings: Text is required. Fix this before saving.';
+      updateConfigMock.mockResolvedValueOnce({ ok: false, error: refusal });
+      updateConfigMock.mockResolvedValueOnce({ ok: false, error: refusal });
+      renderModal();
+
+      const note = await screen.findByLabelText('Note text');
+      fireEvent.change(note, { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(refusal);
+      await waitFor(() => expect(alert).toHaveFocus());
+      expect(scrolled).toHaveBeenCalledTimes(1);
+
+      // The same refusal again still scrolls: the MC may have scrolled away.
+      screen.getByLabelText('Note text').focus();
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveFocus());
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 });

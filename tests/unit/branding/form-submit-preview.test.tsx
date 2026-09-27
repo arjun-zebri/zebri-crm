@@ -61,6 +61,7 @@ describe('RenderFormSubmit', () => {
     sectionSpacing: 24,
     businessName: 'Test Business',
     phone: '',
+    postalAddress: '',
     website: '',
     instagramUrl: '',
     facebookUrl: '',

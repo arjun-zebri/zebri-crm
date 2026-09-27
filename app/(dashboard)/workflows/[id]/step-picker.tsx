@@ -12,7 +12,7 @@
  */
 'use client'
 
-import { CalendarClock, CheckSquare, Clock, GitBranch, type LucideIcon, Square } from 'lucide-react'
+import { CalendarClock, CheckSquare, Clock, GitBranch, type LucideIcon } from 'lucide-react'
 
 import { actionUi } from '@/lib/automations/actions/ui'
 import { isActionLaunchVisible } from '@/lib/automations/launch-catalogue'
@@ -83,15 +83,17 @@ const FLOW_ITEMS: {
 }[] = [
   { id: 'flow:wait', actionType: 'wait', label: 'Wait', description: 'Pause before the next action', icon: Clock },
   { id: 'flow:branch', actionType: 'branch', label: 'Branch', description: 'If / else split based on a condition', icon: GitBranch },
-  { id: 'flow:stop', actionType: 'stop', label: 'Stop', description: 'End the run here', icon: Square },
-  // `sub_flow` + `approval` are implemented by the runner but are NOT
-  // in the review-file catalogue (automations-review.md → FLOW CONTROL
-  // is wait/branch/stop only), so they're omitted from the picker.
-  // Existing automations that use them still render and run.
+  // No Stop. The workflow engine has no handler for it, so a couple who
+  // reached one errored at that step while the picker promised "End the
+  // run here" (Phase 6 ruling: remove it rather than build one). A Stop
+  // already saved on a template still renders, and the Turn on pre-flight
+  // names it as a step that cannot run yet. `sub_flow` and `approval` are
+  // not in the catalogue either and stay out for the same kind of reason.
+  // A workflow ends by itself once its last step is done.
 ]
 
-// Flow control comes first (wait / branch / stop / approval / sub_flow
-// are the high-frequency picks), then the action categories. We
+// Flow control comes first (wait and branch are the high-frequency
+// picks), then the action categories. We
 // define the order explicitly here rather than reusing
 // ACTION_CATEGORIES because that constant already includes a `flow`
 // slug for the `pause_couple_automations` action - merging would
@@ -236,6 +238,9 @@ async function persistAction(args: {
     config: args.config as never,
     parentStepId: args.parentStepId,
     branchPath: args.branchPath,
+    // A fresh step starts unfinished (a branch with no condition), so the
+    // save-time config check is for edits, not this insert (Task 33).
+    isNew: true,
   })
   if (!result.ok) return { ok: false, error: result.error }
   return { ok: true }
@@ -291,8 +296,6 @@ function defaultActionConfigFor(type: ActionType): Record<string, unknown> {
     case 'branch':
       // No predicate: the card opens on "Add condition" rather than a
       // guess about which condition was meant.
-      return {}
-    case 'stop':
       return {}
     case 'approval':
       return { prompt: 'Approve this action?', expiresInDays: 3, approverEmail: '' }

@@ -107,6 +107,24 @@ describe('RunHistoryPanel', () => {
     expect(screen.getByText('Finished')).toBeInTheDocument();
   });
 
+  it('labels a paused instance as paused, not running', async () => {
+    instancesFixture = [
+      {
+        id: 'i4',
+        status: 'paused',
+        applied_at: new Date().toISOString(),
+        completed_at: null,
+        error_message: null,
+        couples: { name: 'Priya & Tom' },
+        workflow_steps: [],
+      },
+    ];
+    renderPanel();
+
+    expect(await screen.findByText('Paused')).toBeInTheDocument();
+    expect(screen.queryByText('Running')).toBeNull();
+  });
+
   it('labels a still-running instance', async () => {
     instancesFixture = [
       {

@@ -254,6 +254,13 @@ describe('step controls', () => {
       .from('workflow_steps').select('id').eq('instance_id', instanceId).order('position')
     const actionStepId = steps![1]!.id
 
+    // The send can only have run, and failed, once the to-do above it was
+    // done: that is what released it. A failed send behind an open to-do
+    // is refused (send-order-guard.test.ts).
+    await admin
+      .from('workflow_steps')
+      .update({ status: 'done', completed_at: '2026-01-01T00:00:00Z' })
+      .eq('id', steps![0]!.id)
     await admin
       .from('workflow_steps')
       .update({ status: 'errored', error_message: 'boom', due_at: '2026-01-01T00:00:00Z' })
