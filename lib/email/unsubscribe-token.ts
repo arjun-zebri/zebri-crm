@@ -120,18 +120,18 @@ export function verifyUnsubscribeToken(token: string): UnsubscribeTokenPayload |
   const [payloadB64, signatureB64] = parts;
   if (!payloadB64 || !signatureB64) return null;
 
-  let expected: Buffer;
-  let actual: Buffer;
-  try {
-    expected = Buffer.from(signPayload(payloadB64), 'base64url');
-    actual = Buffer.from(signatureB64, 'base64url');
-  } catch {
-    return null;
-  }
+  // Compare the base64url *strings*, not the decoded bytes. A 32-byte HMAC
+  // encodes to 43 chars whose last char carries 2 padding bits, and Node's
+  // decoder ignores those bits, so several distinct strings decode to the
+  // same bytes (e.g. `...rA` and `...rB`). Comparing decoded bytes would
+  // accept those altered tokens as genuine; the minted string is canonical,
+  // so anything that differs from it by even one character is rejected.
+  const expected = Buffer.from(signPayload(payloadB64), 'utf8');
+  const actual = Buffer.from(signatureB64, 'utf8');
   // Constant-time comparison, and a length check before it: timingSafeEqual
   // throws on mismatched lengths rather than returning false, and the
-  // lengths themselves aren't secret (both are always 32 bytes for a
-  // well-formed signature) so bailing early here leaks nothing new.
+  // lengths themselves aren't secret (a well-formed signature is always 43
+  // chars) so bailing early here leaks nothing new.
   if (expected.length !== actual.length || expected.length === 0) return null;
   if (!timingSafeEqual(actual, expected)) return null;
 

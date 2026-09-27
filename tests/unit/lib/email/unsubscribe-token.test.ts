@@ -38,6 +38,20 @@ describe('unsubscribe-token', () => {
     expect(verifyUnsubscribeToken(tampered)).toBeNull()
   })
 
+  it('rejects every last-char variant, including ones that decode to the same bytes', () => {
+    // The 43rd char of a 32-byte base64url signature carries 2 padding bits
+    // the decoder ignores, so 3 of the 63 variants below decode to the real
+    // signature's bytes. Covering all of them keeps this deterministic
+    // instead of depending on which char the HMAC happened to end in.
+    const token = createUnsubscribeToken({ userId, coupleId, email: 'couple@example.com' })
+    const [payloadB64, sig = ''] = token.split('.')
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+    for (const ch of alphabet) {
+      if (ch === sig.at(-1)) continue
+      expect(verifyUnsubscribeToken(`${payloadB64}.${sig.slice(0, -1)}${ch}`)).toBeNull()
+    }
+  })
+
   it('rejects a token whose payload was edited (signature no longer matches)', () => {
     const token = createUnsubscribeToken({ userId, coupleId, email: 'couple@example.com' })
     const parts = token.split('.')
