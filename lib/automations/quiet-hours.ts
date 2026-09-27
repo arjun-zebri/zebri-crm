@@ -21,9 +21,9 @@ import type { McSnapshot } from '@/types/automations'
 const DEFAULT_TIMEZONE = 'Australia/Sydney'
 
 export interface QuietHoursWindow {
-  /** 'HH:MM' (24h) local time, inclusive lower bound. */
+  /** 'HH:MM' or 'HH:MM:SS' (24h) local time, inclusive lower bound. */
   start: string
-  /** 'HH:MM' (24h) local time, exclusive upper bound. */
+  /** 'HH:MM' or 'HH:MM:SS' (24h) local time, exclusive upper bound. */
   end: string
   /** IANA timezone name. */
   timezone: string
@@ -39,7 +39,9 @@ export interface QuietHoursWindow {
 export function resolveQuietHours(
   automationStart: string | null,
   automationEnd: string | null,
-  mc: McSnapshot,
+  // Only the three quiet-hours fields are read, so a caller without a
+  // full snapshot (the Upcoming projection) can pass just those.
+  mc: Pick<McSnapshot, 'quietHoursStart' | 'quietHoursEnd' | 'quietHoursTimezone'>,
   coupleTimezone: string | null,
 ): QuietHoursWindow | null {
   const start = automationStart ?? mc.quietHoursStart
@@ -111,12 +113,18 @@ function projectToLocalHM(at: Date, tz: string): number | null {
   }
 }
 
+/**
+ * Minutes since midnight for `HH:MM` or `HH:MM:SS`. Seconds are accepted
+ * and ignored: a workflow template's own window is a Postgres `time`
+ * column, which reads back as `21:00:00`, and parsing only `HH:MM` made
+ * every template-level window silently read as "no quiet hours".
+ */
 function parseHM(hm: string): number | null {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(hm.trim())
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(hm.trim())
   if (!m) return null
   const h = Number(m[1])
   const mm = Number(m[2])
-  if (h > 23 || mm > 59) return null
+  if (h > 23 || mm > 59 || Number(m[3] ?? 0) > 59) return null
   return h * 60 + mm
 }
 

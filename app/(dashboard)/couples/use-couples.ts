@@ -164,8 +164,19 @@ export function useUpdateCouple() {
         await updateCoupleAction({
           id: couple.id,
           name: couple.name,
-          email: couple.email,
-          phone: couple.phone,
+          // `email` / `phone` / `venue` / `notes` are typed as plain
+          // `string` on `Couple`, but the DB columns are nullable and a
+          // couple can reach the app with one of them still `null` (e.g.
+          // a lead submitted with no venue, or any row not created
+          // through a form that already coalesces to ''). The action's
+          // Zod schema requires a string for these fields, so a `null`
+          // here fails the whole save with "Invalid couple data" instead
+          // of just leaving that field blank. Coalescing at this single
+          // shared mutation point fixes every caller (couple-overview's
+          // full edit, couple-profile-header's inline rename, ...) and is
+          // a no-op for callers that already send '' or a real value.
+          email: couple.email ?? '',
+          phone: couple.phone ?? '',
           primary_name: couple.primary_name ?? null,
           primary_email: couple.primary_email ?? null,
           primary_phone: couple.primary_phone ?? null,
@@ -173,8 +184,8 @@ export function useUpdateCouple() {
           secondary_email: couple.secondary_email ?? null,
           secondary_phone: couple.secondary_phone ?? null,
           event_date: couple.event_date,
-          venue: couple.venue,
-          notes: couple.notes,
+          venue: couple.venue ?? '',
+          notes: couple.notes ?? '',
           status: couple.status,
           lead_source: couple.lead_source,
           referral_source: couple.referral_source ?? null,

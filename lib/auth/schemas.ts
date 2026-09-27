@@ -30,7 +30,53 @@ import { z } from 'zod';
  */
 export const sameOriginPathSchema = z
   .string()
-  .regex(/^\/[^/]/, { message: 'Must be a same-origin path starting with /' });
+  .refine(isSameOriginPath, { message: 'Must be a same-origin path starting with /' });
+
+// Why each rule (Phase 4 Task 23 review, I1):
+// - A backslash is read as "/" by every WHATWG URL parser for http(s), so
+//   `/\evil.com` navigates to `//evil.com`.
+// - Tab, CR and LF are stripped by the same parser, so `/<tab>/evil.com`
+//   (from `?next=%2F%09%2Fevil.com`) also becomes `//evil.com`. Every
+//   C0 control and DEL is refused, not only those three.
+// - The checks run on the value AND on its percent-decoding, so a
+//   double-encoded `%2F%5C` or `%09` cannot slip through a later decode.
+// - Last, the value must resolve to the same origin it started from, and
+//   its resolved path must not start with `//` (dot segments such as
+//   `/..//evil.com` collapse to that), which catches any form the rules
+//   above did not think of.
+const UNSAFE_PATH_CHARS = /[\u0000-\u001f\u007f\\]/;
+const SAFE_PATH_START = /^\/(?![/\\])/;
+const PROBE_ORIGIN = 'https://zebri-path-probe.invalid';
+
+function isSafePathShape(value: string): boolean {
+  return SAFE_PATH_START.test(value) && !UNSAFE_PATH_CHARS.test(value);
+}
+
+/**
+ * True for a same-origin relative path that is safe to redirect to:
+ * `/couples`, `/settings?tab=account`. False for anything a browser could
+ * turn into another origin (`//evil.com`, `/\evil.com`, `/<tab>/evil.com`,
+ * encoded variants) and for anything that is not a path at all.
+ */
+export function isSameOriginPath(value: string): boolean {
+  if (!isSafePathShape(value)) return false;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    return false; // malformed percent-encoding
+  }
+  if (decoded !== value && !isSafePathShape(decoded)) return false;
+  try {
+    const resolved = new URL(value, PROBE_ORIGIN);
+    // Same origin is not enough: `/..//evil.com` resolves on this origin
+    // to the PATH `//evil.com`, which any later consumer that forwards
+    // `url.pathname` would turn back into a protocol-relative redirect.
+    return resolved.origin === PROBE_ORIGIN && !resolved.pathname.startsWith('//');
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Password complexity rule (mirrors the signup page's existing
@@ -119,3 +165,20 @@ export function passwordStrength(password: string): PasswordStrength | null {
   if (password.length >= 8 && (hasLower || hasUpper) && (hasDigit || hasSpecial)) return 'medium';
   return 'weak';
 }
+
+/**
+ * A 2FA recovery code as typed on the second-factor screen (Phase 4,
+ * Task 23). Loose on purpose: case, spaces and the hyphen are all
+ * forgiven by `normaliseRecoveryCode` before matching, so this only
+ * bounds the length and rejects anything outside the code alphabet's
+ * character classes.
+ */
+export const recoveryCodeSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(10, { message: 'Enter the full recovery code.' })
+    .max(24, { message: 'That is longer than a recovery code.' })
+    .regex(/^[A-Za-z0-9\s-]+$/, { message: 'Recovery codes use only letters, numbers and a hyphen.' }),
+});
+export type RecoveryCodeInput = z.infer<typeof recoveryCodeSchema>;

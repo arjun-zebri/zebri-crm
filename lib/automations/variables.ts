@@ -198,8 +198,50 @@ export function variableLabel(expr: string): string {
       if (tokenBase === base) return v.label
     }
   }
+  // A variable Zebri never reads has no label to give. A title-cased
+  // guess ("Venue" for `event.venue`) read as a real detail the couple was
+  // missing (live check B7), so it is shown as typed instead.
+  if (!isKnownVariable(base)) return `{{${base}}}`
   const key = base.split('.').slice(1).join(' ') || base
   return key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+}
+
+/**
+ * The fixed keys each namespace's reader below answers. Kept beside the
+ * readers so a new key is added to both in one edit.
+ */
+const KNOWN_KEYS: Readonly<Record<string, ReadonlySet<string>>> = {
+  couple: new Set(['name', 'full_name', 'primary_name', 'partner1', 'spouse_name', 'partner2', 'email', 'phone', 'status']),
+  event: new Set(['date', 'days_until', 'days_since', 'weekday']),
+  venue: new Set(['name']),
+  mc: new Set(['business_name', 'name', 'contact_name', 'email', 'phone', 'review_link', 'signature']),
+  portal: new Set(['link', 'partner_link', 'vendor_link']),
+}
+
+/**
+ * Namespaces read from the triggering event's payload or an earlier
+ * step's results (`readEventField`), whose keys are open-ended: any key
+ * may be filled by some trigger, so none can be called unknown.
+ */
+const OPEN_NAMESPACES: ReadonlySet<string> = new Set(['invoice', 'contract', 'task', 'questionnaire'])
+
+/**
+ * Whether Zebri reads this variable at all.
+ *
+ * An unknown variable (a typo, or `{{event.venue}}` for `{{venue.name}}`)
+ * resolves to nothing for every couple, so no detail the MC adds can ever
+ * fill it: the only fix is to change the message. Callers use this to say
+ * so instead of "add the detail to the couple".
+ *
+ * @param expr - A variable path or full expression (filters ignored).
+ */
+export function isKnownVariable(expr: string): boolean {
+  const base = (expr.split('|')[0] ?? expr).trim()
+  const [namespace = '', ...rest] = base.split('.')
+  const key = rest.join('.')
+  if (!key) return false
+  if (OPEN_NAMESPACES.has(namespace)) return true
+  return KNOWN_KEYS[namespace]?.has(key) ?? false
 }
 
 function readPath(path: string, ctx: RunContext): string {

@@ -16,38 +16,34 @@
  *
  * It opens as a form, not as a receipt with an Edit button on it: the
  * step's own words are already in the fields, so fixing a line is
- * typing rather than a mode change.
+ * typing rather than a mode change. An email opens in the Compose editor
+ * with the message as written (`./use-step-email-form`), so an edit keeps
+ * its formatting and variables (live check B2).
  *
  * @module app/(dashboard)/workflows/step-detail-modal
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
 import { Modal } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AccountPauseNote } from '@/components/workflows/account-pause-note';
 import { isAutomated } from '@/lib/workflows/steps';
 import type { StepType } from '@/types/workflows';
 
-import {
-  approveStepAction,
-  loadStepDetailAction,
-  renameStepAction,
-  rescheduleStepAction,
-  retryStepAction,
-  saveStepMessageAction,
-  tickStepAction,
-  updateStepConfigAction,
-  type StepDetail,
-} from './instance-actions';
-import { inDays } from './queue-labels';
+import { loadStepDetailAction, type StepDetail } from './instance-actions';
 import { StepConfigEdit } from './step-config-edit';
 import { StepDetailBody, StepDetailBodySkeleton } from './step-detail-body';
 import { StepDetailEdit, type ManualStepEdit } from './step-detail-edit';
+import { StepDetailFailure, type StepDetailFailureState } from './step-detail-failure';
+import { StepDetailFooter } from './step-detail-footer';
 import { StepEmailEdit } from './step-email-edit';
+import { StepEmailPreview } from './step-email-preview';
+import { StepPrecomposedNote } from './step-precomposed-note';
+import { useStepDetailActions, type StepForm } from './use-step-detail-actions';
+import { useStepEmailForm } from './use-step-email-form';
 
 export interface StepDetailModalProps {
   /** Step to show, or null when the modal is closed. */
@@ -57,19 +53,13 @@ export interface StepDetailModalProps {
   onSettled: () => void;
 }
 
-/** Which form the step is edited through, or null when it has none. */
-type StepForm = null | 'email' | 'manual' | 'config';
-
 /** The step detail modal. See {@link StepDetailModalProps}. */
 export function StepDetailModal({ stepId, onClose, onSettled }: StepDetailModalProps) {
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
   const [manual, setManual] = useState<ManualStepEdit>({ title: '', description: '', due: '' });
   const [config, setConfig] = useState<Record<string, unknown>>({});
-  const [failure, setFailure] = useState<string | null>(null);
-  /** Which step the fields below currently hold. */
+  const [failure, setFailure] = useState<StepDetailFailureState | null>(null);
+  /** Which step the manual and config fields currently hold. */
   const [seeded, setSeeded] = useState<string | null>(null);
 
   const detail = useQuery({
@@ -83,13 +73,12 @@ export function StepDetailModal({ stepId, onClose, onSettled }: StepDetailModalP
   });
 
   const data = detail.data;
+  const email = useStepEmailForm(stepId, data?.preview);
   const automated = data ? isAutomated(data.type as StepType) : false;
-  const isEmail = data?.preview?.kind === 'email';
   const errored = data?.status === 'errored';
-
   const form: StepForm = !data
     ? null
-    : isEmail
+    : data.preview?.kind === 'email'
       ? 'email'
       : !automated
         ? 'manual'
@@ -97,14 +86,11 @@ export function StepDetailModal({ stepId, onClose, onSettled }: StepDetailModalP
           ? 'config'
           : null;
 
-  // Seeded during render rather than in an effect: the fields are the
-  // step's own words, so they have to be there on the first frame the
-  // step is. Re-seeds when the modal moves to another step, and clears
-  // on close so reopening reads whatever the step says by then.
+  // Seeded during render rather than in an effect, so the step's own
+  // values are there on the first frame. Clears on close so reopening
+  // reads whatever the step says by then.
   if (data && seeded !== data.stepId) {
     setSeeded(data.stepId);
-    setSubject(data.preview?.subject ?? '');
-    setBody(data.preview?.body ?? '');
     setConfig(data.config);
     setManual({
       title: data.title,
@@ -126,101 +112,24 @@ export function StepDetailModal({ stepId, onClose, onSettled }: StepDetailModalP
     onClose();
   }
 
-  const act = useMutation({
-    mutationFn: async (what: 'send' | 'tick' | 'snooze' | 'retry') => {
-      const id = stepId as string;
-      const res =
-        what === 'send'
-          ? // The fields are the message now, so they always travel with
-            // the send rather than only after an Edit mode was entered.
-            await approveStepAction({ stepId: id, ...(isEmail ? { edits: { subject, body } } : {}) })
-          : what === 'tick'
-            ? await tickStepAction({ stepId: id })
-            : what === 'snooze'
-              ? await rescheduleStepAction({ stepId: id, dueAt: inDays(1) })
-              : await retryStepAction({ stepId: id });
-      if (!res.ok) throw new Error(res.error);
-    },
-    onSuccess: settle,
-    onError: (err: Error) => setFailure(err.message),
-  });
+  // Each refusal counts up, so the line is brought into view again even
+  // when its text repeats.
+  const fail = (message: string) => setFailure((prev) => ({ message, seq: (prev?.seq ?? 0) + 1 }));
+  const { act, save } = useStepDetailActions({ stepId, form, edits: email.edits, manual, config }, settle, fail);
 
-  const save = useMutation({
-    mutationFn: async () => {
-      const id = stepId as string;
-      if (form === 'email') {
-        const res = await saveStepMessageAction({ stepId: id, subject, body });
-        if (!res.ok) throw new Error(res.error);
-        return;
-      }
-      if (form === 'config') {
-        const res = await updateStepConfigAction({ stepId: id, config });
-        if (!res.ok) throw new Error(res.error);
-        return;
-      }
-      // Two writes because the date lives on its own action, which is
-      // also what recomputes anything gated behind this step.
-      const renamed = await renameStepAction({
-        stepId: id,
-        title: manual.title.trim(),
-        description: manual.description.trim() || null,
-      });
-      if (!renamed.ok) throw new Error(renamed.error);
-      const dueAt = manual.due ? new Date(`${manual.due}T12:00:00`).toISOString() : null;
-      const moved = await rescheduleStepAction({ stepId: id, dueAt });
-      if (!moved.ok) throw new Error(moved.error);
-    },
-    onSuccess: settle,
-    onError: (err: Error) => setFailure(err.message),
-  });
-
-  // Rendered even while the step is loading, so the footer band and the
-  // modal's height are the same before and after: a modal that grows
-  // under the cursor moves the button the MC was reaching for.
   const footer = (
-    <div className="flex flex-wrap items-center gap-2">
-      {data?.coupleId ? (
-        <Button
-          variant="ghost"
-          onClick={() => router.push(`/couples?openCouple=${data.coupleId}`)}
-        >
-          Open the couple
-        </Button>
-      ) : null}
-
-      <div className="ml-auto flex flex-wrap items-center gap-2">
-        {!data ? (
-          <Button disabled>Loading</Button>
-        ) : (
-          <>
-            <Button variant="secondary" onClick={() => act.mutate('snooze')}>
-              Snooze
-            </Button>
-            {/* Keeping an edit is its own decision: an MC who reworded a
-                send and then snoozed it should still have the rewording
-                when it comes back. */}
-            {form ? (
-              <Button variant="outline" onClick={() => save.mutate()} loading={save.isPending}>
-                Save
-              </Button>
-            ) : null}
-            {errored ? (
-              <Button onClick={() => act.mutate('retry')} loading={act.isPending}>
-                Try again
-              </Button>
-            ) : automated ? (
-              <Button onClick={() => act.mutate('send')} loading={act.isPending}>
-                Send &amp; complete
-              </Button>
-            ) : (
-              <Button onClick={() => act.mutate('tick')} loading={act.isPending}>
-                Mark done
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+    <StepDetailFooter
+      loaded={Boolean(data)}
+      coupleId={data?.coupleId ?? null}
+      canSave={form !== null}
+      errored={errored}
+      automated={automated}
+      blockedReason={data?.blockedReason ?? null}
+      saving={save.isPending}
+      acting={act.isPending}
+      onSave={() => save.mutate()}
+      onAct={(verb) => act.mutate(verb)}
+    />
   );
 
   return (
@@ -245,26 +154,44 @@ export function StepDetailModal({ stepId, onClose, onSettled }: StepDetailModalP
           <div className="space-y-4">
             <StepDetailBody data={data} />
 
-            {form === 'email' ? (
-              <StepEmailEdit
-                subject={subject}
-                body={body}
-                onSubject={setSubject}
-                onBody={setBody}
-              />
+            {automated ? (
+              <AccountPauseNote actionLabel={errored ? 'Try again' : 'Send & complete'} />
+            ) : null}
+
+            {/* A held pre-composed email: what it sends and to whom,
+                above its settings, since there is no rendered preview. */}
+            {data.preview?.precomposed ? (
+              <StepPrecomposedNote sends={data.preview.precomposed} envelope={data.preview.envelope ?? null} />
+            ) : null}
+
+            {form === 'email' && data.preview ? (
+              <>
+                <StepEmailEdit
+                  key={email.editorKey}
+                  subject={email.subject}
+                  onSubject={email.setSubject}
+                  initialContent={email.initialContent}
+                  onContent={email.setContent}
+                  onBaseline={email.setBaseline}
+                  legacyText={email.legacyText}
+                />
+                <StepEmailPreview
+                  stepId={data.stepId}
+                  initial={data.preview}
+                  edits={email.edits}
+                  dirty={email.dirty}
+                  coupleName={data.coupleName}
+                />
+              </>
             ) : form === 'manual' ? (
               <StepDetailEdit value={manual} onChange={setManual} />
             ) : form === 'config' && data.actionType ? (
-              <StepConfigEdit
-                actionType={data.actionType}
-                config={config}
-                onChange={setConfig}
-              />
+              <StepConfigEdit actionType={data.actionType} config={config} onChange={setConfig} />
             ) : data.preview?.summary ? (
               <p className="text-body text-text">{data.preview.summary}</p>
             ) : null}
 
-            {failure ? <p className="text-body text-danger">{failure}</p> : null}
+            <StepDetailFailure failure={failure} />
           </div>
         )}
       </div>

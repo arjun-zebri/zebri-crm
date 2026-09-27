@@ -36,6 +36,7 @@ import { SubjectField } from '../../templates/subject-field'
 import { TemplateAttachments } from '../../templates/template-attachments'
 import { useTemplates } from '../../templates/use-templates'
 
+import { ComposeEmailPreview } from './compose-email-preview'
 import { TriggerFilterList, type FilterConfig } from './filter-list'
 import { EMAIL_OPTION_CHIPS } from './step-chips'
 
@@ -581,6 +582,18 @@ export function EmailComposerModal({
               addLabel="Add option"
             />
           </div>
+        )}
+
+        {/* Last, like every other composer's preview. Only for
+            send_email (the one composer with recipients): the
+            pre-composed sends are rendered by their own handlers, so
+            this chain would preview an email they never send. */}
+        {showRecipients && (
+          <ComposeEmailPreview
+            subject={typeof draft['subject'] === 'string' ? draft['subject'] : ''}
+            content={content}
+            wrap={typeof draft['wrap'] === 'boolean' ? draft['wrap'] : undefined}
+          />
         )}
 
       </div>

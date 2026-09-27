@@ -1,7 +1,7 @@
 'use client'
 
 import { Plus } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToast } from '@/components/ui/toast'
 import { getAccountReadiness } from '@/lib/branding/account-readiness'
@@ -37,6 +37,7 @@ import { EditorTopbar } from './editor-topbar'
 import { NotReadyPanel } from './not-ready-panel'
 import { PortalSectionsBar } from './portal-preview'
 import { ProposalRoleChooser } from './proposal-role-chooser'
+import { AbnHeldBackError, saveBrandingMetadata } from './save-branding-metadata'
 import { SurfaceTabs } from './surface-tabs'
 import { uploadBlockImage, uploadBrandAsset } from './upload-brand-asset'
 import { uploadProposalMedia } from './upload-proposal-media'
@@ -66,6 +67,7 @@ interface BrandingEditorProps {
     secondaryColor: string
     tagline: string
     abn: string
+    postalAddress: string
     showContactOnDocuments: boolean
     fontHeading: HeadingFont
     fontBody: BodyFont
@@ -127,6 +129,7 @@ export interface EditorState {
   secondaryColor: string
   tagline: string
   abn: string
+  postalAddress: string
   showContactOnDocuments: boolean
   businessName: string
   phone: string
@@ -186,6 +189,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       secondaryColor: initialData.secondaryColor,
       tagline: initialData.tagline,
       abn: initialData.abn,
+      postalAddress: initialData.postalAddress,
       showContactOnDocuments: initialData.showContactOnDocuments,
       businessName: initialData.businessName,
       phone: initialData.phone,
@@ -244,6 +248,12 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
   const [accountReadiness, setAccountReadiness] = useState<AccountReadiness | null>(null)
+  // The ABN last confirmed stored. It is a protected payment detail
+  // (Task 23c), saved through its own RPC only when it actually changed.
+  const savedAbnRef = useRef(initialData.abn)
+  // True while the last save failed only because the ABN is not valid yet:
+  // the ABN field already says why, so no "Could not save" toast.
+  const abnHeldBackRef = useRef(false)
   const { status, retry } = useAutosave(state, async (value) => {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
@@ -282,66 +292,17 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       )
     if (brandingError) throw brandingError
 
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        ...existing,
-        // Strip the legacy heavy fields so the JWT shrinks as users save.
-        branding_blocks: null,
-        brand_kits: null,
-        portal_sections: null,
-        brand_kit_name: value.kitName || 'My brand',
-        logo_url: value.logoUrl || null,
-        // Dark logo was removed; null it on next save so the orphan field gets cleaned.
-        logo_dark_url: null,
-        favicon_url: value.faviconUrl || null,
-        header_image_url: value.headerImageUrl || null,
-        brand_color: value.brandColor,
-        heading_color: value.headingColor,
-        subheading_color: value.subheadingColor,
-        surface_color: value.surfaceColor,
-        text_color: value.textColor,
-        secondary_color: value.secondaryColor,
-        tagline: value.tagline,
-        abn: value.abn,
-        show_contact_on_documents: value.showContactOnDocuments,
-        business_name: value.businessName,
-        phone: value.phone,
-        website: value.website,
-        instagram_url: value.instagramUrl,
-        facebook_url: value.facebookUrl,
-        twitter_url: value.twitterUrl,
-        pinterest_url: value.pinterestUrl,
-        font_heading: value.fontHeading,
-        font_body: value.fontBody,
-        font_weight: value.fontWeight,
-        font_body_weight: value.fontBodyWeight,
-        density: value.density,
-        corner_radius: value.cornerRadius,
-        doc_padding: value.docPadding,
-        theme_preset: value.themePreset,
-        active_kit_id: value.activeKitId,
-        heading_size: value.headingSize,
-        body_size: value.bodySize,
-        heading_case: value.headingCase,
-        body_case: value.bodyCase,
-        subheading_size: value.subheadingSize,
-        subheading_weight: value.subheadingWeight,
-        subheading_case: value.subheadingCase,
-        heading_letter_spacing: value.headingLetterSpacing,
-        body_line_height: value.bodyLineHeight,
-        link_color: value.linkColor,
-        border_color: value.borderColor,
-        button_variant: value.buttonVariant,
-        button_size: value.buttonSize,
-        button_radius: value.buttonRadius,
-        section_spacing: value.sectionSpacing,
-      },
-    })
-    if (error) throw error
+    abnHeldBackRef.current = false
+    try {
+      savedAbnRef.current = await saveBrandingMetadata(supabase, existing, value, savedAbnRef.current)
+    } catch (err) {
+      abnHeldBackRef.current = err instanceof AbnHeldBackError
+      throw err
+    }
   })
 
   useEffect(() => {
-    if (status === 'error') toast('Could not save changes', 'error')
+    if (status === 'error' && !abnHeldBackRef.current) toast('Could not save changes', 'error')
   }, [status, toast])
 
   // Fetch account readiness once on mount (before autosave loads user).
@@ -992,6 +953,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     tagline: state.tagline,
     footerText: '',
     abn: state.abn,
+    postalAddress: state.postalAddress,
     showContactOnDocuments: state.showContactOnDocuments,
     fontHeading: state.fontHeading,
     fontBody: state.fontBody,
@@ -1174,6 +1136,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setTagline={(v) => setEditor({ tagline: v }, false)}
           abn={state.abn}
           setAbn={(v) => setEditor({ abn: v }, false)}
+          postalAddress={state.postalAddress}
+          setPostalAddress={(v) => setEditor({ postalAddress: v }, false)}
           phone={state.phone}
           setPhone={(v) => setEditor({ phone: v }, false)}
           website={state.website}

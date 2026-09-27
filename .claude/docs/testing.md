@@ -245,6 +245,62 @@ npx playwright test --project="Mobile Chrome" --project="Mobile Safari"
 npx playwright show-report
 ```
 
+### E2E in CI (Phase 6, Task 37)
+
+CI runs the suite on every PR to `staging`/`main` (`ci.yml`, job `e2e`;
+operating detail in `cicd.md`). One job per device project: `chromium`
+(desktop), `Mobile Chrome` (Pixel 5), `Mobile Safari` (iPhone 12).
+Each gets a fresh `supabase start`, a **production** build
+(`next build` + `next start` on `127.0.0.1:3100`) and
+`playwright.ci.config.ts`.
+
+**Non-blocking for now** (`continue-on-error: true`): the first run found
+82 desktop failures that fail the same way on the base tree, mostly
+selectors and helpers left behind by UI changes. They are a tracked
+backlog (Task 37 report). The plan is to fix them and then flip the job
+to blocking; until then a red e2e check is information, not a gate, and
+"fix the app, never patch the test" still applies to anything new.
+
+What that means when writing a spec:
+
+- **Never sign in per test.** `tests/e2e/global-setup.ts` seeds the
+  `TEST_EMAIL` account and signs it in once; every test starts from that
+  saved state (`playwright/.auth/ci-user.json`), and `login()` takes its
+  fast path. The login action allows 10 attempts a minute per IP, so a
+  spec that submits the form in `beforeEach` fails with "Too many
+  attempts" once the suite is under way. A spec that needs its own user
+  seeds one with the service role (as `two-factor.spec.ts` and
+  `booking.spec.ts` do) and signs that user in a bounded number of times.
+- **A test that signs out globally goes in `navigation.spec.ts`**, or
+  the `SIGN_OUT_SPECS` list in `tests/e2e/ci-pass-lists.ts`. The unit test
+  `tests/unit/e2e/ci-pass-lists.test.ts` fails when a spec outside the
+  lists calls `logout(`, `signOut(`, or clicks a Sign out / Log out
+  button. Sidebar sign-out revokes every
+  session of the account, including the saved one, so those specs run in
+  a second pass after everything else.
+- **A spec that must start signed out** (it signs in as its own seeded
+  user, or tests the login form without clearing cookies) goes in the
+  `SIGNED_OUT_SPECS` list in `tests/e2e/ci-pass-lists.ts`: `/login` redirects a signed-in
+  visitor to `/`. Those run in a third pass with no saved state.
+- **A clean database.** The only rows are the migrations' seed and the
+  seeded MC. A spec creates the couples, contacts and templates it needs
+  (`uniqueName()`), never relies on data from another spec.
+- **No outside services.** Resend, Slack, Stripe, Notion and Anthropic
+  keys are blank or fake, so a spec must not need a delivered email or a
+  real Stripe object. `CRON_SECRET` is set (a fake value), so the tick
+  route is callable.
+- `CI=true`: `workers: 1`, `forbidOnly`, and the CI config sets
+  `retries: 0` while the backlog is red, so a flaky test fails outright;
+  treat it as a bug.
+- Specs guarded to the isolated `:3123` stack or `BRANDING_E2E` skip in
+  CI (the job serves on 3100).
+
+Reproduce a CI leg locally against the running local Supabase without
+restarting it: build a copy of the tree with the job's env, start it on
+3100, then
+`npx playwright test --config playwright.ci.config.ts --project=chromium`
+(and again with `E2E_PASS=signout` and `E2E_PASS=signed-out`).
+
 ---
 
 ## Viewport Targets
@@ -328,7 +384,7 @@ One file per feature area. Do not create test files for sub-features  -  add to 
 
 | Helper | Purpose |
 |--------|---------|
-| `login(page)` | Authenticates using `TEST_EMAIL` / `TEST_PASSWORD` env vars |
+| `login(page)` | Returns at once when the context already holds a session (the CI saved state); otherwise signs in through the form with `TEST_EMAIL` / `TEST_PASSWORD` |
 | `addCouple(page, opts)` | Opens modal, fills form, saves |
 | `deleteCouple(page, name)` | Opens profile, Edit modal, two-click delete |
 | `openCoupleProfile(page, name)` | Searches + clicks row, waits for panel |
@@ -345,7 +401,7 @@ One file per feature area. Do not create test files for sub-features  -  add to 
 ## Writing Tests
 
 ### Always authenticate first
-Tests that require data use a pre-saved auth state (see `fixtures/`). Never hardcode credentials in test files  -  use `process.env.TEST_EMAIL` and `process.env.TEST_PASSWORD`.
+Call `login(page)` in `beforeEach`. In CI the context already carries the saved state from `tests/e2e/global-setup.ts`, so it costs one page load, not a sign-in. Never hardcode credentials in test files  -  use `process.env.TEST_EMAIL` and `process.env.TEST_PASSWORD`.
 
 ### Use semantic selectors (in priority order)
 1. `getByRole`  -  buttons, inputs, headings
@@ -459,7 +515,7 @@ TEST_EMAIL=your-test-user@example.com
 TEST_PASSWORD=your-test-password
 ```
 
-The dev server starts automatically when running tests (`webServer` in `playwright.config.ts`).
+The dev server starts automatically when running tests (`webServer` in `playwright.config.ts`). CI does not use `.env.test` or the dev server: it passes every value as job env and serves a production build (see "E2E in CI" above).
 
 ---
 

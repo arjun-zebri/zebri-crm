@@ -70,6 +70,25 @@ describe('<ConfirmDialog />', () => {
     expect(screen.getByRole('button', { name: /Deleting/ })).toBeDisabled();
   });
 
+  it('confirms in the danger tone by default, and in primary when asked', () => {
+    const { rerender } = render(<ConfirmDialog {...base} open confirmLabel="Turn on" />);
+    expect(screen.getByRole('button', { name: 'Turn on' })).toHaveClass('bg-danger');
+
+    rerender(<ConfirmDialog {...base} open confirmLabel="Turn on" tone="primary" />);
+    expect(screen.getByRole('button', { name: 'Turn on' })).toHaveClass('bg-brand-fg');
+  });
+
+  it('renders an option between the description and the actions', () => {
+    render(
+      <ConfirmDialog {...base} open>
+        <label>
+          <input type="checkbox" /> Resume them too
+        </label>
+      </ConfirmDialog>,
+    );
+    expect(screen.getByRole('dialog')).toContainElement(screen.getByLabelText(/Resume them too/));
+  });
+
   it('stacks above a nested Modal instead of tying with it', () => {
     render(
       <>

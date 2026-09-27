@@ -131,11 +131,18 @@ export async function sendContractEmail(opts: {
   sender?: ResolvedSender;
   /** Optional sender's branding for branded emails. */
   branding?: PublicBranding | null;
+  /**
+   * Optional tenant ID for Resend webhook correlation. When supplied,
+   * adds a `tenant` tag to the send so bounces and complaints can be
+   * attributed to the correct owner.
+   */
+  userId?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
     to: opts.coupleEmail,
     subject: `Contract from ${opts.mcBusinessName} - ${opts.contractNumber}`,
     html: contractHtml(opts, opts.branding),
+    ...(opts.userId ? { tags: [{ name: 'tenant', value: opts.userId }] } : {}),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
@@ -201,11 +208,18 @@ export async function sendInvoiceEmail(opts: {
   sender?: ResolvedSender;
   /** Optional sender's branding for branded emails. */
   branding?: PublicBranding | null;
+  /**
+   * Optional tenant ID for Resend webhook correlation. When supplied,
+   * adds a `tenant` tag to the send so bounces and complaints can be
+   * attributed to the correct owner.
+   */
+  userId?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
     to: opts.coupleEmail,
     subject: `Invoice from ${opts.mcBusinessName} - ${opts.invoiceNumber}`,
     html: invoiceHtml(opts, opts.branding),
+    ...(opts.userId ? { tags: [{ name: 'tenant', value: opts.userId }] } : {}),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }

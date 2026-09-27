@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Button } from './button';
@@ -51,6 +52,13 @@ export interface ConfirmDialogProps {
   confirmLabel?: string;
   /** Confirm label while `loading`. Defaults to `'Deleting...'`. */
   loadingLabel?: string;
+  /**
+   * `'danger'` (default) for a destructive confirm; `'primary'` when the
+   * question is whether to switch something on, which is not a warning.
+   */
+  tone?: 'danger' | 'primary';
+  /** An option that shapes the confirm, e.g. a Checkbox, below the description. */
+  children?: ReactNode;
 }
 
 export function ConfirmDialog({
@@ -62,6 +70,8 @@ export function ConfirmDialog({
   loading,
   confirmLabel = 'Delete',
   loadingLabel = 'Deleting...',
+  tone = 'danger',
+  children,
 }: ConfirmDialogProps) {
   useOverlay({ isOpen: open, onClose: onCancel });
   const dismiss = useBackdropDismiss(onCancel);
@@ -126,6 +136,7 @@ export function ConfirmDialog({
             <p id={descId} className="mb-6 text-body text-text-muted">
               {description}
             </p>
+            {children ? <div className="mb-6">{children}</div> : null}
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -136,7 +147,7 @@ export function ConfirmDialog({
                 Cancel
               </Button>
               <Button
-                variant="danger"
+                variant={tone}
                 onClick={onConfirm}
                 loading={loading ?? false}
                 className="flex-1"

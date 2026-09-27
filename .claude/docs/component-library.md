@@ -37,6 +37,16 @@ match `<Input />`. Pass an `options: { value, label }[]` array and a
 controlled `value` + `onValueChange` (or uncontrolled `defaultValue`).
 Standalone (no companion components to import).
 
+### `<MultiSelect />` - `@/components/ui/multi-select`
+Several values from one list. Same 32px trigger as `<Select />` (it reads
+"N chosen" or the placeholder and never grows), a Radix Popover list of
+`<Checkbox />` rows, and the chosen values as removable chips below. Takes
+`options: { value, label }[]`, a controlled `value: string[]` and
+`onValueChange(next)`, plus `label`, `help`, `error`, `placeholder` and
+`disabled` (which also locks the chips and the open list, for a save in
+flight). A chosen value missing from `options` keeps a chip labelled by
+the raw value.
+
 ### `<Checkbox />` — `@/components/ui/checkbox`
 Custom `<button role="checkbox">` per the frontend-design §Checkboxes
 spec (emerald fill + white checkmark when checked) — never a native
@@ -93,6 +103,14 @@ schedule stages). 5 tones (`neutral` / `info` / `success` / `warning`
 `'hollow'` for due states). Tonal background via `bg-{tone}/10
 text-{tone}`. Never use raw `bg-emerald-50 text-emerald-600` etc. —
 the pill is the canonical surface.
+
+`icon={CalendarClock}` draws a 12px Lucide icon (stroke 1.5,
+`aria-hidden`) in place of a dot; `wrap` lets a sentence-length label
+wrap inside a narrow container (`max-w-full`, icon aligned to the first
+line, and `rounded-control` instead of `rounded-pill`, because a pill
+radius on two lines curves the tint away from the text). The workflow step cards use both: timing and "Asks you first"
+chips, and the warning-toned unfinished-step chip whose text is the fix
+(Task 34). A hand-rolled `rounded-pill bg-…/10` chip is drift; use this.
 
 ### `<Callout />` — `@/components/ui/callout`
 Inline note for a sentence that carries a consequence ("nothing
@@ -456,6 +474,13 @@ Props:
   `CONTRACT_VARIABLES`. Email templates pass `EMAIL_TEMPLATE_VARIABLES`
   (`lib/email/template-variables`). The chosen `id` is stored verbatim
   on the inserted mention node (`attrs.id`).
+- `onReady?: (v: JSONContent) => void`: called once, when the editor is
+  created, with its opening document as the editor serialises it
+  (defaults filled in, through `toPlainJSON` like `onChange`). A caller
+  that tracks "has the MC changed anything" compares `onChange` output
+  against this, not against the `value` it passed: the stored doc
+  usually lacks the defaults, so it differs before a key is pressed. The
+  step detail modal's per-field edits use it (Phase 5 live check B2).
 
 Toolbar: H1/H2, bold/italic, lists, a **Link** button (set/update/remove
 an `<a>` on the selection; bare domains get `https://` prepended;
@@ -601,13 +626,21 @@ Used by the couple timer (see `page-specs.md` "Time tracking").
   set `httpOnly: false` for exactly this), which keeps the dashboard
   layout a synchronous server component. Exposes `useTimerSurface()`:
   `{ shadowing, running, clockOffsetMs, isRunningFor, start, stop,
-  claimSurface }`. `claimSurface()` increments a counter and returns its
+  claimSurface, setPillAnchor }`. `claimSurface()` increments a counter and returns its
   release function; the pill hides while the count is above zero, which is
   how the couple-profile overlay takes over the control.
 - **`TimerPill`**  -  the fixed top-right running pill
   (`data-testid="timer-pill"`). Owns the only one-second interval;
   elapsed is always recomputed from `started_at` plus the clock offset, so
-  it cannot drift.
+  it cannot drift. A page whose header holds primary controls passes
+  `useTimerPillAnchor()` (`components/time-tracking/use-timer-pill-anchor.ts`)
+  as that header's `ref`; the pill then docks 8px below the header's
+  measured bottom edge (a `--timer-pill-top` CSS variable read by
+  `top-[var(--timer-pill-top)]`, re-measured on resize), so it never sits
+  on the header's controls at any width. The workflow canvas does this
+  for its header and unfinished-steps banner (Phase 6 live check B1).
+  Without an anchor it keeps its corner (`top-16`, `md:top-3`). The hook
+  is a no-op outside the provider.
 - **`StopNoteDialog`**  -  the timesheet prompt shown after a stop. The
   inner form is keyed by entry id so a second stop cannot inherit the
   previous note or category.

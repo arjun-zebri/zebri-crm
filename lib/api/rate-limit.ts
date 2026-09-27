@@ -36,6 +36,13 @@
  * @module lib/api/rate-limit
  */
 
+import { logger } from '@/lib/alerts/logger';
+import {
+  AUTOMATED_SEND_WINDOW_MS,
+  automatedSendWindowReopensAt,
+  readAutomatedSendWindow,
+} from '@/lib/email/send-log';
+
 export interface LimiterOptions {
   /** Window length in milliseconds. */
   windowMs: number;
@@ -53,8 +60,16 @@ export interface LimiterCheckResult {
 }
 
 export interface Limiter {
-  /** Records one request for `key` and returns whether it should be allowed. */
-  check(key: string): Promise<LimiterCheckResult>;
+  /**
+   * Records `weight` requests for `key` (default 1) and returns whether
+   * the key is still under the limit. `weight` lets one call stand in
+   * for several units of work (e.g. a single automated step that sends
+   * to more than one recipient) so the budget tracks real volume
+   * instead of call count. A call against a fresh window is always
+   * admitted, even when `weight` exceeds `max`, and drains the window;
+   * the same call against a partly used window is refused.
+   */
+  check(key: string, weight?: number): Promise<LimiterCheckResult>;
 }
 
 interface Bucket {
@@ -71,14 +86,22 @@ export function inMemoryLimiter({ windowMs, max }: LimiterOptions): Limiter {
   const buckets = new Map<string, Bucket>();
 
   return {
-    async check(key: string): Promise<LimiterCheckResult> {
+    async check(key: string, weight = 1): Promise<LimiterCheckResult> {
       const now = Date.now();
       const existing = buckets.get(key);
       if (!existing || existing.resetAt <= now) {
-        buckets.set(key, { count: 1, resetAt: now + windowMs });
-        return { allowed: true, remaining: max - 1, retryAfter: windowMs };
+        buckets.set(key, { count: weight, resetAt: now + windowMs });
+        // A fresh, full bucket always admits the call, even one weighed
+        // above `max`, and that call drains it. Refusing it here could
+        // never succeed later: every retry would land in another fresh
+        // bucket and be refused again, forever. That was a workflow step
+        // addressing more recipients than the burst allows (a run sheet
+        // to 25 vendors) re-parking every minute and never sending. A
+        // partly used bucket still refuses it below, with a finite
+        // `retryAfter`, so it waits for the next fresh window.
+        return { allowed: true, remaining: Math.max(0, max - weight), retryAfter: windowMs };
       }
-      existing.count += 1;
+      existing.count += weight;
       const remaining = Math.max(0, max - existing.count);
       const retryAfter = Math.max(0, existing.resetAt - now);
       return { allowed: existing.count <= max, remaining, retryAfter };
@@ -129,6 +152,18 @@ export function ipOfHeaders(headers: Headers): string {
  * - password resets: 5/hour matches Auth provider best practice.
  * - in-session change/update password: 5/min is generous; anything
  *   beyond is automation.
+ * - redeemRecoveryCode: 5 per 15 minutes per user. The caller already
+ *   holds the password (an aal1 session), so each guess is against
+ *   the last line of defence; a person reading a code off paper needs
+ *   two or three tries at most (Phase 4, Task 23).
+ * - issueRecoveryCodes: 5/min per user. Each call runs ten scrypt
+ *   hashes, so an unthrottled loop is a cheap way to burn CPU.
+ * - verifyTotpUser / verifyTotpIp: authenticator code checks, both keys
+ *   must pass. Supabase only limits code checks per IP, so a guesser
+ *   spread over many IPs meets the per-user key (10 per 15 min; a real MC
+ *   mistypes a 6-digit code once or twice) and one IP hammering many
+ *   accounts meets the per-IP key (30 per 15 min, room for an office of
+ *   MCs behind one address).
  */
 export const AUTH_RATE_LIMITS = {
   login: { windowMs: 60_000, max: 10 },
@@ -136,6 +171,10 @@ export const AUTH_RATE_LIMITS = {
   resetPassword: { windowMs: 3_600_000, max: 5 },
   updatePassword: { windowMs: 60_000, max: 5 },
   changePassword: { windowMs: 60_000, max: 5 },
+  redeemRecoveryCode: { windowMs: 15 * 60_000, max: 5 },
+  issueRecoveryCodes: { windowMs: 60_000, max: 5 },
+  verifyTotpUser: { windowMs: 15 * 60_000, max: 10 },
+  verifyTotpIp: { windowMs: 15 * 60_000, max: 30 },
 } as const satisfies Record<string, LimiterOptions>;
 
 export type AuthRateLimitKey = keyof typeof AUTH_RATE_LIMITS;
@@ -284,3 +323,251 @@ export const PROPOSAL_RATE_LIMITS = {
 } as const satisfies Record<string, LimiterOptions>;
 
 export type ProposalRateLimitKey = keyof typeof PROPOSAL_RATE_LIMITS;
+
+/**
+ * Shadow-mode exit refusal limits. `exitShadow` is a server action anyone
+ * can post, and every refusal alerts Slack, so an unauthenticated script
+ * could otherwise bury real takeover attempts under noise.
+ *
+ * - **exitRefusalIp**: 5/min/IP. After that a refusal still refuses and
+ *   still signs the browser out, it just stops alerting.
+ * - **exitRefusalAlerts**: 10 alerts per 10 min across all IPs, one key.
+ *   Caps the channel when the flood comes from many addresses.
+ */
+export const SHADOW_RATE_LIMITS = {
+  exitRefusalIp: { windowMs: 60_000, max: 5 },
+  exitRefusalAlerts: { windowMs: 600_000, max: 10 },
+} as const satisfies Record<string, LimiterOptions>;
+
+/**
+ * Unsubscribe rate-limits (Phase 2, Task 11). Public, unauthenticated,
+ * token-gated: keyed per IP, same as the other public surfaces above.
+ *
+ * - **confirm**: 20/min/IP on `POST /api/unsubscribe`. The action is a
+ *   one-shot, idempotent write (a repeat is a no-op, see the route), so
+ *   this only needs to stop a scripted loop, not protect against a human
+ *   double-click. Left generous relative to the contract/proposal one-shot
+ *   actions (3-5/min) because a shared office or campus IP can plausibly
+ *   have several genuine unsubscribes land in the same minute.
+ */
+export const UNSUBSCRIBE_RATE_LIMITS = {
+  confirm: { windowMs: 60_000, max: 20 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type UnsubscribeRateLimitKey = keyof typeof UNSUBSCRIBE_RATE_LIMITS;
+
+/**
+ * Per-tenant automated-send limits (workflows trust remediation, Task 15).
+ *
+ * Every MC's automated sends go out through the same shared Resend
+ * domain, so one runaway workflow (a wait loop with no exit condition, a
+ * trigger misfiring in a cycle, or a workflow applied to an MC's entire
+ * back catalogue by mistake) can damage deliverability for every tenant
+ * on the platform, not just the one who triggered it. Two independent
+ * thresholds guard the domain, both keyed per tenant (`ctx.userId`), not
+ * per IP: these are authenticated, server-initiated sends with no
+ * request to key on.
+ *
+ * - **burst** (per minute): sized around the busiest minute a real MC's
+ *   business produces. The executor's own tick budget caps how many
+ *   steps can run across ALL tenants in one minute at 200
+ *   (`STEP_BUDGET_PER_TICK` in `lib/workflows/executor.ts`), so 20/min
+ *   for a single tenant is already a tenth of the entire platform's
+ *   per-minute ceiling. A human applying a workflow to a handful of
+ *   couples who all hit a milestone in the same hour sends a handful of
+ *   emails a minute; a mistargeted trigger or a step that keeps
+ *   re-firing sends dozens, and 20/min catches that within the first
+ *   minute or two rather than after it has already gone out.
+ * - **daily cap**: the backstop for exactly the case the burst limit is
+ *   deliberately too generous for, a workflow applied on purpose to a
+ *   large back catalogue (hundreds of couples), which legitimately
+ *   wants to send that many emails, just spread across many burst
+ *   windows rather than one. A solo or small studio MC blasting their
+ *   entire multi-year couple list in a single day, the single most
+ *   aggressive legitimate action the product supports, tops out in the
+ *   low hundreds. 500/day/tenant sits comfortably above that (a couple
+ *   thousand couples' worth of history, sent all at once, is not a real
+ *   MC's business) and stays far below what an uncapped runaway would
+ *   produce over the same period (a step re-firing every minute for a
+ *   day could otherwise reach into the tens of thousands).
+ *
+ * Both numbers are a starting point, not a promise: ratchet them once
+ * real tenant volume is observed. Too tight shows up immediately as a
+ * `workflow_send_rate_limited` alert on a legitimate account; too loose
+ * shows up as a deliverability complaint, which is the failure mode
+ * this exists to prevent.
+ *
+ * Where each counter lives. The burst limit is in this process's
+ * memory, which suits it: a minute is far shorter than a container's
+ * life, and a runaway step fires inside one tick, in one process. The
+ * daily cap is not: it counts the tenant's automated `couple_emails`
+ * rows sent through the shared domain (`transport = 'resend'`, one row
+ * per message however often it was retried) from the last 24 hours
+ * (Task 30, `readAutomatedSendWindow` in
+ * `lib/email/send-log`), so it is the same figure in every process,
+ * survives a cold start, and is shared by the cron tick and manual
+ * approve-and-send.
+ */
+export const WORKFLOW_SEND_BURST_LIMIT: LimiterOptions = { windowMs: 60_000, max: 20 };
+
+/**
+ * The daily cap: at most `max` automated sends per tenant in any
+ * trailing `windowMs`. Counted from `couple_emails`, not held in memory
+ * (see {@link WORKFLOW_SEND_BURST_LIMIT}).
+ */
+export const WORKFLOW_SEND_DAILY_CAP: LimiterOptions = { windowMs: AUTOMATED_SEND_WINDOW_MS, max: 500 };
+
+/**
+ * The shortest deferral a daily-cap refusal asks for. The window reopens
+ * when the oldest counted row ages out, which can be seconds away; a
+ * minute (the tick's own period) keeps a capped step from waking again
+ * straight away only to be refused again. Also the retry after a count
+ * that could not be read.
+ */
+const DAILY_CAP_MIN_RETRY_MS = 60_000;
+
+const workflowSendBurstLimiter: Limiter = inMemoryLimiter(WORKFLOW_SEND_BURST_LIMIT);
+
+/**
+ * Which threshold a send attempt was stopped by. `daily_cap_unreadable`
+ * is not a threshold being hit: the daily count could not be read, so
+ * the send is held (fail closed) until it can be. Kept distinct so the
+ * alert and the MC-facing wording never claim a limit was reached.
+ */
+export type WorkflowSendLimitScope = 'burst' | 'daily_cap' | 'daily_cap_unreadable';
+
+/**
+ * One `workflow_send_cap_unreadable` alert per tenant per ten minutes.
+ * An unreadable count is usually a database-wide problem that holds
+ * every tenant's sends at once, and each parked step re-checks every
+ * minute; ten minutes keeps the channel readable while still saying,
+ * well inside an hour, that it has not cleared.
+ */
+const CAP_UNREADABLE_ALERT_WINDOW: LimiterOptions = { windowMs: 10 * 60 * 1000, max: 1 };
+
+/**
+ * One Slack ping per {tenant, threshold, window}, not one per deferred
+ * step. A bulk apply that trips the burst limit can defer dozens of
+ * steps inside the same tick; without this every one of them would fire
+ * its own alert. Mirrors the `alertDedup` bucket in
+ * `lib/api/public-token-limiter.ts`. Held in memory even for the daily
+ * cap: a second alert after a cold start is noise, not harm.
+ */
+const workflowSendAlertDedup: Record<WorkflowSendLimitScope, Limiter> = {
+  burst: inMemoryLimiter({ windowMs: WORKFLOW_SEND_BURST_LIMIT.windowMs, max: 1 }),
+  daily_cap: inMemoryLimiter({ windowMs: WORKFLOW_SEND_DAILY_CAP.windowMs, max: 1 }),
+  daily_cap_unreadable: inMemoryLimiter(CAP_UNREADABLE_ALERT_WINDOW),
+};
+
+export interface WorkflowSendLimitResult {
+  /** True when the attempt is clear to send. */
+  allowed: boolean;
+  /** Which threshold was hit. Undefined when `allowed`. */
+  scope?: WorkflowSendLimitScope;
+  /** Milliseconds until this tenant's window for `scope` resets. 0 when allowed. */
+  retryAfterMs: number;
+  /**
+   * True at most once per {tenant, scope, window}. The caller's cue to
+   * raise an alert rather than defer silently on every retry of the
+   * same breach.
+   */
+  shouldAlert: boolean;
+  /**
+   * Set only on a `daily_cap_unreadable` result: the database or
+   * PostgREST error code the count failed with (null when the client
+   * threw). A code, never a message, so it is safe for Slack.
+   */
+  errorCode?: string | null;
+}
+
+/**
+ * Check one send attempt against both per-tenant thresholds, and record
+ * it against the burst limit if it clears.
+ *
+ * `weight` is the number of individual recipient sends this attempt
+ * represents (a single `send_email` step can address more than one
+ * recipient), so the budget tracks real send volume rather than step
+ * count.
+ *
+ * Burst first, in memory, so a tenant hammering inside one minute never
+ * costs a database read. Then the daily cap, from the send log: nothing
+ * is recorded for it here, because the rows the sends write ARE the
+ * record. A burst check passing right before a daily breach still
+ * records a phantom burst count for an attempt that was deferred, but
+ * the burst window is a minute long and self-corrects long before the
+ * daily window that blocked the attempt reopens.
+ *
+ * The daily cap admits an attempt against an empty window even when
+ * `weight` alone exceeds `max`, like {@link inMemoryLimiter}'s fresh
+ * window: otherwise one step addressing more than `max` recipients
+ * could never send at all. A count that cannot be read defers (fails
+ * closed) for {@link DAILY_CAP_MIN_RETRY_MS} as `daily_cap_unreadable`:
+ * the cap is only a backstop if it holds when the database is
+ * struggling. It is not silent: `shouldAlert` is set once per tenant per
+ * ten minutes, because a persistent failure holds every shared-domain
+ * send while the tick itself looks healthy.
+ *
+ * On a breach the retry is when enough rows have aged out for this
+ * attempt to fit ({@link automatedSendWindowReopensAt}), never earlier
+ * than {@link DAILY_CAP_MIN_RETRY_MS}.
+ *
+ * Concurrent attempts for one tenant (a tick and an approve-and-send in
+ * the same second) can both read the count before either logs, so the
+ * cap can be overshot by one step's recipients. It is a brake on a
+ * runaway, which sends thousands; a handful over is not what it is for.
+ */
+export async function checkWorkflowSendLimit(
+  userId: string,
+  weight = 1,
+): Promise<WorkflowSendLimitResult> {
+  const burst = await workflowSendBurstLimiter.check(userId, weight);
+  if (!burst.allowed) {
+    const dedup = await workflowSendAlertDedup.burst.check(userId);
+    return { allowed: false, scope: 'burst', retryAfterMs: burst.retryAfter, shouldAlert: dedup.allowed };
+  }
+
+  const now = Date.now();
+  const window = await readAutomatedSendWindow(userId, now);
+  if (window.status === 'unknown') {
+    logger.error('[rate-limit] daily send count unreadable, deferring', { userId, reason: window.reason });
+    const dedup = await workflowSendAlertDedup.daily_cap_unreadable.check(userId);
+    return {
+      allowed: false,
+      scope: 'daily_cap_unreadable',
+      retryAfterMs: DAILY_CAP_MIN_RETRY_MS,
+      shouldAlert: dedup.allowed,
+      errorCode: window.code,
+    };
+  }
+  if (window.count > 0 && window.count + weight > WORKFLOW_SEND_DAILY_CAP.max) {
+    const mustAgeOut = Math.min(window.count + weight - WORKFLOW_SEND_DAILY_CAP.max, window.count);
+    const reopensAt = (await automatedSendWindowReopensAt(userId, mustAgeOut, now)) ?? now;
+    const dedup = await workflowSendAlertDedup.daily_cap.check(userId);
+    return {
+      allowed: false,
+      scope: 'daily_cap',
+      retryAfterMs: Math.max(reopensAt - now, DAILY_CAP_MIN_RETRY_MS),
+      shouldAlert: dedup.allowed,
+    };
+  }
+  return { allowed: true, retryAfterMs: 0, shouldAlert: false };
+}
+
+/**
+ * Test-only reset for the module-level workflow-send buckets (the burst
+ * limiter and both alert dedups). Also what a process restart does, so
+ * the daily-cap tests call it to prove the cap survives one. Mirrors
+ * `_resetForTest` in `lib/api/public-token-limiter.ts`.
+ */
+export function _resetWorkflowSendLimitersForTest(): void {
+  Object.assign(workflowSendBurstLimiter, inMemoryLimiter(WORKFLOW_SEND_BURST_LIMIT));
+  Object.assign(
+    workflowSendAlertDedup.burst,
+    inMemoryLimiter({ windowMs: WORKFLOW_SEND_BURST_LIMIT.windowMs, max: 1 }),
+  );
+  Object.assign(
+    workflowSendAlertDedup.daily_cap,
+    inMemoryLimiter({ windowMs: WORKFLOW_SEND_DAILY_CAP.windowMs, max: 1 }),
+  );
+  Object.assign(workflowSendAlertDedup.daily_cap_unreadable, inMemoryLimiter(CAP_UNREADABLE_ALERT_WINDOW));
+}

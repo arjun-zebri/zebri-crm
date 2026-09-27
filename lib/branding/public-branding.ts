@@ -55,6 +55,9 @@ export interface PublicBranding {
   tagline: string | null
   abn: string | null
   phone: string | null
+  /** Postal address, shown alongside the ABN and phone in the couple-facing
+   *  email footer's sender-identification line (Spam Act requirement). */
+  postal_address: string | null
   website: string | null
   instagram_url: string | null
   facebook_url: string | null
@@ -135,6 +138,7 @@ export interface UserMetadata {
   tagline?: string
   abn?: string
   phone?: string
+  postal_address?: string
   website?: string
   instagram_url?: string
   facebook_url?: string
@@ -233,6 +237,7 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     tagline: metadata.tagline ?? null,
     abn: metadata.abn ?? null,
     phone: metadata.phone ?? null,
+    postal_address: metadata.postal_address ?? null,
     website: metadata.website ?? null,
     instagram_url: metadata.instagram_url ?? null,
     facebook_url: metadata.facebook_url ?? null,

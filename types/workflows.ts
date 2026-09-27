@@ -32,23 +32,63 @@ export type ApplyRuleType =
 /** Lifecycle of a template. */
 export type TemplateStatus = 'draft' | 'active' | 'archived';
 
-/** Lifecycle of an applied instance. */
-export type InstanceStatus = 'active' | 'completed' | 'cancelled';
+/**
+ * Lifecycle of an applied instance.
+ *
+ * `paused` is the reversible stop: the executor runs only `active`
+ * instances, so nothing on a paused one fires, and resuming it skips
+ * whatever came due in the meantime rather than sending it late (see
+ * `lib/workflows/resume`). It is per instance and separate from any
+ * account-wide pause.
+ */
+export type InstanceStatus = 'active' | 'paused' | 'completed' | 'cancelled';
 
-/** Lifecycle of one step inside an instance. */
+/**
+ * Why a `paused` instance is paused.
+ *
+ * `template_off` means the MC turned the whole workflow off; turning it
+ * back on offers to resume exactly these. `manual` means the MC paused
+ * this couple by hand, and only they resume it. Null when not paused.
+ */
+export type PausedReason = 'template_off' | 'manual';
+
+/**
+ * Why a `cancelled` instance was stopped.
+ *
+ * - `manual`: the MC stopped it (one workflow, or Stop everything).
+ * - `template_deleted`: the MC deleted the workflow it came from.
+ * - `setup_interrupted`: the apply that built it failed or died, so its
+ *   steps may be incomplete. Never resumable.
+ * - `exit_rule`: an exit rule ended it.
+ *
+ * Null on an instance that is not cancelled, and on one stopped before
+ * the reason was recorded.
+ */
+export type CancelledReason = 'manual' | 'template_deleted' | 'setup_interrupted' | 'exit_rule';
+
+/**
+ * Lifecycle of one step inside an instance.
+ *
+ * `cancelled` is a step that had not started when its workflow was
+ * stopped. It never runs, is never re-dated, and is neither done nor an
+ * error: progress and counts leave it out. Resuming the workflow puts it
+ * back to `pending`.
+ */
 export type StepStatus =
   | 'pending'
   | 'running'
   | 'waiting'
   | 'done'
   | 'skipped'
-  | 'errored';
+  | 'errored'
+  | 'cancelled';
 
-/** Statuses that mean the step will never run again. */
+/** Statuses that mean the step will never run again (unless its workflow is resumed). */
 export const TERMINAL_STEP_STATUSES: readonly StepStatus[] = [
   'done',
   'skipped',
   'errored',
+  'cancelled',
 ];
 
 /** Units a chained delay accepts. Minutes are constrained to 15-minute steps by the schema. */
@@ -105,6 +145,11 @@ export interface WorkflowTemplateRow {
   apply_rule_type: ApplyRuleType;
   apply_rule_config: Json;
   allow_reapply: boolean;
+  /**
+   * Stages (`couple_statuses.slug`, lower-cased) that stop this workflow
+   * for a couple who moves into one. See `lib/workflows/exit-rules`.
+   */
+  exit_statuses: string[];
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   branch_depth_limit: number;
@@ -143,13 +188,29 @@ export interface WorkflowInstanceRow {
   name: string;
   template_version: number | null;
   status: InstanceStatus;
+  /** Set only while `status` is `paused`. See {@link PausedReason}. */
+  paused_reason: PausedReason | null;
+  /** Set only while `status` is `cancelled`. See {@link CancelledReason}. */
+  cancelled_reason: CancelledReason | null;
   is_default: boolean;
   is_personal: boolean;
   trigger_event_id: string | null;
+  /**
+   * The template id when this enrolment must be unique on the couple,
+   * else null. Two live instances never share one (a partial unique
+   * index, `status <> 'cancelled'`).
+   */
+  dedupe_key: string | null;
   context: Json;
   applied_at: string;
   completed_at: string | null;
   error_message: string | null;
+  /**
+   * When the bookkeeping after one of its finished steps failed, else
+   * null. The tick's heal pass (`lib/workflows/heal`) redoes that
+   * bookkeeping for marked instances only, then clears this.
+   */
+  needs_recompute_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -165,6 +226,22 @@ export interface WorkflowStepRow {
   description: string | null;
   timing: StepTiming;
   due_at: string | null;
+  /**
+   * When the MC took this step's date off ("Take the date off"), or null
+   * when it is not held. A held step is never re-dated by a recompute and
+   * never claimed by the engine until the MC sets a date, which clears
+   * this. Optional because rows built in memory (an apply preview, a
+   * snapshot about to be inserted) are never held.
+   */
+  due_held_at?: string | null;
+  /**
+   * `'branch'` when the branch logic skipped this step (a lane not taken,
+   * or everything under a skipped branch); null for every other skip and
+   * whenever the step is not skipped (a trigger keeps it so,
+   * 20261024300000). Reopening a branch restores only these. Optional for
+   * rows built in memory.
+   */
+  skip_reason?: 'branch' | null;
   parent_step_id: string | null;
   branch_path: 'yes' | 'no' | null;
   status: StepStatus;
@@ -176,6 +253,8 @@ export interface WorkflowStepRow {
   completed_at: string | null;
   error_message: string | null;
   output: Json | null;
+  /** Executor attempts so far. Reset to 0 when the MC retries by hand. */
+  attempt_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -183,6 +262,11 @@ export interface WorkflowStepRow {
 /** An instance with its steps loaded, ordered by position. */
 export interface WorkflowInstanceWithSteps extends WorkflowInstanceRow {
   steps: WorkflowStepRow[];
+  /**
+   * The status of the template it came from, or null when that template
+   * is gone. Resume is refused unless it is `active`.
+   */
+  template_status: TemplateStatus | null;
 }
 
 /** Progress summary rendered as "step 7 of 20". */

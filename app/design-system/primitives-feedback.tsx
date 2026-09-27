@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, Users } from 'lucide-react';
+import { AlertTriangle, CalendarClock, CalendarDays, ShieldCheck, Users } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,7 +64,7 @@ export function PrimitivesFeedback() {
       </Spec>
 
       <Spec name="StatePill" file="components/ui/state-pill.tsx"
-        importPath="@/components/ui/state-pill" description="Five semantic tones, three dot modes. Token-clean by design.">
+        importPath="@/components/ui/state-pill" description="Five semantic tones, three dot modes, an optional leading icon, and wrap for a label that is a sentence (the fix on an unfinished workflow step). Token-clean by design.">
         <div className="space-y-4">
           <Demo label="Tones (no dot)">
             <DemoRow>
@@ -86,6 +86,23 @@ export function PrimitivesFeedback() {
                 <StatePill key={t} tone={t} label={t} dot="hollow" />
               ))}
             </DemoRow>
+          </Demo>
+          <Demo label="Leading icon (workflow card chips)">
+            <DemoRow>
+              <StatePill label="Immediately" icon={CalendarClock} />
+              <StatePill label="Asks you first" icon={ShieldCheck} />
+              <StatePill label="No condition chosen." tone="warning" icon={AlertTriangle} />
+            </DemoRow>
+          </Demo>
+          <Demo label="Wrapped: a sentence-length label in a narrow card">
+            <div className="w-56">
+              <StatePill
+                label="No name yet, so it won't say what to do on the day."
+                tone="warning"
+                icon={AlertTriangle}
+                wrap
+              />
+            </div>
           </Demo>
         </div>
       </Spec>

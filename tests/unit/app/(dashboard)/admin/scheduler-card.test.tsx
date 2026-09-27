@@ -9,6 +9,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { SchedulerCard } from '@/app/(dashboard)/admin/sections/scheduler-card'
+import type { SchedulerStatus } from '@/lib/admin/scheduler'
 
 vi.mock('@/app/admin/scheduler-actions', () => ({
   syncSchedulerAction: vi.fn(async () => ({ ok: true })),
@@ -19,7 +20,13 @@ vi.mock('@/app/admin/scheduler-actions', () => ({
     jobs: [],
     tickHeartbeat: null,
     tickTruncated: null,
-  })),
+    tickFailedPasses: [],
+    tickFailedReads: 0,
+    tickFailedReadSite: null,
+    staleEvents: null,
+    // Typed, so a field added to the status fails this fixture at
+    // typecheck instead of rendering undefined (Phase 6 residual pass).
+  }) satisfies SchedulerStatus),
 }))
 
 const now = new Date('2026-09-20T10:00:00Z')
@@ -29,7 +36,7 @@ describe('SchedulerCard', () => {
     render(
       <SchedulerCard
         now={now}
-        status={{ configured: false, slackConfigured: false, baseUrl: null, jobs: [], tickHeartbeat: null, tickTruncated: null }}
+        status={{ configured: false, slackConfigured: false, baseUrl: null, jobs: [], tickHeartbeat: null, tickTruncated: null, tickFailedPasses: [], tickFailedReads: 0, tickFailedReadSite: null, staleEvents: null }}
       />,
     )
     expect(screen.getByText('Not configured')).toBeInTheDocument()
@@ -57,6 +64,10 @@ describe('SchedulerCard', () => {
           ],
           tickHeartbeat: '2026-09-20T08:00:00Z',
           tickTruncated: null,
+          tickFailedPasses: [],
+          tickFailedReads: 0,
+          tickFailedReadSite: null,
+          staleEvents: null,
         }}
       />,
     )
@@ -79,6 +90,10 @@ describe('SchedulerCard', () => {
           jobs: [],
           tickHeartbeat: '2026-09-20T09:58:00Z',
           tickTruncated: null,
+          tickFailedPasses: [],
+          tickFailedReads: 0,
+          tickFailedReadSite: null,
+          staleEvents: null,
         }}
       />,
     )
@@ -96,10 +111,101 @@ describe('SchedulerCard', () => {
           jobs: [],
           tickHeartbeat: '2026-09-20T09:58:00Z',
           tickTruncated: true,
+          tickFailedPasses: [],
+          tickFailedReads: 0,
+          tickFailedReadSite: null,
+          staleEvents: null,
         }}
       />,
     )
     expect(screen.getByText(/Tick healthy/)).toBeInTheDocument()
     expect(screen.getByText(/last tick truncated/)).toBeInTheDocument()
+  })
+
+  // Task 36 (audit M4): stale events used to be dropped with no trace.
+  it('shows the last stale-event skip with its count', () => {
+    render(
+      <SchedulerCard
+        now={now}
+        status={{
+          configured: true,
+          slackConfigured: true,
+          baseUrl: 'https://x',
+          jobs: [],
+          tickHeartbeat: '2026-09-20T09:58:00Z',
+          tickTruncated: false,
+          tickFailedPasses: [],
+          tickFailedReads: 0,
+          tickFailedReadSite: null,
+          staleEvents: { count: 12, at: '2026-09-20T08:00:00Z' },
+        }}
+      />,
+    )
+    expect(screen.getByText(/12 stale events skipped in the last batch/)).toBeInTheDocument()
+  })
+
+  it('says so when no stale event has been skipped', () => {
+    render(
+      <SchedulerCard
+        now={now}
+        status={{
+          configured: true,
+          slackConfigured: true,
+          baseUrl: 'https://x',
+          jobs: [],
+          tickHeartbeat: '2026-09-20T09:58:00Z',
+          tickTruncated: false,
+          tickFailedPasses: [],
+          tickFailedReads: 0,
+          tickFailedReadSite: null,
+          staleEvents: null,
+        }}
+      />,
+    )
+    expect(screen.getByText(/No stale events skipped/)).toBeInTheDocument()
+  })
+
+  it('names the passes the last tick could not run', () => {
+    render(
+      <SchedulerCard
+        now={now}
+        status={{
+          configured: true,
+          slackConfigured: true,
+          baseUrl: 'https://x',
+          jobs: [],
+          tickHeartbeat: '2026-09-20T09:58:00Z',
+          tickTruncated: false,
+          tickFailedPasses: ['workflows.executor'],
+          tickFailedReads: 0,
+          tickFailedReadSite: null,
+          staleEvents: null,
+        }}
+      />,
+    )
+    expect(screen.getByText(/last tick failed: workflows.executor/)).toBeInTheDocument()
+  })
+
+  // Phase 6 review I2: the failed-read alert can be lost, so the card
+  // names the last tick's failed reads and where the first one failed.
+  it('names the reads the last tick could not do, and where', () => {
+    render(
+      <SchedulerCard
+        now={now}
+        status={{
+          configured: true,
+          slackConfigured: true,
+          baseUrl: 'https://x',
+          jobs: [],
+          tickHeartbeat: '2026-09-20T09:58:00Z',
+          tickTruncated: false,
+          tickFailedPasses: [],
+          tickFailedReads: 4,
+          tickFailedReadSite: 'executor.load_instance',
+          staleEvents: null,
+        }}
+      />,
+    )
+    expect(screen.getByText(/4 failed reads in the last tick, first at executor.load_instance/)).toBeInTheDocument()
   })
 })

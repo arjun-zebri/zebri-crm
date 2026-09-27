@@ -103,7 +103,25 @@ export async function buildDigest(
     .maybeSingle();
   const timezone = settings?.timezone ?? DEFAULT_TIMEZONE;
 
-  const queue = await loadQueue(supabase, userId);
+  // The MC's own quiet hours move a Wait's end, and with it what sends
+  // today; the same fields the engine reads (`loadMcSnapshot`). A failed
+  // read falls back to the template windows alone.
+  const { data: auth } = await supabase.auth.admin.getUserById(userId);
+  const meta = (auth?.user?.user_metadata ?? {}) as Record<string, unknown>;
+  const text = (key: string) => (typeof meta[key] === 'string' ? (meta[key] as string) : null);
+  const queue = await loadQueue(supabase, userId, {}, undefined, {
+    mcQuietHours: auth?.user
+      ? {
+          quietHoursStart: text('quiet_hours_start'),
+          quietHoursEnd: text('quiet_hours_end'),
+          quietHoursTimezone:
+            text('timezone') ??
+            (typeof auth.user.app_metadata?.['timezone'] === 'string'
+              ? (auth.user.app_metadata['timezone'] as string)
+              : null),
+        }
+      : null,
+  });
   const payload: DigestPayload = {
     userId,
     timezone,

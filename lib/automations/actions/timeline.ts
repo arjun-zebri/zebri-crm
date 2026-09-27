@@ -12,10 +12,11 @@
  * @module lib/automations/actions/timeline
  */
 
-import { Resend } from 'resend'
 import { z } from 'zod'
 
+import { AUTOMATION_FROM, openAutomationSend } from '@/lib/email/automation-send'
 import { wrapAutomationShell } from '@/lib/email/html'
+import { alertPartialSendFailure } from '@/lib/email/partial-send-alert'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult, ActionType, RunContext } from '@/types/automations'
 
@@ -25,17 +26,7 @@ import { renderTemplate } from '../variables'
 
 import type { ActionSpec } from './index'
 
-let _resend: Resend | undefined
-function resend(): Resend {
-  if (!_resend) {
-    const key = process.env.RESEND_API_KEY
-    if (!key) throw new Error('RESEND_API_KEY is not set')
-    _resend = new Resend(key)
-  }
-  return _resend
-}
-
-const FROM = 'Zebri <noreply@app.zebri.com.au>'
+const FROM = AUTOMATION_FROM
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
 
 // ────────────────────────────────────────────────────────────────
@@ -212,33 +203,137 @@ const sendTimelineToVendors: ActionSpec<z.infer<typeof sendTimelineToVendorsSche
     const coupleEmail = config.sendToCouple ? (ctx.couple.email ?? null) : null
     const others = [...emails].filter((to) => to !== coupleEmail)
 
+    // One gate for the whole step: every recipient is checked and the
+    // step's sends are charged against the rate limit once, before
+    // anything goes out. Sending one at a time through the single-send
+    // helper would charge each recipient separately, so a limit hit at
+    // vendor 21 would park the step, and every wake would re-send (and
+    // re-charge) vendors 1 to 20 while 21 never went.
+    //
+    // Only the couple's own address is `isCouple`: their opt-out is
+    // theirs, and their suppliers still need the run sheet. Every address
+    // still gets the suppression check.
+    const coupleId = ctx.couple.id
+    const gate = await openAutomationSend({
+      actionType: 'send_timeline_to_vendors',
+      userId: ctx.userId,
+      manualRun: ctx.manualRun,
+      instanceId: ctx.instanceId,
+      coupleId,
+      recipients: [
+        ...others.map((to) => ({ to, isCouple: false })),
+        ...(coupleEmail ? [{ to: coupleEmail, isCouple: true }] : []),
+      ],
+    })
+    if (gate.kind === 'deferred') return gate.sleep
+    if (gate.kind === 'check_failed') {
+      return {
+        kind: 'error',
+        message: `send_timeline_to_vendors: ${gate.error}`,
+        recoverable: true,
+      }
+    }
+
     // Captured before the closure: `ctx.couple` is narrowed above, but
     // that narrowing does not survive into a callback.
     const coupleName = ctx.couple.name
-    const send = async (to: string, message: string) => {
-      const html = wrapAutomationShell(renderTemplate(message, ctx), ctx.mc.businessName, {
-        label: 'View run sheet',
-        url,
-      })
-      await resend().emails.send({
-        from: FROM,
+    const stepId = ctx.stepId
+    const replyTo = ctx.mc.email
+    let lastError: string | null = null
+    let lastErrorCode: string | null = null
+    let recoverable = true
+    let sent = 0
+    let skipped = 0
+    let failed = 0
+    const send = async (to: string, message: string): Promise<void> => {
+      const body = renderTemplate(message, ctx)
+      const res = await gate.send({
+        stepId,
         to,
         subject: `Run sheet for ${coupleName} - ${ctx.mc.businessName}`,
-        html,
-        replyTo: ctx.mc.email,
+        render: (unsubscribeUrl) =>
+          wrapAutomationShell(
+            body,
+            ctx.mc.businessName,
+            { label: 'View run sheet', url },
+            ctx.mc.branding,
+            unsubscribeUrl,
+          ),
+        identity: { businessName: ctx.mc.businessName, branding: ctx.mc.branding },
+        replyTo,
+        // The share link carries the event's token, and a re-issued
+        // token is a different email even when the copy is identical,
+        // so it is fingerprinted alongside the message. The recipient is
+        // already part of the key, so vendors do not share one.
+        fingerprint: { action: 'send_timeline_to_vendors', message, url, from: FROM },
       })
+      if (!res.ok) {
+        failed += 1
+        lastError = res.error ?? 'unknown send error'
+        lastErrorCode = res.code ?? null
+        recoverable = recoverable && res.recoverable
+      } else if (res.skipped) {
+        // Opted out: a deliberate skip, counted apart from what was sent
+        // so the step never reports a run sheet as delivered when it was
+        // not.
+        skipped += 1
+      } else {
+        sent += 1
+      }
     }
 
-    let sent = 0
     for (const to of others) {
       await send(to, custom ?? RUN_SHEET_MESSAGE)
-      sent += 1
     }
     if (coupleEmail) {
       await send(coupleEmail, custom ?? RUN_SHEET_COUPLE_MESSAGE)
-      sent += 1
     }
-    return { kind: 'ok', output: { sent, run_sheet_link: url } }
+
+    // Same split `send_email` makes, and for the same reason. Nothing
+    // went out and something failed: say so, so the step errors and the
+    // MC finds out rather than a run sheet silently never reaching the
+    // suppliers.
+    if (sent === 0 && failed > 0) {
+      return {
+        kind: 'error',
+        message: `send_timeline_to_vendors: all ${failed} attempted recipient(s) failed${
+          lastError ? ` (${lastError})` : ''
+        }`,
+        recoverable,
+      }
+    }
+    // Some went out, or everyone left was opted out. Erroring here would
+    // re-run the step and re-send to everyone who did get it, so a
+    // partial failure is recorded in the output instead (the step's
+    // warning state reads it, see lib/workflows/send-outcome) and
+    // alerted. The idempotency key covers a retry the MC starts by hand.
+    if (failed > 0) {
+      await alertPartialSendFailure({
+        userId: ctx.userId,
+        coupleId,
+        stepId,
+        instanceId: ctx.instanceId,
+        actionType: 'send_timeline_to_vendors',
+        sent,
+        failed,
+        code: lastErrorCode,
+      })
+    }
+    return {
+      kind: 'ok',
+      output: {
+        sent,
+        run_sheet_link: url,
+        ...(skipped > 0 ? { skipped } : {}),
+        ...(failed > 0
+          ? {
+              failed,
+              ...(lastError ? { last_error: lastError } : {}),
+              ...(lastErrorCode ? { last_error_code: lastErrorCode } : {}),
+            }
+          : {}),
+      },
+    }
   },
   ui: { category: 'couple', label: 'Send run sheet', description: 'Email the run sheet (timeline) link to vendors, the couple, or yourself', icon: 'Send' },
 }

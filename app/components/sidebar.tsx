@@ -25,6 +25,7 @@ import { useState, useEffect } from "react";
 
 import { clearShadowCookies } from "@/app/admin/actions";
 import { isAdmin } from "@/lib/auth/entitlements";
+import { signOutScope } from "@/lib/auth/sign-out-scope";
 import { createClient } from "@/lib/supabase/client";
 
 
@@ -67,9 +68,12 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
 
   const handleSignOut = async () => {
     setSigningOut(true);
+    // Read before clearShadowCookies drops the flag: inside a shadow
+    // session this must never sign the MC out of their other devices.
+    const scope = signOutScope(document.cookie);
     await clearShadowCookies();
     const supabase = createClient();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope });
     queryClient.clear();
     router.push("/login");
   };

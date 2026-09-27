@@ -52,6 +52,10 @@ export type AlertEvent =
 
   // ───── Payments ────────────────────────────────────────────────────
   | (BaseEvent & {
+      // Zebri's own Stripe subscription billing, not a couple's invoice
+      // (couple invoice-payment problems surface via `invoiceId`-keyed
+      // events below, with no email at all). `email` is therefore always
+      // the MC's own billing address, allowlisted (T27).
       type: 'payment_failed';
       severity: 'error';
       email?: string;
@@ -138,7 +142,16 @@ export type AlertEvent =
       type: 'public_token_attempt_burst';
       severity: 'warn';
       ip: string;
-      surface: 'invoice' | 'proposal' | 'portal' | 'contract' | 'lead' | 'slots' | 'booking' | 'manage';
+      surface:
+        | 'invoice'
+        | 'proposal'
+        | 'portal'
+        | 'contract'
+        | 'lead'
+        | 'slots'
+        | 'booking'
+        | 'manage'
+        | 'unsubscribe';
       /** Number of invalid attempts inside the burst window
        *  (typically 10 in 60s). */
       attempts: number;
@@ -187,17 +200,28 @@ export type AlertEvent =
       ip: string;
     })
   | (BaseEvent & {
+      // No `to` and no `subject` (T27, fix round 1): the recipient of a
+      // transactional send is a couple, contact or vendor, never Zebri's
+      // own customer, and the rendered subject line is exactly the same
+      // couple-name-interpolation risk `workflow_email_sent.subject` had
+      // (a bounced "Invoice for Sarah & Jake" would otherwise reach
+      // Slack). No id is threaded to this (currently unused) call path,
+      // so there is nothing to stand in for the address either; the
+      // error message still says enough to act on.
       type: 'resend_send_failed';
       severity: 'error';
-      to: string;
-      subject: string;
       errorMessage: string;
     })
   | (BaseEvent & {
+      // No `to` and no `subject` (T27, fix round 1, same reasoning as
+      // `resend_send_failed`). `userId` is the tenant whose
+      // `email_suppression` row this bounce/complaint wrote, and it plus
+      // `reason` is enough to find the suppression row and the original
+      // message in the app; the couple's/contact's rendered subject
+      // line never needs to leave it.
       type: 'resend_bounced';
       severity: 'warn';
-      to: string;
-      subject: string;
+      userId: string;
       reason?: string;
     })
 
@@ -226,9 +250,33 @@ export type AlertEvent =
   | (BaseEvent & {
       type: 'auth_rate_limit_hit';
       severity: 'warn';
-      action: 'login' | 'signup' | 'resetPassword' | 'updatePassword' | 'changePassword';
+      action:
+        | 'login'
+        | 'signup'
+        | 'resetPassword'
+        | 'updatePassword'
+        | 'changePassword'
+        | 'redeemRecoveryCode'
+        | 'issueRecoveryCodes'
+        | 'verifyTotpUser'
+        | 'verifyTotpIp';
       ip: string;
       userId?: string;
+    })
+  | (BaseEvent & {
+      /**
+       * An MC signed in with a 2FA recovery code instead of their
+       * authenticator app (Phase 4, Task 23). The code is spent and
+       * their TOTP factor removed, so the account is back to password
+       * only until they turn 2FA on again. Worth a look if the MC did
+       * not expect it: whoever did this held the password too. Ids
+       * only, no name or email.
+       */
+      type: 'mfa_recovery_code_used';
+      severity: 'warn';
+      userId: string;
+      /** TOTP factors removed by the redemption (normally 1). */
+      factorsRemoved: number;
     })
   | (BaseEvent & {
       type: 'rls_denied_spike';
@@ -238,13 +286,34 @@ export type AlertEvent =
       windowMinutes: number;
     })
 
-  // ───── Admin actions (Phase 13) ───────────────────────────────────
+  // ───── Admin actions (Phase 13) ─────────────────────────────────────
+  // `targetEmail` on every event below is the target `auth.users` row's
+  // own address: always an MC's Zebri account, never a couple's. MC
+  // account emails stay in alerts (T27 ruling): they are Zebri's own
+  // customers, and support needs to recognise the account by more than
+  // a uuid.
   | (BaseEvent & {
       type: 'admin_shadow_entered';
       severity: 'warn';
       actorId: string;
       targetUserId: string;
       targetEmail: string;
+    })
+  | (BaseEvent & {
+      // exitShadow refused to mint an admin session: no valid signed
+      // grant, a grant for another user, or an admin who is no longer
+      // one. Ids only, never emails or names.
+      type: 'admin_shadow_exit_refused';
+      severity: 'warn';
+      reason:
+        | 'no_session'
+        | 'invalid_grant'
+        | 'target_mismatch'
+        | 'admin_cookie_mismatch'
+        | 'admin_lookup_failed'
+        | 'not_admin';
+      sessionUserId: string | null;
+      claimedAdminId: string | null;
     })
   | (BaseEvent & {
       type: 'admin_user_deleted';
@@ -284,7 +353,9 @@ export type AlertEvent =
       severity: 'warn';
       automationId: string;
       runId: string;
-      coupleName: string | null;
+      /** Which couple the paused step belongs to. Ids only (T27), never
+       *  the couple's name. */
+      coupleId: string | null;
       missingVariables: string[];
     })
   | (BaseEvent & {
@@ -298,6 +369,320 @@ export type AlertEvent =
       severity: 'warn';
       pendingEvents: number;
     })
+  | (BaseEvent & {
+      // The time-emitter pass ran out of its slice of the tick before
+      // every emitter had a turn. Distinct from a truncated tick, which
+      // means work is waiting and will be picked up next time: most of
+      // these emitters fire on a date being exactly so many days away,
+      // so an emitter that did not run has missed that day for every
+      // couple it would have matched, and nothing replays it.
+      type: 'automation_emitters_skipped';
+      severity: 'warn';
+      /** Trigger types that never got their turn, in registry order. */
+      skipped: string[];
+      /** How many did run, for a sense of how far the pass got. */
+      ran: number;
+    })
+  | (BaseEvent & {
+      // The step_overdue emitter hit its per-run row ceiling while paging
+      // through overdue manual steps. It stops there rather than looping
+      // forever, but a run this size on a per-minute cron means the
+      // overdue backlog is outgrowing what one tick can drain, and the
+      // steps past the ceiling wait until the next run to get an event.
+      type: 'automation_overdue_scan_capped';
+      severity: 'warn';
+      /**
+       * What stopped the run. 'row_ceiling' is a runaway (more overdue
+       * steps than any real day produces); 'deadline' is the tick's own
+       * time budget, which means the backlog is real but the pass is
+       * simply not getting through it fast enough. They call for
+       * different answers, so the alert says which.
+       */
+      reason: 'row_ceiling' | 'deadline';
+      /** Rows read this run before the ceiling stopped the page-through. */
+      scanned: number;
+      /** The ceiling itself, so the alert still reads right if it's tuned. */
+      ceiling: number;
+    })
+  | (BaseEvent & {
+      // A read the step_overdue emitter depends on returned a Postgres or
+      // PostgREST error instead of rows, or came back holding rows but
+      // could not be trusted anyway. Distinct from
+      // `automation_overdue_scan_capped`, which fires when the run
+      // intentionally stops at its row ceiling with more work still
+      // waiting: this fires when a read failed outright and the run does
+      // not know what it missed (stage 'scan'), had to skip a batch of
+      // steps rather than risk re-nagging a couple with a stale dedupe
+      // read (stage 'dedupe'), or the dedupe read came back holding
+      // exactly its row cap, which PostgREST returns with no error, so a
+      // full result and a genuinely complete one are indistinguishable on
+      // the wire (stage 'dedupe_truncated').
+      type: 'automation_overdue_read_failed';
+      severity: 'error';
+      stage: 'scan' | 'dedupe' | 'dedupe_truncated';
+      /** Rows already scanned (stage 'scan'), or the ids in the batch that
+       *  was skipped (stage 'dedupe' / 'dedupe_truncated'). */
+      count: number;
+      errorMessage: string;
+    })
+  | (BaseEvent & {
+      // A step's function was killed (or its write failed) after it was
+      // claimed and moved to `running`, so nothing else in the app could
+      // ever see it again: the due query only selects `pending` and
+      // `waiting`, and Try again only accepts `errored`. `sweepStuckSteps`
+      // finds one still `running` past the staleness window and errors
+      // it so the MC can check and retry. No couple names or email
+      // addresses here, just step ids, since this is an operational
+      // signal, not a support ticket.
+      type: 'workflow_step_stuck';
+      severity: 'error';
+      /** How many steps this sweep recovered. */
+      count: number;
+      /** First ten recovered step ids, for a quick look in the logs. */
+      stepIds: string[];
+    })
+  | (BaseEvent & {
+      // A step failed and the executor buried it `errored`. Usually that
+      // means its attempts are spent, but not always: an action can
+      // report a failure as unrecoverable (a setting only the MC can
+      // fix, or a send whose transport cannot deduplicate a repeat), and
+      // those are buried on the first attempt. `attempts` says which.
+      // Distinct from `workflow_step_stuck`, which is a dead function
+      // recovered by the sweep: this is a step that ran, failed, and was
+      // finished by the executor itself. No couple names or email
+      // addresses here, just step ids, since this is an operational
+      // signal, not a support ticket.
+      type: 'workflow_step_failed';
+      severity: 'error';
+      stepId: string;
+      instanceId: string;
+      /** Attempts made before the executor gave up. */
+      attempts: number;
+      message: string;
+    })
+  | (BaseEvent & {
+      // Fired once per delivered recipient right after a successful
+      // send_email dispatch, so the owner sees automated sends happen
+      // instead of discovering them later from a message id buried in
+      // workflow_steps.output. No recipient address or couple name (T27):
+      // the recipient is always a couple, contact or vendor, and this is
+      // Slack, not the app. `coupleId` plus `contactId` are enough to look
+      // the send up from the couple's profile.
+      type: 'workflow_email_sent';
+      severity: 'info';
+      /** The step's display title (`stepDisplayTitle()`), not the
+       *  rendered subject line (T27, fix round 1): a rendered subject
+       *  can carry a couple's name through interpolation; the stored
+       *  title is written once in the builder and never per-couple. */
+      stepTitle: string;
+      coupleId: string | null;
+      /** The resolved recipient's contact/couple-contact row id, null
+       *  for the couple's own primary/spouse address (see
+       *  `ResolvedRecipient.contactId`). */
+      contactId: string | null;
+      stepId: string | null;
+      messageId: string | null;
+    })
+
+  | (BaseEvent & {
+      // A tenant's automated sends hit lib/api/rate-limit.ts's per-tenant
+      // WORKFLOW_SEND_BURST_LIMIT or WORKFLOW_SEND_DAILY_CAP. The step
+      // that tripped it is deferred (ActionResult kind 'sleep'), not
+      // failed, so nothing here means an email was lost, only that one
+      // is queued for later. Still worth a Slack line: a workflow that
+      // silently stops sending, whether for a minute (burst) or the
+      // rest of the day (cap), is exactly the "nobody finds out" failure
+      // this alerting effort exists to close off. Deduped to one alert
+      // per {tenant, scope, window} in checkWorkflowSendLimit so a large
+      // legitimate bulk send does not fire one of these per deferred
+      // step.
+      type: 'workflow_send_rate_limited';
+      severity: 'warn';
+      userId: string;
+      /** Which threshold was hit. */
+      scope: 'burst' | 'daily_cap';
+      /** Recipients this attempt alone was about to send to. */
+      attempted: number;
+      /** Milliseconds until the tenant's window reopens and sends resume. */
+      retryAfterMs: number;
+    })
+  | (BaseEvent & {
+      // An MC's connected Gmail or Outlook mailbox is dead for good (Phase
+      // 5 fix wave, M7; lib/email/sender-identity.ts): the grant was
+      // revoked or expired (`invalid_grant`), or the stored token cannot
+      // be decrypted. The connection was marked failed, so their
+      // automated email now goes from the shared Zebri address until they
+      // reconnect in Settings. Fires once per flip (the write is
+      // conditional on the row still being connected), so it is deduped
+      // across processes. Ids and a reason code only.
+      type: 'mailbox_disconnected';
+      severity: 'warn';
+      userId: string;
+      provider: 'google' | 'microsoft';
+      reason: 'grant_revoked' | 'token_unreadable';
+    })
+  | (BaseEvent & {
+      // The per-tenant daily send count (couple_emails, Task 30) could
+      // not be read, so checkWorkflowSendLimit held the send (fail
+      // closed, fix round 1 I3). Nothing hit a limit. A persistent
+      // failure holds every shared-domain automated send while the tick
+      // looks healthy, which is why this is an error and not silent.
+      // Deduped to one per tenant per ten minutes. `code` is the
+      // database / PostgREST error code, never a message.
+      type: 'workflow_send_cap_unreadable';
+      severity: 'error';
+      userId: string;
+      code: string | null;
+    })
+  | (BaseEvent & {
+      // Bus events older than a day were stamped `skipped: stale` instead
+      // of being dispatched (Task 36, audit M4; lib/workflows/dispatcher.ts).
+      // After any outage over a day, every enquiry that arrived during it
+      // goes this way, and before this alert nothing said so. `count` is
+      // this batch; `suppressed` is what earlier batches skipped inside
+      // the dedupe window without an alert of their own. A suppressed
+      // count only reaches Slack with the next batch in the same scope
+      // (review M1); the Admin card's record shows every batch. `userId` is set when the immediate kick for
+      // one MC did the skipping, null for the cron sweep. Deduped to one
+      // per scope per ten minutes. Counts and an MC id only.
+      type: 'workflow_events_stale';
+      severity: 'error';
+      count: number;
+      suppressed: number;
+      userId: string | null;
+    })
+  | (BaseEvent & {
+      // Reads failed inside a tick pass that carried on (Task 36): the
+      // executor left `executor` steps or instances unrun or unfinished,
+      // and dispatch left `dispatch` events unprocessed for the next
+      // tick. A failed read used to read as "nothing to do", so the tick
+      // reported a clean pass. A whole pass that failed is `app_error`
+      // from the tick's guard instead. Deduped to one per ten minutes.
+      type: 'workflow_reads_failed';
+      severity: 'error';
+      executor: number;
+      dispatch: number;
+      /** Instances the heal pass could not fix this tick (fix round 1). */
+      heal: number;
+      /**
+       * The first failed read's site, e.g. `executor.load_instance`
+       * (review M2), so on-call knows which read without the logs. A code
+       * path name, never data. Null when the passes did not say.
+       */
+      site: string | null;
+    })
+  | (BaseEvent & {
+      // A step finished (its completion write landed) but the bookkeeping
+      // after it failed: merging its output, skipping the branch not
+      // taken, re-dating the steps behind it, or completing the instance
+      // (Task 36 fix round 1, review I1). The executor marks the instance
+      // (`needs_recompute_at`), and the tick's heal pass finds it through
+      // `workflow_stranded_instances` and redoes the bookkeeping on the
+      // next tick. Before this, the followers kept a null date for good
+      // behind a green tick. Also raised, with no step, when the tick's
+      // closing completion check fails for one instance (Phase 6 review
+      // M1): its last step may have finished, and the heal completes it.
+      // Ids and the failing read's site only. Deduped to one per
+      // instance per ten minutes.
+      type: 'workflow_step_unsettled';
+      severity: 'error';
+      instanceId: string;
+      /** The step that finished, or null for a failed completion check. */
+      stepId: string | null;
+      site: string;
+      /**
+       * Whether the marker landed. False means the database refused that
+       * write too, so the heal pass will not find this instance: a person
+       * has to re-date it (tick and untick a step on it).
+       */
+      marked: boolean;
+    })
+  | (BaseEvent & {
+      // An apply failed after its instance row was created (Task 36 fix
+      // round 1): the step snapshot, the dating or the go-live. The
+      // half-built instance is cancelled as `setup_interrupted`, which the
+      // couple's Stopped strip shows ("Its setup did not finish ... Start
+      // it again instead"). The dispatcher marks the event handled, since
+      // the per-event unique index would refuse a retry, so this alert is
+      // how anyone hears about it. Ids only. Deduped to one per workflow
+      // per ten minutes.
+      type: 'workflow_apply_failed';
+      severity: 'error';
+      userId: string;
+      templateId: string;
+      coupleId: string | null;
+      instanceId: string;
+      triggerEventId: string | null;
+    })
+  | (BaseEvent & {
+      // A workflow send step reached some of its recipients and failed on
+      // others (Task 31, audit M6; lib/email/partial-send-alert.ts). The
+      // step stays done, since re-running it would double-send everyone
+      // it reached, so without this the engine looks healthy while a
+      // vendor or a spouse never got the email. The MC sees a warning on
+      // the step. Ids, counts and the provider's error code only (the
+      // provider's message can quote the address). Deduped to one per
+      // tenant per ten minutes.
+      type: 'workflow_send_partial_failure';
+      severity: 'warn';
+      userId: string;
+      coupleId: string | null;
+      stepId: string | null;
+      instanceId: string | null;
+      /** The action that sent, e.g. `send_email`. */
+      actionType: string;
+      sent: number;
+      failed: number;
+      /** `DispatchResult.code` of the last failure, or null. Never a message. */
+      code: string | null;
+    })
+  | (BaseEvent & {
+      // An automated email went out (or failed) but its couple_emails
+      // row could not be written (Task 30, lib/email/send-log.ts). The
+      // send itself stands: logging is strictly after it and never fails
+      // it. What is lost is the Emails-tab record, the webhook's delivery
+      // status for that message, and one unit of the tenant's daily cap
+      // count. Ids only. Deduped to one per tenant per ten minutes, since
+      // a failing insert usually fails for every send in the tick.
+      type: 'automated_send_log_failed';
+      severity: 'error';
+      userId: string;
+      coupleId: string;
+      stepId: string | null;
+      instanceId: string | null;
+      /** Which row was lost: a successful send's or a failed one's. */
+      outcome: 'sent' | 'failed';
+      /** The Postgres / PostgREST error code, or null when the client threw. */
+      code: string | null;
+    })
+  | (BaseEvent & {
+      // The dispatcher could not apply a workflow's exit rules for a
+      // couple's stage change (Task 21): the couple keeps receiving the
+      // workflow that should have stopped. The event is left
+      // undispatched and retried every tick until it works or turns
+      // stale (24h). Deduped to one alert per tenant per hour in
+      // lib/workflows/exit-dispatch.ts, so a persistent failure does not
+      // ping every minute.
+      type: 'workflow_exit_failed';
+      severity: 'error';
+      userId: string;
+      coupleId: string | null;
+      eventId: string;
+      /** The stage the couple moved into. */
+      toStatus: string | null;
+      message: string;
+    })
+  | (BaseEvent & {
+      // An MC pressed the account-wide stop for workflow automation, or
+      // lifted it (Task 18). A stop is the MC's own emergency brake, so
+      // it usually means a workflow just did something they did not
+      // expect; the owner wants to hear about that the same minute.
+      type: 'workflows_account_paused';
+      severity: 'warn';
+      userId: string;
+      /** Which way the switch moved. */
+      action: 'paused' | 'resumed';
+    })
 
   // ───── Proposals (Phase C close) ────────────────────────────────────
   | (BaseEvent & {
@@ -306,7 +691,8 @@ export type AlertEvent =
       /** The MC whose proposal was accepted. */
       userId: string;
       proposalNumber: string;
-      coupleName: string;
+      /** Ids only (T27), never the couple's name. */
+      coupleId: string | null;
       /** The accepted option's total, in dollars. */
       total: number;
     })
@@ -321,7 +707,8 @@ export type AlertEvent =
       /** The MC whose proposal was opened. */
       userId: string;
       proposalNumber: string;
-      coupleName: string;
+      /** Ids only (T27), never the couple's name. */
+      coupleId: string | null;
     })
   | (BaseEvent & {
       type: 'proposal_declined';
@@ -329,7 +716,8 @@ export type AlertEvent =
       /** The MC whose proposal was declined. */
       userId: string;
       proposalNumber: string;
-      coupleName: string;
+      /** Ids only (T27), never the couple's name. */
+      coupleId: string | null;
       reason: string;
     })
   | (BaseEvent & {
@@ -350,6 +738,9 @@ export type AlertEvent =
     })
 
   // ───── Lead capture ────────────────────────────────────────────────
+  // `email` on both events below is the MC's own account address
+  // (`result.mc_email`), never the inbound lead's, allowlisted (T27).
+  // The lead themselves carries no PII into either event.
   | (BaseEvent & {
       type: 'lead_blocked_plan_limit';
       severity: 'warn';
@@ -373,9 +764,11 @@ export type AlertEvent =
       severity: 'info';
       /** The MC who received the booking. */
       userId: string;
+      /** The MC's own account address, allowlisted (T27). */
       email: string;
-      /** The couple/booker's name. */
-      bookerName: string;
+      /** The new booking row. No booker name (T27): the booker is
+       *  couple-side, not Zebri's own customer. */
+      bookingId: string;
       /** The booking's share token for the manage page. */
       manageToken: string;
     })
@@ -465,3 +858,23 @@ export type AlertEvent =
 
 /** Useful for `switch` exhaustiveness checks. */
 export type AlertType = AlertEvent['type'];
+
+// ───── Compile-time PII guard (T27) ──────────────────────────────────
+//
+// A couple's name has no place on any AlertEvent member: it is always
+// expressible as an id (`coupleId`, `contactId`, `bookingId`, ...) that a
+// human can look up in the app instead. `KeysOf` distributes over the
+// union so it collects every key any member ever declares, then the two
+// assertions below fail to typecheck the moment `coupleName` or
+// `bookerName` reappears anywhere in the union; see the T27 ruling in
+// `.superpowers/sdd/2026-09-23-workflows-trust-remediation/progress.md`.
+type KeysOf<T> = T extends unknown ? keyof T : never;
+type AlertEventKeys = KeysOf<AlertEvent>;
+type AssertKeyAbsent<K extends string> = K extends AlertEventKeys
+  ? [`Forbidden PII key "${K}" reappeared on AlertEvent, replace it with an id (T27)`]
+  : true;
+// Exported (not just declared) so `no-unused-vars` leaves it alone; the
+// value itself is never meant to be read, only assigned, which is where
+// the compile error surfaces if either key comes back.
+export const assertNoCoupleNameKey: AssertKeyAbsent<'coupleName'> = true;
+export const assertNoBookerNameKey: AssertKeyAbsent<'bookerName'> = true;

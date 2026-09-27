@@ -40,6 +40,13 @@ interface Props {
   actions?: ReactNode
   /** Frame height. Taller for a document with a header and a footer. */
   height?: string
+  /**
+   * True while the email shown is for an older input than the one on
+   * screen and a newer render is on its way. The frame dims so an
+   * outdated email never reads as the one that will be sent; the
+   * caller's caption says it is updating.
+   */
+  pending?: boolean
 }
 
 export function EmailPreview({
@@ -50,6 +57,7 @@ export function EmailPreview({
   ready,
   actions,
   height = 'h-80',
+  pending = false,
 }: Props) {
   // The frame's own document never changes: it loads `BLANK` once and
   // every version of the email is written into it. Binding `srcDoc` to
@@ -58,6 +66,13 @@ export function EmailPreview({
   // title) would do on every keystroke.
   const frameRef = useRef<HTMLIFrameElement>(null)
   const [loaded, setLoaded] = useState(false)
+  // `loaded` belongs to one frame. Not ready unmounts it, and the next
+  // frame starts blank: a flag left true from the old one wrote the email
+  // into the new frame before its `BLANK` loaded, and that load wiped it,
+  // leaving an empty frame under an "Exactly what ... receives" caption
+  // (live check B1). Reset during render, so the new frame is covered by
+  // the skeleton from its first paint until its own load writes into it.
+  if (!ready && loaded) setLoaded(false)
 
   useEffect(() => {
     if (!loaded) return
@@ -70,6 +85,23 @@ export function EmailPreview({
       .replace(/<\/html>\s*$/, '')
   }, [loaded, html])
 
+  // Links are inert. The sandbox still lets a click navigate the frame
+  // itself, which would swap the preview for a "refused to connect"
+  // page, or, for a real portal or invoice link, open the couple's own
+  // page inside the MC's modal. Listening on the document survives every
+  // rewrite of its contents above.
+  useEffect(() => {
+    if (!loaded) return
+    const doc = frameRef.current?.contentDocument
+    if (!doc) return
+    const stop = (event: MouseEvent) => {
+      const target = event.target as Element | null
+      if (target?.closest?.('a')) event.preventDefault()
+    }
+    doc.addEventListener('click', stop)
+    return () => doc.removeEventListener('click', stop)
+  }, [loaded])
+
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between gap-3">
@@ -77,7 +109,12 @@ export function EmailPreview({
         {ready ? actions : null}
       </div>
 
-      <div className="overflow-hidden rounded-control border border-border">
+      <div
+        aria-busy={pending}
+        className={`overflow-hidden rounded-control border border-border transition-opacity ${
+          pending ? 'opacity-50' : ''
+        }`}
+      >
         <div className="border-b border-border bg-surface-muted px-4 py-3">
           <p className="text-body text-text-subtle">Subject</p>
           {ready ? (

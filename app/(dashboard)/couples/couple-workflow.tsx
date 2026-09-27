@@ -25,10 +25,11 @@ import { detectNudges } from '@/lib/workflows/nudges';
 import { toStepTiming } from '@/lib/workflows/timing-summary';
 import type { WorkflowStepRow } from '@/types/workflows';
 
-
-import { CoupleTabShell, tabStat, type TabStat } from './couple-tab-shell';
+import { coupleDueLabel } from './couple-due-label';
+import { CoupleTabShell, type TabStat } from './couple-tab-shell';
 import { CoupleTodoModal } from './couple-todo-modal';
-import { CoupleWorkflowList } from './couple-workflow-list';
+import { workflowTabStats } from './couple-workflow-stats';
+import { CoupleWorkflowWork } from './couple-workflow-work';
 import { useCoupleWorkflows } from './use-couple-workflows';
 import { useUserTimezone } from './use-user-timezone';
 import { WorkflowActivity } from './workflow-activity';
@@ -70,29 +71,19 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
   const appliedTemplateIds = useMemo(
     () =>
       workflows.instances
-        .filter((i) => i.status === 'active' && i.template_id !== null)
+        // Paused counts as applied: it still holds the couple's
+        // enrolment, and the database refuses a second one.
+        .filter(
+          (i) => (i.status === 'active' || i.status === 'paused') && i.template_id !== null,
+        )
         .map((i) => i.template_id as string),
     [workflows.instances],
   );
 
-  const stats = useMemo<TabStat[] | undefined>(() => {
-    const steps = visible.flatMap((i) => i.steps);
-    if (steps.length === 0) return undefined;
-    const open = steps.filter(
-      (s) => s.status === 'pending' || s.status === 'waiting',
-    ).length;
-    const today = zonedDateParts(new Date(), timezone).date;
-    const overdue = steps.filter(
-      (s) =>
-        s.status === 'pending' &&
-        s.due_at !== null &&
-        zonedDateParts(new Date(s.due_at), timezone).date < today,
-    ).length;
-
-    const out: TabStat[] = [{ label: tabStat(open, 'open') }];
-    if (overdue > 0) out.push({ label: `${overdue} overdue`, tone: 'danger' });
-    return out;
-  }, [visible, timezone]);
+  const stats = useMemo<TabStat[] | undefined>(
+    () => workflowTabStats(visible.flatMap((i) => i.steps), timezone),
+    [visible, timezone],
+  );
 
   const nudges = useMemo(() => {
     if (workflows.isLoading) return [];
@@ -112,23 +103,15 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
     }).filter((nudge) => !COVERED_BY_THE_LIST.has(nudge.id));
   }, [visible, timezone, weddingDate, workflows.isLoading]);
 
-  /** Relative due wording for one step. */
-  function dueLabel(step: WorkflowStepRow): string {
-    if (step.status === 'errored') return 'Failed';
-    if (step.status === 'done' || step.status === 'skipped') return '';
-    if (step.due_at === null) return '';
-    const today = zonedDateParts(new Date(), timezone).date;
-    const due = zonedDateParts(new Date(step.due_at), timezone).date;
-    if (due === today) return 'Today';
-    return due < today ? `Overdue · ${due}` : due;
-  }
-
+  // "Stop everything" ends paused workflows too, so they count here.
   const runningCount = visible.filter(
-    (i) => !i.is_default && i.status === 'active',
+    (i) => !i.is_default && (i.status === 'active' || i.status === 'paused'),
   ).length;
 
+  // A fragment, not a row of its own: the tab shell lays the actions out,
+  // and wraps them onto a second line at phone width (live check B3).
   const actions = (
-    <div className="flex items-center gap-2">
+    <>
       {runningCount > 0 ? (
         <Button variant="ghost" onClick={() => setConfirmStopAll(true)}>
           Stop everything
@@ -144,7 +127,7 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
         <Plus size={16} strokeWidth={1.5} />
         Add a to-do
       </Button>
-    </div>
+    </>
   );
 
   return (
@@ -161,19 +144,14 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
         <div className="space-y-6">
           <WorkflowNudges nudges={nudges} />
 
-          <CoupleWorkflowList
-            instances={visible}
+          {/* The list, the stopped strip, and Pause / Resume. */}
+          <CoupleWorkflowWork
+            coupleId={coupleId}
+            instances={workflows.instances}
             timezone={timezone}
-            dueLabel={dueLabel}
+            dueLabel={(step: WorkflowStepRow) => coupleDueLabel(step, timezone)}
             onOpen={setOpenStepId}
-            onTick={workflows.tick}
-            onUntick={workflows.untick}
-            onSkip={workflows.skip}
-            onRetry={workflows.retry}
-            onRemove={workflows.removeStep}
-            onReschedule={workflows.reschedule}
-            onRename={workflows.rename}
-            onCancelInstance={workflows.cancelInstance}
+            workflows={workflows}
           />
 
           <WorkflowActivity coupleId={coupleId} />
@@ -195,6 +173,7 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
       <WorkflowApplyPicker
         isOpen={pickerOpen}
         onClose={() => setPickerOpen(false)}
+        coupleId={coupleId}
         appliedTemplateIds={appliedTemplateIds}
         onApply={workflows.applyTemplate}
       />

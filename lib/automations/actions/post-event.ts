@@ -11,9 +11,9 @@
  */
 
 import type { JSONContent } from '@tiptap/react'
-import { Resend } from 'resend'
 import { z } from 'zod'
 
+import { AUTOMATION_FROM, sendAutomationEmail } from '@/lib/email/automation-send'
 import type { EmailAttachment } from '@/lib/email/dispatch'
 import { wrapAutomationShell } from '@/lib/email/html'
 import { downloadStaticAttachments } from '@/lib/email/send-context'
@@ -29,17 +29,13 @@ import { renderTemplate } from '../variables'
 
 import type { ActionSpec } from './index'
 
-let _resend: Resend | undefined
-function resend(): Resend {
-  if (!_resend) {
-    const key = process.env.RESEND_API_KEY
-    if (!key) throw new Error('RESEND_API_KEY is not set')
-    _resend = new Resend(key)
-  }
-  return _resend
-}
-
-const FROM = 'Zebri <noreply@app.zebri.com.au>'
+/**
+ * These six always send from the shared Zebri address, never the MC's
+ * connected mailbox, which is how they have always gone out. That is
+ * what {@link sendAutomationEmail} sends from, so they go through it
+ * rather than assembling a sender of their own.
+ */
+const FROM = AUTOMATION_FROM
 
 // Subject + body are the whole config: these actions send exactly
 // what the MC wrote. The old templateId / attachAssets / tone /
@@ -69,8 +65,22 @@ const baseSchema = z.object({
  * a link. Asking for the link in the copy and then leaving the
  * recipient to find a bare URL is how the review request used to
  * work.
+ *
+ * Every send from here carries an idempotency key, for the same reason
+ * `send_email` does: the executor retries a failed step up to three
+ * times, and the failures worth retrying (a thrown request, a timeout)
+ * are exactly the ones where the message may already have gone. Without
+ * the key a couple could receive three thank-you emails. The key is
+ * per step and per recipient, and changes when the MC edits the copy,
+ * so a corrected resend still reaches them.
+ *
+ * The result of the send is read, rather than the call simply being
+ * awaited. Before, a rejected send was reported as `ok`: the step went
+ * green, the workflow moved on, and nothing anywhere said the couple
+ * never got it.
  */
 async function sendPreComposed(
+  actionType: ActionType,
   ctx: RunContext,
   config: z.infer<typeof baseSchema>,
   cta?: { label: string; url: string },
@@ -78,7 +88,12 @@ async function sendPreComposed(
   if (!ctx.couple?.email) return { kind: 'ok', output: { skipped: 'no primary email' } }
 
   let subject: string
-  let html: string
+  // The body before the shell. The shell itself is rendered by the gate's
+  // `render` callback, once it has minted this recipient's unsubscribe
+  // link: every one of these six is commercial by the classification's
+  // default, which the gate, not this file, decides.
+  let body: string
+
   if (config.content) {
     const doc = config.content as JSONContent
     const missing = detectMissingVariables({ subject: config.subject, content: doc }, ctx)
@@ -91,14 +106,10 @@ async function sendPreComposed(
       }
     }
     subject = renderEmailSubject(config.subject, ctx, 'send')
-    html = wrapAutomationShell(
-      renderEmailTemplate(doc, ctx, 'send').html,
-      ctx.mc.businessName,
-      cta,
-    )
+    body = renderEmailTemplate(doc, ctx, 'send').html
   } else {
     subject = renderTemplate(config.subject, ctx)
-    html = wrapAutomationShell(renderTemplate(config.body, ctx), ctx.mc.businessName, cta)
+    body = renderTemplate(config.body, ctx)
   }
 
   // Attachments resolve through the same loader send_email uses; a
@@ -106,21 +117,54 @@ async function sendPreComposed(
   let attachments: EmailAttachment[] = []
   if (config.attachFiles?.length) {
     try {
-      attachments = await downloadStaticAttachments(createAdminClient(), config.attachFiles)
+      const admin = createAdminClient()
+      attachments = await downloadStaticAttachments(admin, config.attachFiles)
     } catch {
       attachments = []
     }
   }
 
-  await resend().emails.send({
-    from: FROM,
+  const res = await sendAutomationEmail({
+    actionType,
+    stepId: ctx.stepId,
+    userId: ctx.userId,
+    manualRun: ctx.manualRun,
+    instanceId: ctx.instanceId,
+    coupleId: ctx.couple.id,
     to: ctx.couple.email,
+    recipientIsCouple: true,
     subject,
-    html,
+    render: (unsubscribeUrl) =>
+      wrapAutomationShell(body, ctx.mc.businessName, cta, ctx.mc.branding, unsubscribeUrl),
+    identity: { businessName: ctx.mc.businessName, branding: ctx.mc.branding },
     replyTo: ctx.mc.email,
     ...(attachments.length ? { attachments } : {}),
+    // Fingerprinted from the configured copy rather than the rendered
+    // html: the render folds in variables like `event.days_until` that
+    // resolve against the clock, so hashing it would mint a fresh key on
+    // every retry and the deduplication would never fire. See
+    // `contentFingerprint`.
+    fingerprint: {
+      subjectTemplate: config.subject,
+      bodyTemplate: config.content ?? config.body,
+      cta: cta ?? null,
+      attachmentIds: [...(config.attachFiles ?? [])].sort(),
+      replyTo: ctx.mc.email ?? null,
+      from: FROM,
+    },
   })
-  return { kind: 'ok', output: { sent: true } }
+  if (res.deferred) return res.deferred
+  if (!res.ok) {
+    return {
+      kind: 'error',
+      message: `Could not send this email: ${res.error}`,
+      recoverable: res.recoverable,
+    }
+  }
+  if (res.skipped) {
+    return { kind: 'ok', output: { skipped: res.skipped } }
+  }
+  return { kind: 'ok', output: { sent: true, message_id: res.messageId } }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -138,7 +182,7 @@ const sendOnboardingPack: ActionSpec<z.infer<typeof baseSchema>> = {
       ),
   }),
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config)
+    return sendPreComposed('send_onboarding_pack', ctx, config)
   },
   ui: { category: 'couple', label: 'Send onboarding pack', description: 'A welcoming "what happens next" email', icon: 'PackageOpen' },
 }
@@ -158,7 +202,7 @@ const sendPreEventChecklist: ActionSpec<z.infer<typeof baseSchema>> = {
       ),
   }),
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config)
+    return sendPreComposed('send_pre_event_checklist', ctx, config)
   },
   ui: { category: 'couple', label: 'Send pre-event checklist', description: 'A countdown checklist email', icon: 'CheckSquare' },
 }
@@ -185,7 +229,7 @@ const sendThankYou: ActionSpec<z.infer<typeof baseSchema>> = {
       ),
   }),
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config)
+    return sendPreComposed('send_thank_you_message', ctx, config)
   },
   ui: { category: 'post_event', label: 'Send thank-you message', description: "Post-event 'thank you' email", icon: 'Heart' },
 }
@@ -232,7 +276,7 @@ const requestReview: ActionSpec<z.infer<typeof requestReviewSchema>> = {
         recoverable: false,
       }
     }
-    return sendPreComposed(ctx, config, { label: 'Leave a review', url })
+    return sendPreComposed('request_review', ctx, config, { label: 'Leave a review', url })
   },
   ui: { category: 'post_event', label: 'Request review', description: 'Ask the couple for a Google / vendor-site review', icon: 'Star' },
 }
@@ -266,7 +310,7 @@ const sendReferralRequest: ActionSpec<z.infer<typeof sendReferralRequestSchema>>
   type: 'send_referral_request',
   configSchema: sendReferralRequestSchema,
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config)
+    return sendPreComposed('send_referral_request', ctx, config)
   },
   ui: { category: 'post_event', label: 'Send referral request', description: 'Ask for word-of-mouth referrals', icon: 'Share2' },
 }
@@ -286,7 +330,7 @@ const sendAnniversaryMessage: ActionSpec<z.infer<typeof baseSchema>> = {
       ),
   }),
   async handler(ctx, config) {
-    return sendPreComposed(ctx, config)
+    return sendPreComposed('send_anniversary_message', ctx, config)
   },
   ui: { category: 'post_event', label: 'Send anniversary message', description: 'Annual anniversary touchpoint', icon: 'Cake' },
 }

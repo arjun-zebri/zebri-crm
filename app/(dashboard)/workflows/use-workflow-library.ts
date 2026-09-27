@@ -26,6 +26,7 @@ import {
   setTemplateTagsAction,
   updateWorkflowTagAction,
   type TemplateListRow,
+  type TemplateStatusChange,
   type WorkflowsLibraryPayload,
 } from './actions';
 
@@ -40,7 +41,12 @@ export interface WorkflowLibrary {
   createTemplate: (name: string) => Promise<string | null>;
   duplicateTemplate: (templateId: string) => Promise<void>;
   deleteTemplate: (templateId: string) => Promise<void>;
-  setStatus: (templateId: string, status: 'draft' | 'active' | 'archived') => Promise<void>;
+  /** `resumePaused` is for turning on: resume the couples turning it off paused. */
+  setStatus: (
+    templateId: string,
+    status: 'draft' | 'active' | 'archived',
+    resumePaused?: boolean,
+  ) => Promise<TemplateStatusChange | undefined>;
   setTags: (templateId: string, tagIds: string[]) => Promise<void>;
   createTag: (name: string, color: TagColor) => Promise<void>;
   updateTag: (tagId: string, patch: { name?: string; color?: TagColor }) => Promise<void>;
@@ -89,6 +95,7 @@ export function useWorkflowLibrary(): WorkflowLibrary {
     mutationFn: async (input: LibraryMutation) => {
       const res = await runMutation(input);
       if (!res.ok) throw new Error(res.error);
+      return res.data;
     },
     onSuccess: invalidate,
   });
@@ -106,13 +113,30 @@ export function useWorkflowLibrary(): WorkflowLibrary {
         return null;
       }
     },
-    duplicateTemplate: (templateId) => mutate.mutateAsync({ op: 'duplicate', templateId }),
-    deleteTemplate: (templateId) => mutate.mutateAsync({ op: 'delete', templateId }),
-    setStatus: (templateId, status) => mutate.mutateAsync({ op: 'status', templateId, status }),
-    setTags: (templateId, tagIds) => mutate.mutateAsync({ op: 'tags', templateId, tagIds }),
-    createTag: (name, color) => mutate.mutateAsync({ op: 'createTag', name, color }),
-    updateTag: (tagId, patch) => mutate.mutateAsync({ op: 'updateTag', tagId, ...patch }),
-    deleteTag: (tagId) => mutate.mutateAsync({ op: 'deleteTag', tagId }),
+    duplicateTemplate: async (templateId) => {
+      await mutate.mutateAsync({ op: 'duplicate', templateId });
+    },
+    deleteTemplate: async (templateId) => {
+      await mutate.mutateAsync({ op: 'delete', templateId });
+    },
+    // Only the status change hands its result back: it says whether a
+    // resume left anyone paused, which the caller reports.
+    setStatus: async (templateId, status, resumePaused = false) =>
+      (await mutate.mutateAsync({ op: 'status', templateId, status, resumePaused })) as
+        | TemplateStatusChange
+        | undefined,
+    setTags: async (templateId, tagIds) => {
+      await mutate.mutateAsync({ op: 'tags', templateId, tagIds });
+    },
+    createTag: async (name, color) => {
+      await mutate.mutateAsync({ op: 'createTag', name, color });
+    },
+    updateTag: async (tagId, patch) => {
+      await mutate.mutateAsync({ op: 'updateTag', tagId, ...patch });
+    },
+    deleteTag: async (tagId) => {
+      await mutate.mutateAsync({ op: 'deleteTag', tagId });
+    },
   };
 }
 
@@ -120,7 +144,12 @@ export function useWorkflowLibrary(): WorkflowLibrary {
 type LibraryMutation =
   | { op: 'duplicate'; templateId: string }
   | { op: 'delete'; templateId: string }
-  | { op: 'status'; templateId: string; status: 'draft' | 'active' | 'archived' }
+  | {
+      op: 'status';
+      templateId: string;
+      status: 'draft' | 'active' | 'archived';
+      resumePaused: boolean;
+    }
   | { op: 'tags'; templateId: string; tagIds: string[] }
   | { op: 'createTag'; name: string; color: TagColor }
   | { op: 'updateTag'; tagId: string; name?: string; color?: TagColor }
@@ -129,7 +158,7 @@ type LibraryMutation =
 /** Route one {@link LibraryMutation} to its server action. */
 async function runMutation(
   input: LibraryMutation,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; data?: unknown } | { ok: false; error: string }> {
   switch (input.op) {
     case 'duplicate': {
       const res = await duplicateTemplateAction({ templateId: input.templateId });
@@ -138,12 +167,11 @@ async function runMutation(
     case 'delete':
       return normalise(await deleteTemplateAction({ templateId: input.templateId }));
     case 'status':
-      return normalise(
-        await setTemplateStatusAction({
-          templateId: input.templateId,
-          status: input.status,
-        }),
-      );
+      return setTemplateStatusAction({
+        templateId: input.templateId,
+        status: input.status,
+        resumePaused: input.resumePaused,
+      });
     case 'tags':
       return normalise(
         await setTemplateTagsAction({

@@ -4,6 +4,7 @@ import { Check, Copy, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { MenuItem, MenuLabel, MenuPanel, MenuSeparator } from '@/components/ui/menu';
@@ -39,6 +40,8 @@ export function PrimitivesOverlays() {
   const [modalSize, setModalSize] = useState<ModalSize | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [optionOpen, setOptionOpen] = useState(false);
+  const [optionChecked, setOptionChecked] = useState(false);
 
   return (
     <>
@@ -96,10 +99,30 @@ export function PrimitivesOverlays() {
       </Spec>
 
       <Spec name="ConfirmDialog" file="components/ui/confirm-dialog.tsx"
-        importPath="@/components/ui/confirm-dialog" description="Destructive confirmation. Self-contained, not built on Modal.">
-        <Button variant="danger" onClick={() => setConfirmOpen(true)}>
-          Open confirm dialog
-        </Button>
+        importPath="@/components/ui/confirm-dialog" description="Destructive confirmation by default. Self-contained, not built on Modal. The tone prop set to primary is for a confirm that switches something on; children hold one option that shapes the confirm, such as a Checkbox.">
+        <DemoRow>
+          <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+            Open confirm dialog
+          </Button>
+          <Button variant="outline" onClick={() => setOptionOpen(true)}>
+            Primary, with an option
+          </Button>
+        </DemoRow>
+        <ConfirmDialog
+          open={optionOpen}
+          tone="primary"
+          title="Turn this workflow on?"
+          description="It starts applying to new couples again."
+          confirmLabel="Turn on"
+          onConfirm={() => setOptionOpen(false)}
+          onCancel={() => setOptionOpen(false)}
+        >
+          <Checkbox
+            checked={optionChecked}
+            onChange={setOptionChecked}
+            label="Resume the 3 couples paused when this was turned off"
+          />
+        </ConfirmDialog>
         <ConfirmDialog
           open={confirmOpen}
           title="Delete this couple?"

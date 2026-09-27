@@ -14,6 +14,7 @@
 
 import { z } from 'zod'
 
+import { AUTOMATION_FROM, sendAutomationEmail } from '@/lib/email/automation-send'
 import { wrapAutomationShell } from '@/lib/email/html'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionResult, ActionType, RunContext } from '@/types/automations'
@@ -22,19 +23,7 @@ import { renderTemplate } from '../variables'
 
 import type { ActionSpec } from './index'
 
-import { Resend } from 'resend'
-
-let _resend: Resend | undefined
-function resend(): Resend {
-  if (!_resend) {
-    const key = process.env.RESEND_API_KEY
-    if (!key) throw new Error('RESEND_API_KEY is not set')
-    _resend = new Resend(key)
-  }
-  return _resend
-}
-
-const FROM = 'Zebri <noreply@app.zebri.com.au>'
+const FROM = AUTOMATION_FROM
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
 
 // ────────────────────────────────────────────────────────────────
@@ -169,19 +158,48 @@ const sendPortalLink: ActionSpec<z.infer<typeof sendPortalLinkSchema>> = {
     }
     // The link rides as the shell's button rather than a bare address
     // pasted under the message: a couple reads "View your portal", not
-    // a token URL.
-    const html = wrapAutomationShell(renderTemplate(config.message, ctxWithLink), ctx.mc.businessName, {
-      label: 'View your portal',
-      url: link,
-    })
-    await resend().emails.send({
-      from: FROM,
+    // a token URL. The branding and the unsubscribe link give the footer
+    // its sender identification: the portal link is commercial by the
+    // classification's default, which the gate applies.
+    const body = renderTemplate(config.message, ctxWithLink)
+    const subject = `Your event portal - ${ctx.mc.businessName}`
+    const res = await sendAutomationEmail({
+      actionType: 'send_portal_link',
+      stepId: ctx.stepId,
+      userId: ctx.userId,
+      manualRun: ctx.manualRun,
+      instanceId: ctx.instanceId,
+      coupleId: ctx.couple.id,
       to: ctx.couple.email,
-      subject: `Your event portal - ${ctx.mc.businessName}`,
-      html,
+      recipientIsCouple: true,
+      subject,
+      render: (unsubscribeUrl) =>
+        wrapAutomationShell(
+          body,
+          ctx.mc.businessName,
+          { label: 'View your portal', url: link },
+          ctx.mc.branding,
+          unsubscribeUrl,
+        ),
+      identity: { businessName: ctx.mc.businessName, branding: ctx.mc.branding },
       replyTo: ctx.mc.email,
+      // The portal token is in the link, and a re-issued token is a
+      // different email even though the message reads the same, so it
+      // belongs in the fingerprint alongside the copy the MC wrote.
+      fingerprint: { action: 'send_portal_link', message: config.message, link, from: FROM },
     })
-    return { kind: 'ok', output: { portal_link: link } }
+    if (res.deferred) return res.deferred
+    if (!res.ok) {
+      return {
+        kind: 'error',
+        message: `send_portal_link: ${res.error}`,
+        recoverable: res.recoverable,
+      }
+    }
+    // A deliberate skip (the couple unsubscribed) is reported as one, not
+    // as a send with no message id.
+    if (res.skipped) return { kind: 'ok', output: { portal_link: link, skipped: res.skipped } }
+    return { kind: 'ok', output: { portal_link: link, message_id: res.messageId } }
   },
   ui: { category: 'couple', label: 'Send portal access link', description: 'Share the couple portal link with the couple', icon: 'Link2' },
 }
@@ -213,18 +231,45 @@ const requestInformation: ActionSpec<z.infer<typeof requestInformationSchema>> =
       .single()
     if (!data?.portal_token) return { kind: 'error', message: 'no portal token' }
     const link = `${APP_URL}/portal/${data.portal_token}#${config.section}`
-    const html = wrapAutomationShell(renderTemplate(config.message, ctx), ctx.mc.businessName, {
-      label: 'Fill in your portal',
-      url: link,
-    })
-    await resend().emails.send({
-      from: FROM,
+    const body = renderTemplate(config.message, ctx)
+    const res = await sendAutomationEmail({
+      actionType: 'request_information',
+      stepId: ctx.stepId,
+      userId: ctx.userId,
+      manualRun: ctx.manualRun,
+      instanceId: ctx.instanceId,
+      coupleId: ctx.couple.id,
       to: ctx.couple.email,
+      recipientIsCouple: true,
       subject: `One step left - ${ctx.mc.businessName}`,
-      html,
+      render: (unsubscribeUrl) =>
+        wrapAutomationShell(
+          body,
+          ctx.mc.businessName,
+          { label: 'Fill in your portal', url: link },
+          ctx.mc.branding,
+          unsubscribeUrl,
+        ),
+      identity: { businessName: ctx.mc.businessName, branding: ctx.mc.branding },
       replyTo: ctx.mc.email,
+      fingerprint: {
+        action: 'request_information',
+        section: config.section,
+        message: config.message,
+        link,
+        from: FROM,
+      },
     })
-    return { kind: 'ok', output: { section: config.section } }
+    if (res.deferred) return res.deferred
+    if (!res.ok) {
+      return {
+        kind: 'error',
+        message: `request_information: ${res.error}`,
+        recoverable: res.recoverable,
+      }
+    }
+    if (res.skipped) return { kind: 'ok', output: { section: config.section, skipped: res.skipped } }
+    return { kind: 'ok', output: { section: config.section, message_id: res.messageId } }
   },
   ui: { category: 'couple', label: 'Request information', description: 'Email the couple asking them to fill in a portal section', icon: 'MailQuestion' },
 }

@@ -60,6 +60,13 @@ describe('isExecutable', () => {
     }
   });
 
+  it('never runs a cancelled step, even an overdue one on a running workflow', () => {
+    // A resume passes through this state (the instance is active again
+    // only after its steps are restored), and a stopped workflow must not
+    // send because one reader forgot the instance.
+    expect(isExecutable(step({ status: 'cancelled' }), NOW)).toBe(false);
+  });
+
   it('does not double-run a step already marked running', () => {
     expect(isExecutable(step({ status: 'running' }), NOW)).toBe(false);
   });

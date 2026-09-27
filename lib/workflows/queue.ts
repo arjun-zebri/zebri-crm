@@ -16,10 +16,11 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { addDaysToDateString, zonedDateParts, zonedTimeToUtc } from '@/lib/scheduling/timezone';
+import { zonedDateParts } from '@/lib/scheduling/timezone';
 import type { Database } from '@/types/database';
 import type { StepStatus, StepType } from '@/types/workflows';
 
+import { loadScheduledItems, type McQuietHours } from './queue-schedule';
 import { stepDisplayTitle } from './step-label';
 import { isAutomated } from './steps';
 
@@ -45,6 +46,18 @@ export interface QueueItem {
   requiresApproval?: boolean;
   /** The step's own note, shown under the title in the Today view. */
   description?: string | null;
+  /**
+   * Why an unfinished step has no time yet, in plain words ("After you
+   * finish Call the venue"). Set only when `dueAt` is null because a
+   * person decides when it runs. See `./schedule-projection`.
+   */
+  gate?: string | null;
+  /**
+   * An automated step still behind an earlier step, or with only a
+   * projected time: the MC can see it but not snooze or send it, since
+   * either would send it out of order. See `./release`.
+   */
+  blocked?: boolean;
 }
 
 /** The three groups the queue renders. */
@@ -63,6 +76,13 @@ export interface QueueResult {
    * ever surprises the MC. Read-only; there is nothing to tick.
    */
   sendingToday: QueueItem[];
+  /**
+   * Automated steps that run after today, or once a person acts: every
+   * send the MC has coming, at the time the engine will send it. Kept
+   * apart from `upcoming` so the digest, which reads only today's
+   * groups, is unchanged.
+   */
+  scheduled: QueueItem[];
 }
 
 /** Narrowing options for the queue. */
@@ -113,6 +133,7 @@ export function groupQueueItems(items: QueueItem[], now: Date, timezone: string)
   const today: QueueItem[] = [];
   const upcoming: QueueItem[] = [];
   const sendingToday: QueueItem[] = [];
+  const scheduled: QueueItem[] = [];
 
   for (const item of items) {
     // An errored step is always the MC's most urgent problem, whatever
@@ -123,14 +144,17 @@ export function groupQueueItems(items: QueueItem[], now: Date, timezone: string)
     }
 
     if (isAutomated(item.type)) {
-      // An automated step only reaches the MC in two situations: it is
-      // waiting for their OK, or it is about to run and they deserve to
-      // know. Everything else the engine handles silently.
+      // An automated step is never a to-do: it is waiting for the MC's
+      // OK, running today, or scheduled for later (or behind something
+      // only a person can finish). The MC sees every one of them, so
+      // nothing the engine sends is a surprise.
       const due = item.dueAt === null ? null : new Date(item.dueAt);
       if (item.requiresApproval && due !== null && due.getTime() <= now.getTime()) {
         review.push(item);
       } else if (due !== null && zonedDateParts(due, timezone).date <= todayLocal) {
         sendingToday.push(item);
+      } else {
+        scheduled.push(item);
       }
       continue;
     }
@@ -151,10 +175,11 @@ export function groupQueueItems(items: QueueItem[], now: Date, timezone: string)
     today: today.sort(byDueDate),
     upcoming: upcoming.sort(byDueDate),
     sendingToday: sendingToday.sort(byDueDate),
+    scheduled: scheduled.sort(byDueDate),
   };
 }
 
-/** Shape of the joined row PostgREST returns for the queue read. */
+/** Shape of the joined row PostgREST returns for the done-list read. */
 interface QueueRow {
   id: string;
   instance_id: string;
@@ -175,18 +200,32 @@ interface QueueRow {
   } | null;
 }
 
+/** Options for {@link loadQueue}. */
+export interface LoadQueueOptions {
+  /**
+   * The MC's quiet hours, which move a Wait's end and so every send
+   * behind it. The server action passes them from the session; left out,
+   * a Wait is projected as if there were none.
+   */
+  mcQuietHours?: McQuietHours | null;
+  /** Injectable for tests. */
+  now?: Date;
+}
+
 /**
  * Load and group the queue for one user.
  *
- * One query with the filters applied server-side, then grouped in
- * memory. Fetching every step and filtering client-side would move the
- * whole table over the wire for a list that shows a couple of dozen rows.
+ * Every unfinished step on every running workflow, each dated the way
+ * the engine will run it (`./queue-schedule`), so a send behind a Wait
+ * shows at the time it will go rather than as "no date". Grouped in
+ * memory, then capped at `limit` rows, soonest first.
  */
 export async function loadQueue(
   supabase: SupabaseClient<Database>,
   userId: string,
   filter: QueueFilter = {},
-  limit = 200,
+  limit = 500,
+  opts: LoadQueueOptions = {},
 ): Promise<QueueResult> {
   const { data: settings } = await supabase
     .from('user_public_settings')
@@ -194,74 +233,20 @@ export async function loadQueue(
     .eq('user_id', userId)
     .maybeSingle();
   const timezone = settings?.timezone ?? DEFAULT_TIMEZONE;
+  const now = opts.now ?? new Date();
 
-  const now = new Date();
-  // Automated steps are only fetched up to the end of the MC's local
-  // day. Anything later is the engine's business, not the MC's, and
-  // pulling it would crowd the to-dos out of the row budget.
-  const tomorrow = addDaysToDateString(zonedDateParts(now, timezone).date, 1);
-  const endOfToday = zonedTimeToUtc(tomorrow, '00:00', timezone).toISOString();
-
-  const SELECT =
-    'id, instance_id, title, config, description, type, status, due_at, requires_approval, ' +
-    'workflow_instances!inner(id, name, couple_id, status, couples(name, event_date))';
-
-  /** Apply the filters both halves share. */
-  function scoped(query: ReturnType<typeof baseQuery>) {
-    let q = query
-      .eq('workflow_instances.user_id', userId)
-      .eq('workflow_instances.status', 'active')
-      .order('due_at', { ascending: true, nullsFirst: false })
-      .limit(limit);
-    if (filter.coupleIds && filter.coupleIds.length > 0) {
-      q = q.in('workflow_instances.couple_id', filter.coupleIds);
-    }
-    return q;
-  }
-
-  function baseQuery() {
-    return supabase.from('workflow_steps').select(SELECT).in('status', ['pending', 'errored']);
-  }
-
-  const manualTypes = (filter.types ?? ['todo', 'appointment']).filter((t) => !isAutomated(t));
-
-  const [manual, automated] = await Promise.all([
-    manualTypes.length > 0
-      ? scoped(baseQuery().in('type', manualTypes))
-      : Promise.resolve({ data: [] }),
-    // The engine's half: what needs the MC's OK, what is about to send,
-    // and anything that has already failed.
-    scoped(baseQuery().in('type', ['action', 'wait', 'branch']))
-      .not('due_at', 'is', null)
-      .lte('due_at', endOfToday),
-  ]);
-
-  const rows = [
-    ...((manual.data ?? []) as unknown as QueueRow[]),
-    ...((automated.data ?? []) as unknown as QueueRow[]),
-  ];
-
-  const items: QueueItem[] = rows
-    .filter((row) => row.workflow_instances !== null)
-    .map((row) => {
-      const instance = row.workflow_instances!;
-      return {
-        stepId: row.id,
-        instanceId: row.instance_id,
-        instanceName: instance.name,
-        coupleId: instance.couple_id,
-        coupleName: instance.couples?.name ?? null,
-        weddingDate: instance.couples?.event_date ?? null,
-        title: stepDisplayTitle(row),
-        description: row.description,
-        type: row.type as StepType,
-        status: row.status as StepStatus,
-        dueAt: row.due_at,
-        requiresApproval: row.requires_approval,
-      };
-    });
-
-  return groupQueueItems(items, now, timezone);
+  const items = await loadScheduledItems(
+    supabase,
+    userId,
+    timezone,
+    opts.mcQuietHours ?? null,
+    filter,
+    now,
+  );
+  // Soonest first, reasons last, before the cap: the cap should drop
+  // what is furthest away, never something due today.
+  const capped = [...items].sort(byDueDate).slice(0, limit);
+  return groupQueueItems(capped, now, timezone);
 }
 
 /**

@@ -15,6 +15,10 @@
 import { FONT_STACKS, googleFontsHref } from "@/lib/branding/fonts";
 import type { PublicBranding } from "@/lib/branding/public-branding";
 
+import { decodeEntities, PREHEADER_MARKER_ATTR } from "./html-to-text";
+
+export { PREHEADER_MARKER_ATTR };
+
 /**
  * The plain-text automation email shell.
  *
@@ -32,15 +36,31 @@ import type { PublicBranding } from "@/lib/branding/public-branding";
  * Takes a business name rather than a run context so the in-app
  * preview can call it: the context type drags the automation runner
  * in, and this module has to stay importable from a client
- * component. `wrapAutomationHtml` in the messaging actions is the
- * context-taking wrapper the handlers use.
+ * component. `send_email`'s legacy plain-text body reaches it through
+ * `renderSendEmail` in `./send-email-render`.
+ *
+ * With `branding` (the MC's resolved {@link PublicBranding}), the footer
+ * carries sender identification (ABN, phone, postal address) plus an
+ * optional unsubscribe link for commercial sends. Without it, the
+ * footer is just "Sent by ... via Zebri", identical to the pre-branding
+ * shell (backward compatible).
+ *
+ * `preheaderSource` is the text the hidden inbox-preview sentence is
+ * derived from, when it differs from `body`. Only the review preview
+ * passes it: its body carries preview-only gap markers, and the inbox
+ * sentence must come from the words the couple actually receives, both
+ * so it matches the send and so an excerpt can never cut a marker in
+ * half. Omitted, the preheader comes from `body` exactly as before.
  */
 export function wrapAutomationShell(
   body: string,
   businessName: string,
   cta?: { label: string; url: string } | undefined,
+  branding?: PublicBranding | null,
+  unsubscribeUrl?: string | null,
+  preheaderSource?: string,
 ): string {
-  const safe = escapeHtmlText(body).replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/\n/g, "<br>");
+  const safe = escapeHtmlText(body).replace(/\n/g, "<br>");
   // A bare URL in the body is a link the recipient has to notice and
   // select. Every other couple-facing email in the app gives it a
   // button with the address underneath for the clients that strip
@@ -57,15 +77,30 @@ export function wrapAutomationShell(
             Or copy this link: <a href="${url}" style="color:#6b7280;">${escapeHtmlText(cta.url)}</a>
           </p>`
     : "";
+
+  // Use the same footer helper as wrapTemplateHtml to ensure consistency
+  // between plain-text and rich-text sends. Pass branding for the
+  // sender-identification footer; without it, the footer is just the
+  // "Sent by ... via Zebri" line.
+  const footer = branding || unsubscribeUrl
+    ? senderFooterHtml(businessName, branding, unsubscribeUrl)
+    : `<p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${escapeHtmlText(businessName)} via Zebri</p>`;
+
+  // The body here is already plain text (resolved variables, no markup),
+  // so `isHtml: false` skips the tag-stripper and only collapses
+  // whitespace before deriving.
+  const preheader = autoPreheaderHtml(preheaderSource ?? body, false);
+
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  ${preheader}
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
         <tr><td style="padding:40px;font-size:15px;color:#374151;line-height:1.6;">${safe}${action}</td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
-          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${escapeHtmlText(businessName)} via Zebri</p>
+          ${footer}
         </td></tr>
       </table>
     </td></tr>
@@ -73,8 +108,194 @@ export function wrapAutomationShell(
 </body></html>`;
 }
 
+/**
+ * Escape an HTML text node for safe rendering.
+ *
+ * Escapes `&`, `<`, `>`, `"` and `'` so the text cannot break out of
+ * or inject into attribute context (e.g. an `alt=""` attribute).
+ * When this output ends up in text-node content the `&quot;` and `&#39;`
+ * render as plain characters, so there is no visual change; when used
+ * in an attribute value, the escaped form keeps the attribute boundary
+ * intact.
+ */
 function escapeHtmlText(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Shortest and longest length, in characters, an auto-derived preheader
+ *  is cut to (Task 32 ruling: "~90-110 chars, cut at a word boundary"). */
+const PREHEADER_MIN_CHARS = 90;
+const PREHEADER_MAX_CHARS = 110;
+
+/**
+ * Reduce a rendered body to flat text {@link derivePreheaderText} can read.
+ *
+ * Strips every tag and decodes entities, collapsing whitespace to single
+ * spaces. Not a general HTML-to-text conversion (see `./html-to-text` for
+ * the one that builds the real text/plain alternative): the preheader is
+ * one flat inbox-preview sentence, so a link's URL, a list's bullets and
+ * a table's rows all just become adjacent words, never a structured
+ * rendering.
+ *
+ * Only real tags are stripped: a `<` followed by a letter, `/` or `!`
+ * (Task 32 review M2, closed in the Phase 5 fix wave). Several shells
+ * interpolate a couple name raw, and a browser shows "Tom <3 Jo" as text,
+ * so the preheader has to as well; the old `<[^>]*>` ate everything from
+ * the `<` to the next tag. Callers with a genuinely plain-text source
+ * still skip this (see {@link autoPreheaderHtml}'s `isHtml` flag).
+ *
+ * @param html - Body markup, tags included.
+ */
+export function stripTagsForPreheader(html: string): string {
+  return decodeEntities(html.replace(/<\/?[a-zA-Z!][^>]*>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Matches a bare URL so it can be dropped before a preheader is derived
+ * (Task 32 review I2): an `http(s)://` link, a `www.` host, or a
+ * schemeless domain followed by a path (`zebri.com.au/portal/<token>`,
+ * the form an MC types by hand; closed in the Phase 5 fix wave).
+ *
+ * A resolved link variable (`{{portal.link}}`, `{{contract.link}}`, …)
+ * becomes a raw capability URL in a plain-text automation body, and an MC
+ * can paste a bare link as its own anchor label in a rich one. Either way
+ * the token that URL carries must never end up as the one thing an inbox
+ * shows next to the subject line.
+ *
+ * The schemeless form needs a letters-only top-level label AND a `/`
+ * straight after it, so prose with dots in it ("5.30pm", "e.g. after",
+ * "the end.Next") is left alone; a bare domain with no path carries no
+ * token and is left alone too.
+ */
+const PREHEADER_URL_TOKEN =
+  /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/\S*/gi;
+
+/**
+ * Drop URL tokens from text already reduced to flat, tag-free words (Task
+ * 32 review I2), and re-collapse the whitespace left behind.
+ *
+ * Applied before {@link derivePreheaderText}, never after: dropping a URL
+ * post-truncation cannot undo a hard cut that already landed mid-token,
+ * which is exactly the M1/I2 "partial token URL" failure the review found.
+ */
+function stripUrlsForPreheader(text: string): string {
+  return text.replace(PREHEADER_URL_TOKEN, " ").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Derive the inbox-preview sentence from the start of a rendered email body.
+ *
+ * Per the Task 32 ruling, the preheader is always computed from the same
+ * resolved content that renders as the body, never a separate field a
+ * caller fills in: that is what guarantees it can never show a raw
+ * `{{token}}` or say something the body itself does not. Cuts at a word
+ * boundary between {@link PREHEADER_MIN_CHARS} and
+ * {@link PREHEADER_MAX_CHARS} characters, so a long body is never
+ * truncated mid-word. A body already shorter than the cap comes back
+ * untouched, and an empty body comes back as `""` (the caller then
+ * renders no preheader element at all: see {@link preheaderHtml}).
+ *
+ * Cut positions are backed off a UTF-16 code unit when they would land
+ * inside a surrogate pair (Task 32 review M3): a hard cut that splits one
+ * lands on a lone surrogate, which renders as a broken glyph (U+FFFD) in
+ * the preview instead of the character being left out cleanly.
+ *
+ * @param plainText - Resolved, tag- and URL-free text (see
+ *   {@link stripTagsForPreheader} and {@link stripUrlsForPreheader}).
+ */
+export function derivePreheaderText(plainText: string): string {
+  const trimmed = plainText.trim();
+  if (trimmed.length <= PREHEADER_MAX_CHARS) return trimmed;
+
+  const window = trimmed.slice(0, PREHEADER_MAX_CHARS + 1);
+  const lastSpace = window.lastIndexOf(" ");
+  // A space inside the target window keeps every word whole. A single
+  // unbroken run of characters (no space anywhere in the window) has
+  // nothing to cut on, so it hard-cuts at the cap instead of overshooting.
+  const cut = lastSpace >= PREHEADER_MIN_CHARS ? lastSpace : PREHEADER_MAX_CHARS;
+  return trimmed.slice(0, backOffSurrogatePair(trimmed, cut)).trim();
+}
+
+/**
+ * If `index` sits between the two UTF-16 units of a surrogate pair (a
+ * character outside the Basic Multilingual Plane, most emoji included),
+ * step back one unit so a slice at `index` never separates them (Task 32
+ * review M3).
+ */
+function backOffSurrogatePair(text: string, index: number): number {
+  const code = text.charCodeAt(index);
+  const isLowSurrogate = code >= 0xdc00 && code <= 0xdfff;
+  return isLowSurrogate ? index - 1 : index;
+}
+
+/**
+ * The hidden "preheader" element every couple-facing shell emits as the
+ * very first thing inside `<body>` (Task 32).
+ *
+ * Gmail, Apple Mail and Outlook all show a snippet of the message next to
+ * its subject in the inbox list, and by default that snippet is whatever
+ * text node the client finds first in the body, usually the "Sent by …
+ * via Zebri" footer line, or nothing readable at all. Putting a genuine,
+ * resolved sentence here first is what makes that snippet read like part
+ * of the email instead of plumbing.
+ *
+ * The markup layers three independent hiding techniques (`display:none`,
+ * a collapsed box via `max-height`/`overflow`/`opacity`, and Outlook's own
+ * `mso-hide`) because no single one is honoured by every client, and pads
+ * the text out with alternating `&zwnj;`/`&nbsp;`, repeated enough times
+ * (Task 32 review M1: the original 16 pairs, 32 invisible characters, was
+ * not enough to stop a short body's snippet bleeding into whatever
+ * visible text follows, whether that is a CTA button, the branding
+ * header or the footer) that a client reading past the preheader's own
+ * text for its snippet has well over 100 further invisible characters to
+ * get through before it reaches anything visible. `htmlToText` strips
+ * this element wholesale by {@link PREHEADER_MARKER_ATTR}, so the derived
+ * text/plain alternative never repeats it.
+ *
+ * No dark-mode styling here or anywhere else in the shell (owner cut that
+ * half of Task 32): this element is hidden by every mechanism above
+ * regardless of the client's colour scheme, so it needs none of its own.
+ *
+ * @param text - The preheader sentence, already safe to show as-is: the
+ *   auto-derived one from {@link derivePreheaderText}, or a caller's own
+ *   fixed, code-free text (see {@link contractOtpHtml}). Returns `""` for
+ *   empty input, so a body with no derivable text renders no preheader
+ *   element at all rather than an empty hidden one.
+ */
+export function preheaderHtml(text: string): string {
+  if (!text) return "";
+  // 90 pairs decode to 180 invisible characters, well past the "roughly
+  // 100 or more" the Task 32 review asked for, on top of the up-to-110
+  // characters of real preheader text ahead of it.
+  const padding = "&zwnj;&nbsp;".repeat(90);
+  return `<div ${PREHEADER_MARKER_ATTR}="true" style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;font-size:1px;color:#f9f9f9;mso-hide:all;">${escapeHtmlText(text)} ${padding}</div>`;
+}
+
+/**
+ * The one auto-preheader pipeline every shell calls (Task 32 review M5):
+ * normalise the body to flat text, drop any bare URL, derive the ~90-110
+ * character preview sentence, and render the hidden element. Replaces
+ * what used to be a `preheaderHtml(derivePreheaderText(stripTagsForPreheader(x)))`
+ * sequence repeated at every call site.
+ *
+ * @param source - The rendered body this preheader previews.
+ * @param isHtml - `true` (the default) for a rendered HTML body, whose
+ *   tags are stripped first. `false` for the automation shell's
+ *   already-plain-text body: running the HTML tag-stripper on arbitrary
+ *   plain text risks eating real content that merely contains a `<` or
+ *   `>` (the parked M2 class), so a plain-text source only has its
+ *   whitespace collapsed.
+ */
+export function autoPreheaderHtml(source: string, isHtml = true): string {
+  const flat = isHtml ? stripTagsForPreheader(source) : source.replace(/\s+/g, " ").trim();
+  return preheaderHtml(derivePreheaderText(stripUrlsForPreheader(flat)));
 }
 
 /** A colour is only trusted into inline CSS when it's a plain hex value. */
@@ -88,9 +309,92 @@ function safeUrl(value: string | null | undefined): string | null {
   return value.replace(/"/g, "%22");
 }
 
+/** The subset of {@link PublicBranding} the sender-identification footer
+ *  reads. Narrowed to just these three so callers that only have loose
+ *  identity fields (not a full resolved branding object) can still use it. */
+export interface FooterIdentity {
+  abn?: string | null;
+  phone?: string | null;
+  postal_address?: string | null;
+}
+
+/**
+ * The sender-identification line every couple-facing email carries below
+ * "Sent by … via Zebri", plus an optional unsubscribe link.
+ *
+ * The Australian Spam Act requires a commercial electronic message to
+ * clearly identify who sent it and how to contact them. ABN, phone and
+ * postal address are read from the MC's branding when set; a field the
+ * MC has never filled in is simply left out of the line rather than
+ * rendered blank. Blocking the send until every field is filled in would
+ * break every existing user the moment this ships, and a legally
+ * required field shown blank reads worse than a line that just carries
+ * fewer facts, so this degrades instead of gating.
+ *
+ * `unsubscribeUrl` is deliberately a plain string the caller supplies,
+ * never something this function decides on its own: whether a given send
+ * is "commercial" (needs the link) or "transactional" (does not) is a
+ * classification that will change once legal advice lands (see
+ * `lib/email/commercial-classification.ts`), so that decision has to stay
+ * in the caller, not get baked into the renderer.
+ */
+function senderFooterHtml(
+  mcBusinessName: string,
+  branding: FooterIdentity | null | undefined,
+  unsubscribeUrl?: string | null,
+): string {
+  const safeName = escapeHtmlText(mcBusinessName);
+  const identityLine = `<p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${safeName} via Zebri</p>`;
+
+  const details = [
+    branding?.abn ? `ABN ${escapeHtmlText(branding.abn)}` : null,
+    branding?.phone ? escapeHtmlText(branding.phone) : null,
+    branding?.postal_address ? escapeHtmlText(branding.postal_address) : null,
+  ].filter((value): value is string => value !== null);
+  const detailsLine = details.length
+    ? `<p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">${details.join(" &middot; ")}</p>`
+    : "";
+
+  const safeUnsubscribeUrl = safeUrl(unsubscribeUrl);
+  const unsubscribeLine = safeUnsubscribeUrl
+    ? `<p style="margin:8px 0 0;font-size:12px;color:#9ca3af;"><a href="${safeUnsubscribeUrl}" style="color:#6b7280;">Unsubscribe</a> from these emails</p>`
+    : "";
+
+  return `${identityLine}${detailsLine}${unsubscribeLine}`;
+}
+
+/**
+ * Append the sender-identification and unsubscribe block to an email
+ * that was rendered without the branded shell.
+ *
+ * A commercial message has to identify its sender and carry a working
+ * unsubscribe facility in the message itself; the `List-Unsubscribe`
+ * header alone is not reliably shown, and some transports (Microsoft
+ * Graph) cannot carry it at all. So when a commercial send's body did
+ * not come through a shell that already renders the footer (a
+ * `send_email` step with `wrap: false`, or an action whose renderer
+ * ignored the link), this adds a minimal one. It goes just before
+ * `</body>` when the HTML has one, else at the end.
+ *
+ * @param html - The rendered email.
+ * @param mcBusinessName - Shown in the "Sent by ... via Zebri" line.
+ * @param branding - ABN, phone and postal address, when the MC set them.
+ * @param unsubscribeUrl - This recipient's unsubscribe page link.
+ */
+export function appendComplianceFooter(
+  html: string,
+  mcBusinessName: string,
+  branding: FooterIdentity | null | undefined,
+  unsubscribeUrl: string,
+): string {
+  const block = `<div style="margin-top:24px;padding-top:12px;border-top:1px solid #f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">${senderFooterHtml(mcBusinessName, branding, unsubscribeUrl)}</div>`;
+  const close = html.toLowerCase().lastIndexOf("</body>");
+  return close === -1 ? `${html}${block}` : `${html.slice(0, close)}${block}${html.slice(close)}`;
+}
+
 /**
  * Wrap an already-rendered (HTML) email body in the outgoing shell.
- * Unlike the automation `wrapAutomationHtml` (which escapes a
+ * Unlike {@link wrapAutomationShell} (which escapes a
  * plain-text body), this embeds trusted, sanitised HTML produced by
  * `renderEmailTemplate`.
  *
@@ -101,13 +405,29 @@ function safeUrl(value: string | null | undefined): string | null {
  * safe font), and their corner radius. Without it, the neutral Zebri
  * shell renders — identical to the pre-branding output.
  *
+ * The footer always carries sender identification (business name, and
+ * ABN / phone / postal address when `branding` has them; see
+ * {@link senderFooterHtml}). Pass `unsubscribeUrl` to add the one-click
+ * unsubscribe link for a commercial send; omit it for a transactional
+ * one (the caller decides which, this function just renders).
+ *
  * The same function feeds the editor's WYSIWYG preview iframe and the
  * send route, so the preview is exactly what lands in the inbox.
+ *
+ * By default the preheader (Task 32) is auto-derived from `bodyHtml`.
+ * Pass a fixed string as `preheaderText` to use exactly that text instead
+ * (no derivation, no URL scrub: the caller is asserting it is already
+ * safe). The one caller that needs this is {@link contractOtpHtml}, whose
+ * body opens with a one-time code and needs a fixed, code-free sentence
+ * in its place. Pass `preheaderText: null` to render no preheader element
+ * at all.
  */
 export function wrapTemplateHtml(
   bodyHtml: string,
   mcBusinessName: string,
   branding?: PublicBranding | null,
+  unsubscribeUrl?: string | null,
+  preheaderText?: string | null,
 ): string {
   const safeName = escapeHtmlText(mcBusinessName);
 
@@ -161,16 +481,30 @@ export function wrapTemplateHtml(
 
   const fontsLink = fontsHref ? `<link rel="stylesheet" href="${fontsHref}">` : "";
 
+  // Derived from bodyHtml, before the header/footer are added around it,
+  // so the preheader can never repeat either of them (Task 32 ruling).
+  // `preheaderText === null` is the explicit opt-out (see the doc comment
+  // above): rendered as no preheader element at all, never an empty one.
+  // A given string (not null/undefined) is a caller's own fixed, already
+  // safe text, rendered as-is with no auto-derivation.
+  const preheader =
+    preheaderText === null
+      ? ""
+      : preheaderText !== undefined
+        ? preheaderHtml(preheaderText)
+        : autoPreheaderHtml(bodyHtml);
+
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${fontsLink}${headStyles}</head>
 <body style="margin:0;padding:0;background:#f9f9f9;font-family:${bodyStack};">
+  ${preheader}
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:${radius}px;border:1px solid #e5e7eb;overflow:hidden;">
         ${accentBar}${header}
         <tr><td class="zb-body" style="padding:32px 40px 40px;font-family:${bodyStack};font-weight:${bodyWeight};font-size:15px;color:#374151;line-height:1.6;">${bodyHtml}</td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
-          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${safeName} via Zebri</p>
+          ${senderFooterHtml(mcBusinessName, branding, unsubscribeUrl)}
         </td></tr>
       </table>
     </td></tr>
@@ -178,6 +512,16 @@ export function wrapTemplateHtml(
 </body></html>`;
 }
 
+/**
+ * The questionnaire invitation email.
+ *
+ * Pass `unsubscribeUrl` when the send is commercial (the automated
+ * `send_couple_questionnaire` step is, by the classification in
+ * `lib/email/commercial-classification.ts`): the footer then carries the
+ * sender identification and the unsubscribe link. Without it the output
+ * is unchanged, which is what the manual send from the couple profile
+ * still gets.
+ */
 export function questionnaireHtml(
   opts: {
     coupleName: string;
@@ -186,13 +530,14 @@ export function questionnaireHtml(
     mcBusinessName: string;
   },
   branding?: PublicBranding | null,
+  unsubscribeUrl?: string | null,
 ): string {
   const { coupleName, title, shareUrl, mcBusinessName } = opts;
 
-  // When branding is provided, use the branded email wrapper; otherwise,
-  // preserve the current hardcoded HTML for byte-for-byte compatibility.
-  if (branding) {
-    const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">A few questions</p>
+  // Hoisted above the branding branch: both paths show the same copy, so
+  // computing it once keeps the preheader (derived below) in sync with
+  // whichever shell actually renders it.
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">A few questions</p>
           <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${title}</h1>
           <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
             Hi ${coupleName},<br><br>
@@ -206,34 +551,29 @@ export function questionnaireHtml(
           <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
             Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
           </p>`;
-    return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
-  }
+
+  // When branding is provided, use the branded email wrapper; otherwise,
+  // preserve the current hardcoded HTML for byte-for-byte compatibility.
+  if (branding) return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding, unsubscribeUrl);
+
+  const footer = unsubscribeUrl
+    ? senderFooterHtml(mcBusinessName, null, unsubscribeUrl)
+    : `<p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>`;
+  const preheader = autoPreheaderHtml(bodyHtml);
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  ${preheader}
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
         <tr><td style="padding:40px 40px 32px;">
-          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">A few questions</p>
-          <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${title}</h1>
-          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
-            Hi ${coupleName},<br><br>
-            ${mcBusinessName} would love a few details to help plan your day. It only takes a couple of minutes, and you can come back to it any time.
-          </p>
-          <table cellpadding="0" cellspacing="0">
-            <tr><td style="background:#111827;border-radius:8px;">
-              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Start questionnaire</a>
-            </td></tr>
-          </table>
-          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
-            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
-          </p>
+          ${bodyHtml}
         </td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
-          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>
+          ${footer}
         </td></tr>
       </table>
     </td></tr>
@@ -254,10 +594,12 @@ export function questionnaireHtml(
  * @param mcBusinessName - Shown in the "Sent by … via Zebri" footer.
  */
 function plainCardHtml(bodyHtml: string, mcBusinessName: string): string {
+  const preheader = autoPreheaderHtml(bodyHtml);
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  ${preheader}
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
@@ -570,10 +912,10 @@ export function contractHtml(
     : "";
   const cta = signCtaBlock(shareUrl, "Review &amp; Sign Contract", links);
 
-  // When branding is provided, use the branded email wrapper; otherwise,
-  // preserve the current hardcoded HTML for byte-for-byte compatibility.
-  if (branding) {
-    const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Contract ${contractNumber}</p>
+  // Hoisted above the branding branch: both paths show the same copy, so
+  // computing it once keeps the preheader (derived below) in sync with
+  // whichever shell actually renders it.
+  const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Contract ${contractNumber}</p>
           <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${contractTitle}</h1>
           ${expiryLine}
           <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
@@ -581,25 +923,23 @@ export function contractHtml(
             ${mcBusinessName} has sent you a contract to review and sign.
           </p>
           ${cta}`;
-    return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
-  }
+
+  // When branding is provided, use the branded email wrapper; otherwise,
+  // preserve the current hardcoded HTML for byte-for-byte compatibility.
+  if (branding) return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
+
+  const preheader = autoPreheaderHtml(bodyHtml);
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  ${preheader}
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
         <tr><td style="padding:40px 40px 32px;">
-          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Contract ${contractNumber}</p>
-          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${contractTitle}</h1>
-          ${expiryLine}
-          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
-            Hi ${coupleName},<br><br>
-            ${mcBusinessName} has sent you a contract to review and sign.
-          </p>
-          ${cta}
+          ${bodyHtml}
         </td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
           <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>
@@ -672,10 +1012,13 @@ export function contractSignedHtml(
 
   if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding);
 
+  const preheader = autoPreheaderHtml(bodyHtml);
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  ${preheader}
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
@@ -695,7 +1038,13 @@ export function contractSignedHtml(
  *
  * The code is in the BODY only, never the subject: a subject line shows in
  * notification previews on a lock screen, which is exactly the shoulder-surfing
- * case the code is meant to resist.
+ * case the code is meant to resist. An auto-derived preheader would read
+ * the start of the body, which is exactly where the code lives, and put
+ * it right back into that same inbox-preview / lock-screen surface. So
+ * this function never auto-derives one; instead both paths get a fixed,
+ * code-free preheader (Task 32 review I1) that names the contract and the
+ * expiry the body already states, with the same generous padding every
+ * other shell uses to keep a client from reading past it into the code.
  */
 export function contractOtpHtml(
   opts: {
@@ -719,12 +1068,17 @@ export function contractOtpHtml(
             The code expires in ${String(minutes)} minutes. If you didn't ask to sign a contract from ${escapeHtmlText(mcBusinessName)}, you can ignore this email.
           </p>`;
 
-  if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding);
+  // Fixed and code-free on both paths: never derived from bodyHtml, whose
+  // start is exactly where the code lives (Task 32 review I1).
+  const safePreheader = `Your signing code for contract ${contractNumber}. It expires in ${String(minutes)} minutes.`;
+
+  if (branding) return wrapTemplateHtml(bodyHtml, mcBusinessName, branding, undefined, safePreheader);
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  ${preheaderHtml(safePreheader)}
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">

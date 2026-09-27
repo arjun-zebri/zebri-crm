@@ -43,8 +43,22 @@ async function handle(request: NextRequest) {
   const now = new Date();
 
   // The tick cannot alert about itself not running. This job can.
-  const lastTick = await readHeartbeat(admin, TICK_HEARTBEAT);
-  if (isHeartbeatStale(lastTick, now, TICK_STALE_MS)) {
+  // A failed read is its own alert, not a "missed" one, and does not stop
+  // the digests: the MCs' mornings do not depend on the tick's stamp.
+  let lastTick: string | null = null;
+  let heartbeatRead = true;
+  try {
+    lastTick = await readHeartbeat(admin, TICK_HEARTBEAT);
+  } catch (err) {
+    heartbeatRead = false;
+    void sendAlert({
+      type: 'app_error',
+      severity: 'error',
+      source: 'workflow_digest.heartbeat',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+  if (heartbeatRead && isHeartbeatStale(lastTick, now, TICK_STALE_MS)) {
     void sendAlert({
       type: 'cron_job_missed',
       severity: 'warn',

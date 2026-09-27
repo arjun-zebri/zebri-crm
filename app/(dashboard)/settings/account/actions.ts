@@ -10,7 +10,7 @@
  * Pipeline mirrors the auth actions:
  *   1. Parse FormData via {@link changePasswordSchema}.
  *   2. Re-authenticate with the current password
- *      (`signInWithPassword`).
+ *      (`signInWithPassword` on a throwaway client, see below).
  *   3. Rate-limit per session (per user-id, not per IP): protects
  *      against scripted password-guessing inside a hijacked session.
  *   4. Update the password (`auth.updateUser({ password })`).
@@ -18,6 +18,8 @@
  * @module app/(dashboard)/settings/account/actions
  */
 'use server';
+
+import { createClient as createStatelessClient } from '@supabase/supabase-js';
 
 import { sendAlert } from '@/lib/alerts/send-alert';
 import {
@@ -65,14 +67,25 @@ export async function changePasswordAction(
     return { error: 'Too many attempts. Please wait a moment and try again.' };
   }
 
-  // Re-authenticate. signInWithPassword refreshes the session, fine.
-  const { error: reauthError } = await supabase.auth.signInWithPassword({
+  // Re-authenticate on a throwaway client, not the cookie-bound one. A
+  // password sign-in mints a fresh aal1 session; doing it on `supabase`
+  // would replace an MC's aal2 (two-factor) session with it, and Supabase
+  // then refuses the password update below ("AAL2 session is required")
+  // and the middleware sends them to the code screen (Phase 4, Task 23).
+  const verifier = createStatelessClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+  const { error: reauthError } = await verifier.auth.signInWithPassword({
     email: user.email,
     password: parsed.data.currentPassword,
   });
   if (reauthError) {
     return { fieldErrors: { currentPassword: 'Current password is incorrect.' }, error: 'Current password is incorrect.' };
   }
+  // End just the throwaway session so it does not linger as a live login.
+  await verifier.auth.signOut({ scope: 'local' });
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { error: error.message };

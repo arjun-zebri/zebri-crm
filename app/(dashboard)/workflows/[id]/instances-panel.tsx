@@ -52,12 +52,16 @@ interface InstanceRow {
 
 const STATUS_LABEL: Record<InstanceStatus, string> = {
   active: 'Running',
+  paused: 'Paused',
   completed: 'Finished',
   cancelled: 'Stopped',
 }
 
 const STATUS_TONE: Record<InstanceStatus, 'success' | 'warning' | 'danger' | 'neutral'> = {
   active: 'neutral',
+  // Warning, not neutral: a paused workflow sends nothing until someone
+  // resumes it, which is worth catching the eye in a list of runs.
+  paused: 'warning',
   completed: 'success',
   cancelled: 'neutral',
 }

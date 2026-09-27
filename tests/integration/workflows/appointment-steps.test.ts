@@ -238,6 +238,8 @@ describe('appointment steps complete on a Scheduler booking', () => {
     await book(coupleId, meetingTypeId);
     await dispatchPendingEvents(admin);
 
-    expect((await step(appointmentId)).status).toBe('pending');
+    // Cancelling marks the open step `cancelled` (Task 22, 20261011000000);
+    // not ticked means it is still that, never `done`.
+    expect((await step(appointmentId)).status).toBe('cancelled');
   });
 });

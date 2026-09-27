@@ -43,6 +43,7 @@ import {
 } from '@/lib/api/rate-limit';
 import { parseFormData } from '@/lib/api/validate';
 import { updateEntitlements } from '@/lib/auth/entitlements';
+import { hasVerifiedFactor, SECOND_FACTOR_PATH } from '@/lib/auth/mfa';
 import {
   loginSchema,
   resetPasswordRequestSchema,
@@ -126,6 +127,15 @@ export async function loginAction(
   }
 
   if (!data.user) return { error: 'Login failed. Please try again.', values: { email: submittedEmail } };
+
+  // Two-factor sign-in on: the password alone gives an aal1 session,
+  // which middleware keeps out of the dashboard. Go straight to the code
+  // step rather than bouncing off a dashboard route first. `next` is
+  // already validated as a same-origin path by loginSchema.
+  if (hasVerifiedFactor(data.user)) {
+    const next = parsed.data.next;
+    redirect(next ? `${SECOND_FACTOR_PATH}?next=${encodeURIComponent(next)}` : SECOND_FACTOR_PATH);
+  }
 
   redirect(parsed.data.next ?? '/');
 }

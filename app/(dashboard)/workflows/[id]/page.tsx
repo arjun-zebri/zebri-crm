@@ -47,6 +47,8 @@ import {
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useTimerPillAnchor } from '@/components/time-tracking/use-timer-pill-anchor';
+import { useToast } from '@/components/ui/toast';
 import { actionUi } from '@/lib/automations/actions/ui';
 import { triggerRegistry } from '@/lib/automations/triggers';
 import { createClient } from '@/lib/supabase/client';
@@ -56,7 +58,6 @@ import {
   planStepReorderFromDrop,
 } from '@/lib/workflows/insert-step';
 import { isAutomated, splitStepType } from '@/lib/workflows/steps';
-import { isDefaultTiming, shortTiming, toStepTiming } from '@/lib/workflows/timing-summary';
 import type {
   ActionType,
   AutomationRow,
@@ -70,7 +71,6 @@ import {
   deleteTemplateStepRow,
   renameTemplateAction,
   renumberTemplateSteps,
-  setTemplateStatusAction,
   setApplyRuleAction,
   updateTemplateStepEdges,
 } from '../actions';
@@ -94,8 +94,10 @@ import { MODAL_ACTIONS, StepConfigForm } from './inspector-panel';
 import { RunHistoryPanel } from './instances-panel';
 import { MobileStepList, type MobileStepItem } from './mobile-step-list';
 import { ActionPicker } from './step-picker';
-import { stepSummary, stepTitle, type StepSummaryLabels } from './step-summary';
+import { stepSummary, stepTitle, timingChip, type StepSummaryLabels } from './step-summary';
+import { UnfinishedStepsBanner } from './unfinished-steps-banner';
 import { useNarrowViewport } from './use-narrow-viewport';
+import { useTemplatePreflight } from './use-template-preflight';
 
 const TRIGGER_NODE_ID = '__trigger__';
 const ADD_ACTION_NODE_ID = '__add_action__';
@@ -132,6 +134,7 @@ function AutomationCanvas() {
   const describeParam = useSearchParams().get('describe');
   const [openingPrompt] = useState<string | undefined>(() => describeParam ?? undefined);
   const router = useRouter();
+  const pillAnchor = useTimerPillAnchor();
   const templateId = params.id;
 
   // Drop it the moment it has been read. `replace`, not `push`: the
@@ -144,6 +147,7 @@ function AutomationCanvas() {
   // rather than a CSS hide: React Flow measures its container, and a
   // display:none canvas fits its view to a zero-size box.
   const narrow = useNarrowViewport();
+  const { toast } = useToast();
 
   const [automation, setAutomation] = useState<AutomationRow | null>(null);
   const [actions, setActions] = useState<AutomationActionRow[]>([]);
@@ -215,6 +219,15 @@ function AutomationCanvas() {
     };
   }, [templateId]);
 
+  // The Turn on pre-flight, for the card badges and the banner on a
+  // workflow already on (Task 34). The switch is gated on the server.
+  const preflight = useTemplatePreflight(templateId, actions);
+  const refreshPreflight = preflight.refresh;
+  const problemByStep = useMemo(
+    () => new Map((preflight.problems ?? []).map((p) => [p.stepId, p.message])),
+    [preflight.problems],
+  );
+
   const applyRuleType = (automation?.trigger_type ?? 'unset') as TriggerType | 'unset';
   const triggerIsSet = applyRuleType !== 'unset';
   const applyRuleConfig = useMemo(
@@ -228,6 +241,17 @@ function AutomationCanvas() {
   // The chip UI writes whole-config patches, so the trigger's save path
   // lives here: the card body stays stateless and the page remains the
   // single owner of the automation row.
+  // The server refuses a trigger that starts the workflow on one of its
+  // own stop stages. The edit was painted optimistically, so say why and
+  // put the saved rule back.
+  const handleRuleRefused = useCallback(
+    (error: string) => {
+      toast(error, 'error');
+      void reloadWorkflow();
+    },
+    [toast, reloadWorkflow],
+  );
+
   const handleTriggerConfigChange = useCallback(
     (next: Record<string, unknown>) => {
       setAutomation((prev) => (prev ? { ...prev, trigger_config: next as never } : prev));
@@ -237,9 +261,11 @@ function AutomationCanvas() {
         templateId,
         applyRuleType: applyRuleType as string,
         applyRuleConfig: next,
+      }).then((res) => {
+        if (!res.ok) handleRuleRefused(res.error);
       });
     },
-    [templateId, applyRuleType, triggerIsSet],
+    [templateId, applyRuleType, triggerIsSet, handleRuleRefused],
   );
 
   /* ── Layout → nodes / edges ────────────────────────────────── */
@@ -332,8 +358,9 @@ function AutomationCanvas() {
         noConfig: action.type === 'stop' || action.type === 'send_sms',
         // Scheduling is the part an MC gets wrong, so it belongs on the
         // card rather than three clicks inside the inspector.
-        timingLabel: timingChipFor(action),
+        timingLabel: timingChip(action),
         needsReview: action.requires_approval === true,
+        problem: problemByStep.get(action.id),
         // Read off the stored (native) type, not the builder slug: the
         // canvas calls an action by its action slug ("send_email"), and
         // the step registry only knows the five native types, so asking
@@ -368,6 +395,7 @@ function AutomationCanvas() {
     tailContext,
     expandedId,
     summaryLabels,
+    problemByStep,
   ]);
 
   // The same cards the canvas draws, flattened into run order with
@@ -583,7 +611,7 @@ function AutomationCanvas() {
         setActions((prev) => prev.filter((a) => a.id !== nodeId));
         setExpandedId((current) => (current === nodeId ? null : current));
         setSavedAt(new Date());
-        void deleteTemplateStepRow({ stepId: nodeId, templateId });
+        void deleteTemplateStepRow({ stepId: nodeId, templateId }).then(refreshPreflight);
       },
       onChangeTrigger: openTriggerPicker,
       renderBody: (nodeId) => {
@@ -634,6 +662,7 @@ function AutomationCanvas() {
                 ),
               );
               setSavedAt(new Date());
+              refreshPreflight();
             }}
           />
         );
@@ -650,6 +679,7 @@ function AutomationCanvas() {
       filters,
       handleTriggerConfigChange,
       openTriggerPicker,
+      refreshPreflight,
     ],
   );
 
@@ -678,13 +708,9 @@ function AutomationCanvas() {
     setSavedAt(new Date());
   }
 
-  async function handleToggleActive() {
-    if (!automation) return;
-    // Templates have no `paused`: a workflow that should stop applying
-    // goes back to being a draft, which is also editable. Two states did
-    // what the automations model needed three for.
-    const next: TemplateStatus = automation.status === 'active' ? 'draft' : 'active';
-    await setTemplateStatusAction({ templateId, status: next });
+  // The switch itself, and the confirmation in front of it, live in
+  // CanvasStatusToggle; the page only mirrors the saved result.
+  function handleStatusChanged(next: TemplateStatus) {
     setAutomation((prev) => (prev ? { ...prev, status: next } : prev));
     setSavedAt(new Date());
   }
@@ -694,15 +720,22 @@ function AutomationCanvas() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <CanvasHeader
-        name={automation.name}
-        status={automation.status}
-        savedAt={savedAt}
-        onBack={() => router.push('/workflows?tab=templates')}
-        onRename={handleRename}
-        onToggleActive={handleToggleActive}
-        onShowRuns={() => setRunsOpen(true)}
-      />
+      {/* The running-timer pill docks below this block, so it never sits
+          on Turn on / Turn off or on the unfinished-steps banner (Phase 6
+          live check, B1). */}
+      <div ref={pillAnchor}>
+        <CanvasHeader
+          name={automation.name}
+          status={automation.status}
+          savedAt={savedAt}
+          onBack={() => router.push('/workflows?tab=templates')}
+          onRename={handleRename}
+          templateId={templateId}
+          onStatusChanged={handleStatusChanged}
+          onShowRuns={() => setRunsOpen(true)}
+        />
+        <UnfinishedStepsBanner status={automation.status} problems={preflight.problems} />
+      </div>
 
       <div className="relative min-h-0 flex-1">
         <FlowNodeContext.Provider value={nodeApi}>
@@ -748,6 +781,7 @@ function AutomationCanvas() {
                   await deleteTemplateStepRow({ stepId: n.id, templateId });
                 }
                 await reloadActions();
+                refreshPreflight();
               }}
             >
               <Background gap={20} size={1} color="var(--color-border)" />
@@ -778,6 +812,7 @@ function AutomationCanvas() {
           currentTrigger={applyRuleType}
           anchor={triggerPickerAnchor}
           onClose={() => setTriggerPickerAnchor(null)}
+          onRefused={handleRuleRefused}
           onPicked={(next) => {
             setAutomation((prev) =>
               prev
@@ -807,6 +842,9 @@ function AutomationCanvas() {
             setSavedAt(new Date());
             void serverResult.then((res) => {
               if (!res.ok) setActions((prev) => prev.filter((a) => a.id !== optimistic.id));
+              // The row is only on the server now: ask again so the new
+              // placeholder is badged even if the first ask beat it there.
+              refreshPreflight();
             });
           }}
         />
@@ -816,16 +854,6 @@ function AutomationCanvas() {
 }
 
 /** Lucide icon name for a step, from the client-safe action catalogue. */
-/**
- * The timing chip for one node, or undefined when there is nothing worth
- * saying. The default ("straight after the step above") is deliberately
- * silent: a chip on every card would be noise rather than information.
- */
-function timingChipFor(action: AutomationActionRow): string | undefined {
-  const timing = toStepTiming(action.timing);
-  return isDefaultTiming(timing) ? undefined : shortTiming(timing);
-}
-
 function actionIconName(action: AutomationActionRow): string | undefined {
   // Cast to string: `todo` and `appointment` are stored step types, not
   // members of `ActionType`, but the builder row carries them - and

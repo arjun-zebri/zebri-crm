@@ -41,6 +41,7 @@ function step(id: string, overrides: Partial<WorkflowStepRow> = {}): WorkflowSte
     completed_at: null,
     error_message: null,
     output: null,
+    attempt_count: 0,
     created_at: '2026-09-01T00:00:00Z',
     updated_at: '2026-09-01T00:00:00Z',
     ...overrides,
@@ -59,6 +60,10 @@ function instance(
     name: 'Booking flow',
     template_version: 1,
     status: 'active',
+    paused_reason: null,
+    cancelled_reason: null,
+    dedupe_key: null,
+    template_status: 'active',
     is_default: false,
     is_personal: false,
     trigger_event_id: null,
@@ -66,6 +71,7 @@ function instance(
     applied_at: '2026-09-01T00:00:00Z',
     completed_at: null,
     error_message: null,
+    needs_recompute_at: null,
     created_at: '2026-09-01T00:00:00Z',
     updated_at: '2026-09-01T00:00:00Z',
     steps,
@@ -160,6 +166,81 @@ describe('bucketCoupleSteps', () => {
 
     expect(buckets.done.map((r) => r.step.id)).toEqual(['skipped', 'done-old']);
     expect(buckets.next.map((r) => r.step.id)).toEqual(['open']);
+  });
+
+  it('marks a paused workflow\'s rows paused, and still offers to stop it', () => {
+    const buckets = bucketCoupleSteps(
+      [
+        instance([step('held', { due_at: '2026-09-10T00:00:00Z' })], { status: 'paused' }),
+        instance([step('live', { due_at: '2026-09-11T00:00:00Z' })], { id: 'inst-2' }),
+      ],
+      TZ,
+      NOW,
+    );
+    const byId = new Map(buckets.next.map((r) => [r.step.id, r]));
+    // The row has to say so: a paused send that looks like any other
+    // upcoming send is the MC being told it will go when it will not.
+    expect(byId.get('held')?.paused).toBe(true);
+    expect(byId.get('held')?.canStop).toBe(true);
+    expect(byId.get('live')?.paused).toBe(false);
+  });
+
+  it('treats a cancelled step as neither done, nor work, nor a failure', () => {
+    const buckets = bucketCoupleSteps(
+      [
+        instance([
+          step('stopped', { status: 'cancelled', due_at: '2026-09-01T02:00:00Z' }),
+          step('open'),
+        ]),
+      ],
+      TZ,
+      NOW,
+    );
+    const all = [...buckets.needsYouNow, ...buckets.next, ...buckets.done];
+    expect(all.map((r) => r.step.id)).toEqual(['open']);
+  });
+
+  it('offers Pause only on a running workflow the MC started', () => {
+    const buckets = bucketCoupleSteps(
+      [
+        instance([step('running')]),
+        instance([step('held')], { id: 'inst-2', status: 'paused', paused_reason: 'manual' }),
+        instance([step('loose')], { id: 'inst-3', is_default: true, template_id: null }),
+      ],
+      TZ,
+      NOW,
+    );
+    const byId = new Map(buckets.next.map((r) => [r.step.id, r]));
+    expect(byId.get('running')?.canPause).toBe(true);
+    expect(byId.get('held')?.canPause).toBe(false);
+    expect(byId.get('loose')?.canPause).toBe(false);
+    // Resume is the paused one's, and only when the server would allow it.
+    expect(byId.get('held')?.canResume).toBe(true);
+    expect(byId.get('running')?.canResume).toBe(false);
+  });
+
+  it('does not offer Resume on a workflow an apply is still building', () => {
+    const buckets = bucketCoupleSteps(
+      [instance([step('building')], { status: 'paused', paused_reason: null })],
+      TZ,
+      NOW,
+    );
+    expect(buckets.next[0]?.canResume).toBe(false);
+  });
+
+  it('does not offer Resume while the workflow is turned off', () => {
+    const buckets = bucketCoupleSteps(
+      [
+        instance([step('off')], {
+          status: 'paused',
+          paused_reason: 'template_off',
+          template_status: 'draft',
+        }),
+      ],
+      TZ,
+      NOW,
+    );
+    expect(buckets.next[0]?.canResume).toBe(false);
   });
 
   it('does not call a step due later today overdue', () => {

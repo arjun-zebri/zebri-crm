@@ -128,6 +128,7 @@ export function flattenQueue(result: QueueResult): QueueItem[] {
     ...result.today,
     ...result.upcoming,
     ...result.sendingToday,
+    ...result.scheduled,
   ];
 }
 
@@ -189,7 +190,9 @@ export function rowDueLabel(
   now: Date = new Date(),
 ): string {
   if (item.status === 'errored') return 'Failed';
-  if (item.dueAt === null) return '';
+  // No time because a person decides when it runs: say who and what,
+  // e.g. "After you finish Call the venue", rather than leave it blank.
+  if (item.dueAt === null) return item.gate ?? '';
 
   const due = new Date(item.dueAt);
   const todayLocal = zonedDateParts(now, timezone).date;

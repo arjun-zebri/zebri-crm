@@ -67,7 +67,7 @@ vi.mock('@/lib/alerts', () => ({
   sendAlert: vi.fn(async () => undefined),
 }))
 vi.mock('@/lib/alerts/logger', () => ({
-  logger: { error: vi.fn() },
+  logger: { error: vi.fn(), warn: vi.fn() },
 }))
 vi.mock('@/lib/email', () => ({
   sendInvoiceEmail: (...args: unknown[]) => sendInvoiceEmailMock(...args),

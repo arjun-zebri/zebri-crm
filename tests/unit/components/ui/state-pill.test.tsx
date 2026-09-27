@@ -2,7 +2,9 @@
  * Unit tests for the shared StatePill.
  */
 import { render, screen } from '@testing-library/react';
+import { AlertTriangle } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
+
 
 import { StatePill } from '@/components/ui/state-pill';
 
@@ -57,4 +59,27 @@ describe('StatePill', () => {
     );
     expect((container.firstElementChild as HTMLElement).className).toContain('ml-4');
   });
+
+  it('renders a leading icon at the icon stroke, hidden from readers', () => {
+    const { container } = render(<StatePill label="Subject is required." tone="warning" icon={AlertTriangle} />);
+    const svg = container.querySelector('svg') as SVGElement | null;
+    expect(svg).toBeTruthy();
+    expect(svg?.getAttribute('aria-hidden')).toBe('true');
+    expect(svg?.getAttribute('stroke-width')).toBe('1.5');
+    expect(screen.getByText('Subject is required.')).toBeInTheDocument();
+  });
+
+  it('lets a sentence-length label wrap when asked, instead of overflowing', () => {
+    const { container, rerender } = render(<StatePill label="x" />);
+    expect((container.firstElementChild as HTMLElement).className).not.toContain('max-w-full');
+    rerender(<StatePill label="A longer sentence that tells the MC what to fix" wrap />);
+    const pill = container.firstElementChild as HTMLElement;
+    expect(pill.className).toContain('max-w-full');
+    expect(pill.className).toContain('items-start');
+    // Two lines under a pill radius push the first and last glyphs out of
+    // the tint (Task 34 re-review Minor 1): a wrapped pill is a control.
+    expect(pill.className).toContain('rounded-control');
+    expect(pill.className).not.toContain('rounded-pill');
+  });
 });
+

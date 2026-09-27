@@ -121,6 +121,11 @@ describe('bucketQueueItems', () => {
 });
 
 describe('rowDueLabel', () => {
+  it('says why a row has no time, in place of a date', () => {
+    const gated = item({ dueAt: null, gate: 'After you OK Quote' });
+    expect(rowDueLabel(gated, 'undated', TZ, NOW)).toBe('After you OK Quote');
+  });
+
   it('says how long an overdue step has been sitting', () => {
     expect(rowDueLabel(item({ dueAt: due('2026-09-09') }), 'overdue', TZ, NOW)).toBe(
       'Yesterday',
@@ -158,6 +163,7 @@ describe('flattenQueue', () => {
       today: [item({ stepId: 'c' })],
       upcoming: [item({ stepId: 'd' })],
       sendingToday: [item({ stepId: 'e' })],
+      scheduled: [],
     });
     expect(flat.map((i) => i.stepId)).toEqual(['a', 'b', 'c', 'd', 'e']);
   });

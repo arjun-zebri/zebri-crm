@@ -31,7 +31,10 @@ describe('applyTemplate', () => {
     expect(coupleErr).toBeNull();
     coupleId = couple!.id;
 
-    const { data: tpl, error: tplErr } = await user.client
+    // Service client: the activation lock (Phase 6, Task 34) refuses a
+    // client insert of an active template; a real one is turned on
+    // through the pre-flight. Setup only; the assertions are unchanged.
+    const { data: tpl, error: tplErr } = await admin
       .from('workflow_templates')
       .insert({ user_id: user.id, name: 'Gold package', status: 'active', version: 3 })
       .select('id')
@@ -146,7 +149,8 @@ describe('applyTemplate', () => {
   });
 
   it('snapshots branch children under their new parent step id', async () => {
-    const { data: tpl } = await user.client
+    // Service client, for the activation lock (see the suite setup).
+    const { data: tpl } = await admin
       .from('workflow_templates')
       .insert({ user_id: user.id, name: 'Branchy', status: 'active' })
       .select('id').single();
@@ -186,7 +190,8 @@ describe('applyTemplate', () => {
   });
 
   it('refuses a duplicate apply when dedupe is on, and allows it when off', async () => {
-    const { data: tpl } = await user.client
+    // Service client, for the activation lock (see the suite setup).
+    const { data: tpl } = await admin
       .from('workflow_templates')
       .insert({ user_id: user.id, name: 'Once only', status: 'active' })
       .select('id').single();
@@ -236,7 +241,8 @@ describe('applyTemplate', () => {
   });
 
   it('skips disabled template steps', async () => {
-    const { data: tpl } = await user.client
+    // Service client, for the activation lock (see the suite setup).
+    const { data: tpl } = await admin
       .from('workflow_templates')
       .insert({ user_id: user.id, name: 'With a disabled step', status: 'active' })
       .select('id').single();

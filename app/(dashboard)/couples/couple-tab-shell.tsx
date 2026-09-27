@@ -41,14 +41,17 @@ export interface TabStat {
   label: string;
   /**
    * `'success'` tints the part green (`text-success`), `'danger'` red
-   * (`text-danger`, e.g. an overdue count); omit for muted.
+   * (`text-danger`, e.g. an overdue count), `'warning'` amber
+   * (`text-warning`, e.g. sends that reached only some recipients); omit
+   * for muted.
    */
-  tone?: 'success' | 'danger';
+  tone?: 'success' | 'danger' | 'warning';
 }
 
 const TONE_CLASS: Record<NonNullable<TabStat['tone']>, string> = {
   success: 'font-medium text-success',
   danger: 'font-medium text-danger',
+  warning: 'font-medium text-warning',
 };
 
 export interface CoupleTabShellProps {
@@ -75,13 +78,19 @@ export function CoupleTabShell({ title, stats, actions, children }: CoupleTabShe
   return (
     <div className="relative flex flex-1 flex-col gap-6 min-h-0">
       {title || actions ? (
-        <div className="relative z-10 flex items-center justify-between gap-4">
-          <div className="min-w-0">
+        // Stacked below `sm`: side by side at 390px the actions took the
+        // row and the title and its stats collapsed to 0px, hiding "1
+        // partly failed" on a phone (live check B3, B4). From `sm` up the
+        // actions sit on the right and the title block takes what is left.
+        <header className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0 sm:flex-1">
             {title ? (
               <h2 className="truncate text-lg font-semibold text-text">{title}</h2>
             ) : null}
             {stats && stats.length > 0 ? (
-              <p className="mt-0.5 truncate text-body text-text-muted">
+              // Wraps rather than truncates: a cut-off stat line hid the
+              // count that tells the MC something went wrong.
+              <p className="mt-0.5 break-words text-body text-text-muted">
                 {stats.map((s, i) => (
                   <Fragment key={i}>
                     {i > 0 ? <span className="text-text-subtle"> · </span> : null}
@@ -91,8 +100,11 @@ export function CoupleTabShell({ title, stats, actions, children }: CoupleTabShe
               </p>
             ) : null}
           </div>
-          <div className="flex shrink-0 items-center gap-2">{actions}</div>
-        </div>
+          {/* Each action keeps its one-line width and wraps to the next
+              line as a whole: shrunk, a label broke onto two lines inside
+              its 32px button. */}
+          <div className="flex flex-wrap items-center gap-2 *:shrink-0 sm:shrink-0">{actions}</div>
+        </header>
       ) : null}
       {children}
     </div>

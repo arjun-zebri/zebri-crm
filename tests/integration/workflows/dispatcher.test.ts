@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { dispatchPendingEvents } from '@/lib/workflows/dispatcher';
+import { dispatchPendingEvents, STALE_EVENTS_HEARTBEAT } from '@/lib/workflows/dispatcher';
 import type { Json } from '@/types/database';
 
 import { createTestUser, serviceClient, type TestUser } from '../helpers/supabase';
@@ -49,18 +49,31 @@ describe('dispatchPendingEvents', () => {
       .in('user_id', [user.id, other.id]);
   });
 
+  /**
+   * Set a template's status with the service role: the activation lock
+   * (20261023600000) refuses a client role switching one on.
+   */
+  async function switchTo(templateId: string, status: string): Promise<void> {
+    const { error } = await admin.from('workflow_templates').update({ status }).eq('id', templateId);
+    expect(error).toBeNull();
+  }
+
   async function template(
     owner: TestUser,
     applyRuleType: string,
     applyRuleConfig: Json,
     status = 'active',
   ): Promise<string> {
+    // Created as a draft through the MC's own client (RLS-scoped), then
+    // switched on with the service role. Since 20261023600000 a client
+    // role cannot make a template active: Turn on goes through the
+    // pre-flighted server action, which flips it as the service role.
     const { data, error } = await owner.client
       .from('workflow_templates')
       .insert({
         user_id: owner.id,
         name: `${applyRuleType} template`,
-        status,
+        status: 'draft',
         apply_rule_type: applyRuleType,
         apply_rule_config: applyRuleConfig,
       })
@@ -75,6 +88,7 @@ describe('dispatchPendingEvents', () => {
       title: 'Say hello',
       config: {},
     });
+    if (status !== 'draft') await switchTo(data!.id, status);
     return data!.id;
   }
 
@@ -185,13 +199,14 @@ describe('dispatchPendingEvents', () => {
       .insert({
         user_id: user.id,
         name: 'Broken config',
-        status: 'active',
+        status: 'draft',
         apply_rule_type: 'on_package_applied',
         apply_rule_config: { packageId: 'not-a-uuid' },
       })
       .select('id')
       .single();
     expect(broken).not.toBeNull();
+    await switchTo(broken!.id, 'active');
 
     const good = await template(user, 'on_couple_created', {});
     const coupleId = await newCouple(user, 'Dispatch Broken Config');
@@ -249,6 +264,38 @@ describe('dispatchPendingEvents', () => {
       .eq('couple_id', coupleId);
     expect(after!.every((e) => e.processed_at !== null)).toBe(true);
     expect(after!.every((e) => (e.error_message ?? '').startsWith('skipped: stale'))).toBe(true);
+  });
+
+  it('records a stale skip on the heartbeat the Admin card reads (Task 36, M4)', async () => {
+    // The skip used to leave no trace outside the rows themselves. It now
+    // stamps `workflow-stale-events` with the batch's count, which the
+    // scheduler card reads through `scheduler_status()` with no query of
+    // its own. Real table, real grants: the service-role write has to land.
+    await template(user, 'on_couple_created', {});
+    const coupleId = await newCouple(user, 'Dispatch Stale Record');
+    const { data: pending } = await admin
+      .from('automation_events')
+      .select('id')
+      .eq('couple_id', coupleId)
+      .is('processed_at', null);
+    expect(pending!.length).toBeGreaterThan(0);
+    await admin
+      .from('automation_events')
+      .update({ created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() })
+      .in('id', pending!.map((e) => e.id));
+    const startedAt = Date.now();
+
+    const result = await dispatchPendingEvents(admin);
+
+    const { data: row, error } = await admin
+      .from('system_heartbeats')
+      .select('last_run_at, detail')
+      .eq('name', STALE_EVENTS_HEARTBEAT)
+      .maybeSingle();
+    expect(error).toBeNull();
+    expect(new Date(row!.last_run_at).getTime()).toBeGreaterThanOrEqual(startedAt - 1000);
+    expect((row!.detail as { count: number }).count).toBe(result.staleEvents);
+    expect(result.staleEvents).toBeGreaterThanOrEqual(pending!.length);
   });
 
   it('does not apply the same template twice across ticks', async () => {

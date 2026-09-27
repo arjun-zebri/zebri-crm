@@ -61,6 +61,10 @@ export interface BrandPreviewState {
   sectionSpacing: number
   businessName: string
   phone: string
+  /** Postal address, from Settings → Branding. Read-only signal for the
+   *  preview; drives the sender-identification line in the email footer
+   *  (`senderFooterHtml` in `lib/email/html.ts`), not rendered on the canvas. */
+  postalAddress: string
   website: string
   instagramUrl: string
   facebookUrl: string

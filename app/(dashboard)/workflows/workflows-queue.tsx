@@ -17,7 +17,7 @@
  * @module app/(dashboard)/workflows/workflows-queue
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -27,19 +27,14 @@ import { ErrorState } from '@/components/ui/error-state';
 import type { QueueResult } from '@/lib/workflows/queue';
 
 import { DoneSection } from './done-section';
-import {
-  loadQueueAction,
-  rescheduleStepAction,
-  skipStepAction,
-  tickStepAction,
-} from './instance-actions';
+import { loadQueueAction } from './instance-actions';
 import { QueueAddStep } from './queue-add-step';
 import { flattenQueue } from './queue-buckets';
 import { QueueGroupMenu } from './queue-group-menu';
 import { DEFAULT_GROUP_BY, groupQueueItems, type QueueGroupBy } from './queue-grouping';
-import { inDays } from './queue-labels';
 import { StepDetailModal } from './step-detail-modal';
 import { UpcomingList } from './upcoming-list';
+import { useQueueStepMutations } from './use-queue-step-mutations';
 import { WorkflowsEmpty } from './workflows-empty';
 import { UpcomingSkeleton } from './workflows-skeletons';
 
@@ -51,6 +46,7 @@ const EMPTY: QueueResult = {
   today: [],
   upcoming: [],
   sendingToday: [],
+  scheduled: [],
 };
 
 export interface WorkflowsQueueProps {
@@ -84,29 +80,7 @@ export function WorkflowsQueue({ timezone }: WorkflowsQueueProps) {
     },
   });
 
-  const tick = useMutation({
-    mutationFn: async (stepId: string) => {
-      const res = await tickStepAction({ stepId });
-      if (!res.ok) throw new Error(res.error);
-    },
-    onSuccess: invalidate,
-  });
-
-  const snooze = useMutation({
-    mutationFn: async ({ stepId, days }: { stepId: string; days: number }) => {
-      const res = await rescheduleStepAction({ stepId, dueAt: inDays(days) });
-      if (!res.ok) throw new Error(res.error);
-    },
-    onSuccess: invalidate,
-  });
-
-  const skip = useMutation({
-    mutationFn: async (stepId: string) => {
-      const res = await skipStepAction({ stepId });
-      if (!res.ok) throw new Error(res.error);
-    },
-    onSuccess: invalidate,
-  });
+  const { tick, snooze, skip } = useQueueStepMutations(invalidate);
 
   const all = useMemo(() => flattenQueue(query.data ?? EMPTY), [query.data]);
 

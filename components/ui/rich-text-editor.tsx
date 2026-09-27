@@ -97,6 +97,18 @@ interface RichTextEditorProps {
    * content rather than reserve a fixed block of empty space.
    */
   scrollBody?: boolean
+  /**
+   * Called once, when the editor is created, with its document as the
+   * editor itself serialises it (default attributes filled in, through
+   * `toPlainJSON` like `onChange`).
+   *
+   * A caller that needs to know whether the MC changed anything compares
+   * `onChange` output against THIS, not against the `value` it passed in:
+   * the stored doc usually lacks the defaults the editor adds, so the two
+   * differ before a key is pressed, and an edit then undo would never read
+   * as clean. Used by the step detail modal's "edited" check.
+   */
+  onReady?: (value: JSONContent) => void
 }
 
 /** The variable path that injects the MC's email signature. */
@@ -161,6 +173,7 @@ export function RichTextEditor({
   tables = false,
   listStyles = false,
   scrollBody = false,
+  onReady,
 }: RichTextEditorProps) {
   // When a signature is supplied (compose editor), the mention extension
   // gets a React NodeView so `{{mc.signature}}` renders inline as the rich
@@ -234,6 +247,7 @@ export function RichTextEditor({
     // React Server Action serialisation silently drops (the variable id is
     // lost, saving `{{null}}`). Normalise to plain objects on the way out.
     onUpdate: ({ editor }) => onChange(toPlainJSON(editor.getJSON())),
+    onCreate: ({ editor }) => onReady?.(toPlainJSON(editor.getJSON())),
   // `useEditor` builds the editor once and ignores later changes to the
   // extensions array, so flipping `tables` on an already-mounted editor leaves
   // an instance with no Table extension while the toolbar (plain React)

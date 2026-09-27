@@ -29,9 +29,22 @@ interface Props {
   anchor: PaletteAnchor
   onClose: () => void
   onPicked: (next: TriggerType | 'unset') => void
+  /**
+   * The server refused the pick, in its own words: today only when the
+   * new trigger starts the workflow on one of its stop stages. The pick
+   * was painted optimistically, so the caller reloads the saved rule.
+   */
+  onRefused: (error: string) => void
 }
 
-export function TriggerPicker({ templateId, currentTrigger, anchor, onClose, onPicked }: Props) {
+export function TriggerPicker({
+  templateId,
+  currentTrigger,
+  anchor,
+  onClose,
+  onPicked,
+  onRefused,
+}: Props) {
   // Only surface triggers that actually fire today. The registry
   // carries the full catalogue (incl. un-wired + Phase-14b types);
   // the launch allowlist hides dead tiles. A currently-set trigger
@@ -65,6 +78,8 @@ export function TriggerPicker({ templateId, currentTrigger, anchor, onClose, onP
       templateId,
       applyRuleType: id,
       applyRuleConfig: defaults as Record<string, unknown>,
+    }).then((res) => {
+      if (!res.ok) onRefused(res.error)
     })
   }
 

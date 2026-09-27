@@ -22,11 +22,17 @@
  */
 import { z } from 'zod'
 
+import { exitRuleConflict } from '@/lib/workflows/exit-rules'
+import { validateStepConfig as runnerAccepts } from '@/lib/workflows/step-config-validation'
 import { joinStepType, splitStepType } from '@/lib/workflows/steps'
+import { normalizeWaitStep } from '@/lib/workflows/wait-step'
 import type { ActionType, TriggerType } from '@/types/automations'
 
+// Two different step validators meet in this file, so neither keeps the
+// bare name (review M4): the copilot's model-facing schema check, and the
+// runner's save-time check every other step save runs.
 import {
-  validateStepConfig,
+  validateStepConfig as validateModelStepConfig,
   validateTiming,
   validateTriggerConfig,
 } from './tool-schemas'
@@ -157,7 +163,7 @@ export const COPILOT_TOOL_PARAMETERS: Record<CopilotToolName, Record<string, unk
   add_action: {
     type: 'object',
     properties: {
-      type: { type: 'string', description: 'An action type from the catalogue (incl. wait/branch/stop/approval).' },
+      type: { type: 'string', description: 'An action type from the catalogue (incl. wait/branch).' },
       config: { type: 'object', description: 'Config matching the action type schema.' },
       afterActionId: {
         type: ['string', 'null'],
@@ -182,12 +188,12 @@ export const COPILOT_TOOL_PARAMETERS: Record<CopilotToolName, Record<string, unk
       timing: {
         type: ['object', 'null'],
         description:
-          'When this step comes due. One of {mode:"wedding_relative",direction:"before"|"after",amount:int,unit:"days"|"weeks"|"months",sendTime?:"HH:MM"}, {mode:"apply_relative",amount:int,unit:"minutes"|"hours"|"days"|"weeks"|"months",sendTime?:"HH:MM"}, or {mode:"after_previous",delayAmount:int,unit:"minutes"|"hours"|"days"}. Minutes must be a multiple of 15. sendTime is a clock time on the 15-minute grid (e.g. "09:15") and only allowed with days, weeks or months. Omit for straight after the step above.',
+          'When this step comes due. One of {mode:"wedding_relative",direction:"before"|"after",amount:int,unit:"days"|"weeks"|"months",sendTime?:"HH:MM"}, {mode:"apply_relative",amount:int,unit:"minutes"|"hours"|"days"|"weeks"|"months",sendTime?:"HH:MM"}, or {mode:"after_previous",delayAmount:int,unit:"minutes"|"hours"|"days"}. Minutes must be a multiple of 15. sendTime is a clock time on the 15-minute grid (e.g. "09:15") and only allowed with days, weeks or months. Omit for straight after the step above. Never on a wait: a wait starts straight after the step above and its config is its only delay.',
       },
       requiresApproval: {
         type: ['boolean', 'null'],
         description:
-          'Automated steps only. True holds the send in the MC\'s day with a preview until they press Send.',
+          'Automated sends only, never a wait. True holds the send in the MC\'s day with a preview until they press Send.',
       },
     },
     required: ['type'],
@@ -335,6 +341,32 @@ async function readAutomation(ctx: CopilotContext): Promise<ToolResult> {
   }
 }
 
+/**
+ * Would this trigger start the workflow on one of its own stop stages?
+ * The copilot's client is a structural subset of supabase-js, so this
+ * reads the two rows itself and applies the shared pure rule
+ * (`lib/workflows/exit-rules`), the one the builder's saves use.
+ */
+async function exitConflict(
+  ctx: CopilotContext,
+  rule: { applyRuleType: string; applyRuleConfig: unknown },
+): Promise<string | null> {
+  const { data, error } = await ctx.supabase
+    .from('workflow_templates')
+    .select('exit_statuses')
+    .eq('id', ctx.automationId)
+    .maybeSingle()
+  // Fail closed, as the builder's saves do (lib/workflows/exit-rule-guard).
+  if (error) return "Could not check this workflow's stop stages. Nothing was saved; try again."
+  const exits = (data as { exit_statuses?: string[] } | null)?.exit_statuses ?? []
+  if (exitRuleConflict(rule, exits) === null) return null
+  const { data: stages } = await ctx.supabase.from('couple_statuses').select('slug, name')
+  const names = new Map(
+    ((stages as Array<{ slug: string; name: string }> | null) ?? []).map((s) => [s.slug.toLowerCase(), s.name]),
+  )
+  return exitRuleConflict(rule, exits, (slug) => names.get(slug) ?? slug)
+}
+
 async function setTrigger(ctx: CopilotContext, input: unknown): Promise<ToolResult> {
   const parsed = setTriggerInput.safeParse(input)
   if (!parsed.success) return { ok: false, error: parsed.error.message }
@@ -342,14 +374,20 @@ async function setTrigger(ctx: CopilotContext, input: unknown): Promise<ToolResu
   if (!guard.ok) return guard
   const valid = validateTriggerConfig(parsed.data.triggerType as TriggerType, parsed.data.triggerConfig)
   if (!valid.ok) return valid
+  const rule = {
+    applyRuleType: 'on_event',
+    applyRuleConfig: { eventType: parsed.data.triggerType, triggerConfig: valid.config },
+  }
+  // The same save-time rule as the builder's trigger: a workflow may not
+  // start on a stage it also stops on. The refusal doubles as the message
+  // the model relays to the MC.
+  const refusal = await exitConflict(ctx, rule)
+  if (refusal) return { ok: false, error: refusal }
   const { error } = await ctx.supabase
     .from('workflow_templates')
     .update({
-      apply_rule_type: 'on_event',
-      apply_rule_config: {
-        eventType: parsed.data.triggerType,
-        triggerConfig: valid.config,
-      },
+      apply_rule_type: rule.applyRuleType,
+      apply_rule_config: rule.applyRuleConfig,
     })
     .eq('id', ctx.automationId)
   if (error) return { ok: false, error: error.message }
@@ -378,8 +416,14 @@ async function addAction(ctx: CopilotContext, input: unknown): Promise<ToolResul
   if (!parsed.success) return { ok: false, error: parsed.error.message }
   const guard = await requireDraft(ctx)
   if (!guard.ok) return guard
-  const valid = validateStepConfig(parsed.data.type, parsed.data.config)
+  const valid = validateModelStepConfig(parsed.data.type, parsed.data.config)
   if (!valid.ok) return valid
+  const stored = splitStepType(parsed.data.type, valid.config as Record<string, unknown>)
+  // The same save-time check every other step save runs (Task 33): the
+  // copilot's own schemas accept builder-only flow types (sub_flow,
+  // approval) that a workflow step errors on at run time.
+  const runnable = runnerAccepts(stored.type, stored.config)
+  if (!runnable.ok) return { ok: false, error: runnable.error }
 
   const actions = await loadActions(ctx)
   const afterId = parsed.data.afterActionId ?? null
@@ -456,18 +500,27 @@ async function addAction(ctx: CopilotContext, input: unknown): Promise<ToolResul
     timing = validTiming.config
   }
 
-  const stored = splitStepType(parsed.data.type, valid.config as Record<string, unknown>)
+  // A Wait has one number: any start offset the model asked for is
+  // folded into its duration and the review flag is dropped, the same
+  // rule as the builder's save (lib/workflows/wait-step).
+  const save = normalizeWaitStep({
+    type: stored.type,
+    config: stored.config as Record<string, unknown>,
+    timing,
+    requiresApproval: parsed.data.requiresApproval ?? false,
+  })
+
   const { data, error } = await ctx.supabase
     .from('workflow_template_steps')
     .insert({
       template_id: ctx.automationId,
       position,
-      type: stored.type,
-      config: stored.config,
+      type: save.type,
+      config: save.config,
       title: parsed.data.label ?? '',
       description: parsed.data.note ?? null,
-      timing,
-      requires_approval: parsed.data.requiresApproval ?? false,
+      timing: save.timing,
+      requires_approval: save.requiresApproval,
       parent_step_id: slotParent,
       branch_path: slotBranch,
       // `(0, 0)`, which `autoLayout`'s `isPlaced` reads as "the MC never
@@ -518,10 +571,13 @@ async function updateActionConfig(ctx: CopilotContext, input: unknown): Promise<
 
   const patch: Record<string, unknown> = {}
   if (parsed.data.config !== undefined) {
-    const valid = validateStepConfig(slug, parsed.data.config)
+    const valid = validateModelStepConfig(slug, parsed.data.config)
     if (!valid.ok) return valid
     // Re-split so `config.actionType` survives a config replacement.
-    patch.config = splitStepType(slug, valid.config as Record<string, unknown>).config
+    const stored = splitStepType(slug, valid.config as Record<string, unknown>)
+    const runnable = runnerAccepts(stored.type, stored.config)
+    if (!runnable.ok) return { ok: false, error: runnable.error }
+    patch.config = stored.config
   }
   if (parsed.data.label !== undefined) patch.title = parsed.data.label ?? ''
   if (parsed.data.note !== undefined) patch.description = parsed.data.note ?? null
@@ -532,6 +588,22 @@ async function updateActionConfig(ctx: CopilotContext, input: unknown): Promise<
   }
   if (parsed.data.requiresApproval !== undefined && parsed.data.requiresApproval !== null) {
     patch.requires_approval = parsed.data.requiresApproval
+  }
+  if (stepRow.type === 'wait') {
+    // Same rule as the builder's save: a new start offset is folded into
+    // the duration (the new config if one came with it, else the stored
+    // one) and a Wait is never held for review.
+    const folded = normalizeWaitStep({
+      type: 'wait',
+      config: (patch.config ?? stepRow.config ?? {}) as Record<string, unknown>,
+      timing: patch.timing,
+      ...(patch.requires_approval !== undefined ? { requiresApproval: patch.requires_approval as boolean } : {}),
+    })
+    if (patch.timing !== undefined) {
+      patch.config = folded.config
+      patch.timing = folded.timing
+    }
+    if (folded.requiresApproval !== undefined) patch.requires_approval = folded.requiresApproval
   }
   if (Object.keys(patch).length === 0) {
     return {

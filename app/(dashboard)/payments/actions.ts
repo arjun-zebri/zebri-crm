@@ -31,6 +31,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/alerts/logger';
 import { publishContractSnapshot } from '@/lib/contracts/publish';
 import { contractCoupleLimit } from '@/lib/payments/subscription';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/types/database';
 
@@ -412,8 +413,8 @@ async function contractLimitError(
    Wraps the `revoke_contract(p_contract_id)` SECURITY INVOKER
    RPC. The DB-side logic resets status → draft, regenerates the
    share token, clears the locked content snapshot, and bumps
-   `version` — RLS scopes the call to the authenticated user's
-   own row.
+   `version`. The action checks ownership with the user's client,
+   then calls the RPC as the service role (see the comment inside).
 
    Phase 3.2 will additionally write a `revoked` row into the
    forthcoming `contract_audit_log` table BEFORE the RPC clears
@@ -433,7 +434,20 @@ export async function revokeContractAction(
   if (!user) return { ok: false, error: 'Not signed in.' };
 
   try {
-    const { error } = await supabase.rpc('revoke_contract', {
+    // revoke_contract is SECURITY INVOKER and calls
+    // emit_contract_audit_event, which clients can no longer execute
+    // (migration 20261001310000). So it runs as the service role, which
+    // bypasses RLS: prove ownership with the user's client first.
+    const { data: owned, error: ownError } = await supabase
+      .from('contracts')
+      .select('id')
+      .eq('id', parsed.data)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (ownError) throw ownError;
+    if (!owned) return { ok: false, error: 'Contract not found.' };
+
+    const { error } = await createAdminClient().rpc('revoke_contract', {
       p_contract_id: parsed.data,
     });
     if (error) throw error;

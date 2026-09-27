@@ -58,6 +58,18 @@ describe('describeConfigError', () => {
 })
 
 describe('configErrorMessage', () => {
+  it('asks for a fix before saving when refused at save (Task 33 I3)', () => {
+    expect(configErrorMessage('Send email', failParse({ subject: '', bodyHtml: 'hi' }), 'save')).toBe(
+      'The "Send email" step has invalid settings: Subject is required. Fix this before saving.',
+    )
+  })
+
+  it('keeps the send-time sentence when named explicitly', () => {
+    expect(configErrorMessage('Send email', failParse({ subject: '', bodyHtml: 'hi' }), 'send')).toBe(
+      'The "Send email" step has invalid settings: Subject is required. Edit the automation to fix it.',
+    )
+  })
+
   it('names the step and tells the MC where to fix it', () => {
     expect(configErrorMessage('Send email', failParse({ subject: '', bodyHtml: 'hi' }))).toBe(
       'The "Send email" step has invalid settings: Subject is required. Edit the automation to fix it.',

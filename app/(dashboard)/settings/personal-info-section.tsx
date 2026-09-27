@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from 'react'
 import { AddressAutocomplete, type AddressValue } from '@/components/ui/address-autocomplete'
 import { useToast } from '@/components/ui/toast'
 import { Tooltip } from '@/components/ui/tooltip'
+import { withoutPaymentDetails } from '@/lib/branding/payment-details'
 import { SIGNATURE_FONT_STACK } from '@/lib/branding/signature-font'
 import {
   VENDOR_ROLE_PRESETS,
@@ -146,7 +147,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     const emailChanged = emailValue !== savedRef.current.email
     const { error: metaError } = await supabase.auth.updateUser({
       data: {
-        ...(user.user_metadata || {}),
+        ...withoutPaymentDetails(user.user_metadata),
         display_name: displayName,
         business_name: businessName,
         phone,

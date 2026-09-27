@@ -67,6 +67,11 @@ export interface TimerSurface {
   stop: () => void;
   /** Hide the pill while a top-right surface is open. Returns its release. */
   claimSurface: () => () => void;
+  /**
+   * Register (or, with null, release) the header the pill must dock
+   * below. Use it through `useTimerPillAnchor`, as a ref callback.
+   */
+  setPillAnchor: (el: HTMLElement | null) => void;
 }
 
 /** Nothing running, used as the rollback floor when no snapshot exists. */
@@ -117,6 +122,15 @@ function optimisticStart(
 }
 
 const TimerSurfaceContext = createContext<TimerSurface | null>(null);
+
+/**
+ * The app-level timer, or null outside {@link TimerProvider}. For
+ * surfaces that also render where no timer exists (a unit test, a
+ * preview), so they degrade to doing nothing rather than throwing.
+ */
+export function useOptionalTimerSurface(): TimerSurface | null {
+  return useContext(TimerSurfaceContext);
+}
 
 /** Access the app-level timer. Throws outside {@link TimerProvider}. */
 export function useTimerSurface(): TimerSurface {
@@ -173,6 +187,7 @@ export function TimerProvider({
   const { running, clockOffsetMs } = useRunningTimer(!shadowing);
   const [pending, setPending] = useState<StoppedSession | null>(null);
   const [claims, setClaims] = useState(0);
+  const [pillAnchor, setPillAnchor] = useState<HTMLElement | null>(null);
 
   const invalidate = useCallback(
     (coupleId?: string) => {
@@ -288,6 +303,7 @@ export function TimerProvider({
         stopMutation.mutate();
       },
       claimSurface,
+      setPillAnchor,
     }),
     [shadowing, running, clockOffsetMs, startMutation, stopMutation, claimSurface],
   );
@@ -295,7 +311,7 @@ export function TimerProvider({
   return (
     <TimerSurfaceContext.Provider value={value}>
       {children}
-      <TimerPill hidden={claims > 0} />
+      <TimerPill hidden={claims > 0} anchor={pillAnchor} />
       <StopNoteDialog pending={pending} onClose={() => setPending(null)} />
     </TimerSurfaceContext.Provider>
   );

@@ -9,6 +9,8 @@
  */
 import { z } from 'zod';
 
+import { hasLineBreak, SINGLE_LINE_MESSAGE, singleLineText } from '@/lib/utils/single-line';
+
 /**
  * Minimum time a genuine human takes to fill the form, in ms.
  *
@@ -33,8 +35,9 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');
 /** Public submission payload. `hp` is the honeypot; `rendered_at` gates timing. */
 export const leadSubmitSchema = z.object({
   token: z.uuid(),
-  name: z.string().trim().min(1).max(120),
-  partner_name: optionalText(120),
+  // Names reach email headers, so a line break is refused (audit M5).
+  name: singleLineText(120).min(1),
+  partner_name: optionalText(120).refine((v) => !v || !hasLineBreak(v), SINGLE_LINE_MESSAGE),
   // Required-ness is decided by the form config in the submit route, so an
   // empty email is valid here; a non-empty one must still be a real address.
   email: z

@@ -61,6 +61,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_shadow_sessions: {
+        Row: {
+          admin_id: string
+          after_end_alerted_at: string | null
+          ended_at: string | null
+          expires_at: string
+          id: string
+          revoked_at: string | null
+          session_id: string
+          started_at: string
+          target_user_id: string
+        }
+        Insert: {
+          admin_id: string
+          after_end_alerted_at?: string | null
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          session_id: string
+          started_at?: string
+          target_user_id: string
+        }
+        Update: {
+          admin_id?: string
+          after_end_alerted_at?: string | null
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          session_id?: string
+          started_at?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       ai_copilot_usage: {
         Row: {
           created_at: string
@@ -1234,42 +1270,72 @@ export type Database = {
       }
       couple_emails: {
         Row: {
-          couple_id: string
+          attempt_key: string | null
+          bounced_at: string | null
+          complained_at: string | null
+          couple_id: string | null
           created_at: string
+          delivered_at: string | null
+          error: string | null
           id: string
+          instance_id: string | null
+          provider_message_id: string | null
           sent_at: string
           source: string
           status: string
+          step_id: string | null
           subject: string
+          superseded_at: string | null
           template_id: string | null
           template_name: string | null
           to_email: string
+          transport: string | null
           user_id: string
         }
         Insert: {
-          couple_id: string
+          attempt_key?: string | null
+          bounced_at?: string | null
+          complained_at?: string | null
+          couple_id?: string | null
           created_at?: string
+          delivered_at?: string | null
+          error?: string | null
           id?: string
+          instance_id?: string | null
+          provider_message_id?: string | null
           sent_at?: string
           source?: string
           status?: string
+          step_id?: string | null
           subject: string
+          superseded_at?: string | null
           template_id?: string | null
           template_name?: string | null
           to_email: string
+          transport?: string | null
           user_id: string
         }
         Update: {
-          couple_id?: string
+          attempt_key?: string | null
+          bounced_at?: string | null
+          complained_at?: string | null
+          couple_id?: string | null
           created_at?: string
+          delivered_at?: string | null
+          error?: string | null
           id?: string
+          instance_id?: string | null
+          provider_message_id?: string | null
           sent_at?: string
           source?: string
           status?: string
+          step_id?: string | null
           subject?: string
+          superseded_at?: string | null
           template_id?: string | null
           template_name?: string | null
           to_email?: string
+          transport?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1278,6 +1344,20 @@ export type Database = {
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_emails_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_emails_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_steps"
             referencedColumns: ["id"]
           },
           {
@@ -1448,6 +1528,8 @@ export type Database = {
       couples: {
         Row: {
           created_at: string
+          do_not_email: boolean
+          do_not_email_at: string | null
           email: string | null
           event_date: string | null
           id: string
@@ -1474,6 +1556,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          do_not_email?: boolean
+          do_not_email_at?: string | null
           email?: string | null
           event_date?: string | null
           id?: string
@@ -1500,6 +1584,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          do_not_email?: boolean
+          do_not_email_at?: string | null
           email?: string | null
           event_date?: string | null
           id?: string
@@ -1533,6 +1619,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_suppression: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       email_template_categories: {
         Row: {
@@ -2601,6 +2711,33 @@ export type Database = {
           },
         ]
       }
+      mfa_recovery_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          id: string
+          salt: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          id?: string
+          salt: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          id?: string
+          salt?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       onboarding_progress: {
         Row: {
           business_types: string[]
@@ -3287,6 +3424,7 @@ export type Database = {
           invoice_id: string | null
           last_viewed_at: string | null
           layout: Json | null
+          layout_revision: number
           payment_schedule_id: string | null
           proposal_number: string
           share_token: string
@@ -3321,6 +3459,7 @@ export type Database = {
           invoice_id?: string | null
           last_viewed_at?: string | null
           layout?: Json | null
+          layout_revision?: number
           payment_schedule_id?: string | null
           proposal_number: string
           share_token?: string
@@ -3355,6 +3494,7 @@ export type Database = {
           invoice_id?: string | null
           last_viewed_at?: string | null
           layout?: Json | null
+          layout_revision?: number
           payment_schedule_id?: string | null
           proposal_number?: string
           share_token?: string
@@ -3462,6 +3602,24 @@ export type Database = {
           questions?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      scheduler_leases: {
+        Row: {
+          held_until: string
+          holder: string | null
+          name: string
+        }
+        Insert: {
+          held_until: string
+          holder?: string | null
+          name: string
+        }
+        Update: {
+          held_until?: string
+          holder?: string | null
+          name?: string
         }
         Relationships: []
       }
@@ -3920,6 +4078,8 @@ export type Database = {
           timezone: string | null
           updated_at: string
           user_id: string
+          workflows_paused_at: string | null
+          workflows_resumed_at: string | null
         }
         Insert: {
           couple_profile_tabs_config?: Json
@@ -3942,6 +4102,8 @@ export type Database = {
           timezone?: string | null
           updated_at?: string
           user_id: string
+          workflows_paused_at?: string | null
+          workflows_resumed_at?: string | null
         }
         Update: {
           couple_profile_tabs_config?: Json
@@ -3964,6 +4126,8 @@ export type Database = {
           timezone?: string | null
           updated_at?: string
           user_id?: string
+          workflows_paused_at?: string | null
+          workflows_resumed_at?: string | null
         }
         Relationships: []
       }
@@ -4139,15 +4303,19 @@ export type Database = {
       workflow_instances: {
         Row: {
           applied_at: string
+          cancelled_reason: string | null
           completed_at: string | null
           context: Json
           couple_id: string | null
           created_at: string
+          dedupe_key: string | null
           error_message: string | null
           id: string
           is_default: boolean
           is_personal: boolean
           name: string
+          needs_recompute_at: string | null
+          paused_reason: string | null
           status: string
           template_id: string | null
           template_version: number | null
@@ -4157,15 +4325,19 @@ export type Database = {
         }
         Insert: {
           applied_at?: string
+          cancelled_reason?: string | null
           completed_at?: string | null
           context?: Json
           couple_id?: string | null
           created_at?: string
+          dedupe_key?: string | null
           error_message?: string | null
           id?: string
           is_default?: boolean
           is_personal?: boolean
           name: string
+          needs_recompute_at?: string | null
+          paused_reason?: string | null
           status?: string
           template_id?: string | null
           template_version?: number | null
@@ -4175,15 +4347,19 @@ export type Database = {
         }
         Update: {
           applied_at?: string
+          cancelled_reason?: string | null
           completed_at?: string | null
           context?: Json
           couple_id?: string | null
           created_at?: string
+          dedupe_key?: string | null
           error_message?: string | null
           id?: string
           is_default?: boolean
           is_personal?: boolean
           name?: string
+          needs_recompute_at?: string | null
+          paused_reason?: string | null
           status?: string
           template_id?: string | null
           template_version?: number | null
@@ -4219,12 +4395,14 @@ export type Database = {
         Row: {
           approval_expires_at: string | null
           approval_token: string | null
+          attempt_count: number
           branch_path: string | null
           completed_at: string | null
           config: Json
           created_at: string
           description: string | null
           due_at: string | null
+          due_held_at: string | null
           error_message: string | null
           id: string
           instance_id: string
@@ -4233,6 +4411,7 @@ export type Database = {
           parent_step_id: string | null
           position: number
           requires_approval: boolean
+          skip_reason: string | null
           status: string
           template_step_id: string | null
           timing: Json
@@ -4244,12 +4423,14 @@ export type Database = {
         Insert: {
           approval_expires_at?: string | null
           approval_token?: string | null
+          attempt_count?: number
           branch_path?: string | null
           completed_at?: string | null
           config?: Json
           created_at?: string
           description?: string | null
           due_at?: string | null
+          due_held_at?: string | null
           error_message?: string | null
           id?: string
           instance_id: string
@@ -4258,6 +4439,7 @@ export type Database = {
           parent_step_id?: string | null
           position: number
           requires_approval?: boolean
+          skip_reason?: string | null
           status?: string
           template_step_id?: string | null
           timing?: Json
@@ -4269,12 +4451,14 @@ export type Database = {
         Update: {
           approval_expires_at?: string | null
           approval_token?: string | null
+          attempt_count?: number
           branch_path?: string | null
           completed_at?: string | null
           config?: Json
           created_at?: string
           description?: string | null
           due_at?: string | null
+          due_held_at?: string | null
           error_message?: string | null
           id?: string
           instance_id?: string
@@ -4283,6 +4467,7 @@ export type Database = {
           parent_step_id?: string | null
           position?: number
           requires_approval?: boolean
+          skip_reason?: string | null
           status?: string
           template_step_id?: string | null
           timing?: Json
@@ -4459,12 +4644,14 @@ export type Database = {
           canvas_viewport: Json
           created_at: string
           description: string | null
+          exit_statuses: string[]
           id: string
           legacy_automation_id: string | null
           name: string
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           status: string
+          steps_revision: number
           template_slug: string | null
           updated_at: string
           user_id: string
@@ -4478,12 +4665,14 @@ export type Database = {
           canvas_viewport?: Json
           created_at?: string
           description?: string | null
+          exit_statuses?: string[]
           id?: string
           legacy_automation_id?: string | null
           name: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           status?: string
+          steps_revision?: number
           template_slug?: string | null
           updated_at?: string
           user_id: string
@@ -4497,12 +4686,14 @@ export type Database = {
           canvas_viewport?: Json
           created_at?: string
           description?: string | null
+          exit_statuses?: string[]
           id?: string
           legacy_automation_id?: string | null
           name?: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           status?: string
+          steps_revision?: number
           template_slug?: string | null
           updated_at?: string
           user_id?: string
@@ -4565,6 +4756,10 @@ export type Database = {
         Args: { p_couple_id: string }
         Returns: string
       }
+      _workflow_lock_live_instance: {
+        Args: { p_step_id: string }
+        Returns: boolean
+      }
       _workflow_recompute_wedding_steps: {
         Args: { p_couple_id: string }
         Returns: undefined
@@ -4580,6 +4775,18 @@ export type Database = {
       accept_proposal: {
         Args: { p_addon_selection?: Json; p_option_id: string; p_token: string }
         Returns: Json
+      }
+      acquire_scheduler_lease: {
+        Args: { p_name: string; p_token: string; p_ttl_seconds: number }
+        Returns: boolean
+      }
+      activate_applied_workflow_instance: {
+        Args: {
+          p_instance_id: string
+          p_loaded_status: string
+          p_require_active: boolean
+        }
+        Returns: string
       }
       admin_user_last_seen: {
         Args: never
@@ -4637,6 +4844,14 @@ export type Database = {
         Args: { p_id: string; p_token: string }
         Returns: undefined
       }
+      delete_workflow_template: {
+        Args: { p_template_id: string }
+        Returns: {
+          couple_id: string | null
+          instance_id: string
+          user_id: string
+        }[]
+      }
       emit_automation_event: {
         Args: {
           p_couple_id?: string
@@ -4665,6 +4880,17 @@ export type Database = {
       ensure_default_workflow: {
         Args: { p_couple_id: string }
         Returns: string
+      }
+      ensure_require_mfa_policies: { Args: never; Returns: number }
+      ensure_shadow_triggers: { Args: never; Returns: number }
+      exit_workflow_instances_for_stage: {
+        Args: { p_couple_id: string; p_to_status: string; p_user_id: string }
+        Returns: {
+          couple_id: string
+          instance_id: string
+          stage: string
+          workflow: string
+        }[]
       }
       expire_contracts: { Args: never; Returns: string[] }
       expire_proposals: { Args: never; Returns: string[] }
@@ -4695,6 +4921,10 @@ export type Database = {
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }
       increment_ai_copilot_usage: { Args: never; Returns: number }
+      is_email_suppressed: {
+        Args: { p_email: string; p_user_id: string }
+        Returns: boolean
+      }
       is_own_couple: { Args: { couple_id_value: string }; Returns: boolean }
       is_valid_portal_token: { Args: { token_value: string }; Returns: boolean }
       issue_signer_otp: {
@@ -4706,10 +4936,28 @@ export type Database = {
         }
         Returns: Json
       }
+      log_automated_send: {
+        Args: {
+          p_attempt_key?: string
+          p_couple_id: string
+          p_error?: string
+          p_instance_id?: string
+          p_provider_message_id?: string
+          p_status: string
+          p_step_id?: string
+          p_subject: string
+          p_to_email: string
+          p_transport: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       mark_booking_reminder_sent: {
         Args: { p_booking_id: string }
         Returns: undefined
       }
+      mfa_satisfied: { Args: never; Returns: boolean }
+      revoke_expired_shadow_sessions: { Args: never; Returns: number }
       peek_signer_otp: { Args: { p_token: string }; Returns: Json }
       record_contract_view: {
         Args: {
@@ -4723,9 +4971,25 @@ export type Database = {
         Args: { p_events: Json; p_session_id: string; p_token: string }
         Returns: Json
       }
+      reopen_completed_workflow_instance: {
+        Args: { p_instance_id: string; p_manual: boolean }
+        Returns: string
+      }
+      release_scheduler_lease: {
+        Args: { p_name: string; p_token: string }
+        Returns: boolean
+      }
+      replace_mfa_recovery_codes: {
+        Args: { p_codes: Json; p_user_id: string }
+        Returns: number
+      }
       reschedule_booking: {
         Args: { p_ends_at: string; p_manage_token: string; p_starts_at: string }
         Returns: Json
+      }
+      resume_workflow_instance: {
+        Args: { p_from: string; p_instance_id: string }
+        Returns: string
       }
       revoke_contract: { Args: { p_contract_id: string }; Returns: Json }
       save_portal_contact: {
@@ -4854,6 +5118,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      set_my_payment_details: { Args: { p_details: Json }; Returns: Json }
       set_scheduler_secrets: {
         Args: {
           p_base_url: string
@@ -4861,6 +5126,18 @@ export type Database = {
           p_slack_webhook_url?: string
         }
         Returns: undefined
+      }
+      set_workflow_template_status: {
+        Args: {
+          p_expected_steps_revision?: number
+          p_status: string
+          p_template_id: string
+        }
+        Returns: {
+          couple_id: string | null
+          instance_id: string
+          user_id: string
+        }[]
       }
       sign_contract: {
         Args: {
@@ -4874,6 +5151,10 @@ export type Database = {
       sign_contract_v2: {
         Args: { p_payload: Json; p_token: string }
         Returns: Json
+      }
+      spend_mfa_recovery_code: {
+        Args: { p_code_id: string; p_user_id: string }
+        Returns: boolean
       }
       submit_booking: {
         Args: {
@@ -4903,6 +5184,38 @@ export type Database = {
         Returns: Json
       }
       verify_contract_hash: { Args: { p_hash: string }; Returns: Json }
+      workflow_claim_step: {
+        Args: { p_manual?: boolean; p_step_id: string }
+        Returns: boolean
+      }
+      workflow_due_steps: {
+        Args: {
+          p_limit: number
+          p_now: string
+          p_types: string[]
+          p_user_id?: string
+        }
+        Returns: Database["public"]["Tables"]["workflow_steps"]["Row"][]
+      }
+      workflow_finish_wait: { Args: { p_step_id: string }; Returns: boolean }
+      workflow_hold_wait: {
+        Args: { p_expected_due_at: string; p_step_id: string; p_until: string }
+        Returns: boolean
+      }
+      workflow_merge_step_outputs: {
+        Args: {
+          p_instance_id: string
+          p_keep_existing?: boolean
+          p_outputs: Json
+        }
+        Returns: undefined
+      }
+      workflow_stranded_instances: {
+        Args: { p_after?: string; p_limit: number }
+        Returns: {
+          instance_id: string
+        }[]
+      }
       write_meeting_results: {
         Args: {
           p_decisions: Json

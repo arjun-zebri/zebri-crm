@@ -20,7 +20,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 import { sendAlert } from '@/lib/alerts';
-import type { Database } from '@/types/database';
+import type { Database, Json } from '@/types/database';
 
 /**
  * Stable string identifiers for the actions we record. Adding a new
@@ -38,7 +38,15 @@ export type AdminActionType =
   | 'update_user_profile'
   | 'send_password_reset'
   | 'delete_user'
-  | 'sync_scheduler';
+  | 'sync_scheduler'
+  // Written by the `log_shadow_mutation` database trigger, never by
+  // recordAdminAction: one row per insert/update/delete made through a
+  // shadow session. Listed so readers of the log see the full vocabulary.
+  | 'shadow_mutation'
+  // Written by middleware (lib/admin/shadow-sessions logShadowRequest):
+  // one row per non-GET request made under a verified shadow grant, which
+  // covers server actions that write with the service role.
+  | 'shadow_request';
 
 export interface RecordAdminActionInput {
   /** The admin who performed the action — required. */
@@ -77,7 +85,7 @@ export async function recordAdminAction(
       actor_id: input.actorId,
       target_user_id: input.targetUserId,
       action: input.action,
-      details: (input.details ?? {}) as Database['public']['Tables']['admin_audit_log']['Insert']['details'],
+      details: (input.details ?? {}) as Json,
     });
     if (error) {
       await sendAlert({

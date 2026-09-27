@@ -4,7 +4,9 @@
  * One step in a couple's workflow checklist.
  *
  * A checkbox for manual steps, a status glyph for automated ones, the
- * title, its due date and an overflow menu. Branch children render
+ * title, its due date and an overflow menu (the glyph and the title
+ * block live in `./workflow-step-glyph` and `./workflow-step-title`).
+ * Branch children render
  * indented under their branch step, which is where the vertical list
  * from the spec actually lives: the builder stays a canvas, the applied
  * instance reads as a checklist.
@@ -12,30 +14,16 @@
  * @module app/(dashboard)/couples/workflow-step-row
  */
 
-import {
-  AlertTriangle,
-  CalendarClock,
-  Check,
-  GitBranch,
-  Timer,
-  Zap,
-} from 'lucide-react';
+import { CalendarClock } from 'lucide-react';
 import { useState } from 'react';
 
-import { inDays } from '@/app/(dashboard)/workflows/queue-labels';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { RowActionsMenu, type RowAction } from '@/components/ui/row-actions-menu';
-import { StatePill } from '@/components/ui/state-pill';
-import { isAutomated } from '@/lib/workflows/steps';
+import { partialSendFailure } from '@/lib/workflows/send-outcome';
 import type { WorkflowStepRow as StepRow } from '@/types/workflows';
 
-/** Icon for an automated step, by type. */
-const AUTOMATED_ICON = {
-  action: Zap,
-  wait: Timer,
-  branch: GitBranch,
-} as const;
+import { workflowStepActions } from './workflow-step-actions';
+import { WorkflowStepGlyph } from './workflow-step-glyph';
+import { WorkflowStepTitle } from './workflow-step-title';
 
 export interface WorkflowStepRowProps {
   step: StepRow;
@@ -59,6 +47,8 @@ export interface WorkflowStepRowProps {
    * MC started, so naming it would invent a thing they never made.
    */
   workflowName?: string | null;
+  /** The step's workflow is paused, so it will not run until resumed. */
+  paused?: boolean;
   /** Appended to the row menu, e.g. "Stop this workflow". */
   extraActions?: RowAction[];
 }
@@ -77,16 +67,14 @@ export function WorkflowStepRow({
   onRename,
   onOpen,
   workflowName = null,
+  paused = false,
   extraActions = [],
 }: WorkflowStepRowProps) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(step.title);
   const done = step.status === 'done';
-  const skipped = step.status === 'skipped';
-  const errored = step.status === 'errored';
-  const automated = isAutomated(step.type);
-  const AutomatedIcon =
-    AUTOMATED_ICON[step.type as keyof typeof AUTOMATED_ICON] ?? Zap;
+  // A send that reached only some recipients is done, but must not wear
+  // the plain green tick (audit M6). Derived from the step's output.
+  const partial = done ? partialSendFailure(step.output) : null;
 
   return (
     // The whole row opens the step when the surface offers a detail
@@ -113,90 +101,17 @@ export function WorkflowStepRow({
       {/* Indent branch children rather than nesting a bordered box. */}
       {depth > 0 ? <span className="w-6 shrink-0" aria-hidden /> : null}
 
-      {automated ? (
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-          {errored ? (
-            <AlertTriangle
-              size={16}
-              strokeWidth={1.5}
-              className="text-danger"
-              aria-label="This step failed"
-            />
-          ) : done ? (
-            <Check size={16} strokeWidth={1.5} className="text-success" aria-label="Done" />
-          ) : (
-            <AutomatedIcon
-              size={16}
-              strokeWidth={1.5}
-              className="text-text-subtle"
-              aria-label="Runs automatically"
-            />
-          )}
-        </span>
-      ) : (
-        <span className="shrink-0" onClick={(event) => event.stopPropagation()}>
-          <Checkbox
-            checked={done}
-            onChange={() => (done ? onUntick(step.id) : onTick(step.id))}
-            ariaLabel={`Mark "${step.title}" ${done ? 'not done' : 'done'}`}
-          />
-        </span>
-      )}
+      <WorkflowStepGlyph step={step} partial={partial} onTick={onTick} onUntick={onUntick} />
 
-      <div className="min-w-0 flex-1" onClick={editing ? (event) => event.stopPropagation() : undefined}>
-        {editing ? (
-          <Input
-            autoFocus
-            value={draft}
-            aria-label="Step name"
-            onChange={(e) => setDraft(e.currentTarget.value)}
-            onBlur={() => {
-              setEditing(false);
-              const next = draft.trim();
-              if (next.length > 0 && next !== step.title) onRename(step.id, next);
-              else setDraft(step.title);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur();
-              if (e.key === 'Escape') {
-                setDraft(step.title);
-                setEditing(false);
-              }
-            }}
-          />
-        ) : (
-          <span className="flex min-w-0 items-center gap-2">
-            <span
-              className={`min-w-0 truncate text-body ${
-                done || skipped ? 'text-text-subtle line-through' : 'text-text'
-              }`}
-            >
-              {step.title || 'Untitled step'}
-            </span>
-            {/* Whose move it is, before whose workflow it came from. */}
-            {step.requires_approval && step.status === 'pending' ? (
-              <StatePill
-                label="Needs your OK"
-                tone="warning"
-                dot="hollow"
-                className="shrink-0"
-              />
-            ) : null}
-            {workflowName ? (
-              <span className="shrink-0 rounded-pill bg-surface-muted px-2 text-body text-text-muted">
-                {workflowName}
-              </span>
-            ) : null}
-          </span>
-        )}
-        {errored && step.error_message ? (
-          <span className="block truncate text-body text-danger">{step.error_message}</span>
-        ) : step.branch_path ? (
-          <span className="block text-body text-text-muted">
-            {step.branch_path === 'yes' ? 'If yes' : 'If no'}
-          </span>
-        ) : null}
-      </div>
+      <WorkflowStepTitle
+        step={step}
+        partial={partial}
+        editing={editing}
+        onEditingChange={setEditing}
+        onRename={onRename}
+        workflowName={workflowName}
+        paused={paused}
+      />
 
       {step.type === 'appointment' ? (
         <CalendarClock
@@ -211,25 +126,11 @@ export function WorkflowStepRow({
 
       <RowActionsMenu
         size="sm"
-        actions={[
-          ...(errored
-            ? [{ label: 'Try again', onSelect: () => onRetry(step.id) }]
-            : []),
-          ...(!done && !skipped
-            ? [
-                { label: 'Rename', onSelect: () => setEditing(true) },
-                { label: 'Tomorrow', onSelect: () => onReschedule(step.id, inDays(1)) },
-                { label: 'Next week', onSelect: () => onReschedule(step.id, inDays(7)) },
-                { label: 'Take the date off', onSelect: () => onReschedule(step.id, null) },
-                { label: 'Skip this step', onSelect: () => onSkip(step.id) },
-              ]
-            : []),
-          ...(done || skipped
-            ? [{ label: 'Reopen', onSelect: () => onUntick(step.id) }]
-            : []),
-          { label: 'Remove', destructive: true, onSelect: () => onRemove(step.id) },
-          ...extraActions,
-        ]}
+        actions={workflowStepActions(
+          step,
+          { onRetry, onRename: () => setEditing(true), onReschedule, onSkip, onUntick, onRemove },
+          extraActions,
+        )}
       />
     </div>
   );

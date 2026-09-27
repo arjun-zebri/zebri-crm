@@ -6,6 +6,61 @@ The schema is intentionally **simple for the MVP CRM**.
 
 ------------------------------------------------------------------------
 
+# Conventions
+
+- **Every public table has RLS on and the shadow-mutation trigger**
+  (Phase 4 Task 25). End any migration that creates a `public` table
+  with:
+
+  ```sql
+  select public.ensure_shadow_triggers();
+  ```
+
+  It attaches `zz_log_shadow_mutation` (AFTER INSERT OR UPDATE OR DELETE,
+  FOR EACH ROW, `WHEN (pg_trigger_depth() = 0)`) to every public base
+  table except `admin_audit_log` and `admin_shadow_sessions`, and is
+  idempotent. The deploy workflows also run it after `db push`. It is
+  what records a write made while an admin is shadowing the MC (see
+  `admin_shadow_sessions` below and `shadow-mode.md`). The ratchet
+  `tests/integration/admin/shadow-trigger-coverage.test.ts` fails when
+  any public table lacks the trigger or has RLS off.
+
+- **Every public RLS table carries the `require_mfa` restrictive policy**
+  (Phase 4 Task 23b). End any migration that creates a `public` table
+  with RLS on with:
+
+  ```sql
+  select public.ensure_require_mfa_policies();
+  ```
+
+  It attaches `require_mfa` (`as restrictive for all to authenticated
+  using ((select public.mfa_satisfied())) with check (...)`) to every
+  public table with RLS on that lacks a correct one, and is idempotent.
+  The deploy workflows also run it after `db push`. Without it, a 2FA
+  MC's password-only (`aal1`) session could read and write the new
+  table directly. Ratchet: `tests/integration/rls/require-mfa-coverage.test.ts`.
+
+- **Every `SECURITY DEFINER` function that `authenticated` can execute
+  is guarded or allowlisted** (Task 23b). Definer functions bypass RLS,
+  so `require_mfa` never reaches them. A definer RPC that acts for
+  `auth.uid()` starts with:
+
+  ```sql
+  if not public.mfa_satisfied() then
+    raise exception using errcode = '42501', message = 'second factor required';
+  end if;
+  ```
+
+  A token-gated public RPC (never acts for the signed-in MC), a trigger
+  function, or a service-role-only function (EXECUTE revoked from
+  `anon, authenticated`; `grant ... to service_role` alone is not
+  enough, because Supabase's default privileges grant EXECUTE on new
+  functions to both) goes on the allowlist in
+  `require-mfa-coverage.test.ts` with its reason instead. The test fails
+  on any definer function that is neither.
+
+------------------------------------------------------------------------
+
 # User Data
 
 There is no `users` table. User data is stored on the Supabase Auth
@@ -13,11 +68,46 @@ user row in **two** metadata bags:
 
 - **`user_metadata`** — user-writable (`auth.updateUser({ data })`).
   Holds user-owned fields (display name, business name, bank details,
-  branding, etc.).
+  branding, etc.). The bank details and ABN are the exception: only
+  `set_my_payment_details` may change them (see below).
 - **`app_metadata`** — **server-only writable**, JWT-readable. Holds
   all entitlement fields (`account_type`, `subscription_*`,
   `stripe_*`, `is_beta_user`). The §7.4 / Phase 0.8b fix moved these
   out of `user_metadata` to close the privilege-escalation surface.
+
+**Payment details are write-locked (Task 23c,
+`20261022000000_lock_payment_details.sql`).** Four `user_metadata`
+keys are protected: `bank_account_name`, `bank_bsb`,
+`bank_account_number`, `abn`. They stay in `user_metadata` for every
+reader, but:
+
+- the `lock_payment_details` BEFORE UPDATE trigger on `auth.users`
+  (`WHEN old.raw_user_meta_data is distinct from new.raw_user_meta_data`)
+  raises 42501 "payment details can only be changed from Settings" when
+  a protected key's value changes and the transaction-local GUC
+  `zebri.payment_details_write` is not `on`. Absent, JSON null and `""`
+  are the same "not set". Resending the keys unchanged passes.
+- `public.set_my_payment_details(p_details jsonb) returns jsonb` is the
+  only writer: SECURITY DEFINER, `search_path ''`, EXECUTE for
+  `authenticated` only, first statement the `mfa_satisfied()` guard.
+  `p_details` is partial (only the keys present change; null or `""`
+  removes the key; any other key is 22023). A CHANGED value must match
+  its shape once spaces and hyphens are removed (BSB 6 digits, account
+  number 4 to 10 digits, ABN 11 digits; account name at most 200
+  characters), else 22023. Stored trimmed, as typed. Returns
+  `{bank_account_name, bank_bsb, bank_account_number, abn}`.
+- `20261022100000` (fix round 1): the RPC trims every kind of
+  whitespace (not only spaces); an `abn` change through a shadow session
+  is sensitive in `log_shadow_auth_user_change`; the migration fails if
+  its role cannot UPDATE `auth.users`; `get_public_invoice` and
+  `get_public_proposal` read `stripe_connect_enabled` from
+  `raw_app_meta_data` when it carries the `account_type` sentinel (else
+  the legacy `raw_user_meta_data` copy), compared as text to `'true'` so
+  a non-boolean is false instead of an error.
+- No service-role path writes these keys, so there is no service-role
+  overload; GoTrue's admin API is refused too. A hand fix sets
+  `select set_config('zebri.payment_details_write', 'on', true);` in the
+  same transaction as its UPDATE.
 
 Read entitlements via `@/lib/auth/entitlements`, never directly from
 either bag. Writes go through `updateEntitlements()` (server-only).
@@ -131,6 +221,222 @@ referral_source (text, nullable)
 source_origin (text, nullable), added by the Lead Capture API migration (2026-09-03, `20260903100000_lead_capture_api.sql`). The browser origin (scheme://host[:port]) the enquiry was posted from. Server-computed by `POST /api/lead/submit`: the request's `Origin` header for a third-party site's post, or the embed's own referrer reduced to an origin when the post is same-origin (hosted page, iframe embed). Null for server-side posts. Read-only in the app; the couple Overview shows it as an "Enquiry from" row (`couple-source-origin-row.tsx`) only when set.
 
 created_at (timestamp)
+
+do_not_email (boolean, not null, default false) do_not_email_at (timestamptz, nullable), added by the email legal-floor migration (Phase 2 Task 10, 2026-09-23, `20261004000000_email_optout_and_suppression.sql`). Denormalised opt-out flag mirroring this couple's stored email against `email_suppression` (below), so the couple UI and the send path can check one boolean without a join. Not the source of truth: `email_suppression` is. Flipped true by the two unsubscribe routes (the page's confirm form and the RFC 8058 one-click `POST /api/unsubscribe/[token]`, both through `lib/email/record-unsubscribe.ts`), on every couple of the owner whose stored `email` is the unsubscribed address (compared ignoring case and surrounding whitespace, never as an ILIKE pattern). The Resend bounce/complaint webhook writes `email_suppression` only and does NOT flip this flag; the send path checks both, so a bounced address is still never mailed. The flag stops automated mail to the couple's own addresses (primary and spouse) only; their vendors' copies are governed by address-level suppression alone. The column comment in `20261004000000` still says the webhook keeps it in sync; `20261006100000` corrects it.
+
+------------------------------------------------------------------------
+
+# email_suppression
+
+Addresses an MC must never email again, and why. The source of truth for
+the "don't send" decision; `couples.do_not_email` (above) is a fast,
+denormalised mirror of this table for the couple's current address, not
+the other way around.
+
+Keyed on `(user_id, email)`, not `couple_id`, and carries no couple_id
+column at all; see the migration's own comment for the full reasoning.
+Short version: the same address can belong to more than one couple, and a
+couple can change their stored address, so a couple-keyed suppression
+would stop protecting an address the moment the couple record changed, or
+miss the same address recurring under a different couple. Suppression is
+a property of the address as the MC's mailing list sees it.
+
+RLS: owner-isolation (`auth.uid() = user_id`) on SELECT/INSERT/DELETE, no
+UPDATE policy, since a suppression row is a record of something that
+happened, not a draft to edit; clearing one means deleting it. Expected writers
+(the public unsubscribe endpoint and the provider bounce/complaint
+webhook, both later tasks) run as the service role and bypass RLS.
+
+Columns:
+
+id (uuid) user_id (uuid, not null, FK auth.users on delete cascade)
+email (text, not null) reason (text, not null, check in
+`unsubscribed` / `bounced` / `complained`) created_at (timestamptz, not
+null, default now())
+
+Unique index `email_suppression_user_email_reason_idx` on
+`(user_id, lower(email), reason)`, case-insensitive on the address, and
+one row per reason so an MC can clear a stale `bounced` row without
+clearing a `complained` one for the same address, and a duplicate
+webhook delivery collides into the same row instead of creating a second
+one. Added by Phase 2 Task 10
+(`20261004000000_email_optout_and_suppression.sql`).
+
+The address is stored AS TYPED, not lower-cased, so the row shows the MC
+exactly what the provider or the unsubscribe click reported. That means
+the index is the only thing normalising case, and an index constrains
+what can be inserted, it does not change how a `SELECT` compares. Read
+the suppression list through
+`public.is_email_suppressed(p_user_id uuid, p_email text) returns
+boolean` (`20261006000000_is_email_suppressed_function.sql`), never
+through a PostgREST `.eq('email', ...)` filter, which is case-sensitive
+and will miss `Sarah@Example.com` against a stored `sarah@example.com`.
+The function compares case-insensitively and ignoring surrounding
+whitespace (`lower(btrim(email, ' \t\r\n'))` on both sides, since
+`20261006100000_is_email_suppressed_trim_search_path.sql`; before that it
+folded case only), scoped to `user_id`, so the index's leading `user_id`
+column narrows the scan to one tenant's list. It is `security invoker`
+(RLS still applies to an authenticated caller), has
+`set search_path = public` (also since `20261006100000`), and `execute`
+is revoked from `public` and `anon`.
+
+------------------------------------------------------------------------
+
+# mfa_recovery_codes
+
+One-time recovery codes for two-factor sign-in (Phase 4 Task 23,
+`20261013000000_mfa_recovery_codes.sql`). Supabase Auth has TOTP factors
+but no recovery codes, so Zebri keeps its own: ten per MC, issued when
+they turn 2FA on (and again from "New recovery codes", which deletes every
+earlier row), shown once, stored only as a salted hash.
+
+Service role only. RLS is on with **no policies**, and every grant to
+`anon` and `authenticated` is revoked, so not even the owner can read or
+write their rows through the client: a readable hash could be brute
+forced offline, and a client insert would let someone holding only the
+password mint a code they know. The only reader and writer is
+`lib/auth/recovery-codes.ts`, called from the Settings two-factor actions
+and the recovery-code server action.
+
+Columns:
+
+id (uuid, pk, default gen_random_uuid()) user_id (uuid, not null, FK
+auth.users on delete cascade) salt (text, not null; hex, 16 random bytes,
+unique per code) code_hash (text, not null; hex scrypt output of the
+normalised code) created_at (timestamptz, not null, default now())
+used_at (timestamptz, nullable; set once when the code is redeemed)
+
+Index `mfa_recovery_codes_user_id_idx` on `(user_id)`.
+
+Writers (service role only, `security invoker`, `set search_path = ''`,
+EXECUTE revoked from `public`, `anon` and `authenticated`; invoker because
+the only caller already has table DML, so a stray EXECUTE grant would still
+meet the table's revoked grants; both take a per-user transaction advisory
+lock, since a user with no rows yet has nothing to row-lock):
+
+- `replace_mfa_recovery_codes(p_user_id uuid, p_codes jsonb) returns
+  integer`: deletes the user's rows and inserts the given
+  `[{salt, code_hash}]` batch in one transaction; returns the count.
+- `spend_mfa_recovery_code(p_user_id uuid, p_code_id uuid) returns
+  boolean`: false if any row of the user is already used (one winner per
+  batch, so two concurrent redemptions with different codes cannot both
+  proceed), else marks `p_code_id` used if it is unused.
+
+After a successful redemption the TOTP factor is removed and the
+remaining unused rows are deleted; the spent row stays as a record. If
+removing the factor fails, the app clears that row's `used_at` so the
+MC can retry with the same code.
+
+------------------------------------------------------------------------
+
+# admin_shadow_sessions
+
+One row per admin shadow session (Phase 4 Task 25,
+`20261015000000_admin_shadow_sessions.sql`), keyed by the Supabase JWT
+`session_id` claim of the session `enterShadow` minted for the target.
+
+Columns:
+
+id (uuid, pk) session_id (uuid, not null, unique; the target session's
+JWT `session_id`, deliberately no FK since `auth.sessions` rows vanish on
+sign-out) admin_id (uuid, not null, FK auth.users on delete cascade,
+matching `admin_audit_log.actor_id`) target_user_id (uuid, not null, FK
+auth.users on delete cascade) started_at (timestamptz, default now())
+expires_at (timestamptz, default now() + 8 hours, the shadow grant's TTL)
+ended_at (timestamptz, nullable; stamped by a genuine `exitShadow`)
+after_end_alerted_at (timestamptz, nullable; last Slack alert for a write
+after end or expiry, throttles it to hourly; `20261017000000`).
+Checks: `admin_id <> target_user_id`, `expires_at > started_at`.
+
+Indexes: partial `admin_shadow_sessions_open_idx` on `(session_id)
+include (admin_id, target_user_id, expires_at) where ended_at is null`
+(the "is this JWT an open shadow session" lookup, for the trigger and
+Task 23b's aal2 waiver); `(target_user_id, started_at desc)`;
+`(admin_id)`. Plus `admin_audit_log_shadow_activity_idx` on
+`admin_audit_log (target_user_id, (details->>'shadow_session_id')) where
+action in ('shadow_mutation', 'shadow_request')` (`20261018000000`; it
+replaced `admin_audit_log_shadow_session_idx`). It served the MC card's
+count, dropped with `my_support_access()` in `20261024800000`; the index
+is kept for admin reads of one visit's activity.
+
+Access: RLS on, **no policies**, every `anon`/`authenticated` grant
+revoked. Written only by the service role (`lib/admin/shadow-sessions.ts`
+from `enterShadow` / `exitShadow`).
+
+Functions:
+
+All below are `security definer`, `search_path = ''`, EXECUTE revoked
+from `public`/`anon`/`authenticated` unless stated.
+
+- `log_shadow_mutation()` returns trigger. Attached as
+  `zz_log_shadow_mutation` (AFTER INSERT OR UPDATE OR DELETE, FOR EACH
+  ROW, `WHEN (pg_trigger_depth() = 0)`) to every public base table
+  except the two above. Skips JWTs with no `session_id`; otherwise, for
+  a recorded session (target = `auth.uid()`, **no** end/expiry filter),
+  inserts `admin_audit_log` (`actor_id` = admin, `target_user_id` = MC,
+  `action = 'shadow_mutation'`, details `{table, op, row_id,
+  shadow_session_id, after_end}`, ids only; `row_id` is `id` or the
+  primary-key columns as an object). An `after_end` write alerts Slack
+  hourly per session. Not on `storage.objects`: Storage API writes there
+  under service_role claims.
+- `mfa_satisfied()` returns boolean (Task 23b, `20261019000000`). STABLE,
+  EXECUTE for `authenticated` and `service_role` (not `anon`). True when
+  the JWT `aal` is `aal2`, the user has no verified row in
+  `auth.mfa_factors`, the JWT `session_id` is an open row here (`ended_at`
+  null, `now() < expires_at`, `target_user_id = auth.uid()`, and the
+  `admin_id` user still has `raw_app_meta_data ->> 'account_type' =
+  'admin'`, since `20261019100000`), or there is no user in the JWT. Used by the `require_mfa` restrictive policies
+  and the guards in definer RPCs; see `authentication.md`.
+- `ensure_require_mfa_policies()` returns integer (tables attached).
+  Idempotent; EXECUTE for `service_role`. A policy counts as attached
+  only if it is restrictive, `for all`, `to authenticated` alone, and
+  its USING and WITH CHECK are each exactly `(select
+  public.mfa_satisfied())` (compared as `pg_get_expr` prints it, with
+  the `public.` prefix on the call ignored; `20261019100000`); otherwise
+  it is replaced. Run at the end of `20261019000000` and
+  `20261019100000` and by both deploy workflows. `storage.objects` gets the same policy once, from the
+  migration.
+- `ensure_shadow_triggers()` returns integer (tables attached).
+  Idempotent; EXECUTE for `service_role`. A trigger counts as attached
+  only if it is enabled, calls `log_shadow_mutation()`, is row-level
+  AFTER on insert, update and delete, and has a WHEN clause; otherwise
+  it is replaced (`20261018000000`). Run at the end of `20261017000000`
+  and `20261018000000` and by both deploy workflows.
+- `log_shadow_auth_user_change()` on `auth.users` (trigger
+  `zz_log_shadow_auth_user`, AFTER UPDATE, WHEN metadata, email, phone
+  or password changed) and `log_shadow_mfa_change()` on
+  `auth.mfa_factors` (`zz_log_shadow_mfa` insert/delete,
+  `zz_log_shadow_mfa_status` status updates). While the user has an
+  open session, log `changed_keys` (names only) or the factor id,
+  `attribution: 'during_session'`. With no open session, `auth.users`
+  changes fall back to `live_shadow_session_for()` and log
+  `attribution: 'unrevoked_shadow_session'`, `after_end: true`. A
+  `bank_*` or email change alerts. Both bodies are wrapped in an
+  exception block: a failure raises a WARNING (plus a Slack note) and
+  never aborts GoTrue's write; JSON-null metadata counts as empty.
+  Kill switch: replace the function body with `return null`
+  (`shadow-mode.md`).
+- `open_shadow_session_for(uuid)`: the open (not ended, not expired)
+  session on a user. `live_shadow_session_for(uuid)`: the newest
+  recorded session whose `auth.sessions` row still exists, has not
+  passed `not_after`, and is inside the 168h timebox and 72h inactivity
+  limit (mirrors `supabase/config.toml`; change together).
+  `shadow_alert_slack(text)`: posts via pg_net to the Vault
+  `slack_webhook_url`, silent without it, never raises.
+- `shadow_slack_key_list(jsonb)` returns text: `immutable`, security
+  invoker, EXECUTE revoked from client roles. Strips `<`, `>`, `&`,
+  caps each key at 40 characters and the list at 10 ("and N more").
+- `my_support_access()` was dropped in `20261024800000` (owner ruling
+  2026-09-27: MCs are not shown shadow sessions). It had fed the
+  Settings "Support access" card, also removed.
+- `admin_shadow_sessions.revoked_at` (`20261021000000`): when
+  `revoke_expired_shadow_sessions()` swept the row. That function
+  (definer, `search_path = ''`, EXECUTE for `service_role` only) deletes
+  the `auth.sessions` row of every unswept ended or expired shadow
+  session (refresh tokens and `mfa_amr_claims` cascade), stamps
+  `ended_at = coalesce(ended_at, expires_at)` and `revoked_at = now()`,
+  and returns the number deleted. Called every minute by the workflow
+  tick. Partial index `admin_shadow_sessions_unswept_idx` on unswept rows.
 
 ------------------------------------------------------------------------
 
@@ -910,21 +1216,112 @@ templates are an opt-in catalog
 
 ## couple_emails (Couple profile — Emails tab)
 
-A sent-history log of emails the MC sends a couple from the manual
-"Send email" flow (`/api/email/send-template` inserts a row after a
-successful send). Powers the **Emails** tab on the couple profile.
+A sent-history log of every email sent to a couple. Powers the
+**Emails** tab on the couple profile.
 
-Columns: id, user_id (RLS key, FK auth.users cascade), couple_id (FK
-couples cascade), template_id (FK email_templates **on delete set
-null**, nullable), template_name (text snapshot — survives template
+- **Manual** (`source = 'manual'`): the MC's own sends
+  (`/api/email/send-template`, `/api/email/send-proposal`) insert a
+  `sent` row after a successful send, as the MC.
+- **Automated** (`source = 'automation'`, Task 30): every workflow
+  message writes one row once the transport has answered, `sent` with
+  its provider message id or `failed` with the error
+  (`logAutomatedSend` in `lib/email/send-log.ts`, called from the send
+  gate in `lib/email/automation-send.ts` and from `send_email` in
+  `lib/automations/actions/messaging.ts`). One row per recipient
+  message, so a cc/bcc split address gets its own. Written with the
+  service role through `log_automated_send(...)` after the send; a
+  failed write never fails the send and raises
+  `automated_send_log_failed`. The Resend webhook then advances the row
+  by `provider_message_id`.
+- **One row per message, not per attempt** (fix round 1): the row's
+  `attempt_key` is the send's per-recipient idempotency key
+  (`step:recipient:fingerprint`), and `log_automated_send` upserts on
+  it. A retry updates its own row; a later success replaces a `failed`
+  row; a row already `sent` or advanced by the webhook is left alone,
+  unless the new answer is a different message (Phase 5 fix wave, N1): a
+  different Resend id (a retry after Resend's 24 hour window), or any
+  success on the MC's own mailbox (Gmail and Graph deduplicate nothing),
+  is inserted as its own row under `attempt_key || ':' || provider id`
+  (a random uuid when there is none). Any other unique violation reaches
+  the caller and is alerted.
+- **A later send supersedes the failure it replaced** (M4): when a
+  success is written for a step, that step's earlier `failed` rows to the
+  same address (case-insensitive) under other keys get `superseded_at`.
+  Their status stays `failed`; the Emails tab reads them as replaced.
+- **A deleted couple's rows are scrubbed, not removed** (Phase 5
+  residual pass R2, `20261023300000`): the `before update of couple_id`
+  trigger `couple_emails_scrub_on_couple_delete` fires when the FK's set
+  null runs and rewrites the row's personal details: `to_email` becomes
+  `'(couple deleted)'`, `subject` becomes `''`, and `template_name`,
+  `error`, `provider_message_id` and `attempt_key` (which embeds the
+  address) become null. The row stays, because it is the tenant's
+  daily-cap count (the cap reads only user_id, source, transport, status
+  and sent_at). Security invoker, empty search_path, no client execute.
+
+Columns: id, user_id (RLS key, FK auth.users cascade), couple_id
+(nullable, FK couples **on delete set null**, Phase 5 fix wave M2), template_id (FK email_templates **on delete set
+null**, nullable), template_name (text snapshot, survives template
 deletion/rename), subject (rendered subject sent), to_email, source
-(`manual` today; `automation` can log here later without a schema
-change), status (default `sent`), sent_at, created_at.
+(`manual` | `automation`), status, sent_at, created_at, and (Task 30)
+step_id (FK workflow_steps on delete set null), instance_id (FK
+workflow_instances on delete set null), provider_message_id (text,
+unique when set), error (why a `failed` send failed), delivered_at,
+bounced_at, complained_at, and (fix round 1) attempt_key (text, unique)
+and transport (`resend` | `gmail` | `graph`, null on manual rows;
+existing automated rows backfilled `resend`), and (Phase 5 fix wave)
+superseded_at (timestamptz, set by `log_automated_send`, null on manual
+rows).
 
-Indexes: `couple_emails(couple_id)`, `couple_emails(user_id)`.
-RLS: owner-only `user_id = auth.uid()`.
+**Deleting a couple keeps its rows** (M2). `couple_id` is set null, not
+cascaded, for every row (one FK, one rule): the rows are the tenant's
+daily-cap count and delivery record, and a cascade let a tenant reset
+their own cap by deleting a couple. An orphaned row is readable by its
+owner only (every read policy scopes by `user_id`) and listed by no
+surface (the Emails tab reads by couple). Deleting the account still
+cascades through `user_id`. The row keeps the recipient address and
+subject after the couple is gone.
 
-Migration: `20260619000000_create_couple_emails.sql`.
+**Status** is CHECK-constrained to `sent | failed | delivered | bounced
+| complained | deferred`, and the webhook only moves it forward: sent <
+deferred < delivered < bounced < complained. A delivered event after a
+bounce leaves it bounced (but still stamps `delivered_at` if unset); a
+replay changes nothing (each timestamp keeps its first value). Legacy
+rows were all `sent`; the migration folds any other value to `sent`
+before the CHECK.
+
+**Daily send cap.** `WORKFLOW_SEND_DAILY_CAP` counts this table:
+`source = 'automation'` and `transport = 'resend'` rows for the tenant
+with `sent_at` in the last 24 hours whose status is `sent`, `delivered`,
+`bounced`, `complained` or `deferred`: messages that left. Not `failed`
+(Phase 5 fix wave, M1: a retry used to count its own earlier failures
+against its admission; a failing loop is bounded by retries and backoff
+instead). `readAutomatedSendWindow` in `lib/email/send-log.ts`, shared by the
+cron tick and approve-and-send. MC-mailbox sends are not on the shared
+domain and do not count. A capped step wakes when the row that has to
+age out for it to fit does (`automatedSendWindowReopensAt`).
+
+Indexes: `couple_emails(couple_id)`, `couple_emails(user_id)`,
+`couple_emails_cap_idx (user_id, source, transport, sent_at) include
+(status)` (the cap count; not partial, so a generic parameterised plan
+can use it too, Phase 5 fix wave N2), unique `(attempt_key)`, unique
+`(user_id, transport, provider_message_id) where provider_message_id is
+not null` (Gmail ids are per mailbox, so uniqueness is per tenant, M5),
+`(provider_message_id, transport)` (the webhook's lookup by Resend id),
+`couple_emails(step_id)`, `couple_emails(instance_id)`.
+
+RLS: the owner reads every row (`user_id = auth.uid()`); inserts only
+`source = 'manual'`, status `sent` rows naming their own couple with
+every engine-only column (superseded_at included) null; deletes only manual rows; no update.
+TRUNCATE, REFERENCES and TRIGGER revoked from `authenticated`; `anon`
+holds SELECT only. Automated rows are the delivery record and the daily
+cap, so the tenant cannot rewrite or delete them (deleting would reset
+their own cap). Plus the restrictive `require_mfa` policy and the
+shadow-mutation trigger every owned table carries.
+
+Migrations: `20260619000000_create_couple_emails.sql`,
+`20261023000000_couple_emails_delivery.sql`,
+`20261023100000_couple_emails_delivery_fixes.sql`,
+`20261023200000_couple_emails_send_fidelity_fixes.sql`.
 
 ## questionnaire_templates / couple_questionnaires (Couple questionnaires)
 
@@ -1787,7 +2184,20 @@ index on `(user_id, lower(name))`.
 `archived`), `apply_rule_type` (`manual` | `on_couple_created` |
 `on_stage_changed` | `on_package_applied` | `on_event`),
 `apply_rule_config` jsonb, `allow_reapply`, `quiet_hours_start/end`,
-`branch_depth_limit`, `canvas_viewport` jsonb, `version`.
+`branch_depth_limit`, `canvas_viewport` jsonb, `version`, and
+`exit_statuses` (`text[] not null default '{}'`, added
+`20261012000000`).
+
+`exit_statuses` lists the stages (`couple_statuses.slug`, lower-cased)
+that stop the workflow for a couple who moves into one. The dispatcher
+applies it through `exit_workflow_instances_for_stage(p_user_id,
+p_couple_id, p_to_status)` (`security invoker`, execute granted to
+`service_role` only): it locks the owner's matching templates `for
+share`, then cancels the couple's `active` and `paused`, non-default,
+non-personal instances of them with `cancelled_reason = 'exit_rule'`,
+returning `(instance_id, couple_id, workflow, stage)` for the audit rows.
+The app refuses an exit stage the template's own stage-changed rule
+starts on.
 
 Converter columns: `legacy_automation_id` (unique where not null),
 `template_slug` (starter-library provenance).
@@ -1831,24 +2241,181 @@ An `action` step stores the old action slug in `config.actionType`.
 
 `id`, `user_id`, `couple_id` (nullable — a personal instance has none),
 `template_id` (nullable, ad-hoc instances have none), `name`,
-`template_version`, `status` (`active` | `completed` | `cancelled`),
+`template_version`, `status` (`active` | `paused` | `completed` |
+`cancelled`; `paused` added `20261007000000`),
 `is_default`, `is_personal`, `trigger_event_id`, `context` jsonb,
-`applied_at`, `completed_at`, `error_message`.
+`applied_at`, `completed_at`, `error_message`, `dedupe_key` (uuid,
+nullable, added `20261003000000`), `paused_reason` (text, nullable,
+CHECK `template_off` | `manual`, added `20261008000000`),
+`cancelled_reason` (text, nullable, CHECK `manual` | `template_deleted`
+| `setup_interrupted` | `exit_rule`, added `20261011000000`).
+`needs_recompute_at` (timestamptz, nullable, added `20261023500000`):
+stamped when the bookkeeping after one of the instance's finished steps
+failed (output merge, branch skip, re-dating, completion); the tick's
+heal pass redoes it and clears the stamp. Partial index
+`workflow_instances_needs_recompute_idx` on `(id)` where it is not null.
+Since `20261024000000` the BEFORE UPDATE OF status trigger
+`workflow_instances_clear_marker` nulls it when the instance becomes
+`completed` or `cancelled` (the heal can do nothing for one), and a heal
+that fails pushes it five minutes into the future
+(`HEAL_RETRY_BACKOFF_MS`), so the finder, which names only markers
+`<= now()`, does not retry it every minute.
+
+`workflow_merge_step_outputs(p_instance_id, p_outputs jsonb,
+p_keep_existing default false) → void` (`20261023900000`, `security
+invoker`, service role only) merges step outputs into
+`context.step_outputs` in one UPDATE (`jsonb_set` with `||`), so two
+writers merging into the same instance keep both keys. With
+`p_keep_existing` (the heal) an existing key is never replaced. A
+non-object `p_outputs` raises `22023`.
+
+`cancelled_reason` says why a cancelled instance was stopped. Every
+cancel path sets it; resume clears it; rows stopped before it existed
+are null. Resume refuses `setup_interrupted`, any instance with a null
+`template_id`, and any whose template is not `active`. The flip is
+`resume_workflow_instance(p_instance_id, p_from)` (`20261011100000`,
+`security invoker`, execute granted to `authenticated` and
+`service_role`): it locks the instance in `p_from`, reads its template
+`for share`, and sets `active` (clearing both reasons and
+`completed_at`) only while the template is `active`. Returns `active`,
+`template_off`, `template_missing`, or null. The AFTER UPDATE OF status trigger
+`workflow_instances_cancel_steps` (`_workflow_instance_cancel_steps()`,
+`security invoker`) marks the instance's `pending` and `waiting` steps
+`cancelled` in the same statement that flips it to `cancelled`.
+
+`dedupe_key` holds the template id when an automatic apply must be
+unique for the couple, else null; null never collides, so a personal
+instance, an ad-hoc apply, or a template with `allow_reapply` set are
+all free to repeat. Backing this is a partial unique index on
+`(couple_id, dedupe_key) where dedupe_key is not null and status <>
+'cancelled'`, which replaced a check-then-insert race that let two bus
+events in the same tick open two instances (and send every email
+twice) for the same couple.
 
 Partial unique indexes: one default per couple, one personal per user,
 one instance per trigger event (so a re-delivered bus event cannot open
-a duplicate).
+a duplicate), one per `(couple_id, dedupe_key)` as above.
 
 A DB trigger creates the default ("General") instance in the same
 transaction as the couple INSERT, so there is never a couple with
 nowhere to put a to-do.
 
+`paused` is the per-instance reversible stop. The executor only runs
+steps on `active` instances, so nothing on a paused one fires; the
+dedupe index still counts it (it is `status <> 'cancelled'`), so a
+paused enrolment blocks a duplicate apply. It is not the account-wide
+pause, which is a separate switch.
+
+`paused_reason` says why a paused instance is paused: `template_off`
+when the MC turned the workflow off, `manual` when they paused the
+couple by hand. Turning the workflow back on offers to resume only
+`template_off` rows. Resume clears it; a row cancelled while paused
+keeps it, which is inert because the offer reads `status = 'paused'`.
+
+Template on/off and delete go through two `security invoker` functions
+(`20261008100000`; `delete_workflow_template` is granted to
+`authenticated` and `service_role`, revoked from `anon`):
+`set_workflow_template_status(p_template_id, p_status,
+p_expected_steps_revision default null)` (replaced in `20261023600000`,
+then in `20261024200000`, **service role only**) takes the template row
+lock `for update`, and for a Turn on requires the `steps_revision` the
+caller's pre-flight read, refusing with SQLSTATE `WF002` when it moved
+(`22023` when it is not passed, `P0002` when the template is gone); it
+then flips the status and, whenever the
+target is not `active`, pauses the template OWNER's `active` instances
+(`template_off`) in the same transaction (`i.user_id` = the template's
+owner, since the service role is not RLS-scoped);
+`delete_workflow_template(p_template_id)` cancels its `active` and
+`paused` instances (reason `template_deleted` since `20261011000000`),
+then deletes it. Both return the rows they changed
+(`instance_id`, `user_id`, `couple_id`). The BEFORE INSERT trigger
+`workflow_instances_refuse_off_template` refuses an insert with a
+`trigger_event_id` whose template is not `active` (SQLSTATE `WF001`).
+
+`workflow_templates.steps_revision` (bigint, not null, default 0,
+added `20261024200000`) is bumped by the AFTER ROW trigger
+`workflow_template_steps_bump_revision` (security definer, empty
+search_path, since `20261024400000`: a cascade from `auth.users` fires
+it as `supabase_auth_admin`, which cannot update `workflow_templates`,
+and a user delete failed; it also skips a template that is gone) in the
+same transaction as every
+insert, update or delete of one of the template's steps. The Turn on
+pre-flight and the hand apply read it first; the flip and `applyTemplate`
+refuse when it moved. A side effect: every step edit also bumps the
+template's `updated_at` through its own update trigger. Only that
+trigger writes the column: the BEFORE INSERT OR UPDATE trigger
+`workflow_templates_guard_steps_revision` (`20261024300000`) refuses
+(`42501`) an insert with a non-zero revision and any update that changes
+it, from every role, unless the write comes from inside another trigger
+(`pg_trigger_depth() > 1`, which only the bump reaches).
+
+The BEFORE INSERT OR UPDATE OF status trigger
+`workflow_templates_activation_lock` (`20261023600000`, Task 34; an
+allowlist since `20261024200000`) refuses a template's `status` becoming
+`active` unless `current_user` is `service_role`, `postgres` or
+`supabase_admin` (SQLSTATE `42501`). Turn on goes only through
+`setTemplateStatusAction`, which runs the pre-flight and flips with the
+service role. Draft inserts, moves to draft or archived, and edits of a
+template already on are unaffected, as are the service role and
+migrations.
+
+`activate_applied_workflow_instance(p_instance_id, p_require_active)`
+(`20261010000000`, `security invoker`, execute granted to
+`service_role` only) is the last step of `applyTemplate`: a new
+instance is inserted `paused` with a null `paused_reason` and flipped
+live here once its past-dated steps are skipped. It touches only an
+instance still `paused` with a null reason. With `p_require_active`, it
+locks the template `for share` (serialising with
+`set_workflow_template_status`) and, if the template is no longer
+`active`, sets `paused_reason = 'template_off'` instead of flipping.
+Returns `active`, `paused`, or null.
+
 ## `workflow_steps`
 
 The snapshot the MC works. Same shape as a template step plus `due_at`,
 `status` (`pending` | `running` | `waiting` | `done` | `skipped` |
-`errored`), `approval_token`, `approval_expires_at`, `completed_at`,
-`error_message`, `output` jsonb, and `legacy_task_id`.
+`errored` | `cancelled`; `cancelled` added `20261011000000`: an
+unstarted step whose workflow was stopped, never run, never re-dated,
+restored to `pending` on resume), `approval_token`, `approval_expires_at`, `completed_at`,
+`error_message`, `output` jsonb, `legacy_task_id`, and `attempt_count`
+(int, default 0, added `20261003100000`), and `due_held_at`
+(timestamptz, nullable, added `20261023700000`).
+
+`skip_reason` (text, nullable, CHECK `'branch'`, added `20261024300000`)
+is `'branch'` when the branch logic skipped the step (a lane not taken,
+or everything under a skipped branch, `lib/workflows/branch-skip.ts`).
+Reopening a branch restores only those; a step skipped by the MC, a
+resume or an apply carries null and stays skipped. The BEFORE INSERT OR
+UPDATE trigger `workflow_steps_skip_and_hold_rules`
+(`_workflow_steps_skip_and_hold_rules()`, `security invoker`) nulls it
+on any step that is not `skipped`, and nulls `due_held_at` on a step
+that becomes `done` or is skipped for any reason but a branch.
+
+`due_held_at` is the MC's hold: set when they take a step's date off
+(`rescheduleStepAction` with a null date, or an undated ad-hoc to-do),
+cleared when they set a date. Every recompute leaves a held step
+undated (`recomputeDueDates` in `lib/workflows/timing.ts` and
+`_workflow_recompute_wedding_steps`), and the engine's claim refuses it;
+only a manual claim (Send now) takes it and clears the hold.
+
+The executor claims a step through `workflow_claim_step(p_step_id,
+p_manual default false) → boolean` and finishes or holds a sleeping
+wait through `workflow_finish_wait(p_step_id) → boolean` and
+`workflow_hold_wait(p_step_id, p_expected_due_at, p_until) → boolean`
+(`20261023800000`, `security invoker`, service role only). Each first
+calls `_workflow_lock_live_instance(p_step_id)`, which takes the
+template row `for share` then the instance row `for share` (the order
+Turn off, delete and resume use) and requires the instance `active`, so
+a pause or Turn off that committed after the pass read its instance
+stops the write. The claim also requires `pending` or `waiting` and,
+unless manual, no hold.
+
+`attempt_count` is how many times the executor has tried an automated
+step. A transient failure reschedules it under a three-attempt cap
+(1, 5, then 15-minute backoff) before it is buried `errored`; a manual
+"Try again" resets the count to 0, since a retry the MC asked for by
+hand is a fresh start, not the next attempt of the same run. See
+`workflows.md` "When a step fails".
 
 `requires_approval` is the review gate: an automated step that is
 pending, due and still flagged does not run, and surfaces on the Today
@@ -1870,6 +2437,32 @@ that lets a manual to-do hold up an automated email.
 
 Partial index `workflow_steps_due_idx` on `(due_at)` where status is
 pending or waiting is the executor's hot query.
+
+`workflow_stranded_instances(p_limit, p_after default null) → table
+(instance_id uuid)` (`20261023400000`, body replaced `20261023500000`,
+`security invoker`, `search_path = ''`, execute revoked from public,
+anon and authenticated) names the active instances carrying
+`needs_recompute_at` at or before now (since `20261024000000`, so a
+backed-off marker waits), keyset paged on instance id, for the tick's
+heal pass (`lib/workflows/heal.ts`). The first version inferred strands from
+the shape of the steps, which could not tell a strand from a step the
+MC had held by taking its date off; the marker replaced it.
+
+`workflow_due_steps(p_now, p_types, p_limit, p_user_id default null)
+→ setof workflow_steps` (`20261014000000`, `security invoker`) is that
+query: steps of active instances, `pending` or `waiting`, type in
+`p_types` (the executor passes `AUTOMATED_STEP_TYPES`), no approval
+gate, `due_at` set and not after `p_now`, optionally one owner, ordered
+`due_at, instance_id, position`, at most `p_limit` rows. It leaves out
+every account under the account-wide stop with a `not exists` on
+`user_public_settings` (`workflows_paused_at is not null and
+workflows_resumed_at is null`). It replaced a PostgREST query that
+listed every stopped MC's id in the request URL, which failed past
+about two hundred stopped accounts and, with the error dropped,
+reported a clean tick while running nothing. Execute is revoked from
+`public`, `anon` and `authenticated` and granted to `service_role`.
+Called only through `loadDueSteps` (`lib/workflows/due-steps.ts`), which
+throws on a failed read.
 
 ## `workflow_audit_log`
 
@@ -1897,7 +2490,26 @@ legacy tables drop so a rollback has somewhere to look. No RLS.
   `wedding_relative` due dates when the couple's date moves. Triggered
   from `events` INSERT/DELETE/UPDATE OF date and `couples` UPDATE OF
   `event_date`, because the wedding date resolves as
-  `primary event date ?? couples.event_date`.
+  `primary event date ?? couples.event_date`. Only `active` and
+  `paused` instances are reshuffled (`paused` since `20261007000000`, so
+  a wedding moved during a pause is not read as overdue on resume).
+  Terminal steps are left
+  alone, and so is a `pending` step with `attempt_count > 0`
+  (`20261003300000`): its `due_at` is the executor's retry backoff, not
+  a schedule, and rewriting it retries the step immediately. No
+  `waiting` step is re-derived from its timing (`20261007000000`): its
+  `due_at` is an engine park or a sleeping wait's wake time. The one
+  exception is a sleeping `relative_to_event` wait, whose wake is
+  re-derived from its own config by `_workflow_wait_relative_wake(jsonb,
+  date)` (null, so untouched, when there is no wedding date or the
+  config does not parse, or the arithmetic overflows; the helper traps
+  every error and returns null, so it can never fail the edit). The
+  executor re-checks quiet hours when a sleeping wait wakes, since this
+  wake is unshifted. `_workflow_repair_stranded_waits()` (same migration,
+  service role only, idempotent) repairs waits the old rewrite left with
+  a null `due_at`. The TypeScript recompute in
+  `lib/workflows/executor.ts` carries the same exclusions; keep them in
+  sync.
 - `_owns_workflow_template_or_null(uuid)` and siblings — the ownership
   guards the foreign keys do not give you.
 - `get_portal_milestones(uuid)` — the couple-facing read, granted to
@@ -1913,6 +2525,8 @@ legacy tables drop so a rollback has somewhere to look. No RLS.
 |---|---|---|
 | `daily_digest_enabled` | boolean | Opt-out for the 7am morning digest |
 | `daily_digest_last_sent_on` | date | The MC's **local** date of the last send, so the repeated hour daylight saving creates cannot produce a second one |
+| `workflows_paused_at` | timestamptz null | Account-wide stop for workflow automation: when it went on. Null means running. Never touches instance status (`20261009000000`) |
+| `workflows_resumed_at` | timestamptz null | When the stop lifted; null while it is on. `[paused_at, resumed_at]` is the window whose due steps are skipped, not sent late. CHECK: set only after `paused_at`, never before it. Partial index on `user_id where workflows_paused_at is not null` for the per-tick read. The due read `workflow_due_steps` (`20261014000000`) applies the active stop in SQL |
 
 Migrations: `20260908000000_workflow_digest_settings.sql`,
 `20260909000000_workflow_portal_milestones.sql`.
@@ -2188,3 +2802,29 @@ RLS on, no policies: service-role only. Written by `lib/workflows/heartbeat.ts`.
 - `cron_call(p_path text) → bigint`: POSTs `<app_base_url><path>` via pg_net with the Vault bearer secret; returns the request id or null when unconfigured. Execute revoked from public, anon, authenticated.
 - `set_scheduler_secrets(p_base_url, p_secret)`: upserts the two Vault secrets. Service-role only.
 - `scheduler_status() → jsonb`: `{ configured, base_url, jobs[], heartbeats{} }`. Service-role only.
+
+### scheduler_leases (`20261003200000`)
+
+| column | type | notes |
+|---|---|---|
+| name | text pk | lease name, e.g. `automations-tick` |
+| held_until | timestamptz | the lease is free once `now()` passes this |
+| holder | uuid | the run that holds it, or null once released |
+
+RLS on, no policies: service-role only, same shape as `system_heartbeats`.
+Stops two overlapping tick runs from racing for the same due steps,
+using a row with an expiry rather than a session advisory lock, because
+pooled connections do not keep a session for a lock to live on.
+
+`acquire_scheduler_lease(p_name, p_ttl_seconds, p_token) → boolean`
+(`security definer`) does the insert-or-steal-if-expired in one
+statement, stamping `p_token` as the holder.
+`release_scheduler_lease(p_name, p_token) → boolean` deletes the row,
+but only when `p_token` still holds it. Both halves matter: the TTL has
+to outlast the longest tick, which makes it longer than the gap between
+two ticks, so a lease left to expire refuses the next minute's run on a
+healthy system; and the token stops a run whose lease expired
+mid-flight from releasing its successor's hold. Execute is revoked from
+`public`, `anon` and `authenticated` explicitly (Supabase's default
+privileges grant new functions to those roles otherwise) and granted to
+`service_role` alone. See `workflows.md` "The cron sweep".
