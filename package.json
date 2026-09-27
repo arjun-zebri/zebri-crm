@@ -93,7 +93,7 @@
     "dotenv": "^16.4.5",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "eslint-config-prettier": "^9.1.2",
+    "eslint-config-prettier": "^10.1.8",
     "jsdom": "^25.0.1",
     "knip": "^5.88.1",
     "prettier": "^3.8.3",
