@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useRef, useState } from 'react'
 
 import { Input } from '@/components/ui/input'
+import { paymentDetailError } from '@/lib/branding/payment-details'
 
 /**
  * BusinessSection - Edits MC branding identity fields
@@ -17,6 +18,8 @@ interface BusinessSectionProps {
   setTagline: (v: string) => void
   abn: string
   setAbn: (v: string) => void
+  postalAddress: string
+  setPostalAddress: (v: string) => void
   phone: string
   setPhone: (v: string) => void
   website: string
@@ -45,13 +48,19 @@ export function BusinessSection(props: BusinessSectionProps) {
       <TextField label="Facebook URL" value={props.facebookUrl} onChange={props.setFacebookUrl} placeholder="facebook.com/youraccount" />
       <TextField label="Twitter URL" value={props.twitterUrl} onChange={props.setTwitterUrl} placeholder="x.com/youraccount" />
       <TextField label="Pinterest URL" value={props.pinterestUrl} onChange={props.setPinterestUrl} placeholder="pinterest.com/youraccount" />
-      <TextField label="ABN" value={props.abn} onChange={props.setAbn} placeholder="00 000 000 000" />
+      {/* The ABN is saved only once it has a valid shape (Task 23c), so
+          say why a half-typed one is not being saved. */}
+      <TextField label="ABN" value={props.abn} onChange={props.setAbn} placeholder="00 000 000 000" error={paymentDetailError('abn', props.abn)} />
+      {/* Business name, ABN and postal address are the fields the outgoing
+          email footer reads to identify the sender (Spam Act requirement);
+          see `senderFooterHtml` in lib/email/html.ts. */}
+      <TextField label="Postal address" value={props.postalAddress} onChange={props.setPostalAddress} placeholder="12 Smith St, Sydney NSW 2000" />
       <IdentityTile label="Favicon" hint="Browser tab · 256KB" url={props.faviconUrl} onUpload={props.uploadFavicon} onRemove={props.removeFavicon} accept="image/png,image/x-icon,image/svg+xml,image/vnd.microsoft.icon" square />
     </div>
   )
 }
 
-function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function TextField({ label, value, onChange, placeholder, error }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; error?: string | null }) {
   // Keep the rail's uppercase field-label style; use the shared Input
   // primitive for the control (design-system rule: no raw <input>).
   return (
@@ -62,6 +71,7 @@ function TextField({ label, value, onChange, placeholder }: { label: string; val
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
+        {...(error ? { error } : {})}
       />
     </div>
   )

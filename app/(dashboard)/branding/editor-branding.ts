@@ -29,6 +29,7 @@ export function publicBrandingFromEditorState(state: BrandPreviewState): PublicB
     tagline: state.tagline || null,
     abn: state.abn || null,
     phone: state.phone || null,
+    postal_address: state.postalAddress || null,
     website: state.website || null,
     instagram_url: state.instagramUrl || null,
     facebook_url: state.facebookUrl || null,

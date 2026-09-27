@@ -1,6 +1,12 @@
 'use client';
 
 import { Trash2, UserCog } from 'lucide-react';
+// Internal-path import: this Next.js version has no public export of
+// `isRedirectError` (only the newer `unstable_rethrow`, which rethrows for
+// the framework's OWN soft navigation, not what we want here, since /admin
+// and / share the (dashboard) layout and a soft redirect would not remount
+// it; see the why-comment on `handleEnterShadow` below).
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { useState, useTransition } from 'react';
 
 import { deleteUser, enterShadow, sendPasswordReset } from '@/app/admin/actions';
@@ -47,8 +53,23 @@ export function AccountActionsSection({
   const handleEnterShadow = () => {
     startTransition(async () => {
       try {
-        await enterShadow(user.id);
+        const refused = await enterShadow(user.id);
+        if (refused) toast(refused.error, 'error');
       } catch (e) {
+        // enterShadow() redirects to "/" on success, which throws Next's
+        // internal NEXT_REDIRECT marker. Catching every error here would
+        // otherwise show that digest as a bogus "Failed to enter shadow
+        // mode" toast. A plain rethrow would let Next perform its own
+        // (soft) redirect, but /admin and / share the (dashboard) layout,
+        // so Sidebar and ShadowBanner (both read identity once in a
+        // mount-only effect) would not remount and would keep showing the
+        // admin's own identity with no shadow banner. A hard navigation
+        // forces every layout component to remount against the
+        // now-switched session.
+        if (isRedirectError(e)) {
+          window.location.assign('/');
+          return;
+        }
         toast(e instanceof Error ? e.message : 'Failed to enter shadow mode', 'error');
       }
     });

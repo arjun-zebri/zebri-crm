@@ -18,7 +18,7 @@
 import { z } from 'zod'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { ensureDefaultInstance, ensurePersonalInstance } from '@/lib/workflows/instantiate'
+import { ensureDefaultInstance, ensurePersonalInstance } from '@/lib/workflows/instance-homes'
 import { computeDueAt, localMidnight } from '@/lib/workflows/timing'
 import type { ActionType, RunContext } from '@/types/automations'
 import type { Database } from '@/types/database'

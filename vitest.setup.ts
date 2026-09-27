@@ -13,6 +13,7 @@
 process.env.STRIPE_SECRET_KEY ??= 'sk_test_unit_dummy_not_used'
 process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_unit_dummy_not_used'
 process.env.STRIPE_CONNECT_WEBHOOK_SECRET ??= 'whsec_unit_dummy_not_used'
+process.env.UNSUBSCRIBE_TOKEN_SECRET ??= 'unit_dummy_unsubscribe_secret_not_used_in_prod'
 
 import '@testing-library/jest-dom/vitest'
 import { afterEach } from 'vitest'

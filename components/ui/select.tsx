@@ -182,7 +182,13 @@ export function Select({
             <RadixSelect.Value placeholder={placeholder} />
           </span>
           <RadixSelect.Icon>
-            <ChevronDown className="text-text-muted shrink-0" width={16} height={16} aria-hidden="true" />
+            <ChevronDown
+              className="text-text-muted shrink-0"
+              width={16}
+              height={16}
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
           </RadixSelect.Icon>
         </RadixSelect.Trigger>
 

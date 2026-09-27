@@ -13,6 +13,7 @@
 
 import { buildManualSendContext } from '@/lib/email/send-context'
 import { createClient } from '@/lib/supabase/server'
+import { actionFailureMessage } from '@/lib/workflows/action-failure'
 import type { RunContext } from '@/types/automations'
 
 export type SendContextResult = { ok: true; ctx: RunContext } | { ok: false; error: string }
@@ -20,7 +21,13 @@ export type SendContextResult = { ok: true; ctx: RunContext } | { ok: false; err
 /** Build the manual-send context for `coupleId` (RLS-scoped). */
 export async function loadSendContextAction(coupleId: string): Promise<SendContextResult> {
   const supabase = await createClient()
-  const ctx = await buildManualSendContext(supabase, coupleId)
-  if (!ctx) return { ok: false, error: 'Could not load couple.' }
-  return { ok: true, ctx }
+  // The couple read throws on a failed read (Task 36); caught so the
+  // modal gets a sentence rather than a thrown server action.
+  try {
+    const ctx = await buildManualSendContext(supabase, coupleId)
+    if (!ctx) return { ok: false, error: 'Could not load couple.' }
+    return { ok: true, ctx }
+  } catch (err) {
+    return { ok: false, error: actionFailureMessage(err, 'loadSendContextAction') }
+  }
 }

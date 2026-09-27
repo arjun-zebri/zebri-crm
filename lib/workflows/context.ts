@@ -21,6 +21,8 @@ import type {
 import type { Database } from '@/types/database';
 import type { WorkflowInstanceRow, WorkflowStepRow } from '@/types/workflows';
 
+import { CONTEXT_UNREADABLE, throwIfReadFailed } from './read-failure';
+
 /** Outputs of previously executed steps, keyed by step id. */
 function stepOutputs(instance: WorkflowInstanceRow): Record<string, unknown> {
   const context = (instance.context ?? {}) as Record<string, unknown>;
@@ -70,11 +72,15 @@ export async function buildStepContext(
 ): Promise<RunContext> {
   let event: AutomationEventRow | null = null;
   if (instance.trigger_event_id) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('automation_events')
       .select('*')
       .eq('id', instance.trigger_event_id)
       .maybeSingle();
+    // Null means the event is gone and the synthetic one stands in; a
+    // failed read must not, or the step renders without the trigger's
+    // payload (the invoice it is about, the stage it moved to).
+    throwIfReadFailed('context.trigger_event', error, CONTEXT_UNREADABLE);
     event = (data as unknown as AutomationEventRow | null) ?? null;
   }
 

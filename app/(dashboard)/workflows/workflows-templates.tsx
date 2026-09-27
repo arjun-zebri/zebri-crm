@@ -19,7 +19,6 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ErrorState } from '@/components/ui/error-state';
 import { Input } from '@/components/ui/input';
 import type { TemplateStatus } from '@/types/workflows';
@@ -28,8 +27,11 @@ import { DescribeWorkflow } from './describe-workflow';
 import { NewWorkflowMenu } from './new-workflow-menu';
 import { TagEditorModal } from './tag-editor-modal';
 import { TemplateCard } from './template-card';
+import { TemplateDeleteDialog, useTemplateDelete } from './template-delete-dialog';
+import { TemplateStatusDialog } from './template-status-dialog';
 import { TemplateTagFilter } from './template-tag-filter';
 import { TemplateTagsModal } from './template-tags-modal';
+import { useTemplateStatusChange } from './use-template-status-change';
 import type { WorkflowLibrary } from './use-workflow-library';
 import { WorkflowsEmpty } from './workflows-empty';
 import { TemplatesSkeleton } from './workflows-skeletons';
@@ -45,9 +47,10 @@ export function WorkflowsTemplates({ library }: WorkflowsTemplatesProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [taggingId, setTaggingId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [describeOpen, setDescribeOpen] = useState(false);
+  const statusChange = useTemplateStatusChange(library.setStatus);
+  const deletion = useTemplateDelete(library.deleteTemplate);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -149,9 +152,11 @@ export function WorkflowsTemplates({ library }: WorkflowsTemplatesProps) {
                 tags={library.tags}
                 onOpen={(id) => router.push(`/workflows/${id}`)}
                 onDuplicate={(id) => void library.duplicateTemplate(id)}
-                onDelete={setPendingDelete}
+                onDelete={(id) => void deletion.request(id)}
                 onEditTags={setTaggingId}
-                onSetStatus={(id, status: TemplateStatus) => void library.setStatus(id, status)}
+                onSetStatus={(id, status: TemplateStatus) =>
+                  void statusChange.request(id, template.status, status)
+                }
               />
             ))}
           </div>
@@ -177,17 +182,9 @@ export function WorkflowsTemplates({ library }: WorkflowsTemplatesProps) {
         onDelete={library.deleteTag}
       />
 
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={() => {
-          if (pendingDelete) void library.deleteTemplate(pendingDelete);
-          setPendingDelete(null);
-        }}
-        title="Delete this workflow?"
-        description="Couples already running it keep their steps. Only the template goes."
-        confirmLabel="Delete"
-      />
+      <TemplateStatusDialog {...statusChange.dialog} />
+
+      <TemplateDeleteDialog {...deletion.dialog} />
     </div>
   );
 }

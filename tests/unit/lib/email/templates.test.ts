@@ -357,3 +357,20 @@ describe('detectMissingVariables', () => {
     expect(result.message).toContain('Venue name')
   })
 })
+
+/**
+ * Review I1 (Task 29): a stray opening sentinel, e.g. one left behind
+ * when a derived excerpt cut a marked gap in half, must never swallow
+ * the markup up to the next gap's closer.
+ */
+describe('applyMissingHighlights with a stray sentinel', () => {
+  it('matches only a complete pair and strips the leftover', async () => {
+    const { applyMissingHighlights, markMissing } = await import('@/lib/email/templates')
+    const stray = markMissing('Venue name').slice(0, 6)
+    const html = `<div>${stray}</div><table><tr><td>at ${markMissing('Venue name')}</td></tr></table>`
+    const out = applyMissingHighlights(html)
+    expect(out).toContain('<div>Venue</div><table><tr><td>at <span')
+    expect(out).toContain('>Venue name</span></td></tr></table>')
+    expect(out).not.toMatch(/[]/)
+  })
+})

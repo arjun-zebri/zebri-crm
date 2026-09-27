@@ -32,7 +32,10 @@ describe('workflows engine end to end', () => {
       .insert({
         user_id: user.id,
         name: 'New enquiry process',
-        status: 'active',
+        // A draft through the MC's client; switched on below with the
+        // service role, since a client role cannot make one active
+        // (activation lock, 20261023600000).
+        status: 'draft',
         apply_rule_type: 'on_couple_created',
         apply_rule_config: {},
       })
@@ -55,6 +58,11 @@ describe('workflows engine end to end', () => {
       },
     ]);
     expect(stepErr).toBeNull();
+    const { error: onErr } = await admin
+      .from('workflow_templates')
+      .update({ status: 'active' })
+      .eq('id', tpl!.id);
+    expect(onErr).toBeNull();
 
     // Drain anything other suites left on the bus.
     await dispatchPendingEvents(admin, 5000);

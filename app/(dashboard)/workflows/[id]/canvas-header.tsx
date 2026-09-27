@@ -23,12 +23,15 @@
  */
 'use client'
 
-import { ArrowLeft, History, Power } from 'lucide-react'
+import { ArrowLeft, History } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { StatePill } from '@/components/ui/state-pill'
 import type { AutomationStatus } from '@/types/automations'
+import type { TemplateStatus } from '@/types/workflows'
+
+import { CanvasStatusToggle } from './canvas-status-toggle'
 
 interface Props {
   name: string
@@ -36,7 +39,9 @@ interface Props {
   savedAt: Date
   onBack: () => void
   onRename: (name: string) => void
-  onToggleActive: () => void
+  templateId: string
+  /** Called once the on/off switch's change has been saved. */
+  onStatusChanged: (next: TemplateStatus) => void
   onShowRuns: () => void
 }
 
@@ -46,13 +51,12 @@ export function CanvasHeader({
   savedAt,
   onBack,
   onRename,
-  onToggleActive,
+  templateId,
+  onStatusChanged,
   onShowRuns,
 }: Props) {
   const [draft, setDraft] = useState(name)
   useEffect(() => setDraft(name), [name])
-
-  const isActive = status === 'active'
 
   return (
     <header className="flex items-center gap-3 px-6 py-3 border-b border-border bg-surface">
@@ -90,14 +94,7 @@ export function CanvasHeader({
           <History size={14} strokeWidth={1.5} />
           Running on
         </Button>
-        <Button
-          variant={isActive ? 'outline' : 'primary'}
-          onClick={onToggleActive}
-          className="gap-1.5"
-        >
-          <Power size={14} strokeWidth={1.5} />
-          {isActive ? 'Turn off' : 'Turn on'}
-        </Button>
+        <CanvasStatusToggle templateId={templateId} status={status} onChanged={onStatusChanged} />
       </div>
     </header>
   )
@@ -125,7 +122,10 @@ function SavedIndicator({ at }: { at: Date }) {
     const t = setInterval(() => force((n) => n + 1), 5000)
     return () => clearInterval(t)
   }, [])
-  return <span className="text-body text-text-muted">Saved · {relative(at)}</span>
+  // Hidden at phone width: Back, the name, Running on and the switch
+  // already fill a 390px row, and the save time is the one thing an MC
+  // on a phone can do without.
+  return <span className="hidden text-body text-text-muted sm:inline">Saved · {relative(at)}</span>
 }
 
 function relative(at: Date): string {

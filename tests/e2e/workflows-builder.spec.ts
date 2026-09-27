@@ -28,8 +28,11 @@ async function openTemplates(page: Page) {
 /** Create a workflow from the library and land on its canvas. */
 async function createWorkflow(page: Page, name: string) {
   await openTemplates(page)
-  const create = page.getByRole('button', { name: /New workflow|Build your first workflow/ }).first()
-  await create.click()
+  await page.getByRole('button', { name: 'New workflow' }).first().click()
+  // "New workflow" opens a menu since the Workflows feature (595ae944):
+  // build it by hand, or generate it with Zebri AI. This spec builds by
+  // hand.
+  await page.getByText('Build it myself').click()
   await page.waitForURL(/\/workflows\/[0-9a-f-]{36}/, { timeout: 20000 })
 
   const nameInput = page.getByPlaceholder('Untitled workflow')
@@ -90,9 +93,10 @@ test.describe('Workflows builder', () => {
 
     await openTemplates(page)
     await expect(page.getByText(workflowName)).toBeVisible({ timeout: 10000 })
-    // A brand new workflow is a draft: nothing applies until the MC says so.
+    // A brand new workflow is a draft: nothing applies until the MC says
+    // so. The library calls that "Paused" (template-card.tsx), not "Off".
     const row = page.locator(`[role="link"]:has-text("${workflowName}")`).first()
-    await expect(row.getByText('Off')).toBeVisible()
+    await expect(row.getByText(/^Paused/)).toBeVisible()
     // The applied count is `hidden sm:inline`: on a phone the row keeps
     // only the name and the status pill.
     const wide = (page.viewportSize()?.width ?? 0) >= 640
@@ -148,8 +152,61 @@ test.describe('Workflows builder', () => {
     await expect(page.getByText('To-do').first()).toBeVisible({ timeout: 15000 })
   })
 
+  test('an empty workflow cannot be turned on, and the canvas says why', async ({ page }) => {
+    await createWorkflow(page, workflowName)
+    await page.getByRole('button', { name: 'Turn on' }).click()
+
+    // Task 34: the pre-flight lists what to finish instead of turning on.
+    const blocked = page.getByRole('dialog', { name: 'Finish this workflow first' })
+    await expect(blocked).toBeVisible({ timeout: 10000 })
+    await expect(blocked.getByText('It has no steps yet. Add at least one.')).toBeVisible()
+    await blocked.getByRole('button', { name: 'OK' }).click()
+    await expect(page.getByRole('button', { name: 'Turn on' })).toBeVisible()
+  })
+
   test('activating a workflow makes it offerable on a couple', async ({ page }) => {
     await createWorkflow(page, workflowName)
+
+    // A workflow needs one finished step before it can be turned on: a
+    // to-do with a name.
+    await page.getByText('When does this start?').click()
+    const rules = page.getByRole('dialog', { name: 'When does this apply?' })
+    await rules.getByPlaceholder('Find a rule…').fill('New enquiry')
+    await Promise.all([
+      page.waitForResponse(
+        (r) => r.request().method() === 'POST' && r.url().includes('/workflows/'),
+        { timeout: 20000 },
+      ),
+      rules.getByRole('button', { name: /New enquiry/ }).first().click(),
+    ])
+    await page.getByText('Add step').click()
+    const steps = page.getByRole('dialog', { name: 'Add step' })
+    await steps.getByPlaceholder('Find a step…').fill('To-do')
+    await Promise.all([
+      page.waitForResponse(
+        (r) => r.request().method() === 'POST' && r.url().includes('/workflows/'),
+        { timeout: 20000 },
+      ),
+      steps.getByRole('button', { name: /To-do/ }).first().click(),
+    ])
+    // The unnamed to-do is badged as unfinished until it has a name.
+    await expect(page.getByText("No name yet, so it won't say what to do on the day.")).toBeVisible({
+      timeout: 10000,
+    })
+    await page.getByText('Give it a name', { exact: true }).click()
+    const todo = page.getByRole('dialog', { name: 'To-do' })
+    await todo.getByLabel('What needs doing').fill('Ring the venue')
+    await Promise.all([
+      page.waitForResponse(
+        (r) => r.request().method() === 'POST' && r.url().includes('/workflows/'),
+        { timeout: 20000 },
+      ),
+      todo.getByRole('button', { name: 'Save' }).click(),
+    ])
+    await expect(page.getByText("No name yet, so it won't say what to do on the day.")).toHaveCount(0, {
+      timeout: 10000,
+    })
+
     await page.getByRole('button', { name: 'Turn on' }).click()
     await page.waitForLoadState('networkidle')
     await expect(page.getByRole('button', { name: 'Turn off' })).toBeVisible({
@@ -158,7 +215,8 @@ test.describe('Workflows builder', () => {
 
     await openTemplates(page)
     const row = page.locator(`[role="link"]:has-text("${workflowName}")`).first()
-    await expect(row.getByText('On')).toBeVisible({ timeout: 10000 })
+    // "Live" in the library (template-card.tsx), not "On".
+    await expect(row.getByText(/^Live/)).toBeVisible({ timeout: 10000 })
   })
 
   test('the retired Automations route lands on the template library', async ({ page }) => {

@@ -1,0 +1,29 @@
+-- Remove the MC-facing view of shadow sessions (owner ruling 2026-09-27).
+--
+-- Phase 4 Task 25 showed each MC a "Support access" card in Settings:
+-- when Zebri support signed in as them, for how long, and how many
+-- changes and requests it made. The owner does not want MCs told when
+-- support uses shadow mode, so the card is gone and so is the one read
+-- behind it, public.my_support_access() (last defined in
+-- 20261021000000). Dropping the function, rather than leaving it
+-- unused, matters: it is granted to `authenticated`, so any MC could
+-- still call it through the data API and read their history.
+--
+-- Nothing else changes. Internal logging stays exactly as it was:
+-- admin_shadow_sessions, the shadow mutation and request rows in
+-- admin_audit_log, the Slack alerts, and the 8 hour revoke. Those
+-- tables were never MC-readable on their own: admin_shadow_sessions has
+-- no permissive policy for `authenticated` (only the restrictive
+-- require_mfa one), and admin_audit_log is readable by admins only
+-- (admin_audit_log_select_admin). So after this drop no MC-readable path
+-- to shadow session data remains.
+--
+-- Nothing depends on the function (no view, trigger or other function
+-- calls it; checked with pg_depend and a repo grep).
+--
+-- If this is wrong: the owner wants the card back. Recreate the function
+-- from 20261021000000 (the latest body) in a new migration and restore
+-- the card from git history.
+
+-- @ALLOW_DESTRUCTIVE: drops the MC-facing my_support_access() read; owner ruling 2026-09-27 that MCs are not shown shadow sessions. No data is lost, only a read function.
+drop function if exists public.my_support_access();

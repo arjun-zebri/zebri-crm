@@ -205,6 +205,22 @@ describe('recomputeDueDates', () => {
     timezone: SYDNEY,
   };
 
+  it('never re-dates a cancelled step', () => {
+    // Its workflow is stopped. A recompute that moved it would hand a
+    // stopped send a fresh date, and a resume would then judge it by a
+    // date the MC never saw.
+    const steps = [
+      step({
+        id: 'x',
+        position: 0,
+        status: 'cancelled',
+        due_at: '2026-10-01T00:00:00Z',
+        timing: { mode: 'wedding_relative', direction: 'before', amount: 2, unit: 'weeks' },
+      }),
+    ];
+    expect(recomputeDueDates(steps, base).find((r) => r.id === 'x')).toBeUndefined();
+  });
+
   it('threads each step completion into the next after_previous step', () => {
     const steps = [
       step({ id: 'a', position: 0, status: 'done', completed_at: '2026-09-10T05:00:00Z' }),
@@ -299,6 +315,25 @@ describe('recomputeDueDates', () => {
     expect(out.find((r) => r.id === 'no1')!.due_at).toBe('2026-09-10T05:00:00.000Z');
   });
 
+  it('never dates a lane head from a skipped branch, only from a done one', () => {
+    // A skipped branch chose no lane. Dating its lanes from the skip
+    // would run both (Task 36 fix round 2, re-review N3).
+    const steps = [
+      step({
+        id: 'br',
+        position: 0,
+        type: 'branch',
+        status: 'skipped',
+        completed_at: '2026-09-10T05:00:00Z',
+      }),
+      step({ id: 'yes1', position: 0, parent_step_id: 'br', branch_path: 'yes' }),
+      step({ id: 'no1', position: 0, parent_step_id: 'br', branch_path: 'no' }),
+    ];
+    const out = recomputeDueDates(steps, { ...base, weddingDate: null });
+    expect(out.find((r) => r.id === 'yes1')!.due_at).toBeNull();
+    expect(out.find((r) => r.id === 'no1')!.due_at).toBeNull();
+  });
+
   it('chains within one branch path without leaking across to the other', () => {
     const steps = [
       step({
@@ -359,5 +394,97 @@ describe('recomputeDueDates', () => {
     ];
     const out = recomputeDueDates(steps, base);
     expect(out.map((r) => r.id)).toEqual(['b']);
+  });
+  describe('a to-do ticked early (owner report, 2026-09-27)', () => {
+    // Send, Wait 1 min, send "email 2", to-do, send "email 3". The MC
+    // ticked the to-do while email 2 was still behind the Wait, and
+    // email 3 was dated from the tick and sent before email 2.
+    const chain = (email2: Partial<WorkflowStepRow>) => [
+      step({ id: 'email1', position: 100, type: 'action', status: 'done', completed_at: '2026-09-27T05:00:40Z' }),
+      step({ id: 'wait', position: 200, type: 'wait', status: 'done', completed_at: '2026-09-27T05:04:52Z' }),
+      step({ id: 'email2', position: 300, type: 'action', ...email2 }),
+      step({ id: 'todo', position: 400, status: 'done', completed_at: '2026-09-27T05:01:54Z' }),
+      step({ id: 'email3', position: 500, type: 'action' }),
+    ];
+
+    it('leaves the send below the early to-do undated while the send above it is open', () => {
+      const out = recomputeDueDates(chain({ status: 'pending' }), base);
+      expect(out.find((r) => r.id === 'email2')!.due_at).toBe('2026-09-27T05:04:52.000Z');
+      expect(out.find((r) => r.id === 'email3')!.due_at).toBeNull();
+    });
+
+    it('dates it from the send above once that finishes after the tick', () => {
+      const out = recomputeDueDates(
+        chain({ status: 'done', completed_at: '2026-09-27T05:04:53Z' }),
+        base,
+      );
+      expect(out.find((r) => r.id === 'email3')!.due_at).toBe('2026-09-27T05:04:53.000Z');
+    });
+
+    it('dates it from the to-do when the to-do was ticked last', () => {
+      const steps = chain({ status: 'done', completed_at: '2026-09-27T05:04:53Z' }).map((s) =>
+        s.id === 'todo' ? { ...s, completed_at: '2026-09-27T06:00:00Z' } : s,
+      );
+      const out = recomputeDueDates(steps, base);
+      expect(out.find((r) => r.id === 'email3')!.due_at).toBe('2026-09-27T06:00:00.000Z');
+    });
+
+    it('a finished dated step does not release the step behind it past an open one (Final call)', () => {
+      // Owner ruling, 2026-09-27. The dated step itself still runs on its
+      // own date; only its follower waits for the open to-do above.
+      const finalCall = (status: 'pending' | 'done') =>
+        step({
+          id: 'call',
+          position: 2,
+          status,
+          completed_at: status === 'done' ? '2026-10-30T13:00:00Z' : null,
+          timing: { mode: 'wedding_relative', direction: 'before', amount: 2, unit: 'weeks' },
+        });
+      const lane = (call: WorkflowStepRow, questionnaire: 'pending' | 'done') => [
+        step({
+          id: 'questionnaire',
+          position: 0,
+          status: questionnaire,
+          completed_at: questionnaire === 'done' ? '2026-11-02T00:00:00Z' : null,
+        }),
+        step({ id: 'chase', position: 1, type: 'action' }),
+        call,
+        step({ id: 'thanks', position: 3, type: 'action' }),
+      ];
+
+      const pendingCall = recomputeDueDates(lane(finalCall('pending'), 'pending'), base);
+      expect(pendingCall.find((r) => r.id === 'call')!.due_at).toBe('2026-10-30T13:00:00.000Z');
+
+      const done = recomputeDueDates(lane(finalCall('done'), 'pending'), base);
+      expect(done.find((r) => r.id === 'thanks')!.due_at).toBeNull();
+
+      // Once everything above has run, Thanks is dated from the latest.
+      const settled = lane(finalCall('done'), 'done').map((s) =>
+        s.id === 'chase' ? { ...s, status: 'done' as const, completed_at: '2026-11-03T00:00:00Z' } : s,
+      );
+      const out = recomputeDueDates(settled, base);
+      expect(out.find((r) => r.id === 'thanks')!.due_at).toBe('2026-11-03T00:00:00.000Z');
+    });
+  });
+
+  it('reads an unreadable timing on a finished row as chained, like release.ts', () => {
+    const steps = [
+      step({ id: 'open', position: 0, status: 'pending' }),
+      step({ id: 'odd', position: 1, status: 'done', completed_at: '2026-09-27T05:00:00Z', timing: { mode: 'someday' } as never }),
+      step({ id: 'after', position: 2 }),
+    ];
+    expect(recomputeDueDates(steps, base).find((r) => r.id === 'after')!.due_at).toBeNull();
+  });
+
+  it('a done chained step in a branch lane behind an open sibling releases nothing', () => {
+    const steps = [
+      step({ id: 'b', position: 0, type: 'branch', status: 'done', completed_at: '2026-09-27T05:00:00Z' }),
+      step({ id: 'open', position: 0, parent_step_id: 'b', branch_path: 'yes' }),
+      step({ id: 'ticked', position: 1, parent_step_id: 'b', branch_path: 'yes', status: 'done', completed_at: '2026-09-27T05:01:00Z' }),
+      step({ id: 'send', position: 2, parent_step_id: 'b', branch_path: 'yes', type: 'action' }),
+    ];
+    const out = recomputeDueDates(steps, base);
+    expect(out.find((r) => r.id === 'open')!.due_at).toBe('2026-09-27T05:00:00.000Z');
+    expect(out.find((r) => r.id === 'send')!.due_at).toBeNull();
   });
 });

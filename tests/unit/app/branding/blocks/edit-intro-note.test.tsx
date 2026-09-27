@@ -26,7 +26,7 @@ const state: BrandPreviewState = {
   headingCase: 'none', bodyCase: 'none', subheadingSize: 14, subheadingWeight: 600, subheadingCase: 'uppercase',
   headingLetterSpacing: 0, bodyLineHeight: 1.5, linkColor: '#111827',
   buttonVariant: 'fill', buttonSize: 'md', buttonRadius: 8, sectionSpacing: 24,
-  businessName: 'Test Business', phone: '', website: '', instagramUrl: '', facebookUrl: '', twitterUrl: '', pinterestUrl: '',
+  businessName: 'Test Business', phone: '', postalAddress: '', website: '', instagramUrl: '', facebookUrl: '', twitterUrl: '', pinterestUrl: '',
   bankAccountName: '', bankBsb: '', bankAccountNumber: '',
 }
 

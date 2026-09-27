@@ -35,6 +35,15 @@ describe('summarise', () => {
     });
   });
 
+  it('leaves a cancelled step out: it is neither done nor still to do', () => {
+    const out = summarise([
+      row({ status: 'cancelled' }),
+      row({ status: 'done' }),
+      row(),
+    ]);
+    expect(out.get('c1')).toMatchObject({ done: 1, total: 2, hasFailure: false });
+  });
+
   it('names the next thing the MC can actually do', () => {
     const out = summarise([
       row({ status: 'done', title: 'Welcome email' }),
@@ -62,5 +71,25 @@ describe('summarise', () => {
     // The personal list has no couple, and its steps must not land on
     // whichever card happens to be first.
     expect(summarise([row({ workflow_instances: { couple_id: null } })]).size).toBe(0);
+  });
+});
+
+/**
+ * A send that reached some recipients and not others stays `done` (audit
+ * M6), so the board's line read as a healthy "4 of 4" (Task 31 review M7,
+ * parked to the Phase 5 fix wave). It now counts them.
+ */
+describe('summarise: partly failed sends', () => {
+  it('counts a done send with failed recipients, and still counts it as done', () => {
+    const out = summarise([
+      row({ status: 'done', type: 'action', output_failed: 1 }),
+      row({ status: 'done', type: 'action', output_failed: 0 }),
+      row({ status: 'done', type: 'action' }),
+    ]);
+    expect(out.get('c1')).toMatchObject({ done: 3, total: 3, partialSends: 1 });
+  });
+
+  it('ignores a failure count on a step that is not done', () => {
+    expect(summarise([row({ status: 'errored', output_failed: 2 })]).get('c1')).toMatchObject({ partialSends: 0 });
   });
 });

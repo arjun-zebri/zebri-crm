@@ -11,9 +11,41 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getActionSpec } from '@/lib/automations/actions'
 import type { RunContext } from '@/types/automations'
 
-const { dispatchMock } = vi.hoisted(() => ({ dispatchMock: vi.fn() }))
+const { dispatchMock, logMock } = vi.hoisted(() => ({ dispatchMock: vi.fn(), logMock: vi.fn() }))
 
-vi.mock('@/lib/email/dispatch', () => ({ dispatchEmail: dispatchMock }))
+// Ported from 98bb9018 on main. This branch's send_email also runs the
+// account stop, the opt-out gate, the send-rate brake and the Task 30
+// send log, so those are stubbed the way the sibling suites stub them.
+vi.mock('@/lib/email/dispatch', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/email/dispatch')>()),
+  dispatchEmail: dispatchMock,
+}))
+vi.mock('@/lib/workflows/account-pause', () => ({
+  readAccountPause: async () => ({ status: 'running' }),
+}))
+vi.mock('@/lib/email/suppression', () => ({
+  isEmailSuppressed: async () => ({ status: 'clear' }),
+  isCoupleOptedOut: async () => ({ status: 'clear' }),
+}))
+vi.mock('@/lib/email/send-log', () => ({
+  AUTOMATED_SEND_WINDOW_MS: 24 * 60 * 60 * 1000,
+  AUTOMATION_SOURCE: 'automation',
+  logAutomatedSend: logMock,
+  readAutomatedSendWindow: vi.fn(async () => ({ status: 'ok', count: 0 })),
+  automatedSendWindowReopensAt: vi.fn(async () => null),
+  transportOf: () => 'microsoft',
+}))
+vi.mock('@/lib/email/sender-identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/email/sender-identity')>()),
+  resolveSenderForSend: async () => ({
+    status: 'ok',
+    sender: {
+      transport: 'oauth',
+      from: 'mc@outlook.com',
+      oauth: { provider: 'microsoft', accessToken: 't' },
+    },
+  }),
+}))
 
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
@@ -91,6 +123,7 @@ describe('send_email without a message id', () => {
   beforeEach(() => {
     dispatchMock.mockReset()
     dispatchMock.mockResolvedValue({ ok: true })
+    logMock.mockReset()
   })
 
   it('counts an ok send with no id as sent', async () => {
@@ -98,6 +131,13 @@ describe('send_email without a message id', () => {
     expect(dispatchMock).toHaveBeenCalledTimes(1)
     expect(result.kind).toBe('ok')
     expect(result).toMatchObject({ output: { sent: 1, failed: 0 } })
+  })
+
+  it('logs it as a sent row with no provider id, not a failed one', async () => {
+    await run(makeCtx())
+    expect(logMock).toHaveBeenCalledTimes(1)
+    expect(logMock.mock.calls[0]![1]).toMatchObject({ result: { ok: true } })
+    expect(logMock.mock.calls[0]![1].result.messageId).toBeUndefined()
   })
 
   it('treats a test send with no id as ok', async () => {

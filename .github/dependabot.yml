@@ -1,0 +1,29 @@
+# Zebri: Dependabot configuration (Phase 4B, Task 26).
+#
+# Weekly update PRs for both ecosystems in this repo. Minor/patch npm
+# updates are grouped into a single PR to limit noise (major bumps, which
+# can be breaking, still open their own PR for review). `open-pull-requests-limit`
+# caps how many PRs Dependabot can have open at once per ecosystem, so a
+# quiet week of merging doesn't turn into a pile-up.
+#
+# Advisories on already-installed dependencies are caught separately by
+# `npm run audit:gate` in CI (see .claude/docs/cicd.md). Dependabot here
+# is about staying current, not about the security gate itself.
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    groups:
+      npm-minor-patch:
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5

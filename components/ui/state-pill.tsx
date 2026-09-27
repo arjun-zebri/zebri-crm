@@ -11,10 +11,13 @@
  * <StatePill label="Active" tone="success" dot />
  * <StatePill label="Draft" tone="neutral" />
  * <StatePill label="Due" tone="warning" dot="hollow" />
+ * <StatePill label="Immediately" icon={CalendarClock} />
+ * <StatePill label="Subject is required." tone="warning" icon={AlertTriangle} wrap />
  * ```
  *
  * @module components/ui/state-pill
  */
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 export type StatePillTone =
@@ -37,6 +40,20 @@ export interface StatePillProps {
    * (Due, Sent, Pending). `false` = no dot.
    */
   dot?: StatePillDot;
+  /**
+   * Optional leading Lucide icon, drawn at 12px and the house 1.5
+   * stroke, hidden from screen readers (the label carries the meaning).
+   * Used instead of a dot where the pill names a kind of thing, such as
+   * a workflow card's timing or an unfinished step.
+   */
+  icon?: LucideIcon;
+  /**
+   * Let a sentence-length label wrap inside its container rather than
+   * overflow it. For a pill whose text is the fix ("Subject is
+   * required."), which truncating would hide. A wrapped pill takes
+   * `rounded-control`, since a pill radius on two lines cuts into the text.
+   */
+  wrap?: boolean;
   /** Optional extra classes — useful for layout adjustments. */
   className?: string;
 }
@@ -70,14 +87,23 @@ export function StatePill({
   label,
   tone = 'neutral',
   dot = false,
+  icon: Icon,
+  wrap = false,
   className,
 }: StatePillProps) {
+  // A wrapped pill aligns its icon with the first line, not the middle,
+  // and takes the control radius: a full pill radius on two lines curves
+  // the tint away from the first and last glyphs of each line.
+  const layout = wrap ? 'max-w-full items-start rounded-control' : 'items-center rounded-pill';
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-pill px-2 py-0.5 text-body font-medium ${TONE_CLASSES[tone]}${
+      className={`inline-flex ${layout} gap-1.5 px-2 py-0.5 text-body font-medium ${TONE_CLASSES[tone]}${
         className ? ` ${className}` : ''
       }`}
     >
+      {Icon ? (
+        <Icon size={12} strokeWidth={1.5} aria-hidden className={`shrink-0${wrap ? ' mt-1' : ''}`} />
+      ) : null}
       {dot === 'filled' ? (
         <span
           className={`h-1.5 w-1.5 rounded-pill ${DOT_BG_BY_TONE[tone]}`}
@@ -89,7 +115,7 @@ export function StatePill({
           aria-hidden
         />
       ) : null}
-      {label}
+      {wrap ? <span className="min-w-0">{label}</span> : label}
     </span>
   );
 }

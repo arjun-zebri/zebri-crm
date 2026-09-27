@@ -75,3 +75,84 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase db push
+
+      # Shadow-mode logging (Task 25): attach the write-logging trigger to
+      # any public table that lacks it. A migration's own attach runs only
+      # against the tables that exist when it runs, so on a hosted project
+      # a table from an earlier-timestamped migration pushed later would
+      # otherwise stay uncovered. Idempotent: returns 0 when nothing was
+      # missing. Uses the Management API SQL endpoint with the same access
+      # token the CLI uses, so no database host or pooler URL is needed.
+      - name: Ensure shadow-mode triggers
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          response=$(curl --fail-with-body -sS -X POST \
+            "https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"query": "select public.ensure_shadow_triggers() as attached;"}')
+          echo "$response"
+          attached=$(echo "$response" | jq -r '.[0].attached')
+          # Non-zero means a table was uncovered on this project until now
+          # (drift from an out-of-order push). It is fixed, but say so.
+          if [ "$attached" != "0" ]; then
+            echo "::warning title=Shadow-mode triggers::ensure_shadow_triggers() attached ${attached} table(s); coverage had drifted on this project."
+          fi
+
+      # Two-factor at the database (Task 23b): attach the restrictive
+      # `require_mfa` policy to any RLS table that lacks it, for the same
+      # out-of-order-push reason as the shadow triggers above. Idempotent:
+      # returns 0 when nothing was missing. Also checks storage.objects,
+      # which the migration attaches once (with only a WARNING if the
+      # project refuses it), and fails the deploy if it is missing.
+      - name: Ensure require_mfa policies
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          response=$(curl --fail-with-body -sS -X POST \
+            "https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\": \"select public.ensure_require_mfa_policies() as attached, (select count(*)::int from pg_policy where polrelid = 'storage.objects'::regclass and polname = 'require_mfa' and not polpermissive) as storage;\"}")
+          echo "$response"
+          attached=$(echo "$response" | jq -r '.[0].attached')
+          storage=$(echo "$response" | jq -r '.[0].storage')
+          # Non-zero means a table was reachable at aal1 on this project
+          # until now. It is fixed, but say so.
+          if [ "$attached" != "0" ]; then
+            echo "::warning title=require_mfa policies::ensure_require_mfa_policies() attached ${attached} table(s); two-factor coverage had drifted on this project."
+          fi
+          # A missing storage policy is not self-healing (the ensure
+          # function covers public tables only) and leaves a 2FA MC's
+          # private files open to a password-only session, so fail the
+          # deploy instead of warning where nobody looks.
+          if [ "$storage" != "1" ]; then
+            echo "::error title=require_mfa on storage::storage.objects has no restrictive require_mfa policy. An aal1 session of a 2FA MC can still reach their files. Attach it (see 20261019000000) and re-run."
+            exit 1
+          fi
+
+      # Post-deploy check: the three account-change triggers on auth.users
+      # and auth.mfa_factors. The migration skips the mfa_factors ones with
+      # only a WARNING if this project refuses the trigger privilege, so
+      # surface a missing one here instead of in a log nobody reads.
+      # Matched by schema and table name through pg_class, never by
+      # regclass text, which drops the `auth.` prefix whenever the
+      # session's search_path includes auth (review M2).
+      - name: Check shadow-mode auth triggers
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          response=$(curl --fail-with-body -sS -X POST \
+            "https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\": \"select count(*)::int as n from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace ns on ns.oid = c.relnamespace where t.tgname like 'zz_log_shadow_%' and ns.nspname = 'auth' and c.relname in ('users', 'mfa_factors') and t.tgenabled <> 'D';\"}")
+          echo "$response"
+          n=$(echo "$response" | jq -r '.[0].n')
+          if [ "$n" != "3" ]; then
+            echo "::warning title=Shadow-mode auth triggers::found ${n} of 3 (zz_log_shadow_auth_user, zz_log_shadow_mfa, zz_log_shadow_mfa_status). Account or 2FA changes while shadowing may be unlogged."
+          fi

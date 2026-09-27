@@ -26,6 +26,8 @@ export interface AuditEntry {
     | 'instance_created'
     | 'instance_completed'
     | 'instance_cancelled'
+    | 'instance_paused'
+    | 'instance_resumed'
     | 'step_started'
     | 'step_completed'
     | 'step_skipped'
@@ -34,6 +36,7 @@ export interface AuditEntry {
     | 'step_added'
     | 'step_approved'
     | 'step_rescheduled'
+    | 'step_retry_scheduled'
     | 'branch_taken';
   detail?: Json;
 }
@@ -49,19 +52,40 @@ export async function writeAudit(
   supabase: SupabaseClient<Database>,
   entry: AuditEntry,
 ): Promise<void> {
+  await writeAuditMany(supabase, [entry]);
+}
+
+/**
+ * Append many entries in one round trip.
+ *
+ * For the callers that transition a batch of steps at once (the stuck
+ * sweep). One insert rather than one per row: a sweep that recovers a
+ * few thousand steps would otherwise spend the tick's budget on audit
+ * writes alone. Every row carries the same keys, which supabase-js
+ * requires of an array insert.
+ *
+ * Never throws, for the same reason as {@link writeAudit}.
+ */
+export async function writeAuditMany(
+  supabase: SupabaseClient<Database>,
+  entries: AuditEntry[],
+): Promise<void> {
+  if (entries.length === 0) return;
   try {
-    const { error } = await supabase.from('workflow_audit_log').insert({
-      user_id: entry.userId,
-      instance_id: entry.instanceId,
-      step_id: entry.stepId ?? null,
-      couple_id: entry.coupleId ?? null,
-      event: entry.event,
-      detail: entry.detail ?? {},
-    });
+    const { error } = await supabase.from('workflow_audit_log').insert(
+      entries.map((entry) => ({
+        user_id: entry.userId,
+        instance_id: entry.instanceId,
+        step_id: entry.stepId ?? null,
+        couple_id: entry.coupleId ?? null,
+        event: entry.event,
+        detail: entry.detail ?? {},
+      })),
+    );
     if (error) {
-      console.error('[workflows] audit write failed', entry.event, error.message);
+      console.error('[workflows] audit write failed', entries.length, error.message);
     }
   } catch (err) {
-    console.error('[workflows] audit write threw', entry.event, err);
+    console.error('[workflows] audit write threw', entries.length, err);
   }
 }

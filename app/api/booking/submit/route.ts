@@ -329,13 +329,15 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Alert to Slack ops channel
+  // Alert to Slack ops channel. No booker name (T27): the booker is
+  // couple-side, not Zebri's own customer; `bookingId` is enough to look
+  // the booking up from the app.
   await sendAlert({
     type: 'booking_created',
     severity: 'info',
     userId,
     email: mcUser?.user?.email || 'unknown',
-    bookerName: input.name,
+    bookingId,
     manageToken,
   });
 

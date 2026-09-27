@@ -8,11 +8,16 @@
  * keys appear nowhere in `lib/automations`, deleted rather than
  * restyled, per the sweep rule.
  *
- * One required chip carries the whole wait ("1 day later", "2 weeks
- * before the event"); its popover edits the current mode's value at
- * the top and offers the other modes as rows beneath. Quiet hours is
- * the one optional chip: the default (defer into allowed hours) needs
- * no chip at all, so adding it exists to switch it off.
+ * One required chip carries the whole wait ("1 day later", "2 months
+ * before the event"); its popover edits the current mode's value at the
+ * top and offers the other modes as rows beneath. The builder offers two
+ * modes: a fixed amount of time, and a "Relative date" before or after
+ * the event, in minutes up to months. "Until a specific date" is no
+ * longer offered (owner ruling 2026-09-27); a Wait saved with it still
+ * runs unchanged, reads "Until <date>" here, and can be switched to a
+ * supported mode. Quiet hours is the one optional chip: the default
+ * (hold until quiet hours end) needs no chip at all, so adding it exists
+ * to switch it off.
  *
  * @module app/(dashboard)/workflows/[id]/wait-chips
  */
@@ -31,10 +36,21 @@ import {
 } from './filter-list'
 import { waitConfigLabel } from './step-summary'
 
-type WaitUnit = 'minutes' | 'hours' | 'days' | 'weeks'
-const WAIT_UNITS: WaitUnit[] = ['minutes', 'hours', 'days', 'weeks']
+type WaitUnit = 'minutes' | 'hours' | 'days' | 'weeks' | 'months'
+/** Units for a fixed amount of time: a month has no fixed length. */
+const DURATION_UNITS: Exclude<WaitUnit, 'months'>[] = ['minutes', 'hours', 'days', 'weeks']
+/**
+ * Units for a relative date. Months are calendar months on the event
+ * date, clamped to month end (see `computeWaitWakeAt`).
+ */
+const RELATIVE_UNITS: WaitUnit[] = ['minutes', 'hours', 'days', 'weeks', 'months']
 
-const MINUTES_PER: Record<WaitUnit, number> = {
+const UNIT_LABELS: Record<WaitUnit, string> = {
+  ...TIME_UNIT_LABELS,
+  months: 'Months',
+}
+
+const MINUTES_PER: Record<Exclude<WaitUnit, 'months'>, number> = {
   minutes: 1,
   hours: 60,
   days: 60 * 24,
@@ -42,8 +58,8 @@ const MINUTES_PER: Record<WaitUnit, number> = {
 }
 
 /** Largest whole unit that divides the stored minutes, for display. */
-function minutesToParts(minutes: number): { amount: number; unit: WaitUnit } {
-  for (const unit of ['weeks', 'days', 'hours'] as WaitUnit[]) {
+function minutesToParts(minutes: number): { amount: number; unit: Exclude<WaitUnit, 'months'> } {
+  for (const unit of ['weeks', 'days', 'hours'] as const) {
     if (minutes >= MINUTES_PER[unit] && minutes % MINUTES_PER[unit] === 0) {
       return { amount: minutes / MINUTES_PER[unit], unit }
     }
@@ -55,11 +71,14 @@ function minutesToParts(minutes: number): { amount: number; unit: WaitUnit } {
 function AmountField({
   value,
   min,
+  max,
   unitLabel,
   onCommit,
 }: {
   value: number
   min: number
+  /** Matches the schema ceiling, so the chip never saves a value the save refuses. */
+  max: number
   unitLabel: string
   onCommit: (next: number) => void
 }) {
@@ -69,7 +88,7 @@ function AmountField({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
   function commit() {
-    const next = draft === '' ? value : Math.max(min, Number(draft))
+    const next = draft === '' ? value : Math.min(max, Math.max(min, Number(draft)))
     setDraft(String(next))
     if (next !== value) onCommit(next)
   }
@@ -112,13 +131,8 @@ function ModeSwitchRows({
       patch: { mode: 'duration', durationMinutes: 1440 },
     },
     {
-      mode: 'until_date',
-      label: 'Until a specific date',
-      patch: { mode: 'until_date', untilDate: '' },
-    },
-    {
       mode: 'relative_to_event',
-      label: 'Before or after the event',
+      label: 'Relative date',
       patch: {
         mode: 'relative_to_event',
         relative: { amount: 2, unit: 'weeks', direction: 'before', anchor: 'event_date' },
@@ -150,16 +164,13 @@ function WaitControl(config: FilterConfig, setConfig: (c: FilterConfig) => void)
   const mode = typeof config['mode'] === 'string' ? config['mode'] : 'duration'
 
   if (mode === 'until_date') {
+    // No longer offered, and no longer edited: the saved date is shown
+    // as it runs, with the supported modes beneath to switch to.
+    const label = waitConfigLabel(config)
     return (
       <>
-        <div className="border-b border-border px-3 py-2">
-          <input
-            type="date"
-            value={typeof config['untilDate'] === 'string' ? config['untilDate'] : ''}
-            onChange={(e) => setConfig({ ...config, untilDate: e.target.value })}
-            aria-label="Resume on"
-            className="w-full bg-transparent text-body text-text focus:outline-none"
-          />
+        <div className="border-b border-border px-3 py-2 text-body text-text">
+          {label.charAt(0).toUpperCase() + label.slice(1)}
         </div>
         <ModeSwitchRows config={config} setConfig={setConfig} current={mode} />
       </>
@@ -181,17 +192,18 @@ function WaitControl(config: FilterConfig, setConfig: (c: FilterConfig) => void)
         <AmountField
           value={amount}
           min={0}
-          unitLabel={`${TIME_UNIT_LABELS[unit] ?? unit} ${direction} the event`}
+          max={525_600}
+          unitLabel={`${UNIT_LABELS[unit] ?? unit} ${direction} the event`}
           onCommit={(next) => update({ amount: next })}
         />
-        {WAIT_UNITS.map((u) => (
+        {RELATIVE_UNITS.map((u) => (
           <MenuItem
             key={u}
             selected={u === unit}
             trailing={u === unit ? <Check size={14} strokeWidth={1.5} /> : null}
             onClick={() => update({ unit: u })}
           >
-            {TIME_UNIT_LABELS[u] ?? u}
+            {UNIT_LABELS[u]}
           </MenuItem>
         ))}
         <MenuSeparator />
@@ -217,17 +229,18 @@ function WaitControl(config: FilterConfig, setConfig: (c: FilterConfig) => void)
       <AmountField
         value={amount}
         min={1}
-        unitLabel={TIME_UNIT_LABELS[unit] ?? unit}
+        max={Math.floor(525_600 / MINUTES_PER[unit])}
+        unitLabel={UNIT_LABELS[unit]}
         onCommit={(next) => setConfig({ ...config, durationMinutes: next * MINUTES_PER[unit] })}
       />
-      {WAIT_UNITS.map((u) => (
+      {DURATION_UNITS.map((u) => (
         <MenuItem
           key={u}
           selected={u === unit}
           trailing={u === unit ? <Check size={14} strokeWidth={1.5} /> : null}
           onClick={() => setConfig({ ...config, durationMinutes: amount * MINUTES_PER[u] })}
         >
-          {TIME_UNIT_LABELS[u] ?? u}
+          {UNIT_LABELS[u]}
         </MenuItem>
       ))}
       <ModeSwitchRows config={config} setConfig={setConfig} current={mode} />
@@ -252,16 +265,20 @@ export const WAIT_CHIPS: TriggerFilterDef[] = [
     label: 'Quiet hours',
     chipLabel: 'quiet hours',
     ...fieldFilter({ respectQuietHours: true }),
+    // Plain words for what happens when the wait ends inside the MC's
+    // quiet hours: it holds until they end (the runner's default), or it
+    // finishes on time and releases the next step regardless. The option
+    // values stay `defer` / `ignore`; only the words changed.
     current: (config) => (config['respectQuietHours'] === false ? 'ignore' : 'defer'),
     valueLabel: (config) =>
-      config['respectQuietHours'] === false ? 'ignored' : 'deferred around',
+      config['respectQuietHours'] === false ? 'ignored' : 'hold until they end',
     summary: (config) =>
       config['respectQuietHours'] === false
         ? 'Ignores quiet hours'
-        : 'Defers around quiet hours',
+        : 'Holds until quiet hours end',
     options: [
-      { value: 'defer', label: 'Defer until allowed hours' },
-      { value: 'ignore', label: 'Send regardless' },
+      { value: 'defer', label: 'Hold until quiet hours end' },
+      { value: 'ignore', label: 'Ignore quiet hours' },
     ],
     apply: (config, value) => ({ ...config, respectQuietHours: value === 'defer' }),
   },

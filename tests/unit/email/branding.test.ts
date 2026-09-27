@@ -27,7 +27,9 @@ describe('Email branding', () => {
 
     // Snapshot captures the exact current output when no branding is passed.
     // If this snapshot breaks, you changed the no-branding HTML structure —
-    // the back-compat requirement means it should NOT change.
+    // the back-compat requirement means it should NOT change, with one
+    // deliberate exception: the Task 32 hidden preheader, added as the
+    // first thing inside <body> for every couple-facing shell.
     expect(html).toMatchSnapshot('invoice-no-branding');
 
     // Sanity checks: the output is a complete HTML document with expected elements.
@@ -57,6 +59,7 @@ describe('Email branding', () => {
       tagline: null,
       abn: null,
       phone: null,
+      postal_address: null,
       website: null,
       instagram_url: null,
       facebook_url: null, twitter_url: null, pinterest_url: null, website_url: null,
@@ -126,6 +129,7 @@ describe('Email branding', () => {
       tagline: null,
       abn: null,
       phone: null,
+      postal_address: null,
       website: null,
       instagram_url: null,
       facebook_url: null, twitter_url: null, pinterest_url: null, website_url: null,
@@ -186,6 +190,7 @@ describe('Email branding', () => {
       tagline: null,
       abn: null,
       phone: null,
+      postal_address: null,
       website: null,
       instagram_url: null,
       facebook_url: null, twitter_url: null, pinterest_url: null, website_url: null,

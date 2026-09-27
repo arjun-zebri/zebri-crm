@@ -227,8 +227,14 @@ describe('to-do actions write workflow steps', () => {
         .single();
 
       const { instanceId } = await scenario('Repoint Tenancy');
+      // Spent attempts, so this call is the last one and lands on
+      // `errored` instead of being rescheduled by the executor's retry
+      // (see executor-retry.test.ts). What this test actually checks is
+      // that the other tenant's step stays untouched, which does not
+      // depend on which attempt finally errors it.
       const driverId = await addStep(instanceId, {
         config: { actionType: 'update_task', taskId: theirStep!.id, status: 'done' },
+        attempt_count: 2,
       });
 
       await advanceDueSteps(admin);

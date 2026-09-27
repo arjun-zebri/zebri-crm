@@ -8,6 +8,7 @@
  * @module lib/admin/scheduler
  */
 import { createAdminClient } from '@/lib/supabase/admin'
+import { STALE_EVENTS_HEARTBEAT } from '@/lib/workflows/heartbeat'
 
 /**
  * One pg_cron job as the card lists it.
@@ -45,6 +46,28 @@ export interface SchedulerStatus {
    * this field existed).
    */
   tickTruncated: boolean | null
+  /**
+   * The last tick's `detail.failedPasses`: every pass its guard caught
+   * throwing (`workflows.executor`, `workflows.backlog`, ...). Empty on a
+   * clean tick, and on a heartbeat written before this field existed.
+   */
+  tickFailedPasses: string[]
+  /**
+   * The last tick's `detail.failedReads`: reads that failed inside passes
+   * that carried on (steps left due, events left unprocessed, heals that
+   * failed). 0 on a clean tick, and on a heartbeat without the field. On
+   * screen because the Slack alert for it can be lost (Phase 6 review I2).
+   */
+  tickFailedReads: number
+  /** Where the first of those failed (`detail.failedReadSite`), or null. */
+  tickFailedReadSite: string | null
+  /**
+   * The last batch of bus events the dispatcher dropped as stale (older
+   * than a day), and when, from the `workflow-stale-events` heartbeat row.
+   * Null when none has ever been dropped. Read from the row the RPC
+   * already returns, so the card pays no query for it.
+   */
+  staleEvents: { count: number; at: string } | null
 }
 
 /** The outcome of a Vault write. */
@@ -57,6 +80,27 @@ const EMPTY: SchedulerStatus = {
   jobs: [],
   tickHeartbeat: null,
   tickTruncated: null,
+  tickFailedPasses: [],
+  tickFailedReads: 0,
+  tickFailedReadSite: null,
+  staleEvents: null,
+}
+
+/** A heartbeat row's `{ last_run_at, detail }`, or null when absent or misshapen. */
+function heartbeatRow(
+  heartbeats: Record<string, unknown>,
+  name: string,
+): { lastRunAt: string | null; detail: Record<string, unknown> | null } | null {
+  const row = heartbeats[name]
+  if (typeof row !== 'object' || row === null) return null
+  const r = row as Record<string, unknown>
+  return {
+    lastRunAt: typeof r['last_run_at'] === 'string' ? r['last_run_at'] : null,
+    detail:
+      typeof r['detail'] === 'object' && r['detail'] !== null
+        ? (r['detail'] as Record<string, unknown>)
+        : null,
+  }
 }
 
 /** Coerce the RPC's jsonb into {@link SchedulerStatus}; anything odd reads as unconfigured. */
@@ -70,14 +114,11 @@ export function parseSchedulerStatus(raw: unknown): SchedulerStatus {
   // Each heartbeat is now `{ last_run_at, detail }`, not a bare timestamp
   // (migration 20261001000000). Anything shaped differently (an old row,
   // or a project mid-migration) reads as never-run rather than throwing.
-  const tick =
-    typeof heartbeats['automations-tick'] === 'object' && heartbeats['automations-tick'] !== null
-      ? (heartbeats['automations-tick'] as Record<string, unknown>)
-      : null
-  const tickDetail =
-    typeof tick?.['detail'] === 'object' && tick['detail'] !== null
-      ? (tick['detail'] as Record<string, unknown>)
-      : null
+  const tick = heartbeatRow(heartbeats, 'automations-tick')
+  const tickDetail = tick?.detail ?? null
+  const failedPasses = tickDetail?.['failedPasses']
+  const stale = heartbeatRow(heartbeats, STALE_EVENTS_HEARTBEAT)
+  const staleCount = stale?.detail?.['count']
   return {
     configured: v['configured'] === true,
     slackConfigured: v['slack_configured'] === true,
@@ -90,8 +131,18 @@ export function parseSchedulerStatus(raw: unknown): SchedulerStatus {
       lastStart: typeof j['last_start'] === 'string' ? j['last_start'] : null,
       lastMessage: typeof j['last_message'] === 'string' ? j['last_message'] : null,
     })),
-    tickHeartbeat: typeof tick?.['last_run_at'] === 'string' ? (tick['last_run_at'] as string) : null,
+    tickHeartbeat: tick?.lastRunAt ?? null,
     tickTruncated: typeof tickDetail?.['truncated'] === 'boolean' ? (tickDetail['truncated'] as boolean) : null,
+    tickFailedPasses: Array.isArray(failedPasses)
+      ? failedPasses.filter((p): p is string => typeof p === 'string')
+      : [],
+    tickFailedReads: typeof tickDetail?.['failedReads'] === 'number' ? (tickDetail['failedReads'] as number) : 0,
+    tickFailedReadSite:
+      typeof tickDetail?.['failedReadSite'] === 'string' ? (tickDetail['failedReadSite'] as string) : null,
+    staleEvents:
+      stale?.lastRunAt && typeof staleCount === 'number'
+        ? { count: staleCount, at: stale.lastRunAt }
+        : null,
   }
 }
 

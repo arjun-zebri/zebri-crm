@@ -231,7 +231,11 @@ const ERROR_BUDGET = 43;
 // warning of slack on staging; locked in (71 -> 70).
 // Proposals Layout v2 (R0) merged with staging: two warnings of slack;
 // locked in (70 -> 68).
-const WARNING_BUDGET = 68;
+// Workflows trust remediation (Task 12): routing every automation send
+// through lib/email/dispatch.ts took the last lazy Resend client out
+// of lib/automations/actions, and its import-order warning with it
+// (68 -> 67).
+const WARNING_BUDGET = 67;
 
 function runEslintJson() {
   try {

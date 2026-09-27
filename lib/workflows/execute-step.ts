@@ -32,6 +32,9 @@ import type {
 } from '@/types/automations';
 import type { WorkflowStepRow } from '@/types/workflows';
 
+import { STOP_NOT_A_STEP } from './step-config-validation';
+import { stepDisplayTitle } from './step-label';
+
 /** A branch step also reports which way it went. */
 export interface StepOutcome {
   result: ActionResult;
@@ -58,17 +61,57 @@ function applyQuietHours(
   override: QuietHoursOverride | null,
 ): ActionResult {
   if (!respect || result.kind !== 'sleep' || result.reason !== 'wait') return result;
-  const window = resolveQuietHours(
-    override?.start ?? null,
-    override?.end ?? null,
-    ctx.mc,
-    ctx.couple?.timezone ?? null,
-  );
+  const window = quietWindow(ctx, override);
   if (!window) return result;
   const wake = new Date(result.wakeAt);
   const corrected = nextAllowedSendAt(wake, window);
   if (corrected.getTime() === wake.getTime()) return result;
   return { ...result, wakeAt: corrected.toISOString(), reason: 'quiet_hours' };
+}
+
+/** The quiet window that applies to this step, or null for "any time". */
+function quietWindow(ctx: RunContext, override: QuietHoursOverride | null) {
+  return resolveQuietHours(
+    override?.start ?? null,
+    override?.end ?? null,
+    ctx.mc,
+    ctx.couple?.timezone ?? null,
+  );
+}
+
+/**
+ * Should a sleeping `wait` that has just woken hold instead of finishing?
+ *
+ * The wake time a wait stores was pushed out of quiet hours when the wait
+ * started (see {@link applyQuietHours}), but a stored wake is not safe to
+ * trust at wake-up: the database's wedding-date recompute re-derives a
+ * wedding-relative wait's wake from its config, unshifted, and anything
+ * else that rewrites `due_at` later would do the same. A woken wait
+ * completes without being evaluated again and releases the send behind
+ * it at once, so the check has to happen here, at the moment of waking,
+ * with the same window the wake computation used.
+ *
+ * @param step - the woken wait
+ * @param ctx - the step's run context (for the MC's window and zone)
+ * @param override - the template's quiet-hours override, if any
+ * @param now - the moment it woke
+ * @returns the end of the quiet window when `now` is inside it, else null.
+ *   The returned instant is always outside the window and after `now`, so
+ *   a re-park on it cannot loop.
+ */
+export function quietHoursHoldUntil(
+  step: WorkflowStepRow,
+  ctx: RunContext,
+  override: QuietHoursOverride | null,
+  now: Date,
+): Date | null {
+  if (step.type !== 'wait') return null;
+  const parsed = waitConfigSchema.safeParse(step.config ?? {});
+  if (!parsed.success || !parsed.data.respectQuietHours) return null;
+  const window = quietWindow(ctx, override);
+  if (!window) return null;
+  const allowed = nextAllowedSendAt(now, window);
+  return allowed.getTime() > now.getTime() ? allowed : null;
 }
 
 /**
@@ -125,6 +168,13 @@ export async function executeStep(
             result: { kind: 'error', message: 'step has no actionType in its config' },
           };
         }
+        // A Stop saved before Stop left the picker (Phase 6). It still
+        // errors rather than being skipped: skipping would run the steps
+        // behind it, which the MC meant to stop. The sentence is the one
+        // the builder shows, not "unknown action stop" (residual F2).
+        if (actionType === 'stop') {
+          return { result: { kind: 'error', message: STOP_NOT_A_STEP } };
+        }
         const spec = getActionSpec(actionType as ActionType);
         if (!spec) {
           return { result: { kind: 'error', message: `unknown action ${actionType}` } };
@@ -138,7 +188,11 @@ export async function executeStep(
             },
           };
         }
-        const result = await spec.handler(ctx, parsed.data as never);
+        // Handlers that alert on a send (send_email) name the step by
+        // this rather than a rendered subject line, which can carry a
+        // couple's name through `{{couple.name}}` interpolation (T27).
+        const ctxWithTitle: RunContext = { ...ctx, stepTitle: stepDisplayTitle(step) };
+        const result = await spec.handler(ctxWithTitle, parsed.data as never);
         return {
           result: applyQuietHours(result, ctx, true, quietHours),
         };

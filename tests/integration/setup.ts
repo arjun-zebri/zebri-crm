@@ -15,6 +15,7 @@
 process.env.STRIPE_SECRET_KEY ??= 'sk_test_integration_dummy_not_used'
 process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_integration_dummy_not_used'
 process.env.STRIPE_CONNECT_WEBHOOK_SECRET ??= 'whsec_integration_dummy_not_used'
+process.env.UNSUBSCRIBE_TOKEN_SECRET ??= 'integration_dummy_unsubscribe_secret_not_used_in_prod'
 
 import { beforeAll } from 'vitest'
 

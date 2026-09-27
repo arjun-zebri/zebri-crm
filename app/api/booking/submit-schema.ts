@@ -8,6 +8,8 @@
  */
 import { z } from 'zod';
 
+import { hasLineBreak, SINGLE_LINE_MESSAGE, singleLineText } from '@/lib/utils/single-line';
+
 /** Minimum time a genuine human takes to fill the form, in ms. */
 const MIN_FILL_MS = 2_000;
 
@@ -51,8 +53,9 @@ export const bookingSubmitSchema = z.object({
       (tz: string) => getSupportedTimezones().includes(tz),
       `Not a valid IANA timezone`,
     ),
-  name: z.string().trim().min(1).max(120),
-  partnerName: optionalText(120),
+  // Names reach email headers, so a line break is refused (audit M5).
+  name: singleLineText(120).min(1),
+  partnerName: optionalText(120).refine((v) => !v || !hasLineBreak(v), SINGLE_LINE_MESSAGE),
   email: z.preprocess(
     (v) => (typeof v === 'string' ? v.trim() : v),
     z.email().max(200),

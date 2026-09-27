@@ -19,7 +19,7 @@ import { LoginForm } from './login-form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; recovered?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -29,8 +29,15 @@ export default async function LoginPage({
 
   // Sanitise `next` server-side too — defence in depth against a
   // malicious link slipping a non-relative path through.
-  const { next: rawNext } = await searchParams;
+  const { next: rawNext, recovered } = await searchParams;
   const next = rawNext && sameOriginPathSchema.safeParse(rawNext).success ? rawNext : undefined;
+  // Set by the recovery-code action (login/mfa/actions.ts) after it has
+  // switched two-factor sign-in off.
+  const recoveredNotice = recovered === '1';
 
-  return next ? <LoginForm next={next} /> : <LoginForm />;
+  return next ? (
+    <LoginForm next={next} recovered={recoveredNotice} />
+  ) : (
+    <LoginForm recovered={recoveredNotice} />
+  );
 }

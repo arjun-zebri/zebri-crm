@@ -234,10 +234,13 @@ async function loadCandidates(
   const counts = new Map<string, number>()
   const maxPositions = new Map<string, number>()
   if (eligible.length > 0) {
-    const { data: allStages } = await supabase
+    const { data: allStages, error: allStagesError } = await supabase
       .from('invoice_payment_stages')
       .select('invoice_id, position')
       .in('invoice_id', [...new Set(eligible.map((r) => r.invoice_id))])
+    // Unread, every stage would count as its invoice's only one, so each
+    // would go out marked final.
+    if (allStagesError) throw new Error(`load stage counts: ${allStagesError.message}`)
     for (const row of allStages ?? []) {
       counts.set(row.invoice_id, (counts.get(row.invoice_id) ?? 0) + 1)
       const currentMax = maxPositions.get(row.invoice_id) ?? 0
@@ -280,10 +283,13 @@ async function loadCandidates(
 
   const withStages = new Set<string>()
   if ((stageless ?? []).length > 0) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('invoice_payment_stages')
       .select('invoice_id')
       .in('invoice_id', (stageless ?? []).map((i) => i.id))
+    // Unread, an invoice that has stages would also fire as stageless:
+    // a second reminder for the same money.
+    if (error) throw new Error(`load staged invoices: ${error.message}`)
     for (const row of data ?? []) withStages.add(row.invoice_id)
   }
 

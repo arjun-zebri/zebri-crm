@@ -52,11 +52,20 @@ export interface DueDatePatch {
   due_at: string | null;
 }
 
-/** Statuses that mean a step will not run again and should not be rescheduled. */
-const TERMINAL: ReadonlySet<string> = new Set(['done', 'skipped', 'errored']);
+/**
+ * Statuses that mean a step will not run again and should not be
+ * rescheduled. A `cancelled` step keeps the date it had when its workflow
+ * stopped: a resume restores it to `pending` first and only then lets the
+ * recompute date it.
+ */
+const TERMINAL: ReadonlySet<string> = new Set(['done', 'skipped', 'errored', 'cancelled']);
 
-/** Statuses that release the step gated behind this one. */
-const RELEASES_NEXT: ReadonlySet<string> = new Set(['done', 'skipped']);
+/**
+ * Statuses that release the step gated behind this one. Not `cancelled`:
+ * a stopped step releases nothing, or the step after it would come due.
+ * Exported for `./release`, which asks the same question of one step.
+ */
+export const RELEASES_NEXT: ReadonlySet<string> = new Set(['done', 'skipped']);
 
 /** Shift a `YYYY-MM-DD` date string by an amount in the given unit. */
 function shiftDate(
@@ -137,9 +146,22 @@ export function computeDueAt(
   }
 }
 
+/**
+ * Is this step held by the MC ("Take the date off")? Held steps are left
+ * out of the recompute's patch, so their `due_at` stays null.
+ */
+export function isHeld(step: Pick<WorkflowStepRow, 'due_held_at'>): boolean {
+  return step.due_held_at !== null && step.due_held_at !== undefined;
+}
+
 /** Group key identifying the ordered list a step belongs to. */
 function laneKey(step: WorkflowStepRow): string {
   return `${step.parent_step_id ?? 'root'}::${step.branch_path ?? ''}`;
+}
+
+/** When a branch releases its lane heads: its completion, if it is done. */
+function branchReleaseAt(branch: WorkflowStepRow | undefined): string | null {
+  return branch?.status === 'done' ? branch.completed_at : null;
 }
 
 /**
@@ -153,6 +175,8 @@ function laneKey(step: WorkflowStepRow): string {
  *
  * Terminal steps are left out of the returned patch: their `due_at` is
  * history, and rewriting it would move dates the MC has already acted on.
+ * So are held steps ({@link isHeld}): the MC took their date off, and
+ * only the MC puts one back.
  *
  * @param steps - every step in the instance, in any order
  * @param anchors - the instance-wide anchors
@@ -178,29 +202,64 @@ export function recomputeDueDates(
   const patch: DueDatePatch[] = [];
 
   for (const lane of lanes.values()) {
-    for (let i = 0; i < lane.length; i += 1) {
-      const step = lane[i]!;
-      if (TERMINAL.has(step.status)) continue;
+    const head = lane[0];
+    // The instant everything above the current step settled, or null
+    // while something above is still open. Head of the lane: a branch
+    // child anchors to its branch step, and only once that branch is
+    // `done`: a done branch picked a lane (the other side is skipped
+    // with it), while a skipped branch picked none, so dating its lanes
+    // from the skip would run both (Task 36 fix round 2, re-review N3).
+    // A top-level head anchors to the apply instant.
+    let released: string | null = head?.parent_step_id
+      ? branchReleaseAt(byId.get(head.parent_step_id))
+      : anchors.appliedAt;
 
-      const previous = i > 0 ? lane[i - 1] : undefined;
-      const previousCompletedAt = previous
-        ? // Skipped counts as completed: skipping a to-do must not strand
-          // every step below it.
-          RELEASES_NEXT.has(previous.status)
-          ? previous.completed_at
-          : null
-        : // Head of the lane. A branch child anchors to its branch step;
-          // a top-level head anchors to the apply instant.
-          step.parent_step_id
-          ? (byId.get(step.parent_step_id)?.completed_at ?? null)
-          : anchors.appliedAt;
-
-      patch.push({
-        id: step.id,
-        due_at: computeDueAt(step.timing, { ...anchors, previousCompletedAt }),
-      });
+    for (const step of lane) {
+      // The MC took a held step's date off. A null date alone looked
+      // exactly like a step waiting on its predecessor, so every
+      // recompute (a sibling ticked, the heal, a resume) put the date back
+      // and the executor sent what the MC had held. The hold is recorded
+      // instead, and only the MC setting a date lifts it. It still gates
+      // the steps behind it: it is pending, so it releases nothing.
+      if (!TERMINAL.has(step.status) && !isHeld(step)) {
+        patch.push({
+          id: step.id,
+          due_at: computeDueAt(step.timing, { ...anchors, previousCompletedAt: released }),
+        });
+      }
+      released = releasedAfter(step, released);
     }
   }
 
   return patch;
+}
+
+/**
+ * What a step hands the step behind it: the instant the lane settled
+ * through it, or null while anything up to it is still open.
+ *
+ * Release is transitive up the lane. A to-do the MC ticked early, while
+ * a send above it was still behind a Wait, used to date the send below
+ * it from the tick, so that send went out before the one above it
+ * (owner report, 2026-09-27). The MC may still tick early; the step
+ * behind simply waits until the chain above has finished too, and is
+ * dated from whichever finished last.
+ *
+ * Skipped counts as finished: skipping a to-do must not strand every
+ * step below it. The rule is the same behind a wedding- or apply-dated
+ * step: that step still runs on its own date, but the step behind it
+ * waits for everything above too (owner ruling, 2026-09-27).
+ */
+function releasedAfter(step: WorkflowStepRow, above: string | null): string | null {
+  if (!RELEASES_NEXT.has(step.status) || step.completed_at === null) return null;
+  // The same for a wedding- or apply-dated step (owner ruling,
+  // 2026-09-27): it runs on its own date whatever is open above it, but
+  // finishing it does not release the step behind it past an earlier
+  // step that is still open.
+  return above === null ? null : laterInstant(above, step.completed_at);
+}
+
+/** The later of two ISO instants, compared as instants, not strings. */
+function laterInstant(a: string, b: string): string {
+  return new Date(a).getTime() > new Date(b).getTime() ? a : b;
 }

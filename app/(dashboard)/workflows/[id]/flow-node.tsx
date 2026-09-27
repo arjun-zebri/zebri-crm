@@ -18,19 +18,11 @@
 'use client';
 
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import {
-  CalendarClock,
-  ChevronDown,
-  Plus,
-  Repeat2,
-  ShieldCheck,
-  Trash2,
-  User,
-  Zap,
-} from 'lucide-react';
+import { ChevronDown, Plus, Repeat2, Trash2, User, Zap } from 'lucide-react';
 import { createElement, createContext, useContext } from 'react';
 
 import { getLucideIcon } from './lucide-lookup';
+import { StepCardChips } from './step-card-chips';
 
 /** Node width. Wide enough for a subject line, narrow enough to scan. */
 const NODE_WIDTH = 'w-[380px]';
@@ -58,14 +50,18 @@ export interface FlowNodeData extends Record<string, unknown> {
    */
   noConfig?: boolean | undefined;
   /**
-   * Short timing phrase ("2w before wedding"), or undefined when the
-   * step runs straight after the one above. Hiding the default keeps a
-   * workflow with no deliberate scheduling from reading as if every
-   * step were configured.
+   * Short timing phrase ("2w before wedding", or "Immediately" for the
+   * default), or undefined for a step whose timing sends nothing (a wait
+   * or a branch). See `timingChip`.
    */
   timingLabel?: string | undefined;
   /** The step holds for the MC's OK before it runs. */
   needsReview?: boolean | undefined;
+  /**
+   * What the Turn on pre-flight found unfinished about this step, as one
+   * sentence, or undefined when it is ready (Task 34).
+   */
+  problem?: string | undefined;
   /**
    * Who does the work. Absent on the trigger and the placeholders,
    * which are not steps and so are nobody's job.
@@ -148,22 +144,7 @@ export function FlowNode({ data, selected }: NodeProps) {
             <span className="min-w-0 flex-1">
               <span className="block truncate text-body font-semibold text-text">{d.title}</span>
               <span className="block truncate text-body text-text-muted">{d.summary}</span>
-              {(d.timingLabel || d.needsReview) && (
-                <span className="mt-1 flex flex-wrap items-center gap-1">
-                  {d.timingLabel && (
-                    <span className="inline-flex items-center gap-1 rounded-pill bg-surface-muted px-2 py-0.5 text-body text-text-muted">
-                      <CalendarClock size={12} strokeWidth={1.5} />
-                      {d.timingLabel}
-                    </span>
-                  )}
-                  {d.needsReview && (
-                    <span className="inline-flex items-center gap-1 rounded-pill bg-surface-muted px-2 py-0.5 text-body text-text-muted">
-                      <ShieldCheck size={12} strokeWidth={1.5} />
-                      Asks you first
-                    </span>
-                  )}
-                </span>
-              )}
+              <StepCardChips data={d} />
             </span>
           </button>
 

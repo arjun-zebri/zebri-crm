@@ -42,5 +42,5 @@ export async function notifyProposalOpened(admin: SupabaseClient<Database>, prop
       sender,
     })
   }
-  await sendAlert({ type: 'proposal_opened', severity: 'info', userId: ctx.row.user_id, proposalNumber: ctx.row.proposal_number, coupleName: ctx.coupleName })
+  await sendAlert({ type: 'proposal_opened', severity: 'info', userId: ctx.row.user_id, proposalNumber: ctx.row.proposal_number, coupleId: ctx.row.couple_id })
 }

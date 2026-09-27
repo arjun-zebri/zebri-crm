@@ -1,0 +1,8 @@
+[
+  {
+    "id": "GHSA-j95f-988m-3j2f",
+    "package": "@tiptap/core",
+    "reason": "Fix requires bumping @tiptap/suggestion to 3.31.3, which conflicts with the peer requirement of the other exact-pinned Tiptap packages (@tiptap/extension-list, @tiptap/extension-table, both pinned at 3.22.4) and needs a coordinated upgrade of the whole @tiptap/* family. That is a real editor-behaviour change (mentions, tables, lists) needing manual verification, not a mechanical npm audit fix; revisit as its own task.",
+    "expires": "2026-12-20"
+  }
+]

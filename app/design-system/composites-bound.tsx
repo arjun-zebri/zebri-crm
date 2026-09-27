@@ -43,7 +43,7 @@ const NOT_RENDERABLE = [
     name: 'TimerProvider / TimerPill',
     file: 'components/time-tracking/timer-provider.tsx',
     lines: 193,
-    why: 'TimerPill returns null unless a timer is actually running, and useTimerSurface throws outside the provider.',
+    why: 'TimerPill returns null unless a timer is actually running, and useTimerSurface throws outside the provider. A page header that holds primary controls passes useTimerPillAnchor() as its ref, and the pill docks below it instead of covering them (the workflow canvas does).',
   },
   {
     name: 'EventProfile',

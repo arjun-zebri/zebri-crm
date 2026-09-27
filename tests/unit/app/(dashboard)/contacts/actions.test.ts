@@ -189,3 +189,28 @@ describe('bulk actions', () => {
     expect(updateMock).toHaveBeenCalledWith({ status: 'inactive' });
   });
 });
+
+/** Task 31 (audit M5): see the couples actions test for why. */
+describe('contact names and emails must be on one line (M5)', () => {
+  const LINE_MESSAGE = 'Names and email addresses must be on one line.';
+  const base = { name: 'Venue Co', category: 'venue' };
+
+  it.each([
+    ['name', 'Venue\nCo'],
+    ['contact_name', 'Vera\r\nVenue'],
+    ['email', 'vera@venue.co\nBcc: spy@evil.test'],
+  ])('createContactAction rejects a line break in %s', async (field, value) => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { createContactAction } = await loadActions();
+    const result = await createContactAction({ ...base, [field]: value } as never);
+    expect(result).toEqual({ ok: false, error: LINE_MESSAGE });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it('updateContactAction rejects a line break in the email', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { updateContactAction } = await loadActions();
+    const result = await updateContactAction({ ...base, id: validUuid, email: 'a@b.co\nX: 1' } as never);
+    expect(result).toEqual({ ok: false, error: LINE_MESSAGE });
+  });
+});

@@ -117,6 +117,8 @@ interface BrandPanelProps {
   setTagline: (v: string) => void
   abn: string
   setAbn: (v: string) => void
+  postalAddress: string
+  setPostalAddress: (v: string) => void
   phone: string
   setPhone: (v: string) => void
   website: string
@@ -185,6 +187,8 @@ export function BrandPanel(props: BrandPanelProps) {
             setTagline={props.setTagline}
             abn={props.abn}
             setAbn={props.setAbn}
+            postalAddress={props.postalAddress}
+            setPostalAddress={props.setPostalAddress}
             phone={props.phone}
             setPhone={props.setPhone}
             website={props.website}

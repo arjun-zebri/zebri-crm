@@ -33,6 +33,7 @@ import {
   renderEmailTemplate,
 } from '@/lib/email/templates'
 import { createClient } from '@/lib/supabase/server'
+import { actionFailureMessage } from '@/lib/workflows/action-failure'
 
 const bodySchema = z
   .object({
@@ -80,7 +81,15 @@ export async function POST(request: NextRequest) {
   if (!parsed.ok) return parsed.response
   const { coupleId, templateId, inlineSubject, inlineBody, overrides, sendAnyway, test, attachmentFileIds } = parsed.data
 
-  const ctx = await buildManualSendContext(supabase, coupleId)
+  // The couple read throws on a failed read (Task 36). Uncaught, that
+  // was Next's HTML 500, which the compose modal cannot read; answered as
+  // JSON, the modal toasts the sentence (review I2).
+  let ctx: Awaited<ReturnType<typeof buildManualSendContext>>
+  try {
+    ctx = await buildManualSendContext(supabase, coupleId)
+  } catch (err) {
+    return NextResponse.json({ error: actionFailureMessage(err, 'send-template.context') }, { status: 500 })
+  }
   if (!ctx || !ctx.couple) return NextResponse.json({ error: 'Couple not found' }, { status: 404 })
   // A test send goes to the MC's own inbox; a real send goes to the couple.
   const recipient = test ? ctx.mc.email : ctx.couple.email

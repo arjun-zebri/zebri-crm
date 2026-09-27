@@ -261,6 +261,13 @@ scroll lock that releases when the last overlay closes.
 `useBackdropDismiss(onClose)` covers click-to-dismiss while ignoring
 drags that began inside the panel.
 
+`ConfirmDialog` confirms in the `danger` tone by default. Pass
+`tone="primary"` when the question is whether to switch something on,
+and use `children` for one option that shapes the confirm (a
+`Checkbox`, as the workflow Turn on dialog does). Pass the same
+`loadingLabel` as `confirmLabel` so the button keeps its size while
+busy.
+
 Stacking comes from `OVERLAY_Z`, keyed by `layer`:
 
 | Layer | Backdrop / panel | Used by |
@@ -762,6 +769,12 @@ useEffect(() => {
 ## Form field dropdown (modals / forms)
 
 For dropdowns inside modals or forms, see the **Select (Custom)** entry in `component-library.md`.
+
+For several values from one list, use `MultiSelect`
+(`components/ui/multi-select.tsx`, on `/design-system` under Form
+controls): the Select trigger at the one control height, a portalled
+list of `Checkbox` rows, and the choices as removable chips under the
+trigger. Never a column of loose checkboxes or a hand-built dropdown.
 
 ------------------------------------------------------------------------
 

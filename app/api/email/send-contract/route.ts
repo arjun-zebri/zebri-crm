@@ -36,6 +36,7 @@ import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendContractEmail } from '@/lib/email';
 import { emailBrandingForUser } from '@/lib/email/branding';
 import { resolveSender } from '@/lib/email/sender-identity';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 // 10 / min / IP. Each call sends a real email (Resend spend) and
@@ -266,7 +267,10 @@ export async function POST(request: NextRequest) {
   // email send so even if Resend fails the audit captures the lock
   // moment — the contract IS sent from the platform's perspective
   // the instant the share token enables.
-  const { error: auditError } = await supabase.rpc(
+  // Service role: clients have no EXECUTE on emit_contract_audit_event
+  // (migration 20261001310000), since it writes into any tenant's audit
+  // log. Ownership was proven above (`.eq('user_id', user.id)`).
+  const { error: auditError } = await createAdminClient().rpc(
     'emit_contract_audit_event',
     {
       p_contract_id: contractId,

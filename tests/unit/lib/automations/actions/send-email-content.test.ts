@@ -9,15 +9,72 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { _resetWorkflowSendLimitersForTest } from '@/lib/api/rate-limit'
 import { getActionSpec } from '@/lib/automations/actions'
 import type { RunContext } from '@/types/automations'
 
 const sendMock = vi.fn()
 
+// This file's focus is composer content, not the send-volume guard
+// (Task 15). Without this, ~20 real handler calls into the same
+// tenant across a single test run would trip the shared burst bucket
+// and start deferring sends, failing unrelated assertions.
+beforeEach(() => {
+  _resetWorkflowSendLimitersForTest()
+})
+
+// The automated-send log (Task 30) is its own module with its own
+// coverage; stubbed so these cases see neither a couple_emails write nor
+// a daily count against the mocked admin client.
+vi.mock('@/lib/email/send-log', () => ({
+  AUTOMATED_SEND_WINDOW_MS: 24 * 60 * 60 * 1000,
+  AUTOMATION_SOURCE: 'automation',
+  logAutomatedSend: vi.fn(async () => undefined),
+  readAutomatedSendWindow: vi.fn(async () => ({ status: 'ok', count: 0 })),
+  automatedSendWindowReopensAt: vi.fn(async () => null),
+  transportOf: (sender: { transport: string }) => (sender.transport === 'resend' ? 'resend' : 'gmail'),
+}))
+
 vi.mock('resend', () => ({
   Resend: class {
     emails = { send: sendMock }
   },
+}))
+
+// The opt-out gate is not what this file is about, so it is stubbed
+// clear rather than modelled. It is stubbed EXPLICITLY for a reason: the
+// hand-written admin-client doubles in these files only ever modelled
+// the exact query chain the code under test used at the time, so when
+// the send path grew a suppression lookup the double threw, the
+// production code's catch swallowed it, and the send went ahead. The
+// test stayed green on a safety check that had silently failed open.
+// Saying "clear" out loud here means a future change to that gate shows
+// up as a compile or behaviour change instead of as nothing at all.
+// The gate's own coverage is in tests/unit/lib/email/automation-send-suppression.test.ts
+// and tests/integration/automations/messaging-send-email.test.ts.
+// The account-wide workflow stop (Task 18) is its own read, stubbed to
+// "running" like the opt-out checks below; its behaviour is covered in
+// automation-send-account-pause.test.ts and the integration suite.
+vi.mock('@/lib/workflows/account-pause', () => ({
+  readAccountPause: async () => ({ status: 'running' }),
+}))
+
+vi.mock('@/lib/email/suppression', () => ({
+  isEmailSuppressed: async () => ({ status: 'clear' }),
+  isCoupleOptedOut: async () => ({ status: 'clear' }),
+}))
+
+// The sender (Phase 5 fix wave, M7) has its own coverage in
+// tests/unit/lib/email/sender-identity.test.ts. Stubbed here, explicitly,
+// to "no connected mailbox": the admin-client double below does not model
+// `user_public_settings`, and the send now errors (rightly) on a settings
+// read it cannot complete instead of quietly using the shared address.
+vi.mock('@/lib/email/sender-identity', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/email/sender-identity')>()),
+  resolveSenderForSend: async () => ({
+    status: 'ok',
+    sender: { transport: 'resend', from: 'Zebri <noreply@app.zebri.com.au>' },
+  }),
 }))
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -191,5 +248,24 @@ describe('send_email attachments', () => {
     })
     expect(result.kind).toBe('ok')
     expect(sendMock.mock.calls[0]![0].attachments).toBeUndefined()
+  })
+
+  it('changes the idempotency key when the attached file set changes', async () => {
+    // Attachments are part of what Resend keys the whole call by. If an
+    // MC adds a file and resends without the key moving, the earlier
+    // response gets replayed and the new attachment never actually goes
+    // out, silently.
+    await run({ subject: 'Hi', content: richBody })
+    const withoutFile = sendMock.mock.calls[0]![1] as { idempotencyKey?: string }
+    sendMock.mockClear()
+    state.files = [{ filename: 'contract.pdf', content: Buffer.from('pdf') }]
+    await run({
+      subject: 'Hi',
+      content: richBody,
+      attachFiles: ['7f2c1e58-0000-4000-8000-000000000003'],
+    })
+    const withFile = sendMock.mock.calls[0]![1] as { idempotencyKey?: string }
+    expect(withFile.idempotencyKey).toEqual(expect.any(String))
+    expect(withFile.idempotencyKey).not.toBe(withoutFile.idempotencyKey)
   })
 })

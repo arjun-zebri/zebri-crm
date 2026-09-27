@@ -614,13 +614,19 @@ const invoiceOverdue: TriggerSpec<z.infer<typeof invoiceOverdueConfig>> = {
   type: 'invoice_overdue',
   configSchema: invoiceOverdueConfig,
   // The `invoice_overdue` event is emitted by the time-emitter once
-  // per (invoice, threshold, day) — see `lib/automations/
+  // per (invoice, threshold, day), see `lib/automations/
   // time-emitters/invoice-overdue.ts`. The emitter stamps the overdue
   // depth in `payload.days_overdue`; narrowing here means an
   // automation with min=7 only fires for the day-7 event, not the
-  // day-1 one. Mirrors `quote_overdue`. `isFinalBalance` is now
-  // enforced, narrowing to only the last stage when set. The
-  // `daysUntilEvent*` filters are accepted but not yet enforced.
+  // day-1 one. Mirrors `quote_overdue`. `isFinalBalance` is enforced,
+  // narrowing to only the last stage when set. `daysUntilEvent*` is
+  // not read here at all (Task 35, workflows audit M8): the
+  // time-emitter never joins the couple's wedding date onto the
+  // payload (see `loadCandidates` in the emitter), so there is
+  // nothing cheap to compare against, and the field was dropped from
+  // `invoiceOverdueConfig` above. `.passthrough()` still lets an
+  // automation saved with the old field parse; the value just sits
+  // there unread, same as `daysOverdueMax`.
   match: (event, config) => {
     const payload = p(event)
     const emitted = Number(payload.days_overdue)

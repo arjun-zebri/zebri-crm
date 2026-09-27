@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { anonClient, createTestUser, type TestUser } from '../helpers/supabase';
+import { anonClient, createTestUser, serviceClient, type TestUser } from '../helpers/supabase';
 
 /**
  * End-to-end multi-signer signing, against real RLS and the real RPCs.
@@ -197,7 +197,15 @@ describe('multi-signer contract signing', () => {
       p_signer_user_agent: 'Sam/1.0',
     });
 
-    const { error } = await user.client.rpc('revoke_contract', { p_contract_id: contract.id });
+    // Clients cannot revoke directly: only the server action can, as the
+    // service role (20261001310000 revokes client EXECUTE).
+    const direct = await user.client.rpc('revoke_contract', { p_contract_id: contract.id });
+    expect(direct.error?.code).toBe('42501');
+
+    // Service role, as revokeContractAction calls it: revoke_contract is
+    // SECURITY INVOKER and its audit write needs EXECUTE on
+    // emit_contract_audit_event, which clients lost in 20261001310000.
+    const { error } = await serviceClient().rpc('revoke_contract', { p_contract_id: contract.id });
     expect(error).toBeNull();
 
     const after = await signersOf(contract.id);
@@ -254,7 +262,10 @@ describe('multi-signer contract signing', () => {
     const contract = await makeSentContract('CTR-MS-10');
     const [first] = await signersOf(contract.id);
 
-    const { error } = await user.client.rpc('revoke_contract', { p_contract_id: contract.id });
+    // Service role, as revokeContractAction calls it: revoke_contract is
+    // SECURITY INVOKER and its audit write needs EXECUTE on
+    // emit_contract_audit_event, which clients lost in 20261001310000.
+    const { error } = await serviceClient().rpc('revoke_contract', { p_contract_id: contract.id });
     expect(error).toBeNull();
 
     const { data: byOldSigner } = await anonClient().rpc('get_public_contract', {

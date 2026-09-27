@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { SignatureEditor } from '@/components/ui/signature-editor'
 import { useToast } from '@/components/ui/toast'
+import { withoutPaymentDetails } from '@/lib/branding/payment-details'
 import { createClient } from '@/lib/supabase/client'
 
 import { AutoSaveStatus, type SaveState } from './auto-save-status'
@@ -67,7 +68,7 @@ export function EmailSignatureSection({ initialContent }: EmailSignatureSectionP
     }
 
     const { error } = await supabase.auth.updateUser({
-      data: { ...(user.user_metadata || {}), email_signature: contentRef.current },
+      data: { ...withoutPaymentDetails(user.user_metadata), email_signature: contentRef.current },
     })
     if (error) {
       toast(error.message, 'error')

@@ -124,11 +124,15 @@ async function alreadyEmittedToday(
 
   if (error) throw new Error(`dedupe lookup: ${error.message}`)
   for (const row of (data ?? []) as Array<{ id: string }>) {
-    const { data: full } = await supabase
+    const { data: full, error: fullError } = await supabase
       .from('automation_events' as never)
       .select('payload')
       .eq('id', row.id)
       .maybeSingle()
+    // An unread payload would read as "not this bucket", and the event
+    // would be emitted a second time today. Thrown instead: the emitter
+    // pass records the failure and alerts.
+    if (fullError) throw new Error(`dedupe payload: ${fullError.message}`)
     const payload = (full as { payload?: { years_since?: unknown } } | null)
       ?.payload
     if (Number(payload?.years_since) === yearsSince) return true

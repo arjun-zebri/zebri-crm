@@ -28,6 +28,10 @@ vi.mock('@/lib/supabase/server', () => ({
     rpc: rpcMock,
   })),
 }));
+const adminRpcMock = vi.fn();
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: vi.fn(() => ({ rpc: adminRpcMock })),
+}));
 vi.mock('@/lib/alerts/logger', () => ({
   logger: {
     error: vi.fn(),
@@ -52,6 +56,7 @@ beforeEach(() => {
   }));
   insertMock.mockReset().mockReturnValue({ select: selectMock });
   rpcMock.mockReset().mockResolvedValue({ data: 'CTR-0001', error: null });
+  adminRpcMock.mockReset();
   eqMock.mockReset().mockResolvedValue({ error: null });
   fromMock.mockReset().mockReturnValue({
     update: updateMock,
@@ -268,30 +273,56 @@ describe('saveContractAction', () => {
 });
 
 describe('revokeContractAction', () => {
+  /** Ownership lookup: `.from('contracts').select('id').eq().eq().maybeSingle()`. */
+  function ownedLookup(row: { id: string } | null) {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: row, error: null });
+    const eqUser = vi.fn(() => ({ maybeSingle }));
+    const eqId = vi.fn(() => ({ eq: eqUser }));
+    fromMock.mockReturnValue({ select: vi.fn(() => ({ eq: eqId })) });
+    return { eqId, eqUser };
+  }
+
   it('returns ok=false on a non-UUID contractId', async () => {
     const { revokeContractAction } = await loadActions();
     const result = await revokeContractAction('not-a-uuid');
     expect(result).toEqual({ ok: false, error: 'Invalid contract ID.' });
   });
 
-  it('calls revoke_contract RPC on the happy path', async () => {
+  it('checks ownership, then calls revoke_contract with the service role', async () => {
     getUserMock.mockResolvedValue({
       data: { user: { id: 'u1', app_metadata: {} } },
     });
-    rpcMock.mockResolvedValue({ error: null });
+    const { eqId, eqUser } = ownedLookup({ id: validId });
+    adminRpcMock.mockResolvedValue({ error: null });
     const { revokeContractAction } = await loadActions();
     const result = await revokeContractAction(validId);
     expect(result).toEqual({ ok: true, data: undefined });
-    expect(rpcMock).toHaveBeenCalledWith('revoke_contract', {
+    expect(eqId).toHaveBeenCalledWith('id', validId);
+    expect(eqUser).toHaveBeenCalledWith('user_id', 'u1');
+    expect(adminRpcMock).toHaveBeenCalledWith('revoke_contract', {
       p_contract_id: validId,
     });
+    // Never through the user's client: it has no EXECUTE on the audit writer.
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses another tenant's contract without calling the RPC", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: 'u1', app_metadata: {} } },
+    });
+    ownedLookup(null);
+    const { revokeContractAction } = await loadActions();
+    const result = await revokeContractAction(validId);
+    expect(result).toEqual({ ok: false, error: 'Contract not found.' });
+    expect(adminRpcMock).not.toHaveBeenCalled();
   });
 
   it('surfaces an error when the RPC fails', async () => {
     getUserMock.mockResolvedValue({
       data: { user: { id: 'u1', app_metadata: {} } },
     });
-    rpcMock.mockResolvedValue({
+    ownedLookup({ id: validId });
+    adminRpcMock.mockResolvedValue({
       error: { message: 'permission denied' },
     });
     const { revokeContractAction } = await loadActions();

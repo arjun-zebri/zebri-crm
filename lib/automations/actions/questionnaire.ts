@@ -12,11 +12,13 @@
 
 import { z } from 'zod'
 
-import { sendQuestionnaireEmail } from '@/lib/email'
-import { resolveSender } from '@/lib/email/sender-identity'
+import { openAutomationSend } from '@/lib/email/automation-send'
+import { questionnaireHtml } from '@/lib/email/html'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionType } from '@/types/automations'
 import type { Database } from '@/types/database'
+
+import { resolveStepSender } from './step-sender'
 
 import type { ActionSpec } from './index'
 
@@ -47,6 +49,37 @@ const sendCoupleQuestionnaire: ActionSpec<z.infer<typeof sendQuestionnaireSchema
       .single()
     if (!template) return { kind: 'ok', output: { skipped: 'no template found' } }
 
+    // The opt-out check and the rate limit run BEFORE the questionnaire
+    // row is created. A suppressed couple gets nothing, not an orphaned
+    // "sent" questionnaire they never received; and a deferral (a failed
+    // lookup, the send limit) creates nothing that a retry would then
+    // duplicate.
+    //
+    // Sent as the MC, through their connected mailbox when they have one,
+    // as the manual "Send questionnaire" button does. Commercial by the
+    // classification's default, so the gate adds the unsubscribe link and
+    // header, and tags a shared-domain send with the tenant so a bounce
+    // can be attributed.
+    const to = ctx.couple.email
+    const resolved = await resolveStepSender(supabase, ctx, 'send_couple_questionnaire')
+    if (!resolved.ok) return resolved.result
+    const sender = resolved.sender
+    const gate = await openAutomationSend({
+      actionType: 'send_couple_questionnaire',
+      userId: ctx.userId,
+      manualRun: ctx.manualRun,
+      instanceId: ctx.instanceId,
+      coupleId: ctx.couple.id,
+      recipients: [{ to, isCouple: true }],
+      sender,
+    })
+    if (gate.kind === 'deferred') return gate.sleep
+    if (gate.kind === 'check_failed') {
+      return { kind: 'error', message: `send_couple_questionnaire: ${gate.error}`, recoverable: true }
+    }
+    const skipped = gate.skipped(to)
+    if (skipped) return { kind: 'ok', output: { skipped } }
+
     const title = config.title ?? template.name
     const { data: created, error } = await supabase
       .from('couple_questionnaires')
@@ -67,14 +100,32 @@ const sendCoupleQuestionnaire: ActionSpec<z.infer<typeof sendQuestionnaireSchema
     if (error || !created) return { kind: 'error', message: 'Could not create the questionnaire.' }
 
     const url = `${APP_URL}/questionnaire/${created.share_token}`
-    await sendQuestionnaireEmail({
-      coupleEmail: ctx.couple.email,
-      coupleName: ctx.couple.name,
-      title,
-      shareUrl: url,
-      mcBusinessName: ctx.mc.businessName,
-      sender: await resolveSender(supabase, ctx.userId, ctx.mc.businessName),
+    const coupleName = ctx.couple.name
+    const res = await gate.send({
+      stepId: ctx.stepId,
+      to,
+      subject: `${ctx.mc.businessName} sent you a few questions`,
+      render: (unsubscribeUrl) =>
+        questionnaireHtml(
+          { coupleName, title, shareUrl: url, mcBusinessName: ctx.mc.businessName },
+          ctx.mc.branding,
+          unsubscribeUrl,
+        ),
+      identity: { businessName: ctx.mc.businessName, branding: ctx.mc.branding },
+      // Keyed on the questionnaire this send is for: its share token is
+      // what the couple opens.
+      fingerprint: { action: 'send_couple_questionnaire', questionnaireId: created.id, title },
     })
+    if (!res.ok) {
+      // Not retried. The questionnaire row already exists, so a retry
+      // would create a second one; the MC can resend this one by hand
+      // from the couple's profile.
+      return {
+        kind: 'error',
+        message: `send_couple_questionnaire: the questionnaire was created but the email failed (${res.error})`,
+        recoverable: false,
+      }
+    }
 
     return { kind: 'ok', output: { questionnaire_id: created.id, questionnaire_link: url } }
   },

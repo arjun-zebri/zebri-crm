@@ -26,6 +26,7 @@ import type { WorkflowStepRow } from '@/types/workflows';
 
 import { writeAudit } from './audit';
 import { completeStep } from './executor';
+import { throwIfReadFailed } from './read-failure';
 
 /** The fields the booking emitter puts on a `consultation_booked` event. */
 interface BookingPayload {
@@ -39,8 +40,15 @@ interface BookingPayload {
  * Complete every appointment step waiting on this booking's meeting
  * type, for this couple.
  *
- * Returns how many steps were completed. Never throws: a booking must
- * still be recorded even if no workflow was listening for it.
+ * Returns how many steps were completed. A booking with no step waiting
+ * on it is simply 0: the booking is recorded either way.
+ *
+ * Throws a `WorkflowReadError` when the step read fails. It used to
+ * return 0, which the dispatcher took as "nothing was waiting" and marked
+ * the event handled, so the step never completed and everything behind
+ * it stayed gated. Thrown, the dispatcher leaves the event for the next
+ * tick; the retry only matches steps still pending, so none completes
+ * twice.
  *
  * @param supabase - a service-role client; this runs from the cron tick
  * @param event - a `consultation_booked` bus event
@@ -65,7 +73,7 @@ export async function completeBookedAppointmentSteps(
     .eq('status', 'pending')
     .eq('workflow_instances.couple_id', coupleId)
     .eq('workflow_instances.status', 'active');
-  if (error) return 0;
+  throwIfReadFailed('appointments.load_steps', error);
 
   const rows = (data ?? []) as unknown as Array<
     WorkflowStepRow & {

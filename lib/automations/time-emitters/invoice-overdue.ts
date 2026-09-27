@@ -48,9 +48,12 @@
  *
  * # Known limitations
  *
- *   - `isFinalBalance` and `daysUntilEventOp`/`daysUntilEventValue` config
- *     fields are accepted by the schema but **not enforced** here — final-balance
- *     tracking is out of A4's scope.
+ *   - `daysUntilEventOp`/`daysUntilEventValue` are not offered as a filter
+ *     on `invoice_overdue` (Task 35, workflows audit M8): this emitter
+ *     never joins the couple's wedding date onto the payload above, so
+ *     the trigger's `match()` has nothing cheap to compare against.
+ *     `isFinalBalance`, by contrast, *is* enforced, see `stage_is_final`
+ *     on the payload and `matchesFinalBalance` in `triggers.ts`.
  *   - Day boundaries are UTC (same caveat as `quote_due`).
  *   - Fires forward only: an invoice already deeper overdue than the threshold
  *     when the automation is activated will not retro-fire.
@@ -246,10 +249,13 @@ async function loadCandidates(
   const counts = new Map<string, number>()
   const maxPositions = new Map<string, number>()
   if (eligible.length > 0) {
-    const { data: allStages } = await supabase
+    const { data: allStages, error: allStagesError } = await supabase
       .from('invoice_payment_stages')
       .select('invoice_id, position')
       .in('invoice_id', [...new Set(eligible.map((r) => r.invoice_id))])
+    // Unread, every stage would count as its invoice's only one, so each
+    // would go out marked final.
+    if (allStagesError) throw new Error(`load stage counts: ${allStagesError.message}`)
     for (const row of allStages ?? []) {
       counts.set(row.invoice_id, (counts.get(row.invoice_id) ?? 0) + 1)
       const currentMax = maxPositions.get(row.invoice_id) ?? 0
@@ -292,10 +298,13 @@ async function loadCandidates(
 
   const withStages = new Set<string>()
   if ((stageless ?? []).length > 0) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('invoice_payment_stages')
       .select('invoice_id')
       .in('invoice_id', (stageless ?? []).map((i) => i.id))
+    // Unread, an invoice that has stages would also fire as stageless:
+    // a second reminder for the same money.
+    if (error) throw new Error(`load staged invoices: ${error.message}`)
     for (const row of data ?? []) withStages.add(row.invoice_id)
   }
 

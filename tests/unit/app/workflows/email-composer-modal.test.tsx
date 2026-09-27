@@ -44,6 +44,11 @@ vi.mock('@/components/ui/rich-text-editor', () => ({
 vi.mock('@/app/(dashboard)/templates/template-attachments', () => ({
   TemplateAttachments: () => <div data-testid="attachments" />,
 }))
+// The server-rendered preview (Task 28) has its own coverage in
+// compose-email-preview.test.tsx; here it only has to stay off the network.
+vi.mock('@/app/(dashboard)/workflows/preview-actions', () => ({
+  previewComposeEmailAction: async () => ({ ok: false, error: 'not in this test' }),
+}))
 
 function open(config: Record<string, unknown> = {}) {
   const onSave = vi.fn()

@@ -30,6 +30,7 @@ export function makeBranding(overrides?: Partial<PublicBranding>): PublicBrandin
     tagline: 'Test tagline',
     abn: null,
     phone: null,
+    postal_address: null,
     website: null,
     instagram_url: null,
     facebook_url: null,

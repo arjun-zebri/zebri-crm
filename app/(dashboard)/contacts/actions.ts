@@ -29,6 +29,7 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
 import { createClient } from '@/lib/supabase/server';
+import { singleLineIssue, singleLineText } from '@/lib/utils/single-line';
 import { CATEGORIES, type Contact } from '@/types/contact';
 
 /* ─── Tagged result type ───────────────────────────────────────── */
@@ -55,10 +56,12 @@ const categorySchema = z.enum(CATEGORIES as unknown as [string, ...string[]]);
 
 const statusSchema = z.enum(['active', 'inactive']);
 
+// Names and addresses reach email headers, so a line break in one is
+// refused here (audit M5, see lib/utils/single-line).
 const contactInputSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(200),
-  contact_name: z.string().trim().max(200).default(''),
-  email: z.string().trim().max(200).default(''),
+  name: singleLineText(200).min(1, 'Name is required'),
+  contact_name: singleLineText(200).default(''),
+  email: singleLineText(200).default(''),
   phone: z.string().trim().max(50).default(''),
   category: categorySchema,
   notes: z.string().max(5000).default(''),
@@ -74,7 +77,7 @@ export async function createContactAction(
 ): Promise<ActionResult<Contact>> {
   const parsed = contactInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Invalid contact data.' };
+    return { ok: false, error: singleLineIssue(parsed.error) ?? 'Invalid contact data.' };
   }
 
   const supabase = await createClient();
@@ -112,7 +115,7 @@ export async function updateContactAction(
 ): Promise<ActionResult<Contact>> {
   const parsed = updateContactSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Invalid contact data.' };
+    return { ok: false, error: singleLineIssue(parsed.error) ?? 'Invalid contact data.' };
   }
   const { id, ...rest } = parsed.data;
 

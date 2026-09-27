@@ -295,7 +295,25 @@ export type BranchPath = 'yes' | 'no'
 
 export type AutomationStatus = 'draft' | 'active' | 'paused' | 'archived'
 export type RunStatus = 'running' | 'waiting' | 'paused' | 'completed' | 'errored' | 'cancelled'
-export type WaitReason = 'wait' | 'approval' | 'quiet_hours' | 'missing_variables'
+// 'send_rate_limited': the step tried to send and hit the tenant's
+// per-tenant send-volume guard (lib/api/rate-limit.ts, Task 15). Not a
+// failure - nothing was sent, so the step parks and wakes on its own
+// once the tenant's window resets, instead of spending one of the
+// executor's retry attempts on a quota rather than a real fault.
+/**
+ * Why a step is asleep. `account_paused` is the send gate refusing an
+ * automated send while the MC's account-wide workflow stop is on.
+ */
+export type WaitReason =
+  | 'wait'
+  | 'approval'
+  | 'quiet_hours'
+  | 'missing_variables'
+  | 'send_rate_limited'
+  // The daily send count could not be read, so the send is held until
+  // it can be (Task 30 fix round 1). Not a limit being reached.
+  | 'send_check_unavailable'
+  | 'account_paused'
 
 export interface AutomationRow {
   id: string
@@ -498,6 +516,18 @@ export interface RunContext {
   instanceId: string
   /** The workflow step currently executing. */
   stepId: string
+  /**
+   * The step's display title (`stepDisplayTitle()` in
+   * `lib/workflows/step-label.ts`): the MC's own stored title, or a
+   * description of what the step does when they never named it.
+   * Populated by `executeStep` right before an action handler runs.
+   * Optional so a hand-built context (tests, previews) need not carry
+   * it. Used in place of a rendered subject line on the
+   * `workflow_email_sent` alert (T27, Task 27 fix round 1): the stored
+   * title never carries per-couple interpolation the way a rendered
+   * subject can.
+   */
+  stepTitle?: string
   coupleId: string | null
   triggerEvent: AutomationEventRow
 
@@ -528,6 +558,15 @@ export interface RunContext {
 
   /** Outputs from previously executed actions, keyed by action id. */
   actionResults: Record<string, Json>
+
+  /**
+   * True when the MC ran this step by hand (Run now, approve and send,
+   * Try again) rather than the engine running it on schedule. The send
+   * gate lets a manual run through the account-wide workflow stop,
+   * which exists to stop the engine acting alone, never the MC.
+   * Optional: absent means scheduled.
+   */
+  manualRun?: boolean | undefined
 }
 
 export interface CoupleSnapshot {
@@ -618,6 +657,8 @@ export interface McSnapshot {
    * from `user_metadata` via `buildPublicBranding`. Drives the branded
    * email shell so previews and sends look identical. Optional so older
    * fixtures still typecheck; a missing value gets the neutral shell.
+   * Also the one source of the sender identification (ABN, phone,
+   * postal address) the email footer carries for the Spam Act.
    */
   branding?: PublicBranding | null
 }
@@ -669,12 +710,18 @@ export interface WaitActionConfig {
   mode: WaitMode
   /** When mode = 'duration': minutes from now. */
   durationMinutes?: number
-  /** When mode = 'until_date': ISO date. */
+  /**
+   * When mode = 'until_date': ISO date. The builder and the copilot no
+   * longer offer this mode (owner ruling 2026-09-27); saved ones still run.
+   */
   untilDate?: string
-  /** When mode = 'relative_to_event'. */
+  /**
+   * When mode = 'relative_to_event' (a "Relative date" in the builder).
+   * `months` is calendar months on the event date, clamped to month end.
+   */
   relative?: {
     amount: number
-    unit: 'minutes' | 'hours' | 'days' | 'weeks'
+    unit: 'minutes' | 'hours' | 'days' | 'weeks' | 'months'
     direction: 'before' | 'after'
     anchor: 'event_date'
   }

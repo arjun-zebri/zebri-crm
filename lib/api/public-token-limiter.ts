@@ -64,7 +64,8 @@ export type PublicSurface =
   | 'lead'
   | 'slots'
   | 'booking'
-  | 'manage';
+  | 'manage'
+  | 'unsubscribe';
 
 export interface RecordResult {
   /** True if the request is under both thresholds. */

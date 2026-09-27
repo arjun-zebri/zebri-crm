@@ -11,6 +11,9 @@
  */
 import { configWithDefaults } from '@/lib/automations/action-defaults'
 import { actionUi } from '@/lib/automations/actions/ui'
+import { formatDate } from '@/lib/utils'
+import { STOP_NOT_A_STEP } from '@/lib/workflows/step-config-validation'
+import { isDefaultTiming, shortTiming, toStepTiming } from '@/lib/workflows/timing-summary'
 import type { ActionType, AutomationActionRow } from '@/types/automations'
 
 import { formatTimeLabel } from './time-options'
@@ -53,6 +56,26 @@ export function stepTitle(action: AutomationActionRow): string {
 }
 
 /**
+ * The timing chip for one card.
+ *
+ * The default ("straight after the step above") used to show no chip, so
+ * a send that goes the moment a couple reaches it looked unscheduled
+ * rather than immediate (audit M7). It now says so. A wait or a branch
+ * has no chip for the default: neither sends anything, and a wait's own
+ * length is its summary.
+ */
+export function timingChip(action: AutomationActionRow): string | undefined {
+  // A Wait has one number, its duration. A start offset saved before that
+  // rule is folded into the duration on the card (lib/workflows/wait-step),
+  // so a timing chip beside it would count the offset twice.
+  if ((action.type as string) === 'wait') return undefined
+  const timing = toStepTiming(action.timing)
+  if (!isDefaultTiming(timing)) return shortTiming(timing)
+  const type = action.type as string
+  return type === 'wait' || type === 'branch' ? undefined : 'Immediately'
+}
+
+/**
  * Names for ids a config stores but cannot read.
  *
  * A questionnaire step holds a template id; the card has to show the
@@ -82,7 +105,9 @@ export function stepSummary(action: AutomationActionRow, labels?: StepSummaryLab
     case 'branch':
       return branchSummary(config)
     case 'stop':
-      return text(config, 'reason') || 'End the run here'
+      // A Stop saved before it left the picker. The engine never ran one,
+      // so the card says so and what to do (Phase 6 residual F2).
+      return STOP_NOT_A_STEP
     case 'send_email': {
       const template = text(config, 'templateId')
       if (template) return 'Uses a saved template'
@@ -179,9 +204,11 @@ export function waitLabel(action: AutomationActionRow): string {
 export function waitConfigLabel(config: Record<string, unknown>): string {
   const mode = text(config, 'mode') || 'duration'
 
+  // No longer offered in the builder (owner ruling 2026-09-27), but a
+  // saved one still runs and reads as what it does.
   if (mode === 'until_date') {
     const date = text(config, 'untilDate')
-    return date ? `on ${date}` : 'until a date'
+    return date ? `until ${formatDate(date.slice(0, 10))}` : 'until a date'
   }
 
   if (mode === 'relative_to_event') {

@@ -16,17 +16,13 @@
  * @module app/(dashboard)/workflows/upcoming-list
  */
 
-import { AlertTriangle, Zap } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
-import { Checkbox } from '@/components/ui/checkbox';
-import { RowActionsMenu } from '@/components/ui/row-actions-menu';
-import { StatePill } from '@/components/ui/state-pill';
-import type { QueueItem } from '@/lib/workflows/queue';
 import { isAutomated } from '@/lib/workflows/steps';
 
-import { bucketFor, rowDueLabel, type QueueBucket } from './queue-buckets';
+import { bucketFor, type QueueBucket } from './queue-buckets';
 import { localToday, type QueueGroupBy } from './queue-grouping';
+import { UpcomingRow } from './upcoming-row';
 
 export interface UpcomingListProps {
   buckets: QueueBucket[];
@@ -43,21 +39,6 @@ export interface UpcomingListProps {
   onSkip: (stepId: string) => void;
   /** Opens the couple this step belongs to. */
   onOpenCouple: (coupleId: string) => void;
-}
-
-/** "Sam & Priya · 19 Sep" for the row's middle column. */
-function coupleLine(item: QueueItem): string {
-  const who = item.coupleName ?? 'My to-dos';
-  if (!item.weddingDate) return who;
-  // Assembled from parts: `en-AU` renders September as "Sept", which
-  // sits a character wider than every other month and makes the column
-  // look ragged.
-  const parts = new Intl.DateTimeFormat('en-AU', {
-    day: 'numeric',
-    month: 'short',
-  }).formatToParts(new Date(`${item.weddingDate}T12:00:00Z`));
-  const find = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  return `${who} · ${find('day')} ${find('month').slice(0, 3)}`;
 }
 
 /** The grouped list. See {@link UpcomingListProps}. */
@@ -134,104 +115,23 @@ export function UpcomingList({
           <div className="min-w-0 flex-1 border-l border-border">
             {bucket.items.map((item) => {
               const index = flat.findIndex((row) => row.item.stepId === item.stepId);
-              const automated = isAutomated(item.type);
-              const errored = item.status === 'errored';
-              const band = bucketFor(item, todayLocal, timezone);
-              const late = band === 'overdue';
               return (
-                // The whole row opens the step. The title button stays for
-                // the keyboard and the screen reader; its click bubbles up
-                // to this handler rather than duplicating it.
-                <div
+                <UpcomingRow
                   key={item.stepId}
-                  role="listitem"
-                  onClick={() => {
+                  item={item}
+                  band={bucketFor(item, todayLocal, timezone)}
+                  timezone={timezone}
+                  showCouple={groupBy !== 'couple'}
+                  selected={index === active}
+                  onSelect={() => {
                     setCursor(index);
                     onOpen(item.stepId);
                   }}
-                  className={`group flex cursor-pointer items-center gap-2 border-b border-border px-3 py-3 last:border-b-0 sm:gap-3 sm:px-4 ${
-                    index === active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
-                  }`}
-                >
-                  {errored ? (
-                    <AlertTriangle
-                      size={18}
-                      strokeWidth={1.5}
-                      className="shrink-0 text-danger"
-                      aria-label="This step failed"
-                    />
-                  ) : automated ? (
-                    <Zap
-                      size={18}
-                      strokeWidth={1.5}
-                      className="shrink-0 text-text-subtle"
-                      aria-label="Runs by itself"
-                    />
-                  ) : (
-                    // Ticking is not opening: swallow the click so the
-                    // modal never appears behind a checked box.
-                    <span className="shrink-0" onClick={(event) => event.stopPropagation()}>
-                      <Checkbox
-                        checked={false}
-                        onChange={() => onTick(item.stepId)}
-                        ariaLabel={`Mark "${item.title}" done`}
-                      />
-                    </span>
-                  )}
-
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
-                  >
-                    <span className="min-w-0 truncate text-body text-text">{item.title}</span>
-                    {/* A ⚡ says "Zebri runs this", which is the opposite
-                        of what a held send needs the MC to know. The
-                        pill says whose move it is. */}
-                    {item.requiresApproval ? (
-                      <StatePill
-                        label="Needs your OK"
-                        tone="warning"
-                        dot="hollow"
-                        className="shrink-0"
-                      />
-                    ) : null}
-                  </button>
-
-                  {/* Redundant when the rail is already the couple's
-                      name, and a repeated name down a column is what
-                      makes a grouped list hard to scan. */}
-                  {groupBy === 'couple' ? null : (
-                    <span className="hidden shrink-0 text-body text-text-muted sm:inline">
-                      {coupleLine(item)}
-                    </span>
-                  )}
-
-                  <span
-                    className={`shrink-0 whitespace-nowrap text-right text-body sm:w-20 ${
-                      late ? 'text-danger' : 'text-text-muted'
-                    }`}
-                  >
-                    {rowDueLabel(item, band, timezone)}
-                  </span>
-
-                  <RowActionsMenu
-                    size="sm"
-                    alwaysVisible
-                    actions={[
-                      { label: 'Tomorrow', onSelect: () => onSnooze(item.stepId, 1) },
-                      { label: 'Next week', onSelect: () => onSnooze(item.stepId, 7) },
-                      { label: 'Skip this step', onSelect: () => onSkip(item.stepId) },
-                      ...(item.coupleId
-                        ? [
-                            {
-                              label: 'Open the couple',
-                              onSelect: () => onOpenCouple(item.coupleId as string),
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </div>
+                  onTick={onTick}
+                  onSnooze={onSnooze}
+                  onSkip={onSkip}
+                  onOpenCouple={onOpenCouple}
+                />
               );
             })}
           </div>
