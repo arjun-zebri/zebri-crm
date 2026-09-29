@@ -57,11 +57,7 @@ function dayDelta(from: string, to: string): number {
     Number(from.slice(5, 7)) - 1,
     Number(from.slice(8, 10)),
   );
-  const b = Date.UTC(
-    Number(to.slice(0, 4)),
-    Number(to.slice(5, 7)) - 1,
-    Number(to.slice(8, 10)),
-  );
+  const b = Date.UTC(Number(to.slice(0, 4)), Number(to.slice(5, 7)) - 1, Number(to.slice(8, 10)));
   return Math.round((b - a) / 86_400_000);
 }
 
@@ -175,8 +171,27 @@ export function bucketQueueItems(
   }));
 }
 
+/** "9:00am" in the MC's zone. */
+function clockTime(due: Date, timezone: string): string {
+  return due
+    .toLocaleTimeString('en-AU', {
+      timeZone: timezone,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    .replace(/\s/g, '')
+    .toLowerCase();
+}
+
 /**
  * The right-hand label for one row, given its band.
+ *
+ * Anything that happens at a moment (a send, an appointment) carries
+ * its time in every band: "Mon" alone left the MC opening the step to
+ * find out whether an email goes at 6am or 6pm. A plain to-do is due on
+ * a day, so it keeps the day only. A date outside this year says the
+ * year, or "Mon 1 Feb" reads as this February.
  *
  * @param item - the row
  * @param bucket - which band it landed in
@@ -191,7 +206,7 @@ export function rowDueLabel(
 ): string {
   if (item.status === 'errored') return 'Failed';
   // No time because a person decides when it runs: say who and what,
-  // e.g. "After you finish Call the venue", rather than leave it blank.
+  // e.g. "After you finish “Call the venue”", rather than leave it blank.
   if (item.dueAt === null) return item.gate ?? '';
 
   const due = new Date(item.dueAt);
@@ -205,24 +220,20 @@ export function rowDueLabel(
     return `${behind} days ago`;
   }
 
-  if (bucket === 'today') {
-    return due
-      .toLocaleTimeString('en-AU', {
-        timeZone: timezone,
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      })
-      .replace(/\s/g, '')
-      .toLowerCase();
-  }
+  if (bucket === 'today') return clockTime(due, timezone);
 
-  if (bucket === 'later') return railDate(dueLocal, timezone);
+  const time = item.type === 'todo' ? '' : `, ${clockTime(due, timezone)}`;
+
+  if (bucket === 'later') {
+    const year = dueLocal.slice(0, 4) === todayLocal.slice(0, 4) ? '' : ` ${dueLocal.slice(0, 4)}`;
+    return `${railDate(dueLocal, timezone)}${year}${time}`;
+  }
 
   // Tomorrow and the next fortnight: the weekday is what an MC plans
   // against, and the date adds nothing they cannot work out.
-  return new Intl.DateTimeFormat('en-AU', {
+  const weekday = new Intl.DateTimeFormat('en-AU', {
     timeZone: timezone,
     weekday: 'short',
   }).format(due);
+  return `${weekday}${time}`;
 }

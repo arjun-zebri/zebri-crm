@@ -50,3 +50,16 @@ export function coupleLine(item: QueueItem): string {
   const find = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
   return `${who} · ${find('day')} ${find('month').slice(0, 3)}`;
 }
+
+/**
+ * The pill a row shows when a person decides when it runs.
+ *
+ * Every reason that points at an earlier step ("After you OK “5 Months
+ * to GO!”", "Depends on “Paid deposit?”") reads as one short pill; the
+ * step it waits on moves to the pill's hover, where it no longer
+ * crowds the row. A reason that is about this step itself ("No date
+ * set", "Needs a wedding date") is already short, so it stays as is.
+ */
+export function gatePillLabel(gate: string): string {
+  return /^(After|Depends on) /.test(gate) ? 'After previous step' : gate;
+}

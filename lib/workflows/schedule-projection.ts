@@ -28,7 +28,7 @@ import { nextAllowedSendAt, type QuietHoursWindow } from '@/lib/automations/quie
 import type { WaitActionConfig } from '@/types/automations';
 import type { WorkflowStepRow } from '@/types/workflows';
 
-import { stepDisplayTitle } from './step-label';
+import { stepShortTitle } from './step-label';
 import { computeDueAt, isHeld, type InstanceAnchors } from './timing';
 import { toStepTiming } from './timing-summary';
 
@@ -59,6 +59,13 @@ export interface StepProjection {
 
 /** What a step hands the step behind it: a finish time or a reason. */
 type Release = { at: string } | { gate: string };
+
+/**
+ * A step's name inside a reason, e.g. “Call the venue”. Quoted because
+ * the name is the MC's own words (or an email subject) and would
+ * otherwise run into the sentence around it.
+ */
+const quoted = (step: ProjectionStep): string => `“${stepShortTitle(step)}”`;
 
 const later = (a: string, b: Date): string =>
   new Date(Math.max(new Date(a).getTime(), b.getTime())).toISOString();
@@ -103,7 +110,7 @@ export function projectSchedule(
             ? { at: step.completed_at }
             : 'gate' in release
               ? release
-              : { gate: `Depends on ${stepDisplayTitle(step)}` };
+              : { gate: `Depends on ${quoted(step)}` };
         walk(step.id, 'yes', lanesHead);
         walk(step.id, 'no', lanesHead);
       }
@@ -122,7 +129,7 @@ function projectStep(
   quietWindow: QuietHoursWindow | null,
   now: Date,
 ): { shown: StepProjection | null; release: Release } {
-  const title = stepDisplayTitle(step);
+  const title = quoted(step);
   switch (step.status) {
     case 'done':
     case 'skipped':
@@ -155,7 +162,8 @@ function projectStep(
   // `prev`; a dated one fires on its own date, but its follower waits for
   // everything above (owner ruling, 2026-09-27), as `recomputeDueDates`
   // and `releaseBlocker` hold it.
-  const behind = (at: string): Release => ('gate' in prev ? prev : { at: later(at, new Date(prev.at)) });
+  const behind = (at: string): Release =>
+    'gate' in prev ? prev : { at: later(at, new Date(prev.at)) };
   const timing = toStepTiming(step.timing);
 
   let start = step.due_at;

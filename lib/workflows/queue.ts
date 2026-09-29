@@ -36,7 +36,16 @@ export interface QueueItem {
   coupleId: string | null;
   coupleName: string | null;
   weddingDate: string | null;
+  /** The whole name, e.g. "Send email · Sam & Priya check in". */
   title: string;
+  /**
+   * What the step does ("Send email"), set only when {@link name} is a
+   * detail read out of its config. Lists print it quietly beside the
+   * name. See `stepLabelParts` in `./step-label`.
+   */
+  kind?: string | null;
+  /** The name without its kind, e.g. "Sam & Priya check in". */
+  name?: string;
   type: StepType;
   status: StepStatus;
   dueAt: string | null;
@@ -48,7 +57,7 @@ export interface QueueItem {
   description?: string | null;
   /**
    * Why an unfinished step has no time yet, in plain words ("After you
-   * finish Call the venue"). Set only when `dueAt` is null because a
+   * finish “Call the venue”"). Set only when `dueAt` is null because a
    * person decides when it runs. See `./schedule-projection`.
    */
   gate?: string | null;

@@ -130,14 +130,14 @@ describe('projectSchedule', () => {
       NOW,
     );
     expect(out.get('t')).toEqual({ at: APPLIED, gate: null });
-    expect(out.get('e')).toEqual({ at: null, gate: 'After you finish Call the venue' });
+    expect(out.get('e')).toEqual({ at: null, gate: 'After you finish “Call the venue”' });
   });
 
   it('a send waiting for approval gates what follows it', () => {
     const held = step({ id: 'h', requires_approval: true, due_at: APPLIED, title: 'Quote' });
     const out = projectSchedule([held, step({ id: 'e' })], ANCHORS, null, NOW);
     expect(out.get('h')?.at).toBe(APPLIED);
-    expect(out.get('e')?.gate).toBe('After you OK Quote');
+    expect(out.get('e')?.gate).toBe('After you OK “Quote”');
   });
 
   it('an undecided branch gates both sides, and its sibling runs on', () => {
@@ -152,8 +152,8 @@ describe('projectSchedule', () => {
     const no = step({ id: 'n', parent_step_id: 'b', branch_path: 'no', position: 1 });
     const after = step({ id: 'a' });
     const out = projectSchedule([b, yes, no, after], ANCHORS, null, NOW);
-    expect(out.get('y')?.gate).toBe('Depends on Paid deposit?');
-    expect(out.get('n')?.gate).toBe('Depends on Paid deposit?');
+    expect(out.get('y')?.gate).toBe('Depends on “Paid deposit?”');
+    expect(out.get('n')?.gate).toBe('Depends on “Paid deposit?”');
     expect(out.get('a')?.at).toBe(NOW.toISOString());
   });
 
@@ -174,14 +174,14 @@ describe('projectSchedule', () => {
     const held = step({ id: 'h', title: 'Thank you', due_held_at: APPLIED });
     const out = projectSchedule([held, step({ id: 'e' })], ANCHORS, null, NOW);
     expect(out.get('h')).toEqual({ at: null, gate: 'No date set' });
-    expect(out.get('e')?.gate).toBe('After Thank you, which has no date');
+    expect(out.get('e')?.gate).toBe('After “Thank you”, which has no date');
   });
 
   it('a failed step gates the steps behind it', () => {
     const failed = step({ id: 'f', status: 'errored', title: 'Invoice', due_at: APPLIED });
     const out = projectSchedule([failed, step({ id: 'e' })], ANCHORS, null, NOW);
     expect(out.has('f')).toBe(false);
-    expect(out.get('e')?.gate).toBe('After Invoice is fixed');
+    expect(out.get('e')?.gate).toBe('After “Invoice” is fixed');
   });
 
   it('starts from nothing done: Email 1 due, then the Wait, then Email 2', () => {
@@ -203,19 +203,19 @@ describe('projectSchedule', () => {
     const b = step({ id: 'b', type: 'branch', title: 'Paid?', config: {} });
     const yes = step({ id: 'y', parent_step_id: 'b', branch_path: 'yes', position: 1 });
     const out = projectSchedule([todo, b, yes], ANCHORS, null, NOW);
-    expect(out.get('y')?.gate).toBe('After you finish Call');
+    expect(out.get('y')?.gate).toBe('After you finish “Call”');
   });
 
   it('a finished step with no finish time dates nothing behind it', () => {
     const done = step({ id: 'd', status: 'done', completed_at: null, title: 'Intro' });
     const out = projectSchedule([done, step({ id: 'e' })], ANCHORS, null, NOW);
-    expect(out.get('e')).toEqual({ at: null, gate: 'After Intro' });
+    expect(out.get('e')).toEqual({ at: null, gate: 'After “Intro”' });
   });
 
   it('a legacy Wait still flagged for approval holds what follows', () => {
     const w = wait(5, { id: 'w', requires_approval: true, due_at: APPLIED, title: 'Pause' });
     const out = projectSchedule([w, step({ id: 'e' })], ANCHORS, null, NOW);
-    expect(out.get('e')?.gate).toBe('After you OK Pause');
+    expect(out.get('e')?.gate).toBe('After you OK “Pause”');
   });
 
   it('a wedding-dated step keeps its own date behind a gate', () => {
@@ -254,7 +254,7 @@ describe('projectSchedule', () => {
     const todo = step({ id: 'todo', type: 'todo', status: 'done', completed_at: '2026-09-27T03:01:54.000Z' });
     const email = step({ id: 'email' });
     const out = projectSchedule([doneEmail, first, todo, email], ANCHORS, null, NOW);
-    expect(out.get('email')).toEqual({ at: null, gate: 'After you finish Call the venue' });
+    expect(out.get('email')).toEqual({ at: null, gate: 'After you finish “Call the venue”' });
   });
 
   it('a finished dated step does not date the step behind it past an open to-do (Final call)', () => {
@@ -269,7 +269,7 @@ describe('projectSchedule', () => {
     });
     const thanks = step({ id: 'thanks' });
     const out = projectSchedule([doneEmail, questionnaire, chase, finalCall, thanks], ANCHORS, null, NOW);
-    expect(out.get('thanks')).toEqual({ at: null, gate: 'After you finish Send questionnaire' });
+    expect(out.get('thanks')).toEqual({ at: null, gate: 'After you finish “Send questionnaire”' });
   });
 
   it('a pending dated email does not release the step behind it past an open to-do', () => {
@@ -286,7 +286,7 @@ describe('projectSchedule', () => {
     const thanks = step({ id: 'thanks' });
     const out = projectSchedule([doneEmail, questionnaire, chase, dated, thanks], ANCHORS, null, NOW);
     expect(out.get('dated')).toEqual({ at: '2026-09-29T14:00:00.000Z', gate: null });
-    expect(out.get('thanks')).toEqual({ at: null, gate: 'After you finish Send questionnaire' });
+    expect(out.get('thanks')).toEqual({ at: null, gate: 'After you finish “Send questionnaire”' });
   });
 
   it('a dated email releases the step behind it no earlier than a later Wait above it', () => {

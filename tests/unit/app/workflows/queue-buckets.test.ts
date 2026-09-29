@@ -48,9 +48,9 @@ describe('bucketFor', () => {
   it('puts a failure in Overdue whatever date it carries', () => {
     // A step that broke is the MC's most urgent problem even if the
     // engine will not try it again until next month.
-    expect(
-      bucketFor(item({ status: 'errored', dueAt: due('2026-11-03') }), today, TZ),
-    ).toBe('overdue');
+    expect(bucketFor(item({ status: 'errored', dueAt: due('2026-11-03') }), today, TZ)).toBe(
+      'overdue',
+    );
   });
 
   it('keeps an undated to-do in the list rather than dropping it', () => {
@@ -112,7 +112,10 @@ describe('bucketQueueItems', () => {
 
   it('sorts undated work last', () => {
     const buckets = bucketQueueItems(
-      [item({ stepId: 'no-date', dueAt: null }), item({ stepId: 'dated', dueAt: due('2026-09-10') })],
+      [
+        item({ stepId: 'no-date', dueAt: null }),
+        item({ stepId: 'dated', dueAt: due('2026-09-10') }),
+      ],
       TZ,
       NOW,
     );
@@ -127,12 +130,8 @@ describe('rowDueLabel', () => {
   });
 
   it('says how long an overdue step has been sitting', () => {
-    expect(rowDueLabel(item({ dueAt: due('2026-09-09') }), 'overdue', TZ, NOW)).toBe(
-      'Yesterday',
-    );
-    expect(rowDueLabel(item({ dueAt: due('2026-06-15') }), 'overdue', TZ, NOW)).toBe(
-      '87 days ago',
-    );
+    expect(rowDueLabel(item({ dueAt: due('2026-09-09') }), 'overdue', TZ, NOW)).toBe('Yesterday');
+    expect(rowDueLabel(item({ dueAt: due('2026-06-15') }), 'overdue', TZ, NOW)).toBe('87 days ago');
   });
 
   it('gives a time for today, because that is what is left to decide', () => {
@@ -141,8 +140,18 @@ describe('rowDueLabel', () => {
 
   it('gives a weekday inside the fortnight and a date beyond it', () => {
     expect(rowDueLabel(item({ dueAt: due('2026-09-14') }), 'this_week', TZ, NOW)).toBe('Mon');
-    expect(rowDueLabel(item({ dueAt: due('2026-11-03') }), 'later', TZ, NOW)).toBe(
-      'Tue 3 Nov',
+    expect(rowDueLabel(item({ dueAt: due('2026-11-03') }), 'later', TZ, NOW)).toBe('Tue 3 Nov');
+  });
+
+  it('gives a send its time as well as its day', () => {
+    const send = (at: string) => item({ type: 'action', dueAt: due(at) });
+    expect(rowDueLabel(send('2026-09-14'), 'this_week', TZ, NOW)).toBe('Mon, 9:00am');
+    expect(rowDueLabel(send('2026-09-28'), 'later', TZ, NOW)).toBe('Mon 28 Sep, 9:00am');
+  });
+
+  it('says the year of a date outside this one', () => {
+    expect(rowDueLabel(item({ dueAt: due('2027-02-01') }), 'later', TZ, NOW)).toBe(
+      'Mon 1 Feb 2027',
     );
   });
 
