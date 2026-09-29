@@ -17,10 +17,6 @@ PR opened / pushed
 │  install → audit:gate → typecheck → typecheck:strict →      │
 │  lint:gate → knip → unit → build → integration (local       │
 │  Supabase + RLS)                                             │
-│        │ PRs only, once gates pass                          │
-│        ▼                                                    │
-│  e2e × 3 (desktop · Pixel 5 · iPhone 12): fresh local       │
-│  Supabase → next build → next start → Playwright            │
 └─────────────────────────────────────────────────────────────┘
        │ merge to `staging`
        ▼
@@ -87,9 +83,6 @@ Repo → Settings → **Branches** → add a ruleset for both `main` and
 - Require a pull request before merging.
 - Require status checks to pass:
   - `Gates (typecheck · lint · tests · build)` (from `ci.yml`)
-  - NOT yet `E2E (chromium)`, `E2E (Mobile Chrome)`, `E2E (Mobile Safari)`.
-    The `e2e` job is non-blocking (see below); add these three once it
-    flips to blocking.
 - Require branches to be up to date before merging.
 - Disable force pushes.
 - Disable branch deletion.
@@ -174,107 +167,9 @@ Triggers: PRs into `main`/`staging` and pushes to those branches.
 Ordered cheapest-first so failures surface in ~30s, not after the slow
 Supabase startup.
 
-#### Job `e2e`: Playwright against a production build
+#### E2E
 
-**Non-blocking for now.** The job has `continue-on-error: true`: a red
-e2e run shows in the PR checks and uploads its report, but never fails
-the workflow or the PR. Reason: Task 37's first run found 82 desktop
-failures that fail identically on the base tree (stale selectors and
-helpers left behind by UI changes), tracked as a backlog in the Task 37
-report. **Plan: fix the backlog, then remove `continue-on-error` and add
-the three `E2E (…)` checks to branch protection**, so e2e becomes a
-real gate.
-
-How a failing leg shows in the checks is **to be verified on the first
-real run**: with job-level `continue-on-error`, GitHub reports the
-workflow run as a success, but the failed leg's own check can render
-red or as a neutral/warning mark depending on the view. Record what the
-PR checks list actually shows here after the first red run, so nobody
-mistakes it for a blocking failure (or a pass).
-
-Retries are 0 (`playwright.ci.config.ts`) and each leg has
-`timeout-minutes: 90`: with the backlog red, retrying 82 deterministic
-failures would triple the run and show nothing new. Revisit both when the
-job flips to blocking.
-
-Triggers: PRs into `main`/`staging` and the manual "Run workflow"
-button. Not on the push that merges a PR (same tree, already tested).
-`needs: gates`, so a type error never starts three Supabase stacks.
-
-One matrix leg per device project (`chromium` = desktop Chrome,
-`Mobile Chrome` = Pixel 5, `Mobile Safari` = iPhone 12), `fail-fast:
-false`, so a phone-only break is its own red check. Each leg:
-
-| Step | Why it's there |
-|---|---|
-| `supabase start` (CLI 2.65.5, same pin as gates) | A fresh stack from the full migration chain + seed, with the repo's `config.toml` (TOTP on, Inbucket for auth mail). |
-| Export local keys | Reads `API_URL` / `ANON_KEY` / `SERVICE_ROLE_KEY` from `supabase status -o json` into the job env, masked. |
-| `npm run build` | A real production build. Runs after the stack is up because `NEXT_PUBLIC_*` values are inlined at build time. |
-| `npm run start -- -H 127.0.0.1 -p 3100` | `next start` in the background; the step waits up to 2 min for `/login` to answer. Log kept as `next-server.log`. |
-| Playwright browser | `npx playwright install --with-deps <chromium|webkit>`, cached per Playwright version and browser. |
-| Playwright, pass `main` | `playwright.ci.config.ts`, every spec not named in the two passes below, signed in from the saved state. |
-| Playwright, pass `signout` | `navigation.spec.ts`. Its sign-out tests revoke every session of the shared account (global scope), so they run after `main`. |
-| Playwright, pass `signed-out` | `two-factor.spec.ts`, `debug-login.spec.ts`, with no saved state. `/login` redirects a signed-in visitor to `/`, so a spec that signs in as its own user must start signed out. |
-| Upload report (on failure) | Artifact `playwright-report-<desktop|pixel-5|iphone-12>`: the HTML report of each pass (`playwright-report*/`), `test-results*/` (screenshots, error context) and `next-server.log`. 14 days. |
-
-`playwright.ci.config.ts` extends `playwright.config.ts`: the three
-projects only, no `webServer`, list + HTML reporters, and a global setup
-(`tests/e2e/global-setup.ts`) that seeds the MC account the specs use
-(`TEST_EMAIL` / `TEST_PASSWORD`: confirmed, active subscription, welcome
-wizard already done) and signs it in **once**, saving the browser state
-to `playwright/.auth/ci-user.json`. The login server action allows 10
-attempts a minute per IP; with every test calling `login()` in
-`beforeEach` from one runner, per-test sign-in trips it in the first
-minute. The setup refuses to run against a non-loopback Supabase URL.
-`CI=true` in Actions keeps the base config's `workers: 1` and
-`forbidOnly`; the CI config sets `retries: 0`.
-
-**Secrets: none.** Every value in the job's `env` is blank or an
-obviously fake test value, and nothing can leave the runner:
-
-- `RESEND_API_KEY` blank: `lib/email/dispatch.ts` returns a failed send
-  without calling Resend.
-- `SLACK_WEBHOOK_URL` blank, and `NEXT_PUBLIC_APP_URL` is loopback,
-  which suppresses Slack by itself (`slackSuppressed()`).
-- `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are fake
-  `sk_test_` / `pk_test_` strings, and `STRIPE_API_HOST=127.0.0.1`,
-  `STRIPE_API_PORT=9`, `STRIPE_API_PROTOCOL=http` point the server's
-  Stripe client (`lib/payments/stripe.ts`, `stripeClientConfig`) at a
-  dead loopback port. A spec that reaches a Stripe-calling route fails on
-  the runner; nothing is sent to api.stripe.com. The overrides apply only
-  when set, and only when `CI=true` or the secret key starts with
-  `sk_test_` (Phase 6 review M5), so a stray `STRIPE_API_HOST` on a
-  live-key deployment is ignored rather than routing real payments
-  elsewhere. Pinned by
-  `tests/unit/lib/payments/stripe-ci-host.test.ts`, which reads these
-  values out of `ci.yml`.
-- `NOTION_API_KEY` blank: `notionApiKey()` throws before any fetch, and
-  the feedback route (`lib/bug-reports/submit.ts`) records the Notion sync
-  as failed.
-- `ANTHROPIC_API_KEY` blank: the SDK constructs, but `messages.create()`
-  throws "could not resolve authentication method" before any request, so
-  Zebri AI fails closed.
-- `CRON_SECRET`, `UNSUBSCRIBE_TOKEN_SECRET`, `EMAIL_CRED_KEY`: fake values
-  that exist only in the ephemeral runner. `CRON_SECRET` lets
-  `portal-package-workflow.spec.ts` call the tick route.
-- Supabase auth emails land in the stack's Inbucket.
-
-Specs guarded to the isolated port-3123 stack (`branding-*`,
-`lead-form-blocks`, `welcome-onboarding`, and the booking spec's "Mobile: slot picker" test)
-skip in CI: the job serves on 3100 and does not set `BRANDING_E2E`.
-Turning them on is a separate decision (they reset shared state, and
-`welcome-onboarding` signs in its own users, which the saved state would
-shadow).
-
-Run the same thing locally without touching the shared stack: copy the
-tree, point a production build at the running local Supabase, and use
-the CI config:
-
-```bash
-npm run build && npm run start -- -H 127.0.0.1 -p 3100 &   # with the job's env exported
-PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 TEST_EMAIL=… TEST_PASSWORD=… \
-  npx playwright test --config playwright.ci.config.ts --project=chromium
-```
+Not run in CI. See "E2E (not in CI)" at the end of this doc.
 
 ### `deploy-staging.yml` / `deploy-prod.yml`
 
@@ -475,10 +370,6 @@ or 2 above.
 | CI `audit:gate` fails (invalid allowlist entry) | An entry in `scripts/npm-audit-allowlist.json` has expired or is dated more than 90 days out. Re-check whether the advisory can now be fixed; if not, replace the entry with a fresh `expires` date and an updated reason. |
 | CI `lint:gate` fails with `EXCEEDED` | New code added a lint violation. Run `npm run lint` locally; fix or `lint:fix`. **Never raise the budget** for new code — see `scripts/lint-gate.mjs` rules. |
 | CI `typecheck:strict` exceeds budget | New code violated `noUncheckedIndexedAccess` or `exactOptionalPropertyTypes` — fix the new site (don't re-baseline). |
-| CI `e2e` fails in global setup ("no Supabase auth cookie", or a timeout on `/login`) | The app never signed the seeded user in. Open `next-server.log` in the report artifact; a missing env value or a crash on boot shows there first. |
-| CI `e2e` fails with "Too many attempts" on the login form | Something signed the shared account out mid-run (a new sign-out test outside `navigation.spec.ts`), so every later test fell back to the form and hit the 10-a-minute limiter. Add the spec to `SIGN_OUT_SPECS` in `tests/e2e/ci-pass-lists.ts` (the unit test `tests/unit/e2e/ci-pass-lists.test.ts` should already have failed on it). |
-| CI `e2e`: a spec that visits `/login` lands on the dashboard | It started from the saved signed-in state and `/login` redirected. Add it to `SIGNED_OUT_SPECS` in `tests/e2e/ci-pass-lists.ts`. |
-| CI `e2e` red on one device only | Download `playwright-report-<device>`; every failed test keeps its trace (`trace: retain-on-failure` in `playwright.ci.config.ts`, since CI runs with retries 0), so open the failing test's trace in the report. Mobile failures are usually an element hidden below `md` (see `openSidebar` in `tests/e2e/helpers.ts`). |
 | CI `test:integration` fails on `supabase start` | Usually transient image-pull timeout. Re-run the job. Persistent failures → check Supabase Docker image health. |
 | Deploy: "Found local migration files to be inserted before the last migration on remote" | The Phase 0.2 ledger reconciliation hasn't been done on that env yet — see "First-run ledger reconciliation" above. |
 | Deploy: migration safety FAILED | The migration drops/truncates without the marker. Add `-- @ALLOW_DESTRUCTIVE: <reason>` if intentional; otherwise rewrite the migration to be non-destructive. |
@@ -568,11 +459,11 @@ deploy workflows (and `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` /
 
 ---
 
-## E2E in CI (Phase 6, Task 37)
+## E2E (not in CI)
 
-Until Task 37 the e2e suite ran only by hand, so the Definition of
-Done's "e2e green on desktop and mobile" was never enforced. The `e2e`
-job above now runs it on every PR. No spec is skipped or quarantined to
-make it green: the job is non-blocking instead, while the 82 pre-existing
-desktop failures listed in the Task 37 report are fixed, and then it
-flips to blocking.
+The `e2e` job (Phase 6, Task 37) was removed from `ci.yml` on 2026-09-29:
+it was non-blocking with a large pre-existing failure backlog, so its three
+`E2E (…)` checks added wait time to every PR without gating anything.
+Run Playwright locally instead (`npx playwright test`). The CI harness it
+used (`playwright.ci.config.ts`, `tests/e2e/ci-pass-lists.ts`) is kept, so
+the job can be restored from git history once the backlog is fixed.

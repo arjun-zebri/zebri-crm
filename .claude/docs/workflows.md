@@ -1593,6 +1593,18 @@ behind a Wait carries the Wait's end as its own time. The couple's own
 to-do list and the MC's personal one are loose lists, not sequences, so
 their to-dos keep the date the MC gave them.
 
+**The couple's Workflow tab uses the same projection** (user ticket
+2026-09-29: "the 6 month check in doesn't say when it will send, it
+just says Wait above it with Today next to it"). `projectCoupleSteps`
+(`app/(dashboard)/couples/couple-step-projection.ts`) runs
+`projectSchedule` over the couple's `active` instances and
+`coupleDueLabel` reads it: a send behind a Wait shows its date, a Wait
+shows when it ends ("Until 2027-03-30"), and a step behind the MC shows
+the reason ("After you OK Send email · …"). Paused instances and the
+couple's own to-do list keep their stored dates. The tab does not load
+quiet hours, so a Wait's end is not pushed for them there; a daytime
+wake is unaffected.
+
 Every read is paged to exhaustion (`lib/workflows/read-pages.ts`,
 `queue-schedule-reads.ts`): PostgREST cuts a response at `max_rows`
 (1000) without an error, and a missing finished step or to-do dates the

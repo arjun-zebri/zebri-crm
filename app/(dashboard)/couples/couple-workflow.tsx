@@ -26,6 +26,7 @@ import { toStepTiming } from '@/lib/workflows/timing-summary';
 import type { WorkflowStepRow } from '@/types/workflows';
 
 import { coupleDueLabel } from './couple-due-label';
+import { projectCoupleSteps } from './couple-step-projection';
 import { CoupleTabShell, type TabStat } from './couple-tab-shell';
 import { CoupleTodoModal } from './couple-todo-modal';
 import { workflowTabStats } from './couple-workflow-stats';
@@ -83,6 +84,13 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
   const stats = useMemo<TabStat[] | undefined>(
     () => workflowTabStats(visible.flatMap((i) => i.steps), timezone),
     [visible, timezone],
+  );
+
+  // When each coming step will run, including the sends behind a Wait
+  // that the engine has not dated yet (user ticket, 2026-09-29).
+  const projections = useMemo(
+    () => projectCoupleSteps(visible, weddingDate, timezone),
+    [visible, weddingDate, timezone],
   );
 
   const nudges = useMemo(() => {
@@ -149,7 +157,9 @@ export function CoupleWorkflow({ coupleId, weddingDate = null }: CoupleWorkflowP
             coupleId={coupleId}
             instances={workflows.instances}
             timezone={timezone}
-            dueLabel={(step: WorkflowStepRow) => coupleDueLabel(step, timezone)}
+            dueLabel={(step: WorkflowStepRow) =>
+              coupleDueLabel(step, timezone, new Date(), projections.get(step.id))
+            }
             onOpen={setOpenStepId}
             workflows={workflows}
           />

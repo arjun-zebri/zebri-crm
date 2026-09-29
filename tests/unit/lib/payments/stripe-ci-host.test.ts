@@ -3,11 +3,17 @@
  * The CI e2e job must never reach api.stripe.com (Task 37, review I1).
  *
  * The job points STRIPE_API_HOST / STRIPE_API_PORT / STRIPE_API_PROTOCOL
- * at a dead loopback port. These tests read those values out of ci.yml
- * itself, build the client exactly as `lib/payments/stripe.ts` does, make
- * a real call, and prove it fails on loopback without a socket ever being
- * opened towards Stripe. They also pin that production (vars unset) keeps
- * the SDK defaults.
+ * at a dead loopback port. When ci.yml has an e2e job, these tests read
+ * those values out of it; the client is built exactly as
+ * `lib/payments/stripe.ts` does it, a real call is made, and it must fail
+ * on loopback without a socket ever being opened towards Stripe. They
+ * also pin that production (vars unset) keeps the SDK defaults.
+ *
+ * The e2e job was taken out of CI (5321cf69) with its harness kept for a
+ * later restore. Until it is back, the ci.yml check is skipped rather than
+ * failing on a job that does not exist, and the loopback proof runs
+ * against the same values the job used, so a restored job is checked
+ * again with no edit here.
  */
 import { readFileSync } from 'node:fs'
 import http from 'node:http'
@@ -20,6 +26,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { stripeClientConfig } from '@/lib/payments/stripe'
 
 const CI_YML = readFileSync(path.resolve(__dirname, '../../../../.github/workflows/ci.yml'), 'utf8')
+
+/** Does ci.yml currently define the e2e job? */
+const HAS_E2E_JOB = CI_YML.includes('\n  e2e:')
+
+/**
+ * The Stripe override the e2e job set before it left CI: a dead loopback
+ * port. The loopback proof uses the job's own values when it exists, and
+ * these otherwise.
+ */
+const LOOPBACK_ENV: Record<string, string> = {
+  STRIPE_API_HOST: '127.0.0.1',
+  STRIPE_API_PORT: '9',
+  STRIPE_API_PROTOCOL: 'http',
+  STRIPE_SECRET_KEY: 'sk_test_x',
+}
 
 /** The e2e job's env block, as KEY -> value (quotes stripped). */
 function e2eJobEnv(): Record<string, string> {
@@ -67,7 +88,7 @@ describe('stripeClientConfig', () => {
     })
   })
 
-  it('ci.yml points the e2e job at a loopback Stripe host', () => {
+  it.skipIf(!HAS_E2E_JOB)('ci.yml points the e2e job at a loopback Stripe host', () => {
     const env = e2eJobEnv()
     expect(env.STRIPE_API_HOST).toBe('127.0.0.1')
     expect(env.STRIPE_API_PROTOCOL).toBe('http')
@@ -80,7 +101,7 @@ describe('stripeClientConfig', () => {
   })
 
   it('under the CI config a Stripe call fails on loopback and never dials api.stripe.com', async () => {
-    const env = e2eJobEnv()
+    const env = HAS_E2E_JOB ? e2eJobEnv() : LOOPBACK_ENV
     const httpSpy = vi.spyOn(http, 'request')
     const httpsSpy = vi.spyOn(https, 'request')
 
