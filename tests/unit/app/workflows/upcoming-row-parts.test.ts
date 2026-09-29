@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { rowActions } from '@/app/(dashboard)/workflows/upcoming-row-parts';
+import { gatePillLabel, rowActions } from '@/app/(dashboard)/workflows/upcoming-row-parts';
 import type { QueueItem } from '@/lib/workflows/queue';
 
 function item(over: Partial<QueueItem> = {}): QueueItem {
@@ -40,5 +40,18 @@ describe('rowActions', () => {
   it('snoozes the row it belongs to', () => {
     rowActions(item(), on)[1]?.onSelect();
     expect(on.onSnooze).toHaveBeenCalledWith('s1', 7);
+  });
+});
+
+describe('gatePillLabel', () => {
+  it('reads any wait on an earlier step as one short pill', () => {
+    expect(gatePillLabel('After you OK “5 Months to GO!”')).toBe('After previous step');
+    expect(gatePillLabel('After you finish “Call the venue”')).toBe('After previous step');
+    expect(gatePillLabel('Depends on “Paid deposit?”')).toBe('After previous step');
+  });
+
+  it('keeps a reason that is about the step itself', () => {
+    expect(gatePillLabel('No date set')).toBe('No date set');
+    expect(gatePillLabel('Needs a wedding date')).toBe('Needs a wedding date');
   });
 });

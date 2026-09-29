@@ -8,13 +8,18 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { stepDisplayTitle } from '@/lib/workflows/step-label';
+import {
+  fillStepVariables,
+  stepDisplayTitle,
+  stepLabelParts,
+  stepShortTitle,
+} from '@/lib/workflows/step-label';
 
 describe('stepDisplayTitle', () => {
   it("uses the MC's own words when there are any", () => {
-    expect(
-      stepDisplayTitle({ title: 'Ring the venue', type: 'todo', config: {} }),
-    ).toBe('Ring the venue');
+    expect(stepDisplayTitle({ title: 'Ring the venue', type: 'todo', config: {} })).toBe(
+      'Ring the venue',
+    );
   });
 
   it('ignores a title that is only whitespace', () => {
@@ -69,9 +74,7 @@ describe('stepDisplayTitle', () => {
   it('names the flow steps', () => {
     expect(stepDisplayTitle({ title: '', type: 'wait', config: {} })).toBe('Wait');
     expect(stepDisplayTitle({ title: '', type: 'branch', config: {} })).toBe('Branch');
-    expect(stepDisplayTitle({ title: '', type: 'appointment', config: {} })).toBe(
-      'Appointment',
-    );
+    expect(stepDisplayTitle({ title: '', type: 'appointment', config: {} })).toBe('Appointment');
   });
 
   it('still returns something for a step it cannot place', () => {
@@ -81,5 +84,39 @@ describe('stepDisplayTitle', () => {
       stepDisplayTitle({ title: '', type: 'action', config: { actionType: 'nonsense' } }),
     ).toBe('Step');
     expect(stepDisplayTitle({ title: null, type: 'action', config: null })).toBe('Step');
+  });
+});
+
+describe('stepLabelParts', () => {
+  const email = {
+    title: '',
+    type: 'action',
+    config: { actionType: 'send_email', subject: 'Check in!' },
+  };
+
+  it('splits an unnamed send into its kind and its subject', () => {
+    expect(stepLabelParts(email)).toEqual({ kind: 'Send email', name: 'Check in!' });
+    expect(stepShortTitle(email)).toBe('Check in!');
+  });
+
+  it("keeps the MC's own name whole", () => {
+    expect(stepLabelParts({ ...email, title: 'Nudge' })).toEqual({ kind: null, name: 'Nudge' });
+  });
+});
+
+describe('fillStepVariables', () => {
+  it('fills the couple name and names every other variable', () => {
+    expect(fillStepVariables('{{couple.name}} Check In!', { coupleName: 'Sam & Priya' })).toBe(
+      'Sam & Priya Check In!',
+    );
+    expect(
+      fillStepVariables('Hi {{ couple.primary_name }}', { coupleName: 'Sam & Priya' }),
+    ).not.toContain('{{');
+  });
+
+  it('never leaves braces, even with no couple or an unknown variable', () => {
+    expect(
+      fillStepVariables('{{couple.name}} and {{made.up}}', { coupleName: null }),
+    ).not.toContain('{{');
   });
 });

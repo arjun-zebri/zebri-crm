@@ -25,7 +25,7 @@ import type { QueueFilter, QueueItem } from './queue';
 import { readSchedule, type ScheduleReads, type ScheduleStep } from './queue-schedule-reads';
 import { releaseBlocker } from './release';
 import { projectSchedule, type StepProjection } from './schedule-projection';
-import { stepDisplayTitle } from './step-label';
+import { fillStepVariables, stepDisplayTitle, stepLabelParts } from './step-label';
 import { isAutomated } from './steps';
 
 /** The MC's own quiet hours, from their settings. */
@@ -92,6 +92,12 @@ export async function loadScheduledItems(
       const plan = projected.get(step.id);
       if (FINISHED.has(step.status) || (!failed && (!plan || HIDDEN.has(step.type)))) continue;
       if (!isAutomated(step.type) && !manualTypes.has(step.type)) continue;
+      // Names come off the template, so "{{couple.name}} Check In!" is
+      // filled with this couple's name before any list shows it.
+      const fill = (text: string) =>
+        fillStepVariables(text, { coupleName: instance.couples?.name ?? null });
+      const parts = stepLabelParts(step);
+      const gate = failed ? null : (plan?.gate ?? null);
       items.push({
         stepId: step.id,
         instanceId: instance.id,
@@ -99,12 +105,14 @@ export async function loadScheduledItems(
         coupleId: instance.couple_id,
         coupleName: instance.couples?.name ?? null,
         weddingDate,
-        title: stepDisplayTitle(step),
+        title: fill(stepDisplayTitle(step)),
+        kind: parts.kind,
+        name: fill(parts.name),
         description: step.description ?? null,
         type: step.type,
         status: step.status as StepStatus,
         dueAt: failed ? step.due_at : (plan?.at ?? null),
-        gate: failed ? null : (plan?.gate ?? null),
+        gate: gate === null ? null : fill(gate),
         blocked: !failed && isBlocked(step, own),
         requiresApproval: step.requires_approval,
       });
