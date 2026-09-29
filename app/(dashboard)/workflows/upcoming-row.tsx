@@ -124,21 +124,27 @@ export function UpcomingRow({
         </span>
       ) : null}
 
-      {gated ? (
-        // The pill says there is a step first; hovering it says which.
-        // Phones read the whole reason on the line under the title.
-        <Tooltip label={item.gate ?? ''} multiline className="hidden shrink-0 sm:inline-flex">
-          <StatePill label={gatePillLabel(item.gate ?? '')} tone="neutral" />
-        </Tooltip>
-      ) : (
-        <span
-          className={`shrink-0 whitespace-nowrap text-right text-body tabular-nums sm:w-40 ${
-            band === 'overdue' ? 'text-danger' : 'text-text-muted'
-          }`}
-        >
-          {rowDueLabel(item, band, timezone)}
-        </span>
-      )}
+      {/* One fixed slot for the date or the pill, so the couple column
+          beside it lines up on every row. Sized for the longest label,
+          "Wed 30 Sep 2027, 10:30am"; a narrower slot let that overflow
+          and shoved its row's couple name out of line. */}
+      <span className="flex shrink-0 justify-end sm:w-56">
+        {gated ? (
+          // The pill says there is a step first; hovering it says which.
+          // Phones read the whole reason on the line under the title.
+          <Tooltip label={item.gate ?? ''} multiline className="hidden sm:inline-flex">
+            <StatePill label={gatePillLabel(item.gate ?? '')} tone="neutral" />
+          </Tooltip>
+        ) : (
+          <span
+            className={`whitespace-nowrap text-body tabular-nums ${
+              band === 'overdue' ? 'text-danger' : 'text-text-muted'
+            }`}
+          >
+            {rowDueLabel(item, band, timezone)}
+          </span>
+        )}
+      </span>
 
       <RowActionsMenu
         size="sm"
