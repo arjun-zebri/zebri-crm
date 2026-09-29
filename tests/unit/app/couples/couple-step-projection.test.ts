@@ -97,7 +97,7 @@ describe('projectCoupleSteps', () => {
     const steps = ticketWorkflow();
     const out = projectCoupleSteps([instance(steps)], null, TZ, NOW);
     expect(coupleDueLabel(steps[3]!, TZ, NOW, out.get('send2'))).toBe(
-      'After you OK Send email · 6 Month Check In!',
+      'After you OK “6 Month Check In!”',
     );
   });
 

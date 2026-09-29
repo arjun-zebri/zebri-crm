@@ -6,7 +6,7 @@
  * The right-hand column is a time for anything with one, including a
  * send behind a Wait (its time is the Wait's end, see
  * `lib/workflows/schedule-projection`). A step only a person can release
- * says why instead ("After you finish Call the venue").
+ * shows a pill instead ("After previous step", naming the step on hover).
  *
  * @module app/(dashboard)/workflows/upcoming-row
  */
@@ -16,11 +16,12 @@ import { AlertTriangle, Zap } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RowActionsMenu } from '@/components/ui/row-actions-menu';
 import { StatePill } from '@/components/ui/state-pill';
+import { Tooltip } from '@/components/ui/tooltip';
 import type { QueueItem } from '@/lib/workflows/queue';
 import { isAutomated } from '@/lib/workflows/steps';
 
 import { rowDueLabel, type BucketKey } from './queue-buckets';
-import { coupleLine, rowActions } from './upcoming-row-parts';
+import { coupleLine, gatePillLabel, rowActions } from './upcoming-row-parts';
 
 /** Props for {@link UpcomingRow}. */
 export interface UpcomingRowProps {
@@ -95,7 +96,12 @@ export function UpcomingRow({
 
       <button type="button" className="min-w-0 flex-1 cursor-pointer text-left">
         <span className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 truncate text-body text-text">{item.title}</span>
+          {/* The subject is what tells two sends apart; "Send email" on
+              every row is context, so it sits back in the muted tone. */}
+          <span className="min-w-0 truncate text-body text-text">
+            {item.kind ? <span className="text-text-muted">{item.kind} · </span> : null}
+            {item.name ?? item.title}
+          </span>
           {/* A ⚡ says "Zebri runs this", which is the opposite of what a
               held send needs the MC to know. The pill says whose move it is. */}
           {item.requiresApproval ? (
@@ -119,17 +125,14 @@ export function UpcomingRow({
       ) : null}
 
       {gated ? (
-        // A reason is a sentence, not a date: it gets room to read, and
-        // truncates with the whole of it on hover.
-        <span
-          title={item.gate ?? undefined}
-          className="hidden min-w-0 max-w-64 shrink truncate text-right text-body text-text-muted sm:inline"
-        >
-          {item.gate}
-        </span>
+        // The pill says there is a step first; hovering it says which.
+        // Phones read the whole reason on the line under the title.
+        <Tooltip label={item.gate ?? ''} multiline className="hidden shrink-0 sm:inline-flex">
+          <StatePill label={gatePillLabel(item.gate ?? '')} tone="neutral" />
+        </Tooltip>
       ) : (
         <span
-          className={`shrink-0 whitespace-nowrap text-right text-body sm:w-20 ${
+          className={`shrink-0 whitespace-nowrap text-right text-body tabular-nums sm:w-40 ${
             band === 'overdue' ? 'text-danger' : 'text-text-muted'
           }`}
         >
