@@ -31,6 +31,7 @@ import { questionnaireActions } from './questionnaire'
 import { taskActions } from './task'
 import { timelineActions } from './timeline'
 import type { ActionUi } from './ui'
+import { workflowActions } from './workflow'
 
 // `ActionUi` + the client-safe `actionUi` metadata catalogue live in
 // `./ui` (no handler imports), so client components read action metadata
@@ -53,6 +54,7 @@ export const actionRegistry: Partial<Record<ActionType, ActionSpec<any>>> = {
   ...questionnaireActions,
   ...timelineActions,
   ...postEventActions,
+  ...workflowActions,
   // Phase 14a UI-only stubs (handlers throw a clear "not wired" error).
   ...extendedActions,
 }

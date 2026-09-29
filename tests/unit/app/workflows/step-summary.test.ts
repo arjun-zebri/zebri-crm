@@ -105,6 +105,11 @@ describe('the timing chip (audit M7)', () => {
     expect(timingChip(timed('send_email', { mode: 'after_previous', delayAmount: 2, unit: 'days' }))).toBe('+2d')
   })
 
+  it('shows nothing on Start workflow, which runs straight after the step above (a delay is a Wait)', () => {
+    expect(timingChip(timed('start_workflow', null))).toBeUndefined()
+    expect(timingChip(timed('start_workflow', { mode: 'after_previous', delayAmount: 2, unit: 'days' }))).toBeUndefined()
+  })
+
   it('shows nothing on a wait or a branch, whose timing is not when anything is sent', () => {
     expect(timingChip(timed('wait', null))).toBeUndefined()
     expect(timingChip(timed('branch', null))).toBeUndefined()
@@ -114,5 +119,29 @@ describe('the timing chip (audit M7)', () => {
     // A Wait's one number is its duration; a legacy offset is folded into
     // it on the card, so a "+2d" chip beside it would count it twice.
     expect(timingChip(timed('wait', { mode: 'after_previous', delayAmount: 2, unit: 'days' }))).toBeUndefined()
+  })
+})
+
+describe('the Start workflow step summary', () => {
+  const labels = { workflows: { w1: 'Planning' } }
+
+  it('names the workflow the couple moves on to', () => {
+    expect(stepSummary(row('start_workflow', { workflow: 'w1', endCurrent: true }), labels)).toBe('Starts Planning')
+  })
+
+  it('reads as a hand-off when "End this workflow" was never touched', () => {
+    // The runner defaults it on, so an absent flag must not read "alongside".
+    expect(stepSummary(row('start_workflow', { workflow: 'w1' }), labels)).toBe('Starts Planning')
+  })
+
+  it('says when this workflow keeps going alongside the next', () => {
+    expect(stepSummary(row('start_workflow', { workflow: 'w1', endCurrent: false }), labels)).toBe(
+      'Starts Planning, alongside this one',
+    )
+  })
+
+  it('says so when nothing is chosen, or the workflow was deleted', () => {
+    expect(stepSummary(row('start_workflow', { endCurrent: true }), labels)).toBe('No workflow chosen')
+    expect(stepSummary(row('start_workflow', { workflow: 'gone' }), labels)).toBe('Starts a workflow that was deleted')
   })
 })

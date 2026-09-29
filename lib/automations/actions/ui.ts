@@ -94,6 +94,12 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
       "description": "Add a new couple to your CRM",
       "icon": "UserPlus"
     },
+    "start_workflow": {
+      "category": "flow",
+      "label": "Start workflow",
+      "description": "Move the couple on to another workflow",
+      "icon": "Workflow"
+    },
     "pause_couple_automations": {
       "category": "flow",
       "label": "Pause this couple's automations",

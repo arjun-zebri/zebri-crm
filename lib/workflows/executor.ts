@@ -34,8 +34,11 @@ import {
 } from './account-pause';
 import { writeAudit, writeAuditMany } from './audit';
 import { skipBranchSide } from './branch-skip';
+import { isStartWorkflowStep, startedInstanceId } from './chain';
 import { buildStepContext } from './context';
 import { loadDueSteps } from './due-steps';
+import { emitWorkflowCompleted } from './emitters/workflow-completed';
+import { endRestOfInstance, endsWorkflow } from './end-instance';
 import { isExecutable } from './executable';
 import { executeStep, quietHoursHoldUntil } from './execute-step';
 import { loadMcTimezone } from './mc-timezone';
@@ -322,6 +325,99 @@ export async function advanceDueSteps(
     console.error('[workflows] read failed, left for the next tick', id, describeFailure(err));
   }
 
+  /**
+   * Run what one instance has due now, in order, up to the chain cap:
+   * the followers a finished step released. Any workflow a Start
+   * workflow step opens on the way is added to `handoffs`.
+   *
+   * The loop body is the pre-chaining follower loop unchanged (the
+   * backlog check on the row the caller holds, then a fresh read before
+   * each run); only the handoff note after each run is new.
+   */
+  async function chainFrom(instance: WorkflowInstanceRow, handoffs: string[]): Promise<void> {
+    for (let depth = 0; depth < maxChainDepth; depth += 1) {
+      if (pastDeadline()) {
+        truncated = true;
+        return;
+      }
+      let next: WorkflowStepRow | null;
+      try {
+        next = await nextDueStep(supabase, instance.id, handled);
+      } catch (err) {
+        // The follower is still due; the next tick's due read has it.
+        countReadFailure(err, instance.id);
+        return;
+      }
+      if (!next) return;
+      // The same backlog rule as the outer loop, for an instance whose
+      // lifted-stop steps the outer loop has not reached yet.
+      const pause = pauses.get(instance.user_id);
+      if (await isPauseBacklog(supabase, instance, next, pause)) {
+        handled.add(next.id);
+        await settlePauseBacklog(instance, pause!);
+        if (unsettled.has(instance.id)) return;
+        continue;
+      }
+      // Reload rather than reuse: the step just run merged its output
+      // into `instance.context` in the database, and a follower reads
+      // that context (`update_task` finds the to-do `create_task` made
+      // through it). The in-memory row is from before that write, and
+      // handing it on would both hide the output and overwrite it. The
+      // step may also have ended the instance. `run` invalidated it, so
+      // this is a real read every time, never the batch's copy.
+      let fresh: WorkflowInstanceRow | null;
+      try {
+        fresh = await reads.instance(instance.id);
+      } catch (err) {
+        countReadFailure(err, instance.id);
+        return;
+      }
+      if (!fresh || fresh.status !== 'active') return;
+      await run(fresh, next);
+      await noteHandoff(next, handoffs);
+    }
+  }
+
+  /**
+   * Run the first due steps of a workflow a Start workflow step opened.
+   * Its row is read here: it did not exist when this pass began.
+   */
+  async function chainInto(instanceId: string, handoffs: string[]): Promise<void> {
+    let opened: WorkflowInstanceRow | null;
+    try {
+      opened = await reads.instance(instanceId);
+    } catch (err) {
+      countReadFailure(err, instanceId);
+      return;
+    }
+    if (!opened || opened.status !== 'active') return;
+    await chainFrom(opened, handoffs);
+  }
+
+  /**
+   * After a Start workflow step, queue the workflow it opened, so its
+   * first steps run in this pass. Read from the step's stored output:
+   * that is the record of what the step did, whoever ran it.
+   */
+  async function noteHandoff(step: WorkflowStepRow, handoffs: string[]): Promise<void> {
+    if (!isStartWorkflowStep(step)) return;
+    try {
+      const { data, error } = await supabase
+        .from('workflow_steps')
+        .select('status, output')
+        .eq('id', step.id)
+        .maybeSingle();
+      // Not running the new workflow now only costs latency: its steps
+      // are due, and the next tick's due read finds them.
+      throwIfReadFailed('executor.handoff_read', error);
+      if (data?.status !== 'done') return;
+      const opened = startedInstanceId(data.output);
+      if (opened && !handoffs.includes(opened)) handoffs.push(opened);
+    } catch (err) {
+      countReadFailure(err, step.id);
+    }
+  }
+
   for (const [index, step] of candidates.entries()) {
     // Batches look ahead from here, never back at steps already run.
     reads.startStep(index);
@@ -363,46 +459,18 @@ export async function advanceDueSteps(
 
     // Chain: a completed step's recompute may have stamped the next one
     // due right now (an "after previous, 0 delay" follower, or the send
-    // behind a wait). Run it in this pass rather than the next.
-    for (let depth = 0; depth < maxChainDepth; depth += 1) {
-      if (pastDeadline()) {
-        truncated = true;
-        break;
-      }
-      let next: WorkflowStepRow | null;
-      try {
-        next = await nextDueStep(supabase, instance.id, handled);
-      } catch (err) {
-        // The follower is still due; the next tick's due read has it.
-        countReadFailure(err, instance.id);
-        break;
-      }
-      if (!next) break;
-      // The same backlog rule as the outer loop, for an instance whose
-      // lifted-stop steps the outer loop has not reached yet.
-      const pause = pauses.get(instance.user_id);
-      if (await isPauseBacklog(supabase, instance, next, pause)) {
-        handled.add(next.id);
-        await settlePauseBacklog(instance, pause!);
-        if (unsettled.has(instance.id)) break;
-        continue;
-      }
-      // Reload rather than reuse: the step just run merged its output
-      // into `instance.context` in the database, and a follower reads
-      // that context (`update_task` finds the to-do `create_task` made
-      // through it). The in-memory row is from before that write, and
-      // handing it on would both hide the output and overwrite it. The
-      // step may also have ended the instance. `run` invalidated it, so
-      // this is a real read every time, never the batch's copy.
-      let fresh: WorkflowInstanceRow | null;
-      try {
-        fresh = await reads.instance(instance.id);
-      } catch (err) {
-        countReadFailure(err, instance.id);
-        break;
-      }
-      if (!fresh || fresh.status !== 'active') break;
-      await run(fresh, next);
+    // behind a wait). Run it in this pass rather than the next. A Start
+    // workflow step hands on to the workflow it opened, whose first steps
+    // are due now too but were not in this pass's due read: they run next,
+    // in this pass, so the couple does not sit in the new workflow until
+    // the next tick (or, where no tick runs, for good).
+    const handoffs: string[] = [];
+    await noteHandoff(step, handoffs);
+    await chainFrom(instance, handoffs);
+    // Bounded: each handoff is one level deeper in its chain, and the
+    // Start workflow step refuses past MAX_CHAIN_DEPTH.
+    while (!truncated && handoffs.length > 0) {
+      await chainInto(handoffs.shift()!, handoffs);
     }
     if (truncated) break;
   }
@@ -960,6 +1028,15 @@ async function runOneStep(
             event: 'branch_taken',
             detail: { path: branchPath },
           });
+        }
+
+        // A Start workflow step with "End this workflow" on. Here, after
+        // the completion landed, so a retried step never ends the
+        // workflow twice or ends it without having started the next.
+        // Before the recompute, which would otherwise date the steps
+        // this is about to skip.
+        if (endsWorkflow(result.output)) {
+          await endRestOfInstance(supabase, instance, step.id, { site: 'executor.end_workflow' });
         }
 
         await writeAudit(supabase, {
@@ -1705,6 +1782,9 @@ async function completeLoadedInstanceIfDone(
     coupleId: instance.couple_id,
     event: 'instance_completed',
   });
+  // After the guarded write, so it fires once and only for a completion
+  // that landed. Never throws; see the emitter.
+  await emitWorkflowCompleted(supabase, instance);
   return true;
 }
 

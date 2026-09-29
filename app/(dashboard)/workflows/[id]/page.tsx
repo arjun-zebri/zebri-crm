@@ -88,7 +88,7 @@ import { ROW_GAP, autoLayout } from './auto-layout';
 import { CanvasHeader } from './canvas-header';
 import { CanvasLegend } from './canvas-legend';
 import { CanvasSkeleton } from './canvas-skeleton';
-import { useQuestionnaireTemplateOptions } from './filter-options';
+import { useQuestionnaireTemplateOptions, useWorkflowTemplateOptions } from './filter-options';
 import { FlowNode, FlowNodeContext, type FlowNodeApi, type FlowNodeData } from './flow-node';
 import { MODAL_ACTIONS, StepConfigForm } from './inspector-panel';
 import { RunHistoryPanel } from './instances-panel';
@@ -305,11 +305,13 @@ function AutomationCanvas() {
   // picker already loads this list, so the card reuses it rather than
   // fetching again.
   const questionnaireOptions = useQuestionnaireTemplateOptions();
+  const workflowOptions = useWorkflowTemplateOptions();
   const summaryLabels = useMemo<StepSummaryLabels>(
     () => ({
       questionnaires: Object.fromEntries(questionnaireOptions.map((o) => [o.value, o.label])),
+      workflows: Object.fromEntries(workflowOptions.map((o) => [o.value, o.label])),
     }),
-    [questionnaireOptions],
+    [questionnaireOptions, workflowOptions],
   );
 
   const initialNodes = useMemo<Node<FlowNodeData>[]>(() => {

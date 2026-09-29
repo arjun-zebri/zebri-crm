@@ -1393,6 +1393,80 @@ Tests: `tests/integration/workflows/exit-rules.test.ts`,
 `tests/unit/lib/workflows/exit-rules.test.ts`,
 `tests/unit/app/workflows/exit-stages-control.test.tsx`.
 
+### Chaining: one workflow starting the next
+
+An MC can lay their process out as a line of workflows ("Booked", then
+"Planning", then "Final details") and move a couple from one to the next
+(Notion ticket, 2026-09-29). There are two ways in, and both are
+workflow-driven, not stage-driven (owner ruling: a couple's stage is
+not the link between workflows).
+
+- **The Start workflow step** (`start_workflow`, flow control group,
+  `lib/automations/actions/workflow.ts`). Config `{ workflow, endCurrent }`:
+  `workflow` is the template id, `endCurrent` defaults on. The handler
+  reads the target owner-scoped (the engine runs on the service role, so
+  this filter, not RLS, keeps another MC's workflow out), refuses a
+  workflow starting itself, a missing couple and a deleted workflow, then
+  calls `applyTemplate` with `dedupe: true`. Already on the couple, or
+  stopped by an exit rule while it was being built, is `ok` with
+  `started: false`, never an errored step. A turned-off target refuses
+  with the reason; a failed build is retried (the half-built instance is
+  cancelled, releasing the dedupe). The same step shows on Dubsado,
+  ActiveCampaign, GoHighLevel and HubSpot. Like a Wait, it has no timing
+  control, no "Ask me before this runs" toggle and no timing chip: it runs
+  straight after the step above, and a delay before it is a Wait step
+  (owner ruling 2026-09-29). The picker adds it with an empty config, the
+  one shape an add may save before its required field is chosen.
+- **"End this workflow"** (`endCurrent`, the checkbox on the step). The
+  handler only reports it (`output.ended_workflow`). The executor reads
+  it after the step's completion has landed and, before the recompute,
+  skips every step of the instance still `pending` or `waiting`
+  (`lib/workflows/end-instance.ts`), one `step_skipped` audit row each
+  ("the couple moved on to the next workflow"). The normal completion
+  check then completes the instance. `running` steps finish; `errored`
+  ones stay and keep the workflow open, as anywhere else. The heal pass
+  redoes the end for a finished Start workflow step whose end did not
+  land, before re-dating.
+- **The Workflow completed trigger** (`workflow_completed`, optional
+  "Which workflow" chip, blank means any; `workflow-filters.ts`). The
+  executor's completion check emits the bus event straight after the
+  guarded `completed` write (`lib/workflows/emitters/workflow-completed.ts`),
+  with `template_id`, `instance_id`, `couple_id`, `chain_depth`. Only a
+  real completion emits: a stop, exit rule or Turn off never does, and
+  neither do the General and personal lists or an ad-hoc instance. A
+  failed emit never throws (the completion stands) and raises
+  `workflow_chain_failed` (`emit_failed`). The dispatcher never starts a
+  workflow on its own completion (`isOwnCompletion`), so "any workflow"
+  or `allow_reapply` cannot loop a workflow onto itself; the builder
+  leaves the workflow being edited out of the chip.
+- **Chain depth** (`lib/workflows/chain.ts`). Each instance a chain opens
+  records `context.chain_depth` at insert (`applyTemplate`'s
+  `chainDepth`). The step opens the next one level deeper; the trigger
+  opens one level below the finished workflow's depth. Past
+  `MAX_CHAIN_DEPTH` (5) nothing opens: the step errors non-recoverably
+  with the reason, the dispatcher skips the applies for that event, and
+  both raise `workflow_chain_failed` (`depth_limit`). Any other trigger
+  starts a fresh chain at 0: the database cannot tell who changed a stage.
+- **Latency.** The next workflow opens when the step runs, and the same
+  executor pass carries on into it: `advanceDueSteps` reads the Start
+  workflow step's stored output and runs the new instance's due steps
+  straight after (`chainFrom` / `noteHandoff`), so the couple never sits
+  in the new workflow waiting for a tick. A trigger chain waits for the
+  next dispatch. Ticking a to-do does not kick the engine, so a Start
+  workflow step behind a to-do runs on the next tick.
+- **Known edge.** A step the MC reopens by hand on a workflow that a Start
+  workflow step ended can be skipped again if the heal pass later runs on
+  that instance, because the finished step still says it ended the
+  workflow. Reopening a step of a completed workflow is rare; revisit if
+  it is reported.
+
+Tests: `tests/unit/lib/automations/actions/start-workflow.test.ts`,
+`tests/unit/lib/workflows/chain.test.ts`,
+`tests/unit/app/workflows/workflow-filters.test.ts`, the Start workflow
+cases in `tests/unit/app/workflows/step-summary.test.ts`, and
+`tests/integration/workflows/workflow-chaining.test.ts` (the ticket's
+scenario end to end).
+
 ## Getting a workflow onto the screen
 
 An empty Workflows tab is the feature's hardest moment: a canvas with a
@@ -1518,6 +1592,18 @@ Waits and branches are never rows (only when they fail): the send
 behind a Wait carries the Wait's end as its own time. The couple's own
 to-do list and the MC's personal one are loose lists, not sequences, so
 their to-dos keep the date the MC gave them.
+
+**The couple's Workflow tab uses the same projection** (user ticket
+2026-09-29: "the 6 month check in doesn't say when it will send, it
+just says Wait above it with Today next to it"). `projectCoupleSteps`
+(`app/(dashboard)/couples/couple-step-projection.ts`) runs
+`projectSchedule` over the couple's `active` instances and
+`coupleDueLabel` reads it: a send behind a Wait shows its date, a Wait
+shows when it ends ("Until 2027-03-30"), and a step behind the MC shows
+the reason ("After you OK Send email · …"). Paused instances and the
+couple's own to-do list keep their stored dates. The tab does not load
+quiet hours, so a Wait's end is not pushed for them there; a daytime
+wake is unaffected.
 
 Every read is paged to exhaustion (`lib/workflows/read-pages.ts`,
 `queue-schedule-reads.ts`): PostgREST cuts a response at `max_rows`

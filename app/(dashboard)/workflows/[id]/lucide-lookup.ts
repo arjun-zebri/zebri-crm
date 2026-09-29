@@ -59,6 +59,7 @@ import {
   Star,
   StickyNote,
   UserPlus,
+  Workflow,
   XCircle,
 } from 'lucide-react'
 
@@ -112,6 +113,7 @@ const ICONS: Record<string, LucideIcon> = {
   Star,
   StickyNote,
   UserPlus,
+  Workflow,
   XCircle,
 }
 

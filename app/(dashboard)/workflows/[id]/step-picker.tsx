@@ -286,6 +286,14 @@ function defaultActionConfigFor(type: ActionType): Record<string, unknown> {
       return {}
     case 'update_couple_stage':
       return { toStatus: 'contacted' }
+    case 'start_workflow':
+      // Empty, like every add whose required field the MC still has to
+      // pick: the add skips the save-time check only for `{}`
+      // (`isPlaceholderConfig` in ../actions), so any default key here
+      // made the server refuse the add and the step vanished. "End this
+      // workflow" needs no key: absent reads as on in the runner's
+      // schema, the checkbox and the card summary.
+      return {}
     case 'add_note':
       // Empty: the composer's placeholder says what goes here, and a
       // default nobody typed reads as a note they wrote.

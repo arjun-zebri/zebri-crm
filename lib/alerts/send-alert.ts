@@ -172,6 +172,10 @@ function describe(event: AlertEvent): string {
       } · ${event.outcome} send not logged (code ${event.code ?? 'thrown'})`;
     case 'workflow_exit_failed':
       return `user=${event.userId} · couple=${event.coupleId ?? 'unknown'} · stage=${event.toStatus ?? 'unknown'} · event=${event.eventId}: ${event.message}`;
+    case 'workflow_chain_failed':
+      return `user=${event.userId} · couple=${event.coupleId ?? 'none'} · instance=${event.instanceId} · ${
+        event.reason === 'depth_limit' ? 'workflow chain hit its depth limit' : 'workflow_completed event not written'
+      }: ${event.message}`;
     case 'workflows_account_paused':
       return `user=${event.userId} · workflow automation ${event.action}`;
     case 'proposal_accepted':

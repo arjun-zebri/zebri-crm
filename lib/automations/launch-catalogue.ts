@@ -60,6 +60,8 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   // from the picker but stay registered, so a workflow converted from an
   // automation saved against one still parses and runs.
   'step_overdue',
+  // Another workflow finished on the couple (lib/workflows/chain).
+  'workflow_completed',
   'package_applied',
   // Contacts
   'contact_created',
@@ -120,6 +122,8 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'send_email',
   'send_sms', // greyed coming-soon, kept per review
   'update_couple_stage',
+  // Moves the couple on to another workflow (lib/workflows/chain).
+  'start_workflow',
   'add_note',
   'create_couple',
   // `create_task` is deliberately absent. It spawns a to-do on the

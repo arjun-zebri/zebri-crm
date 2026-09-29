@@ -21,6 +21,7 @@ import type {
 import type { Database } from '@/types/database';
 import type { WorkflowInstanceRow, WorkflowStepRow } from '@/types/workflows';
 
+import { chainDepthOf } from './chain';
 import { CONTEXT_UNREADABLE, throwIfReadFailed } from './read-failure';
 
 /** Outputs of previously executed steps, keyed by step id. */
@@ -104,5 +105,10 @@ export async function buildStepContext(
     event ?? syntheticEvent(instance),
   );
 
-  return { ...ctx, instanceId: instance.id, stepId: step.id };
+  return {
+    ...ctx,
+    instanceId: instance.id,
+    stepId: step.id,
+    chainDepth: chainDepthOf(instance.context),
+  };
 }

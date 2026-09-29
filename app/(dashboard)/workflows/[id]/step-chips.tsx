@@ -13,7 +13,8 @@
 'use client'
 
 import { Check, ChevronLeft } from 'lucide-react'
-import { useState } from 'react'
+import { useParams } from 'next/navigation'
+import { useMemo, useState } from 'react'
 
 import { MenuItem } from '@/components/ui/menu'
 import { LEAD_SOURCE_LABELS, LEAD_SOURCES, type LeadSource } from '@/types/couple'
@@ -26,7 +27,11 @@ import {
   type FilterConfig,
   type TriggerFilterDef,
 } from './filter-list'
-import { useCoupleStatuses, useQuestionnaireTemplateOptions } from './filter-options'
+import {
+  useCoupleStatuses,
+  useQuestionnaireTemplateOptions,
+  useWorkflowTemplateOptions,
+} from './filter-options'
 import { runSheetAudience } from './step-summary'
 import { formatTimeLabel, timeOptions } from './time-options'
 
@@ -59,6 +64,37 @@ export function StageChips({ config, setConfig }: ChipRowProps) {
     },
     options: statuses.map((s) => ({ value: s.slug, label: s.name })),
     apply: (c, value) => ({ ...c, toStatus: value }),
+  }
+  return <TriggerFilterList filters={[chip]} config={config} setConfig={setConfig} />
+}
+
+/* ─── start_workflow ───────────────────────────────────────────── */
+
+/**
+ * One required chip: which workflow the couple moves on to. The workflow
+ * being edited is left out (the route's `[id]`), because a workflow
+ * cannot start itself; the handler refuses it too, for a step edited
+ * anywhere else.
+ */
+export function StartWorkflowChips({ config, setConfig }: ChipRowProps) {
+  const all = useWorkflowTemplateOptions()
+  const params = useParams<{ id?: string }>()
+  const workflows = useMemo(() => all.filter((w) => w.value !== params?.id), [all, params?.id])
+  const nameFor = (id: string) => all.find((w) => w.value === id)?.label
+  const chip: TriggerFilterDef = {
+    key: 'workflow',
+    label: 'Start',
+    chipLabel: 'start',
+    required: true,
+    ...fieldFilter({ workflow: '' }),
+    current: (c) => str(c, 'workflow'),
+    valueLabel: (c) => nameFor(str(c, 'workflow')) ?? 'choose a workflow',
+    summary: (c) => {
+      const name = nameFor(str(c, 'workflow'))
+      return name ? `Starts ${name}` : 'No workflow chosen'
+    },
+    options: workflows,
+    apply: (c, value) => ({ ...c, workflow: value }),
   }
   return <TriggerFilterList filters={[chip]} config={config} setConfig={setConfig} />
 }

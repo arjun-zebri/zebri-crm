@@ -137,6 +137,34 @@ export const SONG_CATEGORY_OPTIONS: FilterOptionRow[] = [
   { value: 'avoid', label: 'Do Not Play' },
 ]
 
+/**
+ * The MC's workflows (id + name), by name, for the Start workflow step
+ * and the Workflow completed trigger. Deleted (archived) workflows are
+ * left out: neither can start one. A step still pointing at one reads
+ * as unset, and the step itself says why when it runs.
+ */
+export function useWorkflowTemplateOptions(): FilterOptionRow[] {
+  const [rows, setRows] = useState<FilterOptionRow[]>(EMPTY)
+
+  useEffect(() => {
+    let cancelled = false
+    createClient()
+      .from('workflow_templates')
+      .select('id, name')
+      .neq('status', 'archived')
+      .order('name', { ascending: true })
+      .then(({ data }) => {
+        if (cancelled) return
+        setRows((data ?? []).map((row) => ({ value: row.id, label: row.name })))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return rows
+}
+
 /** The MC's questionnaire templates (id + name), in board order. */
 export function useQuestionnaireTemplateOptions(): FilterOptionRow[] {
   return useOptionRows('questionnaire_templates', 'id', 'name', 'position')
