@@ -43,6 +43,7 @@ import type { Database, Json } from '@/types/database';
 import type { WorkflowInstanceRow, WorkflowStepRow } from '@/types/workflows';
 
 import { type BranchSide, skipBranchSide } from './branch-skip';
+import { endRestOfInstance, endsWorkflow } from './end-instance';
 import { completeInstanceIfDone, recomputeInstance } from './executor';
 import { describeFailure, isWorkflowReadError, throwIfReadFailed } from './read-failure';
 
@@ -162,6 +163,13 @@ async function healInstance(supabase: SupabaseClient<Database>, instanceId: stri
       reason: side === 'both' ? 'branch skipped' : 'branch not taken',
       via: 'heal',
     });
+  }
+  // A Start workflow step that finished with "End this workflow" on,
+  // whose end did not land. Before the re-dating, for the same reason as
+  // the branch skips: dated first, the steps it ends would run.
+  const ender = done.find((s) => endsWorkflow(s.output));
+  if (ender) {
+    await endRestOfInstance(supabase, instance, ender.id, { site: 'heal.end_workflow', via: 'heal' });
   }
   await recomputeInstance(supabase, instance);
   await completeInstanceIfDone(supabase, instance.id);

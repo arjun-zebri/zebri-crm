@@ -91,6 +91,8 @@ export type TriggerType =
   // manual step sits past its due date. Lets an MC build a workflow that
   // chases their own overdue steps.
   | 'step_overdue'
+  // A workflow finished on the couple (lib/workflows/emitters/workflow-completed).
+  | 'workflow_completed'
   // Contacts (vendors, family, bridal party)
   | 'contact_created'
   | 'contact_updated'
@@ -181,6 +183,8 @@ export type ActionType =
   | 'create_couple'
   | 'add_note'
   | 'update_couple_stage'
+  // Workflows: open another workflow on the couple (lib/workflows/chain)
+  | 'start_workflow'
   | 'send_portal_link'
   | 'request_information'
   | 'send_onboarding_pack'
@@ -567,6 +571,14 @@ export interface RunContext {
    * Optional: absent means scheduled.
    */
   manualRun?: boolean | undefined
+
+  /**
+   * How far down a workflow chain this step's instance is
+   * (`lib/workflows/chain`): 0 for a workflow started by hand or by any
+   * trigger but "Workflow completed". The "Start workflow" step opens
+   * the next one a level deeper. Optional: absent reads as 0.
+   */
+  chainDepth?: number | undefined
 }
 
 export interface CoupleSnapshot {

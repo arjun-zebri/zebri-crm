@@ -33,6 +33,7 @@ import type { WorkflowTemplateRow } from '@/types/workflows';
 
 import { getApplyRuleSpec } from './apply-rules';
 import { completeBookedAppointmentSteps } from './appointments';
+import { MAX_CHAIN_DEPTH, WORKFLOW_COMPLETED_EVENT, chainDepthForEvent } from './chain';
 import { applyExitRules, reportExitFailure } from './exit-dispatch';
 import { isOwnExitStage } from './exit-rules';
 import { recordHeartbeat, STALE_EVENT_MS, STALE_EVENTS_HEARTBEAT } from './heartbeat';
@@ -236,8 +237,16 @@ export async function dispatchPendingEvents(
         await reportExitFailure(event, err);
       }
 
+      // A workflow finishing continues its chain; anything else starts a
+      // fresh one (lib/workflows/chain).
+      const chainDepth = chainDepthForEvent(event);
       const templates = await loadCandidateTemplates(supabase, event.user_id);
+      let chainCapped = false;
       for (const template of templates) {
+        // Never start a workflow on its own completion. With "any
+        // workflow" chosen, or with re-applying allowed, it would
+        // otherwise restart itself every time it finished.
+        if (isOwnCompletion(event, template.id)) continue;
         // Never start a workflow on a stage that stops it, whatever
         // its trigger says: a blank "any stage" trigger is allowed to
         // be saved alongside stop stages (lib/workflows/exit-rules).
@@ -250,6 +259,12 @@ export async function dispatchPendingEvents(
         if (!spec.matchesRaw(event, template.apply_rule_config)) continue;
 
         matchedTemplates += 1;
+        // A chain this long is workflows starting each other in a loop.
+        // Nothing opens; one alert per event says which couple.
+        if (chainDepth > MAX_CHAIN_DEPTH) {
+          chainCapped = true;
+          continue;
+        }
         const result = await applyTemplate(supabase, {
           userId: event.user_id,
           templateId: template.id,
@@ -258,6 +273,7 @@ export async function dispatchPendingEvents(
           // An automatic re-apply means duplicate emails. The manual
           // picker is the only path that may apply a template twice.
           dedupe: true,
+          chainDepth,
         });
         // Turned off mid-apply is the same quiet skip as turned off
         // before the insert, whichever side of the insert it landed.
@@ -266,6 +282,7 @@ export async function dispatchPendingEvents(
           else openedInstances += 1;
         } else if (result.skipped === 'template_off') skippedOffTemplates += 1;
       }
+      if (chainCapped) await reportChainCapped(event, chainDepth);
     } catch (err) {
       console.error('[workflows] dispatch failed for event', event.id, err);
       // A read that failed says nothing about the event: marking it seen
@@ -368,4 +385,35 @@ async function markDispatched(
     .from('automation_events')
     .update({ processed_at: new Date().toISOString() })
     .eq('id', eventId);
+}
+
+/**
+ * Is this event the completion of the workflow about to be matched?
+ *
+ * @param event - any bus event
+ * @param templateId - the candidate workflow
+ */
+function isOwnCompletion(event: AutomationEventRow, templateId: string): boolean {
+  if (event.event_type !== WORKFLOW_COMPLETED_EVENT) return false;
+  const payload = event.payload as Record<string, unknown> | null;
+  return payload?.['template_id'] === templateId;
+}
+
+/**
+ * Alert a chain the dispatcher refused to extend. Never throws: it runs
+ * inside the per-event guard, and the event is still marked handled (a
+ * retry would refuse again).
+ */
+async function reportChainCapped(event: AutomationEventRow, depth: number): Promise<void> {
+  const payload = event.payload as Record<string, unknown> | null;
+  const instanceId = typeof payload?.['instance_id'] === 'string' ? payload['instance_id'] : (event.source_id ?? event.id);
+  await sendAlert({
+    type: 'workflow_chain_failed',
+    severity: 'warn',
+    userId: event.user_id,
+    coupleId: event.couple_id,
+    instanceId,
+    reason: 'depth_limit',
+    message: `workflow_completed at depth ${depth}; nothing started`,
+  }).catch(() => undefined);
 }

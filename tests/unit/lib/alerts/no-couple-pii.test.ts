@@ -414,6 +414,15 @@ const fixtures: FixturesByType = {
     toStatus: 'booked',
     message: 'exit rule evaluation threw',
   },
+  workflow_chain_failed: {
+    type: 'workflow_chain_failed',
+    severity: 'warn',
+    userId: 'user-1',
+    coupleId: 'couple-1',
+    instanceId: 'instance-1',
+    reason: 'depth_limit',
+    message: 'start_workflow at depth 6',
+  },
   workflows_account_paused: {
     type: 'workflows_account_paused',
     severity: 'warn',
@@ -534,7 +543,7 @@ describe('AlertEvent fixtures carry no couple-side PII (T27)', () => {
   it('covers every AlertEvent type with a fixture', () => {
     // FixturesByType already guarantees this at compile time (a missing
     // key fails to compile); this just makes it visible at runtime too.
-    expect(allTypes.length).toBe(65);
+    expect(allTypes.length).toBe(66);
   });
 
   it.each(allTypes)('%s: no field outside the MC allowlist looks like an email', (type) => {

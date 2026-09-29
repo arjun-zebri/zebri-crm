@@ -10,6 +10,7 @@
  */
 'use client'
 
+import { useParams } from 'next/navigation'
 import { useMemo } from 'react'
 
 import type { TriggerType } from '@/types/automations'
@@ -35,6 +36,7 @@ import {
   useQuestionnaireTemplateOptions,
   useTaskPriorityOptions,
   useTaskTypeOptions,
+  useWorkflowTemplateOptions,
   type FilterOptionRow,
   type CoupleStatus,
 } from './filter-options'
@@ -53,6 +55,7 @@ import {
   sectionCompletedFilters,
 } from './portal-filters'
 import { taskCompletedFilters, taskCreatedFilters, taskOverdueFilters } from './step-filters'
+import { workflowCompletedFilters } from './workflow-filters'
 
 /** Everything a filter builder might need options from. */
 interface FilterOptionSources {
@@ -60,6 +63,10 @@ interface FilterOptionSources {
   taskPriorities: FilterOptionRow[]
   taskTypes: FilterOptionRow[]
   questionnaireTemplates: FilterOptionRow[]
+  /** The MC's workflows, for "Workflow completed". */
+  workflowTemplates: FilterOptionRow[]
+  /** The workflow being edited, which never starts on its own completion. */
+  selfId: string | undefined
   /**
    * The trigger's saved config. Only for builders whose available
    * filters depend on a choice already made — `section_completed`
@@ -106,6 +113,8 @@ const CHIP_TRIGGERS: Partial<
   timeline_edited: () => TIMELINE_EDITED_FILTERS,
   couple_completed_vows: () => VOWS_FILTERS,
   questionnaire_completed: (src) => questionnaireFilters(src.questionnaireTemplates),
+  // Workflows
+  workflow_completed: (src) => workflowCompletedFilters(src.workflowTemplates, src.selfId),
   // Tasks + contacts
   task_created: (src) => taskCreatedFilters(src.taskPriorities, src.taskTypes),
   task_completed: (src) => taskCompletedFilters(src.taskPriorities, src.taskTypes),
@@ -127,7 +136,7 @@ const NO_FILTERS: TriggerFilterDef[] = []
  * that memo recompute forever, which React Flow's store surfaced as
  * "Maximum update depth exceeded".
  *
- * All four option sources load unconditionally (hooks can't be
+ * Every option source loads unconditionally (hooks can't be
  * conditional); each is one tiny select over the MC's own rows.
  */
 export function useTriggerFilters(
@@ -138,6 +147,8 @@ export function useTriggerFilters(
   const taskPriorities = useTaskPriorityOptions()
   const taskTypes = useTaskTypeOptions()
   const questionnaireTemplates = useQuestionnaireTemplateOptions()
+  const workflowTemplates = useWorkflowTemplateOptions()
+  const selfId = useParams<{ id?: string }>()?.id
   // `config` itself is a new object on every keystroke, so the memo
   // keys off the one field any builder branches on. Depending on the
   // whole object would rebuild the array constantly and set the node
@@ -151,9 +162,11 @@ export function useTriggerFilters(
       taskPriorities,
       taskTypes,
       questionnaireTemplates,
+      workflowTemplates,
+      selfId,
       config: { section },
     })
-  }, [applyRuleType, statuses, taskPriorities, taskTypes, questionnaireTemplates, section])
+  }, [applyRuleType, statuses, taskPriorities, taskTypes, questionnaireTemplates, workflowTemplates, selfId, section])
 }
 
 /**

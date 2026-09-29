@@ -673,6 +673,22 @@ export type AlertEvent =
       message: string;
     })
   | (BaseEvent & {
+      // One workflow could not hand a couple on to the next
+      // (lib/workflows/chain). `depth_limit`: a chain opened more than
+      // MAX_CHAIN_DEPTH workflows in a row, almost certainly workflows
+      // starting each other in a loop; the step errors and the MC sees
+      // why. `emit_failed`: a workflow finished but its
+      // `workflow_completed` event could not be written, so anything
+      // set to start "when this workflow is completed" did not.
+      type: 'workflow_chain_failed';
+      severity: 'warn' | 'error';
+      userId: string;
+      coupleId: string | null;
+      instanceId: string;
+      reason: 'depth_limit' | 'emit_failed';
+      message: string;
+    })
+  | (BaseEvent & {
       // An MC pressed the account-wide stop for workflow automation, or
       // lifted it (Task 18). A stop is the MC's own emergency brake, so
       // it usually means a workflow just did something they did not
