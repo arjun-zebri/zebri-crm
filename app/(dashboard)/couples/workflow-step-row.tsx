@@ -122,7 +122,15 @@ export function WorkflowStepRow({
         />
       ) : null}
 
-      <span className="shrink-0 text-body text-text-muted">{dueLabel}</span>
+      {/* Capped: a step waiting on the MC names what it waits on ("After
+          you OK Send email · …"), which must not squeeze the title. The
+          full reason is on hover and in the step's detail modal. */}
+      <span
+        title={dueLabel || undefined}
+        className="max-w-40 shrink-0 truncate text-body text-text-muted sm:max-w-64"
+      >
+        {dueLabel}
+      </span>
 
       <RowActionsMenu
         size="sm"
