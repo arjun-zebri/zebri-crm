@@ -80,6 +80,7 @@ import {
   RequestSectionChips,
   RUN_SHEET_CHIP,
   StageChips,
+  StartWorkflowChips,
   TASK_STATUS_CHIP,
   taskDueChip,
 } from './step-chips'
@@ -518,15 +519,20 @@ function ActionConfigForm({
   // server, so its card shows the whole delay rather than the part left
   // in the config.
   const isWait = action.type === 'wait'
+  // Start workflow has no timing and no review either: it is a hand-off
+  // that runs straight after the step above, and a delay before it is a
+  // Wait step (owner ruling 2026-09-29). Pinned to the default timing so
+  // the next save writes it, whatever the row held.
+  const untimed = isWait || action.type === 'start_workflow'
   const [config, setConfig] = useState<Record<string, unknown>>(() => {
     const stored = (action.config as Record<string, unknown>) ?? {}
     return isWait ? foldWaitConfig(stored, action.timing) : stored
   })
   const [timing, setTiming] = useState<StepTiming>(() =>
-    isWait ? WAIT_TIMING : toStepTiming(action.timing),
+    untimed ? WAIT_TIMING : toStepTiming(action.timing),
   )
   const [needsReview, setNeedsReview] = useState<boolean>(
-    !isWait && (action.requires_approval ?? false),
+    !untimed && (action.requires_approval ?? false),
   )
   // The step's title. Only the manual steps let the MC write one - for
   // every other step the title is the action's own name - but it saves
@@ -535,7 +541,7 @@ function ActionConfigForm({
   const [label, setLabel] = useState<string>(action.label ?? '')
   const automated = !isManualStep(action.type) && action.type !== 'stop'
   // Only a step that sends something can be held for review.
-  const reviewable = automated && !isWait
+  const reviewable = automated && !untimed
 
   // Timing, the review flag and the config all save through one upsert,
   // so a change to any of them cannot land without the others.
@@ -611,7 +617,7 @@ function ActionConfigForm({
 
   return (
     <div className="space-y-3">
-      {isWait ? null : (
+      {untimed ? null : (
         <TimingControl
           value={timing}
           onChange={setTiming}
@@ -829,6 +835,8 @@ export function ActionFields({
       return <UpdateTaskForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
     case 'update_couple_stage':
       return <UpdateCoupleStageForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
+    case 'start_workflow':
+      return <StartWorkflowForm config={config} updateConfig={updateInner} replaceConfig={setConfig} />
     case 'send_couple_questionnaire':
       return modal ? (
         <QuestionnaireComposerModal
@@ -1250,6 +1258,30 @@ function UpdateTaskForm({ config, updateConfig, replaceConfig }: ChipHostProps) 
 
 function UpdateCoupleStageForm({ config, replaceConfig }: ChipHostProps) {
   return <StageChips config={config} setConfig={(c) => replaceConfig(c)} />
+}
+
+/**
+ * Which workflow the couple moves on to, and whether this one ends when
+ * they do. `endCurrent` is absent on a step saved before the option was
+ * touched; the runner's schema defaults it on, so the box does too.
+ */
+function StartWorkflowForm({ config, updateConfig, replaceConfig }: ChipHostProps) {
+  const endCurrent = config['endCurrent'] !== false
+  return (
+    <>
+      <StartWorkflowChips config={config} setConfig={(c) => replaceConfig(c)} />
+      <CheckboxField
+        label="End this workflow"
+        checked={endCurrent}
+        onChange={(v) => updateConfig({ endCurrent: v })}
+      />
+      <Hint>
+        {endCurrent
+          ? 'Anything left in this workflow is skipped once the next one starts.'
+          : 'This workflow keeps going alongside the next one.'}
+      </Hint>
+    </>
+  )
 }
 
 function AddNoteForm({ config, updateConfig }: ConfigProps) {

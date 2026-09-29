@@ -820,6 +820,19 @@ edit paths. A signed-in user calling one gets a permission error
   grants, so the revoke has to be explicit. Covered by
   `tests/integration/workflows/recompute-grants.test.ts`.
 
+**Workflow chaining (2026-09-29).** The Start workflow step stores
+another template's id in its config, and it runs on the service role,
+so RLS does not stop a config pointing at another MC's workflow. The
+handler reads the target with `.eq('user_id', ctx.userId)` and refuses a
+miss as deleted; `applyTemplate` filters on the owner again. The
+`workflow_completed` event is written through `emit_automation_event`
+(service role only since `20261002100000`) from the executor, never from
+a client, and the dispatcher only matches it against the event owner's
+own templates. Loops are capped (`MAX_CHAIN_DEPTH`, `lib/workflows/chain.ts`).
+Covered by `tests/unit/lib/automations/actions/start-workflow.test.ts`
+and the cross-tenant case in
+`tests/integration/workflows/workflow-chaining.test.ts`.
+
 ### Cron auth gate: `/api/cron/booking-reminders` (Scheduler Phase D)
 
 Uses the shared `isCronAuthorized(request)` helper (constant-time comparison of `Authorization: Bearer CRON_SECRET`). Invoked on a 22:30 UTC schedule via pg_cron (`zebri:booking-reminders`). See "Cron-secret enforcement" section above for full details.

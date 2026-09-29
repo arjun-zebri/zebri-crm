@@ -1777,6 +1777,41 @@ const stepOverdue: TriggerSpec<z.infer<typeof stepOverdueConfig>> = {
   },
 }
 
+/**
+ * Config shape for {@link workflowCompleted}. `workflow` is the finished
+ * workflow's template id; blank means any workflow. A free-form string
+ * rather than a uuid, for the same reason as `packageId`: a workflow
+ * saved against one since deleted has to keep parsing. It simply stops
+ * matching.
+ */
+const workflowCompletedConfig = z.object({
+  workflow: z.string().optional(),
+}).passthrough()
+
+/**
+ * Emitted when a workflow completes on a couple (every step done or
+ * skipped), from the executor's completion check
+ * (`lib/workflows/emitters/workflow-completed`). A workflow stopped by
+ * the MC, an exit rule or Turn off never emits it. Lets an MC chain
+ * workflows ("Booked" finishes, "Planning" starts) without editing the
+ * first one. The dispatcher never starts a workflow on its own
+ * completion, and caps a chain's length (`lib/workflows/chain`).
+ */
+const workflowCompleted: TriggerSpec<z.infer<typeof workflowCompletedConfig>> = {
+  type: 'workflow_completed',
+  configSchema: workflowCompletedConfig,
+  match(event, config) {
+    if (config.workflow && p(event).template_id !== config.workflow) return false
+    return true
+  },
+  ui: {
+    category: 'task',
+    label: 'Workflow completed',
+    description: 'Another workflow finished on the couple',
+    icon: 'Workflow',
+  },
+}
+
 export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   // Lead
   new_enquiry: newEnquiry,
@@ -1786,6 +1821,7 @@ export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   couple_stage_changed: coupleStageChanged,
   package_applied: packageApplied,
   step_overdue: stepOverdue,
+  workflow_completed: workflowCompleted,
   // Quotes / invoices / payments
   // Invoices / payments
   invoice_created: invoiceCreated,

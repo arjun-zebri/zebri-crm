@@ -23,15 +23,16 @@ import {
 import { triggerRegistry } from '@/lib/automations/triggers'
 
 describe('launch catalogue — triggers', () => {
-  it('lists exactly the 28 triggers that fire today', () => {
+  it('lists exactly the 29 triggers that fire today', () => {
     // 28 from the launch review + questionnaire_completed (P4 — emitted by
     // the couple_questionnaires completion DB trigger) + consultation_booked,
     // booking_cancelled (consultation lifecycle from Phase D DB trigger and RPC),
     // and consultation_completed (Phase D time emitter), minus the two portal
     // duplicates folded into "Portal item added", minus the three task_*
     // triggers retired at the Workflows cutover, plus step_overdue and
-    // package_applied which replaced them.
-    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(28)
+    // package_applied which replaced them, plus workflow_completed
+    // (workflow chaining, emitted by the executor's completion check).
+    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(29)
   })
 
   it('hides the task triggers Workflows retired, without deregistering them', () => {
@@ -143,8 +144,9 @@ describe('launch catalogue — actions', () => {
     // item in the sequence and gates everything behind it, while
     // create_task spawns a to-do that gates nothing. Two things called
     // "to-do" behaving in opposite ways is a trap, so only the gating
-    // one is offered.
-    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(13)
+    // one is offered. Plus start_workflow (workflow chaining): moves the
+    // couple on to another workflow.
+    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(14)
     for (const retired of [
       'pause_couple_automations',
       'update_task',

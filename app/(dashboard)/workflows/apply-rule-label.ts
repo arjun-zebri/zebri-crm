@@ -20,6 +20,7 @@ const OVERRIDES: Readonly<Record<string, string>> = {
   new_enquiry: 'Starts on enquiry',
   couple_stage_changed: 'Starts on a stage change',
   package_applied: 'Starts on a package',
+  workflow_completed: 'Starts after another workflow',
   contract_signed: 'Starts on signing',
   invoice_paid: 'Starts on payment',
 };

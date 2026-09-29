@@ -66,6 +66,13 @@ export interface ApplyTemplateOptions {
    * pre-flight.
    */
   expectedStepsRevision?: number;
+  /**
+   * How far down a workflow chain the new instance sits
+   * (`./chain`): set by the "Start workflow" step and by a
+   * "Workflow completed" trigger. Unset or 0 is the head of a chain and
+   * writes nothing, so every other apply leaves `context` as it was.
+   */
+  chainDepth?: number;
 }
 
 /**
@@ -206,6 +213,9 @@ export async function applyTemplate(
       dedupe_key: dedupeKey,
       status: 'paused',
       paused_reason: null,
+      // Written at birth rather than merged later, so the depth is on
+      // the row before any of its steps can run and read it.
+      ...(opts.chainDepth ? { context: { chain_depth: opts.chainDepth } } : {}),
     })
     .select('*')
     .single();

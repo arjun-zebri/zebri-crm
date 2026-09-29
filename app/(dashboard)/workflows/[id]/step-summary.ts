@@ -69,6 +69,9 @@ export function timingChip(action: AutomationActionRow): string | undefined {
   // rule is folded into the duration on the card (lib/workflows/wait-step),
   // so a timing chip beside it would count the offset twice.
   if ((action.type as string) === 'wait') return undefined
+  // Start workflow always runs straight after the step above; a delay
+  // before it is a Wait step, so it carries no timing chip at all.
+  if ((action.type as string) === 'start_workflow') return undefined
   const timing = toStepTiming(action.timing)
   if (!isDefaultTiming(timing)) return shortTiming(timing)
   const type = action.type as string
@@ -85,6 +88,8 @@ export function timingChip(action: AutomationActionRow): string | undefined {
  */
 export interface StepSummaryLabels {
   questionnaires?: Record<string, string>
+  /** Workflow names by template id, for Start workflow. */
+  workflows?: Record<string, string>
 }
 
 /** Collapsed-card summary for one action. */
@@ -126,6 +131,14 @@ export function stepSummary(action: AutomationActionRow, labels?: StepSummaryLab
     case 'update_couple_stage': {
       const status = text(config, 'toStatus')
       return status ? `Move to ${status}` : 'No status chosen'
+    }
+    case 'start_workflow': {
+      const id = text(config, 'workflow')
+      if (!id) return 'No workflow chosen'
+      const name = labels?.workflows?.[id]
+      // Ending is the default, so only the unusual case is spelled out.
+      const alongside = config['endCurrent'] === false ? ', alongside this one' : ''
+      return name ? `Starts ${truncate(name)}${alongside}` : 'Starts a workflow that was deleted'
     }
     case 'add_note': {
       const note = text(config, 'text')
