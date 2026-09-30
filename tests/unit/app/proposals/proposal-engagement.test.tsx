@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ProposalEngagement } from '@/app/(dashboard)/proposals/[id]/proposal-engagement';
 import type { ProposalDetailRow } from '@/app/(dashboard)/proposals/use-proposals';
+import { doc, paragraph } from '@/features/proposals';
 import type { EngagementRow } from '@/lib/proposals/engagement';
 
 const useProposalEvents = vi.fn();
@@ -18,7 +19,39 @@ const proposal: ProposalDetailRow = {
   declined_reason: null, declined_message: null, contract_id: null, invoice_id: null, template_id: null,
   couple: { id: 'c1', name: 'Anna & Jake' },
   proposal_options: [{ id: 'opt1', subtotal: 1500, is_popular: true, position: 1, title: 'Full Day MC' }],
+  layout: null,
+  accepted_option_id: null,
 };
+
+const style = { height: 'fit' as const };
+// A v2 layout: the page break must not appear in the report.
+const v2Layout = {
+  version: 2,
+  sections: [
+    { id: 's1', kind: 'content', name: 'Cover', style, content: doc(paragraph()) },
+    { id: 's2', kind: 'packages', name: 'Your options', style, data: { kind: 'packages', packages: {} } },
+    { id: 's3', kind: 'pageBreak', style },
+    { id: 's4', kind: 'faq', name: 'FAQ', style, data: { kind: 'faq', faq: {} } },
+  ],
+};
+const v2Proposal: ProposalDetailRow = {
+  ...proposal,
+  layout: v2Layout,
+  accepted_option_id: 'opt1',
+  proposal_options: [
+    { id: 'opt1', subtotal: 1500, is_popular: true, position: 1, title: 'Full Day MC' },
+    { id: 'opt2', subtotal: 900, is_popular: false, position: 2, title: 'Reception MC' },
+  ],
+};
+const v2Rows: EngagementRow[] = [
+  { session_id: 'a', type: 'opened', payload: { device: 'phone' }, created_at: '2026-09-14T10:00:00Z' },
+  { session_id: 'a', type: 'section_viewed', payload: { sectionId: 's1', seconds: 10 }, created_at: '2026-09-14T10:01:00Z' },
+  { session_id: 'a', type: 'section_viewed', payload: { sectionId: 's2', seconds: 30 }, created_at: '2026-09-14T10:02:00Z' },
+  { session_id: 'a', type: 'package_viewed', payload: { optionId: 'opt1', seconds: 20 }, created_at: '2026-09-14T10:02:00Z' },
+  { session_id: 'b', type: 'opened', payload: { device: 'desktop' }, created_at: '2026-09-15T10:00:00Z' },
+  { session_id: 'b', type: 'section_viewed', payload: { sectionId: 's1', seconds: 5 }, created_at: '2026-09-15T10:01:00Z' },
+  { session_id: 'b', type: 'section_viewed', payload: { sectionId: 's4', seconds: 12 }, created_at: '2026-09-15T10:02:00Z' },
+];
 
 // Two sessions: the older one only viewed a section and glanced at the
 // package; the newer one selected the package, walked every step, and
@@ -41,26 +74,60 @@ const rows: EngagementRow[] = [
 ];
 
 describe('ProposalEngagement', () => {
-  it('mounts the section and package analytics placeholders (sample-marked) under Layout v2, even with no opens', () => {
-    vi.stubEnv('NEXT_PUBLIC_PROPOSAL_LAYOUT_V2', '1');
-    try {
-      useProposalEvents.mockReturnValue({ data: [], isLoading: false, error: null });
-      render(<ProposalEngagement proposal={proposal} />);
-      expect(screen.getByText('No opens yet')).toBeInTheDocument();
+  describe('Layout v2 proposals', () => {
+    it('reads by section in layout order, without the page break or a sample pill', () => {
+      useProposalEvents.mockReturnValue({ data: v2Rows, isLoading: false, error: null });
+      render(<ProposalEngagement proposal={v2Proposal} />);
       expect(screen.getByRole('heading', { name: 'Reading by section' })).toBeInTheDocument();
+      const labels = ['Cover', 'Your options', 'FAQ'].map((l) => screen.getAllByText(l)[0] as HTMLElement);
+      expect(labels[0]!.compareDocumentPosition(labels[1]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(labels[1]!.compareDocumentPosition(labels[2]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(screen.queryByText('Page break')).not.toBeInTheDocument();
+      expect(screen.getAllByText('100% reached')).toHaveLength(2);
+      expect(screen.getByText('50% reached')).toBeInTheDocument();
+      expect(screen.getAllByText('30s').length).toBeGreaterThan(0);
+      expect(screen.queryByText('Sample data')).not.toBeInTheDocument();
+    });
+
+    it('lists the proposal option titles and marks the accepted one Chosen', () => {
+      useProposalEvents.mockReturnValue({ data: v2Rows, isLoading: false, error: null });
+      render(<ProposalEngagement proposal={v2Proposal} />);
       expect(screen.getByRole('heading', { name: 'Packages' })).toBeInTheDocument();
-      // The comparison borrows the proposal's real package title.
-      expect(screen.getByText('Full Day MC')).toBeInTheDocument();
-      expect(screen.getAllByText('Sample data')).toHaveLength(2);
-    } finally {
-      vi.unstubAllEnvs();
-    }
+      expect(screen.getAllByText('Full Day MC').length).toBeGreaterThan(0);
+      expect(screen.getByText('Reception MC')).toBeInTheDocument();
+      expect(screen.getAllByText('Chosen')).toHaveLength(1);
+      expect(screen.queryByText('Sample data')).not.toBeInTheDocument();
+    });
+
+    it('shows the device line, omitting zero buckets', () => {
+      useProposalEvents.mockReturnValue({ data: v2Rows, isLoading: false, error: null });
+      render(<ProposalEngagement proposal={v2Proposal} />);
+      expect(screen.getByRole('heading', { name: 'Devices' })).toBeInTheDocument();
+      expect(screen.getByText('2 sessions: 1 phone, 1 desktop')).toBeInTheDocument();
+    });
+
+    it('shows only the empty state when nobody has opened it', () => {
+      useProposalEvents.mockReturnValue({ data: [], isLoading: false, error: null });
+      render(<ProposalEngagement proposal={v2Proposal} />);
+      expect(screen.getByText('No opens yet')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Reading by section' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Packages' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Devices' })).not.toBeInTheDocument();
+    });
+
+    it('treats a layout that fails to parse like a v1 proposal', () => {
+      useProposalEvents.mockReturnValue({ data: rows, isLoading: false, error: null });
+      render(<ProposalEngagement proposal={{ ...proposal, layout: { version: 2, sections: 'nope' } }} />);
+      expect(screen.queryByRole('heading', { name: 'Reading by section' })).not.toBeInTheDocument();
+      expect(screen.getByText('40s')).toBeInTheDocument();
+    });
   });
 
-  it('hides the placeholders when Layout v2 is off', () => {
-    useProposalEvents.mockReturnValue({ data: [], isLoading: false, error: null });
+  it('keeps the top-section bars and no v2 blocks for a v1 proposal', () => {
+    useProposalEvents.mockReturnValue({ data: rows, isLoading: false, error: null });
     render(<ProposalEngagement proposal={proposal} />);
-    expect(screen.queryByText('Sample data')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Reading by section' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Devices' })).not.toBeInTheDocument();
   });
 
   it('shows the error state with a retry when the query fails', () => {
