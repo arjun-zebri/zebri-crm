@@ -13,6 +13,7 @@ const row = (over: Partial<ProposalListRow> = {}): ProposalListRow => ({
   last_viewed_at: null,
   view_count: 0,
   created_at: '2026-09-01T00:00:00Z',
+  updated_at: '2026-09-01T00:00:00Z',
   couple: { id: 'c1', name: 'Anna & Jake' },
   proposal_options: [
     { subtotal: 900, is_popular: false, position: 1 },

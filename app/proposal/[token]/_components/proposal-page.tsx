@@ -121,6 +121,12 @@ export function ProposalPage({ proposal, blocks, layout, frame, token, onDownloa
           branding={proposal}
           doc={doc}
           mode={frame}
+          // This is a real, sent proposal, so the package cards must carry
+          // its own `proposal_options` ids: a card still showing the
+          // template's `pk-…` id renders fine and then fails
+          // `POST /api/proposal/accept`, which takes uuids (live bug,
+          // 2026-09-23). Every template surface keeps the default.
+          packageIds="proposal"
           onAction={onLayoutAction}
           proposal={{
             selectedOptionId,

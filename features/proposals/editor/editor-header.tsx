@@ -1,10 +1,13 @@
 'use client'
 
 /**
- * The template editor's header (Proposal Layout v2 Phase 2 Task 14, UX
+ * The layout editor's header (Proposal Layout v2 Phase 2 Task 14, UX
  * audit slice D §3.7): one `h-12` row above the canvas - a labelled back
- * link to Templates, the template name (click to rename, pencil
- * affordance), the autosave status, Preview, and the device toggle. No
+ * link to Proposals, the document's name (click to rename, pencil
+ * affordance), an optional `context` note about the document itself (the
+ * proposal editor's "whose copy is this?" badge), the autosave status,
+ * Preview, the device toggle, and an optional `trailing` action the
+ * proposal editor uses for Send to couple. No
  * Save button (the editor autosaves) and no Undo/Redo buttons (2026-09-18
  * feedback: `⌘Z`/`⌘⇧Z` still work, wired independently in
  * `use-editor-shortcuts.ts`; only the header's own buttons were removed).
@@ -15,7 +18,7 @@
  * a failure, "Reload" after a conflict). The rename field and the status
  * label live in `editor-header-name-field.tsx`; the
  * Preview overlay itself and its Cmd/Ctrl+Shift+P shortcut are owned here
- * (rather than `template-editor-body.tsx`) since this is the only place
+ * (rather than `layout-editor-body.tsx`) since this is the only place
  * that needs the Preview button's own ref, for returning focus to it on
  * close.
  *
@@ -23,7 +26,7 @@
  */
 import { ArrowLeft, Eye, Monitor, Smartphone } from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 
 import { PillToggle, type CanvasDevice } from '@/components/editor'
 import { Button, buttonClassName } from '@/components/ui/button'
@@ -39,7 +42,7 @@ import { usePreviewShortcut } from './use-preview-shortcut'
 
 /** Props for {@link EditorHeader}. */
 export interface EditorHeaderProps {
-  /** The template's current name. */
+  /** The document's current name: a template's name, or a proposal's title. */
   name: string
   /**
    * Commits a rename once the field is blurred/committed with an actually
@@ -48,6 +51,13 @@ export interface EditorHeaderProps {
    * `onRename`, whose optimistic-then-revert pattern `NameField` mirrors.
    */
   onRename: (name: string) => Promise<boolean>
+  /**
+   * A note about the document itself, rendered right after the name. The
+   * proposal editor puts `ProposalCopyBadge` here, so the MC can see they
+   * are in one couple's copy and not their template; the template editor
+   * leaves it unset, so its header is unchanged.
+   */
+  context?: ReactNode
   /** Current autosave status, fed to `formatSaveStatus` for the header's status text. */
   status: SaveStatus
   /** When the layout last saved successfully, or `null` before the first save. */
@@ -60,10 +70,17 @@ export interface EditorHeaderProps {
   /** The editor's live, possibly-unsaved layout - what the Preview overlay renders. */
   layout: ProposalLayout
   branding: PublicBranding
+  /**
+   * An extra action rendered at the end of the row, after the device
+   * toggle. The proposal editor puts Send to couple here; the template
+   * editor has nothing to add and leaves it unset, so its header is
+   * unchanged.
+   */
+  trailing?: ReactNode
 }
 
-/** One `h-12` row: back link, rename field, save status, Preview, device toggle. */
-export function EditorHeader({ name, onRename, status, lastSavedAt, onRetry, device, onDeviceChange, layout, branding }: EditorHeaderProps) {
+/** One `h-12` row: back link, rename field, whatever `context` adds, save status, Preview, device toggle, and whatever `trailing` adds. */
+export function EditorHeader({ name, onRename, context, status, lastSavedAt, onRetry, device, onDeviceChange, layout, branding, trailing }: EditorHeaderProps) {
   const [previewOpen, setPreviewOpen] = useState(false)
   const previewButtonRef = useRef<HTMLButtonElement>(null)
   const closePreview = useCallback(() => {
@@ -89,8 +106,12 @@ export function EditorHeader({ name, onRename, status, lastSavedAt, onRetry, dev
         Proposals
       </Link>
 
-      <div className="min-w-0 flex-1">
+      {/* The context badge sits with the name, not out by the actions: it
+          says what this document IS, so it has to read as part of the
+          title rather than as another control. */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <NameField value={name} onCommit={onRename} />
+        {context}
       </div>
 
       <SaveStatusLabel status={status} lastSavedAt={lastSavedAt} onRetry={onRetry} />
@@ -110,6 +131,8 @@ export function EditorHeader({ name, onRename, status, lastSavedAt, onRetry, dev
           { value: 'mobile', label: 'Mobile', icon: <Smartphone size={13} strokeWidth={1.5} /> },
         ]}
       />
+
+      {trailing}
 
       <PreviewOverlay
         isOpen={previewOpen}

@@ -1,19 +1,25 @@
 /**
- * Proposals, Phase A + B: create from /proposals, save, and open the public
- * link as a logged-out visitor. Sending needs Resend, so this spec does
- * not exercise the "Send to couple" flow; instead it asserts the 404 for
- * an unsent link, and the page for a sent one when TEST_PROPOSAL_TOKEN is
- * provided (set by flipping `share_token_enabled` on a saved proposal
- * directly in local SQL). Phase B adds the `/branding?surface=proposal`
- * role chooser + page canvas, and the public page-mode surface (package
- * selection, accept note) that replaced the Phase A document renderer.
+ * Proposals, Phase A + B: start a proposal from /proposals and open the
+ * public link as a logged-out visitor. Sending needs Resend, so this spec
+ * does not exercise the "Send to couple" flow; instead it asserts the 404
+ * for an unsent link, and the page for a sent one when
+ * TEST_PROPOSAL_TOKEN is provided (set by flipping `share_token_enabled`
+ * on a saved proposal directly in local SQL). Phase B adds the
+ * `/branding?surface=proposal` role chooser + page canvas, and the public
+ * page-mode surface (package selection, accept note) that replaced the
+ * Phase A document renderer.
+ *
+ * The first test covers both shells. With Proposal Layout v2 on, "New
+ * proposal" opens the Send a proposal modal: pick a couple, see the page
+ * the couple will get, stop there. With it off, it opens the legacy
+ * builder and saves a draft.
  */
 import { expect, test } from '@playwright/test'
 
 import { login, openSidebar, uniqueName } from './helpers'
 
 test.describe('proposals', () => {
-  test('creates a proposal and lands on its detail page', async ({ page }) => {
+  test('starts a proposal for a couple from /proposals', async ({ page }) => {
     await login(page)
     await openSidebar(page)
     await page.getByRole('link', { name: 'Proposals' }).click()
@@ -32,6 +38,36 @@ test.describe('proposals', () => {
       await page.getByRole('button', { name: 'New', exact: true }).click()
       await page.getByRole('menuitem', { name: 'New proposal' }).click()
     }
+
+    // Which modal opened tells us which shell this build runs, without the
+    // spec having to read a NEXT_PUBLIC_ flag the server inlined at build
+    // time. `waitFor` polls (a same-tick `isVisible()` would read the DOM
+    // before the modal's portal mounts and always report false).
+    const sendModal = page.getByRole('dialog', { name: 'Send a proposal' })
+    const layoutV2 = await sendModal
+      .waitFor({ state: 'visible', timeout: 8000 })
+      .then(() => true)
+      .catch(() => false)
+
+    if (layoutV2) {
+      // The couple is the only thing the MC fills in: everything else comes
+      // from the template (founder review, 2026-09-22).
+      await sendModal.getByRole('button', { name: /Select couple/ }).click()
+      const firstCouple = page.locator('[data-radix-popper-content-wrapper] button').first()
+      await firstCouple.waitFor()
+      const coupleName = (await firstCouple.textContent())?.trim() ?? ''
+      await firstCouple.click()
+      await expect(sendModal.getByRole('button', { name: new RegExp(coupleName) })).toBeVisible()
+
+      // The preview is the couple's real page: its hero heading is the
+      // layout's own h1, not the modal's title.
+      await expect(sendModal.getByRole('heading', { level: 1 }).first()).toBeVisible()
+      // Stop before sending: that needs Resend. Both ways out are offered.
+      await expect(sendModal.getByRole('button', { name: 'Make edits' })).toBeVisible()
+      await expect(sendModal.getByRole('button', { name: 'Send to couple' })).toBeVisible()
+      return
+    }
+
     const title = uniqueName('Proposal')
     await page.getByPlaceholder('Anna & Jake, your wedding').fill(title)
 

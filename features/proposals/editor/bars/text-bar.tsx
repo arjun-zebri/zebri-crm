@@ -165,7 +165,7 @@ export function TextBarRow({ editor, swatches = [], theme, ref }: TextBarProps) 
  * `className="z-30"` on the `BubbleMenu` (forwarded straight onto its own
  * floating element via `React.HTMLAttributes<HTMLDivElement>`, see
  * `@tiptap/react/menus`'s typings) puts it above
- * `template-editor-body.tsx`'s section/node-bar overlay strip (`z-20`):
+ * `layout-editor-body.tsx`'s section/node-bar overlay strip (`z-20`):
  * without it, a selection near the top of the canvas put the bubble
  * behind that strip, hiding every control it holds. `options.placement` is
  * `bottom` (see the JSX comment); `@tiptap/extension-bubble-menu` keeps

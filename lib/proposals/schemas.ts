@@ -11,8 +11,19 @@ import { z } from 'zod';
 
 import type { SaveProposalInput } from './types';
 
-/** D7: a couple chooses one of at most three packages. */
-export const MAX_OPTIONS = 3;
+/**
+ * How many packages one proposal may carry.
+ *
+ * D7 originally capped this at three, when the MC hand-built every option
+ * in the builder modal. Packages now live in the template's own packages
+ * section, which authors up to `PACKAGE_LIMITS.maxOptions` (6) cards, and
+ * creating a proposal from a template copies every card into a
+ * `proposal_options` row. A lower cap here would make a proposal seeded
+ * from a four-card template impossible to save again, so the two limits
+ * are kept in step. The number is repeated rather than imported because
+ * `lib/` must not depend on `features/`.
+ */
+export const MAX_OPTIONS = 6;
 
 const itemSchema = z.object({
   id: z.string().min(1),

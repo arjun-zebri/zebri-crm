@@ -2758,8 +2758,9 @@ One row per user; account-level defaults for the public proposal page.
 ### New columns
 | Table | Column | Purpose |
 |---|---|---|
-| `proposals` | `layout` (jsonb, null) | The proposal's own v2 layout copy. Reserved; nothing writes it until Phase 4, so `get_public_proposal_layout` returns null for every existing proposal until then |
-| `proposals` | `template_id` (uuid, null, -> `proposal_templates` set null, indexed) | Which template the proposal was created from. Reserved; nothing writes it until Phase 4 |
+| `proposals` | `layout` (jsonb, null) | The proposal's own v2 layout copy, snapshotted from the template by `createProposalFromTemplateAction` with fresh section ids. Null for a proposal created by the legacy v1 builder, and `get_public_proposal_layout` returns null for those |
+| `proposals` | `template_id` (uuid, null, -> `proposal_templates` set null, indexed) | Which template the proposal was created from, written at create time by `createProposalFromTemplateAction` |
+| `proposals` | `layout_revision` (integer, 0) | Optimistic-concurrency counter for per-proposal layout writes, the `proposal_templates.revision` equivalent: `updateProposalLayoutAction` matches `layout_revision = baseRevision` and sets `baseRevision + 1`, and a miss comes back as a conflict carrying the current row. Separate from `version`, which counts resends. Added `20261005000000_proposal_layout_revision.sql` |
 | `user_branding` | `blocks_proposal_v1_backup` (jsonb, null) | The v1 `branding_blocks.proposal` tree, backed up once when an account is first migrated to v2 templates |
 | `user_branding` | `blocks_proposal_v1_backup_at` (timestamptz, null) | When the backup was taken |
 

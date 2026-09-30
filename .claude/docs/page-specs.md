@@ -1781,11 +1781,18 @@ options-summary.tsx`), decline reason and message when declined, links
 to the couple and (once Phase C populates them) the generated
 contract/invoice. Actions: Copy link / Open (once
 `share_token_enabled`), Revert to draft (any non-draft, non-accepted
-status: sent, viewed, declined, expired), Edit (hidden once accepted),
-**Download PDF** (`proposal-pdf-button.tsx`): fetches the full row,
-maps it to the public shape with `toPublicProposal`, and prints the
-exact same `ProposalPage` component the couple's link renders (in the
-`print` frame) via `printProposal`: there is no second PDF layout.
+status: sent, viewed, declined, expired), **Download PDF**
+(`proposal-pdf-button.tsx`, fetches the full row, maps it to the public
+shape with `toPublicProposal`, and prints the exact same `ProposalPage`
+component the couple's link renders via `printProposal`: there is no
+second PDF layout), and (R3, 2026-09-23) two edit actions side by side
+once the proposal is not accepted: "Details" (secondary, `Pencil`
+icon, opens `ProposalBuilderModal` on the proposal's couple, title,
+options and terms; renamed from "Edit") and, only for a proposal that
+also carries a `template_id`, "Edit design" (primary, `LayoutTemplate`
+icon, links to `/proposals/[id]/design`, see "Proposal design editor"
+below). A proposal from before R3, or built by the v1 builder, has no
+`template_id` and so stays Details-only.
 
 **Engagement** (`proposal-engagement.tsx` +
 `proposal-engagement-timeline.tsx`, Phase D): reads raw
@@ -1805,7 +1812,11 @@ editor (apply from a package, mark one popular), add-ons editor, terms
 (deposit %, payment schedule, contract template), a readiness checklist,
 and the shared `ShareAndSend` footer ("Save changes" / "Send to
 couple", "Resend" once sent). The couple picker cannot be changed after
-the first save.
+the first save. While `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2` is on this is no
+longer the "New proposal" entry point (the Send a proposal modal is,
+see "Proposal Layout v2: single page" below): it opens only from an
+existing proposal's "Details" action, and stays the whole story with
+the flag off.
 
 **Couple profile:** a Proposals tab (`couple-proposals.tsx`, listed
 among the couple-profile tabs above) mirrors the couple's Contracts tab
@@ -1852,6 +1863,17 @@ still `Empty`-state placeholders — with one page:
   Viewed, Accepted — computed from the already-fetched list
   (`computeProposalStats`, `proposals-stats.ts`). No trend/delta; there
   is no historical comparison data yet.
+- **Drafts strip** (`proposal-drafts-strip.tsx`, T8 2026-09-23): under
+  the stats, a bordered card headed "N drafts in progress" listing the
+  three most recently edited `draft` proposals (couple name, "Edited 2h
+  ago"), each with Open (to `/proposals/<id>/design`) and a delete
+  behind a `ConfirmDialog`. More than three are counted, not listed. An
+  account with no drafts, or a list still loading, renders nothing at
+  all; a failed list renders a compact `ErrorState`. This is not the
+  per-proposal list removed on 2026-09-19: no columns, no status pills,
+  and nothing that has been sent. It exists because a draft the MC
+  deliberately started was counted in the stats above and reachable
+  from nowhere.
 - **Templates shortcut** (`proposal-templates-shortcut.tsx`): the
   default template plus the next couple most-recently-edited, each a
   card linking to the section editor. "See all" links to
@@ -1877,6 +1899,19 @@ still `Empty`-state placeholders — with one page:
 
 Full model: `.claude/docs/proposals.md` ("Layout v2 (single-page
 consolidation)").
+
+**Send a proposal (R3, 2026-09-23)**: with the flag on, "New proposal"
+(`new-proposal-menu.tsx`'s split button, or the plain button when
+`onNewTemplate` is not passed) opens `SendProposalModal`
+(`components/builders/send-proposal-modal.tsx`) instead of the builder:
+a couple/template/expiry picker over a live preview of the couple's
+actual page, "Make edits" or "Send to couple". "Make edits" creates
+nothing: it opens `/proposals/design/new`, where the row appears only
+once the MC changes something. Same modal opens from
+the couple profile's Proposals tab (couple preselected) and from a
+template card's `...` menu, "Send to a couple" (template preselected,
+first item in the menu). Full model: `.claude/docs/proposals.md`
+("Layout v2 (R3: create-from-template, send modal, design editor)").
 
 ## Templates editor (Phase 2)
 
@@ -1975,6 +2010,66 @@ restored on the next load, and every write carries the template's
 `revision` so a stale tab can never overwrite a newer copy. Full
 design: `.claude/docs/proposals.md`, "Nothing the MC types is ever held
 only in React state".
+
+## Proposal design editor for a proposal that does not exist yet (T8, 2026-09-23)
+
+Route `/proposals/design/new?couple=<uuid>&template=<uuid>&expires=<YYYY-MM-DD>`
+(`app/(dashboard)/proposals/design/new/page.tsx`, a server component;
+`notFound()` when the flag is off or either id is malformed). Two static
+segments, so it cannot collide with `/proposals/[id]`: Next.js matches
+static before dynamic, and there is deliberately no page at
+`/proposals/design` itself.
+
+It mounts the same `ProposalEditorBody` on a fresh copy of the chosen
+template's layout (`cloneLayoutWithFreshIds`, held in memory) and writes
+nothing at all until the MC changes something, renames the document, or
+sends. On that first write `createProposalFromTemplateAction` runs once
+(single-flight, so a retry or React StrictMode cannot mint two), the
+layout is saved into the new row at revision 0, and the URL is replaced
+with `/proposals/<id>/design` through `window.history.replaceState` so
+the editor is never remounted mid-save.
+
+What counts as a change is `sameDocument`
+(`features/proposals/editor/layout-equivalence.ts`), not a string
+compare: mounting the canvas reorders object keys and lets TipTap append
+an empty paragraph wherever a container ends in something you cannot
+type after, and a row must never appear because of either. There is no
+local draft before the row exists (the draft is keyed by id), so a hard
+refresh inside the 800ms debounce on the very first change loses that
+one change; every later change is covered as before.
+
+## Proposal design editor (R3, 2026-09-23)
+
+Route `/proposals/[id]/design` (`app/(dashboard)/proposals/[id]/design/page.tsx`,
+a server component; `notFound()` when `proposalLayoutV2Enabled()` is
+false). Full width, same reasons as the template editor above: opts
+out of `ProposalsFrame`'s gutter, owns its own scroll. Reached from a
+proposal's own detail page ("Edit design", only once it carries a
+`template_id` and is not `accepted`). "Make edits" in the Send a
+proposal modal goes to `/proposals/design/new` instead (above), and
+lands here by URL replacement once its row exists.
+
+**First open, per account**: a small `Modal` titled "You are editing
+this couple's copy" names the template and the couple, says the change
+goes to this proposal only, and is dismissed with "Got it"
+(`features/proposals/editor/design-explainer-modal.tsx`). Remembered in
+`localStorage` under a key scoped by user id
+(`design-explainer-seen.ts`); unreadable storage degrades to showing it
+again. Never shown by the template editor.
+
+Identical editor to the template one: same canvas, control bars, add
+palette, resize engine, mobile preview, keyboard shortcuts, all shared
+verbatim through `features/proposals/editor/layout-editor-body.tsx`,
+mounted on the proposal's own copy of the layout instead of a
+template's. Two differences: the header's trailing slot carries a
+"Send to couple" button (`send-to-couple-button.tsx`; reads "Resend"
+once the loaded status is past `draft`) instead of nothing, and the
+autosave writes through `updateProposalLayoutAction` /
+`/api/proposals/layout-beacon` against `proposals.layout_revision`
+rather than the template's `revision`. An `accepted` proposal gets no
+Send action at all, not disabled, not rendered, since the design is
+then frozen. Full model: `.claude/docs/proposals.md` ("Layout v2 (R3:
+create-from-template, send modal, design editor)").
 
 ---
 

@@ -141,7 +141,7 @@ changes; the parent modals own the actual form state + mutations.
 | Part | Used by |
 |---|---|
 | `builder-modal-shell.tsx` | Modal frame + hero title input + state pill + ⋯ overflow menu + contextual primary CTA |
-| `builder-meta-row.tsx` | Couple picker + payment terms (invoice) + expiry / due date |
+| `builder-meta-row.tsx` | Couple picker + payment terms (invoice) + optional `extra` slot + expiry / due date. `extra` renders one caller-supplied control between the couple picker and the date, so a document that needs a third choice keeps one calm row instead of a second picker implementation (the proposal template `Select`) |
 | `line-items-table.tsx` | description + amount table; dnd-kit reorder; empty-state CTA |
 | `totals-panel.tsx` | Subtotal / (optional) Discount / (optional) GST / Total / (optional) muted `note` line under the total (invoices pass "Prices include GST") |
 | `discount-control.tsx` | Collapsed "+ Add discount" link → inline editor with % / $ switch |
@@ -158,11 +158,39 @@ changes; the parent modals own the actual form state + mutations.
 | `preview-pdf.tsx` | PDF preview — renders `buildPdfHtml()` output in a sandboxed iframe |
 | `preview-email.tsx` | Email preview — `From/To/Subject` envelope + `invoiceHtml()` body in a sandboxed iframe |
 | `preview-payment-page.tsx` | Payment-page preview — uses `PublicBlockRenderer` with `useCurrentBranding(surface)` for pixel-faithful render |
+| `send-proposal-controls.tsx` | Send a proposal: the one control row (couple picker + template `Select` + expiry `DatePicker`), built on `builder-meta-row` |
+| `send-proposal-preview.tsx` | Send a proposal: the couple's page, rendered full-bleed from the chosen template with `ProposalLayoutView` (`mode="page"`, `defaultSelection={false}`) plus its loading / empty / error states |
+| `send-proposal-footer.tsx` | Send a proposal: "Make edits" + "Send to couple", and the `text-text-muted` line saying why Send is off, wired with `aria-describedby` |
+| `use-send-proposal.ts` | Send a proposal: couples + templates + expiry defaults, the blocked-Send reason, and the create-once `ensureProposal` both actions share |
 | `use-apply-sources.ts` | Packages / invoice templates as "start from" sources for the builders |
 | `preview-shared.ts` | The `PreviewDoc` shape the parent modals pass into every preview tab |
 
 All parts are ≤200 LOC, TSDoc'd, and unit-tested under
 `tests/unit/components/builders/parts/*.test.tsx`.
+
+### Send a proposal modal: `components/builders/send-proposal-modal.tsx`
+
+The Proposal Layout v2 replacement for `ProposalBuilderModal` when
+starting a NEW proposal (founder review, 2026-09-22: the note, hero,
+packages, add-ons and terms "should just come from the template").
+Fullscreen `Modal`: a sticky control row (couple, template, expiry), a
+live full-bleed preview of the template rendered exactly as the couple
+will see it, and a footer with "Make edits" and "Send to couple".
+
+- "Send to couple" runs `createProposalFromTemplateAction`, then POSTs
+  `/api/email/send-proposal`. A failed email leaves the draft and a
+  retry reuses its id rather than creating a second proposal.
+- "Make edits" creates nothing. It routes to
+  `/proposals/design/new?couple=&template=&expires=`, where the editor
+  mounts on a copy of the template's layout held in memory and the
+  `proposals` row is written by the first real change (T8, 2026-09-23:
+  opening it and backing out used to leave an untouched draft behind).
+- Opened from `/proposals` ("New proposal"), the couple profile's
+  Proposals tab (couple preselected), and a template card's
+  "Send to a couple" action (template preselected), all behind
+  `proposalLayoutV2Enabled()`; the legacy builder is unchanged with the
+  flag off.
+- The payload it previews is built by `lib/proposals/template-preview-doc.ts`.
 
 ### Builder first-paint skeleton
 
