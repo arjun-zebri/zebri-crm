@@ -245,7 +245,7 @@ export { designExplainerKey, hasSeenDesignExplainer, markDesignExplainerSeen } f
 
 // analytics/
 export { acceptanceRate } from './analytics/types'
-export type { AccountSummary, DeviceSplit, PackageEngagementRow, SectionEngagementRow, TemplateStats } from './analytics/types'
+export type { AccountSummary, DeviceSplit, PackageChoice, PackageEngagementRow, SectionEngagementRow, TemplateStats } from './analytics/types'
 export { deviceSplit, packageReport, sectionReport } from './analytics/reports'
 export { sectionTotals, summarizeEngagement } from './analytics/summary'
 export type { EngagementRow, EngagementSummary, SectionSeconds } from './analytics/summary'
@@ -253,3 +253,4 @@ export { sessionTimelines } from './analytics/sessions'
 export type { SessionTimeline } from './analytics/sessions'
 export { blockTypeLabel, formatDuration, formatSeconds, stepLabel } from './analytics/labels'
 export { getAccountSummaryAction, getTemplatePerformanceAction } from './analytics/data'
+export { PROPOSAL_ANALYTICS_QUERY_KEY } from './analytics/query-key'

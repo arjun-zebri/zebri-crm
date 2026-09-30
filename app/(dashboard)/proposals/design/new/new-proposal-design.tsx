@@ -23,12 +23,11 @@ import { useMemo } from 'react';
 import { Empty } from '@/components/ui/empty';
 import { ErrorState } from '@/components/ui/error-state';
 import {
-  cloneLayoutWithFreshIds, EditorSkeleton, GateState, getTemplateAction, ProposalEditorBody, type ProposalLayout,
+  cloneLayoutWithFreshIds, EditorSkeleton, GateState, getTemplateAction, PROPOSAL_ANALYTICS_QUERY_KEY, ProposalEditorBody, type ProposalLayout,
 } from '@/features/proposals';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import { createClient } from '@/lib/supabase/client';
 
-import { PROPOSAL_ANALYTICS_QUERY_KEY } from '../../use-proposal-analytics';
 import { PROPOSALS_QUERY_KEY } from '../../use-proposals';
 
 import { useMaterialiseProposal } from './use-materialise-proposal';

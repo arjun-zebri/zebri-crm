@@ -17,7 +17,17 @@ import { formatSeconds } from '@/features/proposals';
 export interface ProposalSectionEngagementProps {
   /** Sections in page order. */
   rows: SectionEngagementRow[];
+  /** Distinct sessions behind the rows; the "where readers leave" line needs {@link MIN_SESSIONS_FOR_DROP}. */
+  sessions: number;
 }
+
+/**
+ * Sessions needed before the page names where "most readers" leave. With
+ * one or two visits the biggest drop is one person closing a tab, and
+ * calling that "most readers" overstates it. The row still turns warning
+ * colour; only the sentence waits.
+ */
+export const MIN_SESSIONS_FOR_DROP = 3;
 
 /** Index of the row whose reach fell the most from the row before it, or -1 when reach never drops. */
 export function biggestDropIndex(rows: SectionEngagementRow[]): number {
@@ -36,7 +46,7 @@ export function biggestDropIndex(rows: SectionEngagementRow[]): number {
 }
 
 /** See {@link ProposalSectionEngagementProps}. */
-export function ProposalSectionEngagement({ rows }: ProposalSectionEngagementProps) {
+export function ProposalSectionEngagement({ rows, sessions }: ProposalSectionEngagementProps) {
   // Bars are relative to the longest-read section, matching the existing
   // top-sections bars in proposal-engagement.tsx: a short glance and a
   // long read should both fill the bar for their own top section.
@@ -65,7 +75,7 @@ export function ProposalSectionEngagement({ rows }: ProposalSectionEngagementPro
           </div>
         ))}
       </div>
-      {dropAt >= 0 ? (
+      {dropAt >= 0 && sessions >= MIN_SESSIONS_FOR_DROP ? (
         <p className="text-body text-text-subtle">Most readers leave around {rows[dropAt]?.label}.</p>
       ) : null}
     </div>

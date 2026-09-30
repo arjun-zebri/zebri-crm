@@ -28,14 +28,14 @@ interface Card {
   tone: StatePillTone;
   /** The figure, or `null` when there is nothing to report yet. */
   value: (s: AccountSummary) => string | null;
-  /** Why the figure is missing, shown on the en dash. */
-  emptyHint: string;
+  /** Why the figure is missing, shown on the en dash. Only on cards whose `value` can be `null`. */
+  emptyHint?: string;
 }
 
 const CARDS: readonly Card[] = [
   { label: 'Acceptance rate', icon: CircleCheck, tone: 'success', emptyHint: 'Nothing sent yet', value: (s) => (s.acceptancePct === null ? null : `${s.acceptancePct}%`) },
   { label: 'Median time to open', icon: Clock, tone: 'info', emptyHint: 'No opens yet', value: (s) => (s.medianOpenSeconds === null ? null : formatDuration(s.medianOpenSeconds)) },
-  { label: 'Accepted this month', icon: DollarSign, tone: 'success', emptyHint: 'Nothing accepted yet', value: (s) => `$${s.revenueThisMonth.toLocaleString('en-AU', { maximumFractionDigits: 0 })}` },
+  { label: 'Accepted this month', icon: DollarSign, tone: 'success', value: (s) => `$${s.revenueThisMonth.toLocaleString('en-AU', { maximumFractionDigits: 0 })}` },
 ];
 
 const BADGE_CLASSES: Record<StatePillTone, string> = {
@@ -48,7 +48,9 @@ const BADGE_CLASSES: Record<StatePillTone, string> = {
 
 /** See {@link ProposalsStatsRowProps}. */
 export function ProposalsStatsRow({ summary, loading, error, onRetry }: ProposalsStatsRowProps) {
-  if (error) return <ErrorState title="Could not load your proposal figures" onRetry={onRetry} className="py-6" />;
+  // Only when there is nothing to show: a failed background refetch keeps
+  // the figures already on screen rather than swapping them for an error.
+  if (error && !summary) return <ErrorState title="Could not load your proposal figures" onRetry={onRetry} className="py-6" />;
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       {CARDS.map(({ label, icon: Icon, tone, value, emptyHint }) => {
@@ -67,10 +69,10 @@ export function ProposalsStatsRow({ summary, loading, error, onRetry }: Proposal
               <div className="min-w-0">
                 <div className="text-section font-semibold text-text sm:text-2xl">
                   {figure === null ? (
-                    <Tooltip label={emptyHint}>
+                    <Tooltip label={emptyHint ?? 'Nothing yet'}>
                       <span>
                         <span aria-hidden="true">{'\u2013'}</span>
-                        <span className="sr-only">{emptyHint}</span>
+                        <span className="sr-only">{emptyHint ?? 'Nothing yet'}</span>
                       </span>
                     </Tooltip>
                   ) : (

@@ -22,6 +22,7 @@ import { Empty } from '@/components/ui/empty'
 import { ErrorState } from '@/components/ui/error-state'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 
+import { PROPOSAL_ANALYTICS_QUERY_KEY } from '../analytics/query-key'
 import { getProposalDesignAction, type ProposalDesignRecord } from '../data/proposals'
 
 import { EditorSkeleton } from './editor-skeleton'
@@ -40,8 +41,6 @@ const queryKey = (id: string) => ['proposal-design', id] as const
  * knows the list uses.
  */
 const PROPOSALS_LIST_QUERY_KEY = ['all-proposals'] as const
-/** Prefix of the /proposals analytics queries (`use-proposal-analytics.ts`), repeated for the same boundary reason. */
-const PROPOSAL_ANALYTICS_QUERY_KEY = ['proposal-analytics'] as const
 
 /**
  * The two `getProposalDesignAction` failures that are data rather than

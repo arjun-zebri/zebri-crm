@@ -51,7 +51,7 @@ function EngagementBody({
   const summary = summarizeEngagement(rows);
   const optionTitles = Object.fromEntries(proposal.proposal_options.map((o) => [o.id, o.title]));
   const facts = [
-    `${summary.sessions} sessions`,
+    `${summary.sessions} session${summary.sessions === 1 ? '' : 's'}`,
     summary.firstOpenedAt ? `first opened ${shortDate(summary.firstOpenedAt)}` : null,
     // M6: "last active", not "last seen" -- the facts line above this
     // component already says "Last viewed" for `proposals.view_count`
@@ -73,7 +73,9 @@ function EngagementBody({
   // malformed batch, see M4) has a defined-but-zero top section, which
   // `??` would not catch, yielding `width: NaN%`.
   const maxSeconds = topSections[0]?.seconds || 1;
-  const lingered = summary.lingeredOptionId
+  // The v2 Packages block already shows every package's time, so the
+  // one-line "Lingered on" summary is only for v1.
+  const lingered = !layout && summary.lingeredOptionId
     ? { title: optionTitles[summary.lingeredOptionId] ?? 'a package', seconds: summary.packages[0]?.seconds ?? 0 }
     : null;
 
@@ -81,7 +83,7 @@ function EngagementBody({
     <>
       <p className="text-body text-text-muted">{facts.join(' · ')}</p>
 
-      {layout ? <ProposalEngagementV2 proposal={proposal} layout={layout} rows={rows} /> : null}
+      {layout ? <ProposalEngagementV2 proposal={proposal} layout={layout} rows={rows} sessions={summary.sessions} /> : null}
 
       {topSections.length > 0 ? (
         <div className="space-y-1.5">

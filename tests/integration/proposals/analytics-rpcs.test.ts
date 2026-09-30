@@ -1,7 +1,9 @@
 /**
  * proposal_template_performance / proposal_account_summary: counts, revenue
  * (invoice beats package), median time to open from `opened` events only,
- * tenant isolation via RLS, anon denied, and a bogus stored timezone.
+ * tenant isolation via RLS, anon denied, a bogus stored timezone, an
+ * acceptance outside this month, and a template-less proposal that splits
+ * the account median from the per-template one.
  * Local Supabase.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -15,6 +17,7 @@ let p1: { id: string; share_token: string };
 let p2: { id: string; share_token: string };
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+const daysAgo = (d: number) => hoursAgo(d * 24);
 
 async function seed(user: TestUser, coupleId: string, n: string, overrides: Record<string, unknown>) {
   const { data, error } = await user.client
@@ -42,6 +45,12 @@ beforeAll(async () => {
   await seed(a, coupleId, '3', { template_id: templateId, status: 'draft' });
   // P4: first_viewed_at set but no `opened` event (the MC's own preview).
   await seed(a, coupleId, '4', { status: 'viewed', first_viewed_at: new Date().toISOString(), email_sent_at: hoursAgo(3) });
+  // P5: accepted 40 days ago, so it counts as accepted but never as
+  // revenue this month (no month is 40 days long).
+  const p5 = await seed(a, coupleId, '5', { status: 'accepted', email_sent_at: daysAgo(41), accepted_at: daysAgo(40) });
+  // P6: no template, opened about 10h after the email. It feeds the account
+  // median (samples ~1h, ~2h, ~10h: median ~2h) but not template T's (~1.5h).
+  const p6 = await seed(a, coupleId, '6', { status: 'viewed', email_sent_at: hoursAgo(10) });
 
   const { data: o, error: oe } = await a.client
     .from('proposal_options')
@@ -51,8 +60,16 @@ beforeAll(async () => {
   if (oe) throw oe;
   const upd = await a.client.from('proposals').update({ accepted_option_id: o!.id }).eq('id', p1.id);
   if (upd.error) throw upd.error;
+  const { data: o5, error: o5e } = await a.client
+    .from('proposal_options')
+    .insert({ proposal_id: p5.id, user_id: a.id, position: 0, title: 'Old pkg', subtotal: 500 })
+    .select('id')
+    .single();
+  if (o5e) throw o5e;
+  const upd5 = await a.client.from('proposals').update({ accepted_option_id: o5!.id }).eq('id', p5.id);
+  if (upd5.error) throw upd5.error;
 
-  for (const [p, s] of [[p1, 's1'], [p2, 's2']] as const) {
+  for (const [p, s] of [[p1, 's1'], [p2, 's2'], [p6, 's6']] as const) {
     const r = await anonClient().rpc('record_proposal_events', { p_token: p.share_token, p_session_id: s, p_events: [{ id: `ev-${s}`, type: 'opened', payload: {} }] });
     if (r.error) throw r.error;
   }
@@ -81,12 +98,30 @@ describe('proposal analytics functions', () => {
     expect(error).toBeNull();
     expect(data).toHaveLength(1);
     const row = data![0]!;
-    expect(row.sent).toBe(3);
-    expect(row.accepted).toBe(1);
+    // P1, P2, P4, P5, P6 (P3 is a draft).
+    expect(row.sent).toBe(5);
+    // P1 this month and P5 forty days ago.
+    expect(row.accepted).toBe(2);
+    // P5's 500 is outside this month.
     expect(Number(row.revenue_this_month)).toBe(1000);
-    // A P4 gap of ~3h would drag a 3-sample median to ~7200; it must not.
-    expect(Number(row.median_open_seconds)).toBeGreaterThan(5000);
-    expect(Number(row.median_open_seconds)).toBeLessThan(5900);
+    // Samples are P1 (~2h), P2 (~1h) and P6 (~10h): median ~7200. A P4 gap
+    // of ~3h would make it 4 samples with a median of ~9000; it must not.
+    expect(Number(row.median_open_seconds)).toBeGreaterThan(7000);
+    expect(Number(row.median_open_seconds)).toBeLessThan(7600);
+  });
+
+  it('the per-template median is T only, apart from the account median', async () => {
+    const perf = await a.client.rpc('proposal_template_performance');
+    const sum = await a.client.rpc('proposal_account_summary');
+    expect(perf.error).toBeNull();
+    expect(sum.error).toBeNull();
+    // P6 has no template, so only the account median sees its ~10h gap.
+    expect(perf.data).toHaveLength(1);
+    const templateMedian = Number(perf.data![0]!.median_open_seconds);
+    const accountMedian = Number(sum.data![0]!.median_open_seconds);
+    expect(templateMedian).toBeGreaterThan(5000);
+    expect(templateMedian).toBeLessThan(5900);
+    expect(accountMedian).toBeGreaterThan(templateMedian + 1000);
   });
 
   it('another tenant sees nothing', async () => {

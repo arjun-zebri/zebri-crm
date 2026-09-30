@@ -9,7 +9,7 @@ import { DEVICE_KINDS } from '@/lib/proposals/engagement-events'
 
 import { num, obj, str } from './read'
 import type { EngagementRow } from './summary'
-import type { DeviceSplit, PackageEngagementRow, SectionEngagementRow } from './types'
+import type { DeviceSplit, PackageChoice, PackageEngagementRow, SectionEngagementRow } from './types'
 
 /**
  * Reading depth by section for one v2 proposal, in page order. `reachPct`
@@ -42,9 +42,10 @@ export function sectionReport(rows: EngagementRow[], sections: ReadonlyArray<{ i
 
 /**
  * Attention per package, in `position` order, including options nobody
- * viewed. `chosen` is the accepted option when known; before acceptance
- * (or when the accepted id is not recorded) it is the option of the most
- * recent `package_selected` row, so an open proposal still shows a lean.
+ * viewed. `chosenBy` is `'accepted'` on the accepted option when known;
+ * before acceptance (or when the accepted id is not recorded) the option
+ * of the most recent `package_selected` row is `'selected'`, so an open
+ * proposal still shows a lean without claiming a commitment.
  */
 export function packageReport(
   rows: EngagementRow[],
@@ -67,10 +68,15 @@ export function packageReport(
       latest = { at: r.created_at, optionId }
     }
   }
-  const chosenId = acceptedOptionId ?? latest?.optionId ?? null
+  // Acceptance wins outright: a later card click on another package does
+  // not undo a signature.
+  const choiceFor = (id: string): PackageChoice => {
+    if (acceptedOptionId) return id === acceptedOptionId ? 'accepted' : null
+    return id === latest?.optionId ? 'selected' : null
+  }
   return [...options]
     .sort((a, b) => a.position - b.position)
-    .map((o) => ({ optionId: o.id, title: o.title, views: viewers.get(o.id)?.size ?? 0, seconds: seconds.get(o.id) ?? 0, chosen: o.id === chosenId }))
+    .map((o) => ({ optionId: o.id, title: o.title, views: viewers.get(o.id)?.size ?? 0, seconds: seconds.get(o.id) ?? 0, chosenBy: choiceFor(o.id) }))
 }
 
 /**

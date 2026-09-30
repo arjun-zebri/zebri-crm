@@ -11,16 +11,21 @@ import { useQuery } from '@tanstack/react-query';
 import {
   getAccountSummaryAction,
   getTemplatePerformanceAction,
+  PROPOSAL_ANALYTICS_QUERY_KEY,
   type AccountSummary,
   type TemplateStats,
 } from '@/features/proposals';
 
-/** Prefix of both analytics queries: invalidate this after a send or an accept. */
-export const PROPOSAL_ANALYTICS_QUERY_KEY = ['proposal-analytics'] as const;
+/** Options for the analytics hooks. */
+export interface AnalyticsQueryOptions {
+  /** False skips the fetch entirely, e.g. while the Layout v2 flag hides the surface. Defaults to true. */
+  enabled?: boolean;
+}
 
 /** The account strip's figures. */
-export function useAccountSummary() {
+export function useAccountSummary({ enabled = true }: AnalyticsQueryOptions = {}) {
   return useQuery({
+    enabled,
     queryKey: [...PROPOSAL_ANALYTICS_QUERY_KEY, 'account'],
     queryFn: async (): Promise<AccountSummary> => {
       const result = await getAccountSummaryAction();
@@ -31,8 +36,9 @@ export function useAccountSummary() {
 }
 
 /** Per-template outcomes keyed by template id. */
-export function useTemplatePerformance() {
+export function useTemplatePerformance({ enabled = true }: AnalyticsQueryOptions = {}) {
   return useQuery({
+    enabled,
     queryKey: [...PROPOSAL_ANALYTICS_QUERY_KEY, 'templates'],
     queryFn: async (): Promise<Record<string, TemplateStats>> => {
       const result = await getTemplatePerformanceAction();

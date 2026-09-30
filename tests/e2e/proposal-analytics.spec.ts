@@ -24,12 +24,13 @@ const proposalId = process.env.TEST_PROPOSAL_ID
 
 /**
  * Distinct sessions on the detail page's Engagement facts line
- * ("2 sessions · first opened ..."), or 0 when it shows the empty state.
+ * ("1 session · first opened ..." or "2 sessions · ..."), or 0 when it
+ * shows the empty state.
  * Waits for the section to finish loading first, so a still-loading
  * report is never read as zero.
  */
 async function sessionCount(page: Page): Promise<number> {
-  const facts = page.getByText(/^\d+ sessions( ·|$)/)
+  const facts = page.getByText(/^\d+ sessions?( ·|$)/)
   const empty = page.getByText('No opens yet')
   await expect(facts.or(empty).first()).toBeVisible()
   if (await empty.isVisible()) return 0

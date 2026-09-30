@@ -2,6 +2,9 @@
  * Package comparison: each package's share of attention (views and time,
  * as a bar) next to which one was chosen, so "they lingered on Premium
  * but picked Full day" is one glance rather than two lines of prose.
+ * "Chosen" is only ever a signed acceptance; a card the couple clicked on
+ * an unaccepted proposal reads "Selected", because a click is not a
+ * commitment.
  *
  * Renders the {@link PackageEngagementRow}s built by `packageReport`
  * (`@/features/proposals`) from `package_viewed` / `package_selected`
@@ -24,7 +27,7 @@ export interface ProposalPackageComparisonProps {
 export function ProposalPackageComparison({ rows }: ProposalPackageComparisonProps) {
   const maxSeconds = Math.max(1, ...rows.map((r) => r.seconds));
   const mostViewed = rows.reduce<PackageEngagementRow | null>((top, r) => (top && top.seconds >= r.seconds ? top : r), null);
-  const chosen = rows.find((r) => r.chosen) ?? null;
+  const chosen = rows.find((r) => r.chosenBy !== null) ?? null;
 
   return (
     <div className="space-y-2">
@@ -42,17 +45,18 @@ export function ProposalPackageComparison({ rows }: ProposalPackageComparisonPro
             <span className="w-28 shrink-0 text-right text-body text-text-muted">
               {r.views} view{r.views === 1 ? '' : 's'} · {formatSeconds(r.seconds)}
             </span>
-            {/* w-20, not w-16: the dotted "Chosen" pill is about 78px and
-                overflowed a 64px column into the page edge. */}
-            <span className="w-20 shrink-0">
-              {r.chosen ? <StatePill label="Chosen" tone="success" dot="filled" /> : null}
+            {/* w-24: the dotted "Chosen" pill is about 78px and overflowed a
+                64px column; "Selected" is a little wider still. */}
+            <span className="w-24 shrink-0">
+              {r.chosenBy === 'accepted' ? <StatePill label="Chosen" tone="success" dot="filled" /> : null}
+              {r.chosenBy === 'selected' ? <StatePill label="Selected" tone="info" dot="hollow" /> : null}
             </span>
           </div>
         ))}
       </div>
       {mostViewed && chosen && mostViewed.optionId !== chosen.optionId ? (
         <p className="text-body text-text-subtle">
-          Lingered on {mostViewed.title}, chose {chosen.title}.
+          Lingered on {mostViewed.title}, {chosen.chosenBy === 'accepted' ? 'chose' : 'selected'} {chosen.title}.
         </p>
       ) : null}
     </div>

@@ -55,19 +55,26 @@ describe('packageReport', () => {
   it('counts distinct viewing sessions, sums seconds, orders by position and keeps unviewed options', () => {
     const rows = [pv('S1', 'o1', 5), pv('S1', 'o1', 7), pv('S2', 'o1', 3), pv('S1', 'o2', 20)]
     expect(packageReport(rows, options, 'o2')).toEqual([
-      { optionId: 'o1', title: 'Reception', views: 2, seconds: 15, chosen: false },
-      { optionId: 'o2', title: 'Full day', views: 1, seconds: 20, chosen: true },
-      { optionId: 'o3', title: 'Premium', views: 0, seconds: 0, chosen: false },
+      { optionId: 'o1', title: 'Reception', views: 2, seconds: 15, chosenBy: null },
+      { optionId: 'o2', title: 'Full day', views: 1, seconds: 20, chosenBy: 'accepted' },
+      { optionId: 'o3', title: 'Premium', views: 0, seconds: 0, chosenBy: null },
     ])
   })
 
-  it('falls back to the latest package_selected when nothing is accepted', () => {
+  it('marks the latest package_selected as selected, not accepted, when nothing is accepted', () => {
     const rows = [
       row('S1', 'package_selected', { optionId: 'o1' }, '2026-09-30T00:00:01Z'),
       row('S2', 'package_selected', { optionId: 'o3' }, '2026-09-30T00:00:09Z'),
     ]
-    expect(packageReport(rows, options, null).filter((p) => p.chosen).map((p) => p.optionId)).toEqual(['o3'])
-    expect(packageReport([], options, null).some((p) => p.chosen)).toBe(false)
+    const report = packageReport(rows, options, null)
+    expect(report.map((p) => [p.optionId, p.chosenBy])).toEqual([['o1', null], ['o2', null], ['o3', 'selected']])
+    expect(packageReport([], options, null).every((p) => p.chosenBy === null)).toBe(true)
+  })
+
+  it('the accepted option beats a later package_selected on another option', () => {
+    const rows = [row('S1', 'package_selected', { optionId: 'o3' }, '2026-09-30T00:00:09Z')]
+    const report = packageReport(rows, options, 'o1')
+    expect(report.map((p) => [p.optionId, p.chosenBy])).toEqual([['o1', 'accepted'], ['o2', null], ['o3', null]])
   })
 })
 

@@ -1034,13 +1034,26 @@ size and shape bounds:
 | Type | Payload | Notes |
 |---|---|---|
 | `opened` | `{ device? }` | `device` from `deviceKind(window.innerWidth)` at open (`engagement-session.ts`): under 640 is `phone`, under 1024 `tablet`, else `desktop`. Width, not user agent: it decides the layout the couple actually saw. |
-| `section_viewed` (v2) | `{ sectionId, sectionKind, pageId?, seconds }` | Observed on `[data-section-id]` at a 0.5 threshold. `pageId` is the section's closest `[data-page-id]`, so it is only present in the "One at a time" step flow; a scroll-flow section sends none. |
+| `section_viewed` (v2) | `{ sectionId, sectionKind, pageId?, seconds }` | Observed on `[data-section-id]` at a 0.5 threshold (see "In view" below). `pageId` is the section's closest `[data-page-id]`, so it is only present in the "One at a time" step flow; a scroll-flow section sends none. |
 | `section_viewed` (v1) | `{ blockId, blockType, seconds }` | Unchanged. A v1 page has no `[data-section-id]` and a v2 page has no `[data-block-id]`, so the two observers never double-count. |
 
 The Zod union is `.strict()` on each side, so one payload cannot mix
 the two shapes. Seconds are whole seconds banked while visible, so a
 section scrolled past in under a second records nothing; reach still
 counts it through any later section the session viewed.
+
+**In view** (`engagement-observe.ts`, shared by v1 and v2 sections and
+the package cards): an element is in view when at least the threshold
+share of the ELEMENT is visible, **or** its visible part fills at least
+that share of the VIEWPORT (`intersectionRect.height / rootBounds.height`,
+falling back to `window.innerHeight` when `rootBounds` is null).
+`intersectionRatio` alone is the element's share, so a section taller
+than twice the viewport (a packages section with stacked cards on a
+phone, a long FAQ) never reached 0.5 and banked nothing. The observer
+uses thresholds in 5% steps (plus the caller's own), so a tall section
+keeps getting callbacks while it scrolls through; quarter steps would
+miss a section over four viewports tall. `onEnter` fires once per entry
+into view, not on every threshold crossing.
 
 ### SQL functions
 
@@ -1065,7 +1078,12 @@ is no tenant filter to get wrong and no MFA ratchet entry. `anon` and
 `getAccountSummaryAction` / `getTemplatePerformanceAction`, coercing
 PostgREST's string `numeric` cells so a bad cell never becomes `NaN`
 on screen; `use-proposal-analytics.ts` exposes them as React Query
-hooks under `PROPOSAL_ANALYTICS_QUERY_KEY`.
+hooks under `PROPOSAL_ANALYTICS_QUERY_KEY` (defined in
+`features/proposals/analytics/query-key.ts`, exported from
+`@/features/proposals`, and the one key every send, accept and editor
+path invalidates). Both hooks take `{ enabled }`; `/proposals` passes the
+Layout v2 flag so the strip's figures are never fetched while it is
+hidden.
 
 ### Aggregation module
 
@@ -1091,11 +1109,20 @@ never a report row.
 - Detail page (`[id]/proposal-engagement-v2.tsx`, v2 layouts only):
   `ProposalSectionEngagement` (every non-page-break section in page
   order, time bar and "N% reached", the biggest reach drop in
-  `text-warning` with "Most readers leave around X"),
-  `ProposalPackageComparison` (views and time per package, a
-  Chosen pill, "Lingered on X, chose Y" when they differ) and
-  `ProposalDeviceSplit` ("3 sessions: 2 phone, 1 desktop"). A v1
-  proposal keeps the Phase D top-four bars.
+  `text-warning`; the "Most readers leave around X" line only from 3
+  sessions, since one or two visits are not "most readers"; the whole
+  block is hidden when no row matched a layout section, e.g. visits from
+  before R4),
+  `ProposalPackageComparison` (views and time per package; a success
+  "Chosen" pill only on the accepted option, an info "Selected" pill on
+  the latest `package_selected` of an unaccepted proposal, because a
+  card click is not a commitment; "Lingered on X, chose Y" or
+  "Lingered on X, selected Y" when they differ; `packageReport` returns
+  `chosenBy: 'accepted' | 'selected' | null`, and acceptance beats any
+  later click) and `ProposalDeviceSplit` ("3 sessions: 2 phone, 1
+  desktop"). The v1 "Lingered on X (Ns)" line is hidden for v2, where
+  the Packages block already says it. A v1 proposal keeps the Phase D
+  top-four bars. The facts line says "1 session" for a single visit.
 
 Below `sm`, section and package rows wrap: the bar takes its own
 full-width line under the label and figures. The single-line layout left

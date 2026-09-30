@@ -31,19 +31,19 @@ function expectPhoneWrap(row: HTMLElement) {
 
 describe('drill-down rows at phone width', () => {
   it('section rows wrap so the bar is never squeezed to nothing', () => {
-    render(<ProposalSectionEngagement rows={[{ id: 's1', label: 'Hero', seconds: 5, reachPct: 100 }]} />);
+    render(<ProposalSectionEngagement rows={[{ id: 's1', label: 'Hero', seconds: 5, reachPct: 100 }]} sessions={1} />);
     expectPhoneWrap(screen.getByText('Hero').parentElement!);
   });
 
   it('package rows wrap, and the pill column fits the Chosen pill', () => {
     render(
       <ProposalPackageComparison
-        rows={[{ optionId: 'o1', title: 'Full day', views: 1, seconds: 7, chosen: true }]}
+        rows={[{ optionId: 'o1', title: 'Full day', views: 1, seconds: 7, chosenBy: 'accepted' }]}
       />,
     );
     const row = screen.getByText('Full day').parentElement!;
     expectPhoneWrap(row);
     const pillCell = screen.getByText('Chosen').closest('span.shrink-0');
-    expect(pillCell?.className).toContain('w-20');
+    expect(pillCell?.className).toContain('w-24');
   });
 });

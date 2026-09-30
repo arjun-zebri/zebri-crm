@@ -19,9 +19,8 @@ import {
   revertProposalToDraftAction,
   saveProposalAction,
 } from '@/app/(dashboard)/proposals/actions';
-import { PROPOSAL_ANALYTICS_QUERY_KEY } from '@/app/(dashboard)/proposals/use-proposal-analytics';
 import { PROPOSALS_QUERY_KEY } from '@/app/(dashboard)/proposals/use-proposals';
-import type { ProposalLayout } from '@/features/proposals';
+import { PROPOSAL_ANALYTICS_QUERY_KEY, type ProposalLayout } from '@/features/proposals';
 import { emptyForm } from '@/lib/proposals/form-factories';
 import { fromRow, toInput, type ProposalFormState, type ProposalRow } from '@/lib/proposals/form-mapping';
 import { createClient } from '@/lib/supabase/client';

@@ -1811,11 +1811,14 @@ line, three blocks from the same `proposal_events` rows.
 **Reading by section** (`proposal-section-engagement.tsx`): every
 section in page order except page breaks, with a time bar, the seconds,
 and "N% reached" (the share of sessions that saw it or anything after
-it); the row with the biggest reach drop is `text-warning` and a muted
-line says "Most readers leave around X". **Packages**
-(`proposal-package-comparison.tsx`): one row per option with a bar,
-"N views · time" and a Chosen pill on the accepted or selected one, plus
-"Lingered on X, chose Y" when those differ. **Devices**
+it); the row with the biggest reach drop is `text-warning` and, from 3
+sessions, a muted line says "Most readers leave around X". The block is
+hidden when no event matched a layout section (visits from before R4).
+**Packages** (`proposal-package-comparison.tsx`): one row per option
+with a bar, "N views · time", a success "Chosen" pill on the accepted
+option only, or an info "Selected" pill on the package the couple last
+clicked on an unaccepted proposal, plus "Lingered on X, chose Y" (or
+"selected Y") when those differ. **Devices**
 (`proposal-device-split.tsx`): "3 sessions: 2 phone, 1 desktop" with
 icons; an `unknown` bucket only when non-zero. Below `sm`, section and
 package rows wrap so the bar gets its own full-width line. Loading,
@@ -1882,7 +1885,9 @@ still `Empty`-state placeholders — with one page:
   (`useAccountSummary` in `use-proposal-analytics.ts`). A figure with
   nothing behind it (nothing sent, nothing opened) is an en dash with a
   tooltip ("Nothing sent yet", "No opens yet"), never "0%" or "0s"; a
-  failed read is a compact `ErrorState` with Retry. "This month" is the
+  failed first read is a compact `ErrorState` with Retry, while a failed
+  background refetch keeps the figures already on screen. Not fetched
+  at all while the Layout v2 flag is off. "This month" is the
   MC's own calendar month (`user_public_settings.timezone`). No
   trend/delta. Definitions: `.claude/docs/proposals.md` ("R4
   analytics").

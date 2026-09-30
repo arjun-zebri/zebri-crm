@@ -14,13 +14,13 @@ import Link from 'next/link';
 import { revertProposalToDraftAction } from '@/app/(dashboard)/proposals/actions';
 import { proposalLayoutV2Enabled } from '@/app/(dashboard)/proposals/flags';
 import { headlineTotal, PROPOSAL_STATE_PILL } from '@/app/(dashboard)/proposals/proposals-list';
-import { PROPOSAL_ANALYTICS_QUERY_KEY } from '@/app/(dashboard)/proposals/use-proposal-analytics';
 import { PROPOSALS_QUERY_KEY, type ProposalDetailRow } from '@/app/(dashboard)/proposals/use-proposals';
 import { Button, buttonClassName } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatePill } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
+import { PROPOSAL_ANALYTICS_QUERY_KEY } from '@/features/proposals';
 
 import { ProposalEngagement } from './proposal-engagement';
 import { ProposalOptionsSummary } from './proposal-options-summary';

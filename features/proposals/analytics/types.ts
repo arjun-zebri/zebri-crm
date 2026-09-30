@@ -17,7 +17,14 @@ export interface SectionEngagementRow {
   reachPct: number
 }
 
-/** One package's share of attention against the others, and whether it was the one chosen. */
+/**
+ * How a package came to be the couple's pick: `'accepted'` when they
+ * signed for it, `'selected'` when they only clicked its card on an
+ * unaccepted proposal (a lean, not a commitment), `null` otherwise.
+ */
+export type PackageChoice = 'accepted' | 'selected' | null
+
+/** One package's share of attention against the others, and whether it was accepted or only selected. */
 export interface PackageEngagementRow {
   optionId: string
   title: string
@@ -25,7 +32,8 @@ export interface PackageEngagementRow {
   views: number
   /** Total seconds spent with the card in view. */
   seconds: number
-  chosen: boolean
+  /** See {@link PackageChoice}. At most one row per report is non-null. */
+  chosenBy: PackageChoice
 }
 
 /** Per-template outcomes, for the cards on /proposals. */

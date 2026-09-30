@@ -115,6 +115,25 @@ describe('ProposalEngagement', () => {
       expect(screen.queryByRole('heading', { name: 'Devices' })).not.toBeInTheDocument();
     });
 
+    it('F3: hides Reading by section when no row matches a layout section (pre-R4 visits)', () => {
+      const legacy: EngagementRow[] = [
+        { session_id: 'a', type: 'opened', payload: {}, created_at: '2026-09-14T10:00:00Z' },
+        { session_id: 'a', type: 'section_viewed', payload: { blockId: 'b1', blockType: 'hero', seconds: 9 }, created_at: '2026-09-14T10:01:00Z' },
+        { session_id: 'a', type: 'package_viewed', payload: { optionId: 'opt1', seconds: 4 }, created_at: '2026-09-14T10:01:00Z' },
+      ];
+      useProposalEvents.mockReturnValue({ data: legacy, isLoading: false, error: null });
+      render(<ProposalEngagement proposal={v2Proposal} />);
+      expect(screen.queryByRole('heading', { name: 'Reading by section' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/% reached/)).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Packages' })).toBeInTheDocument();
+    });
+
+    it('F7: does not repeat the Lingered on line under the v2 Packages block', () => {
+      useProposalEvents.mockReturnValue({ data: v2Rows, isLoading: false, error: null });
+      render(<ProposalEngagement proposal={v2Proposal} />);
+      expect(screen.queryByText(/^Lingered on .*\(/)).not.toBeInTheDocument();
+    });
+
     it('treats a layout that fails to parse like a v1 proposal', () => {
       useProposalEvents.mockReturnValue({ data: rows, isLoading: false, error: null });
       render(<ProposalEngagement proposal={{ ...proposal, layout: { version: 2, sections: 'nope' } }} />);
@@ -168,6 +187,13 @@ describe('ProposalEngagement', () => {
     expect(screen.getByText('Lingered on Full Day MC (25s)')).toBeInTheDocument();
     expect(screen.getByText(/Got as far as: Done/)).toBeInTheDocument();
     expect(screen.getByText('Accepted')).toBeInTheDocument();
+  });
+
+  it('F9: says "1 session", not "1 sessions", for a single visit', () => {
+    useProposalEvents.mockReturnValue({ data: rows.filter((r) => r.session_id === 'sess-a'), isLoading: false, error: null });
+    render(<ProposalEngagement proposal={proposal} />);
+    expect(screen.getByText(/^1 session ·/)).toBeInTheDocument();
+    expect(screen.queryByText(/1 sessions/)).not.toBeInTheDocument();
   });
 
   it('lists the newest session first in the timeline', () => {

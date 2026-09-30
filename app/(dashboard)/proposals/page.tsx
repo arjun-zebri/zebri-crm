@@ -40,8 +40,9 @@ export default function ProposalsPage() {
   // own, server-aggregated one) - still no per-proposal list on this page,
   // see the module doc.
   const { data, isLoading, error, refetch } = useProposals();
-  const summary = useAccountSummary();
   const layoutV2 = proposalLayoutV2Enabled();
+  // The strip only renders with Layout v2 on, so do not fetch its figures otherwise.
+  const summary = useAccountSummary({ enabled: layoutV2 });
 
   return (
     <ProposalsFrame>

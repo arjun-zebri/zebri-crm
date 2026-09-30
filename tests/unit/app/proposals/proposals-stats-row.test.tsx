@@ -45,4 +45,11 @@ describe('ProposalsStatsRow', () => {
     fireEvent.click(screen.getByRole('button', { name: /retry|try again/i }))
     expect(onRetry).toHaveBeenCalled()
   })
+
+  it('F5: keeps the figures when a background refetch fails with a summary already loaded', () => {
+    render(<ProposalsStatsRow summary={summary} loading={false} error={new Error('boom')} onRetry={() => {}} />)
+    expect(screen.getByText('33%')).toBeInTheDocument()
+    expect(screen.getByText('$1,000')).toBeInTheDocument()
+    expect(screen.queryByText('Could not load your proposal figures')).not.toBeInTheDocument()
+  })
 })
