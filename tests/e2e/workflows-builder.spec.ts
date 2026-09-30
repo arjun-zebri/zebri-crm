@@ -28,11 +28,10 @@ async function openTemplates(page: Page) {
 /** Create a workflow from the library and land on its canvas. */
 async function createWorkflow(page: Page, name: string) {
   await openTemplates(page)
-  await page.getByRole('button', { name: 'New workflow' }).first().click()
-  // "New workflow" opens a menu since the Workflows feature (595ae944):
-  // build it by hand, or generate it with Zebri AI. This spec builds by
-  // hand.
-  await page.getByText('Build it myself').click()
+  const create = page.getByRole('button', { name: /New workflow|Build your first workflow/ }).first()
+  await create.click()
+  // "New workflow" opens a menu; "Build it myself" lands on a blank canvas.
+  await page.getByRole('menu').getByRole('menuitem', { name: 'Build it myself' }).click()
   await page.waitForURL(/\/workflows\/[0-9a-f-]{36}/, { timeout: 20000 })
 
   const nameInput = page.getByPlaceholder('Untitled workflow')

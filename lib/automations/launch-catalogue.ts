@@ -50,6 +50,13 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   'contract_signed',
   'contract_declined',
   'contract_expired',
+  // Proposals (R2: DB-trigger emitted, plus the tick-emitted expiring one)
+  'proposal_sent',
+  'proposal_opened',
+  'proposal_accepted',
+  'proposal_declined',
+  'proposal_expired',
+  'proposal_expiring',
   // Events
   'event_created',
   'event_updated',
@@ -117,6 +124,8 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
  * `update_timeline_event`, `send_onboarding_pack`,
  * `send_anniversary_message`, `update_custom_fields`,
  * `send_whatsapp`) and the to-wire stubs (`generate_run_sheet_pdf`).
+ * `send_proposal` (R2, spec 5.4) is included alongside `send_contract`
+ * / `send_invoice`: it sends the couple's most recent draft proposal.
  */
 export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionType>([
   'send_email',
@@ -135,6 +144,7 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   // running: the handler is untouched, only the picker entry is gone.
   'send_contract',
   'send_invoice',
+  'send_proposal',
   'send_couple_questionnaire',
   // `trigger_payment_reminder` is deliberately absent: its handler
   // delegates verbatim to send_invoice (and never filtered to unpaid,

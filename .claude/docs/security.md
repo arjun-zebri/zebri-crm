@@ -553,6 +553,32 @@ the helper.
   truth in both the helper and the `enforce_starter_couple_limit`
   Postgres function.
 
+### 🟧 Closed: `emit_automation_event` executable by `authenticated` (R2 fix wave, S-I1)
+
+`20260604000000_create_automations_foundation.sql` granted execute on
+`emit_automation_event` to `authenticated` on the belief that the
+AFTER triggers call it as the session user. They do not: every trigger
+and RPC that emits is `security definer`, so the inner call is checked
+as the function owner. The grant therefore served no real caller and
+let any signed-in user run
+`rpc('emit_automation_event', { p_user_id: <victim>, ... })` from the
+browser, writing a forged event into another tenant's bus (the RPC is
+definer and inserts the `p_user_id` it is handed, so `automation_events`
+RLS never sees the write). A forged `proposal_sent`, `proposal_expiring`
+or stage-change event would then start the victim's workflows on
+attacker-chosen data.
+
+**Resolved 2026-09-22** by
+`20261002100000_revoke_emit_automation_event.sql`: execute revoked from
+`public, anon, authenticated`; `service_role` re-granted explicitly.
+No emitter changed behaviour. The `proposal_expiring` time emitter's
+per-day dedupe read (`lib/automations/time-emitters/proposal-expiring.ts`)
+is now also pinned to `user_id`, so a foreign bus row under a proposal
+id can never suppress the real emit even if a future grant slips.
+Pinned by `tests/integration/proposals/lifecycle-events.test.ts`
+(`emit_automation_event grant`): both a stranger's and the owner's
+authenticated session get `42501` and no row lands.
+
 ---
 
 ## Phase 0.8a — security infrastructure (shipped)
@@ -837,6 +863,10 @@ and the cross-tenant case in
 
 Uses the shared `isCronAuthorized(request)` helper (constant-time comparison of `Authorization: Bearer CRON_SECRET`). Invoked on a 22:30 UTC schedule via pg_cron (`zebri:booking-reminders`). See "Cron-secret enforcement" section above for full details.
 
+### Cron auth gate: `/api/cron/expire-proposals` (R2)
+
+Uses the same `isCronAuthorized(request)` helper, invoked on a 22:10 UTC schedule via pg_cron (`zebri:expire-proposals`, registered in `20261002000000_proposal_lifecycle_events.sql`). On success it calls `expire_proposals()` through the admin (service-role) client, since that RPC is revoked from `authenticated` and a cron request carries no user session. A failure alerts `cron_job_failed` with `job: 'expire-proposals'` and returns 500; the RPC's own effect (flipping status to `expired`) is what makes `tg_proposals_emit_lifecycle` emit `proposal_expired`, so this route never touches the bus itself.
+
 ### MC Calendar Busy Route: `GET /api/calendar/busy` (Scheduler Phase E)
 
 Backs the authenticated MC's `/calendar` page Day and Week views. Authenticated session required; RLS scopes access.
@@ -925,6 +955,7 @@ for the full job table and secret-sync flow):
 | Route | Schedule (UTC) |
 |---|---|
 | `/api/cron/expire-contracts` | `0 22 * * *` |
+| `/api/cron/expire-proposals` | `10 22 * * *` (R2) |
 | `/api/cron/booking-reminders` | `30 22 * * *` (Scheduler Phase D) |
 | `/api/cron/prune-stripe-events` | `0 3 * * *` (Phase 2A) |
 | `/api/cron/automations-tick` | `* * * * *` (the workflow tick; keeps its legacy path because renaming a live cron endpoint is a needless outage risk) |
@@ -1124,7 +1155,9 @@ through a token the couple already holds (never an id from the body).
 | `decline_proposal(p_token, p_reason, p_message)` | `anon`, `authenticated` | Share-token gated; deletes an unsigned draft contract (owner-matched) and nulls `contract_id`; refuses once the contract is signed. |
 | `get_public_proposal(token)` | `anon` | Returns `pending_contract.sign_token` (the couple's own signer credential), `invoice.share_token`, the MC's `bank_*` and `stripe_connect_enabled`; `deposit_percent` is null whenever `payment_schedule_id` is set. `pending_contract` and `invoice` are owner-matched (`user_id = p.user_id`). |
 | `finalize_proposal_acceptance(p_token, p_invoice)` | service role only (`revoke ... from public, anon, authenticated`) | Signer-token gated; the invoice payload is computed server-side in `lib/proposals/finalize.ts`. Refuses `declined`, `not_signed`; owner-matches the existing-invoice read. |
-| `expire_proposals()` | service role only (`revoke ... from public, anon, authenticated`) | Daily cron stamp; the cron route is pending (Task 6). |
+| `expire_proposals()` | service role only (`revoke ... from public, anon, authenticated`) | Daily cron stamp; called by `/api/cron/expire-proposals` (pg_cron `zebri:expire-proposals`, 22:10 UTC, R2). |
+| `emit_automation_event(p_user_id, p_source_table, p_source_id, p_event_type, p_payload, p_couple_id)` | service role only (`revoke ... from public, anon, authenticated` in `20261002100000_revoke_emit_automation_event.sql`; `authenticated` held execute from `20260604000000` until the R2 fix wave) | The single sanctioned writer of `automation_events`. `security definer` and inserts whatever `p_user_id` it is handed, so the execute grant is the only tenant boundary. Every DB emitter (the `tg_*_emit_*` trigger family, `cancel_booking`, `reschedule_booking`) is itself `security definer` and calls it as the function owner; every app emitter (tick time emitters, `step-overdue`, the Stripe webhook) uses the service-role client. No client-side or user-scoped code path calls it. `tests/integration/proposals/lifecycle-events.test.ts` proves both the owner's and a stranger's authenticated session get `42501` and write nothing. |
+| `tg_proposals_emit_lifecycle()` | trigger only, execute revoked from `public, anon, authenticated` | `AFTER UPDATE` trigger on `proposals` (R2, migration `20261002000000_proposal_lifecycle_events.sql`). Returns early unless `tg_op = 'UPDATE'`; each of the five lifecycle events is gated by its own old-vs-new comparison (e.g. `new.accepted_at is not null and old.accepted_at is null`) so an `updated_at` touch or a `version` bump never re-emits. Not callable as an RPC; the PUBLIC execute grant is revoked anyway since the function writes `automation_events`. |
 | `record_proposal_events(p_token, p_session_id, p_events)` | `anon`, `authenticated` | Share-token gated (`for update` lock on the proposal row before computing `first_open`, closing a two-tabs-same-second race). Validates `p_session_id` and caps the batch at 50 events; unknown event types are silently dropped, not counted in `inserted`. Returns `{ ok, inserted, first_open }`. Proposals Phase D. |
 | `get_public_proposal_layout(token)` | `anon`, `authenticated` | Share-token gated (`share_token_enabled = true`), `stable`, no side effects (no view-count bump, unlike `get_public_proposal`). Returns the proposal's own `layout`, else `null`; `null` for a disabled or unknown token; no `proposal_templates` fallback at all (a template never renders on a couple's link, cross-tenant or not). Strips `page.passwordHash` from the returned jsonb with `#-` before it leaves the function, since the password gate runs server-side and the hash is never a public field. Proposal Layout v2 Phase 1 (`supabase/migrations/20260927000000_proposal_layout_v2.sql`). |
 
@@ -1525,7 +1558,7 @@ rows below cover it.
 | `availability_overrides` | ✅ | `user_id` | ✅ `tests/integration/rls/scheduling-tables.test.ts` (Scheduler Phase B) | Scheduler Phase B |
 | `meeting_type_availability_rules` | ✅ | `user_id` + `_owns_meeting_type(meeting_type_id)` on write | ✅ `tests/integration/rls/scheduling-tables.test.ts` (cross-tenant read/insert/update/delete denial, cross-parent insert denial, cascade on parent delete) | Per-type availability |
 | `automations` | ✅ | `user_id` | ✅ `tests/integration/automations/run-now.test.ts` (cross-tenant: cannot manually run another MC's automation) | Automations |
-| `automation_events` | ✅ (SELECT-only; writes via SECURITY DEFINER RPC + service-role) | `user_id` | ✅ exercised by `run-now.test.ts` (manual-fire event opens only the owner's run) | Automations |
+| `automation_events` | ✅ (SELECT-only; writes via SECURITY DEFINER RPC + service-role) | `user_id` | ✅ exercised by `run-now.test.ts` (manual-fire event opens only the owner's run) + `tests/integration/proposals/lifecycle-events.test.ts` (proposal rows: cross-tenant read denial, anon read returns nothing, cross-tenant update/delete are no-ops with the owner's row intact, and the `emit_automation_event` RPC refused to every authenticated session) | Automations |
 | `automation_actions` | ✅ | `automation_id` (→ `automations.user_id`) | ✅ exercised by `run-now.test.ts` | Automations |
 | `automation_runs` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cross-tenant retry/cancel/pause/resume are no-ops) | Automations |
 | `automation_waits` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cancel consumes; resume reads — exercised via the control actions) | Automations |

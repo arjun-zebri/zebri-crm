@@ -747,6 +747,18 @@ page always renders the latest saved version. `accepted` and
 Revert to draft is available from any non-draft, non-accepted status
 (`sent`, `viewed`, `declined`, `expired`), never from `accepted`.
 
+**Bus events (R2):** `tg_proposals_emit_lifecycle` (`AFTER UPDATE` on
+`proposals`) emits one automation-bus event per transition: the
+`share_token_enabled` flip emits `proposal_sent`, the first
+`first_viewed_at` stamp emits `proposal_opened`, the first `accepted_at`
+stamp emits `proposal_accepted`, the first `declined_at` stamp emits
+`proposal_declined`, and `status` becoming `expired` emits
+`proposal_expired`. `expire_proposals()` (the daily cron RPC) is what
+sets that last transition. See `workflows.md` → "Proposals (R2)" for
+the trigger specs, payload keys and the `proposal_expiring` time-based
+trigger, which is not part of this state machine (it fires on a lead
+time before `expires_at`, not on a status change).
+
 ## Dashboard surfaces (Phase A)
 
 - **Sidebar:** "Proposals", between Couples and Calendar.
@@ -782,7 +794,12 @@ Revert to draft is available from any non-draft, non-accepted status
 - **Couple profile:** a Proposals tab mirroring the Contracts tab.
 - **Send:** `app/api/email/send-proposal/route.ts` flips
   `share_token_enabled`, emails the couple, stamps `email_sent_at`, and
-  logs a `couple_emails` row.
+  logs a `couple_emails` row. The send itself lives in
+  `lib/proposals/send.ts` (`sendProposalToCouple`), shared verbatim by
+  this route and the `send_proposal` workflow action (R2): the route
+  keeps its own auth, rate-limit, Zod validation and HTTP response
+  shape, and the action keeps its own run-log skip reasons, around the
+  same guard (`proposalSendBlock`) and send call.
 - **Public page:** `app/proposal/[token]/page.tsx` composes
   `ProposalPageClient` (`app/proposal/[token]/_components/proposal-page.tsx`),
   the couple's full branded page-mode block tree with selection state
@@ -798,6 +815,18 @@ Revert to draft is available from any non-draft, non-accepted status
   is open until 1 December.", with today, tomorrow or a day count added
   only inside three days, since a day count on a date months away reads
   as a pushed deadline rather than a fact).
+
+## Workflows
+
+Proposals integrate with the Workflows engine as of R2: six triggers
+(`proposal_sent`, `proposal_opened`, `proposal_accepted`,
+`proposal_declined`, `proposal_expired`, `proposal_expiring`), the
+`send_proposal` action, and the `{{proposal.link}}` / `.number` /
+`.title` variables. Full detail (payload keys, the `days` lead time
+chip, the action's pick order and skip reasons, variable resolution
+order) lives in `.claude/docs/workflows.md` → "Proposals (R2)"; this
+doc stays the source of truth for the proposal's own state machine and
+data model.
 
 ## What Phases B-E add
 

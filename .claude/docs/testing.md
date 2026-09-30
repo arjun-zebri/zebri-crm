@@ -671,6 +671,43 @@ no-op on desktop, so one spec runs on both projects.
 live on a couple, so two bus events for one couple open **one**
 instance. A test expecting one per event is asserting the old engine.
 
+### Proposals in Workflows (R2, 2026-09-21)
+
+Feature doc: `.claude/docs/workflows.md` ("Proposals (R2)") and
+`.claude/docs/proposals.md` ("Workflows").
+
+Integration (local Supabase, real RLS):
+`tests/integration/proposals/lifecycle-events.test.ts` covers
+`tg_proposals_emit_lifecycle` (one bus row per guarded transition,
+never on a plain touch, cross-tenant read denial on `automation_events`).
+`tests/integration/automations/proposal-expiring-emitter.test.ts` covers
+`proposalExpiringEmitter` (lead times sourced from active trigger
+configs, the sent/viewed + `accepted_at is null` + `expires_at` match,
+`days_until_expiry` in the payload, per-day dedupe).
+`tests/integration/automations/send-proposal-action.test.ts` covers the
+`send_proposal` action against the real database (pick order, the three
+skip reasons, the status/`share_token_enabled` flip, the `couple_emails`
+row).
+
+Unit: `tests/unit/lib/automations/proposal-triggers.test.ts` (trigger
+match, the wedding-date chip family, the `days` schema default and
+bounds), `tests/unit/lib/automations/actions/send-proposal.test.ts`,
+`tests/unit/lib/automations/time-emitters/proposal-expiring.test.ts`,
+`tests/unit/lib/proposals/send.test.ts` (`proposalSendBlock`,
+`sendProposalToCouple`), `tests/unit/app/api/cron/expire-proposals.test.ts`
+(`isCronAuthorized`, the admin-client RPC call, the `cron_job_failed`
+alert on error).
+
+E2E: a test appended to `tests/e2e/proposals.spec.ts`, `accepting a
+proposal applies a "Proposal accepted" workflow`. Opt-in, needs two env
+vars on the target DB: `TEST_PROPOSAL_TOKEN` (a sent, unaccepted
+proposal owned by the e2e login user, with at least one option and a
+contract template) and `CRON_SECRET` (to drive the automations tick via
+`POST /api/cron/automations-tick`). Without either, the test skips. The
+run consumes the proposal: accepting it through the public flow stamps
+`accepted_at`, so the same token cannot be reused for a second run and
+needs reseeding before the next one.
+
 ### Proposals (2026-09-13, Phase A; Phase B page-mode surface 2026-09-14)
 
 Feature doc: `.claude/docs/proposals.md`.

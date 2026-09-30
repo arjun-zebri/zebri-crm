@@ -54,6 +54,7 @@ import {
   questionnaireFilters,
   sectionCompletedFilters,
 } from './portal-filters'
+import { PROPOSAL_EXPIRING_FILTERS } from './proposal-filters'
 import { taskCompletedFilters, taskCreatedFilters, taskOverdueFilters } from './step-filters'
 import { workflowCompletedFilters } from './workflow-filters'
 
@@ -99,6 +100,14 @@ const CHIP_TRIGGERS: Partial<
   contract_signed: () => EVENT_DATE_FILTERS,
   contract_declined: () => EVENT_DATE_FILTERS,
   contract_expired: () => EVENT_DATE_FILTERS,
+  // Proposals carry the same wedding-date payload as contracts; expiring
+  // adds its lead time.
+  proposal_sent: () => EVENT_DATE_FILTERS,
+  proposal_opened: () => EVENT_DATE_FILTERS,
+  proposal_accepted: () => EVENT_DATE_FILTERS,
+  proposal_declined: () => EVENT_DATE_FILTERS,
+  proposal_expired: () => EVENT_DATE_FILTERS,
+  proposal_expiring: () => PROPOSAL_EXPIRING_FILTERS,
   // Events + calendar
   event_created: () => EVENT_CREATED_FILTERS,
   event_updated: () => EVENT_UPDATED_FILTERS,

@@ -1,11 +1,12 @@
 /**
- * Preview modal for the `send_contract` and `send_invoice` steps.
+ * Preview modal for the `send_contract`, `send_invoice` and
+ * `send_proposal` steps.
  *
- * Both are zero-config: the handler picks the couple's most recent
- * contract or invoice and sends it as saved. Every field their old
- * schemas carried (`templateId`, `signersRequired`, `expiryDays`,
- * `customMessage`, the invoice's payment fields) was declared and
- * never read.
+ * All three are zero-config: the handler picks the couple's most
+ * recent contract, invoice or draft proposal and sends it as saved.
+ * Every field their old schemas carried (`templateId`,
+ * `signersRequired`, `expiryDays`, `customMessage`, the invoice's
+ * payment fields) was declared and never read.
  *
  * So there is nothing to fill in, and the only question worth
  * answering is what the couple receives. Same treatment as the
@@ -21,14 +22,14 @@ import { useMemo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
-import { contractHtml, invoiceHtml } from '@/lib/email/html'
+import { contractHtml, invoiceHtml, proposalHtml } from '@/lib/email/html'
 
 import { loadSenderIdentityAction } from '../actions'
 
 import { EmailPreview } from './email-preview'
 
 /** Which document the step sends. */
-export type DocumentKind = 'contract' | 'invoice'
+export type DocumentKind = 'contract' | 'invoice' | 'proposal'
 
 /** Stands in for the couple and document the run will be about. */
 const SAMPLE_COUPLE = 'Sam & Alex'
@@ -39,9 +40,32 @@ interface Props {
   kind: DocumentKind
 }
 
-const COPY: Record<DocumentKind, { title: string; number: string; docTitle: string }> = {
-  contract: { title: 'Send contract', number: 'CTR-001', docTitle: 'Wedding MC agreement' },
-  invoice: { title: 'Send invoice', number: 'INV-001', docTitle: 'Wedding MC services' },
+const COPY: Record<
+  DocumentKind,
+  { title: string; number: string; docTitle: string; subject: string; what: string; note?: string }
+> = {
+  contract: {
+    title: 'Send contract',
+    number: 'CTR-001',
+    docTitle: 'Wedding MC agreement',
+    subject: 'Contract',
+    what: 'most recent contract',
+  },
+  invoice: {
+    title: 'Send invoice',
+    number: 'INV-001',
+    docTitle: 'Wedding MC services',
+    subject: 'Invoice',
+    what: 'most recent invoice',
+  },
+  proposal: {
+    title: 'Send proposal',
+    number: 'PR-001',
+    docTitle: 'Wedding MC proposal',
+    subject: 'A proposal',
+    what: 'most recent draft proposal',
+    note: "It sends the couple's draft only, so inside a workflow started by a proposal event (sent, opened, accepted, declined or expired) this step will skip.",
+  },
 }
 
 export function DocumentComposerModal({ isOpen, onClose, kind }: Props) {
@@ -60,8 +84,9 @@ export function DocumentComposerModal({ isOpen, onClose, kind }: Props) {
       shareUrl: `https://app.zebri.com.au/${kind}/…`,
       mcBusinessName: businessName,
     }
-    return kind === 'contract'
-      ? contractHtml(
+    switch (kind) {
+      case 'contract':
+        return contractHtml(
           {
             ...shared,
             contractNumber: copy.number,
@@ -70,7 +95,8 @@ export function DocumentComposerModal({ isOpen, onClose, kind }: Props) {
           },
           identity?.branding ?? null,
         )
-      : invoiceHtml(
+      case 'invoice':
+        return invoiceHtml(
           {
             ...shared,
             invoiceNumber: copy.number,
@@ -79,6 +105,17 @@ export function DocumentComposerModal({ isOpen, onClose, kind }: Props) {
           },
           identity?.branding ?? null,
         )
+      case 'proposal':
+        return proposalHtml(
+          { ...shared, proposalNumber: copy.number, proposalTitle: copy.docTitle, expiresAt: null },
+          identity?.branding ?? null,
+        )
+      default: {
+        // A new DocumentKind must pick a template here, not render blank.
+        const exhaustive: never = kind
+        return exhaustive
+      }
+    }
   }, [kind, businessName, identity, copy])
 
   return (
@@ -95,13 +132,14 @@ export function DocumentComposerModal({ isOpen, onClose, kind }: Props) {
     >
       <div className="space-y-4">
         <p className="text-body text-text-muted">
-          Sends the couple&apos;s most recent {kind} when this step runs, and turns on its share
-          link if it is off. There is nothing to configure.
+          Sends the couple&apos;s {copy.what} when this step runs, and turns on its share link if
+          it is off. There is nothing to configure.
+          {copy.note ? ` ${copy.note}` : null}
         </p>
 
         <EmailPreview
           ready={identity !== undefined}
-          subject={`${kind === 'contract' ? 'Contract' : 'Invoice'} from ${businessName} - ${copy.number}`}
+          subject={`${copy.subject} from ${businessName} - ${copy.number}`}
           html={previewHtml}
           frameTitle={`${kind} email preview`}
           caption={`Shown with a sample couple and ${kind}.`}
