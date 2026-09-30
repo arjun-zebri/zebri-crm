@@ -4730,6 +4730,23 @@ export type Database = {
         Args: { p_template_id: string }
         Returns: boolean
       }
+      _proposal_open_gaps: {
+        Args: never
+        Returns: {
+          gap_seconds: number
+          proposal_id: string
+          template_id: string
+        }[]
+      }
+      _proposal_revenue: {
+        Args: never
+        Returns: {
+          accepted_at: string
+          proposal_id: string
+          revenue: number
+          template_id: string
+        }[]
+      }
       _resolve_contract_token: {
         Args: { p_token: string }
         Returns: {
@@ -4959,6 +4976,25 @@ export type Database = {
       mfa_satisfied: { Args: never; Returns: boolean }
       revoke_expired_shadow_sessions: { Args: never; Returns: number }
       peek_signer_otp: { Args: { p_token: string }; Returns: Json }
+      proposal_account_summary: {
+        Args: never
+        Returns: {
+          accepted: number
+          median_open_seconds: number
+          revenue_this_month: number
+          sent: number
+        }[]
+      }
+      proposal_template_performance: {
+        Args: never
+        Returns: {
+          accepted: number
+          median_open_seconds: number
+          revenue: number
+          sent: number
+          template_id: string
+        }[]
+      }
       record_contract_view: {
         Args: {
           p_actor_ip?: string
