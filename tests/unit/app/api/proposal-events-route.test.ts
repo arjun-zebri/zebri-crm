@@ -106,6 +106,15 @@ describe('POST /api/proposal/events', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it('forwards a v2 section_viewed to the RPC unchanged', async () => {
+    rpc.mockResolvedValue({ data: { ok: true, inserted: 1, first_open: false }, error: null });
+    const v2 = { id: 'ev-9', type: 'section_viewed', payload: { sectionId: 's-1', sectionKind: 'content', pageId: 'p-1', seconds: 4 } };
+    const res = await POST(req({ ...body, events: [v2] }));
+    expect(res.status).toBe(200);
+    const args = rpc.mock.calls[0]![1] as { p_events: unknown };
+    expect(args.p_events).toEqual([v2]);
+  });
+
   it('passes RPC errors through as 400 and records a token miss on not_found', async () => {
     rpc.mockResolvedValue({ data: { error: 'not_found' }, error: null });
     const res = await POST(req(body));

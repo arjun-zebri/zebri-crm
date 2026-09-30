@@ -33,4 +33,24 @@ describe('engagement event schemas', () => {
     expect(eventsBodySchema.safeParse({ token, sessionId: 'short', events: [one] }).success).toBe(false)
     expect(eventsBodySchema.safeParse({ token, sessionId: 'abcdefgh', events: Array(51).fill(one) }).success).toBe(false)
   })
+  it('accepts a v2 section_viewed with a page id', () => {
+    const r = engagementEventSchema.safeParse({ id: 'e1', type: 'section_viewed', payload: { sectionId: 's-1', sectionKind: 'content', pageId: 'p-1', seconds: 4 } })
+    expect(r.success).toBe(true)
+  })
+  it('accepts a v2 section_viewed without a page id (scroll flow)', () => {
+    expect(engagementEventSchema.safeParse({ id: 'e1', type: 'section_viewed', payload: { sectionId: 's-1', sectionKind: 'faq', seconds: 4 } }).success).toBe(true)
+  })
+  it('still accepts a v1 section_viewed', () => {
+    expect(engagementEventSchema.safeParse({ id: 'e1', type: 'section_viewed', payload: { blockId: 'b', blockType: 'hero', seconds: 1 } }).success).toBe(true)
+  })
+  it('rejects a section_viewed mixing v1 and v2 keys', () => {
+    expect(engagementEventSchema.safeParse({ id: 'e1', type: 'section_viewed', payload: { blockId: 'b', sectionId: 's', blockType: 'hero', seconds: 1 } }).success).toBe(false)
+  })
+  it('accepts opened with a device, and with none', () => {
+    expect(engagementEventSchema.safeParse({ id: 'e1', type: 'opened', payload: { device: 'phone' } }).success).toBe(true)
+    expect(engagementEventSchema.safeParse({ id: 'e1', type: 'opened', payload: {} }).success).toBe(true)
+  })
+  it('rejects an unknown device', () => {
+    expect(engagementEventSchema.safeParse({ id: 'e1', type: 'opened', payload: { device: 'fridge' } }).success).toBe(false)
+  })
 })

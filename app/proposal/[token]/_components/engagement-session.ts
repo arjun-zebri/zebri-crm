@@ -9,6 +9,8 @@
  *
  * @module app/proposal/[token]/_components/engagement-session
  */
+import type { DeviceKind } from '@/lib/proposals/engagement-events'
+
 /** Prefix for the `sessionStorage` key a session id is cached under, namespaced per token so two proposal tabs never share an id. */
 export const SESSION_KEY_PREFIX = 'proposal-session:'
 
@@ -131,4 +133,15 @@ export function visibleSecondsLedger(): VisibleLedger {
       return out
     },
   }
+}
+
+/**
+ * Coarse device class from the viewport width at open. Width, not user
+ * agent: it is what decides the layout the couple actually saw, and it
+ * needs no parsing. Breakpoints match Tailwind's `sm` (640) and `lg` (1024).
+ */
+export function deviceKind(width: number): DeviceKind {
+  if (width < 640) return 'phone'
+  if (width < 1024) return 'tablet'
+  return 'desktop'
 }
