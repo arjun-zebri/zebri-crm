@@ -35,6 +35,11 @@ export const ENGAGEMENT_EVENT_TYPES = [
 /** One of {@link ENGAGEMENT_EVENT_TYPES}. */
 export type EngagementEventType = (typeof ENGAGEMENT_EVENT_TYPES)[number]
 
+/** Coarse device class, read once per session from the viewport when the page opens. */
+export const DEVICE_KINDS = ['phone', 'tablet', 'desktop'] as const
+/** See {@link DEVICE_KINDS}. */
+export type DeviceKind = (typeof DEVICE_KINDS)[number]
+
 /** Steps of the accept stepper, in the order a couple moves through them. */
 export const ACCEPT_STEPS = ['choose', 'sign', 'pay', 'done'] as const
 
@@ -43,14 +48,21 @@ export const ACCEPT_STEPS = ['choose', 'sign', 'pay', 'done'] as const
  * `engagement-bus.ts`, or the tracker's own `opened`/view events).
  *
  * Discriminated on `type`; each variant's `payload` carries only what that
- * event needs. `opened` and `accepted` carry no data of their own (the
- * session id and timestamp identify them), so their payload type is
- * `Record<string, never>`. See the module doc above for the `id` that is
+ * event needs. `accepted` carries no data of its own (the session id and
+ * timestamp identify it), so its payload type is `Record<string, never>`.
+ * `opened` carries an optional {@link DeviceKind}. `section_viewed` is
+ * either v1 (`blockId`/`blockType`, the block tree) or v2 (`sectionId`/
+ * `sectionKind`/optional `pageId`, Layout v2 sections). See the module doc above for the `id` that is
  * added when this is queued for delivery.
  */
 export type EngagementEvent =
-  | { type: 'opened'; payload: Record<string, never> }
-  | { type: 'section_viewed'; payload: { blockId: string; blockType: string; seconds: number } }
+  | { type: 'opened'; payload: { device?: DeviceKind | undefined } }
+  | {
+      type: 'section_viewed'
+      payload:
+        | { blockId: string; blockType: string; seconds: number }
+        | { sectionId: string; sectionKind: string; pageId?: string | undefined; seconds: number }
+    }
   | { type: 'package_viewed'; payload: { optionId: string; seconds: number } }
   | { type: 'package_selected'; payload: { optionId: string } }
   | { type: 'addon_toggled'; payload: { itemId: string; on: boolean } }
@@ -74,6 +86,9 @@ export type QueuedEngagementEvent = EngagementEvent & { id: string }
 // unavailable.
 const id = z.string().min(1).max(64)
 const seconds = z.number().min(0).max(3600)
+// The explicit `| undefined` on optional payload keys in the types above
+// matches what Zod infers for `.optional()`, so the schema satisfies the
+// type under exactOptionalPropertyTypes.
 const emptyPayload = z.object({}).strict()
 
 /**
@@ -82,11 +97,17 @@ const emptyPayload = z.object({}).strict()
  * validated by the route (or the RPC) already has one.
  */
 export const engagementEventSchema: z.ZodType<QueuedEngagementEvent> = z.discriminatedUnion('type', [
-  z.object({ id, type: z.literal('opened'), payload: emptyPayload }),
+  z.object({ id, type: z.literal('opened'), payload: z.object({ device: z.enum(DEVICE_KINDS).optional() }).strict() }),
   z.object({
     id,
     type: z.literal('section_viewed'),
-    payload: z.object({ blockId: id, blockType: id, seconds }).strict(),
+    // v1 (block tree) and v2 (Layout v2 sections) both ride this type, so
+    // rows written before and after R4 aggregate together. `.strict()` on
+    // each side stops a payload mixing the two shapes.
+    payload: z.union([
+      z.object({ blockId: id, blockType: id, seconds }).strict(),
+      z.object({ sectionId: id, sectionKind: id, pageId: id.optional(), seconds }).strict(),
+    ]),
   }),
   z.object({
     id,

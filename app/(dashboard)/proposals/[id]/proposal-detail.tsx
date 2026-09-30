@@ -20,6 +20,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatePill } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
+import { PROPOSAL_ANALYTICS_QUERY_KEY } from '@/features/proposals';
 
 import { ProposalEngagement } from './proposal-engagement';
 import { ProposalOptionsSummary } from './proposal-options-summary';
@@ -69,6 +70,7 @@ export function ProposalDetail({ proposal: p, onEdit, onChanged }: ProposalDetai
         return;
       }
       void queryClient.invalidateQueries({ queryKey: PROPOSALS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: PROPOSAL_ANALYTICS_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: ['proposal', p.id] });
       void queryClient.invalidateQueries({ queryKey: ['couple-proposals', p.couple.id] });
       toast('Reverted to draft', 'success');

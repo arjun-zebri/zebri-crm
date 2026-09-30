@@ -42,7 +42,8 @@ const proposal: ProposalDetailRow = {
   last_viewed_at: '2026-09-03T00:00:00Z', view_count: 4, created_at: '2026-09-01T00:00:00Z',
   updated_at: '2026-09-03T00:00:00Z',
   share_token: 'tok', share_token_enabled: true, declined_reason: null, declined_message: null,
-  contract_id: null, invoice_id: null, template_id: null, couple: { id: 'c1', name: 'Anna & Jake' },
+  contract_id: null, invoice_id: null, template_id: null, layout: null, accepted_option_id: null,
+  couple: { id: 'c1', name: 'Anna & Jake' },
   proposal_options: [{ id: 'opt1', subtotal: 1500, is_popular: true, position: 1, title: 'Full day' }],
 };
 

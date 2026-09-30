@@ -22,6 +22,7 @@ import { Empty } from '@/components/ui/empty'
 import { ErrorState } from '@/components/ui/error-state'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 
+import { PROPOSAL_ANALYTICS_QUERY_KEY } from '../analytics/query-key'
 import { getProposalDesignAction, type ProposalDesignRecord } from '../data/proposals'
 
 import { EditorSkeleton } from './editor-skeleton'
@@ -136,6 +137,7 @@ export function ProposalEditor({ proposalId, userId }: ProposalEditorProps) {
       onChanged={() => {
         void qc.invalidateQueries({ queryKey: queryKey(proposalId) })
         void qc.invalidateQueries({ queryKey: PROPOSALS_LIST_QUERY_KEY })
+        void qc.invalidateQueries({ queryKey: PROPOSAL_ANALYTICS_QUERY_KEY })
       }}
     />
   )

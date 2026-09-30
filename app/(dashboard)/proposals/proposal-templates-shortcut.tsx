@@ -14,12 +14,16 @@ import { FileText, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Empty } from '@/components/ui/empty';
 import { ErrorState } from '@/components/ui/error-state';
+import type { TemplateStats } from '@/features/proposals';
 
-import { SAMPLE_TEMPLATE_STATS } from './analytics-placeholders';
 import { TemplateCards } from './templates/template-cards';
 import { TemplateCardsSkeleton } from './templates/template-cards-skeleton';
 import { TemplateStatsChips } from './templates/template-stats-chips';
 import { useProposalTemplates } from './templates/use-proposal-templates';
+import { useTemplatePerformance } from './use-proposal-analytics';
+
+/** The honest "nothing sent" shape: the chips render nothing for it. */
+const EMPTY_STATS: TemplateStats = { sent: 0, accepted: 0, revenue: 0, medianOpenSeconds: null };
 
 export interface ProposalTemplatesShortcutProps {
   /** Opens the New template flow, for the empty state's own button. */
@@ -29,6 +33,9 @@ export interface ProposalTemplatesShortcutProps {
 /** Every proposal template, as cards. See {@link ProposalTemplatesShortcutProps}. */
 export function ProposalTemplatesShortcut({ onNewTemplate }: ProposalTemplatesShortcutProps) {
   const query = useProposalTemplates();
+  // A failed figures query must not fail the card grid: fall back to empty
+  // stats and the chips simply do not render.
+  const perf = useTemplatePerformance();
 
   if (query.isLoading) return <TemplateCardsSkeleton />;
   if (query.error) {
@@ -53,16 +60,10 @@ export function ProposalTemplatesShortcut({ onNewTemplate }: ProposalTemplatesSh
     );
   }
 
-  // Placeholder outcomes per card (sample data, no pill) until
-  // `proposals.template_id` is written and real per-template figures
-  // exist; see analytics-placeholders.ts. Cards past the sample set carry
-  // no chips, the honest "nothing sent" shape.
   return (
     <TemplateCards
       templates={query.data}
-      overlay={(_t, i) => (
-        <TemplateStatsChips stats={SAMPLE_TEMPLATE_STATS[i] ?? { sent: 0, accepted: 0, revenue: 0 }} />
-      )}
+      overlay={(t) => <TemplateStatsChips stats={perf.data?.[t.id] ?? EMPTY_STATS} />}
     />
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { type EngagementRow, sessionTimelines, summarizeEngagement } from '@/lib/proposals/engagement'
-import { blockTypeLabel, formatSeconds, stepLabel } from '@/lib/proposals/engagement-labels'
+import { blockTypeLabel, formatSeconds, stepLabel } from '@/features/proposals/analytics/labels'
+import { type EngagementRow, sectionTotals, sessionTimelines, summarizeEngagement } from '@/features/proposals/analytics/summary'
 
 const at = (m: number) => new Date(Date.UTC(2026, 8, 15, 10, m)).toISOString()
 const rows: EngagementRow[] = [
@@ -35,8 +35,8 @@ describe('summarizeEngagement', () => {
     expect(s.lastSeenAt).toBe(at(40))
     expect(s.totalSeconds).toBe(56)
     expect(s.sections).toEqual([
-      { blockId: 'p', blockType: 'packages', seconds: 40 },
-      { blockId: 'h', blockType: 'hero', seconds: 16 },
+      { id: 'p', kind: 'packages', seconds: 40 },
+      { id: 'h', kind: 'hero', seconds: 16 },
     ])
     expect(s.packages).toEqual([
       { optionId: 'o2', seconds: 25, selected: 1 },
@@ -68,13 +68,28 @@ describe('summarizeEngagement', () => {
   })
 })
 
+describe('sectionTotals', () => {
+  it('folds v1 (blockId) and v2 (sectionId) rows into one id / kind pair', () => {
+    const rows: EngagementRow[] = [
+      { session_id: 'a', type: 'section_viewed', payload: { blockId: 'x', blockType: 'hero', seconds: 4 }, created_at: at(1) },
+      { session_id: 'a', type: 'section_viewed', payload: { sectionId: 'y', sectionKind: 'faq', pageId: 'p1', seconds: 6 }, created_at: at(2) },
+      { session_id: 'b', type: 'section_viewed', payload: { sectionId: 'y', sectionKind: 'faq', seconds: 1 }, created_at: at(3) },
+      { session_id: 'b', type: 'section_viewed', payload: { seconds: 9 }, created_at: at(4) },
+    ]
+    expect(sectionTotals(rows)).toEqual([
+      { id: 'y', kind: 'faq', seconds: 7 },
+      { id: 'x', kind: 'hero', seconds: 4 },
+    ])
+  })
+})
+
 describe('sessionTimelines', () => {
   it('builds one timeline per session, newest first, with steps in order and the outcome', () => {
     const t = sessionTimelines(rows)
     expect(t.map((x) => x.sessionId)).toEqual(['c', 'b', 'a'])
     expect(t[1]).toMatchObject({ sessionId: 'b', startedAt: at(30), endedAt: at(35), seconds: 5, steps: ['choose', 'sign', 'pay', 'done'], outcome: 'accepted', selectedOptionId: null })
     expect(t[2]).toMatchObject({ sessionId: 'a', seconds: 50, steps: ['choose', 'sign'], selectedOptionId: 'o2', outcome: null })
-    expect(t[2]?.sections[0]).toEqual({ blockId: 'p', blockType: 'packages', seconds: 40 })
+    expect(t[2]?.sections[0]).toEqual({ id: 'p', kind: 'packages', seconds: 40 })
   })
   it('honours the limit', () => {
     expect(sessionTimelines(rows, 1)).toHaveLength(1)

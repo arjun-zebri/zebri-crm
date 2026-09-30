@@ -1805,6 +1805,26 @@ once there's an outcome, and a calm newest-first timeline of every
 session. Empty state ("No opens yet") until the first open. Full
 model: `.claude/docs/proposals.md` (Phase D).
 
+**Drill-down** (R4 2026-09-30, `proposal-engagement-v2.tsx`, v2 layouts
+only; a v1 proposal keeps the top-four bars above): under the facts
+line, three blocks from the same `proposal_events` rows.
+**Reading by section** (`proposal-section-engagement.tsx`): every
+section in page order except page breaks, with a time bar, the seconds,
+and "N% reached" (the share of sessions that saw it or anything after
+it); the row with the biggest reach drop is `text-warning` and, from 3
+sessions, a muted line says "Most readers leave around X". The block is
+hidden when no event matched a layout section (visits from before R4).
+**Packages** (`proposal-package-comparison.tsx`): one row per option
+with a bar, "N views · time", a success "Chosen" pill on the accepted
+option only, or an info "Selected" pill on the package the couple last
+clicked on an unaccepted proposal, plus "Lingered on X, chose Y" (or
+"selected Y") when those differ. **Devices**
+(`proposal-device-split.tsx`): "3 sessions: 2 phone, 1 desktop" with
+icons; an `unknown` bucket only when non-zero. Below `sm`, section and
+package rows wrap so the bar gets its own full-width line. Loading,
+error and empty come from the Engagement wrapper above, so a proposal
+nobody has opened shows "No opens yet", never `0%` or `NaN%`.
+
 **Builder** (`components/builders/proposal-builder-modal.tsx`): couple
 picker + expiry via `BuilderMetaRow` (shared with Quote/Invoice), title
 input (placeholder "Anna & Jake, your wedding"), intro note, options
@@ -1859,10 +1879,18 @@ Templates, Analytics, Settings) under `proposals-nav.tsx` — Templates
 duplicated the sidebar's Templates hub, and Analytics/Settings were
 still `Empty`-state placeholders — with one page:
 
-- **Stats row** (`proposals-stats-row.tsx`): four cards — Total, Sent,
-  Viewed, Accepted — computed from the already-fetched list
-  (`computeProposalStats`, `proposals-stats.ts`). No trend/delta; there
-  is no historical comparison data yet.
+- **Account strip** (`proposals-stats-row.tsx`, R4 2026-09-30): three
+  cards, Acceptance rate, Median time to open and Accepted this month,
+  from the `proposal_account_summary()` SQL function
+  (`useAccountSummary` in `use-proposal-analytics.ts`). A figure with
+  nothing behind it (nothing sent, nothing opened) is an en dash with a
+  tooltip ("Nothing sent yet", "No opens yet"), never "0%" or "0s"; a
+  failed first read is a compact `ErrorState` with Retry, while a failed
+  background refetch keeps the figures already on screen. Not fetched
+  at all while the Layout v2 flag is off. "This month" is the
+  MC's own calendar month (`user_public_settings.timezone`). No
+  trend/delta. Definitions: `.claude/docs/proposals.md` ("R4
+  analytics").
 - **Drafts strip** (`proposal-drafts-strip.tsx`, T8 2026-09-23): under
   the stats, a bordered card headed "N drafts in progress" listing the
   three most recently edited `draft` proposals (couple name, "Edited 2h
@@ -1895,7 +1923,11 @@ still `Empty`-state placeholders — with one page:
   thumbnail's top-right corner; the outcomes (sent / accepted / won)
   are icon chips over its top-left, each with the full reading in a
   tooltip, and no chips at all when nothing has been sent. No "Sample
-  data" pill (the figures are still placeholders).
+  data" pill. Since R4 the chips are real, from
+  `proposal_template_performance()` (`useTemplatePerformance`): sent,
+  acceptance, revenue won, and a clock chip for the median time from
+  send to first open once any proposal from the template has been
+  opened.
 
 Full model: `.claude/docs/proposals.md` ("Layout v2 (single-page
 consolidation)").

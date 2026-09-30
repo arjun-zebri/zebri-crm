@@ -104,7 +104,7 @@ describe('EngagementTracker', () => {
     vi.advanceTimersByTime(10_000)
     const body = lastPostedBody(fetchMock)
     expect(body.events).toContainEqual(expect.objectContaining({ type: 'package_selected', payload: { optionId: 'o1' } }))
-    expect(body.events).toContainEqual(expect.objectContaining({ type: 'opened', payload: {} }))
+    expect(body.events).toContainEqual(expect.objectContaining({ type: 'opened', payload: { device: expect.any(String) } }))
   })
 
   it('4. pagehide flushes via sendBeacon instead of fetch', () => {
@@ -174,7 +174,7 @@ describe('EngagementTracker', () => {
     await vi.advanceTimersByTimeAsync(10_000)
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const second = lastPostedBody(fetchMock)
-    expect(second.events).toContainEqual(expect.objectContaining({ type: 'opened', payload: {} }))
+    expect(second.events).toContainEqual(expect.objectContaining({ type: 'opened', payload: { device: expect.any(String) } }))
     // The single most important detail this fix depends on: a requeued
     // retry must NOT mint a fresh id, or the server could never tell it
     // apart from a new event and the dedup constraint would never fire.
@@ -199,5 +199,43 @@ describe('EngagementTracker', () => {
     unmount()
     expect(sendBeacon).toHaveBeenCalledTimes(1)
     expect(sendBeacon).toHaveBeenCalledWith('/api/proposal/events', expect.any(Blob))
+  })
+
+  it('11. v2 sections report their kind and page id (when inside a page), and opened carries the device', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 })
+    const page = document.createElement('div')
+    page.setAttribute('data-page-id', 'p-1')
+    const s1 = document.createElement('section')
+    s1.setAttribute('data-section-id', 's-1')
+    s1.setAttribute('data-section-kind', 'content')
+    page.append(s1)
+    const s2 = document.createElement('section')
+    s2.setAttribute('data-section-id', 's-2')
+    s2.setAttribute('data-section-kind', 'faq')
+    document.body.append(page, s2)
+
+    render(<EngagementTracker token={token} enabled />)
+    observerFor(s1).fire(s1, true)
+    observerFor(s2).fire(s2, true)
+    vi.advanceTimersByTime(10_000)
+
+    const body = lastPostedBody(fetchMock)
+    expect(body.events).toContainEqual(expect.objectContaining({ type: 'section_viewed', payload: { sectionId: 's-1', sectionKind: 'content', pageId: 'p-1', seconds: expect.any(Number) } }))
+    expect(body.events).toContainEqual(expect.objectContaining({ type: 'section_viewed', payload: { sectionId: 's-2', sectionKind: 'faq', seconds: expect.any(Number) } }))
+    expect(body.events).toContainEqual(expect.objectContaining({ type: 'opened', payload: { device: 'desktop' } }))
+
+    document.body.removeChild(page)
+    document.body.removeChild(s2)
+  })
+
+  it.each([
+    [390, 'phone'],
+    [800, 'tablet'],
+    [1280, 'desktop'],
+  ])('12. a %ipx viewport opens as %s', (width, device) => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+    render(<EngagementTracker token={token} enabled />)
+    vi.advanceTimersByTime(10_000)
+    expect(lastPostedBody(fetchMock).events[0]).toMatchObject({ type: 'opened', payload: { device } })
   })
 })

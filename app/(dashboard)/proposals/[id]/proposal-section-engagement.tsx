@@ -4,25 +4,30 @@
  * far enough to see it). Reach falls as the page goes on; the biggest
  * step down is where readers leave, and that row is marked.
  *
- * Placeholder: renders {@link SectionEngagementRow}s, and today the caller
- * passes `SAMPLE_SECTION_ENGAGEMENT`. Real rows come from `section_viewed`
- * seconds (already recorded) plus per-session first-seen sets for reach.
+ * Renders the {@link SectionEngagementRow}s built by `sectionReport`
+ * (`@/features/proposals`) from the proposal's `section_viewed` events.
  *
  * @module app/(dashboard)/proposals/[id]/proposal-section-engagement
  */
 'use client';
 
-import { StatePill } from '@/components/ui/state-pill';
-import { formatSeconds } from '@/lib/proposals/engagement-labels';
-
-import type { SectionEngagementRow } from '../analytics-placeholders';
+import type { SectionEngagementRow } from '@/features/proposals';
+import { formatSeconds } from '@/features/proposals';
 
 export interface ProposalSectionEngagementProps {
   /** Sections in page order. */
   rows: SectionEngagementRow[];
-  /** True while the rows are sample data; shows the "Sample data" pill. */
-  sample?: boolean;
+  /** Distinct sessions behind the rows; the "where readers leave" line needs {@link MIN_SESSIONS_FOR_DROP}. */
+  sessions: number;
 }
+
+/**
+ * Sessions needed before the page names where "most readers" leave. With
+ * one or two visits the biggest drop is one person closing a tab, and
+ * calling that "most readers" overstates it. The row still turns warning
+ * colour; only the sentence waits.
+ */
+export const MIN_SESSIONS_FOR_DROP = 3;
 
 /** Index of the row whose reach fell the most from the row before it, or -1 when reach never drops. */
 export function biggestDropIndex(rows: SectionEngagementRow[]): number {
@@ -41,7 +46,7 @@ export function biggestDropIndex(rows: SectionEngagementRow[]): number {
 }
 
 /** See {@link ProposalSectionEngagementProps}. */
-export function ProposalSectionEngagement({ rows, sample }: ProposalSectionEngagementProps) {
+export function ProposalSectionEngagement({ rows, sessions }: ProposalSectionEngagementProps) {
   // Bars are relative to the longest-read section, matching the existing
   // top-sections bars in proposal-engagement.tsx: a short glance and a
   // long read should both fill the bar for their own top section.
@@ -50,15 +55,15 @@ export function ProposalSectionEngagement({ rows, sample }: ProposalSectionEngag
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <h3 className="text-body font-medium text-text">Reading by section</h3>
-        {sample ? <StatePill label="Sample data" tone="neutral" /> : null}
-      </div>
+      <h3 className="text-body font-medium text-text">Reading by section</h3>
       <div className="space-y-1.5">
         {rows.map((r, i) => (
-          <div key={r.id} className="flex items-center gap-3">
-            <span className="w-40 shrink-0 truncate text-body text-text-muted">{r.label}</span>
-            <div className="h-2 flex-1 rounded-control bg-surface-muted">
+          // Same phone layout as the package rows: below `sm` the bar gets
+          // its own line, since the fixed label, time and reach columns
+          // alone fill a 390px screen and left the bar 0px wide.
+          <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
+            <span className="min-w-0 flex-1 truncate text-body text-text-muted sm:w-40 sm:flex-none">{r.label}</span>
+            <div className="order-last h-2 w-full rounded-control bg-surface-muted sm:order-none sm:w-auto sm:flex-1">
               {/* Width is the one data-driven value (share of the top
                   section's seconds); colour and radius come from tokens. */}
               <div className="h-2 rounded-control bg-brand-fg" style={{ width: `${Math.round((r.seconds / maxSeconds) * 100)}%` }} />
@@ -70,7 +75,7 @@ export function ProposalSectionEngagement({ rows, sample }: ProposalSectionEngag
           </div>
         ))}
       </div>
-      {dropAt >= 0 ? (
+      {dropAt >= 0 && sessions >= MIN_SESSIONS_FOR_DROP ? (
         <p className="text-body text-text-subtle">Most readers leave around {rows[dropAt]?.label}.</p>
       ) : null}
     </div>

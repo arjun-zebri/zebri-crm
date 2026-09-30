@@ -713,6 +713,32 @@ role chooser once and renders the page canvas, and that a sent
 proposal's public page renders in page mode with a selectable package
 and an accept dialog.
 
+E2E (R4 analytics, 2026-09-30): `tests/e2e/proposal-analytics.spec.ts`
+(chromium, Mobile Chrome, Mobile Safari). Skipped unless both
+`TEST_PROPOSAL_TOKEN` (the `share_token`) and `TEST_PROPOSAL_ID` (the
+`id`; the public page never exposes it) are set, for a **sent Layout v2
+proposal owned by the e2e login**. It reads the detail page's session
+count as a baseline, opens the public link as a logged-out visitor in
+a fresh `browser.newContext()` (a shared context carries the owner's
+cookies and `record_proposal_events` records nothing for the owner),
+walks every `[data-section-id]`, waits 3 seconds, then navigates to
+`about:blank` so `pagehide` flushes the beacon. Back as the owner it
+reloads until the session count has gone up (the proposal is reused
+across runs, so "the report is visible" alone would pass on an older
+run's rows), then expects "Reading by section" and a first-row reach of
+at least 1%.
+
+Two harness gotchas this spec works around: `mouse.wheel` is not
+supported in mobile WebKit (walk sections with `scrollIntoViewIfNeeded`
+instead), and Playwright WebKit's `page.close()` does not fire
+`pagehide` (navigate away instead; a real iPhone does fire it). Closing
+the context straight after the navigation can also tear down a
+just-queued beacon, so the spec waits 2 seconds first.
+
+Unit (R4): `tests/unit/app/proposals/proposal-engagement-rows-phone.test.tsx`
+pins the phone layout of the drill-down rows (row wraps below `sm`, bar
+on its own full-width line, pill column wide enough for "Chosen").
+
 **Selector notes:**
 - The "New proposal" button in `proposals-header.tsx` carries an
   explicit `aria-label="New proposal"`: its visible text collapses to

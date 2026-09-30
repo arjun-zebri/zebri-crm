@@ -3,15 +3,16 @@
  *
  * @module app/(dashboard)/proposals/[id]/proposal-engagement-timeline
  */
-import type { EngagementRow } from '@/lib/proposals/engagement';
-import { sessionTimelines } from '@/lib/proposals/engagement';
-import { blockTypeLabel, formatSeconds, stepLabel } from '@/lib/proposals/engagement-labels';
+import type { EngagementRow } from '@/features/proposals';
+import { blockTypeLabel, formatSeconds, sessionTimelines, stepLabel } from '@/features/proposals';
 
 export interface ProposalEngagementTimelineProps {
   /** Raw engagement rows for one proposal, any order. */
   rows: EngagementRow[];
   /** Option id -> option title, so a session's chosen package reads by name. */
   optionTitles: Record<string, string>;
+  /** Layout v2 section id -> the layout's own label; absent for a v1 proposal. */
+  sectionLabels?: Record<string, string>;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface ProposalEngagementTimelineProps {
  * No boxes-in-boxes, matching the rest of the detail page. Renders
  * `null` when there are no sessions so the caller needs no extra check.
  */
-export function ProposalEngagementTimeline({ rows, optionTitles }: ProposalEngagementTimelineProps) {
+export function ProposalEngagementTimeline({ rows, optionTitles, sectionLabels }: ProposalEngagementTimelineProps) {
   const timelines = sessionTimelines(rows);
   if (timelines.length === 0) return null;
 
@@ -41,7 +42,7 @@ export function ProposalEngagementTimeline({ rows, optionTitles }: ProposalEngag
         const line = [when, formatSeconds(t.seconds), chose, furthestStep ? stepLabel(furthestStep) : null]
           .filter((part): part is string => Boolean(part))
           .join(' · ');
-        const topSections = t.sections.slice(0, 3).map((s) => blockTypeLabel(s.blockType)).join(', ');
+        const topSections = t.sections.slice(0, 3).map((s) => sectionLabels?.[s.id] ?? blockTypeLabel(s.kind)).join(', ');
 
         return (
           <li key={t.sessionId} className="py-2 space-y-0.5">

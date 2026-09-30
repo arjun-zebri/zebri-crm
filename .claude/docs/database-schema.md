@@ -2642,6 +2642,16 @@ expiry cron. None of these exist yet.
 Migration `20260924000000_proposal_surface.sql`. Full feature doc:
 `.claude/docs/proposals.md`.
 
+### Analytics functions (R4)
+
+`proposal_template_performance()` and `proposal_account_summary()` (plus
+helpers `_proposal_open_gaps()`, `_proposal_revenue()`) are `security
+invoker`, so RLS scopes them to the caller; anon is revoked. Sent is
+`status <> 'draft'`, accepted is `accepted_at is not null`, revenue is
+`coalesce(invoice subtotal, accepted option subtotal)`, and time to open
+is the first `opened` event minus `email_sent_at` (never
+`first_viewed_at`). Migration `20261025000000_proposal_analytics_rpcs.sql`.
+
 - `user_branding.enabled_surfaces` default gains `proposal`:
   `'["invoice", "contract", "portal", "vendorTimeline", "questionnaire",
   "lead", "proposal"]'::jsonb`. Existing rows are not rewritten;

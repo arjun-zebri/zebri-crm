@@ -10,7 +10,7 @@ import type { JSONContent } from '@tiptap/core';
 
 import type { HeroOverride, ProposalStatus } from '@/lib/proposals/types';
 import { createClient } from '@/lib/supabase/client';
-import type { Tables } from '@/types/database';
+import type { Json, Tables } from '@/types/database';
 
 export interface ProposalListRow {
   id: string;
@@ -48,6 +48,10 @@ export interface ProposalDetailRow extends ProposalListRow {
    * create path has no design to open.
    */
   template_id: string | null;
+  /** The Layout v2 document, when the proposal has one. Parse with `parseProposalLayout`; never trust the shape. */
+  layout: Json | null;
+  /** The package the couple accepted, once they have. */
+  accepted_option_id: string | null;
   proposal_options: { id: string; subtotal: number; is_popular: boolean; position: number; title: string }[];
 }
 
@@ -98,7 +102,7 @@ export function useProposal(id: string) {
       const { data, error } = await supabase
         .from('proposals')
         .select(
-          'id, proposal_number, title, status, version, expires_at, email_sent_at, first_viewed_at, last_viewed_at, view_count, created_at, updated_at, share_token, share_token_enabled, declined_reason, declined_message, contract_id, invoice_id, template_id, couple:couple_id(id, name), proposal_options!proposal_options_proposal_id_fkey(id, subtotal, is_popular, position, title)',
+          'id, proposal_number, title, status, version, expires_at, email_sent_at, first_viewed_at, last_viewed_at, view_count, created_at, updated_at, share_token, share_token_enabled, declined_reason, declined_message, contract_id, invoice_id, template_id, layout, accepted_option_id, couple:couple_id(id, name), proposal_options!proposal_options_proposal_id_fkey(id, subtotal, is_popular, position, title)',
         )
         .eq('id', id)
         .maybeSingle();
@@ -123,7 +127,6 @@ export interface ProposalPrintRow extends Omit<ProposalDetailRow, 'couple' | 'pr
   intro_note: JSONContent | null;
   hero_override: HeroOverride | null;
   deposit_percent: number | null;
-  accepted_option_id: string | null;
   accepted_addon_selection: string[] | null;
   accepted_at: string | null;
   declined_at: string | null;
