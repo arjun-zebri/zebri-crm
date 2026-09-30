@@ -48,9 +48,12 @@ export function ProposalSectionEngagement({ rows }: ProposalSectionEngagementPro
       <h3 className="text-body font-medium text-text">Reading by section</h3>
       <div className="space-y-1.5">
         {rows.map((r, i) => (
-          <div key={r.id} className="flex items-center gap-3">
-            <span className="w-40 shrink-0 truncate text-body text-text-muted">{r.label}</span>
-            <div className="h-2 flex-1 rounded-control bg-surface-muted">
+          // Same phone layout as the package rows: below `sm` the bar gets
+          // its own line, since the fixed label, time and reach columns
+          // alone fill a 390px screen and left the bar 0px wide.
+          <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
+            <span className="min-w-0 flex-1 truncate text-body text-text-muted sm:w-40 sm:flex-none">{r.label}</span>
+            <div className="order-last h-2 w-full rounded-control bg-surface-muted sm:order-none sm:w-auto sm:flex-1">
               {/* Width is the one data-driven value (share of the top
                   section's seconds); colour and radius come from tokens. */}
               <div className="h-2 rounded-control bg-brand-fg" style={{ width: `${Math.round((r.seconds / maxSeconds) * 100)}%` }} />

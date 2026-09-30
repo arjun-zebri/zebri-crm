@@ -31,15 +31,20 @@ export function ProposalPackageComparison({ rows }: ProposalPackageComparisonPro
       <h3 className="text-body font-medium text-text">Packages</h3>
       <div className="space-y-1.5">
         {rows.map((r) => (
-          <div key={r.optionId} className="flex items-center gap-3">
-            <span className="w-40 shrink-0 truncate text-body text-text">{r.title}</span>
-            <div className="h-2 flex-1 rounded-control bg-surface-muted">
+          // Below `sm` the bar drops to its own line under the title: a
+          // fixed-width title, count and pill left the bar 0px wide and
+          // pushed the pill off a 390px screen (found in the R4 live check).
+          <div key={r.optionId} className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
+            <span className="min-w-0 flex-1 truncate text-body text-text sm:w-40 sm:flex-none">{r.title}</span>
+            <div className="order-last h-2 w-full rounded-control bg-surface-muted sm:order-none sm:w-auto sm:flex-1">
               <div className="h-2 rounded-control bg-brand-fg" style={{ width: `${Math.round((r.seconds / maxSeconds) * 100)}%` }} />
             </div>
             <span className="w-28 shrink-0 text-right text-body text-text-muted">
               {r.views} view{r.views === 1 ? '' : 's'} · {formatSeconds(r.seconds)}
             </span>
-            <span className="w-16 shrink-0">
+            {/* w-20, not w-16: the dotted "Chosen" pill is about 78px and
+                overflowed a 64px column into the page edge. */}
+            <span className="w-20 shrink-0">
               {r.chosen ? <StatePill label="Chosen" tone="success" dot="filled" /> : null}
             </span>
           </div>

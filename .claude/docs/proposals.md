@@ -282,7 +282,8 @@ now also renders:
   comparison data to back one. This is not Phase 5's per-proposal
   engagement analytics (time per section, drop-off, device split),
   which stays future, separate work and needs event-tracking
-  instrumentation that doesn't exist yet.
+  instrumentation that doesn't exist yet. (Superseded: the R4 account
+  strip replaced this row, see "R4 analytics" below.)
 - **A templates shortcut** (`proposal-templates-shortcut.tsx`): the
   default template plus the next couple most-recently-edited, sharing
   the Templates tab's `TEMPLATES_QUERY_KEY` cache. "See all" links to
@@ -343,7 +344,8 @@ now also renders:
   takes this as `overlay` (was `footer`). No "Sample data" pill; the
   figures are still `SAMPLE_TEMPLATE_STATS` until
   `proposals.template_id` is written. The detail page's engagement
-  placeholders keep their pill.
+  placeholders keep their pill. (Superseded: R4 made every figure real,
+  see "R4 analytics" below.)
 - **Editor back link goes to `/proposals`** (was the Templates hub's
   Proposals tab): the cards an MC edits from live on `/proposals`.
 - **Skeleton loading.** The templates grid (both hosts) waits as
@@ -975,6 +977,152 @@ per-proposal list removed on 2026-09-19: no columns, no status pills,
 nothing that has been sent. `ProposalListRow` gained `updated_at` for
 it.
 
+## R4 analytics (2026-09-30)
+
+Plan: `docs/superpowers/plans/2026-09-30-r4-proposal-analytics.md`
+(roadmap `docs/superpowers/specs/2026-09-20-proposals-completion-roadmap-design.md`
+R4). Replaces every sample figure on `/proposals` and the detail page
+with real numbers: an account strip, per-template outcome chips, and a
+per-proposal drill-down (reading by section, packages, devices). The
+v2-only surfaces stay behind `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2`
+(`proposalLayoutV2Enabled()`).
+
+### Definitions
+
+These meanings are used everywhere (SQL, `features/proposals/analytics`,
+copy). Change one and the others must follow.
+
+- **Sent:** `status <> 'draft'`. Also true of a `sent` proposal whose
+  email failed: the link is live.
+- **Accepted:** `accepted_at is not null`.
+- **Acceptance / win rate:** accepted divided by sent, a whole
+  percentage; `null` when sent is 0 (0/0 is not 0%). `null` renders as
+  an en dash with a tooltip, never "0%".
+- **Revenue accepted:** per accepted proposal, `coalesce(invoice
+  subtotal, accepted option subtotal)`. The same expression R2's
+  lifecycle trigger uses for `total` (`invoices.subtotal` where `id =
+  invoice_id and user_id = proposal.user_id`, else
+  `proposal_options.subtotal` where `id = accepted_option_id and
+  proposal_id = proposal.id`).
+- **Time to open:** the first `opened` row in `proposal_events` for the
+  proposal, minus `email_sent_at`. Proposals with no `email_sent_at`,
+  or with no `opened` row, are left out. Negative gaps (an open before
+  the email, i.e. a link shared by hand) are left out. Median, in
+  seconds. **Never `proposals.first_viewed_at`:** `get_public_proposal`
+  stamps it with no owner check, so an MC previewing their own link
+  would read as the couple opening it, while `record_proposal_events`
+  already records nothing for the owner.
+- **This month:** from the start of the calendar month in the MC's
+  timezone (`user_public_settings.timezone`, default
+  `Australia/Sydney`; an unknown stored name falls back to the default
+  rather than raising) to now.
+- **Section reach:** among all sessions for the proposal, the share that
+  viewed that section **or any later section**, so reach can only fall
+  down the page. Sessions are distinct `session_id` across all rows,
+  the same rule `summarizeEngagement` uses (E4).
+- **Device:** read once per session from the `opened` payload's
+  `device` (`phone` / `tablet` / `desktop`). Sessions without it count
+  as `unknown`, which covers every v1-era row.
+
+### Tracker payloads
+
+The public tracker (`app/proposal/[token]/_components/engagement-tracker.tsx`)
+now sends two more things, both validated by the route's Zod schema
+(`lib/proposals/engagement-events.ts`) and re-checked by the RPC's own
+size and shape bounds:
+
+| Type | Payload | Notes |
+|---|---|---|
+| `opened` | `{ device? }` | `device` from `deviceKind(window.innerWidth)` at open (`engagement-session.ts`): under 640 is `phone`, under 1024 `tablet`, else `desktop`. Width, not user agent: it decides the layout the couple actually saw. |
+| `section_viewed` (v2) | `{ sectionId, sectionKind, pageId?, seconds }` | Observed on `[data-section-id]` at a 0.5 threshold. `pageId` is the section's closest `[data-page-id]`, so it is only present in the "One at a time" step flow; a scroll-flow section sends none. |
+| `section_viewed` (v1) | `{ blockId, blockType, seconds }` | Unchanged. A v1 page has no `[data-section-id]` and a v2 page has no `[data-block-id]`, so the two observers never double-count. |
+
+The Zod union is `.strict()` on each side, so one payload cannot mix
+the two shapes. Seconds are whole seconds banked while visible, so a
+section scrolled past in under a second records nothing; reach still
+counts it through any later section the session viewed.
+
+### SQL functions
+
+Migration `20261025000000_proposal_analytics_rpcs.sql`. All four are
+`security invoker`: they read only through the caller's RLS, so there
+is no tenant filter to get wrong and no MFA ratchet entry. `anon` and
+`public` are revoked; `authenticated` may execute.
+
+- **`proposal_template_performance()`**: one row per template the
+  caller has sent at least once: `template_id`, `sent`, `accepted`,
+  `revenue`, `median_open_seconds` (null when nothing from it was
+  opened after its email).
+- **`proposal_account_summary()`**: exactly one row: `sent`,
+  `accepted`, `revenue_this_month`, `median_open_seconds`. Zeros and a
+  null median for an empty account.
+- Helpers `_proposal_open_gaps()` (one row per proposal with an
+  `email_sent_at` and an `opened` event, negative gaps dropped) and
+  `_proposal_revenue()` (one row per accepted proposal) hold the two
+  shared expressions so both functions compute them the same way.
+
+`features/proposals/analytics/data.ts` wraps them as
+`getAccountSummaryAction` / `getTemplatePerformanceAction`, coercing
+PostgREST's string `numeric` cells so a bad cell never becomes `NaN`
+on screen; `use-proposal-analytics.ts` exposes them as React Query
+hooks under `PROPOSAL_ANALYTICS_QUERY_KEY`.
+
+### Aggregation module
+
+`features/proposals/analytics/` is pure (no React): `summary.ts`
+(`summarizeEngagement`, `sectionTotals`), `sessions.ts`
+(`sessionTimelines`), `reports.ts` (`sectionReport`, `packageReport`,
+`deviceSplit`), `labels.ts`, `types.ts` (`acceptanceRate`), and
+`read.ts` (`num` / `str` / `obj`). Every payload field is read through
+those helpers, never trusted as typed: `proposal_events` is anonymous
+input. v1 and v2 `section_viewed` rows aggregate together; a section id
+no longer in the layout (deleted after it was read) is dropped from the
+ordered report rather than shown as a nameless row; a page break is
+never a report row.
+
+### Surfaces
+
+- `/proposals` strip (`proposals-stats-row.tsx`): Acceptance rate,
+  Median time to open, Accepted this month.
+- Template card chips (`templates/template-stats-chips.tsx`): sent,
+  acceptance, revenue, and a clock chip for median time to open when
+  any proposal from the template was opened. No chips when nothing was
+  sent.
+- Detail page (`[id]/proposal-engagement-v2.tsx`, v2 layouts only):
+  `ProposalSectionEngagement` (every non-page-break section in page
+  order, time bar and "N% reached", the biggest reach drop in
+  `text-warning` with "Most readers leave around X"),
+  `ProposalPackageComparison` (views and time per package, a
+  Chosen pill, "Lingered on X, chose Y" when they differ) and
+  `ProposalDeviceSplit` ("3 sessions: 2 phone, 1 desktop"). A v1
+  proposal keeps the Phase D top-four bars.
+
+Below `sm`, section and package rows wrap: the bar takes its own
+full-width line under the label and figures. The single-line layout left
+every bar 0px wide and pushed the Chosen pill off a 390px screen (found
+in the live check, pinned by
+`tests/unit/app/proposals/proposal-engagement-rows-phone.test.tsx`).
+
+### Ruling: no recharts
+
+The spec said "charts on the shared recharts patterns". The only
+recharts uses in the app (`dashboard-revenue-chart.tsx`,
+`metric-chart-card.tsx`) hardcode hex colours, which is off-token. R4
+keeps the token CSS bars already on the detail page (`bg-surface-muted`
+track, `bg-brand-fg` fill, width as the one inline style) and adds no
+recharts chart. Every figure is a ranked list or a small count, which a
+bar list shows better than a plotted chart anyway.
+
+### Tests
+
+Unit: the analytics module, strip, chips, drill-down components and
+tracker payloads under `tests/unit/features/proposals/analytics/` and
+`tests/unit/app/proposals/`. Integration:
+`tests/integration/proposals/analytics-rpcs.test.ts` (counts, revenue,
+time to open from `opened` events only, tenant isolation, anon denied,
+bogus timezone). E2E: `tests/e2e/proposal-analytics.spec.ts` (see
+`testing.md`), which closes Phase D's M8 gap.
+
 ## What a proposal is
 
 An MC offers a couple up to three priced **options** (each a snapshot
@@ -1553,6 +1701,7 @@ no code change:
   (see the events vocabulary table above).
 - **M8.** No Playwright e2e coverage for the engagement feature yet,
   consistent with deferring e2e for this batch; see `testing.md`.
+  Closed by R4: `tests/e2e/proposal-analytics.spec.ts`.
 
 ## Gotchas
 
