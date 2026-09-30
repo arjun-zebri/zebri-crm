@@ -5,7 +5,7 @@
  * move up/down, duplicate and delete, shown pinned to the section's own
  * top-right corner while it is selected - replacing the old `SectionBar`,
  * which lived in a detached strip at the top of the canvas
- * (`template-editor-body.tsx`'s old overlay slot; the section bar no
+ * (`layout-editor-body.tsx`'s old overlay slot; the section bar no
  * longer mounts there, see that file). The heavier style controls move
  * behind the Style button's popover (`section-style-popover.tsx`), which
  * already carries this bar's trailing `...` menu had (Hide on phone,

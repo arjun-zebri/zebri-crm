@@ -8,13 +8,14 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink, Pencil, RotateCcw } from 'lucide-react';
+import { ExternalLink, LayoutTemplate, Pencil, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
 import { revertProposalToDraftAction } from '@/app/(dashboard)/proposals/actions';
+import { proposalLayoutV2Enabled } from '@/app/(dashboard)/proposals/flags';
 import { headlineTotal, PROPOSAL_STATE_PILL } from '@/app/(dashboard)/proposals/proposals-list';
 import { PROPOSALS_QUERY_KEY, type ProposalDetailRow } from '@/app/(dashboard)/proposals/use-proposals';
-import { Button } from '@/components/ui/button';
+import { Button, buttonClassName } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatePill } from '@/components/ui/state-pill';
@@ -36,7 +37,7 @@ const DECLINE_REASONS: Record<string, string> = {
 export interface ProposalDetailProps {
   /** Full detail row from {@link useProposal}. */
   proposal: ProposalDetailRow;
-  /** Opens the builder modal in edit mode. */
+  /** Opens the builder modal on the proposal's details (couple, terms, options). */
   onEdit: () => void;
   /** Called after a mutation (e.g. revert) so the caller can refetch. */
   onChanged: () => void;
@@ -46,6 +47,7 @@ export interface ProposalDetailProps {
 export function ProposalDetail({ proposal: p, onEdit, onChanged }: ProposalDetailProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const designEditable = proposalLayoutV2Enabled() && !!p.template_id && p.status !== 'accepted';
   const facts = [
     p.email_sent_at ? `Sent ${longDate(p.email_sent_at)}` : 'Not sent',
     `${p.view_count} views`,
@@ -109,9 +111,18 @@ export function ProposalDetail({ proposal: p, onEdit, onChanged }: ProposalDetai
               </Button>
             ) : null}
             {p.status !== 'accepted' ? (
-              <Button onClick={onEdit} className="gap-1.5">
-                <Pencil size={14} strokeWidth={1.5} /> Edit
+              <Button variant="secondary" onClick={onEdit} className="gap-1.5">
+                <Pencil size={14} strokeWidth={1.5} /> Details
               </Button>
+            ) : null}
+            {/* The design is the document the couple actually reads, so it
+                is the primary action here. It only exists for a proposal
+                created from a template (`template_id`); older ones have no
+                layout of their own and stay details-only. */}
+            {designEditable ? (
+              <Link href={`/proposals/${p.id}/design`} className={buttonClassName({ className: 'gap-1.5' })}>
+                <LayoutTemplate size={14} strokeWidth={1.5} /> Edit design
+              </Link>
             ) : null}
           </div>
         }

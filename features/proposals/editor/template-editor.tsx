@@ -22,7 +22,7 @@
  * @module features/proposals/editor/template-editor
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, type ReactNode } from 'react'
+import { useMemo } from 'react'
 
 import { Empty } from '@/components/ui/empty'
 import { ErrorState } from '@/components/ui/error-state'
@@ -31,6 +31,7 @@ import { useCurrentBranding } from '@/lib/branding/use-current-branding'
 import { getTemplateAction, type TemplateRecord } from '../data/templates'
 
 import { EditorSkeleton } from './editor-skeleton'
+import { GateState } from './gate-state'
 import { draftKey, readDraft, reconcileDraft } from './local-draft'
 import { TemplateEditorBody } from './template-editor-body'
 
@@ -50,18 +51,6 @@ export interface TemplateEditorProps {
   templateId: string
   /** The signed-in user's id, scoping the local draft. `null` disables the draft. */
   userId: string | null
-}
-
-/**
- * Centres an `ErrorState` / `Empty` gate state (loading is the
- * editor-shaped `EditorSkeleton`, which fills the frame itself). Every other
- * `/proposals` route keeps its padding through `ProposalsFrame`, which this
- * route opts out of for the loaded editor (it needs the full width) - but
- * these transient states are not the editor, so they get their own gutter
- * rather than rendering flush against the corner of the scroll container.
- */
-function GateState({ children }: { children: ReactNode }) {
-  return <div className="flex h-full items-center justify-center p-6">{children}</div>
 }
 
 /** Loads template `templateId`; renders `EditorSkeleton` / `ErrorState` / `Empty` until it and the branding are both ready. */

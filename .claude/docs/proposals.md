@@ -682,6 +682,299 @@ columns and resize the table to make it wider/taller."
   proportions on a phone instead of scrolling sideways. Header cells
   (`th`) stay vertically middle-aligned on both surfaces, as before.
 
+## Layout v2 (R3: create-from-template, send modal, design editor, 2026-09-23)
+
+Roadmap: `docs/superpowers/specs/2026-09-20-proposals-completion-roadmap-design.md`
+§6 ("R3: builder, template → couple"), §6.1 ("Lifecycle"). Same branch
+family, same flag. This lands the create/edit/send slice of R3, not
+the full section (see "What R3 still doesn't have" below).
+
+**Create** (`app/(dashboard)/proposals/create-from-template.ts`,
+`createProposalFromTemplateAction`): given a couple id and an optional
+template id, it resolves the template (the one requested, else the
+account default: `is_default` first, then freshest, the same order
+the templates list itself shows), re-validates its stored layout with
+`parseProposalLayout` (a template a v2 parse rejects fails the create
+rather than copying something the MC never actually designed), then:
+
+- Snapshots the layout into `proposals.layout` with fresh section ids
+  (`cloneLayoutWithFreshIds`) so editing the template later never
+  reaches a proposal already created from it, and records
+  `template_id`.
+- Seeds `proposal_options` (and their items) from the layout's first
+  `packages` section (`layoutPackageOptions` /
+  `packageOptionsToInputs`, `features/proposals/model/seed-options.ts`)
+  via the existing `replaceOptions` write path. A template with no
+  packages section, or two of them, seeds zero or from the first one
+  only: a proposal has one set of options the couple chooses between
+  (D7). Rich text collapses to plain strings crossing into
+  `proposal_options.title`/`description`, exactly as the v1 "apply a
+  package" path already did.
+- Applies `resolveTemplateSettings(account, template.settings)` for
+  expiry days and deposit percent (the template's own settings
+  snapshot replaces the account defaults outright when it has one,
+  never merges) and the account's default contract template
+  (`is_default` first, then `position`), so a proposal is never
+  creatable without one to close against downstream.
+- Mints the proposal number (`generate_proposal_number`) and always
+  starts `draft`.
+
+RLS is what proves the couple and the template are this MC's: a
+foreign id simply returns no row (`Couple not found.` /
+`Template not found.`), never a different error that would leak
+whether the row exists for someone else.
+
+**`proposals.layout_revision`** (`20261005000000_proposal_layout_revision.sql`)
+mirrors `proposal_templates.revision`: every proposal layout write
+carries the revision it was based on, the update only matches that
+revision and bumps it by one, and a miss comes back as a conflict
+carrying the current row. Separate from `version`, which counts
+resends and has nothing to do with a layout edit.
+
+**Edit** (`/proposals/[id]/design`, `app/(dashboard)/proposals/[id]/design/page.tsx`,
+flag-gated, full width like the template editor): the same editor as
+the template editor, generalised. `features/proposals/editor/layout-editor-body.tsx`
+(renamed from `template-editor-body.tsx`) now holds everything that
+makes the editor an editor: canvas, bars, shortcuts, insert host, the
+four autosave layers, and is mounted by two thin, kind-specific
+wrappers: `template-editor-body.tsx` (rename via `renameTemplateAction`,
+no trailing header action) and the new `proposal-editor-body.tsx`
+(rename via `renameProposalAction`; a "Send to couple" button
+(`send-to-couple-button.tsx`) in the header's trailing slot, omitted
+entirely, not just disabled, once the proposal is `accepted`).
+`use-template-autosave.ts` is now `use-layout-autosave.ts`:
+`useLayoutAutosave(target, layout, options)` takes a
+`{ kind: 'template' | 'proposal', id }` target and picks the matching
+server action and beacon route
+(`updateTemplateLayoutAction`/`updateProposalLayoutAction`,
+`/api/proposals/templates/layout-beacon`/`/api/proposals/layout-beacon`);
+the four layers themselves (debounced save, revision guard, local
+draft, unload beacon) are unchanged and shared verbatim. The local
+draft key carries the target's kind as well as its id
+(`draftKey(userId, id, kind)`), so a proposal's draft and the template
+it was created from can never be read into each other.
+
+`ProposalEditor` (`editor/proposal-editor.tsx`) is the load gate:
+`getProposalDesignAction` (`features/proposals/data/proposals.ts`)
+loads the row, and a proposal that predates R3 or was built by the v1
+builder (`layout === null`) renders `Empty`, not `ErrorState`: there
+is nothing to retry. `updateProposalLayoutAction` refuses to write once
+`status = 'accepted'` (the `.neq` in the update statement is what
+enforces it, not a read-then-write); `renameProposalAction` just
+renames.
+
+**`/api/proposals/layout-beacon`** (`app/api/proposals/layout-beacon/route.ts`)
+is the per-proposal twin of the template's own beacon route: same
+job (a plain endpoint `navigator.sendBeacon` can target, since a
+Server Action can't be one), same validation and ownership check, same
+`accepted` freeze. It deliberately does **not** bump
+`layout_revision`: see the route's own module doc for why a
+same-generation overwrite is what keeps a restored tab's next real
+autosave from looking like a conflict against its own beacon.
+
+**Send a proposal** (`components/builders/send-proposal-modal.tsx`):
+replaces `ProposalBuilderModal` as the "New proposal" entry point,
+while the flag is on, everywhere a proposal gets created: `/proposals`,
+a couple's Proposals tab (couple preselected), and now also a template
+card's `...` menu ("Send to a couple", first action, template
+preselected; founder ask 2026-09-22). Fullscreen modal:
+
+- A sticky control row (`send-proposal-controls.tsx`, built on the
+  shared `BuilderMetaRow`): couple picker, a template `Select`,
+  expiry `DatePicker`.
+- A live, full-bleed preview (`send-proposal-preview.tsx`) of the
+  couple's actual page: the same `ProposalLayoutView` the public page
+  and the template editor's own Preview overlay render, in `mode="page"`,
+  fed by `lib/proposals/template-preview-doc.ts` (`templatePreviewDoc`),
+  which fills in only the couple's name/date/venue and the expiry/deposit;
+  everything else, copy, hero, packages, terms, comes straight from
+  the template. This is deliberate: the founder's review of the old
+  builder was that per-send re-authoring of the intro note and packages
+  "shouldn't come from this - it should just come from the template".
+- A footer (`send-proposal-footer.tsx`) with "Make edits" and "Send to
+  couple". Both share one `ensureProposal` (`use-send-proposal.ts`)
+  that creates the draft via `createProposalFromTemplateAction` once
+  and remembers its id, so a failed send (email step) leaves a good
+  draft behind and clicking Send again retries the email rather than
+  minting the couple a second proposal. "Make edits" routes to
+  `/proposals/<id>/design`; "Send to couple" POSTs
+  `/api/email/send-proposal` with that id.
+- Send is blocked, with the reason shown beside the button
+  (`aria-describedby`, not a tooltip: a disabled control can't be
+  hovered or focused), until there is a couple, a template, an email
+  address on the couple, and an account contract template.
+
+The legacy `ProposalBuilderModal` still opens for "New proposal"
+everywhere the flag is off.
+
+**The v1 builder is now Details-only.** `/proposals/[id]`
+(`proposal-detail.tsx`) renders two actions side by side: "Details"
+(secondary, `Pencil` icon, opens `ProposalBuilderModal` on the
+proposal's couple/title/options/terms, renamed from "Edit") and "Edit
+design" (primary, `LayoutTemplate` icon, links to `/proposals/[id]/design`),
+shown only when the proposal both carries a `template_id` and is not
+`accepted`: a proposal from before R3, or built by the v1 builder, has
+no layout of its own and stays Details-only forever.
+
+**`MAX_OPTIONS`** (`lib/proposals/schemas.ts`) raised from 3 to 6, to
+match `PACKAGE_LIMITS.maxOptions`: a template's packages section now
+authors up to six cards, and creating a proposal from it copies every
+one into a `proposal_options` row, so a lower cap would make a
+proposal seeded from a six-card template impossible to save again.
+
+**What the couple's page renders** is unchanged from Phase 1:
+`get_public_proposal_layout` still returns only the proposal's own
+`layout`, never a template's, so nothing new is needed there: a
+proposal created by `createProposalFromTemplateAction` simply always
+has one from the moment it exists, where a v1-builder proposal never
+does.
+
+**What R3 still doesn't have** (see roadmap §6.1-6.5 for the full
+list): no Details pane alongside Design on the `/proposals/[id]/design`
+route (Details stays a separate page/modal); no `create_proposal`
+workflow action (§6.3); no analytics (R4); no settings enforcement on
+the public page beyond what Phase 1 already persists (password gate,
+download toggle, §6.2); `TemplateStatsChips`/the templates shortcut
+still read `SAMPLE_TEMPLATE_STATS`, not real sent/accepted/won counts
+off the now-written `template_id` (§6.4).
+
+## Editing a couple's copy (T7, 2026-09-23)
+
+Founder feedback on "Make edits": "this is great, but the make edits
+should be just for the proposal going out to that couple - we dont
+want to change the entire template". Mechanically that was already
+true (the editor mounts on `proposals.layout` and autosaves through
+`updateProposalLayoutAction`; `proposal_templates` is never written),
+but the screen was identical to the template editor and said nothing,
+so it read as editing the template. Two changes:
+
+**The header says whose document it is.** `EditorHeader` grew an
+optional `context?: ReactNode` slot, rendered straight after the name
+field. The proposal editor fills it with `ProposalCopyBadge`
+(`features/proposals/editor/proposal-copy-badge.tsx`): a neutral
+`StatePill` reading "Anna & Jake's copy", whose tooltip reads
+"Editing this proposal only. Your template <name> is not changed."
+(or "Your templates are not changed." for a proposal with no
+`template_id`). The template editor leaves `context` unset, so its
+own header is byte-for-byte what it was. The couple's name and the
+source template's name both ride along on `ProposalDesignRecord`
+(`coupleName`, the new `templateName`, joined from
+`proposal_templates(name)`). The header stays one `h-12` row at every
+width: only the couple's name truncates, so the word "copy" always
+survives, and below `sm` the badge steps out of the row entirely
+rather than wrapping it.
+
+**The couple's option rows follow the couple's design.** The rows
+were seeded once at create time and nothing kept them current, so an
+MC who edited a package in the proposal's own design left the couple
+reading the new price off the layout while the contract and the
+invoice were still built from the stale row. Now
+`updateProposalLayoutAction`, after the layout write lands, calls
+`resyncProposalOptions` (`features/proposals/data/resync-options.ts`):
+it derives `packageOptionsToInputs(layoutPackageOptions(layout))`,
+compares it with the stored rows through `optionsMatchLayout`
+(`lib/proposals/options-match.ts`) and only on a difference calls
+`replaceOptions`. Notes:
+
+- The comparison ignores ids and compares title, description, pricing
+  mode, fixed price, GST, weekend loading, popular, and each item's
+  description / amount / quantity / add-on / default-included /
+  position. It exists because a re-seed deletes and reinserts (new row
+  ids) and the editor autosaves every 800ms: churning ids on every
+  keystroke would move the ground under a couple with the page open,
+  and the public page renders options by id.
+- An `accepted` proposal is never re-seeded. The `.neq('status',
+  'accepted')` on the layout write already blocks it; `resyncProposalOptions`
+  checks again on its own account.
+- A failed re-seed never fails the layout save. It is logged as
+  `proposal_options_resync_failed` and the save returns its normal
+  success, because the MC's work is the priority and the next save
+  corrects it.
+- `replaceOptions` moved from `app/(dashboard)/proposals/write-options.ts`
+  to `lib/proposals/write-options.ts` so `features/proposals` can
+  reach it (the feature boundary forbids importing from `app/`). The
+  old path re-exports it, so existing callers are unchanged.
+
+## No phantom drafts, and saying what the editor is (T8, 2026-09-23)
+
+Founder feedback, straight after T7: "Clicking make edits works but it
+increases the proposal count when youve quit out of it. But you cant
+see it in the templates - this should not be the case. Also when you
+click edit it should open it up the way it is, but have a quick modal
+which explains that this is a one time editor that wont affect the
+actual template." Three changes.
+
+**The row is created by the first change, not by the click.** "Make
+edits" no longer creates anything: `useSendProposal` hands back an
+`editHref` and the modal routes to
+`/proposals/design/new?couple=&template=&expires=`. That route
+(`app/(dashboard)/proposals/design/new/`) mounts the same
+`ProposalEditorBody` on `cloneLayoutWithFreshIds(template.layout)` held
+in memory. `useLayoutAutosave`'s target gained a third shape, a
+`proposal` whose `id` is `null` and which carries a `create`; the save
+path itself materialises the row, so the four autosave layers stay one
+mechanism rather than growing a second write path beside them. On that
+first save: `createProposalFromTemplateAction`, then the layout write at
+revision 0 (`proposals.layout_revision`'s default), then
+`window.history.replaceState` to `/proposals/<id>/design`. Never
+`router.replace`: that would unmount the editor mid-save, resetting undo
+history and dropping the change that created the row.
+
+Details that matter:
+
+- **Exactly one proposal, ever.** The create is held in a single-flight
+  ref in both `useMaterialiseProposal` and the autosave hook, so an
+  automatic retry, a flush on unmount, a rename, a Send and React
+  StrictMode's double mount all await the same promise. A failed create
+  clears the ref so the autosave's own backoff can try again.
+- **What counts as a change** is `sameDocument`
+  (`features/proposals/editor/layout-equivalence.ts`), not
+  `JSON.stringify`. Mounting the canvas rebuilds objects (key order
+  moves) and lets TipTap repair the document it was handed: StarterKit's
+  `trailingNode` and this feature's `TrailingParagraphExtension` append
+  an empty paragraph wherever a container ends in something you cannot
+  type after. Both would otherwise have created a proposal for an MC who
+  only looked. The comparison ignores key order and trailing empty
+  paragraphs, and is used only to decide whether to write, never what to
+  write. Consequence worth knowing: pressing Enter at the end of a
+  section and leaving creates nothing.
+- **No local draft before the row exists.** `local-draft.ts` keys on an
+  id and reconciles against a server revision, and an uncreated proposal
+  has neither, so layers 3 and 4 stay off for that one first change and
+  switch on the moment the row lands. A hard refresh inside the 800ms
+  debounce on the very first change therefore loses that change; the
+  beacon cannot help either, since `sendBeacon` cannot create a row.
+  Nothing is written under a provisional key, so there is no stale draft
+  to migrate or clean up.
+- **Send still creates.** The send modal's own Send path is unchanged,
+  and the editor's "Send to couple" now takes a
+  `resolveProposalId: () => Promise<string>` rather than an id, so
+  choosing to send from an uncreated proposal materialises it first.
+- `create-from-template.ts` itself did not change.
+
+**The editor says what it is.** The first time an account opens a
+proposal design, a small `Modal` titled "You are editing this couple's
+copy" explains that this is a copy of <template> made for <couple>, that
+changes never touch the template, and that it will only be said once.
+One button, "Got it"; no "do not show this again" tick, because
+dismissing is the tick. The flag lives in `localStorage` under
+`zebri:proposal-design-explainer:<userId>`
+(`design-explainer-seen.ts`) - scoped by user id because storage
+outlives `signOut()`, which is exactly how a browser-global flag once
+swallowed the welcome tour for every account that signed up afterwards
+on the same machine. Every read and write is wrapped: unreadable storage
+degrades to showing the explainer again, never to crashing the editor.
+The template editor never shows it.
+
+**A draft that does exist is findable.** `/proposals` grew a quiet
+drafts strip under the stats (`proposal-drafts-strip.tsx`): the three
+most recently edited drafts by couple name and "Edited 2h ago", each
+with Open and a confirmed delete, more than three counted rather than
+listed, and nothing at all on an account with none. Deliberately not the
+per-proposal list removed on 2026-09-19: no columns, no status pills,
+nothing that has been sent. `ProposalListRow` gained `updated_at` for
+it.
+
 ## What a proposal is
 
 An MC offers a couple up to three priced **options** (each a snapshot

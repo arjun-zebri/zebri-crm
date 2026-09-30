@@ -67,9 +67,12 @@ export function NewProposalMenu({ onNewProposal, onNewTemplate }: NewProposalMen
 
   return (
     <div className="relative" ref={wrapperRef}>
-      <Button onClick={() => setOpen((wasOpen) => !wasOpen)} className="gap-1.5">
+      {/* The label collapses below `sm`, which would leave an icon-only
+          button with no accessible name at all; the aria-label carries it
+          at every width (and is what the e2e specs select on). */}
+      <Button onClick={() => setOpen((wasOpen) => !wasOpen)} className="gap-1.5" aria-label="New" aria-haspopup="menu" aria-expanded={open}>
         <Plus size={16} strokeWidth={1.5} />
-        <span className="hidden sm:inline">New</span>
+        <span className="hidden sm:inline" aria-hidden="true">New</span>
         <ChevronDown size={14} strokeWidth={1.5} />
       </Button>
 

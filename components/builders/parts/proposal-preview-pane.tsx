@@ -27,6 +27,7 @@ import { ExternalLink, Palette } from 'lucide-react';
 
 import { ProposalPage } from '@/app/proposal/[token]/_components/proposal-page';
 import { Loading } from '@/components/ui/loading';
+import type { ProposalLayout } from '@/features/proposals';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import type { ProposalFormState } from '@/lib/proposals/form-mapping';
 import { previewProposal } from '@/lib/proposals/preview-proposal';
@@ -36,9 +37,17 @@ export interface ProposalPreviewPaneProps {
   form: ProposalFormState;
   /** The selected couple's display name, or null when none is chosen yet. */
   coupleName: string | null;
+  /**
+   * The proposal's own Layout v2 design, when it has one. Passing it makes
+   * this pane show the document the couple actually receives; without it
+   * the pane would render the legacy block tree, which for such a proposal
+   * is a page nobody will ever see. The design itself is edited at
+   * `/proposals/[id]/design`, not here.
+   */
+  layout?: ProposalLayout | null | undefined;
 }
 
-export function ProposalPreviewPane({ form, coupleName }: ProposalPreviewPaneProps) {
+export function ProposalPreviewPane({ form, coupleName, layout }: ProposalPreviewPaneProps) {
   const { branding, blocks, brandLabel, loading } = useCurrentBranding('proposal');
 
   return (
@@ -75,6 +84,7 @@ export function ProposalPreviewPane({ form, coupleName }: ProposalPreviewPanePro
           <ProposalPage
             proposal={previewProposal(form, branding, coupleName)}
             blocks={blocks}
+            layout={layout ?? null}
             frame="page"
             embedded
           />

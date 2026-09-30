@@ -1,12 +1,12 @@
 'use client'
 
 /**
- * Builds the node bar's content for `template-editor-body.tsx`'s `overlay`
+ * Builds the node bar's content for `layout-editor-body.tsx`'s `overlay`
  * slot: the registered TipTap editor for the selected section (also gates
  * whether `TextBar` mounts), the section-name options the button bar's
  * "Jump to section" control offers, and `NodeBar` itself pre-wrapped in
  * `NodeBarAnchor` so it only ever renders already anchored to the node's
- * on-canvas position. Split out of `template-editor-body.tsx` to keep that
+ * on-canvas position. Split out of `layout-editor-body.tsx` to keep that
  * file near its line budget once the header/Preview wiring landed (UX
  * audit slice D).
  *

@@ -23,7 +23,7 @@ export interface FieldShortcuts {
 
 const FieldShortcutsContext = createContext<FieldShortcuts | null>(null)
 
-/** Provides {@link FieldShortcuts} to every `InlineField` beneath it; `template-editor-body.tsx` mounts one around the canvas. */
+/** Provides {@link FieldShortcuts} to every `InlineField` beneath it; `layout-editor-body.tsx` mounts one around the canvas. */
 export const FieldShortcutsProvider = FieldShortcutsContext.Provider
 
 /** The nearest provider's shortcuts, or `null` outside the template editor (a bare harness), where a field's Cmd+Z is simply inert. */

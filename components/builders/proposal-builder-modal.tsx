@@ -14,22 +14,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { PROPOSAL_STATE_PILL } from '@/app/(dashboard)/proposals/proposals-list';
-import { BuilderMetaRow, type CoupleOption } from '@/components/builders/parts/builder-meta-row';
+import type { CoupleOption } from '@/components/builders/parts/builder-meta-row';
 import { BuilderModalShell, type OverflowMenuItem } from '@/components/builders/parts/builder-modal-shell';
-import { ProposalAddonsEditor } from '@/components/builders/parts/proposal-addons-editor';
-import { ProposalHeroOverride } from '@/components/builders/parts/proposal-hero-override';
-import { ProposalIntroNote } from '@/components/builders/parts/proposal-intro-note';
-import { ProposalOptionsEditor } from '@/components/builders/parts/proposal-options-editor';
+import { ProposalBuilderBody } from '@/components/builders/parts/proposal-builder-body';
 import { ProposalPreviewPane } from '@/components/builders/parts/proposal-preview-pane';
-import { isReadyToSend, ProposalReadiness } from '@/components/builders/parts/proposal-readiness';
-import { ProposalTerms } from '@/components/builders/parts/proposal-terms';
+import { isReadyToSend, sendBlockReason } from '@/components/builders/parts/proposal-readiness';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { useApplySources } from '@/components/builders/parts/use-apply-sources';
 import { useProposalForm } from '@/components/builders/parts/use-proposal-form';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Loading } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/toast';
-import { applyPackageToOption } from '@/lib/proposals/form-factories';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentUser } from '@/lib/supabase/current-user';
 
@@ -48,7 +43,7 @@ export function ProposalBuilderModal({ proposalId, initialCoupleId, initialCoupl
   const supabase = createClient();
   const { toast } = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const { form, update, dirty, isLoading, save, send, remove, revert } = useProposalForm(proposalId, initialCoupleId ?? null, isOpen);
+  const { form, update, dirty, isLoading, hasLayout, layout, save, send, remove, revert } = useProposalForm(proposalId, initialCoupleId ?? null, isOpen);
   const { data: sources } = useApplySources();
 
   const { data: couples } = useQuery({
@@ -102,7 +97,7 @@ export function ProposalBuilderModal({ proposalId, initialCoupleId, initialCoupl
         onTitleChange={(t) => update({ title: t })}
         titlePlaceholder="Anna & Jake, your wedding"
         titleReadOnly={!canEdit}
-        previewPane={<ProposalPreviewPane form={form} coupleName={coupleName} />}
+        previewPane={<ProposalPreviewPane form={form} coupleName={coupleName} layout={layout} />}
         footer={
           <ShareAndSend
             dirty={dirty}
@@ -113,6 +108,7 @@ export function ProposalBuilderModal({ proposalId, initialCoupleId, initialCoupl
             saving={save.isPending}
             sending={send.isPending}
             hasCouple={!!form.coupleId && isReadyToSend(form)}
+            blockedReason={sendBlockReason(form)}
             onSave={onSave}
             onSend={onSend}
           />
@@ -121,50 +117,15 @@ export function ProposalBuilderModal({ proposalId, initialCoupleId, initialCoupl
         {isLoading ? (
           <Loading label="Loading proposal" />
         ) : (
-          <div className="space-y-6">
-            <BuilderMetaRow
-              selectedCoupleId={form.coupleId || null}
-              selectedCoupleName={coupleName}
-              coupleOptions={couples ?? []}
-              canEditCouple={canEdit && !form.proposalId}
-              onSelectCouple={(c) => update({ coupleId: c.id })}
-              dateValue={form.expiresAt}
-              dateLabel="Expires"
-              onDateChange={(v) => update({ expiresAt: v })}
-              canEdit={canEdit}
-            />
-            <ProposalIntroNote value={form.introNote} canEdit={canEdit} onChange={(v) => update({ introNote: v })} />
-            <ProposalHeroOverride
-              value={form.heroOverride}
-              proposalId={form.proposalId}
-              canEdit={canEdit}
-              onChange={(v) => update({ heroOverride: v })}
-            />
-            <ProposalOptionsEditor
-              options={form.options}
-              sources={sources}
-              canEdit={canEdit}
-              onChange={(options) => update({ options })}
-              onApplySource={(id) => {
-                const src = sources?.applyMap[id];
-                const name = sources?.options.find((o) => o.id === id)?.name ?? 'Package';
-                if (!src) return;
-                const hasPopular = form.options.some((o) => o.isPopular);
-                update({
-                  options: [...form.options, applyPackageToOption(src, name, form.options.length + 1, hasPopular)],
-                });
-              }}
-            />
-            <ProposalAddonsEditor options={form.options} canEdit={canEdit} onChange={(options) => update({ options })} />
-            <ProposalTerms
-              depositPercent={form.depositPercent}
-              paymentScheduleId={form.paymentScheduleId}
-              contractTemplateId={form.contractTemplateId}
-              canEdit={canEdit}
-              onChange={update}
-            />
-            <ProposalReadiness form={form} />
-          </div>
+          <ProposalBuilderBody
+            form={form}
+            update={update}
+            canEdit={canEdit}
+            hasLayout={hasLayout}
+            couples={couples}
+            coupleName={coupleName}
+            sources={sources}
+          />
         )}
       </BuilderModalShell>
       <ConfirmDialog

@@ -15,8 +15,10 @@ import { FileHeart, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { proposalLayoutV2Enabled } from '@/app/(dashboard)/proposals/flags'
 import { PROPOSAL_STATE_PILL } from '@/app/(dashboard)/proposals/proposals-list'
 import { ProposalBuilderModal } from '@/components/builders/proposal-builder-modal'
+import { SendProposalModal } from '@/components/builders/send-proposal-modal'
 import { Button } from '@/components/ui/button'
 import { StatePill } from '@/components/ui/state-pill'
 import type { ProposalStatus } from '@/lib/proposals/types'
@@ -47,6 +49,7 @@ export function CoupleProposals({ coupleId, coupleName }: CoupleProposalsProps) 
   // the modal keeps pointing at that row (not a phantom `null`) for the
   // rest of the session instead of looking half-created after Save/Send.
   const [editingId, setEditingId] = useState<string | null>(null)
+  const layoutV2 = proposalLayoutV2Enabled()
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['couple-proposals', coupleId],
@@ -111,7 +114,19 @@ export function CoupleProposals({ coupleId, coupleName }: CoupleProposalsProps) 
         )}
       </CoupleTabShell>
 
-      {newOpen && (
+      {/* Layout v2: New proposal is a send of an existing template with this
+          couple preselected, not an authoring session (founder review
+          2026-09-22). The old builder stays for accounts still on v1. */}
+      {newOpen && layoutV2 && (
+        <SendProposalModal
+          isOpen
+          initialCoupleId={coupleId}
+          initialCoupleName={coupleName}
+          onClose={() => { setNewOpen(false); void refetch() }}
+          onSent={() => void refetch()}
+        />
+      )}
+      {newOpen && !layoutV2 && (
         <ProposalBuilderModal
           proposalId={editingId}
           initialCoupleId={coupleId}
