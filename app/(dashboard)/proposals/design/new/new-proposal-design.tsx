@@ -28,6 +28,7 @@ import {
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import { createClient } from '@/lib/supabase/client';
 
+import { PROPOSAL_ANALYTICS_QUERY_KEY } from '../../use-proposal-analytics';
 import { PROPOSALS_QUERY_KEY } from '../../use-proposals';
 
 import { useMaterialiseProposal } from './use-materialise-proposal';
@@ -140,7 +141,10 @@ export function NewProposalDesign({ templateId, coupleId, expiresAt, userId }: N
       branding={branding}
       // A rename or a send here has created the row by definition, so the
       // list the `/proposals` stats and drafts strip read has moved on.
-      onChanged={() => void qc.invalidateQueries({ queryKey: PROPOSALS_QUERY_KEY })}
+      onChanged={() => {
+        void qc.invalidateQueries({ queryKey: PROPOSALS_QUERY_KEY });
+        void qc.invalidateQueries({ queryKey: PROPOSAL_ANALYTICS_QUERY_KEY });
+      }}
     />
   );
 }

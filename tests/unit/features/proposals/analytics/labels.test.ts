@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { DOC_SPECIFIC_BY_SURFACE } from '@/app/(dashboard)/branding/blocks/blocks-by-surface'
 import { BLOCK_LABELS } from '@/app/(dashboard)/branding/blocks/types'
-import { BLOCK_TYPE_LABELS } from '@/features/proposals/analytics/labels'
+import { BLOCK_TYPE_LABELS, formatDuration } from '@/features/proposals/analytics/labels'
 
 /**
  * m4: `BLOCK_TYPE_LABELS` is a hand-copied duplicate of `BLOCK_LABELS`
@@ -18,5 +18,17 @@ describe('BLOCK_TYPE_LABELS', () => {
       DOC_SPECIFIC_BY_SURFACE.proposal.map((type) => [type, BLOCK_LABELS[type]]),
     )
     expect(BLOCK_TYPE_LABELS).toEqual(expected)
+  })
+})
+
+describe('formatDuration', () => {
+  it.each([
+    [0, '0m'],
+    [59, '0m'],
+    [2700, '45m'],
+    [5400, '1h 30m'],
+    [190000, '2d 4h'],
+  ])('%i seconds reads %s', (s, expected) => {
+    expect(formatDuration(s)).toBe(expected)
   })
 })

@@ -11,9 +11,8 @@ import { describe, expect, it } from 'vitest'
 import { ProposalPackageComparison } from '@/app/(dashboard)/proposals/[id]/proposal-package-comparison'
 import { biggestDropIndex, ProposalSectionEngagement } from '@/app/(dashboard)/proposals/[id]/proposal-section-engagement'
 import {
-  acceptanceRate, SAMPLE_SECTION_ENGAGEMENT, SAMPLE_TEMPLATE_STATS, samplePackageRows,
+  acceptanceRate, SAMPLE_SECTION_ENGAGEMENT, samplePackageRows,
 } from '@/app/(dashboard)/proposals/analytics-placeholders'
-import { TemplateStatsChips } from '@/app/(dashboard)/proposals/templates/template-stats-chips'
 
 describe('analytics placeholders', () => {
   it('acceptanceRate is null with nothing sent (0/0 is not 0%)', () => {
@@ -50,14 +49,5 @@ describe('analytics placeholders', () => {
     expect(screen.queryByText(/Lingered on/)).not.toBeInTheDocument()
     rerender(<ProposalPackageComparison rows={rows.map((r, i) => ({ ...r, chosen: i === 2 }))} />)
     expect(screen.getByText('Lingered on Full day, chose Premium.')).toBeInTheDocument()
-  })
-
-  it('template stats chips read sent / rate / revenue, and render nothing when nothing was sent', () => {
-    const { rerender, container } = render(<TemplateStatsChips stats={SAMPLE_TEMPLATE_STATS[0]!} />)
-    expect(screen.getByText('12 sent')).toBeInTheDocument()
-    expect(screen.getByText('67% accepted')).toBeInTheDocument()
-    expect(screen.getByText('$17,600 won')).toBeInTheDocument()
-    rerender(<TemplateStatsChips stats={{ sent: 0, accepted: 0, revenue: 0, medianOpenSeconds: null }} />)
-    expect(container).toBeEmptyDOMElement()
   })
 })

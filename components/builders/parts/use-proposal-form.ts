@@ -19,6 +19,7 @@ import {
   revertProposalToDraftAction,
   saveProposalAction,
 } from '@/app/(dashboard)/proposals/actions';
+import { PROPOSAL_ANALYTICS_QUERY_KEY } from '@/app/(dashboard)/proposals/use-proposal-analytics';
 import { PROPOSALS_QUERY_KEY } from '@/app/(dashboard)/proposals/use-proposals';
 import type { ProposalLayout } from '@/features/proposals';
 import { emptyForm } from '@/lib/proposals/form-factories';
@@ -79,6 +80,7 @@ export function useProposalForm(proposalId: string | null, initialCoupleId: stri
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: PROPOSALS_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: PROPOSAL_ANALYTICS_QUERY_KEY });
     void queryClient.invalidateQueries({ queryKey: ['proposal', form.proposalId] });
     void queryClient.invalidateQueries({ queryKey: ['couple-proposals', form.coupleId] });
   };

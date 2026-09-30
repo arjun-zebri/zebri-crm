@@ -11,20 +11,18 @@
  * Renders nothing when nothing has been sent: a "0" chip on a fresh
  * template is noise, and the card already says what it is.
  *
- * Placeholder: renders a {@link TemplateStats}; today the caller passes
- * `SAMPLE_TEMPLATE_STATS`, with no "Sample data" pill. Real figures need
- * `proposals.template_id` to be written at create time, then a count/sum
- * grouped by it.
+ * Real figures from `proposal_template_performance`. A fourth clock chip
+ * shows the median time from send to first open, when any proposal from
+ * the template has been opened.
  *
  * @module app/(dashboard)/proposals/templates/template-stats-chips
  */
 'use client';
 
-import { CircleCheck, DollarSign, Send } from 'lucide-react';
+import { CircleCheck, Clock, DollarSign, Send } from 'lucide-react';
 
 import { Tooltip } from '@/components/ui/tooltip';
-
-import { acceptanceRate, type TemplateStats } from '../analytics-placeholders';
+import { acceptanceRate, formatDuration, type TemplateStats } from '@/features/proposals';
 
 const money = (n: number) => `$${n.toLocaleString('en-AU', { maximumFractionDigits: 0 })}`;
 
@@ -49,6 +47,10 @@ export function TemplateStatsChips({ stats }: TemplateStatsChipsProps) {
     { Icon: CircleCheck, value: `${rate}%`, label: `${rate}% accepted` },
     { Icon: DollarSign, value: money(stats.revenue), label: `${money(stats.revenue)} won` },
   ];
+  if (stats.medianOpenSeconds !== null) {
+    const opened = formatDuration(stats.medianOpenSeconds);
+    chips.push({ Icon: Clock, value: opened, label: `Opened in ${opened} (median)` });
+  }
   return (
     <div className="flex flex-wrap items-center gap-1">
       {chips.map(({ Icon, value, label }) => (

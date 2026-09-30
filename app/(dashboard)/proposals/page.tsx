@@ -27,8 +27,8 @@ import { ProposalSettingsModal } from './proposal-settings-modal';
 import { ProposalTemplatesShortcut } from './proposal-templates-shortcut';
 import { ProposalsFrame } from './proposals-frame';
 import { ProposalsHeader } from './proposals-header';
-import { computeProposalStats } from './proposals-stats';
 import { ProposalsStatsRow } from './proposals-stats-row';
+import { useAccountSummary } from './use-proposal-analytics';
 import { useProposals } from './use-proposals';
 
 export default function ProposalsPage() {
@@ -36,10 +36,11 @@ export default function ProposalsPage() {
   const [newOpen, setNewOpen] = useState(false);
   const [newTemplateOpen, setNewTemplateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // The aggregate counts (`ProposalsStatsRow`) and the drafts strip are
-  // both drawn from this one query - still no per-proposal list on this
-  // page, see the module doc.
+  // The drafts strip is drawn from this query (the account strip has its
+  // own, server-aggregated one) - still no per-proposal list on this page,
+  // see the module doc.
   const { data, isLoading, error, refetch } = useProposals();
+  const summary = useAccountSummary();
   const layoutV2 = proposalLayoutV2Enabled();
 
   return (
@@ -53,7 +54,14 @@ export default function ProposalsPage() {
           {...(layoutV2 ? { onNewTemplate: () => setNewTemplateOpen(true) } : {})}
           {...(layoutV2 ? { onOpenSettings: () => setSettingsOpen(true) } : {})}
         />
-        {layoutV2 ? <ProposalsStatsRow stats={computeProposalStats(data ?? [])} loading={isLoading} /> : null}
+        {layoutV2 ? (
+          <ProposalsStatsRow
+            summary={summary.data}
+            loading={summary.isLoading}
+            error={summary.error}
+            onRetry={() => void summary.refetch()}
+          />
+        ) : null}
         {layoutV2 ? (
           <ProposalDraftsStrip
             rows={data ?? []}

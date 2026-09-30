@@ -44,13 +44,6 @@ export const SAMPLE_PACKAGE_FIGURES: Array<Pick<PackageEngagementRow, 'views' | 
   { views: 2, seconds: 25, chosen: false },
 ];
 
-/** Deterministic per-card sample so the three cards do not all say the same thing. */
-export const SAMPLE_TEMPLATE_STATS: TemplateStats[] = [
-  { sent: 12, accepted: 8, revenue: 17600, medianOpenSeconds: null },
-  { sent: 5, accepted: 2, revenue: 4400, medianOpenSeconds: null },
-  { sent: 0, accepted: 0, revenue: 0, medianOpenSeconds: null },
-];
-
 /**
  * Sample package rows over the proposal's real package titles (so the
  * placeholder reads in the MC's own words), falling back to

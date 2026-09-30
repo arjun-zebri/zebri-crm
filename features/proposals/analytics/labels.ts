@@ -56,3 +56,17 @@ export function formatSeconds(s: number): string {
   if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`
   return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`
 }
+
+/**
+ * "45m", "1h 30m", "2d 4h": a time-to-open, coarse on purpose (seconds are
+ * noise at this scale). Shows the two largest units that are non-zero-led.
+ */
+export function formatDuration(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds))
+  const days = Math.floor(s / 86400)
+  const hours = Math.floor((s % 86400) / 3600)
+  const minutes = Math.floor((s % 3600) / 60)
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}

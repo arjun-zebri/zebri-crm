@@ -40,6 +40,8 @@ const queryKey = (id: string) => ['proposal-design', id] as const
  * knows the list uses.
  */
 const PROPOSALS_LIST_QUERY_KEY = ['all-proposals'] as const
+/** Prefix of the /proposals analytics queries (`use-proposal-analytics.ts`), repeated for the same boundary reason. */
+const PROPOSAL_ANALYTICS_QUERY_KEY = ['proposal-analytics'] as const
 
 /**
  * The two `getProposalDesignAction` failures that are data rather than
@@ -136,6 +138,7 @@ export function ProposalEditor({ proposalId, userId }: ProposalEditorProps) {
       onChanged={() => {
         void qc.invalidateQueries({ queryKey: queryKey(proposalId) })
         void qc.invalidateQueries({ queryKey: PROPOSALS_LIST_QUERY_KEY })
+        void qc.invalidateQueries({ queryKey: PROPOSAL_ANALYTICS_QUERY_KEY })
       }}
     />
   )

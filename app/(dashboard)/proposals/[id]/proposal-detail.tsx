@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { revertProposalToDraftAction } from '@/app/(dashboard)/proposals/actions';
 import { proposalLayoutV2Enabled } from '@/app/(dashboard)/proposals/flags';
 import { headlineTotal, PROPOSAL_STATE_PILL } from '@/app/(dashboard)/proposals/proposals-list';
+import { PROPOSAL_ANALYTICS_QUERY_KEY } from '@/app/(dashboard)/proposals/use-proposal-analytics';
 import { PROPOSALS_QUERY_KEY, type ProposalDetailRow } from '@/app/(dashboard)/proposals/use-proposals';
 import { Button, buttonClassName } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -69,6 +70,7 @@ export function ProposalDetail({ proposal: p, onEdit, onChanged }: ProposalDetai
         return;
       }
       void queryClient.invalidateQueries({ queryKey: PROPOSALS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: PROPOSAL_ANALYTICS_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: ['proposal', p.id] });
       void queryClient.invalidateQueries({ queryKey: ['couple-proposals', p.couple.id] });
       toast('Reverted to draft', 'success');
