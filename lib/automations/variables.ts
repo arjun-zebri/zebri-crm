@@ -26,6 +26,7 @@
  *   - `invoice.*`   link, number, total
  *   - `contract.*`  link, number
  *   - `task.*`      title, due_date
+ *   - `proposal.*`  link, number, title
  *
  * Missing fields render as the configured default or an empty
  * string; the resolver does NOT throw on unknown vars. That keeps
@@ -107,8 +108,18 @@ export function extractTokens(input: string): string[] {
   return out
 }
 
-/** Base URL for every share link. Mirrors the action handlers'. */
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+/**
+ * Base URL for every share link. Mirrors the action handlers' and
+ * `lib/proposals/send`'s own read of the same env var.
+ *
+ * A function, not a module-level constant: the value has to be read on
+ * each call, not frozen at import time, so a test (or a redeploy) can
+ * change `NEXT_PUBLIC_APP_URL` and every link variable - including
+ * {@link linkLabelForUrl}'s host check - follows it.
+ */
+function appUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+}
 
 /**
  * Couple-facing anchor text for each link variable, keyed by base path.
@@ -128,6 +139,7 @@ const LINK_LABELS: Readonly<Record<string, string>> = {
   'portal.vendor_link': 'View the run sheet',
   'invoice.link': 'View and pay your invoice',
   'contract.link': 'Review and sign your contract',
+  'proposal.link': 'View your proposal',
   'questionnaire.link': 'Fill in your questionnaire',
   'quote.link': 'View your quote',
   'mc.review_link': 'Leave a review',
@@ -157,6 +169,7 @@ const LINK_LABELS_BY_ROUTE: ReadonlyArray<readonly [route: string, label: string
   ['timeline', 'View the run sheet'],
   ['invoice', 'View and pay your invoice'],
   ['contract', 'Review and sign your contract'],
+  ['proposal', 'View your proposal'],
   ['questionnaire', 'Fill in your questionnaire'],
   ['quote', 'View your quote'],
 ]
@@ -176,7 +189,7 @@ export function linkLabelForUrl(url: string): string | null {
   }
   // Only this app's own routes: an MC's website that happens to have a
   // /portal page must not be relabelled as the couple's portal.
-  if (parsed.host !== new URL(APP_URL).host) return null
+  if (parsed.host !== new URL(appUrl()).host) return null
   const route = parsed.pathname.split('/')[1]
   return LINK_LABELS_BY_ROUTE.find(([r]) => r === route)?.[1] ?? null
 }
@@ -216,6 +229,7 @@ const KNOWN_KEYS: Readonly<Record<string, ReadonlySet<string>>> = {
   venue: new Set(['name']),
   mc: new Set(['business_name', 'name', 'contact_name', 'email', 'phone', 'review_link', 'signature']),
   portal: new Set(['link', 'partner_link', 'vendor_link']),
+  proposal: new Set(['link', 'number', 'title']),
 }
 
 /**
@@ -260,6 +274,8 @@ function readPath(path: string, ctx: RunContext): string {
       return readPortal(ctx, key)
     case 'questionnaire':
       return readQuestionnaire(ctx, key)
+    case 'proposal':
+      return readProposal(ctx, key)
     case 'invoice':
     case 'contract':
     case 'task':
@@ -398,15 +414,15 @@ function readPortal(ctx: RunContext, key: string): string {
   switch (key) {
     case 'link':
       return couple.portalEnabled && couple.portalToken
-        ? `${APP_URL}/portal/${couple.portalToken}`
+        ? `${appUrl()}/portal/${couple.portalToken}`
         : ''
     case 'partner_link':
       return couple.portalEnabled && couple.secondaryPortalToken
-        ? `${APP_URL}/portal/${couple.secondaryPortalToken}`
+        ? `${appUrl()}/portal/${couple.secondaryPortalToken}`
         : ''
     case 'vendor_link':
       return couple.runSheetEnabled && couple.runSheetToken
-        ? `${APP_URL}/timeline/${couple.runSheetToken}`
+        ? `${appUrl()}/timeline/${couple.runSheetToken}`
         : ''
     default:
       return ''
@@ -428,11 +444,56 @@ function readQuestionnaire(ctx: RunContext, key: string): string {
     const token = payload['share_token']
     // Only a questionnaire event's share_token belongs to this namespace.
     if (payload['questionnaire_id'] != null && typeof token === 'string' && token) {
-      const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
-      return `${base}/questionnaire/${token}`
+      return `${appUrl()}/questionnaire/${token}`
     }
   }
   return ''
+}
+
+/**
+ * `{{proposal.*}}`, resolved in this order:
+ *
+ * 1. A stamped `proposal_<key>` on the trigger payload (`proposal_link`,
+ *    `proposal_number`, `proposal_title`). Previews stuff these so the
+ *    composer can show a realistic value with no real proposal in play.
+ * 2. The same keys on any prior action's output: a `send_proposal` step
+ *    that just sent the proposal knows the freshest link.
+ * 3. For an event the proposal trigger emitted (`source_table ===
+ *    'proposals'`), the lifecycle payload's own columns: `share_token`
+ *    (`tg_proposals_emit_lifecycle`, Task 3) for the link, and `title`.
+ *    The link is built here rather than stamped by the trigger because
+ *    Postgres cannot know this app's runtime origin.
+ *
+ * Exact keys only, both above and here: a `title` column on some other
+ * table's event payload (e.g. a contract) is not the proposal's title,
+ * so a stray same-named field must not leak across namespaces.
+ *
+ * The URL is built via {@link appUrl}, which reads `NEXT_PUBLIC_APP_URL`
+ * at call time rather than a frozen constant - it keeps this resolver
+ * testable against a per-test origin, and matches how `lib/proposals/send`
+ * builds the same share URL.
+ */
+function readProposal(ctx: RunContext, key: string): string {
+  const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
+  const stamped = payload[`proposal_${key}`]
+  if (stamped != null) return String(stamped)
+  for (const actionId of Object.keys(ctx.actionResults)) {
+    const r = ctx.actionResults[actionId] as Record<string, unknown> | null
+    const v = r?.[`proposal_${key}`]
+    if (v != null) return String(v)
+  }
+  if (ctx.triggerEvent.source_table !== 'proposals') return ''
+  switch (key) {
+    case 'link':
+      return typeof payload['share_token'] === 'string' && payload['share_token']
+        ? `${appUrl()}/proposal/${payload['share_token']}`
+        : ''
+    case 'title':
+      return payload['title'] != null ? String(payload['title']) : ''
+    default:
+      // `number` is covered by the `proposal_number` read above the switch.
+      return ''
+  }
 }
 
 function readEventField(ctx: RunContext, namespace: string, key: string): string {
@@ -538,6 +599,7 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
       { token: '{{portal.vendor_link}}', label: 'Vendor run sheet link', example: 'https://zebri.app/timeline/…' },
       { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/invoice/…' },
       { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/contract/…' },
+      { token: '{{proposal.link}}', label: 'Proposal link', example: 'https://zebri.app/proposal/…' },
       { token: '{{questionnaire.link}}', label: 'Questionnaire link', example: 'https://zebri.app/questionnaire/…' },
     ],
   },
@@ -546,6 +608,8 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
     variables: [
       { token: '{{invoice.number}}', label: 'Invoice number', example: 'INV-001' },
       { token: '{{contract.number}}', label: 'Contract number', example: 'CTR-001' },
+      { token: '{{proposal.number}}', label: 'Proposal number', example: 'PR-001' },
+      { token: '{{proposal.title}}', label: 'Proposal title', example: 'Wedding MC proposal' },
     ],
   },
   {

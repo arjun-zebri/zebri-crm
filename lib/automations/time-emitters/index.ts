@@ -7,8 +7,8 @@
  *
  * A handful of triggers, though, don't have a source row that changes
  * when they "fire": `invoice_due`, `invoice_overdue`, `step_overdue`,
- * `time_before_event`, etc. They need to be computed each tick by
- * comparing the source row's timestamp to "now".
+ * `time_before_event`, `proposal_expiring`, etc. They need to be
+ * computed each tick by comparing the source row's timestamp to "now".
  *
  * This module hosts those computations. The {@link runTimeEmitters}
  * function is called from the cron tick on the quarter hour (the tick
@@ -55,6 +55,7 @@ import { anniversaryOfEventEmitter } from './anniversary-of-event'
 import { consultationCompletedEmitter } from './consultation-completed'
 import { invoiceDueEmitter } from './invoice-due'
 import { invoiceOverdueEmitter } from './invoice-overdue'
+import { proposalExpiringEmitter } from './proposal-expiring'
 import { timeAfterEventEmitter } from './time-after-event'
 import { timeBeforeEventEmitter } from './time-before-event'
 
@@ -107,6 +108,7 @@ export interface TimeEmitter {
 export const timeEmitterRegistry: readonly TimeEmitter[] = [
   invoiceDueEmitter,
   invoiceOverdueEmitter,
+  proposalExpiringEmitter,
   timeBeforeEventEmitter,
   timeAfterEventEmitter,
   anniversaryOfEventEmitter,

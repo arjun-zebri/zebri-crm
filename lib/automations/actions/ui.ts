@@ -142,6 +142,12 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
       "description": "Email the couple an invoice",
       "icon": "Receipt"
     },
+    "send_proposal": {
+      "category": "payments",
+      "label": "Send proposal",
+      "description": "Email the couple their draft proposal",
+      "icon": "FileText"
+    },
     "send_couple_questionnaire": {
       "category": "couple",
       "label": "Send questionnaire",

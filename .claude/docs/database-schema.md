@@ -2780,6 +2780,40 @@ for the coverage matrix and integration tests.
   before it leaves the function, since the password gate is checked
   server-side and the hash is never a public field.
 
+## Proposals in Workflows (R2, 2026-09-21)
+
+Migration `20261002000000_proposal_lifecycle_events.sql`. Full feature
+doc: `.claude/docs/workflows.md` (Proposals (R2)) and
+`.claude/docs/proposals.md` (Workflows).
+
+### `tg_proposals_emit_lifecycle()`
+`AFTER UPDATE` trigger on `proposals`, `plpgsql`, `security definer`,
+`search_path public, pg_temp`, execute revoked from `public, anon,
+authenticated`. Returns immediately unless `tg_op = 'UPDATE'`. Emits up
+to five `automation_events` rows per row update, each gated on its own
+old-vs-new comparison so a plain `updated_at` touch or `version` bump
+never re-emits:
+
+| Event | Guard | Extra payload (beyond `proposal_id`, `couple_id`, `proposal_number`, `title`, `share_token`, `event_date`) |
+|---|---|---|
+| `proposal_sent` | `new.share_token_enabled and not old.share_token_enabled` | `expires_at` |
+| `proposal_opened` | `new.first_viewed_at is not null and old.first_viewed_at is null` | (none) |
+| `proposal_accepted` | `new.accepted_at is not null and old.accepted_at is null` | `accepted_option_id`, `option_title`, `total` (the accepted invoice's subtotal, falling back to the option's subtotal) |
+| `proposal_declined` | `new.declined_at is not null and old.declined_at is null` | `declined_reason`, `declined_message` |
+| `proposal_expired` | `new.status = 'expired' and old.status is distinct from 'expired'` | `expires_at` |
+
+`event_date` is resolved through `_workflow_couple_wedding_date(couple_id)`
+(the same helper every other trigger and the workflow variable resolver
+use), not a plain `couples.event_date` read.
+
+### Scheduled job
+`zebri:expire-proposals`, `10 22 * * *`, registered in the same
+migration alongside the trigger (see "Scheduler" below for the full job
+table). Calls `public.cron_call('/api/cron/expire-proposals')`, which
+runs `expire_proposals()` (defined in `20260925000000_proposal_close.sql`);
+the resulting `status = 'expired'` update is what fires
+`tg_proposals_emit_lifecycle`'s `proposal_expired` branch.
+
 ------------------------------------------------------------------------
 
 # Scheduler (R1, 2026-09-20)
@@ -2828,3 +2862,19 @@ mid-flight from releasing its successor's hold. Execute is revoked from
 `public`, `anon` and `authenticated` explicitly (Supabase's default
 privileges grant new functions to those roles otherwise) and granted to
 `service_role` alone. See `workflows.md` "The cron sweep".
+
+### Jobs
+
+One `cron.job` row per scheduled route, each running `public.cron_call('<path>')`.
+Full job table and secret-sync flow: `.claude/docs/cicd.md` ("Scheduled
+jobs (pg_cron)").
+
+| Job | Route | Schedule (UTC) | Added |
+|---|---|---|---|
+| `zebri:automations-tick` | `/api/cron/automations-tick` | `* * * * *` | R1 |
+| `zebri:expire-contracts` | `/api/cron/expire-contracts` | `0 22 * * *` | R1 |
+| `zebri:booking-reminders` | `/api/cron/booking-reminders` | `30 22 * * *` | R1 |
+| `zebri:prune-stripe-events` | `/api/cron/prune-stripe-events` | `0 3 * * *` | R1 |
+| `zebri:workflow-digest` | `/api/cron/workflow-digest` | `0 * * * *` | R1 |
+| `zebri:cron-history-prune` | (SQL only) | `0 4 * * *` | R1 |
+| `zebri:expire-proposals` | `/api/cron/expire-proposals` | `10 22 * * *` | R2 |

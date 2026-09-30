@@ -79,3 +79,46 @@ export async function loadWeddingDateOrThrow(
   if (error) throw new WorkflowReadError('wedding_date', error);
   return events.data?.date ?? couple.data?.event_date ?? null;
 }
+
+/**
+ * The wedding date for several couples at once.
+ *
+ * Same resolution as {@link loadWeddingDate} (earliest `events` row,
+ * else `couples.event_date`, else null) but batched into two queries
+ * total instead of two per couple. The result set is sorted ascending,
+ * so the first row seen for a `couple_id` is that couple's earliest date.
+ *
+ * Lenient like {@link loadWeddingDate}: a failed read answers null.
+ * Callers resolving many rows (e.g. the `proposal_expiring` time-emitter
+ * fanning out over a tick's candidates) call this once rather than
+ * {@link loadWeddingDate} in a loop.
+ *
+ * @param supabase - service-role client
+ * @param coupleIds - couples to resolve; duplicates are ignored
+ */
+export async function loadWeddingDates(
+  supabase: SupabaseClient<Database>,
+  coupleIds: readonly string[],
+): Promise<Map<string, string | null>> {
+  const ids = [...new Set(coupleIds)];
+  const result = new Map<string, string | null>();
+  if (ids.length === 0) return result;
+
+  const [{ data: events }, { data: couples }] = await Promise.all([
+    supabase.from('events').select('couple_id, date').in('couple_id', ids).order('date', { ascending: true }),
+    supabase.from('couples').select('id, event_date').in('id', ids),
+  ]);
+
+  const fallback = new Map<string, string | null>();
+  for (const row of couples ?? []) fallback.set(row.id, row.event_date);
+
+  const earliest = new Map<string, string>();
+  for (const row of events ?? []) {
+    if (!earliest.has(row.couple_id)) earliest.set(row.couple_id, row.date);
+  }
+
+  for (const id of ids) {
+    result.set(id, earliest.get(id) ?? fallback.get(id) ?? null);
+  }
+  return result;
+}

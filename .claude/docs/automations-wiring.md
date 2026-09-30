@@ -104,7 +104,7 @@ get unhidden by their wiring PR.
   *visible* tiles. Zod schemas keep `.passthrough()` so previously
   saved configs still parse; the fields just leave the UI.
 
-### Triggers, VISIBLE (31, fire today)
+### Triggers, VISIBLE (37, fire today)
 
 `new_enquiry`, `couple_stage_changed`, `invoice_created`,
 `invoice_sent`, `payment_received`, `invoice_due`, `invoice_overdue`,
@@ -116,13 +116,19 @@ get unhidden by their wiring PR.
 `anniversary_of_event`, `couple_uploaded_file`,
 `couple_added_song_to_playlist`, `couple_completed_vows`,
 `questionnaire_completed`, `consultation_booked`, `booking_cancelled`,
-`consultation_completed`.
+`consultation_completed`, `proposal_sent`, `proposal_opened`,
+`proposal_accepted`, `proposal_declined`, `proposal_expired`,
+`proposal_expiring`.
 
 (The six `quote_*` triggers left this list when the quotes feature was
 dropped on 2026-07-11. The old `booking_cancelled` (status-based) was
 retired 2026-08-13; the new one fires from the booking insert trigger
 and cancel_booking RPC (Scheduler Phase D). consultation_booked and
-consultation_completed are Phase D additions, visible starting 2026-08-20.)
+consultation_completed are Phase D additions, visible starting 2026-08-20.
+The six `proposal_*` triggers are R2 additions: the five lifecycle ones
+fire from `tg_proposals_emit_lifecycle`, `proposal_expiring` from the
+tick-emitted `proposalExpiringEmitter`. See `workflows.md` → "Proposals
+(R2)".)
 
 ### Triggers — HIDDEN
 
@@ -141,18 +147,22 @@ consultation_completed are Phase D additions, visible starting 2026-08-20.)
   `vendor_contact_assigned`, `team_member_added`,
   `webhook_received`). All stay defined in the registry but hidden.
 
-### Actions — VISIBLE after cleanup (21)
+### Actions, VISIBLE after cleanup (22)
 
 `send_email`, `update_couple_stage`, `add_note`, `send_portal_link`,
 `request_information`, `create_couple`, `pause_couple_automations`,
 `create_task`, `update_task`, `send_quote`, `send_contract`,
-`send_invoice`, `trigger_payment_reminder`, `create_timeline_event`,
-`send_timeline_to_vendors`, `send_final_run_sheet`,
-`send_pre_event_checklist`, `send_thank_you_message`,
-`request_review`, `send_referral_request`, plus `send_sms`
-(greyed `comingSoon`, kept per review). Flow control: `wait`,
-`branch`, `stop` only — `sub_flow` and `approval` are cut (not in
+`send_invoice`, `send_proposal`, `trigger_payment_reminder`,
+`create_timeline_event`, `send_timeline_to_vendors`,
+`send_final_run_sheet`, `send_pre_event_checklist`,
+`send_thank_you_message`, `request_review`, `send_referral_request`,
+plus `send_sms` (greyed `comingSoon`, kept per review). Flow control:
+`wait`, `branch`, `stop` only: `sub_flow` and `approval` are cut (not in
 the review file) and should be hidden from the picker's flow list.
+
+`send_proposal` is an R2 addition alongside `send_contract` /
+`send_invoice`: it emails the couple's most recent draft proposal, draft
+only. See `workflows.md` → "Proposals (R2)".
 
 ### Actions — HIDDEN / CUT
 

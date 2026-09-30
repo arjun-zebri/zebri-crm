@@ -36,6 +36,7 @@ import {
   questionnaireFilters,
   sectionCompletedFilters,
 } from '@/app/(dashboard)/workflows/[id]/portal-filters'
+import { PROPOSAL_EXPIRING_FILTERS } from '@/app/(dashboard)/workflows/[id]/proposal-filters'
 import {
   taskCompletedFilters,
   taskCreatedFilters,
@@ -83,6 +84,12 @@ const SUITES: { trigger: TriggerType; filters: TriggerFilterDef[] }[] = [
   { trigger: 'invoice_overdue', filters: INVOICE_OVERDUE_FILTERS },
   { trigger: 'contract_created', filters: EVENT_DATE_FILTERS },
   { trigger: 'contract_signed', filters: EVENT_DATE_FILTERS },
+  { trigger: 'proposal_sent', filters: EVENT_DATE_FILTERS },
+  { trigger: 'proposal_opened', filters: EVENT_DATE_FILTERS },
+  { trigger: 'proposal_accepted', filters: EVENT_DATE_FILTERS },
+  { trigger: 'proposal_declined', filters: EVENT_DATE_FILTERS },
+  { trigger: 'proposal_expired', filters: EVENT_DATE_FILTERS },
+  { trigger: 'proposal_expiring', filters: PROPOSAL_EXPIRING_FILTERS },
   { trigger: 'event_created', filters: EVENT_CREATED_FILTERS },
   { trigger: 'event_updated', filters: EVENT_UPDATED_FILTERS },
   { trigger: 'time_before_event', filters: TIME_BEFORE_EVENT_FILTERS },
