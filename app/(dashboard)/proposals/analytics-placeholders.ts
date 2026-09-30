@@ -15,34 +15,14 @@
  * @module app/(dashboard)/proposals/analytics-placeholders
  */
 
-/** One section of a proposal, with how long viewers spent on it and how many of them scrolled as far as it. */
-export interface SectionEngagementRow {
-  id: string;
-  label: string;
-  /** Total reading seconds across every session. */
-  seconds: number;
-  /** Share of sessions that scrolled far enough to see this section, 0 to 100. Falls as the page goes on; the biggest drop is where readers leave. */
-  reachPct: number;
-}
+import type { PackageEngagementRow, SectionEngagementRow, TemplateStats } from '@/features/proposals';
+import { acceptanceRate } from '@/features/proposals';
 
-/** One package's share of attention against the others, and whether it was the one chosen. */
-export interface PackageEngagementRow {
-  optionId: string;
-  title: string;
-  /** Sessions in which the package card was viewed. */
-  views: number;
-  /** Total seconds spent with the card in view. */
-  seconds: number;
-  chosen: boolean;
-}
-
-/** Per-template outcomes, for the cards on /proposals. */
-export interface TemplateStats {
-  sent: number;
-  accepted: number;
-  /** Sum of the accepted proposals' chosen-package subtotals, in whole dollars. */
-  revenue: number;
-}
+// Types and `acceptanceRate` moved to `features/proposals/analytics` (R4);
+// re-exported so the remaining placeholder users keep compiling until
+// Tasks 4 and 5 remove them.
+export { acceptanceRate };
+export type { PackageEngagementRow, SectionEngagementRow, TemplateStats };
 
 /** The shape a typical proposal reads in: attention front-loaded, reach tapering, a spike on the packages. */
 export const SAMPLE_SECTION_ENGAGEMENT: SectionEngagementRow[] = [
@@ -66,15 +46,10 @@ export const SAMPLE_PACKAGE_FIGURES: Array<Pick<PackageEngagementRow, 'views' | 
 
 /** Deterministic per-card sample so the three cards do not all say the same thing. */
 export const SAMPLE_TEMPLATE_STATS: TemplateStats[] = [
-  { sent: 12, accepted: 8, revenue: 17600 },
-  { sent: 5, accepted: 2, revenue: 4400 },
-  { sent: 0, accepted: 0, revenue: 0 },
+  { sent: 12, accepted: 8, revenue: 17600, medianOpenSeconds: null },
+  { sent: 5, accepted: 2, revenue: 4400, medianOpenSeconds: null },
+  { sent: 0, accepted: 0, revenue: 0, medianOpenSeconds: null },
 ];
-
-/** `accepted / sent` as a whole percentage, or `null` when nothing has been sent (0/0 is not 0%). */
-export function acceptanceRate(stats: TemplateStats): number | null {
-  return stats.sent === 0 ? null : Math.round((stats.accepted / stats.sent) * 100);
-}
 
 /**
  * Sample package rows over the proposal's real package titles (so the

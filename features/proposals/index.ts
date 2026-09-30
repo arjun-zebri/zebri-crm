@@ -5,8 +5,9 @@
  * (see `eslint.config.mjs`, "Feature boundary").
  *
  * Phase 1 exports the layout model, validator, presets, migration and the
- * public renderer. Phase 2 adds the editor state. Later phases add the
- * builder and analytics.
+ * public renderer. Phase 2 adds the editor state. Analytics (R4) adds the
+ * engagement summaries and the pure section, package and device reports.
+ * Later phases add the builder.
  *
  * @module features/proposals
  */
@@ -241,3 +242,13 @@ export { GateState } from './editor/gate-state'
 export { DesignExplainerModal } from './editor/design-explainer-modal'
 export type { DesignExplainerModalProps } from './editor/design-explainer-modal'
 export { designExplainerKey, hasSeenDesignExplainer, markDesignExplainerSeen } from './editor/design-explainer-seen'
+
+// analytics/
+export { acceptanceRate } from './analytics/types'
+export type { AccountSummary, DeviceSplit, PackageEngagementRow, SectionEngagementRow, TemplateStats } from './analytics/types'
+export { deviceSplit, packageReport, sectionReport } from './analytics/reports'
+export { sectionTotals, summarizeEngagement } from './analytics/summary'
+export type { EngagementRow, EngagementSummary, SectionSeconds } from './analytics/summary'
+export { sessionTimelines } from './analytics/sessions'
+export type { SessionTimeline } from './analytics/sessions'
+export { blockTypeLabel, formatSeconds, stepLabel } from './analytics/labels'

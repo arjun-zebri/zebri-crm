@@ -78,8 +78,8 @@ function EngagementBody({ proposal, rows }: { proposal: ProposalDetailRow; rows:
       {topSections.length > 0 ? (
         <div className="space-y-1.5">
           {topSections.map((s) => (
-            <div key={s.blockId} className="flex items-center gap-3">
-              <span className="text-body text-text-muted w-32 shrink-0">{blockTypeLabel(s.blockType)}</span>
+            <div key={s.id} className="flex items-center gap-3">
+              <span className="text-body text-text-muted w-32 shrink-0">{blockTypeLabel(s.kind)}</span>
               <div className="h-2 flex-1 rounded-control bg-surface-muted">
                 {/* Width is the one data-driven value here (share of the
                     top section's seconds); colour and radius still come

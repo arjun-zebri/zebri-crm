@@ -41,7 +41,7 @@ export function ProposalEngagementTimeline({ rows, optionTitles }: ProposalEngag
         const line = [when, formatSeconds(t.seconds), chose, furthestStep ? stepLabel(furthestStep) : null]
           .filter((part): part is string => Boolean(part))
           .join(' · ');
-        const topSections = t.sections.slice(0, 3).map((s) => blockTypeLabel(s.blockType)).join(', ');
+        const topSections = t.sections.slice(0, 3).map((s) => blockTypeLabel(s.kind)).join(', ');
 
         return (
           <li key={t.sessionId} className="py-2 space-y-0.5">

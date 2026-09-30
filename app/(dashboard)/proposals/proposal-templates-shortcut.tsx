@@ -61,7 +61,7 @@ export function ProposalTemplatesShortcut({ onNewTemplate }: ProposalTemplatesSh
     <TemplateCards
       templates={query.data}
       overlay={(_t, i) => (
-        <TemplateStatsChips stats={SAMPLE_TEMPLATE_STATS[i] ?? { sent: 0, accepted: 0, revenue: 0 }} />
+        <TemplateStatsChips stats={SAMPLE_TEMPLATE_STATS[i] ?? { sent: 0, accepted: 0, revenue: 0, medianOpenSeconds: null }} />
       )}
     />
   );

@@ -17,8 +17,8 @@ import { TemplateStatsChips } from '@/app/(dashboard)/proposals/templates/templa
 
 describe('analytics placeholders', () => {
   it('acceptanceRate is null with nothing sent (0/0 is not 0%)', () => {
-    expect(acceptanceRate({ sent: 0, accepted: 0, revenue: 0 })).toBeNull()
-    expect(acceptanceRate({ sent: 12, accepted: 8, revenue: 0 })).toBe(67)
+    expect(acceptanceRate({ sent: 0, accepted: 0 })).toBeNull()
+    expect(acceptanceRate({ sent: 12, accepted: 8 })).toBe(67)
   })
 
   it('biggestDropIndex marks the section where reach fell the most', () => {
@@ -57,7 +57,7 @@ describe('analytics placeholders', () => {
     expect(screen.getByText('12 sent')).toBeInTheDocument()
     expect(screen.getByText('67% accepted')).toBeInTheDocument()
     expect(screen.getByText('$17,600 won')).toBeInTheDocument()
-    rerender(<TemplateStatsChips stats={{ sent: 0, accepted: 0, revenue: 0 }} />)
+    rerender(<TemplateStatsChips stats={{ sent: 0, accepted: 0, revenue: 0, medianOpenSeconds: null }} />)
     expect(container).toBeEmptyDOMElement()
   })
 })

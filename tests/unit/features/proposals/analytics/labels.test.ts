@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { DOC_SPECIFIC_BY_SURFACE } from '@/app/(dashboard)/branding/blocks/blocks-by-surface'
 import { BLOCK_LABELS } from '@/app/(dashboard)/branding/blocks/types'
-import { BLOCK_TYPE_LABELS } from '@/lib/proposals/engagement-labels'
+import { BLOCK_TYPE_LABELS } from '@/features/proposals/analytics/labels'
 
 /**
  * m4: `BLOCK_TYPE_LABELS` is a hand-copied duplicate of `BLOCK_LABELS`
