@@ -25,8 +25,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { getTriggerSpec } from '@/lib/automations/triggers'
-import { loadWeddingDates } from '@/lib/workflows/wedding-date'
 import { loadActiveTriggerConfigs } from '@/lib/workflows/trigger-configs'
+import { loadWeddingDates } from '@/lib/workflows/wedding-date'
 import type { Database } from '@/types/database'
 
 import type { TimeEmitter } from './index'

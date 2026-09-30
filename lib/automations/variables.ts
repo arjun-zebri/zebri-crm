@@ -229,6 +229,7 @@ const KNOWN_KEYS: Readonly<Record<string, ReadonlySet<string>>> = {
   venue: new Set(['name']),
   mc: new Set(['business_name', 'name', 'contact_name', 'email', 'phone', 'review_link', 'signature']),
   portal: new Set(['link', 'partner_link', 'vendor_link']),
+  proposal: new Set(['link', 'number', 'title']),
 }
 
 /**

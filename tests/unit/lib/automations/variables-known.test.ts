@@ -32,6 +32,13 @@ describe('isKnownVariable', () => {
     }
   });
 
+  it('knows the proposal keys readProposal answers, and no others', () => {
+    for (const path of ['proposal.link', 'proposal.number', 'proposal.title']) {
+      expect(isKnownVariable(path), path).toBe(true);
+    }
+    expect(isKnownVariable('proposal.total')).toBe(false);
+  });
+
   it('does not know event.venue, or a namespace it has never heard of', () => {
     expect(isKnownVariable('event.venue')).toBe(false);
     expect(isKnownVariable('venue.address')).toBe(false);
