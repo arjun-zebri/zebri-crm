@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 
-import type { PortalPerson, PortalSong } from './use-portal-data'
+import type { PortalPerson } from './use-portal-data'
 
 // Underline input vocabulary - matches the couple/event/contact
 // modals so the four surfaces look like one product. Same definition
@@ -320,115 +320,6 @@ export function PersonModal({
             placeholder="Any notes for the MC..."
             rows={8}
             className={`${inputClass} resize-none`}
-          />
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
-// ── Song modal ──────────────────────────────────────────────────────────────
-export function SongModal({
-  isOpen, onClose, onSave, onDelete, song, categoryLabel, saving,
-}: {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (data: Partial<PortalSong>) => void
-  onDelete?: () => void
-  song: PortalSong | null
-  categoryLabel: string
-  saving: boolean
-}) {
-  const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
-  const [notes, setNotes] = useState('')
-  const [confirmDelete, setConfirmDelete] = useState(false)
-
-  useEffect(() => {
-    if (isOpen) {
-      setTitle(song?.title ?? '')
-      setArtist(song?.artist ?? '')
-      setNotes(song?.notes ?? '')
-      setConfirmDelete(false)
-    }
-  }, [isOpen, song])
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="sm"
-      nested
-      title={song ? 'Edit song' : `Add ${categoryLabel} song`}
-      footer={
-        <div className="flex items-center justify-between">
-          {song && onDelete ? (
-            confirmDelete ? (
-              <div className="flex items-center gap-2">
-                <span className="text-body text-text-muted">Remove this song?</span>
-                <button type="button" onClick={onDelete} className="text-body text-red-500 hover:text-red-600 transition cursor-pointer">Yes, remove</button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="text-body text-text-subtle hover:text-gray-600 transition cursor-pointer">Cancel</button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className="text-body px-4 py-2 rounded-control bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
-              >
-                Delete
-              </button>
-            )
-          ) : null}
-          <div className="flex gap-3 ml-auto">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="text-body px-4 py-2 rounded-control bg-surface-emphasis text-text hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <Button
-              onClick={() => onSave({ title, artist: artist || null, notes: notes || null })}
-              disabled={!title.trim()}
-              loading={saving}
-            >
-              Save
-            </Button>
-          </div>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <div>
-          <label className={labelClass}>Song title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Can't Help Falling in Love"
-            className={inputClass}
-            autoFocus
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Artist (optional)</label>
-          <input
-            type="text"
-            value={artist}
-            onChange={(e) => setArtist(e.target.value)}
-            placeholder="e.g. Elvis Presley"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Notes (optional)</label>
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. Start from the chorus"
-            className={inputClass}
           />
         </div>
       </div>

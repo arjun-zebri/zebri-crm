@@ -71,7 +71,9 @@ import { execSync } from 'node:child_process';
 // Scheduler UI pass: sweeping four hand-rolled toggle switches onto the shared
 // `Toggle` primitive removed the duplicated markup and its violations → 53,
 // then moving the meeting type status onto its card removed another → 52.
-const ERROR_BUDGET = 43;
+// Spotify song search: the two song modals' setState-in-effect resets moved
+// into a render-time reset in the shared `useSongForm` hook, 43 -> 41.
+const ERROR_BUDGET = 41;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C

@@ -846,8 +846,12 @@ artist (text, nullable)
 notes (text, nullable)
 position (integer, default 0)
 created_at (timestamptz, default now())
+spotify_track_id (text, nullable)  -  22-char Spotify track id when picked from Spotify search; null for a typed song. CHECK `^[A-Za-z0-9]{22}$`
+artwork_url (text, nullable)  -  album cover; CHECK pins it to Spotify's CDN (`https://i.scdn.co/image/...`) because anon portal visitors write it and both surfaces render it as an <img>
+duration_ms (integer, nullable)  -  track length; CHECK 0 < n < 24h
+(CHECK portal_songs_spotify_meta_needs_track: artwork_url / duration_ms only with a spotify_track_id)
 
-RLS: Standard user_id = auth.uid(). Anon access via: save_portal_song, delete_portal_song.
+RLS: Standard user_id = auth.uid(). Anon access via: save_portal_song (10 args; the 3 Spotify params default to null, and re-saving without them clears the pick; the ON CONFLICT update only touches a row of the token's own couple), delete_portal_song, get_portal_song_spotify(p_token) (Spotify columns per song, merged onto get_portal_data's songs by the portal page). portal_token_is_active(p_token) gates /api/spotify/search for portal visitors. Migration 20261026100000.
 
 ------------------------------------------------------------------------
 

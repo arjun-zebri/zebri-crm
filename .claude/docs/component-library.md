@@ -615,6 +615,31 @@ type PreviewScriptProps = {
 };
 ```
 
+## Song components  -  `components/songs/*`
+
+Spotify song search, shared by the client profile's song modal
+(`app/(dashboard)/couples/song-modal.tsx`) and the couple portal
+(`app/portal/[token]/song-modal.tsx`, branded). All on `/design-system`
+under Feature composites.
+
+- `SpotifyTrackPicker`: search field + results, or the picked track's
+  player with "Choose a different song". Fixed `h-72` in every state so the
+  modal never resizes. Dashboard primitives; the portal has its own branded
+  twin (`app/portal/[token]/song-spotify-picker.tsx`) over the same hook.
+- `SpotifyTrackRow`: one result (cover, title, artist · length).
+- `SpotifyEmbed`: Spotify's official 80px player iframe.
+- `SongArtwork`: cover `<img>` that falls back instead of a broken image.
+- `useSpotifySearch(query, portalToken?)`: 300ms-debounced search via
+  `/api/spotify/search`; pasted track links skip the debounce. Keeps the
+  last results while the next search loads.
+- `useSongForm(song, isOpen)`: the add/edit form state both modals share
+  (Spotify pick vs typed entry, notes, delete confirm). Resets during
+  render when the modal opens, not in an effect.
+
+Server side: `lib/spotify/client.ts` (Client Credentials, server only),
+`lib/spotify/parse.ts` (link parsing, embed/track URLs, `3:02` durations),
+`lib/spotify/song-fields.ts` (Zod for the three `portal_songs` columns).
+
 ## Time-tracking components  -  `components/time-tracking/*`
 
 Used by the couple timer (see `page-specs.md` "Time tracking").
