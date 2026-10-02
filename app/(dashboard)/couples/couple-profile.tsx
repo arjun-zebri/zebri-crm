@@ -55,7 +55,8 @@ import type {
   CoupleProfileNavItem,
   CoupleProfileSection,
 } from './couple-profile-types';
-import { PersonModal, SongModal } from './portal-modals';
+import { PersonModal } from './portal-modals';
+import { SongModal } from './song-modal';
 import { useCoupleProfileTabsConfig } from './use-couple-profile-tabs';
 import { useCoupleStatuses } from './use-couple-statuses';
 import { usePortalData } from './use-portal-data';

@@ -210,6 +210,8 @@ function describe(event: AlertEvent): string {
       return `report=${event.reportId} — ${event.reason}\n*${event.title}* (${event.reporter})\n${event.description}`;
     case 'bug_report_screenshot_upload_failed':
       return `report=${event.reportId} — ticket filed without its screenshot: ${event.reason}`;
+    case 'spotify_api_failed':
+      return `song search is down: Spotify ${event.code} status=${event.status}. Check SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET (couples fall back to typing songs)`;
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }

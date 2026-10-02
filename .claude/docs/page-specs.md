@@ -526,6 +526,42 @@ mode.
 - Data: `scripts` table, `use-couple-scripts.ts` (React Query) for reads,
   `script-actions.ts` (Zod, RLS client) for writes.
 
+### Songs (client profile + couple portal)
+
+Couples add songs per category on their portal (`app/portal/[token]/songs-section.tsx`);
+the MC sees and edits them on the client profile's **Songs** tab
+(`app/(dashboard)/couples/mc-portal-songs.tsx`, `song-modal.tsx`).
+
+Adding a song **searches Spotify first**: type a title or artist, or paste an
+`open.spotify.com/track/...` link (looked up straight away). Picking a result
+shows Spotify's own player so the couple or MC can hear it is the right
+recording, then Save stores the title, artist, track id, cover and length.
+**"Can't find it? Type it in"** switches to typed title + artist for songs
+Spotify does not have; a typed song reopens in typed mode, a picked one with
+its player. Notes stay free text on both. When search is unavailable
+(Spotify down, keys missing) the picker says so and offers typing it in.
+
+Shared pieces live in `components/songs/` (`useSpotifySearch`, `useSongForm`,
+`SpotifyTrackPicker`, `SpotifyEmbed`, `SongArtwork`); the portal renders them
+in the MC's branding. The search goes through `/api/spotify/search`
+(see `security.md`). Picked songs show their cover on the song cards.
+
+On the portal every category is always open (no accordion): heading,
+optional description and an "Add song" action on the right, then the songs
+as plain rows (cover, title, artist · length · notes). No cards, dashed boxes
+or rules between categories, only spacing. A picked song has a play button
+that opens Spotify's player under the row; tapping the row edits the song.
+
+The modal keeps one fixed height whether searching, showing a pick, or typing.
+On phones the MC's per-category **+** (add song) is visible at rest; on
+desktop it appears on hover.
+
+Known gap (pre-existing, not Spotify-specific): the portal's default
+categories (`first_dance`, `ceremony`, ...) and the client profile's seeded
+defaults (`parents_entry`, `bridal_party_entry`, `couple_entry`) differ, so
+songs a couple adds before the MC first opens the Songs tab sit in categories
+the MC's tab does not list (they still count in "n total").
+
 ### Time tracking (couple timer)
 
 Lets an MC time the work they put into a couple and charge accordingly.

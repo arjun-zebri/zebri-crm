@@ -357,6 +357,20 @@ export const UNSUBSCRIBE_RATE_LIMITS = {
 export type UnsubscribeRateLimitKey = keyof typeof UNSUBSCRIBE_RATE_LIMITS;
 
 /**
+ * Spotify song-search rate-limits (`/api/spotify/search`).
+ *
+ * - **search**: 60/min/IP. The picker debounces at 300ms, so a person
+ *   typing a long title fires roughly one request per word; 60 leaves room
+ *   for several people on one venue Wi-Fi while stopping the route from
+ *   being used as a free Spotify proxy (our app quota is shared by every MC).
+ */
+export const SPOTIFY_RATE_LIMITS = {
+  search: { windowMs: 60_000, max: 60 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type SpotifyRateLimitKey = keyof typeof SPOTIFY_RATE_LIMITS;
+
+/**
  * Per-tenant automated-send limits (workflows trust remediation, Task 15).
  *
  * Every MC's automated sends go out through the same shared Resend

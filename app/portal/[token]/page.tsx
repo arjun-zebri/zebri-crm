@@ -18,6 +18,7 @@ import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-r
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
+import type { SongSpotifyColumns } from '@/lib/spotify/song-fields'
 
 
 import { BrandingHead } from './branding-head'
@@ -37,7 +38,7 @@ export interface PortalPerson {
   phone: string | null
 }
 
-export interface PortalSong {
+export interface PortalSong extends SongSpotifyColumns {
   id: string
   category: string
   title: string
@@ -241,6 +242,21 @@ export default async function PortalPage({
   // every section already reading it, stays untouched.
   const { data: msData } = await supabase.rpc('get_portal_milestones', { token })
   portal.milestones = (msData as PortalMilestone[] | null) ?? []
+
+  // Spotify picks, same pattern: merged onto the songs get_portal_data
+  // already returned, so typed songs simply keep null Spotify columns.
+  const { data: spotifyData } = await supabase.rpc('get_portal_song_spotify', { p_token: token })
+  const spotifyRows = (spotifyData as (SongSpotifyColumns & { id: string })[] | null) ?? []
+  const spotifyById = new Map(spotifyRows.map((row) => [row.id, row]))
+  portal.songs = portal.songs.map((song) => {
+    const pick = spotifyById.get(song.id)
+    return {
+      ...song,
+      spotify_track_id: pick?.spotify_track_id ?? null,
+      artwork_url: pick?.artwork_url ?? null,
+      duration_ms: pick?.duration_ms ?? null,
+    }
+  })
 
   // Resolve branding once at the page boundary. portal.branding comes from
   // get_portal_data which always returns a fully populated PublicBranding

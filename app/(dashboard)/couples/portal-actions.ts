@@ -28,6 +28,7 @@
 import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
+import { spotifySongFields } from '@/lib/spotify/song-fields';
 import { createClient } from '@/lib/supabase/server';
 import { singleLineIssue, singleLineText } from '@/lib/utils/single-line';
 
@@ -184,6 +185,9 @@ const addSongSchema = z.object({
   artist: z.string().trim().max(500).nullable().default(null),
   notes: z.string().max(5000).nullable().default(null),
   position: z.number().int().default(0),
+  spotify_track_id: spotifySongFields.spotify_track_id.default(null),
+  artwork_url: spotifySongFields.artwork_url.default(null),
+  duration_ms: spotifySongFields.duration_ms.default(null),
 });
 
 export type AddPortalSongInput = z.input<typeof addSongSchema>;
@@ -224,6 +228,9 @@ const updateSongSchema = z.object({
       artist: z.string().trim().max(500).nullable().optional(),
       notes: z.string().max(5000).nullable().optional(),
       position: z.number().int().optional(),
+      spotify_track_id: spotifySongFields.spotify_track_id.optional(),
+      artwork_url: spotifySongFields.artwork_url.optional(),
+      duration_ms: spotifySongFields.duration_ms.optional(),
     })
     .refine((p) => Object.keys(p).length > 0, {
       message: 'Patch must contain at least one field',

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useCallback } from 'react'
 
 import { useToast } from '@/components/ui/toast'
+import type { SongSpotifyColumns } from '@/lib/spotify/song-fields'
 import { createClient } from '@/lib/supabase/client'
 
 import {
@@ -35,7 +36,7 @@ export interface PortalPerson {
   position: number
 }
 
-export interface PortalSong {
+export interface PortalSong extends SongSpotifyColumns {
   id: string
   category: string
   title: string
@@ -210,6 +211,10 @@ export function usePortalData(coupleId: string) {
               title: data.title ?? editingSong.title,
               artist: data.artist ?? null,
               notes: data.notes ?? null,
+              // Always sent: re-typing a picked song clears its Spotify pick.
+              spotify_track_id: data.spotify_track_id ?? null,
+              artwork_url: data.artwork_url ?? null,
+              duration_ms: data.duration_ms ?? null,
             },
           }),
         )
@@ -223,6 +228,9 @@ export function usePortalData(coupleId: string) {
             artist: data.artist ?? null,
             notes: data.notes ?? null,
             position: categorySongs.length * 1000,
+            spotify_track_id: data.spotify_track_id ?? null,
+            artwork_url: data.artwork_url ?? null,
+            duration_ms: data.duration_ms ?? null,
           }),
         )
       }

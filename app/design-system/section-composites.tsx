@@ -1,6 +1,7 @@
 import { CompositesBound } from './composites-bound';
 import { CompositesMisc } from './composites-misc';
 import { CompositesQuestionnaires } from './composites-questionnaires';
+import { CompositesSongs } from './composites-songs';
 import { Section } from './showroom';
 
 /**
@@ -17,10 +18,11 @@ export function SectionComposites() {
     <Section
       id="composites"
       title="Feature composites"
-      description="The 21 components in components/auth, builders, events, questionnaires, settings and time-tracking. Prop-driven ones are live; Supabase-bound ones render from a seeded cache with interaction disabled, because the dev server writes to the remote database."
+      description="The 25 components in components/auth, builders, events, questionnaires, settings, songs and time-tracking. Prop-driven ones are live; Supabase-bound ones render from a seeded cache with interaction disabled, because the dev server writes to the remote database."
     >
       <CompositesMisc />
       <CompositesQuestionnaires />
+      <CompositesSongs />
       <CompositesBound />
     </Section>
   );

@@ -83,7 +83,9 @@ import { execSync } from 'node:child_process';
 // Workflows trust remediation (Task 25 admin/audit.ts fix, -1) plus Task
 // 24/26 fix round 1 (npm-audit-gate.test.ts: two `noUncheckedIndexedAccess`
 // array-destructure accesses replaced with optional chaining, -2): 238 -> 237.
-const STRICT_BUDGET = 237;
+// Spotify song search: the portal songs section and both song modals were
+// rewritten clean under strict while splitting them up, 237 -> 231.
+const STRICT_BUDGET = 231;
 
 function runTscStrict() {
   try {

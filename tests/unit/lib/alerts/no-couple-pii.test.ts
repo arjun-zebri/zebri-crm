@@ -504,6 +504,12 @@ const fixtures: FixturesByType = {
     bookingId: 'booking-1',
     diagnostic: 'isOnlineMeeting=false',
   },
+  spotify_api_failed: {
+    type: 'spotify_api_failed',
+    severity: 'error',
+    status: 401,
+    code: 'token',
+  },
   bug_report_submitted: {
     type: 'bug_report_submitted',
     severity: 'info',
@@ -543,7 +549,7 @@ describe('AlertEvent fixtures carry no couple-side PII (T27)', () => {
   it('covers every AlertEvent type with a fixture', () => {
     // FixturesByType already guarantees this at compile time (a missing
     // key fails to compile); this just makes it visible at runtime too.
-    expect(allTypes.length).toBe(66);
+    expect(allTypes.length).toBe(67);
   });
 
   it.each(allTypes)('%s: no field outside the MC allowlist looks like an email', (type) => {
