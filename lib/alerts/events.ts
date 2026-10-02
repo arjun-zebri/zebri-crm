@@ -864,6 +864,16 @@ export type AlertEvent =
       reason: string;
     })
 
+  // ───── Integrations ────────────────────────────────────────────────
+  | (BaseEvent & {
+      type: 'spotify_api_failed';
+      severity: 'error';
+      /** HTTP status from Spotify, or 0 when no response / no credentials. */
+      status: number;
+      /** `missing_credentials`, `token`, `search` or `track`. */
+      code: string;
+    })
+
   // ───── Catch-all ──────────────────────────────────────────────────
   | (BaseEvent & {
       type: 'app_error';

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2, Plus, Music } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
+import { SongArtwork } from '@/components/songs/song-artwork'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 
@@ -13,6 +14,7 @@ import {
   deletePortalSongCategoryAction,
   updatePortalSongCategoryAction,
 } from './portal-actions'
+import type { PortalSong } from './use-portal-data'
 
 /** Throw on `ok: false` so React Query treats it as an error. */
 function unwrap<T>(
@@ -22,14 +24,7 @@ function unwrap<T>(
   throw new Error(result.error)
 }
 
-interface PortalSong {
-  id: string
-  category: string
-  title: string
-  artist: string | null
-  notes: string | null
-  position: number
-}
+
 
 interface SongCategory {
   id: string
@@ -126,10 +121,12 @@ function CategorySection({
             >
               <Trash2 size={11} strokeWidth={1.5} />
             </button>
+            {/* Visible at rest on touch screens, which have no hover to reveal it. */}
             <button
               onClick={onAdd}
-              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition cursor-pointer text-text-muted"
+              className="opacity-60 sm:opacity-0 sm:group-hover:opacity-60 hover:!opacity-100 transition cursor-pointer text-text-muted"
               title="Add song"
+              aria-label="Add song"
             >
               <Plus size={12} strokeWidth={2} />
             </button>
@@ -156,6 +153,7 @@ function CategorySection({
               onClick={() => onEditSong(song)}
               className="inline-flex items-center gap-3 border border-border rounded-control px-4 py-2.5 hover:border-border-strong hover:bg-gray-50/50 transition cursor-pointer group/song w-[200px]"
             >
+              <SongArtwork src={song.artwork_url} className="size-8 shrink-0 rounded-control object-cover" />
               <div className="min-w-0 flex-1">
                 <p className="text-body font-medium text-text truncate">{song.title}</p>
                 {song.artist && <p className="text-body text-text-subtle truncate">{song.artist}</p>}

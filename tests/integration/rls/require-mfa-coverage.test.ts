@@ -164,6 +164,7 @@ describe('require_mfa coverage', () => {
     'get_portal_data(token uuid)': TOKEN_RPC,
     'get_portal_milestones(token uuid)': TOKEN_RPC,
     'get_portal_packages(p_token uuid)': TOKEN_RPC,
+    'get_portal_song_spotify(p_token uuid)': TOKEN_RPC,
     'get_portal_questionnaires(token uuid)': TOKEN_RPC,
     'get_public_booking_page(token uuid)': TOKEN_RPC,
     'get_public_contract(token uuid)': TOKEN_RPC,
@@ -185,7 +186,7 @@ describe('require_mfa coverage', () => {
     'save_portal_person(p_token uuid, p_id uuid, p_category text, p_full_name text, p_phonetic text, p_role text, p_audio_url text, p_position integer)': TOKEN_RPC,
     'save_portal_person(p_token uuid, p_id uuid, p_category text, p_full_name text, p_phonetic text, p_role text, p_audio_url text, p_position integer, p_notes text)': TOKEN_RPC,
     'save_portal_person(p_token uuid, p_id uuid, p_category text, p_full_name text, p_phonetic text, p_role text, p_audio_url text, p_position integer, p_notes text, p_email text, p_phone text)': TOKEN_RPC,
-    'save_portal_song(p_token uuid, p_id uuid, p_category text, p_title text, p_artist text, p_notes text, p_position integer)': TOKEN_RPC,
+    'save_portal_song(p_token uuid, p_id uuid, p_category text, p_title text, p_artist text, p_notes text, p_position integer, p_spotify_track_id text, p_artwork_url text, p_duration_ms integer)': TOKEN_RPC,
     'save_portal_timeline_item(p_token uuid, p_id uuid, p_start_time text, p_title text, p_description text, p_duration_min integer, p_event_id uuid)': TOKEN_RPC,
     'save_portal_vow(p_token uuid, p_id uuid, p_content text)': TOKEN_RPC,
     'save_questionnaire_progress(token uuid, p_responses jsonb)': TOKEN_RPC,
@@ -196,6 +197,7 @@ describe('require_mfa coverage', () => {
     'submit_questionnaire(token uuid, p_responses jsonb)': TOKEN_RPC,
     'verify_contract_hash(p_hash text)': 'public certificate lookup by document hash; returns no MC data beyond the certificate',
     'is_valid_portal_token(token_value text)': 'boolean token check used by Storage policies; no MC data',
+    'portal_token_is_active(p_token uuid)': 'boolean token check gating /api/spotify/search; no MC data',
     'is_own_couple(couple_id_value text)':
       'boolean "is this couple mine" used by Storage policies; exposes nothing, and the storage.objects require_mfa policy gates the objects themselves',
 

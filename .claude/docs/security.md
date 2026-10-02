@@ -1331,6 +1331,26 @@ loads via the `get_public_questionnaire` RPC (anon, branding-merged).
 bounced logged-out couples to `/login`). The MC can revoke access per
 questionnaire via the "Turn link off" row action (`share_token_enabled`).
 
+### Spotify song search: `GET /api/spotify/search`
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/spotify/search/route.ts` | ✅ `q` (1-200 chars) + optional `portal_token` (UUID) via `parseSearchParams` | ✅ 60/min/IP (`SPOTIFY_RATE_LIMITS.search`) | Caller must be a signed-in MC **or** hold an active portal token (`portal_token_is_active`, SECURITY DEFINER, anon-executable boolean). Inactive tokens are counted by `recordInvalidTokenAttempt` (surface `portal`) and answered 403. Spotify credentials are server-only env (`SPOTIFY_CLIENT_*`), never sent to the browser. Our credential faults raise `spotify_api_failed`; everything Spotify-side answers 503. |
+
+On the middleware `PUBLIC_ROUTES` allowlist (`/api/spotify`) because portal
+couples are not signed in; the route does its own auth. Why it is gated at
+all: the app's Spotify quota is shared by every MC, so an open proxy would
+let anyone exhaust it.
+
+Writes stay on the token-gated `save_portal_song` RPC. Migration
+20261026100000 also closed a cross-couple overwrite there: its
+`ON CONFLICT (id) DO UPDATE` had no couple check, so a token holder who
+knew another couple's song id could rewrite that song. The update now
+requires `portal_songs.couple_id` to match the token's couple (integration
+test `tests/integration/portal/songs-spotify.test.ts`). `artwork_url` is
+CHECK-pinned to `https://i.scdn.co/image/...` because anon visitors write
+it and the MC's browser renders it as an `<img>`.
+
 ### Public unsubscribe endpoint + page (Phase 2, Task 11)
 
 | Route | Zod | Rate-limit | Notes |

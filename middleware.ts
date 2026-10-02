@@ -66,6 +66,9 @@ const PUBLIC_ROUTES = [
   // the embed loader script (`/book-embed.js`), and the submit endpoint (`/api/booking/*`).
   "/book",
   "/api/booking",
+  // Spotify song search. Portal couples are not signed in; the route
+  // itself requires a signed-in MC or an active portal token.
+  "/api/spotify",
   // Internal component showroom. The route itself 404s in production
   // (see app/design-system/layout.tsx); this entry only keeps the
   // dev-server middleware from bouncing it to /login.

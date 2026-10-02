@@ -3134,34 +3134,43 @@ export type Database = {
       portal_songs: {
         Row: {
           artist: string | null
+          artwork_url: string | null
           category: string
           couple_id: string
           created_at: string | null
+          duration_ms: number | null
           id: string
           notes: string | null
           position: number
+          spotify_track_id: string | null
           title: string
           user_id: string
         }
         Insert: {
           artist?: string | null
+          artwork_url?: string | null
           category: string
           couple_id: string
           created_at?: string | null
+          duration_ms?: number | null
           id?: string
           notes?: string | null
           position?: number
+          spotify_track_id?: string | null
           title: string
           user_id: string
         }
         Update: {
           artist?: string | null
+          artwork_url?: string | null
           category?: string
           couple_id?: string
           created_at?: string | null
+          duration_ms?: number | null
           id?: string
           notes?: string | null
           position?: number
+          spotify_track_id?: string | null
           title?: string
           user_id?: string
         }
@@ -4911,6 +4920,15 @@ export type Database = {
       get_portal_data: { Args: { token: string }; Returns: Json }
       get_portal_milestones: { Args: { token: string }; Returns: Json }
       get_portal_packages: { Args: { p_token: string }; Returns: Json }
+      get_portal_song_spotify: {
+        Args: { p_token: string }
+        Returns: {
+          artwork_url: string
+          duration_ms: number
+          id: string
+          spotify_track_id: string
+        }[]
+      }
       get_portal_questionnaires: { Args: { token: string }; Returns: Json }
       get_public_booking_page: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
@@ -4959,6 +4977,7 @@ export type Database = {
       mfa_satisfied: { Args: never; Returns: boolean }
       revoke_expired_shadow_sessions: { Args: never; Returns: number }
       peek_signer_otp: { Args: { p_token: string }; Returns: Json }
+      portal_token_is_active: { Args: { p_token: string }; Returns: boolean }
       record_contract_view: {
         Args: {
           p_actor_ip?: string
@@ -5080,10 +5099,13 @@ export type Database = {
       save_portal_song: {
         Args: {
           p_artist: string
+          p_artwork_url?: string
           p_category: string
+          p_duration_ms?: number
           p_id: string
           p_notes: string
           p_position: number
+          p_spotify_track_id?: string
           p_title: string
           p_token: string
         }
