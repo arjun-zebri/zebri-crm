@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toast'
 import { toDisplayMode, type Question, type QuestionnaireDisplayMode, type Responses } from '@/lib/questionnaires/question-schema'
+import { labelVariables } from '@/lib/questionnaires/variables'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
 
@@ -28,6 +29,7 @@ import { CoupleQuestionnaireAnswers } from './couple-questionnaire-answers'
 import { CoupleQuestionnaireRow } from './couple-questionnaire-row'
 import { CoupleTabEmpty, CoupleTabShell, tabStat, type TabStat } from './couple-tab-shell'
 import { resendCoupleQuestionnaireAction, sendCoupleQuestionnaireAction } from './questionnaire-actions'
+import { previewCoupleQuestionnaireAction, type InviteEmailState } from './questionnaire-preview-actions'
 import { QuestionnaireSendPreview } from './questionnaire-send-preview'
 
 /** One questionnaire instance as this tab reads it. */
@@ -50,9 +52,19 @@ interface TemplateOption {
   name: string
   display_mode: QuestionnaireDisplayMode
   questions: Question[]
+  /** The chosen email template's name; null = the standard email. */
+  emailName: string | null
 }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+
+/** The Send modal's "Email:" line, including why a chosen email is not used. */
+function emailLine(chosenName: string | null, state: InviteEmailState | undefined): string {
+  if (!chosenName || state === 'standard') return 'Standard questionnaire email'
+  if (state === 'no_link') return `Standard email (${chosenName} has no questionnaire link)`
+  if (state === 'unfilled') return `Standard email (${chosenName} needs details this couple is missing)`
+  return chosenName
+}
 
 export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: string; coupleName: string }) {
   const supabase = createClient()
@@ -106,17 +118,40 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
     },
   })
 
-  const { data: templates } = useQuery({
-    queryKey: ['questionnaire-templates'],
+  // What this couple would actually get: names filled, chosen email rendered.
+  const { data: sendPreview } = useQuery({
+    queryKey: ['questionnaire-send-preview', coupleId, preview?.id],
+    enabled: !!preview,
     queryFn: async () => {
-      const { data, error } = await supabase.from('questionnaire_templates').select('id, name, display_mode, questions').order('position')
+      const res = await previewCoupleQuestionnaireAction({ coupleId, templateId: preview!.id })
+      if (!res.ok) throw new Error(res.error)
+      return res.data
+    },
+  })
+
+  const { data: templates } = useQuery({
+    // Its own key under the manager's prefix: the two queries store
+    // different shapes, and sharing one key let whichever loaded first
+    // hand the other the wrong rows. The manager's save still refreshes
+    // this through prefix invalidation.
+    queryKey: ['questionnaire-templates', 'send-options'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('questionnaire_templates')
+        .select('id, name, display_mode, questions, email_templates(name, archived_at)')
+        .order('position')
       if (error) throw error
-      return (data ?? []).map((t): TemplateOption => ({
-        id: t.id,
-        name: t.name,
-        display_mode: toDisplayMode(t.display_mode),
-        questions: Array.isArray(t.questions) ? (t.questions as unknown as Question[]) : [],
-      }))
+      return (data ?? []).map((t): TemplateOption => {
+        // An archived email template is skipped at send, so say so here too.
+        const email = t.email_templates
+        return {
+          id: t.id,
+          name: t.name,
+          display_mode: toDisplayMode(t.display_mode),
+          questions: Array.isArray(t.questions) ? (t.questions as unknown as Question[]) : [],
+          emailName: email && !email.archived_at ? email.name : null,
+        }
+      })
     },
   })
 
@@ -219,7 +254,7 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
                 }}
                 className="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left text-body text-text transition hover:bg-surface-muted"
               >
-                <span className="truncate">{t.name}</span>
+                <span className="truncate">{labelVariables(t.name)}</span>
                 <Send size={14} strokeWidth={1.5} className="shrink-0 text-text-muted" />
               </button>
             ))
@@ -277,11 +312,16 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
       <Modal
         isOpen={!!preview}
         onClose={() => setPreview(null)}
-        title={preview ? `Send ${preview.name}` : ''}
+        title={preview ? `Send ${labelVariables(preview.name)}` : ''}
         size="2xl"
         nested
         footer={
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-end gap-2">
+            {preview && (
+              <p className="mr-auto truncate text-body text-text-muted">
+                Email: {emailLine(preview.emailName, sendPreview?.emailState)}
+              </p>
+            )}
             <Button variant="outline" onClick={() => setPreview(null)}>
               Cancel
             </Button>
@@ -292,8 +332,11 @@ export function CoupleQuestionnaires({ coupleId, coupleName }: { coupleId: strin
         {preview && (
           <QuestionnaireSendPreview
             key={preview.id}
-            name={preview.name}
-            questions={preview.questions}
+            // The couple's own names once the server preview lands; the
+            // variable labels until then.
+            name={sendPreview?.title ?? labelVariables(preview.name)}
+            questions={sendPreview?.questions ?? preview.questions.map((q) => ({ ...q, label: labelVariables(q.label) }))}
+            email={sendPreview?.email ?? null}
             displayMode={preview.display_mode}
             coupleName={coupleName}
           />

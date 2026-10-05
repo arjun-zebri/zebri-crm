@@ -235,3 +235,42 @@ describe('sendAlert structured log', () => {
     expect(payload.text).not.toContain('11111111');
   });
 });
+
+describe('formatSlackMessage: error reports lead with what broke', () => {
+  it('server_error titles with the log source and lists the real cause', () => {
+    const { text } = formatSlackMessage({
+      type: 'server_error',
+      severity: 'error',
+      source: '[couples/actions] deleteCoupleAction failed',
+      message: 'insert or update on table "automation_events" violates foreign key constraint',
+      code: '23503',
+      account: 'mc@business.example',
+      userId: 'user-1',
+      ids: { coupleId: 'couple-1' },
+      build: 'b0c5991 · production',
+      at: '2 Oct 2026, 2:24:35 pm AEST',
+    });
+    expect(text.split('\n')[0]).toBe(':rotating_light: *[couples/actions] deleteCoupleAction failed*');
+    expect(text).toContain('*Error:* insert or update on table "automation_events" violates foreign key constraint (23503)');
+    expect(text).toContain('*Account:* mc@business.example (user-1)');
+    expect(text).toContain('*Ids:* coupleId=couple-1');
+    expect(text).toContain('*Build:* b0c5991 · production · 2 Oct 2026, 2:24:35 pm AEST');
+  });
+
+  it('client_error titles with the kind and message, and says when no one is signed in', () => {
+    const { text } = formatSlackMessage({
+      type: 'client_error',
+      severity: 'warn',
+      kind: 'mutation',
+      message: 'Start cannot be in the future',
+      page: '/couples',
+      browser: 'Chrome 154 · Windows',
+      build: 'b0c5991 · production',
+      at: '2 Oct 2026, 2:24:35 pm AEST',
+    });
+    expect(text.split('\n')[0]).toBe(':warning: *Mutation failed:* Start cannot be in the future');
+    expect(text).toContain('*Account:* signed out');
+    expect(text).toContain('*Page:* /couples');
+    expect(text).not.toContain('*Code:*');
+  });
+});

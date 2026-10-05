@@ -3579,6 +3579,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          email_template_id: string | null
           display_mode: string
           id: string
           is_starter: boolean
@@ -3591,6 +3592,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          email_template_id?: string | null
           display_mode?: string
           id?: string
           is_starter?: boolean
@@ -3603,6 +3605,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          email_template_id?: string | null
           display_mode?: string
           id?: string
           is_starter?: boolean
@@ -3612,7 +3615,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_templates_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scheduler_leases: {
         Row: {

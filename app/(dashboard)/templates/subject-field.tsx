@@ -7,6 +7,10 @@
  * at the start of a word, which opens the same keyboard-navigable
  * floating list the body uses and splices the token at the caret.
  *
+ * Also used for the questionnaire name and question text, with a
+ * narrower variable list. `label={null}` drops the header row (and with
+ * it the popover button) for compact rows, leaving the `@` path.
+ *
  * @module app/(dashboard)/templates/subject-field
  */
 'use client'
@@ -18,11 +22,20 @@ import { useMemo, useRef, useState } from 'react'
 
 import { Input } from '@/components/ui/input'
 import { VariableSuggestionList, type ListHandle } from '@/components/ui/variable-suggestion'
-import { EMAIL_TEMPLATE_VARIABLES } from '@/lib/email/template-variables'
+import { EMAIL_TEMPLATE_VARIABLES, type EditorVariable } from '@/lib/email/template-variables'
 
 interface SubjectFieldProps {
   value: string
   onChange: (value: string) => void
+  /** Header label. Defaults to "Subject"; `null` hides the header and its popover button. */
+  label?: string | null
+  /** Input id, tied to the label. Defaults to `template-subject`. */
+  id?: string
+  /** Accessible name when `label` is null. */
+  ariaLabel?: string
+  placeholder?: string
+  /** Variables offered. Defaults to the full email catalogue. */
+  variables?: readonly EditorVariable[]
 }
 
 /** An active `@` trigger: where it starts and what's typed after it. */
@@ -31,7 +44,15 @@ interface AtTrigger {
   query: string
 }
 
-export function SubjectField({ value, onChange }: SubjectFieldProps) {
+export function SubjectField({
+  value,
+  onChange,
+  label = 'Subject',
+  id = 'template-subject',
+  ariaLabel,
+  placeholder = 'e.g. Your invoice from {{mc.business_name}}',
+  variables = EMAIL_TEMPLATE_VARIABLES,
+}: SubjectFieldProps) {
   const [open, setOpen] = useState(false)
   const [trigger, setTrigger] = useState<AtTrigger | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -39,10 +60,8 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
 
   const items = useMemo(() => {
     const q = (trigger?.query ?? '').toLowerCase()
-    return EMAIL_TEMPLATE_VARIABLES.filter(
-      (v) => !q || v.label.toLowerCase().includes(q) || v.id.toLowerCase().includes(q),
-    )
-  }, [trigger?.query])
+    return variables.filter((v) => !q || v.label.toLowerCase().includes(q) || v.id.toLowerCase().includes(q))
+  }, [trigger?.query, variables])
 
   // Toolbar-popover path: append the token at the end.
   const insertAtEnd = (id: string) => {
@@ -98,47 +117,50 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between">
-        <label className="text-body font-medium text-text" htmlFor="template-subject">
-          Subject
-        </label>
-        <Popover.Root open={open} onOpenChange={setOpen}>
-          <Popover.Trigger asChild>
-            <button
-              type="button"
-              className="flex cursor-pointer items-center gap-1.5 rounded-control border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-body font-medium text-emerald-700 transition hover:bg-emerald-100"
-            >
-              <AtSign size={13} strokeWidth={1.5} />
-              Insert variable
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              align="end"
-              sideOffset={6}
-              className="z-[90] w-56 rounded-control border border-border bg-card p-1 shadow-lg"
-            >
-              <div className="max-h-72 overflow-y-auto">
-                {EMAIL_TEMPLATE_VARIABLES.map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => insertAtEnd(v.id)}
-                    className="w-full cursor-pointer rounded-control px-2 py-1 text-left hover:bg-surface-muted"
-                  >
-                    <p className="truncate text-body text-text">{v.label}</p>
-                  </button>
-                ))}
-              </div>
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-      </div>
+      {label !== null && (
+        <div className="mb-1 flex items-center justify-between">
+          <label className="text-body font-medium text-text" htmlFor={id}>
+            {label}
+          </label>
+          <Popover.Root open={open} onOpenChange={setOpen}>
+            <Popover.Trigger asChild>
+              <button
+                type="button"
+                className="flex cursor-pointer items-center gap-1.5 rounded-control border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-body font-medium text-emerald-700 transition hover:bg-emerald-100"
+              >
+                <AtSign size={13} strokeWidth={1.5} />
+                Insert variable
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                align="end"
+                sideOffset={6}
+                className="z-[90] w-56 rounded-control border border-border bg-card p-1 shadow-lg"
+              >
+                <div className="max-h-72 overflow-y-auto">
+                  {variables.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => insertAtEnd(v.id)}
+                      className="w-full cursor-pointer rounded-control px-2 py-1 text-left hover:bg-surface-muted"
+                    >
+                      <p className="truncate text-body text-text">{v.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        </div>
+      )}
       {/* Relative wrapper anchors the @-suggestion float to the input. */}
       <div className="relative">
         <Input
-          id="template-subject"
+          id={id}
           ref={inputRef}
+          aria-label={label === null ? ariaLabel : undefined}
           value={value}
           onChange={(e) => {
             onChange(e.target.value)
@@ -147,7 +169,7 @@ export function SubjectField({ value, onChange }: SubjectFieldProps) {
           onSelect={detectTrigger}
           onKeyDown={onKeyDown}
           onBlur={() => setTrigger(null)}
-          placeholder="e.g. Your invoice from {{mc.business_name}}"
+          placeholder={placeholder}
         />
         {trigger && (
           // onMouseDown preventDefault keeps the input focused so a

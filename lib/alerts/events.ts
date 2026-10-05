@@ -874,6 +874,51 @@ export type AlertEvent =
       code: string;
     })
 
+  // ───── Error reporting ────────────────────────────────────────────
+  | (BaseEvent & {
+      // Any server-side `logger.error`, forwarded by
+      // `lib/alerts/server-error-transport`. Carries the real cause
+      // (the Postgres or provider error) that the friendly message an
+      // MC sees deliberately hides.
+      type: 'server_error';
+      severity: 'error';
+      /** The logger message, e.g. `[couples/actions] deleteCoupleAction failed`. */
+      source: string;
+      /** The underlying error's own message. */
+      message: string;
+      code?: string;
+      detail?: string;
+      hint?: string;
+      /** The MC's own login email, looked up from `userId` (allowlisted). */
+      account?: string;
+      userId?: string;
+      /** Record ids from the log context (`coupleId`, `stepId`, ...). Ids only, never values. */
+      ids: Record<string, string>;
+      /** `describeBuild()`, e.g. "b0c5991 · production". */
+      build: string;
+      at: string;
+    })
+  | (BaseEvent & {
+      // A failure in front of an MC, reported by the browser through
+      // `/api/alerts/client-error`. Account, browser and build are
+      // filled in server-side.
+      type: 'client_error';
+      severity: 'warn' | 'error';
+      kind: 'mutation' | 'render' | 'crash';
+      message: string;
+      code?: string;
+      digest?: string;
+      mutation?: string;
+      /** Redacted `pathname + search`. */
+      page: string;
+      /** The signed-in MC's own login email (allowlisted); absent on public pages. */
+      account?: string;
+      userId?: string;
+      browser: string;
+      build: string;
+      at: string;
+    })
+
   // ───── Catch-all ──────────────────────────────────────────────────
   | (BaseEvent & {
       type: 'app_error';

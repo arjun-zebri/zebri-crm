@@ -583,6 +583,8 @@ share_token_enabled (boolean, not null, default false)  -  link is inactive unti
 
 created_at (timestamp)
 
+Trigger `events_emit_lifecycle` publishes `event_created` / `event_updated` / `event_deleted` onto `automation_events`. The DELETE branch is skipped when the parent couple is already gone (a couple delete cascading into its events): the bus row's `couple_id` FK would reject it and abort the whole couple delete (migration `20261027000000`, prod incident 2026-10-05).
+
 ------------------------------------------------------------------------
 
 # timeline_items
@@ -1343,8 +1345,18 @@ description (nullable), display_mode (`typeform | form`, default `typeform`,
 enforced in code like statuses), `questions` (jsonb — ordered array of
 `{ id, type, label, help_text?, required, options? }`; types live in
 `lib/questionnaires/question-schema.ts`), is_starter (provenance for cloned
-starters), position, created_at, updated_at. Index: `(user_id)`. RLS:
-owner-only `user_id = auth.uid()`.
+starters), `email_template_id` (nullable FK `email_templates` **on delete set
+null**: the email it is sent with; null = the standard questionnaire email),
+position, created_at, updated_at. Indexes: `(user_id)`, `(email_template_id)`.
+RLS: owner-only `user_id = auth.uid()`; the write check also requires
+`email_template_id` to be null or one of the caller's own email templates
+(migration `20261027100000`, since an FK alone accepts another tenant's id).
+
+The name, description, question text, help text and options may hold
+name variables (`{{couple.primary_name | first}}` etc., the workflow/email
+syntax; offered list in `lib/questionnaires/variables.ts`). They are filled
+from the couple when a `couple_questionnaires` row is created, so that
+row's `title` / `questions` snapshot is plain text.
 
 **couple_questionnaires** (Couple profile — Questionnaires tab). One per send.
 Columns: id, user_id (RLS key), couple_id (FK couples cascade), template_id (FK

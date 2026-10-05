@@ -14,6 +14,9 @@ import { z } from 'zod'
 
 import { openAutomationSend } from '@/lib/email/automation-send'
 import { questionnaireHtml } from '@/lib/email/html'
+import { loadInviteTemplate, renderInvite, withQuestionnaire } from '@/lib/questionnaires/invite-email'
+import type { Question } from '@/lib/questionnaires/question-schema'
+import { personalizeQuestionnaire } from '@/lib/questionnaires/variables'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionType } from '@/types/automations'
 import type { Database } from '@/types/database'
@@ -80,7 +83,17 @@ const sendCoupleQuestionnaire: ActionSpec<z.infer<typeof sendQuestionnaireSchema
     const skipped = gate.skipped(to)
     if (skipped) return { kind: 'ok', output: { skipped } }
 
-    const title = config.title ?? template.name
+    // Fill name variables from the run's couple: the row is a snapshot
+    // the couple's page shows as-is (see lib/questionnaires/variables).
+    const text = personalizeQuestionnaire(
+      {
+        title: config.title ?? template.name,
+        description: null,
+        questions: template.questions as unknown as Question[],
+      },
+      ctx,
+    )
+    const title = text.title
     const { data: created, error } = await supabase
       .from('couple_questionnaires')
       .insert({
@@ -88,7 +101,7 @@ const sendCoupleQuestionnaire: ActionSpec<z.infer<typeof sendQuestionnaireSchema
         couple_id: ctx.couple.id,
         template_id: config.questionnaireTemplateId,
         title,
-        questions: template.questions as Database['public']['Tables']['couple_questionnaires']['Row']['questions'],
+        questions: text.questions as unknown as Database['public']['Tables']['couple_questionnaires']['Row']['questions'],
         // Snapshot the display style with the questions.
         display_mode: template.display_mode,
         status: 'sent',
@@ -101,16 +114,22 @@ const sendCoupleQuestionnaire: ActionSpec<z.infer<typeof sendQuestionnaireSchema
 
     const url = `${APP_URL}/questionnaire/${created.share_token}`
     const coupleName = ctx.couple.name
+    // The MC's chosen email for this questionnaire, else the standard one.
+    // Rendered through the same gate, so it carries the unsubscribe link too.
+    const invite = await loadInviteTemplate(supabase, ctx.userId, config.questionnaireTemplateId)
+    const chosen = invite ? renderInvite(invite, withQuestionnaire(ctx, { id: created.id, link: url, title })) : null
     const res = await gate.send({
       stepId: ctx.stepId,
       to,
-      subject: `${ctx.mc.businessName} sent you a few questions`,
+      subject: chosen?.subject ?? `${ctx.mc.businessName} sent you a few questions`,
       render: (unsubscribeUrl) =>
-        questionnaireHtml(
-          { coupleName, title, shareUrl: url, mcBusinessName: ctx.mc.businessName },
-          ctx.mc.branding,
-          unsubscribeUrl,
-        ),
+        chosen
+          ? chosen.renderHtml(unsubscribeUrl)
+          : questionnaireHtml(
+              { coupleName, title, shareUrl: url, mcBusinessName: ctx.mc.businessName },
+              ctx.mc.branding,
+              unsubscribeUrl,
+            ),
       identity: { businessName: ctx.mc.businessName, branding: ctx.mc.branding },
       // Keyed on the questionnaire this send is for: its share token is
       // what the couple opens.

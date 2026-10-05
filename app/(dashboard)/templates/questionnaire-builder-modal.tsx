@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
+import { buildSampleContext } from '@/lib/email/template-variables'
 import {
   addQuestion,
   createQuestion,
@@ -42,9 +43,15 @@ import {
 } from '@/lib/questionnaires/builder-state'
 import { displayModeFromBlocks, displayModeLabel } from '@/lib/questionnaires/display-mode'
 import type { Question } from '@/lib/questionnaires/question-schema'
+import { personalizeQuestionnaire, QUESTIONNAIRE_VARIABLES } from '@/lib/questionnaires/variables'
 
+import { QuestionnaireEmailPicker } from './questionnaire-email-picker'
 import { QuestionnaireQuestionRow } from './questionnaire-question-row'
 import type { QuestionnaireTemplateRow } from './questionnaire-template-manager'
+import { SubjectField } from './subject-field'
+
+/** Sample couple (Sam & Alex) the preview fills name variables from. */
+const SAMPLE_CONTEXT = buildSampleContext()
 
 interface BuilderProps {
   template: QuestionnaireTemplateRow
@@ -56,7 +63,14 @@ interface BuilderProps {
 export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }: BuilderProps) {
   const [name, setName] = useState(template.name)
   const [description, setDescription] = useState(template.description ?? '')
+  const [emailTemplateId, setEmailTemplateId] = useState(template.email_template_id)
   const [questions, setQuestions] = useState<Question[]>(template.questions)
+  // The preview shows what a couple reads, so variables are filled with
+  // the sample couple rather than shown as raw {{tokens}}.
+  const preview = useMemo(
+    () => personalizeQuestionnaire({ title: name, description, questions }, SAMPLE_CONTEXT),
+    [name, description, questions],
+  )
   // Validation stays quiet while building; it surfaces on a save attempt.
   const [showIssues, setShowIssues] = useState(false)
 
@@ -96,7 +110,14 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
     }
     // Keep snapshotting display_mode for backward compatibility, but the
     // actual mode shown to couples comes from branding blocks, not this setting.
-    onSave({ ...template, name, description: description || null, display_mode: template.display_mode, questions })
+    onSave({
+      ...template,
+      name,
+      description: description || null,
+      display_mode: template.display_mode,
+      questions,
+      email_template_id: emailTemplateId,
+    })
   }
 
   return (
@@ -124,10 +145,14 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
         {/* Editor */}
         <div className="space-y-4 lg:flex-1 lg:min-w-0">
           <div className="space-y-3">
-            <div>
-              <label className="mb-1.5 block text-body font-medium text-text">Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
+            <SubjectField
+              value={name}
+              onChange={setName}
+              label="Name"
+              id="questionnaire-name"
+              placeholder="e.g. Couples Questionnaire, type @ for a name"
+              variables={QUESTIONNAIRE_VARIABLES}
+            />
             <div>
               <label className="mb-1.5 block text-body font-medium text-text">Description (optional)</label>
               <Input
@@ -136,6 +161,7 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
                 placeholder="Shown to the couple under the questionnaire title"
               />
             </div>
+            <QuestionnaireEmailPicker value={emailTemplateId} onChange={setEmailTemplateId} />
             <div>
               <label className="mb-1.5 block text-body font-medium text-text">Answer style</label>
               <div className="flex items-center justify-between rounded-control border border-border bg-surface p-3">
@@ -184,7 +210,13 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
         <div className="hidden rounded-control bg-surface-muted p-4 lg:flex lg:flex-1 lg:min-w-0 lg:flex-col">
           <p className="mb-3 px-2 text-body uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
           <div className="min-h-0 lg:flex-1">
-            <QuestionnaireExperiencePreview title={name} description={description} questions={questions} displayMode={previewMode} heightClass="h-full" />
+            <QuestionnaireExperiencePreview
+              title={preview.title}
+              description={preview.description ?? ''}
+              questions={preview.questions}
+              displayMode={previewMode}
+              heightClass="h-full"
+            />
           </div>
         </div>
       </div>

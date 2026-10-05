@@ -17,8 +17,13 @@ import { logger } from '@/lib/alerts/logger'
 import { resolveCoupleEmail } from '@/lib/couples/email'
 import { sendQuestionnaireEmail } from '@/lib/email'
 import { emailBrandingForUser } from '@/lib/email/branding'
+import { buildManualSendContext } from '@/lib/email/send-context'
 import { resolveSender } from '@/lib/email/sender-identity'
+import { loadInviteTemplate, renderInvite, withQuestionnaire } from '@/lib/questionnaires/invite-email'
+import type { Question } from '@/lib/questionnaires/question-schema'
+import { personalizeQuestionnaire } from '@/lib/questionnaires/variables'
 import { createClient } from '@/lib/supabase/server'
+import type { RunContext } from '@/types/automations'
 import type { Database } from '@/types/database'
 
 /** Tagged result: created questionnaire id + whether the cover email sent. */
@@ -32,6 +37,32 @@ export interface SendFailure {
 }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+
+/**
+ * The MC's chosen email for this questionnaire, rendered for the couple,
+ * or undefined for the standard email (none chosen, no context, or a
+ * variable the template needs has no value).
+ */
+async function chosenInvite(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  questionnaireTemplateId: string | null,
+  ctx: RunContext | null,
+  questionnaire: { id: string; link: string; title: string },
+): Promise<{ subject: string; html: string } | undefined> {
+  if (!ctx) return undefined
+  const template = await loadInviteTemplate(supabase, userId, questionnaireTemplateId)
+  if (!template) return undefined
+  const rendered = renderInvite(template, withQuestionnaire(ctx, questionnaire))
+  if (!rendered) {
+    logger.warn('[couples/questionnaire-actions] chosen email could not render, sent the standard one', {
+      userId,
+      questionnaireTemplateId,
+    })
+    return undefined
+  }
+  return { subject: rendered.subject, html: rendered.renderHtml(null) }
+}
 
 const inputSchema = z.object({
   coupleId: z.uuid(),
@@ -66,7 +97,18 @@ export async function sendCoupleQuestionnaireAction(
   if (!template) return { ok: false, error: 'Questionnaire template not found.' }
   if (!couple) return { ok: false, error: 'Couple not found.' }
 
-  const resolvedTitle = title ?? template.name
+  // Fill name variables ("{{couple.primary_name | first}}'s ...") from this
+  // couple now: the row is a snapshot, so the couple's page and the
+  // answers view read plain text. Without a context (unreadable couple,
+  // already ruled out above) the raw text is kept rather than failing.
+  const ctx = await buildManualSendContext(supabase, coupleId)
+  const raw = {
+    title: title ?? template.name,
+    description: template.description,
+    questions: template.questions as unknown as Question[],
+  }
+  const text = ctx ? personalizeQuestionnaire(raw, ctx) : raw
+  const resolvedTitle = text.title
 
   const { data: created, error: insertError } = await supabase
     .from('couple_questionnaires')
@@ -75,8 +117,8 @@ export async function sendCoupleQuestionnaireAction(
       couple_id: coupleId,
       template_id: templateId,
       title: resolvedTitle,
-      description: template.description,
-      questions: template.questions as Database['public']['Tables']['couple_questionnaires']['Row']['questions'],
+      description: text.description,
+      questions: text.questions as unknown as Database['public']['Tables']['couple_questionnaires']['Row']['questions'],
       // Snapshot the display style with the questions, for the same reason.
       display_mode: template.display_mode,
       status: 'sent',
@@ -102,6 +144,11 @@ export async function sendCoupleQuestionnaireAction(
     // Fetch the sender's branding to render the email with their brand colors,
     // fonts, and logo. Gracefully continues without branding if fetch fails.
     const branding = await emailBrandingForUser(supabase, user.id)
+    const custom = await chosenInvite(supabase, user.id, templateId, ctx, {
+      id: created.id,
+      link: shareUrl,
+      title: resolvedTitle,
+    })
     const res = await sendQuestionnaireEmail({
       coupleEmail,
       coupleName: couple.name || 'there',
@@ -110,6 +157,7 @@ export async function sendCoupleQuestionnaireAction(
       mcBusinessName,
       sender: await resolveSender(supabase, user.id, mcBusinessName),
       branding,
+      custom,
     })
     emailSent = res.ok
     if (!res.ok) {
@@ -142,7 +190,7 @@ export async function resendCoupleQuestionnaireAction(
   // RLS scopes the read to this MC's questionnaires.
   const { data: q } = await supabase
     .from('couple_questionnaires')
-    .select('id, title, status, share_token, share_token_enabled, couple_id')
+    .select('id, title, status, share_token, share_token_enabled, couple_id, template_id')
     .eq('id', parsed.data.questionnaireId)
     .single()
   if (!q) return { ok: false, error: 'Questionnaire not found.' }
@@ -160,14 +208,24 @@ export async function resendCoupleQuestionnaireAction(
   // Fetch the sender's branding to render the email with their brand colors,
   // fonts, and logo. Gracefully continues without branding if fetch fails.
   const branding = await emailBrandingForUser(supabase, user.id)
+  const shareUrl = `${APP_URL}/questionnaire/${q.share_token}`
+  // The resend goes out in the same chosen email as the first send.
+  const custom = await chosenInvite(
+    supabase,
+    user.id,
+    q.template_id,
+    await buildManualSendContext(supabase, q.couple_id),
+    { id: q.id, link: shareUrl, title: q.title },
+  )
   const res = await sendQuestionnaireEmail({
     coupleEmail,
     coupleName: couple?.name || 'there',
     title: q.title,
-    shareUrl: `${APP_URL}/questionnaire/${q.share_token}`,
+    shareUrl,
     mcBusinessName,
     sender: await resolveSender(supabase, user.id, mcBusinessName),
     branding,
+    custom,
   })
   if (!res.ok) {
     logger.error('[couples/questionnaire-actions] resend email failed', null, { userId: user.id, error: res.error })
