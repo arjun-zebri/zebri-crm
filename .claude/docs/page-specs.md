@@ -3093,6 +3093,24 @@ blocked (with inline per-question messages) while a question has no text or a
 choice/dropdown has no options  -  `questionIssues` in
 `lib/questionnaires/builder-state.ts`.
 
+**Name variables.** The Name field (with an "Insert variable" button) and
+each question's text (type `@`) take the names-only list in
+`lib/questionnaires/variables.ts`, e.g. `{{couple.primary_name | first}}'s
+Couples Questionnaire`. Both use `SubjectField` (`subject-field.tsx`) with a
+narrower `variables` list. The builder preview fills them with the sample
+couple (Sam & Alex); each couple's copy is filled with their own names when
+it is sent (`personalizeQuestionnaire`), on both the manual and workflow
+paths.
+
+**Send with.** `questionnaire-email-picker.tsx` picks the email the
+questionnaire goes out in: one of the MC's active email templates, or the
+standard questionnaire email (`questionnaire_templates.email_template_id`).
+The manual Send, the Resend and workflow "Send questionnaire" steps all use
+it (`lib/questionnaires/invite-email.ts`). The standard email goes instead
+when the chosen one has no `{{questionnaire.link}}`, needs a variable this
+couple has no value for, or is archived, so a questionnaire is never sent
+without its link.
+
 The Questionnaires tab's detail pane shows the same preview for the selected
 template, fed by the same branding-derived answer style and the template's
 description, so the two MC-side previews and the live page cannot disagree.
@@ -3108,8 +3126,12 @@ sent_at / viewed_at / non-empty responses / completed_at) and per-row actions
 (`resendCoupleQuestionnaireAction`), and turn the share link off/on. "Send"
 picks a template and opens the send preview
 (`questionnaire-send-preview.tsx`)  -  two tabs: the couple experience (with a
-desktop/phone width toggle) and the actual cover email
-(`questionnaireHtml` in a sandboxed iframe)  -  then calls
+desktop/phone width toggle) and the actual cover email (the MC's chosen
+email template, else `questionnaireHtml`, in a sandboxed iframe). Both are
+rendered for this couple by `previewCoupleQuestionnaireAction`
+(`questionnaire-preview-actions.ts`): names filled, and the footer's
+"Email:" line says which email goes and why a chosen one would be skipped.
+Then the modal calls
 `sendCoupleQuestionnaireAction` (`questionnaire-actions.ts`), which snapshots
 the template's questions + description + display mode into a
 `couple_questionnaires` row,

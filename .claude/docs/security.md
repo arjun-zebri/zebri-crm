@@ -1336,6 +1336,7 @@ questionnaire via the "Turn link off" row action (`share_token_enabled`).
 | Route | Zod | Rate-limit | Notes |
 |---|---|---|---|
 | `app/api/spotify/search/route.ts` | ✅ `q` (1-200 chars) + optional `portal_token` (UUID) via `parseSearchParams` | ✅ 60/min/IP (`SPOTIFY_RATE_LIMITS.search`) | Caller must be a signed-in MC **or** hold an active portal token (`portal_token_is_active`, SECURITY DEFINER, anon-executable boolean). Inactive tokens are counted by `recordInvalidTokenAttempt` (surface `portal`) and answered 403. Spotify credentials are server-only env (`SPOTIFY_CLIENT_*`), never sent to the browser. Our credential faults raise `spotify_api_failed`; everything Spotify-side answers 503. |
+| `app/api/alerts/client-error/route.ts` (`POST`) | ✅ `clientErrorReportSchema` (`kind` enum, bounded `message` / `code` / `digest` / `mutation` / `page`) via `parseJsonBody` | ✅ 20/min/IP (`CLIENT_ERROR_RATE_LIMITS.report`) | Public by design (crashes on the portal and invoice pages must report). Replaced `/api/alerts/slack`, an unauthenticated relay that forwarded any Slack payload to the alerts channel. The route now builds the message itself: account from the session (never the body), browser and build server-side, and `page` redacted (20+ char tokens cut to six, email-shaped values dropped) so a portal or invoice capability token never lands in Slack. |
 
 On the middleware `PUBLIC_ROUTES` allowlist (`/api/spotify`) because portal
 couples are not signed in; the route does its own auth. Why it is gated at

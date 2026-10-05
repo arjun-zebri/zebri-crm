@@ -36,15 +36,74 @@ const SEVERITY_EMOJI: Record<AlertEvent['severity'], string> = {
 /** Build a Slack payload from a typed event. Pure; no I/O. */
 export function formatSlackMessage(event: AlertEvent): SlackPayload {
   const emoji = SEVERITY_EMOJI[event.severity];
-  const title = `${emoji} ${event.type.replace(/_/g, ' ')}`;
+  const title = `${emoji} ${titleOf(event)}`;
   const detail = describe(event);
   return {
     text: detail ? `${title}\n${detail}` : title,
   };
 }
 
+const CLIENT_KIND_TITLE = {
+  mutation: 'Mutation failed',
+  render: 'Page crashed',
+  crash: 'App crashed',
+} as const;
+
+/**
+ * The bold first line. Most events read fine as their type ("payment
+ * failed"); the two error reports lead with what actually broke, because
+ * "server error" on its own tells on-call nothing.
+ */
+function titleOf(event: AlertEvent): string {
+  switch (event.type) {
+    case 'server_error':
+      return `*${event.source}*`;
+    case 'client_error':
+      return `*${CLIENT_KIND_TITLE[event.kind]}:* ${event.message}`;
+    default:
+      return event.type.replace(/_/g, ' ');
+  }
+}
+
+/** One `Label: value` line per present value, for the multi-line reports. */
+function lines(entries: Array<[string, string | undefined]>): string {
+  return entries
+    .filter((entry): entry is [string, string] => Boolean(entry[1]))
+    .map(([label, value]) => `*${label}:* ${value}`)
+    .join('\n');
+}
+
+function accountLine(account: string | undefined, userId: string | undefined): string | undefined {
+  if (account && userId) return `${account} (${userId})`;
+  return account ?? userId;
+}
+
 function describe(event: AlertEvent): string {
   switch (event.type) {
+    case 'server_error':
+      return lines([
+        ['Error', `${event.message}${event.code ? ` (${event.code})` : ''}`],
+        ['Detail', event.detail],
+        ['Hint', event.hint],
+        ['Account', accountLine(event.account, event.userId)],
+        [
+          'Ids',
+          Object.entries(event.ids)
+            .map(([key, id]) => `${key}=${id}`)
+            .join(' · ') || undefined,
+        ],
+        ['Build', `${event.build} · ${event.at}`],
+      ]);
+    case 'client_error':
+      return lines([
+        ['Account', accountLine(event.account, event.userId) ?? 'signed out'],
+        ['Page', event.page],
+        ['Code', event.code],
+        ['Mutation', event.mutation],
+        ['Digest', event.digest],
+        ['Browser', event.browser],
+        ['Build', `${event.build} · ${event.at}`],
+      ]);
     case 'signup_completed':
       return `${event.displayName} (${event.email}) — ${event.businessName ?? 'no business'}`;
     case 'subscription_created':
@@ -252,6 +311,11 @@ const MC_EMAIL_ALLOWLIST: ReadonlySet<string> = new Set([
   'admin_refund_issued:targetEmail',
   'bug_report_submitted:reporter',
   'bug_report_notion_sync_failed:reporter',
+  // The signed-in MC's own login email, read server-side from the
+  // session (client_error) or looked up from the logged userId
+  // (server_error). Never taken from the request body or log context.
+  'server_error:account',
+  'client_error:account',
 ]);
 
 /** Loose enough to catch `name@domain.tld` without validating format. */

@@ -41,6 +41,8 @@ const MC_EMAIL_FIELDS = new Set([
   'admin_refund_issued:targetEmail',
   'bug_report_submitted:reporter',
   'bug_report_notion_sync_failed:reporter',
+  'server_error:account',
+  'client_error:account',
 ]);
 const EMAIL_SHAPE = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 /**
@@ -535,6 +537,31 @@ const fixtures: FixturesByType = {
     reportId: 'report-1',
     reason: 'file too large',
   },
+  server_error: {
+    type: 'server_error',
+    severity: 'error',
+    source: '[couples/actions] deleteCoupleAction failed',
+    message: 'insert or update on table "automation_events" violates foreign key constraint',
+    code: '23503',
+    detail: 'Key (couple_id)=(d95a2ff0) is not present in table "couples".',
+    account: 'mc@business.example',
+    userId: 'user-1',
+    ids: { coupleId: 'couple-1' },
+    build: 'b0c5991 · production',
+    at: '2 Oct 2026, 2:24:35 pm AEST',
+  },
+  client_error: {
+    type: 'client_error',
+    severity: 'warn',
+    kind: 'mutation',
+    message: 'Could not delete couple.',
+    page: '/couples?view=board',
+    account: 'mc@business.example',
+    userId: 'user-1',
+    browser: 'Chrome 154 · Windows',
+    build: 'b0c5991 · production',
+    at: '2 Oct 2026, 2:24:35 pm AEST',
+  },
   app_error: {
     type: 'app_error',
     severity: 'error',
@@ -549,7 +576,7 @@ describe('AlertEvent fixtures carry no couple-side PII (T27)', () => {
   it('covers every AlertEvent type with a fixture', () => {
     // FixturesByType already guarantees this at compile time (a missing
     // key fails to compile); this just makes it visible at runtime too.
-    expect(allTypes.length).toBe(67);
+    expect(allTypes.length).toBe(69);
   });
 
   it.each(allTypes)('%s: no field outside the MC allowlist looks like an email', (type) => {

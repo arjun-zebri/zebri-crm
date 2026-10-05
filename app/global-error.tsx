@@ -2,6 +2,8 @@
 
 import { useEffect } from "react"
 
+import { reportClientError } from "@/lib/alerts/report-client-error"
+
 export default function GlobalError({
   error,
   reset,
@@ -10,36 +12,11 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Fire Slack alert on mount
-    fetch("/api/alerts/slack", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: ":skull: Critical Error",
-        blocks: [
-          {
-            type: "header",
-            text: {
-              type: "plain_text",
-              text: ":skull: Critical Error",
-            },
-          },
-          {
-            type: "section",
-            fields: [
-              {
-                type: "mrkdwn",
-                text: `*Message:*\n${error.message || "Unknown error"}`,
-              },
-              {
-                type: "mrkdwn",
-                text: `*Time:*\n${new Date().toLocaleString("en-AU")}`,
-              },
-            ],
-          },
-        ],
-      }),
-    }).catch(() => {})
+    reportClientError({
+      kind: "crash",
+      error,
+      ...(error.digest ? { digest: error.digest } : {}),
+    })
   }, [error])
 
   return (

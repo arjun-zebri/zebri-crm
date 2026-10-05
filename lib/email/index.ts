@@ -103,11 +103,16 @@ export async function sendQuestionnaireEmail(opts: {
   sender?: ResolvedSender;
   /** Optional sender's branding for branded emails. */
   branding?: PublicBranding | null;
+  /**
+   * The MC's own email template, already rendered for this couple
+   * (`lib/questionnaires/invite-email`). Omit for the standard email.
+   */
+  custom?: { subject: string; html: string } | undefined;
 }): Promise<{ ok: boolean; error?: string }> {
   const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
     to: opts.coupleEmail,
-    subject: `${opts.mcBusinessName} sent you a few questions`,
-    html: questionnaireHtml(opts, opts.branding),
+    subject: opts.custom?.subject ?? `${opts.mcBusinessName} sent you a few questions`,
+    html: opts.custom?.html ?? questionnaireHtml(opts, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }

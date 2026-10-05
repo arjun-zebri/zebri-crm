@@ -49,6 +49,8 @@ const FILTERS: Record<string, FilterFn> = {
   upper: (s) => s.toUpperCase(),
   lower: (s) => s.toLowerCase(),
   currency: (s) => formatCurrency(s),
+  // First word only: "Ayeel Smith" reads "Ayeel" in "Ayeel's questionnaire".
+  first: (s) => s.trim().split(/\s+/)[0] ?? '',
 }
 
 /**
