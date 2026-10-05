@@ -3,8 +3,10 @@
  *
  * Two tabs: the questionnaire exactly as the couple will experience it (the
  * shared {@link QuestionnaireExperiencePreview}, with a desktop / phone width
- * toggle), and the cover email that delivers the link (the real
- * {@link questionnaireHtml} output in a sandboxed iframe). The MC confirms
+ * toggle), and the cover email that delivers the link: the MC's chosen
+ * email template when the questionnaire has one (rendered server-side for
+ * this couple), else the real {@link questionnaireHtml} output, in a
+ * sandboxed iframe. The MC confirms
  * what's going out before sending, mirroring the quote/invoice/contract flow.
  *
  * @module app/(dashboard)/couples/questionnaire-send-preview
@@ -24,22 +26,26 @@ interface Props {
   questions: Question[]
   displayMode: QuestionnaireDisplayMode
   coupleName: string
+  /** The chosen email, rendered for this couple. Omit or null for the standard email. */
+  email?: { subject: string; html: string } | null
 }
 
 type Tab = 'questionnaire' | 'email'
 
-export function QuestionnaireSendPreview({ name, questions, displayMode, coupleName }: Props) {
+export function QuestionnaireSendPreview({ name, questions, displayMode, coupleName, email = null }: Props) {
   const { branding } = useCurrentBranding('questionnaire')
   const [tab, setTab] = useState<Tab>('questionnaire')
   const [frame, setFrame] = useState<'desktop' | 'mobile'>('desktop')
 
-  const emailHtml = questionnaireHtml({
+  const standardHtml = questionnaireHtml({
     coupleName: coupleName || 'there',
     title: name,
     // The real link only exists once the questionnaire is created on send.
     shareUrl: 'https://…/questionnaire/…',
     mcBusinessName: branding?.business_name || 'Your celebrant',
   })
+  const emailHtml = email?.html ?? standardHtml
+  const subject = email?.subject ?? `${branding?.business_name || 'Your celebrant'} sent you a few questions`
 
   const tabButton = (value: Tab, label: string) => (
     <button
@@ -95,11 +101,11 @@ export function QuestionnaireSendPreview({ name, questions, displayMode, coupleN
         <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-muted px-4 py-2.5 text-body text-text-muted">
           <Mail size={14} strokeWidth={1.5} />
           <span className="truncate">
-            Subject: {branding?.business_name || 'Your celebrant'} sent you a few questions
+            Subject: {subject}
           </span>
         </div>
-        {/* Sandboxed: the email HTML is trusted output of questionnaireHtml,
-            but the iframe keeps its styles from leaking either way. */}
+        {/* Sandboxed: the email HTML is our own render (questionnaireHtml or
+            the MC's template), but the iframe keeps its styles from leaking. */}
         <iframe title="Email preview" sandbox="" srcDoc={emailHtml} className="min-h-0 w-full flex-1 bg-surface" />
       </div>
     </div>

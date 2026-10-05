@@ -19,6 +19,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { QUESTION_TYPE_META, QUESTION_TYPES, type Question } from '@/lib/questionnaires/question-schema'
+import { QUESTIONNAIRE_VARIABLES } from '@/lib/questionnaires/variables'
+
+import { SubjectField } from './subject-field'
 
 interface QuestionRowProps {
   question: Question
@@ -63,12 +66,18 @@ export function QuestionnaireQuestionRow({ question, issue = null, onChange, onD
 
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex gap-2">
-            <Input
-              value={question.label}
-              onChange={(e) => onChange({ label: e.target.value })}
-              placeholder={isSection ? 'Section heading' : 'Question text'}
-              className="flex-1"
-            />
+            {/* Type @ to drop in a partner's name; filled per couple on send. */}
+            <div className="min-w-0 flex-1">
+              <SubjectField
+                value={question.label}
+                onChange={(label) => onChange({ label })}
+                label={null}
+                id={`question-${question.id}`}
+                ariaLabel={isSection ? 'Section heading' : 'Question text'}
+                placeholder={isSection ? 'Section heading' : 'Question text, type @ for a name'}
+                variables={QUESTIONNAIRE_VARIABLES}
+              />
+            </div>
             <Select
               value={question.type}
               onValueChange={(v) => onChange({ type: v as Question['type'] })}

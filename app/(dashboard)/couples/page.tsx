@@ -241,7 +241,15 @@ function CouplesPageContent() {
   };
 
   const handleDeleteCouple = async (id: string) => {
-    await deleteCouple.mutateAsync(id);
+    // A failed delete must say so: without the catch the rejection is
+    // dropped and the confirm dialog just sits there, which reads as
+    // the button doing nothing.
+    try {
+      await deleteCouple.mutateAsync(id);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not delete couple.', 'error');
+      return;
+    }
     setSelectedCouple(null);
     toast('Couple deleted');
   };

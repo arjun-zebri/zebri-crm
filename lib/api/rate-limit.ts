@@ -371,6 +371,18 @@ export const SPOTIFY_RATE_LIMITS = {
 export type SpotifyRateLimitKey = keyof typeof SPOTIFY_RATE_LIMITS;
 
 /**
+ * Browser error reports (`/api/alerts/client-error`).
+ *
+ * - **report**: 20/min/IP. A real failure is one report per click, so an
+ *   MC retrying a broken save lands well under it. The route is public
+ *   (crashes on the portal and invoice pages are worth knowing about),
+ *   so this is what stops it being used to flood the alerts channel.
+ */
+export const CLIENT_ERROR_RATE_LIMITS = {
+  report: { windowMs: 60_000, max: 20 },
+} as const satisfies Record<string, LimiterOptions>;
+
+/**
  * Per-tenant automated-send limits (workflows trust remediation, Task 15).
  *
  * Every MC's automated sends go out through the same shared Resend

@@ -42,6 +42,8 @@ export interface QuestionnaireTemplateRow {
   /** How couples answer: one question at a time or all on one page. */
   display_mode: QuestionnaireDisplayMode
   questions: Question[]
+  /** Email template sent with it; null = the standard questionnaire email. */
+  email_template_id: string | null
   is_starter: boolean
   position: number
 }
@@ -56,6 +58,7 @@ function toRow(r: DbRow): QuestionnaireTemplateRow {
     description: r.description,
     display_mode: toDisplayMode(r.display_mode),
     questions: Array.isArray(r.questions) ? (r.questions as unknown as Question[]) : [],
+    email_template_id: r.email_template_id,
     is_starter: r.is_starter,
     position: r.position,
   }
@@ -124,6 +127,7 @@ export function QuestionnaireTemplateManager() {
           description: t.description,
           display_mode: t.display_mode,
           questions: t.questions as unknown as DbRow['questions'],
+          email_template_id: t.email_template_id,
         })
         .eq('id', t.id)
       if (error) throw error
@@ -148,6 +152,7 @@ export function QuestionnaireTemplateManager() {
           description: t.description,
           display_mode: t.display_mode,
           questions: t.questions as unknown as DbRow['questions'],
+          email_template_id: t.email_template_id,
           position: (templates?.length ?? 0) + 1,
         })
         .select('*')

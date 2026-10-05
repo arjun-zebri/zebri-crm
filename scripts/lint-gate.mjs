@@ -237,7 +237,9 @@ const ERROR_BUDGET = 41;
 // through lib/email/dispatch.ts took the last lazy Resend client out
 // of lib/automations/actions, and its import-order warning with it
 // (68 -> 67).
-const WARNING_BUDGET = 67;
+// Aaron's tickets (couple delete + error alerts): two warnings of slack
+// on this branch; locked in (67 -> 65).
+const WARNING_BUDGET = 65;
 
 function runEslintJson() {
   try {

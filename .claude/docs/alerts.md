@@ -33,9 +33,9 @@ call sites post to Slack directly and would otherwise bypass it:
 
 - `app/api/stripe/webhook/route.ts`
 - `app/api/email/send-contract/route.ts`
-- `app/api/alerts/slack/route.ts`, which the client error boundaries
-  (`app/error.tsx`, `app/global-error.tsx`, `app/providers.tsx`) POST to
-  on every uncaught render or query error
+- `app/api/alerts/client-error/route.ts` (via `sendAlert`), which the
+  error boundaries (`app/error.tsx`, `app/global-error.tsx`) and the
+  mutation cache (`app/providers.tsx`) POST to
 
 `slackSuppressed()` returns true on two signals: `NODE_ENV ===
 'development'` (the dev server) and a `NEXT_PUBLIC_APP_URL` pointing at
@@ -214,7 +214,9 @@ default emoji and routing.
 | `bug_report_notion_sync_failed` | error | The `bug_reports` row saved but the Notion push failed. There is no retry, so this alert repeats the full title and description: it is the only copy anyone will read when re-filing the ticket by hand | `lib/bug-reports/submit.ts` |
 | `bug_report_screenshot_upload_failed` | warn | The Notion File Upload step failed. The ticket was still filed, just without its screenshot | `lib/bug-reports/submit.ts` |
 | `spotify_api_failed` | error | Song search could not reach Spotify because of our own configuration: `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` missing (`code: missing_credentials`, `status: 0`) or rejected (`token`, 400/401). Couples and MCs still add songs by typing them in; nothing is lost. Transient Spotify outages and 429s answer 503 without alerting. Carries `status` and `code` only. Deduped in memory to one per ten minutes per server instance | `app/api/spotify/search/route.ts` |
-| `app_error` | error | Catch-all / uncaught errors. Carries a `source` string so the channel line reads `<source>: <message>`. The unsubscribe routes use `unsubscribe` when an opt-out could not be recorded (a legal opt-out failing, so it pages rather than only logging). Zebri AI uses `ai-copilot` (usage-counter failure) and `ai-draft-email` (usage-counter failure, or the model call failing after the MC pressed Rewrite) | global error boundaries, `/api/ai/*` |
+| `server_error` | error | Any server-side `logger.error` (server actions, routes, cron), forwarded by the logger transport in `lib/alerts/server-error-transport.ts`, installed from `instrumentation.ts` (Node runtime only). Carries the real cause the friendly UI message hides: `source` (the log message, e.g. `[couples/actions] deleteCoupleAction failed`, used as the title), the error's own `message`, Postgres `code` / `detail` / `hint`, `account` (the MC's login email, looked up from the logged `userId` with the service role; allowlisted), id-named context keys only (`coupleId`, `step_id`, ...; never other values) and the build. Skips the alert layer's own `alert: <type>` log lines so nothing posts twice or loops. Same source + error deduped to one per ten minutes per server instance. Off on local runs | every `logger.error` on the server |
+| `client_error` | warn (mutation) / error (render, crash) | A failure in front of a user, reported by the browser. `kind: 'mutation'` comes from `MutationCache.onError` (fires for every mutation, including ones with their own `onError`, which a `defaultOptions` handler silently missed); `render` from `app/error.tsx`; `crash` from `app/global-error.tsx`. Title is "Mutation failed: <message>" / "Page crashed" / "App crashed". The route fills in `account` from the session (never the body; allowlisted), `browser` from the user agent, the build and a Sydney timestamp. `page` is redacted: path segments or query values of 20+ token characters are cut to six, email-shaped values dropped. For the real cause of a mutation failure, look for the `server_error` posted alongside it | `app/api/alerts/client-error/route.ts` |
+| `app_error` | error | Catch-all / uncaught errors. Carries a `source` string so the channel line reads `<source>: <message>`. The unsubscribe routes use `unsubscribe` when an opt-out could not be recorded (a legal opt-out failing, so it pages rather than only logging). Zebri AI uses `ai-copilot` (usage-counter failure) and `ai-draft-email` (usage-counter failure, or the model call failing after the MC pressed Rewrite) | `/api/ai/*`, unsubscribe routes, the tick guard |
 
 Wiring each row to its source happens during that surface's hardening
 phase — the dispatcher and matrix land here, the call sites follow
@@ -311,23 +313,25 @@ step's own budget. Still available for custom Block-Kit payloads:
 export async function sendSlackAlert(payload: SlackPayload): Promise<void>
 ```
 
-### `app/api/alerts/slack/route.ts`
+### `app/api/alerts/client-error/route.ts`
 
-Thin API gateway. Receives JSON from client, forwards to `sendSlackAlert`. No authentication (read-only operation; abuse prevention via middleware rate-limiting).
+The browser's only way into Slack. Takes a Zod-validated report
+(`clientErrorReportSchema` in `lib/alerts/error-report.ts`: `kind`,
+`message`, optional `code` / `digest` / `mutation`, `page`), rate-limited
+by `CLIENT_ERROR_RATE_LIMITS.report` (20/min/IP), and builds a
+`client_error` itself. Public under `/api/alerts` so crashes on the
+portal and invoice pages still report. It replaced
+`/api/alerts/slack`, which relayed any Slack payload unauthenticated
+(anyone could post anything to the channel).
 
 ### Client-side Alerts
 
-All client-side alerts use fire-and-forget fetch:
+Call `reportClientError` (`lib/alerts/report-client-error.ts`):
+fire-and-forget, `keepalive`, never throws.
 
 ```ts
-fetch("/api/alerts/slack", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ ... }),
-}).catch(() => {}) // never blocks UX
+reportClientError({ kind: 'render', error, digest: error.digest })
 ```
-
-Failures are silently ignored  -  alerts should never degrade the user experience.
 
 ### Server-side Alerts
 
@@ -402,7 +406,7 @@ See [Slack Block Kit docs](https://api.slack.com/block-kit) for more.
 Check the Slack channel for alerts. If alerts aren't arriving:
 
 1. Verify `SLACK_WEBHOOK_URL` is set in `.env.local`
-2. Check browser DevTools Network tab for POST to `/api/alerts/slack`
+2. Check browser DevTools Network tab for POST to `/api/alerts/client-error` (204 = sent, 400 = bad report, 429 = rate-limited)
 3. Check server logs for `[slack] Failed to send alert` errors
 4. Verify Slack webhook is still active (tokens can expire if workspace settings change)
 

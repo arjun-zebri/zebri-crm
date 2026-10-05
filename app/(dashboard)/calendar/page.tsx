@@ -56,7 +56,14 @@ export default function CalendarPage() {
   };
 
   const handleDeleteCouple = async (id: string) => {
-    await deleteCouple.mutateAsync(id);
+    // Same as the couples page: surface a failed delete instead of
+    // dropping the rejection and leaving the dialog open.
+    try {
+      await deleteCouple.mutateAsync(id);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not delete couple.", "error");
+      return;
+    }
     if (selectedCouple?.id === id) {
       setSelectedCouple(null);
     }
