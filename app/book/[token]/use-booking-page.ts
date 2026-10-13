@@ -90,6 +90,7 @@ interface SubmitBody {
   phone?: string
   notes?: string
   answers: Array<{ question_id: string; value: AnswerValue }>
+  ref?: string
 }
 
 /** Read a JSON error body without throwing; a non-JSON body yields `{}`. */
@@ -187,8 +188,9 @@ function buildAvailableDates(slots: Slot[], timezone: string): Set<string> {
 /**
  * Manages the booking page state machine. Handles RPC fetch for meeting type data,
  * slot queries with 2-week paging, form submission, and error recovery (409 -> refetch).
+ * `ref` is an outreach attribution code from the link, passed through on submit.
  */
-export function useBookingPage(token: string) {
+export function useBookingPage(token: string, ref: string | null = null) {
   const supabase = createClient()
 
   const [s, setS] = useState<UseBookingPageState>({
@@ -377,6 +379,7 @@ export function useBookingPage(token: string) {
           ...(payload.phone !== undefined ? { phone: payload.phone } : {}),
           ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
           answers: payload.answers,
+          ...(ref ? { ref } : {}),
         }
 
         const res = await fetch('/api/booking/submit', {
@@ -451,7 +454,7 @@ export function useBookingPage(token: string) {
         return {}
       }
     },
-    [s.selectedSlot, s.viewerTimezone, detectedTimezone, s.mcTimezone, s.currentFrom, s.currentTo, token, loadSlots],
+    [s.selectedSlot, s.viewerTimezone, detectedTimezone, s.mcTimezone, s.currentFrom, s.currentTo, token, ref, loadSlots],
   )
 
   /**

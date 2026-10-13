@@ -27,6 +27,12 @@ interface RowActionsMenuProps {
    * over the rows it belongs to.
    */
   size?: 'sm' | 'md'
+  /**
+   * Accessible name of the trigger. Defaults to "Row actions"; pass the
+   * row's name ("More actions for Jo Smith") so a screen reader can tell
+   * several triggers apart.
+   */
+  label?: string
 }
 
 export function RowActionsMenu({
@@ -34,6 +40,7 @@ export function RowActionsMenu({
   submenus,
   alwaysVisible,
   size = 'md',
+  label = 'Row actions',
 }: RowActionsMenuProps) {
   const [open, setOpen] = useState(false)
   const [submenuKey, setSubmenuKey] = useState<string | null>(null)
@@ -63,17 +70,17 @@ export function RowActionsMenu({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className={`shrink-0 p-1.5 rounded-control text-text-subtle hover:text-gray-700 hover:bg-surface-emphasis transition cursor-pointer ${
+          className={`shrink-0 p-1.5 rounded-control text-text-subtle hover:text-text hover:bg-surface-emphasis transition cursor-pointer ${
             alwaysVisible ? '' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'
           }`}
-          aria-label="Row actions"
+          aria-label={label}
         >
           <MoreHorizontal size={15} strokeWidth={1.5} />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className={`bg-surface border border-border rounded-control shadow-lg py-1 text-body z-[80] ${contentWidth}`}
+          className={`bg-surface border border-border rounded-control shadow-lg py-1 text-body z-[90] ${contentWidth}`}
           sideOffset={4}
           align="end"
           onClick={(e) => e.stopPropagation()}
@@ -87,8 +94,8 @@ export function RowActionsMenu({
                   setSubmenuKey((k) => (k === sub.label ? null : sub.label))
                 }
                 className={`${itemClass} justify-between ${
-                  submenuKey === sub.label ? 'bg-gray-50' : 'hover:bg-gray-50'
-                } text-gray-700`}
+                  submenuKey === sub.label ? 'bg-surface-muted' : 'hover:bg-surface-muted'
+                } text-text`}
               >
                 <span className="flex items-center gap-2">
                   {sub.icon}
@@ -109,7 +116,7 @@ export function RowActionsMenu({
                         item.onSelect()
                         close()
                       }}
-                      className={`${itemClass} text-gray-700 hover:bg-gray-50`}
+                      className={`${itemClass} text-text hover:bg-surface-muted`}
                     >
                       {item.label}
                     </button>
@@ -128,8 +135,8 @@ export function RowActionsMenu({
               }}
               className={`${itemClass} ${
                 a.destructive
-                  ? 'text-red-600 hover:bg-red-50'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'text-danger hover:bg-danger/10'
+                  : 'text-text hover:bg-surface-muted'
               } ${a.className ?? ''}`}
             >
               {a.icon}

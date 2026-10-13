@@ -19,6 +19,14 @@ describe('bookingSubmitSchema', () => {
     startedAt: Date.now(),
   };
 
+  it('keeps a well-formed outreach ref and silently drops a mangled one', () => {
+    const good = bookingSubmitSchema.safeParse({ ...validBase, ref: 'abcd2345' });
+    expect(good.success && good.data.ref).toBe('abcd2345');
+    const bad = bookingSubmitSchema.safeParse({ ...validBase, ref: 'ABC<script>' });
+    expect(bad.success).toBe(true);
+    expect(bad.success && bad.data.ref).toBeUndefined();
+  });
+
   it('accepts a valid body with required fields only', () => {
     const result = bookingSubmitSchema.safeParse(validBase);
     expect(result.success).toBe(true);

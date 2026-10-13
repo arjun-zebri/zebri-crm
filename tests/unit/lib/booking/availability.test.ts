@@ -173,6 +173,7 @@ function fakeBooking(
     updated_at: new Date().toISOString(),
     partner_name: null,
     answers: [],
+    source_ref: null,
     user_id: 'user-1',
     timezone: 'Australia/Sydney',
     external_event_ids: null,

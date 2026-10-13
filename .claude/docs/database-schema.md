@@ -2202,6 +2202,35 @@ An applied workflow instance IS the run. Templates are authored once;
 applying one **snapshots** its steps into rows the couple owns, so
 editing a template never disturbs live work.
 
+## Outreach (admin, service role only)
+
+Every `outreach_*` table is admin-only operational data: no owner column,
+RLS on with no policies, `anon` and `authenticated` revoked, `service_role`
+only. The base tables are in `20261028000000_create_outreach.sql`.
+
+Added by `20261030100000_outreach_compliance.sql`:
+
+| Object | Purpose |
+|---|---|
+| `outreach_suppression` | Global do-not-contact list. `kind` (`email` or `instagram`), `value` (lower-cased email, or handle without `@`), `reason` (`opted_out`, `bounced`, `complained`, `manual`), `source`, `created_at`. Unique on `(kind, value)`. Backfilled from every do-not-contact prospect. |
+| `outreach_spend_reservations` | One row per Apify batch: `run_id`, `amount_cents` (estimate), `actual_cents` (real, once settled), `status` (`reserved` or `settled`), timestamps. Monthly spend is the sum over this table. Backfilled from existing run costs. |
+| `outreach_is_existing_customer(p_email)` | `boolean`. True when an `auth.users` email matches. SECURITY DEFINER, pinned search path, service role only. |
+| `outreach_enrol_candidates(p_campaign, p_limit)` | Replaced. Adds: excludes suppressed emails and handles, existing customers (linked user or auth email match), and prospects whose only contact is a scraped email. Signature, grants and search path unchanged. |
+| `outreach_start_ig_batch(p_run, p_max, p_budget_cents, p_cents_per_profile)` | `jsonb` status (`started` with `reservation_id` and `check_ids`, `in_flight`, `budget`, `empty`, `not_running`). Takes an advisory lock, refuses a second in-flight run, claims pending IG checks and reserves their estimated cost in one transaction. Releases reservations open for more than two hours. |
+| `outreach_settle_ig_batch(p_run, p_actual_cents)` | Settles the run's open reservation at its real cost and clears `apify_run_id`. |
+| `outreach_retention_pass(p_cutoff)` | Clears `ig_bio`, `sheet_raw`, message bodies and reply snippets on prospects idle since the cutoff. Returns the eligible count. |
+
+Column-level changes: none. `outreach_prospects` and `outreach_events` keep
+their shape; the `do_not_contact` flag is now also set at import and manual
+add when the address or handle is on the suppression list. A new event
+kind, `manual_touch` with `payload.kind = 'email_confirmed'`, records a
+founder confirming a scraped email.
+
+Generated types for these live in `types/database.ts`; keep them in step
+with the migration.
+
+---
+
 ## `workflow_tags`
 
 `id`, `user_id`, `name`, `color`, `position`. Case-insensitive unique
