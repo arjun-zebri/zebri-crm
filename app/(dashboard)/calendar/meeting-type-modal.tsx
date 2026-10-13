@@ -5,17 +5,24 @@ import { useEffect, useReducer, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
+import type { BookingQuestion } from '@/lib/booking/questions';
 import type { Database } from '@/types/database';
-
 
 import { weekFromRules } from './availability-utils';
 import { MeetingTypeAvailabilityFields } from './meeting-type-availability-fields';
+import { MeetingTypeBookingFormFields } from './meeting-type-booking-form-fields';
+import { loadQuestionsForEditor } from './meeting-type-booking-load';
+import {
+  validateBookingQuestions,
+  type BookingQuestionsValidation,
+} from './meeting-type-booking-validation';
 import { MeetingTypeFields } from './meeting-type-fields';
 import {
   buildMeetingTypePayload,
   DEFAULT_FORM_STATE,
   formReducer,
 } from './meeting-type-form';
+import { parsePhoneField } from './meeting-type-schema';
 import type { MeetingTypeTemplate } from './meeting-type-templates';
 import { useAvailability } from './use-availability';
 import { createFormSetters } from './use-form-dispatch';
@@ -62,6 +69,9 @@ export function MeetingTypeModal({
    * never ran either. Pressing Save simply did nothing, with no reason given.
    */
   const [nameError, setNameError] = useState<string | undefined>(undefined);
+  /** Per-question messages from the last failed save, keyed by question id. */
+  const [questionErrors, setQuestionErrors] = useState<Record<string, string>>({});
+  const [questionsFormError, setQuestionsFormError] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const createMutation = useCreateMeetingType();
   const updateMutation = useUpdateMeetingType();
@@ -97,6 +107,8 @@ export function MeetingTypeModal({
           reminderEnabled: meetingType.reminder_enabled,
           active: meetingType.active,
           customAvailability: meetingType.uses_custom_availability,
+          phoneField: parsePhoneField(meetingType.phone_field),
+          questions: loadQuestionsForEditor(meetingType.questions),
         },
       });
     } else if (template) {
@@ -110,6 +122,7 @@ export function MeetingTypeModal({
           description: template.description,
           durationMinutes: String(template.durationMinutes),
           locationType: template.locationType,
+          questions: template.questions,
         },
       });
     } else {
@@ -140,16 +153,40 @@ export function MeetingTypeModal({
    */
   const handleClose = () => {
     setNameError(undefined);
+    setQuestionErrors({});
+    setQuestionsFormError(undefined);
     onClose();
+  };
+
+  /**
+   * Replace the question list. Any message from the last save is dropped
+   * because it may refer to a question that has just changed; Save re-checks.
+   */
+  const setQuestions = (questions: BookingQuestion[]) => {
+    setQuestionErrors({});
+    setQuestionsFormError(undefined);
+    dispatch({ type: 'set', payload: { questions } });
+  };
+
+  /** Copy a failed question check into state so each message lands on its row. */
+  const showQuestionErrors = (result: Extract<BookingQuestionsValidation, { ok: false }>) => {
+    setQuestionErrors(result.byId);
+    setQuestionsFormError(result.formError);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const questionCheck = validateBookingQuestions(form.questions);
     if (!form.name.trim()) {
       setNameError('Give this meeting type a name.');
-      return;
     }
+    if (!questionCheck.ok) {
+      showQuestionErrors(questionCheck);
+    }
+    if (!form.name.trim() || !questionCheck.ok) return;
     setNameError(undefined);
+    setQuestionErrors({});
+    setQuestionsFormError(undefined);
 
     const payload = buildMeetingTypePayload(form);
 
@@ -179,7 +216,7 @@ export function MeetingTypeModal({
       isOpen={isOpen}
       onClose={handleClose}
       title={title}
-      size="md"
+      size="lg"
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="secondary" onClick={handleClose}>
@@ -213,6 +250,15 @@ export function MeetingTypeModal({
           setMaxAdvanceDays={setters.setMaxAdvanceDays}
           reminderEnabled={form.reminderEnabled}
           setReminderEnabled={setters.setReminderEnabled}
+        />
+
+        <MeetingTypeBookingFormFields
+          phoneField={form.phoneField}
+          setPhoneField={(phoneField) => dispatch({ type: 'set', payload: { phoneField } })}
+          questions={form.questions}
+          setQuestions={setQuestions}
+          questionErrors={questionErrors}
+          questionsFormError={questionsFormError}
         />
 
         <MeetingTypeAvailabilityFields

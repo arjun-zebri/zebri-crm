@@ -125,23 +125,23 @@ test.describe('Public booking page', () => {
       const firstSlot = page.locator('button').filter({ has: page.getByText(/\d{1,2}:\d{2}/) }).first()
       await firstSlot.click()
 
-      // Verify we've moved to the details form step.
-      await expect(page.getByText('Confirm your booking details')).toBeVisible()
+      // Verify we've moved to the details step.
+      await expect(page.getByRole('heading', { name: 'Almost there' })).toBeVisible()
 
       // Fill the form.
-      await page.getByLabel('Your name').fill('Alice Smith')
-      await page.getByLabel("Partner's name (optional)").fill('Bob Smith')
+      await page.getByLabel('Full name').fill('Alice Smith')
       await page.getByLabel('Email').fill('alice@example.test')
-      await page.getByLabel('Phone (optional)').fill('+61 2 1234 5678')
-      await page.getByLabel('Notes (optional)').fill('Looking forward to it!')
+      await page.getByLabel('Phone').fill('+61 2 1234 5678')
+      await page.getByLabel('Anything else we should know?').fill('Looking forward to it!')
 
       // Submit.
       await page.getByRole('button', { name: 'Confirm booking' }).click()
 
       // Verify confirmation screen.
-      await expect(page.getByText('Booking confirmed')).toBeVisible()
-      await expect(page.getByText('Thank you for booking a consultation with us')).toBeVisible()
-      await expect(page.getByText('A confirmation email has been sent to your inbox')).toBeVisible()
+      await expect(page.getByRole('heading', { name: "You're booked" })).toBeVisible()
+      await expect(page.getByText("We've sent the details to alice@example.test")).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Google' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Apple or other (.ics)' })).toBeVisible()
     } finally {
       await visitor1Ctx.close()
     }
@@ -158,16 +158,18 @@ test.describe('Public booking page', () => {
         await page.goto(bookingUrl, { waitUntil: 'networkidle' })
         const firstSlot = page.locator('button').filter({ has: page.getByText(/\d{1,2}:\d{2}/) }).first()
         await firstSlot.click()
-        await page.getByLabel('Your name').fill('Charlie Brown')
+        await page.getByLabel('Full name').fill('Charlie Brown')
         await page.getByLabel('Email').fill('charlie@example.test')
         await page.getByRole('button', { name: 'Confirm booking' }).click()
-        await expect(page.getByText('Booking confirmed')).toBeVisible()
+        await expect(page.getByRole('heading', { name: "You're booked" })).toBeVisible()
       } finally {
         await ctx.close()
       }
     }
 
-    // Second visitor tries to book the same time.
+    // Second visitor tries to book the same time. The slot list is loaded
+    // before the first booking, so the taken time still shows; the conflict
+    // is only discovered on submit (409), which sends them back to the picker.
     {
       const ctx = await browser.newContext()
       try {
@@ -177,14 +179,14 @@ test.describe('Public booking page', () => {
         const firstSlotText = await firstSlot.textContent()
         await firstSlot.click()
 
-        // The slot-taken notice should appear (the first slot is now booked).
+        await page.getByLabel('Full name').fill('Diana Prince')
+        await page.getByLabel('Email').fill('diana@example.test')
+        await page.getByRole('button', { name: 'Confirm booking' }).click()
+
+        // The slot-taken notice should appear back on the picker.
         await expect(page.getByText('That time was just taken. Please choose another time.')).toBeVisible()
 
-        // Go back and pick a different slot.
-        await page.getByRole('button', { name: 'Back' }).click()
-        await expect(page.getByText('Confirm your booking details')).not.toBeVisible()
-
-        // Pick the second slot.
+        // Pick a different slot.
         const slots = page.locator('button').filter({ has: page.getByText(/\d{1,2}:\d{2}/) })
         const slotCount = await slots.count()
         expect(slotCount).toBeGreaterThanOrEqual(2) // Verify there are multiple slots
@@ -195,12 +197,12 @@ test.describe('Public booking page', () => {
         await secondSlot.click()
 
         // Fill and submit with the second slot.
-        await page.getByLabel('Your name').fill('Diana Prince')
+        await page.getByLabel('Full name').fill('Diana Prince')
         await page.getByLabel('Email').fill('diana@example.test')
         await page.getByRole('button', { name: 'Confirm booking' }).click()
 
         // Verify confirmation.
-        await expect(page.getByText('Booking confirmed')).toBeVisible()
+        await expect(page.getByRole('heading', { name: "You're booked" })).toBeVisible()
       } finally {
         await ctx.close()
       }
@@ -222,22 +224,23 @@ test.describe('Public booking page', () => {
       await page.goto(bookingUrl, { waitUntil: 'networkidle' })
 
       // Verify the slot picker is visible on mobile.
-      await expect(page.getByText(/Times shown in your local time/)).toBeVisible()
+      await expect(page.getByText(/All times are in/)).toBeVisible()
 
       // Pick a slot.
       const firstSlot = page.locator('button').filter({ has: page.getByText(/\d{1,2}:\d{2}/) }).first()
       await firstSlot.click()
 
-      // Verify the details form is visible.
-      await expect(page.getByLabel('Your name')).toBeVisible()
+      // Verify the details form is visible, with the summary collapsed to its bar.
+      await expect(page.getByLabel('Full name')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Change time' })).toBeVisible()
 
       // Fill and submit.
-      await page.getByLabel('Your name').fill('Mobile Booker')
+      await page.getByLabel('Full name').fill('Mobile Booker')
       await page.getByLabel('Email').fill('mobile@example.test')
       await page.getByRole('button', { name: 'Confirm booking' }).click()
 
       // Verify confirmation.
-      await expect(page.getByText('Booking confirmed')).toBeVisible()
+      await expect(page.getByRole('heading', { name: "You're booked" })).toBeVisible()
     } finally {
       await ctx.close()
     }

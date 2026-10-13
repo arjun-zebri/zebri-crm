@@ -84,6 +84,10 @@ export async function sendBookingNotificationEmail(opts: {
     locationType: 'video' | 'phone' | 'in_person';
     address: string | null;
     joinUrl: string | null;
+    phone?: string | undefined;
+    notes?: string | undefined;
+    /** Custom question answers, already rendered to text. */
+    answers?: Array<{ label: string; value: string }> | undefined;
   };
 }): Promise<DispatchResult> {
   return dispatchEmail(

@@ -26,6 +26,12 @@ import {
   isSlotBookable,
   BookingsUnavailableError,
 } from '@/lib/booking/availability';
+import {
+  formatAnswerValue,
+  parseBookingQuestions,
+  validateAnswers,
+  type BookingAnswer,
+} from '@/lib/booking/questions';
 import { pushBookingEvent, EventPushError } from '@/lib/calendar/event-push';
 import { FreeBusyUnavailableError } from '@/lib/calendar/free-busy';
 import {
@@ -43,44 +49,59 @@ const ok = () => NextResponse.json({ ok: true });
 /**
  * Map the validated input and meeting type to the RPC call parameters.
  * Computes endsAt from startsAt + meeting type duration.
+ *
+ * Answers go over as `{ question_id, value }` only: the RPC copies each
+ * label and type from the stored question, so nothing the booker sends can
+ * relabel an answer.
  */
 function toRpcParams(
   input: BookingSubmitInput,
   durationMinutes: number,
+  answers: BookingAnswer[],
+  phone: string | undefined,
 ) {
   const startsAt = new Date(input.startsAt);
   const endsAt = new Date(startsAt.getTime() + durationMinutes * 60 * 1000);
 
-  const params: Record<string, unknown> = {
+  return {
     token: input.token,
     p_starts_at: startsAt.toISOString(),
     p_ends_at: endsAt.toISOString(),
     p_timezone: input.timezone,
     p_name: input.name,
     p_email: input.email,
+    p_answers: answers.map((a) => ({ question_id: a.question_id, value: a.value })),
+    ...(phone !== undefined && { p_phone: phone }),
+    ...(input.notes !== undefined && { p_notes: input.notes }),
   };
+}
 
-  if (input.partnerName !== undefined) {
-    params.p_partner_name = input.partnerName;
-  }
-  if (input.phone !== undefined) {
-    params.p_phone = input.phone;
-  }
-  if (input.notes !== undefined) {
-    params.p_notes = input.notes;
+/**
+ * Check the booker's answers and phone against the meeting type's form.
+ *
+ * Returns the cleaned answers, or per-field errors keyed the way the public
+ * form keys its inputs (`phone`, or a question id), so the form can put each
+ * message beside the field it belongs to.
+ */
+function checkForm(
+  input: BookingSubmitInput,
+  meetingType: { questions: unknown; phone_field: string },
+):
+  | { ok: true; answers: BookingAnswer[]; phone: string | undefined }
+  | { ok: false; fieldErrors: Record<string, string> } {
+  const questions = parseBookingQuestions(meetingType.questions);
+  const raw = Object.fromEntries(input.answers.map((a) => [a.question_id, a.value]));
+  const { answers, errors } = validateAnswers(questions, raw);
+
+  // A hidden phone field is dropped rather than rejected: a form that stopped
+  // asking for it should not fail a submission from a page loaded earlier.
+  const phone = meetingType.phone_field === 'hidden' ? undefined : input.phone;
+  if (meetingType.phone_field === 'required' && !phone) {
+    errors.phone = 'Add a phone number';
   }
 
-  return params as unknown as {
-    token: string;
-    p_starts_at: string;
-    p_ends_at: string;
-    p_timezone: string;
-    p_name: string;
-    p_email: string;
-    p_partner_name?: string;
-    p_phone?: string;
-    p_notes?: string;
-  };
+  if (Object.keys(errors).length > 0) return { ok: false, fieldErrors: errors };
+  return { ok: true, answers, phone };
 }
 
 export async function POST(request: NextRequest) {
@@ -109,6 +130,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Booking not available.' }, { status: 404 });
   }
 
+  const form = checkForm(input, ctx.meetingType);
+  if (!form.ok) {
+    return NextResponse.json(
+      { error: 'Please check the form and try again.', fieldErrors: form.fieldErrors },
+      { status: 400 },
+    );
+  }
+  const { answers, phone } = form;
+
   const startsAt = new Date(input.startsAt);
   const endsAt = new Date(startsAt.getTime() + ctx.meetingType.duration_minutes * 60 * 1000);
 
@@ -131,7 +161,7 @@ export async function POST(request: NextRequest) {
   // Submit the booking via RPC (SECURITY DEFINER handles the write)
   const { data, error } = await supabase.rpc(
     'submit_booking',
-    toRpcParams(input, ctx.meetingType.duration_minutes),
+    toRpcParams(input, ctx.meetingType.duration_minutes, answers, phone),
   );
 
   if (error) {
@@ -189,6 +219,10 @@ export async function POST(request: NextRequest) {
   const businessName = result.business_name || 'your business';
 
   const admin = createAdminClient();
+
+  // Answers as plain text, shared by the calendar event and the MC's email.
+  const answerLines = answers.map((a) => ({ label: a.label, value: formatAnswerValue(a) }));
+
   let joinUrl: string | null = null;
   const eventIds: Record<string, string> = {};
 
@@ -197,7 +231,13 @@ export async function POST(request: NextRequest) {
   try {
     const pushed = await pushBookingEvent(supabase, userId, {
       summary: `Consultation: ${input.name}`,
-      description: `Booking from ${input.name}\nEmail: ${input.email}\n${input.phone ? `Phone: ${input.phone}` : ''}${input.notes ? `\nNotes: ${input.notes}` : ''}`,
+      description: [
+        `Booking from ${input.name}`,
+        `Email: ${input.email}`,
+        phone && `Phone: ${phone}`,
+        ...answerLines.map((a) => `${a.label}: ${a.value}`),
+        input.notes && `Notes: ${input.notes}`,
+      ].filter(Boolean).join('\n'),
       start: startsAt,
       end: endsAt,
       attendeeEmail: input.email,
@@ -321,6 +361,9 @@ export async function POST(request: NextRequest) {
         locationType,
         address: ctx.meetingType.address,
         joinUrl,
+        phone,
+        notes: input.notes,
+        answers: answerLines,
       },
     }).catch((err) => {
       logger.error('[booking/submit] notification email failed', {

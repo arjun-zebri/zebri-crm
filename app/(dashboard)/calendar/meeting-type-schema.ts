@@ -10,6 +10,12 @@
  */
 import { z } from 'zod';
 
+import {
+  bookingQuestionsSchema,
+  PHONE_FIELD_MODES,
+  parseBookingQuestions,
+  type PhoneFieldMode,
+} from '@/lib/booking/questions';
 import type { Database } from '@/types/database';
 
 /** Time in HH:mm, 24-hour. Mirrors the availability editor's schema. */
@@ -85,6 +91,14 @@ export const meetingTypeInputSchema = z.object({
    * {@link meetingTypeAvailabilitySchema}.
    */
   availability: meetingTypeAvailabilitySchema.optional(),
+  /**
+   * Booking-form questions beyond the fixed name and email. Defaults to none,
+   * and {@link meetingTypeRowToInput} carries stored questions through so a
+   * quick update from the card cannot wipe them.
+   */
+  questions: bookingQuestionsSchema.default([]),
+  /** Whether the fixed phone field is hidden, optional or required on the form. */
+  phone_field: z.enum(PHONE_FIELD_MODES).default('optional'),
 });
 
 /**
@@ -100,6 +114,15 @@ export const updateMeetingTypeSchema = meetingTypeInputSchema.extend({
 
 /** Input type for {@link updateMeetingTypeSchema}. */
 export type UpdateMeetingTypeInput = z.input<typeof updateMeetingTypeSchema>;
+
+/**
+ * Read a stored phone mode, falling back to the column default for anything unknown.
+ *
+ * @param raw - the `phone_field` column value
+ */
+export function parsePhoneField(raw: unknown): PhoneFieldMode {
+  return PHONE_FIELD_MODES.includes(raw as PhoneFieldMode) ? (raw as PhoneFieldMode) : 'optional';
+}
 
 /**
  * Turn a stored meeting type row back into a full update input.
@@ -134,5 +157,7 @@ export function meetingTypeRowToInput(
     max_advance_days: row.max_advance_days,
     reminder_enabled: row.reminder_enabled,
     active: row.active,
+    questions: parseBookingQuestions(row.questions),
+    phone_field: parsePhoneField(row.phone_field),
   };
 }

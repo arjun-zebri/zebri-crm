@@ -30,7 +30,7 @@ function booking(id: string, startsAt: string, endsAt: string, status = 'confirm
     id,
     name: `Booker ${id}`,
     email: 'booker@example.com',
-    partner_name: null,
+    answers: [],
     phone: null,
     starts_at: startsAt,
     ends_at: endsAt,

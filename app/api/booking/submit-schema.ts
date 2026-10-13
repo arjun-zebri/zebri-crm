@@ -8,7 +8,8 @@
  */
 import { z } from 'zod';
 
-import { hasLineBreak, SINGLE_LINE_MESSAGE, singleLineText } from '@/lib/utils/single-line';
+import { QUESTION_LIMITS } from '@/lib/booking/questions';
+import { singleLineText } from '@/lib/utils/single-line';
 
 /** Minimum time a genuine human takes to fill the form, in ms. */
 const MIN_FILL_MS = 2_000;
@@ -55,13 +56,28 @@ export const bookingSubmitSchema = z.object({
     ),
   // Names reach email headers, so a line break is refused (audit M5).
   name: singleLineText(120).min(1),
-  partnerName: optionalText(120).refine((v) => !v || !hasLineBreak(v), SINGLE_LINE_MESSAGE),
   email: z.preprocess(
     (v) => (typeof v === 'string' ? v.trim() : v),
     z.email().max(200),
   ),
   phone: optionalText(40),
   notes: optionalText(2000),
+  // Answers to the meeting type's own questions, keyed by question id. Only
+  // the shape is checked here: whether each answer fits its question needs
+  // the meeting type, so the route runs `validateAnswers` once it has loaded
+  // it, and the RPC checks again because it is anon-callable.
+  answers: z
+    .array(
+      z.object({
+        question_id: z.string().min(1).max(64),
+        value: z.union([
+          z.string().max(QUESTION_LIMITS.answerLength),
+          z.array(z.string().max(QUESTION_LIMITS.optionLength)).max(QUESTION_LIMITS.maxOptions),
+        ]),
+      }),
+    )
+    .max(QUESTION_LIMITS.maxQuestions)
+    .default([]),
   // Honeypot: bots fill hidden form fields; must be empty
   website: z
     .string()

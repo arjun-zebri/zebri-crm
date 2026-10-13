@@ -31,6 +31,8 @@ const baseType: MeetingType = {
   max_advance_days: 60,
   reminder_enabled: true,
   uses_custom_availability: false,
+  phone_field: 'optional',
+  questions: [],
   active: true,
   share_token: 'tok-abc',
   created_at: '2026-08-01T00:00:00Z',
@@ -191,6 +193,8 @@ describe('meetingTypeRowToInput', () => {
       max_advance_days: 60,
       reminder_enabled: true,
       active: true,
+      phone_field: 'optional',
+      questions: [],
     });
   });
 

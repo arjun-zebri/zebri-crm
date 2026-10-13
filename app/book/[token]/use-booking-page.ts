@@ -8,10 +8,16 @@
  * @module app/book/[token]/use-booking-page
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { BookingSubmitInput } from '@/app/api/booking/submit-schema'
 import { useBrowserTimezone } from '@/components/scheduling/use-browser-timezone'
+import {
+  parseBookingQuestions,
+  PHONE_FIELD_MODES,
+  type AnswerValue,
+  type BookingQuestion,
+  type PhoneFieldMode,
+} from '@/lib/booking/questions'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import { isValidTimezone } from '@/lib/scheduling/timezone-options'
 import { createClient } from '@/lib/supabase/client'
@@ -24,6 +30,10 @@ export type BookingPageData = PublicBranding & {
   duration_minutes: number
   location_type: 'video' | 'phone' | 'in_person'
   address: string | null
+  /** The meeting type's custom questions, as stored (jsonb). Parsed by the hook. */
+  questions?: unknown
+  /** How the fixed phone field behaves. Absent on older payloads: treated as optional. */
+  phone_field?: unknown
 }
 
 export interface Slot {
@@ -37,6 +47,78 @@ export interface BookingConfirmation {
   end: string
   timezone: string
   joinUrl?: string | null
+  /** The booker's email, copied from the submitted form for the confirmation copy. */
+  email: string
+}
+
+/**
+ * What the details form sends. Answers are keyed by question id; the server
+ * re-validates them, so the shape here only has to be well-formed.
+ */
+export interface SubmitPayload {
+  token: string
+  name: string
+  email: string
+  phone: string | undefined
+  notes: string | undefined
+  answers: Array<{ question_id: string; value: AnswerValue }>
+  startedAt: number
+}
+
+/**
+ * What {@link useBookingPage}'s `submit` hands back to the form. Empty when the
+ * outcome is handled by the page itself (confirmed, or slot taken and sent back
+ * to the picker). Field errors and a form-level message stay on the form, so a
+ * couple can correct the details without losing their place.
+ */
+export interface SubmitResult {
+  /** Server errors keyed by `name`, `email`, `phone`, or a question id. */
+  fieldErrors?: Record<string, string>
+  /** A message that belongs to the form as a whole. */
+  formError?: string
+}
+
+/** Body POSTed to `/api/booking/submit`. */
+interface SubmitBody {
+  token: string
+  startsAt: string
+  timezone: string
+  name: string
+  email: string
+  website: string
+  startedAt: number
+  phone?: string
+  notes?: string
+  answers: Array<{ question_id: string; value: AnswerValue }>
+}
+
+/** Read a JSON error body without throwing; a non-JSON body yields `{}`. */
+async function readErrorBody(res: Response): Promise<{ error?: string; fieldErrors?: Record<string, string> }> {
+  try {
+    const data = (await res.json()) as { error?: unknown; fieldErrors?: unknown }
+    const fieldErrors: Record<string, string> = {}
+    if (data.fieldErrors && typeof data.fieldErrors === 'object') {
+      for (const [key, value] of Object.entries(data.fieldErrors)) {
+        if (typeof value === 'string') fieldErrors[key] = value
+      }
+    }
+    return {
+      ...(typeof data.error === 'string' ? { error: data.error } : {}),
+      ...(Object.keys(fieldErrors).length > 0 ? { fieldErrors } : {}),
+    }
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Read the phone mode off the payload. Anything unrecognised is 'optional':
+ * the form then asks for a number without refusing bookings.
+ */
+export function parsePhoneField(raw: unknown): PhoneFieldMode {
+  return (PHONE_FIELD_MODES as readonly string[]).includes(raw as string)
+    ? (raw as PhoneFieldMode)
+    : 'optional'
 }
 
 interface UseBookingPageState {
@@ -75,16 +157,6 @@ interface UseBookingPageState {
    * which is a very different message from "still looking".
    */
   slotsLoading: boolean
-}
-
-interface SubmitPayload {
-  token: string
-  name: string
-  partnerName: string | undefined
-  email: string
-  phone: string | undefined
-  notes: string | undefined
-  startedAt: number
 }
 
 /**
@@ -278,11 +350,12 @@ export function useBookingPage(token: string) {
   )
 
   const submit = useCallback(
-    async (payload: SubmitPayload) => {
+    async (payload: SubmitPayload): Promise<SubmitResult> => {
       const bookerTimezone = s.viewerTimezone || detectedTimezone || s.mcTimezone
-      if (!s.selectedSlot || !bookerTimezone) {
+      const slot = s.selectedSlot
+      if (!slot || !bookerTimezone) {
         console.error('[booking] submit: no selected slot or timezone')
-        return
+        return { formError: 'Choose a time before confirming.' }
       }
 
       setS((prev) => ({ ...prev, submitting: true }))
@@ -291,9 +364,9 @@ export function useBookingPage(token: string) {
         // Send the slot string exactly as the slots endpoint produced it.
         // Round-tripping through Date re-adds milliseconds and changes the
         // value the server offered.
-        const submitBody: BookingSubmitInput = {
+        const submitBody: SubmitBody = {
           token: payload.token,
-          startsAt: s.selectedSlot.start,
+          startsAt: slot.start,
           // The booker's zone, so their confirmation and 24h reminder render
           // in it and the MC can see where they are.
           timezone: bookerTimezone,
@@ -301,9 +374,9 @@ export function useBookingPage(token: string) {
           email: payload.email,
           website: '', // honeypot
           startedAt: payload.startedAt,
-          partnerName: payload.partnerName,
-          phone: payload.phone,
-          notes: payload.notes,
+          ...(payload.phone !== undefined ? { phone: payload.phone } : {}),
+          ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+          answers: payload.answers,
         }
 
         const res = await fetch('/api/booking/submit', {
@@ -322,21 +395,43 @@ export function useBookingPage(token: string) {
             slotTakenNotice: true,
             submitting: false,
           }))
-          return
+          return {}
+        }
+
+        if (res.status === 400) {
+          // The details were rejected, not the slot. Keep the couple on the
+          // form with the message beside the field it belongs to.
+          const body = await readErrorBody(res)
+          setS((prev) => ({ ...prev, submitting: false }))
+          if (body.fieldErrors) return { fieldErrors: body.fieldErrors }
+          return { formError: body.error ?? 'Check the details and try again.' }
         }
 
         if (!res.ok) {
-          const errorData = await res.json()
+          const errorData = await readErrorBody(res)
           setS((prev) => ({
             ...prev,
             state: 'error',
             error: errorData.error || 'Could not complete booking',
             submitting: false,
           }))
-          return
+          return {}
         }
 
-        const confirmation = (await res.json()) as BookingConfirmation
+        // Built from what the booker chose, not from the response body. The
+        // server answers a bot with a bare `{ ok: true }`, and a confirmation
+        // that formats an undefined time would crash the page for a real booker
+        // whose submission was silently dropped. The join link is the one thing
+        // only the server knows, so it is the only field taken from the reply.
+        const body = (await res.json().catch(() => ({}))) as { joinUrl?: string | null }
+        const confirmation: BookingConfirmation = {
+          ok: true,
+          start: slot.start,
+          end: slot.end,
+          timezone: bookerTimezone,
+          joinUrl: body.joinUrl ?? null,
+          email: payload.email,
+        }
         setS((prev) => ({
           ...prev,
           state: 'confirmed',
@@ -344,6 +439,7 @@ export function useBookingPage(token: string) {
           selectedSlot: null,
           submitting: false,
         }))
+        return {}
       } catch (err) {
         console.error('[booking] submit error', err)
         setS((prev) => ({
@@ -352,6 +448,7 @@ export function useBookingPage(token: string) {
           error: 'Something went wrong. Please try again.',
           submitting: false,
         }))
+        return {}
       }
     },
     [s.selectedSlot, s.viewerTimezone, detectedTimezone, s.mcTimezone, s.currentFrom, s.currentTo, token, loadSlots],
@@ -405,6 +502,11 @@ export function useBookingPage(token: string) {
   // Everything the booker reads is rendered in their zone, falling back to the
   // MC's only for the first paint before detection resolves.
   const timezone = s.viewerTimezone || detectedTimezone || s.mcTimezone
+  // Parsed once per payload, not per render: the form keys its fields off these.
+  const rawQuestions = s.bookingPage?.questions
+  const rawPhoneField = s.bookingPage?.phone_field
+  const questions = useMemo<BookingQuestion[]>(() => parseBookingQuestions(rawQuestions), [rawQuestions])
+  const phoneField = useMemo(() => parsePhoneField(rawPhoneField), [rawPhoneField])
   const availableDates = buildAvailableDates(s.slots, timezone)
   const slotsForSelectedDate = s.selectedDate
     ? s.slots.filter((slot) => getLocalDay(slot.start, timezone) === s.selectedDate)
@@ -420,6 +522,9 @@ export function useBookingPage(token: string) {
     currentMonth: s.currentMonth,
     availableDates,
     timezone,
+    mcTimezone: s.mcTimezone,
+    questions,
+    phoneField,
     changeTimezone,
     slotTakenNotice: s.slotTakenNotice,
     confirmation: s.confirmation,

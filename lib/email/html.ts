@@ -1234,6 +1234,10 @@ export function bookingNotificationHtml(opts: {
     locationType: "video" | "phone" | "in_person";
     address: string | null;
     joinUrl: string | null;
+    phone?: string | undefined;
+    notes?: string | undefined;
+    /** The meeting type's custom questions, already rendered to text. */
+    answers?: Array<{ label: string; value: string }> | undefined;
   };
 }): string {
   const b = opts.booking;
@@ -1241,11 +1245,11 @@ export function bookingNotificationHtml(opts: {
 
   let location: string;
   if (b.locationType === "video" && b.joinUrl) {
-    location = escapeHtmlText(b.joinUrl);
+    location = b.joinUrl;
   } else if (b.locationType === "video") {
     location = "Video call (link to follow)";
   } else if (b.locationType === "in_person" && b.address) {
-    location = escapeHtmlText(b.address);
+    location = b.address;
   } else if (b.locationType === "phone") {
     location = "Phone call";
   } else {
@@ -1264,9 +1268,12 @@ export function bookingNotificationHtml(opts: {
     <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
       ${row("Booker", b.bookerName)}
       ${row("Email", b.bookerEmail)}
+      ${row("Phone", b.phone)}
       ${row("Meeting type", b.meetingTypeName)}
       ${row("Date & time", dateTime)}
       ${row("Location", location)}
+      ${(b.answers ?? []).map((a) => row(a.label, a.value)).join("")}
+      ${row("Note", b.notes)}
     </table>`;
 
   return wrapTemplateHtml(body, opts.mcBusinessName);
@@ -1404,11 +1411,11 @@ export function bookingChangeNotificationHtml(opts: {
 
   let location: string;
   if (b.locationType === "video" && b.joinUrl) {
-    location = escapeHtmlText(b.joinUrl);
+    location = b.joinUrl;
   } else if (b.locationType === "video") {
     location = "Video call (link to follow)";
   } else if (b.locationType === "in_person" && b.address) {
-    location = escapeHtmlText(b.address);
+    location = b.address;
   } else if (b.locationType === "phone") {
     location = "Phone call";
   } else {

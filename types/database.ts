@@ -524,6 +524,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          answers: Json
           cancelled_at: string | null
           couple_id: string | null
           created_at: string
@@ -546,6 +547,7 @@ export type Database = {
           video_join_url: string | null
         }
         Insert: {
+          answers?: Json
           cancelled_at?: string | null
           couple_id?: string | null
           created_at?: string
@@ -568,6 +570,7 @@ export type Database = {
           video_join_url?: string | null
         }
         Update: {
+          answers?: Json
           cancelled_at?: string | null
           couple_id?: string | null
           created_at?: string
@@ -2539,6 +2542,8 @@ export type Database = {
           max_advance_days: number
           min_notice_hours: number
           name: string
+          phone_field: string
+          questions: Json
           reminder_enabled: boolean
           share_token: string
           updated_at: string
@@ -2558,6 +2563,8 @@ export type Database = {
           max_advance_days?: number
           min_notice_hours?: number
           name: string
+          phone_field?: string
+          questions?: Json
           reminder_enabled?: boolean
           share_token?: string
           updated_at?: string
@@ -2577,6 +2584,8 @@ export type Database = {
           max_advance_days?: number
           min_notice_hours?: number
           name?: string
+          phone_field?: string
+          questions?: Json
           reminder_enabled?: boolean
           share_token?: string
           updated_at?: string
@@ -5191,11 +5200,11 @@ export type Database = {
       }
       submit_booking: {
         Args: {
+          p_answers?: Json
           p_email: string
           p_ends_at: string
           p_name: string
           p_notes?: string
-          p_partner_name?: string
           p_phone?: string
           p_starts_at: string
           p_timezone: string
