@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { OPT_OUT_LINE, textToHtml, withEmailFooterHtml } from '@/lib/outreach/render';
+import { identityLine, OPT_OUT_LINE, signatureLinesHtml, textToHtml, withEmailFooterHtml } from '@/lib/outreach/render';
 import { composeEmail } from '@/lib/outreach/services/compose';
 
 const doc = {
@@ -21,11 +21,12 @@ const settings = { sender_name: 'Jo', signature: 'Jo Smith\nWebsite <https://zeb
 describe('composeEmail', () => {
   it('puts the text signature on the text part and the rich one on the HTML part', () => {
     const out = composeEmail('Hi Jane,\n\nQuick question.', settings);
-    expect(out.text).toBe(`Hi Jane,\n\nQuick question.\n\nJo, Zebri\n\nJo Smith\nWebsite <https://zebri.com.au>\n\n${OPT_OUT_LINE}`);
+    // The signature names Jo and Zebri, so there is no separate identity line.
+    expect(out.text).toBe(`Hi Jane,\n\nQuick question.\n\nJo Smith\nWebsite <https://zebri.com.au>\n\n${OPT_OUT_LINE}`);
     expect(out.html).toContain('<strong>Jo Smith</strong>');
     expect(out.html).toContain('href="https://zebri.com.au"');
     expect(out.html).toContain('src="https://cdn.test/logo.png"');
-    expect(out.html).toContain('Jo, Zebri');
+    expect(out.html).not.toContain('Jo, Zebri');
     expect(out.html).toContain("Reply &#39;stop&#39;");
   });
 
@@ -55,5 +56,52 @@ describe('withEmailFooterHtml', () => {
   it('leaves the signature block out when there is none', () => {
     const html = withEmailFooterHtml('Hi', '', '');
     expect(html).toBe(`<div dir="ltr"><div>Hi</div><div><br></div><div>Zebri</div><div><br></div><div>Not interested? Reply &#39;stop&#39; and I won&#39;t contact you again.</div></div>`);
+  });
+});
+
+describe('signatureLinesHtml', () => {
+  it('turns paragraphs into margin-free lines and keeps blank ones as one line', () => {
+    // Gmail gives a bare <p> a full line of space either side, so the
+    // signature arrived double-spaced next to the tight editor preview.
+    expect(signatureLinesHtml('<p>Jo</p><p style="text-align:center"><strong>Founder</strong></p><p></p><img src="https://cdn.test/a.png" />')).toBe(
+      '<div>Jo</div><div style="text-align:center"><strong>Founder</strong></div><div><br></div><img src="https://cdn.test/a.png" />',
+    );
+  });
+
+  it('leaves tags that only start with p alone', () => {
+    expect(signatureLinesHtml('<pre>x</pre>')).toBe('<pre>x</pre>');
+  });
+});
+
+describe('composeEmail signature spacing', () => {
+  it('sends no <p> in the HTML part', () => {
+    const out = composeEmail('Hi', settings);
+    expect(out.html).not.toMatch(/<p[\s>]/);
+    expect(out.html).toContain('<div><strong>Jo Smith</strong></div>');
+  });
+});
+
+describe('identityLine', () => {
+  it('drops the line when the signature already names the sender and Zebri', () => {
+    // The name printed twice in a row: "Arjun Punekar, Zebri" then the
+    // signature's own "Arjun Punekar".
+    expect(identityLine('Arjun Punekar', 'Arjun Punekar\nFounder\nwww.zebri.com.au')).toBeNull();
+  });
+
+  it('keeps it when the signature lacks the name or Zebri, so the sender is always named', () => {
+    expect(identityLine('Arjun Punekar', 'Founder\nwww.zebri.com.au')).toBe('Arjun Punekar, Zebri');
+    expect(identityLine('Arjun Punekar', 'Arjun Punekar\n0424 073 944')).toBe('Arjun Punekar, Zebri');
+    expect(identityLine('', 'Zebri')).toBe('Zebri');
+    expect(identityLine('Al', 'Weddings Australia\nzebri.com.au')).toBe('Al, Zebri');
+  });
+});
+
+describe('composeEmail identity line', () => {
+  it('names the sender once when the signature carries the name and Zebri', () => {
+    const sig = { sender_name: 'Jo Smith', signature: 'Jo Smith\nhttps://zebri.com.au', signature_doc: null };
+    const out = composeEmail('Hi', sig);
+    expect(out.text).toBe(`Hi\n\nJo Smith\nhttps://zebri.com.au\n\n${OPT_OUT_LINE}`);
+    expect(out.html).not.toContain('Jo Smith, Zebri');
+    expect(out.html.match(/Jo Smith/g)).toHaveLength(1);
   });
 });
