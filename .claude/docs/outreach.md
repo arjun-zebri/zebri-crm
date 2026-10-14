@@ -21,8 +21,15 @@ The founder's cold-outreach engine for celebrants, at **Admin > Outreach**
    - A campaign holds several sequences ("arms"). Each person is randomly
      assigned an arm they can receive.
 4. **Sending:**
-   - Email goes out through the founder's Gmail (Gmail API, plain text,
-     threaded follow-ups), within the warm-up ramp and caps.
+   - Email goes out through the founder's Gmail (Gmail API, threaded
+     follow-ups), within the warm-up ramp and caps. Each email is
+     multipart/alternative: a plain-text part and an HTML part written
+     the way Gmail composes (a `<div>` per line), with no tracking pixel.
+   - The footer (identity line, signature, opt-out line) is added at send
+     time (`services/compose.ts`), not when the email is queued, so a
+     signature edit reaches emails already in the queue. A body queued
+     before this change already ends with the opt-out line and is sent as
+     it stands.
    - Instagram DMs are assisted manual: the Today queue copies the message
      and opens `ig.me`, the founder sends it and clicks Sent.
 5. **Tracking:** every change writes an `outreach_events` row. Analytics
@@ -164,6 +171,8 @@ The founder-facing guide is `docs/outreach-guide.md`.
 4. **In Outreach > Settings:**
    - Connect Gmail.
    - Set the sender name and signature (required for email campaigns).
+     The signature uses the same editor as Settings > Signature: bold,
+     links and images (uploaded to the public `branding` bucket).
    - Pick the booking page.
    - Check the caps.
 
@@ -171,10 +180,10 @@ The founder-facing guide is `docs/outreach-guide.md`.
 
 Every email carries:
 - the sender's identity: "<sender>, Zebri", then the signature, which must
-  hold an email, phone or web address (`hasContactDetails`);
+  hold an email, phone or web address (`hasContactDetails`, run on the
+  plain-text copy, where a link keeps its address: "Call me <0412...>");
 - "Not interested? Reply 'stop' and I won't contact you again.";
-- a `List-Unsubscribe: mailto:` header (still to add to the Gmail MIME
-  builder, which is outside the compliance pass).
+- a `List-Unsubscribe: mailto:` header.
 
 Sending is blocked (`sendBlockReason`, in `services/suppression.ts`) with a
 machine reason when:

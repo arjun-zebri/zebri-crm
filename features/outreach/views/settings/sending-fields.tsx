@@ -8,7 +8,7 @@
  */
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { SignatureEditor } from '@/components/ui/signature-editor';
 import { TimeSelect } from '@/components/ui/time-select';
 
 import type { FieldErrors, SettingsForm } from './form-model';
@@ -48,13 +48,17 @@ export function SendingFields({ form, set, errors }: { form: SettingsForm; set: 
         value={form.sender_name}
         onChange={(e) => set('sender_name', e.target.value)}
       />
-      <Textarea
-        label="Signature"
-        help="Your name, Zebri, and website. Every email must say who it's from."
-        rows={4}
-        value={form.signature}
-        onChange={(e) => set('signature', e.target.value)}
-      />
+      <div className="space-y-1">
+        <p className="text-body font-medium text-text">Signature</p>
+        <SignatureEditor
+          value={form.signature_doc}
+          onChange={(doc) => set('signature_doc', doc)}
+          placeholder="Your name, Zebri, and a phone, email or website"
+        />
+        <p className="text-body text-text-muted">
+          Bold, links and images work like your email signature in Settings. Include a phone, email or website: every email must say how to reach you.
+        </p>
+      </div>
       <Input
         label="Daily email limit while the inbox warms up"
         help="One number per week, like 5, 10, 20, 30. The last number stays after the list ends."

@@ -58,6 +58,22 @@ describe('toInput errors', () => {
   });
 });
 
+describe('signature', () => {
+  it('turns a plain-text signature into one paragraph per line', () => {
+    expect(form.signature_doc).toEqual({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Jo, Zebri' }] }] });
+  });
+
+  it('keeps a saved rich signature and sends its text copy with it', () => {
+    const doc = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Site', marks: [{ type: 'link', attrs: { href: 'https://zebri.com.au' } }] }] }] };
+    const rich = toForm({ ...saved, signature_doc: doc } as OutreachSettings);
+    expect(rich.signature_doc).toEqual(doc);
+    const out = toInput(rich);
+    if (!out.ok) throw new Error('expected valid');
+    expect(out.data.signature_doc).toEqual(doc);
+    expect(out.data.signature).toBe('Site <https://zebri.com.au>');
+  });
+});
+
 describe('isFormDirty', () => {
   it('is clean for an untouched form', () => {
     expect(isFormDirty(form, toForm(saved))).toBe(false);

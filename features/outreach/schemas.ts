@@ -7,6 +7,7 @@
  *
  * @module features/outreach/schemas
  */
+import type { JSONContent } from '@tiptap/core';
 import { z } from 'zod';
 
 import { SHEET_FIELDS } from '@/lib/outreach/import/sheet';
@@ -136,10 +137,24 @@ export const saveCampaignSchema = z.object({
 /** Campaign status change. */
 export const campaignStatusSchema = z.object({ id, status: z.enum(['active', 'paused', 'finished']) });
 
-/** Settings save. */
+/** Upper bound on a stored signature document, images being URLs rather than data. */
+const SIGNATURE_DOC_MAX_CHARS = 50_000;
+
+/**
+ * A signature document from the editor: a TipTap `doc` of bounded size.
+ * Its content is not trusted: it is sanitised whenever it is rendered.
+ */
+const signatureDoc = z.custom<JSONContent>(
+  (v) => typeof v === 'object' && v !== null && (v as { type?: unknown }).type === 'doc'
+    && JSON.stringify(v).length <= SIGNATURE_DOC_MAX_CHARS,
+  'That signature is too large to save.',
+);
+
+/** Settings save. `signature` is ignored when a document is sent; the server derives it. */
 export const saveSettingsSchema = z.object({
   sender_name: z.string().max(100),
   signature: z.string().max(1000),
+  signature_doc: signatureDoc.nullable(),
   email_ramp: z.array(z.number().int().min(0).max(200)).min(1).max(12),
   email_daily_cap: z.number().int().min(0).max(200),
   ig_daily_cap: z.number().int().min(0).max(200),

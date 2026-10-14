@@ -3495,6 +3495,7 @@ export type Database = {
           sender_name: string
           sending_paused: boolean
           signature: string
+          signature_doc: Json | null
           updated_at: string
         }
         Insert: {
@@ -3514,6 +3515,7 @@ export type Database = {
           sender_name?: string
           sending_paused?: boolean
           signature?: string
+          signature_doc?: Json | null
           updated_at?: string
         }
         Update: {
@@ -3533,6 +3535,7 @@ export type Database = {
           sender_name?: string
           sending_paused?: boolean
           signature?: string
+          signature_doc?: Json | null
           updated_at?: string
         }
         Relationships: [

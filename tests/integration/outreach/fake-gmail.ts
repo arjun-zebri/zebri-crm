@@ -37,6 +37,8 @@ export interface FakeMail {
   to: string;
   subject: string;
   body: string;
+  /** The text/html part of a multipart send, or null for plain text. */
+  html?: string | null;
   rfcMessageId: string | null;
   inReplyTo: string | null;
   internalDate: number;
@@ -216,24 +218,49 @@ function decodeHeader(value: string): string {
   return m ? Buffer.from(m[1]!, 'base64').toString('utf8') : value;
 }
 
-/** Read the headers and body the app built into a raw RFC 5322 message. */
-function parseRaw(raw: string): { to: string; subject: string; messageId: string; inReplyTo: string | null; body: string } {
-  const text = Buffer.from(raw, 'base64url').toString('utf8');
+/** Split a header block and a base64 body; headers keyed lower-case. */
+function splitPart(text: string): { headers: Map<string, string>; body: string } {
   const split = text.indexOf('\r\n\r\n');
-  const headerBlock = text.slice(0, split);
-  const bodyB64 = text.slice(split + 4).replace(/\s+/g, '');
   const headers = new Map<string, string>();
-  for (const line of headerBlock.split('\r\n')) {
+  for (const line of text.slice(0, split).split('\r\n')) {
     const i = line.indexOf(':');
     if (i > 0) headers.set(line.slice(0, i).toLowerCase(), line.slice(i + 1).trim());
   }
-  const to = (headers.get('to') ?? '').replace(/^<|>$/g, '');
+  return { headers, body: text.slice(split + 4) };
+}
+
+/** Decode a base64 part body, ignoring its line breaks. */
+function decodeBody(b64: string): string {
+  return Buffer.from(b64.replace(/\s+/g, ''), 'base64').toString('utf8');
+}
+
+/**
+ * Read the headers, text body and (for multipart/alternative) HTML body the
+ * app built into a raw RFC 5322 message, as Gmail would.
+ */
+function parseRaw(raw: string): { to: string; subject: string; messageId: string; inReplyTo: string | null; body: string; html: string | null } {
+  const { headers, body: rest } = splitPart(Buffer.from(raw, 'base64url').toString('utf8'));
+  let body = '';
+  let html: string | null = null;
+  const boundary = (headers.get('content-type') ?? '').match(/boundary="([^"]+)"/)?.[1];
+  if (boundary) {
+    for (const chunk of rest.split(`--${boundary}`).slice(1)) {
+      if (chunk.startsWith('--')) break;
+      const part = splitPart(chunk.replace(/^\r\n/, ''));
+      const type = part.headers.get('content-type') ?? '';
+      if (type.startsWith('text/plain')) body = decodeBody(part.body);
+      if (type.startsWith('text/html')) html = decodeBody(part.body);
+    }
+  } else {
+    body = decodeBody(rest);
+  }
   return {
-    to,
+    to: (headers.get('to') ?? '').replace(/^<|>$/g, ''),
     subject: decodeHeader(headers.get('subject') ?? ''),
     messageId: headers.get('message-id') ?? '',
     inReplyTo: headers.get('in-reply-to') ?? null,
-    body: Buffer.from(bodyB64, 'base64').toString('utf8'),
+    body,
+    html,
   };
 }
 
@@ -291,6 +318,7 @@ export class FakeGmailClient {
       to: parsed.to,
       subject: parsed.subject,
       body: parsed.body,
+      html: parsed.html,
       rfcMessageId: parsed.messageId || null,
       inReplyTo: parsed.inReplyTo,
       internalDate: Date.now(),

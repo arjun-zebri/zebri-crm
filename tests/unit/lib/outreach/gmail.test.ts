@@ -27,6 +27,29 @@ describe('buildRawEmail', () => {
     expect(Buffer.from(body!.replace(/\r\n/g, ''), 'base64').toString('utf8')).toBe('Hi Jane,\r\nthanks');
   });
 
+  it('sends multipart/alternative with a text and an HTML part when there is HTML', () => {
+    const raw = decode(buildRawEmail({
+      from: { name: 'Jo', email: 'jo@zebri.com.au' },
+      to: 'jane@x.com',
+      subject: 'Hello',
+      body: 'Hi Jane',
+      html: '<div>Hi <strong>Jane</strong></div>',
+      messageId: '<m@zebri.com.au>',
+    }, 'BOUNDARY'));
+    const head = raw.split('\r\n\r\n')[0]!;
+    expect(head).toContain('Content-Type: multipart/alternative; boundary="BOUNDARY"');
+    expect(head).not.toContain('text/plain');
+    const parts = raw.split('--BOUNDARY');
+    // Preamble, text, html, closing marker.
+    expect(parts).toHaveLength(4);
+    const partBody = (p: string) => Buffer.from(p.split('\r\n\r\n')[1]!.replace(/\r\n/g, ''), 'base64').toString('utf8');
+    expect(parts[1]).toContain('Content-Type: text/plain; charset="UTF-8"');
+    expect(partBody(parts[1]!)).toBe('Hi Jane');
+    expect(parts[2]).toContain('Content-Type: text/html; charset="UTF-8"');
+    expect(partBody(parts[2]!)).toBe('<div>Hi <strong>Jane</strong></div>');
+    expect(parts[3]!.startsWith('--')).toBe(true);
+  });
+
   it('encodes non-ASCII headers', () => {
     expect(encodeHeader('Café')).toMatch(/^=\?UTF-8\?B\?/);
     expect(encodeHeader('Plain')).toBe('Plain');

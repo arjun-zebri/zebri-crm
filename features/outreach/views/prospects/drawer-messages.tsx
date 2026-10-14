@@ -10,6 +10,7 @@ import { Instagram, Mail } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { OPT_OUT_LINE } from '@/lib/outreach/render';
 import type { ProspectDetail } from '@/lib/outreach/services/queries';
 
 import { formatRelative, formatSydneyDateTime, humanize } from './labels';
@@ -49,6 +50,10 @@ function MessageRow({ m, open, onToggle }: { m: Message; open: boolean; onToggle
         <div className="mt-3 ml-7 space-y-2 rounded-control bg-surface-muted p-4">
           {m.error && <p className="text-body text-danger">{m.error}</p>}
           <p className="whitespace-pre-wrap text-body text-text">{m.body}</p>
+          {/* Why: the footer is added at send time, so an unsent email's text stops at the message. */}
+          {isEmail && !m.body.trimEnd().endsWith(OPT_OUT_LINE) && (
+            <p className="text-body text-text-muted">Your signature and opt-out line are added when it sends.</p>
+          )}
         </div>
       )}
     </li>

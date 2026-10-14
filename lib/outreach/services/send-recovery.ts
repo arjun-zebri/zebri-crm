@@ -40,6 +40,8 @@ export interface SentRecord {
   gmailThreadId: string;
   localHour: number;
   localWeekday: number;
+  /** The text part as sent, footer included. Unknown to the reaper, which leaves the queued body. */
+  body?: string;
 }
 
 /** Message-ids are stored with angle brackets; Gmail's search wants them bare. */
@@ -63,6 +65,7 @@ async function persistSent(db: AdminDb, rec: SentRecord): Promise<boolean> {
       send_local_hour: rec.localHour,
       send_local_weekday: rec.localWeekday,
       error: null,
+      ...(rec.body !== undefined ? { body: rec.body } : {}),
     }).eq('id', rec.messageId);
     if (!error) return true;
     lastError = error.message;
