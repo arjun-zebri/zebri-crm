@@ -4,10 +4,13 @@
  *
  * @module lib/outreach/services/settings
  */
+import type { JSONContent } from '@tiptap/core';
+
 import { logger } from '@/lib/alerts/logger';
 import { decryptSecret } from '@/lib/crypto/secret-box';
 
 import { refreshOutreachToken } from '../gmail/client';
+import { signatureDocToText } from '../signature';
 import type { AdminDb, OutreachSettings } from '../types';
 
 /** The single settings row. Throws if the migration's seed row is missing. */
@@ -99,7 +102,10 @@ export async function apifySpendThisMonth(db: AdminDb, now: Date = new Date()): 
 /** Editable settings fields. */
 export interface SettingsInput {
   sender_name: string;
+  /** Plain-text signature. Replaced by the document's text copy when `signature_doc` is set. */
   signature: string;
+  /** Rich signature from the editor, or null to keep a plain-text one. */
+  signature_doc: JSONContent | null;
   email_ramp: number[];
   email_daily_cap: number;
   ig_daily_cap: number;
@@ -110,9 +116,16 @@ export interface SettingsInput {
   booking_meeting_type_id: string | null;
 }
 
-/** Save settings. */
+/**
+ * Save settings.
+ *
+ * Why the text copy is derived here rather than trusted from the client: the
+ * send-time contact-details check reads `signature`, so it must always say
+ * what the HTML signature says.
+ */
 export async function saveSettings(db: AdminDb, input: SettingsInput): Promise<void> {
-  const { error } = await db.from('outreach_settings').update({ ...input, updated_at: new Date().toISOString() }).eq('id', true);
+  const signature = input.signature_doc ? signatureDocToText(input.signature_doc) : input.signature.trim();
+  const { error } = await db.from('outreach_settings').update({ ...input, signature, updated_at: new Date().toISOString() }).eq('id', true);
   if (error) throw new Error(`save settings: ${error.message}`);
 }
 

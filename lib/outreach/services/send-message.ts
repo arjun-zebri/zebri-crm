@@ -17,6 +17,7 @@ import { timezoneForState } from '../import/normalise';
 import { isInSendWindow, localParts } from '../sequencer/schedule';
 import type { AdminDb, OutreachMessage, OutreachSettings } from '../types';
 
+import { composeEmail, type ComposedEmail } from './compose';
 import { recordEvent } from './events';
 import { deferToWindow, inboundAfter, windowOf } from './send-guards';
 import { finishSend, requeueOrFail } from './send-recovery';
@@ -186,12 +187,15 @@ export async function sendClaimed(ctx: SendContext, msg: OutreachMessage): Promi
   // send if we crash straight after it.
   const messageId = newMessageId(ctx.ownEmail);
   let raw: string;
+  let composed: ComposedEmail;
   try {
+    composed = composeEmail(msg.body, ctx.settings);
     raw = buildRawEmail({
       from: { name: ctx.settings.sender_name, email: ctx.ownEmail },
       to: recipient,
       subject: msg.subject ?? '',
-      body: msg.body,
+      body: composed.text,
+      html: composed.html,
       inReplyTo: thread.inReplyTo,
       messageId,
     });
@@ -213,7 +217,7 @@ export async function sendClaimed(ctx: SendContext, msg: OutreachMessage): Promi
   await finishSend(db, {
     messageId: msg.id, enrollmentId: msg.enrollment_id, prospectId: msg.prospect_id, stepId: msg.step_id,
     sentAt, gmailMessageId: sent.id, gmailThreadId: sent.threadId,
-    localHour: local.hour, localWeekday: local.weekday,
+    localHour: local.hour, localWeekday: local.weekday, body: composed.text,
   });
   ctx.result.sent++;
   return 'done';

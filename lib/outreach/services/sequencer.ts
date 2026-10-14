@@ -9,7 +9,7 @@
  */
 import { replySubject } from '../gmail/mime';
 import { timezoneForState } from '../import/normalise';
-import { mergeValuesFor, renderTemplate, withEmailFooter } from '../render';
+import { mergeValuesFor, renderTemplate } from '../render';
 import { availabilityOf, eligibleArms, pickWeighted, type Arm, type Channel } from '../sequencer/arms';
 import {
   CAP_TIMEZONE,
@@ -163,7 +163,8 @@ export async function scheduleStep(
       channel, status: 'scheduled', scheduled_for: at.toISOString(),
       send_local_hour: local.hour, send_local_weekday: local.weekday,
       subject,
-      body: channel === 'email' ? withEmailFooter(body.text, ctx.settings.signature, ctx.settings.sender_name) : body.text,
+      // The email footer (identity, signature, opt-out) is added at send time; see services/compose.
+      body: body.text,
     })
     .select('id')
     .single();

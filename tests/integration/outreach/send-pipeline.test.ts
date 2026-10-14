@@ -10,6 +10,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { OPT_OUT_LINE } from '@/lib/outreach/render';
 import { localParts } from '@/lib/outreach/sequencer/schedule';
 import { sendDueEmails } from '@/lib/outreach/services/send';
 
@@ -129,7 +130,9 @@ describe('email send path', () => {
     const sent = sendsTo(p.email);
     expect(sent).toHaveLength(1);
     expect(sent[0]!.subject).toBe('Hello Ava');
-    expect(sent[0]!.body).toBe('First touch');
+    // The footer is added as the email goes out, not when it is queued.
+    expect(sent[0]!.body.startsWith('First touch\r\n\r\n')).toBe(true);
+    expect(sent[0]!.body.endsWith(OPT_OUT_LINE)).toBe(true);
 
     const row = await messageRow(db, p.messageId);
     expect(row.status).toBe('sent');
@@ -149,6 +152,33 @@ describe('email send path', () => {
 
     const { data: events } = await db.from('outreach_events').select('type').eq('message_id', p.messageId);
     expect(events!.map((e) => e.type)).toContain('email_sent');
+  });
+
+  it('sends the rich signature as HTML, the text copy as plain text, and records what went out', async () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Pipeline Test MC', marks: [{ type: 'bold' }] }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'Website', marks: [{ type: 'link', attrs: { href: 'https://zebri.test' } }] }] },
+        { type: 'image', attrs: { src: 'https://cdn.zebri.test/logo.png', alt: 'Logo' } },
+      ],
+    };
+    await patchSettings(db, { signature_doc: doc, signature: 'Pipeline Test MC\nWebsite <https://zebri.test>' });
+    try {
+      const p = await dueProspect('rich-sig');
+      await pass();
+      const [mail] = sendsTo(p.email);
+      expect(mail!.html).toContain('<strong>Pipeline Test MC</strong>');
+      expect(mail!.html).toContain('href="https://zebri.test"');
+      expect(mail!.html).toContain('src="https://cdn.zebri.test/logo.png"');
+      expect(mail!.body).toContain('Website <https://zebri.test>');
+      expect(mail!.body).not.toContain('<strong>');
+      // The stored body is the text part as sent, so the prospect's history shows the real email.
+      const row = await messageRow(db, p.messageId);
+      expect(row.body).toBe(mail!.body.replace(/\r\n/g, '\n'));
+    } finally {
+      await patchSettings(db, { signature_doc: null, signature: SIGNATURE });
+    }
   });
 
   it('does not requeue an accepted send when the bookkeeping after it throws', async () => {

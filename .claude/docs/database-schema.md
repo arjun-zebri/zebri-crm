@@ -2229,6 +2229,14 @@ founder confirming a scraped email.
 Generated types for these live in `types/database.ts`; keep them in step
 with the migration.
 
+Added by `20261031000000_outreach_signature_doc.sql`:
+`outreach_settings.signature_doc jsonb` (nullable), the rich signature as
+the Settings > Signature editor's TipTap JSON. It drives the HTML part of
+each email. `signature` (text) stays as its plain-text copy, derived from
+the document on save (`signatureDocToText`): it is the text/plain part and
+what `hasContactDetails` checks. Null means a signature saved before the
+rich editor; the settings form converts it on first load.
+
 ---
 
 ## `workflow_tags`
