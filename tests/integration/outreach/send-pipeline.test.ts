@@ -262,10 +262,11 @@ describe('email send path', () => {
   });
 
   it('fails only the one message on a 404 (a deleted thread) and keeps sending', async () => {
+    // One due message when the fault fires: two due at the same instant send in no fixed order.
     const gone = await dueProspect('thread-gone');
-    const next = await dueProspect('after-gone');
     queueSendFaults({ kind: 'status', status: 404 });
     await pass();
+    const next = await dueProspect('after-gone');
     await pass();
 
     expect((await messageRow(db, gone.messageId)).status).toBe('failed');
