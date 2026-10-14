@@ -9,6 +9,9 @@
 
 'use client'
 
+import { Button } from '@/components/ui/button'
+import { formatBookingDate, formatTimeOfDay } from '@/lib/booking/format-time'
+
 import type { Slot } from './use-booking-page'
 
 export interface BookingSlotColumnProps {
@@ -18,29 +21,13 @@ export interface BookingSlotColumnProps {
   slots: Slot[]
   /** IANA timezone for formatting time display. */
   timezone: string
+  /** Locale for the day header and times, e.g. `en-AU`. */
+  locale: string
   /** Callback when user clicks a slot. */
   onSelectSlot: (slot: Slot) => void
 }
 
-/**
- * Format a time slot as local time without timezone suffix.
- * E.g. "10:00 AM"
- */
-function formatSlotTime(isoString: string, timezone: string): string {
-  const date = new Date(isoString)
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: timezone,
-  })
-  return formatter.format(date)
-}
-
-/**
- * Extract city name from IANA timezone.
- * E.g. "Sydney time" from "Australia/Sydney"
- */
+/** Extract the city from an IANA zone for the "All times are in" line. */
 function getTimezoneName(timezone: string): string {
   const parts = timezone.split('/')
   if (parts.length > 1) {
@@ -50,60 +37,45 @@ function getTimezoneName(timezone: string): string {
 }
 
 /**
- * Format a date as a weekday + day string.
- * E.g. "Thursday, August 20"
- */
-function formatDateHeader(isoDate: string, timezone: string): string {
-  const date = new Date(isoDate + 'T00:00:00Z')
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    timeZone: timezone,
-  })
-  return formatter.format(date)
-}
-
-/**
  * Renders the selected day's slots as a vertical stack of time buttons.
  */
 export function BookingSlotColumn({
   selectedDate,
   slots,
   timezone,
+  locale,
   onSelectSlot,
 }: BookingSlotColumnProps) {
   if (!selectedDate) {
     return (
-      <div className="text-center py-6">
-        <p className="text-sm text-text-muted">Select a date to see available times</p>
+      <div className="py-6 text-center">
+        <p className="text-body text-text-muted">Select a date to see available times</p>
       </div>
     )
   }
 
-  const dateHeader = formatDateHeader(selectedDate, timezone)
+  // The date is a calendar day, not an instant: noon UTC keeps it on the same
+  // day in every zone the picker can show.
+  const dateHeader = formatBookingDate(`${selectedDate}T12:00:00Z`, 'UTC', locale)
   const tzName = getTimezoneName(timezone)
 
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-semibold text-text">{dateHeader}</p>
-        <p className="text-xs text-text-muted mt-1">All times are in {tzName}</p>
+        <p className="text-body font-semibold text-text">{dateHeader}</p>
+        <p className="mt-1 text-body text-text-muted">All times are in {tzName}</p>
       </div>
 
-      <div className="space-y-2">
+      {/* Two columns on a phone, so a long day of times fits a screen without a long scroll. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
         {slots.length > 0 ? (
           slots.map((slot) => (
-            <button
-              key={slot.start}
-              onClick={() => onSelectSlot(slot)}
-              className="w-full px-3 py-2 rounded-control border border-border text-sm font-medium text-text hover:bg-surface-emphasis transition-colors cursor-pointer text-center"
-            >
-              {formatSlotTime(slot.start, timezone)}
-            </button>
+            <Button key={slot.start} variant="outline" className="w-full" onClick={() => onSelectSlot(slot)}>
+              {formatTimeOfDay(slot.start, timezone, locale)}
+            </Button>
           ))
         ) : (
-          <p className="text-sm text-text-muted text-center py-4">No times available for this day</p>
+          <p className="col-span-full py-4 text-center text-body text-text-muted">No times available for this day</p>
         )}
       </div>
     </div>

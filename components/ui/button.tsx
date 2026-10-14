@@ -58,8 +58,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // Visual styling - token-only. Hover/focus tones come from the same token
 // ladder so brand changes propagate without per-call overrides.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  // Text is `brand-bg`, not `text-inverse`: the public booking page sets
+  // `--brand-fg` to the MC's colour and `--brand-bg` to a readable text colour
+  // beside it. Everywhere else `--brand-bg` is white, so this is unchanged.
   primary:
-    'bg-brand-fg text-text-inverse hover:opacity-90 focus-visible:ring-2 focus-visible:ring-brand-fg',
+    'bg-brand-fg text-brand-bg hover:opacity-90 focus-visible:ring-2 focus-visible:ring-brand-fg',
   secondary:
     'bg-surface-emphasis text-text hover:bg-surface-muted border border-border focus-visible:ring-2 focus-visible:ring-border-strong',
   outline:

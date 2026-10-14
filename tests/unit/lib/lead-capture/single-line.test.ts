@@ -42,10 +42,13 @@ describe('bookingSubmitSchema', () => {
     expect(bookingSubmitSchema.safeParse(booking).success).toBe(true);
   });
 
-  it.each([
-    ['name', 'Sarah\nBcc: spy@evil.test'],
-    ['partnerName', 'Jake\rX: 1'],
-  ])('rejects a line break in %s', (field, value) => {
-    expect(bookingSubmitSchema.safeParse({ ...booking, [field]: value }).success).toBe(false);
+  it('rejects a line break in name', () => {
+    expect(bookingSubmitSchema.safeParse({ ...booking, name: 'Sarah\nBcc: spy@evil.test' }).success).toBe(false);
+  });
+
+  // The booking form no longer asks for a partner; a legacy field is stripped, so it never reaches a header.
+  it('drops a legacy partnerName, line break and all', () => {
+    const result = bookingSubmitSchema.safeParse({ ...booking, partnerName: 'Jake\rX: 1' });
+    expect(result.success && 'partnerName' in result.data).toBe(false);
   });
 });

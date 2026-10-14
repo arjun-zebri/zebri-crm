@@ -1,9 +1,10 @@
 'use client'
 
-import { CheckCircle, XCircle } from 'lucide-react'
+import { CheckCircle, Info, XCircle } from 'lucide-react'
 import { createContext, useContext, useState, useCallback } from 'react'
 
-type ToastType = 'success' | 'error'
+/** `info` is neutral news ("checked a moment ago"), not a success or a failure. */
+type ToastType = 'success' | 'error' | 'info'
 
 interface ToastAction {
   /** Label for the action button. */
@@ -36,7 +37,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const toast = useCallback((message: string, type: ToastType = 'success', action?: ToastAction) => {
     const id = Math.random().toString(36).slice(2)
-    setToasts((prev) => [...prev, { id, message, type, action }])
+    setToasts((prev) => [...prev, { id, message, type, ...(action ? { action } : {}) }])
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
     }, 3000)
@@ -59,11 +60,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             className="flex items-center gap-2.5 bg-surface border border-border rounded-control px-4 py-3 shadow-lg text-body animate-slide-in-right pointer-events-auto"
           >
-            {t.type === 'success' ? (
-              <CheckCircle size={15} strokeWidth={1.5} className="text-emerald-500 flex-shrink-0" />
-            ) : (
-              <XCircle size={15} strokeWidth={1.5} className="text-red-500 flex-shrink-0" />
-            )}
+            {t.type === 'success' && <CheckCircle size={15} strokeWidth={1.5} className="text-emerald-500 flex-shrink-0" />}
+            {t.type === 'error' && <XCircle size={15} strokeWidth={1.5} className="text-red-500 flex-shrink-0" />}
+            {t.type === 'info' && <Info size={15} strokeWidth={1.5} className="text-info flex-shrink-0" />}
             <span className="text-gray-800">{t.message}</span>
             {t.action && (
               <button

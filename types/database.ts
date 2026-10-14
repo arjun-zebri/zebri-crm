@@ -524,6 +524,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          answers: Json
           cancelled_at: string | null
           couple_id: string | null
           created_at: string
@@ -536,6 +537,7 @@ export type Database = {
           name: string
           notes: string | null
           partner_name: string | null
+          source_ref: string | null
           phone: string | null
           reminder_sent_at: string | null
           starts_at: string
@@ -546,6 +548,7 @@ export type Database = {
           video_join_url: string | null
         }
         Insert: {
+          answers?: Json
           cancelled_at?: string | null
           couple_id?: string | null
           created_at?: string
@@ -558,6 +561,7 @@ export type Database = {
           name: string
           notes?: string | null
           partner_name?: string | null
+          source_ref?: string | null
           phone?: string | null
           reminder_sent_at?: string | null
           starts_at: string
@@ -568,6 +572,7 @@ export type Database = {
           video_join_url?: string | null
         }
         Update: {
+          answers?: Json
           cancelled_at?: string | null
           couple_id?: string | null
           created_at?: string
@@ -580,6 +585,7 @@ export type Database = {
           name?: string
           notes?: string | null
           partner_name?: string | null
+          source_ref?: string | null
           phone?: string | null
           reminder_sent_at?: string | null
           starts_at?: string
@@ -2539,6 +2545,8 @@ export type Database = {
           max_advance_days: number
           min_notice_hours: number
           name: string
+          phone_field: string
+          questions: Json
           reminder_enabled: boolean
           share_token: string
           updated_at: string
@@ -2558,6 +2566,8 @@ export type Database = {
           max_advance_days?: number
           min_notice_hours?: number
           name: string
+          phone_field?: string
+          questions?: Json
           reminder_enabled?: boolean
           share_token?: string
           updated_at?: string
@@ -2577,6 +2587,8 @@ export type Database = {
           max_advance_days?: number
           min_notice_hours?: number
           name?: string
+          phone_field?: string
+          questions?: Json
           reminder_enabled?: boolean
           share_token?: string
           updated_at?: string
@@ -2782,6 +2794,797 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      outreach_campaign_arms: {
+        Row: {
+          campaign_id: string
+          sequence_id: string
+          weight: number
+        }
+        Insert: {
+          campaign_id: string
+          sequence_id: string
+          weight?: number
+        }
+        Update: {
+          campaign_id?: string
+          sequence_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_campaign_arms_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_campaign_arms_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_campaigns: {
+        Row: {
+          activated_at: string | null
+          audience: Json
+          created_at: string
+          daily_new_enrolments: number
+          id: string
+          name: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          audience?: Json
+          created_at?: string
+          daily_new_enrolments?: number
+          id?: string
+          name: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          audience?: Json
+          created_at?: string
+          daily_new_enrolments?: number
+          id?: string
+          name?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      outreach_check_runs: {
+        Row: {
+          apify_run_id: string | null
+          cost_cents: number
+          done: number
+          errors: number
+          finished_at: string | null
+          id: string
+          kind: string
+          scope: Json
+          started_at: string
+          status: string
+          total: number
+        }
+        Insert: {
+          apify_run_id?: string | null
+          cost_cents?: number
+          done?: number
+          errors?: number
+          finished_at?: string | null
+          id?: string
+          kind: string
+          scope?: Json
+          started_at?: string
+          status?: string
+          total?: number
+        }
+        Update: {
+          apify_run_id?: string | null
+          cost_cents?: number
+          done?: number
+          errors?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          scope?: Json
+          started_at?: string
+          status?: string
+          total?: number
+        }
+        Relationships: []
+      }
+      outreach_checks: {
+        Row: {
+          check: string
+          checked_at: string | null
+          claimed_at: string | null
+          error: string | null
+          id: string
+          prospect_id: string
+          result: Json
+          run_id: string
+          status: string
+        }
+        Insert: {
+          check: string
+          checked_at?: string | null
+          claimed_at?: string | null
+          error?: string | null
+          id?: string
+          prospect_id: string
+          result?: Json
+          run_id: string
+          status?: string
+        }
+        Update: {
+          check?: string
+          checked_at?: string | null
+          claimed_at?: string | null
+          error?: string | null
+          id?: string
+          prospect_id?: string
+          result?: Json
+          run_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_checks_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_prospects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_checks_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_check_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_enrollments: {
+        Row: {
+          campaign_id: string
+          current_position: number
+          enrolled_at: string
+          id: string
+          prospect_id: string
+          sequence_id: string
+          status: string
+          stop_reason: string | null
+          stopped_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          current_position?: number
+          enrolled_at?: string
+          id?: string
+          prospect_id: string
+          sequence_id: string
+          status?: string
+          stop_reason?: string | null
+          stopped_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          current_position?: number
+          enrolled_at?: string
+          id?: string
+          prospect_id?: string
+          sequence_id?: string
+          status?: string
+          stop_reason?: string | null
+          stopped_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_enrollments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_enrollments_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_prospects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_events: {
+        Row: {
+          actor: string
+          campaign_id: string | null
+          channel: string | null
+          enrollment_id: string | null
+          id: number
+          message_id: string | null
+          occurred_at: string
+          payload: Json
+          prospect_id: string | null
+          type: string
+        }
+        Insert: {
+          actor?: string
+          campaign_id?: string | null
+          channel?: string | null
+          enrollment_id?: string | null
+          id?: never
+          message_id?: string | null
+          occurred_at?: string
+          payload?: Json
+          prospect_id?: string | null
+          type: string
+        }
+        Update: {
+          actor?: string
+          campaign_id?: string | null
+          channel?: string | null
+          enrollment_id?: string | null
+          id?: never
+          message_id?: string | null
+          occurred_at?: string
+          payload?: Json
+          prospect_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_events_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_events_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_events_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_mailbox: {
+        Row: {
+          connected_at: string
+          email: string
+          id: boolean
+          last_error: string | null
+          last_polled_at: string | null
+          refresh_token_enc: string
+          scopes: string[]
+        }
+        Insert: {
+          connected_at?: string
+          email: string
+          id?: boolean
+          last_error?: string | null
+          last_polled_at?: string | null
+          refresh_token_enc: string
+          scopes?: string[]
+        }
+        Update: {
+          connected_at?: string
+          email?: string
+          id?: boolean
+          last_error?: string | null
+          last_polled_at?: string | null
+          refresh_token_enc?: string
+          scopes?: string[]
+        }
+        Relationships: []
+      }
+      outreach_spend_reservations: {
+        Row: {
+          actual_cents: number | null
+          amount_cents: number
+          created_at: string
+          id: string
+          run_id: string
+          settled_at: string | null
+          status: string
+        }
+        Insert: {
+          actual_cents?: number | null
+          amount_cents: number
+          created_at?: string
+          id?: string
+          run_id: string
+          settled_at?: string | null
+          status?: string
+        }
+        Update: {
+          actual_cents?: number | null
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          run_id?: string
+          settled_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      outreach_suppression: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          reason: string
+          source: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          reason: string
+          source?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          reason?: string
+          source?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      outreach_messages: {
+        Row: {
+          attempts: number
+          body: string
+          channel: string
+          created_at: string
+          enrollment_id: string
+          error: string | null
+          gmail_message_id: string | null
+          gmail_thread_id: string | null
+          id: string
+          prospect_id: string
+          claimed_at: string | null
+          reply_checked_at: string | null
+          rfc_message_id: string | null
+          scheduled_for: string
+          send_local_hour: number | null
+          send_local_weekday: number | null
+          sent_at: string | null
+          skip_reason: string | null
+          status: string
+          step_id: string
+          subject: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          body: string
+          channel: string
+          created_at?: string
+          enrollment_id: string
+          error?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          prospect_id: string
+          claimed_at?: string | null
+          reply_checked_at?: string | null
+          rfc_message_id?: string | null
+          scheduled_for: string
+          send_local_hour?: number | null
+          send_local_weekday?: number | null
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          step_id: string
+          subject?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          body?: string
+          channel?: string
+          created_at?: string
+          enrollment_id?: string
+          error?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          prospect_id?: string
+          claimed_at?: string | null
+          reply_checked_at?: string | null
+          rfc_message_id?: string | null
+          scheduled_for?: string
+          send_local_hour?: number | null
+          send_local_weekday?: number | null
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          step_id?: string
+          subject?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_messages_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_messages_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_prospects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_messages_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequence_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_messages_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_prospects: {
+        Row: {
+          activity_score: number | null
+          created_at: string
+          dedupe_key: string
+          do_not_contact: boolean
+          email: string | null
+          email_check: string
+          email_checked_at: string | null
+          email_source: string | null
+          facebook_url: string | null
+          first_name: string | null
+          full_name: string
+          id: string
+          ig_bio: string | null
+          ig_checked_at: string | null
+          ig_followers: number | null
+          ig_is_private: boolean | null
+          ig_last_post_at: string | null
+          ig_posts: number | null
+          ig_status: string | null
+          instagram_handle: string | null
+          instagram_source: string | null
+          last_name: string | null
+          linked_user_id: string | null
+          lost_reason: string | null
+          notes: string | null
+          opted_out_at: string | null
+          phone: string | null
+          postcode: string | null
+          ref_code: string
+          registration_no: string | null
+          reply_sentiment: string | null
+          sheet_notes: string | null
+          sheet_raw: Json
+          sheet_status: string | null
+          site_checked_at: string | null
+          site_has_wedding_content: boolean | null
+          site_latest_year: number | null
+          site_status: string | null
+          stage: string
+          state: string | null
+          suburb: string | null
+          updated_at: string
+          verdict: string
+          verdict_reason: string | null
+          verdict_source: string
+          website: string | null
+          website_source: string | null
+        }
+        Insert: {
+          activity_score?: number | null
+          created_at?: string
+          dedupe_key: string
+          do_not_contact?: boolean
+          email?: string | null
+          email_check?: string
+          email_checked_at?: string | null
+          email_source?: string | null
+          facebook_url?: string | null
+          first_name?: string | null
+          full_name: string
+          id?: string
+          ig_bio?: string | null
+          ig_checked_at?: string | null
+          ig_followers?: number | null
+          ig_is_private?: boolean | null
+          ig_last_post_at?: string | null
+          ig_posts?: number | null
+          ig_status?: string | null
+          instagram_handle?: string | null
+          instagram_source?: string | null
+          last_name?: string | null
+          linked_user_id?: string | null
+          lost_reason?: string | null
+          notes?: string | null
+          opted_out_at?: string | null
+          phone?: string | null
+          postcode?: string | null
+          ref_code: string
+          registration_no?: string | null
+          reply_sentiment?: string | null
+          sheet_notes?: string | null
+          sheet_raw?: Json
+          sheet_status?: string | null
+          site_checked_at?: string | null
+          site_has_wedding_content?: boolean | null
+          site_latest_year?: number | null
+          site_status?: string | null
+          stage?: string
+          state?: string | null
+          suburb?: string | null
+          updated_at?: string
+          verdict?: string
+          verdict_reason?: string | null
+          verdict_source?: string
+          website?: string | null
+          website_source?: string | null
+        }
+        Update: {
+          activity_score?: number | null
+          created_at?: string
+          dedupe_key?: string
+          do_not_contact?: boolean
+          email?: string | null
+          email_check?: string
+          email_checked_at?: string | null
+          email_source?: string | null
+          facebook_url?: string | null
+          first_name?: string | null
+          full_name?: string
+          id?: string
+          ig_bio?: string | null
+          ig_checked_at?: string | null
+          ig_followers?: number | null
+          ig_is_private?: boolean | null
+          ig_last_post_at?: string | null
+          ig_posts?: number | null
+          ig_status?: string | null
+          instagram_handle?: string | null
+          instagram_source?: string | null
+          last_name?: string | null
+          linked_user_id?: string | null
+          lost_reason?: string | null
+          notes?: string | null
+          opted_out_at?: string | null
+          phone?: string | null
+          postcode?: string | null
+          ref_code?: string
+          registration_no?: string | null
+          reply_sentiment?: string | null
+          sheet_notes?: string | null
+          sheet_raw?: Json
+          sheet_status?: string | null
+          site_checked_at?: string | null
+          site_has_wedding_content?: boolean | null
+          site_latest_year?: number | null
+          site_status?: string | null
+          stage?: string
+          state?: string | null
+          suburb?: string | null
+          updated_at?: string
+          verdict?: string
+          verdict_reason?: string | null
+          verdict_source?: string
+          website?: string | null
+          website_source?: string | null
+        }
+        Relationships: []
+      }
+      outreach_sequence_steps: {
+        Row: {
+          channel: string
+          delay_days: number
+          id: string
+          is_new_thread: boolean
+          position: number
+          sequence_id: string
+        }
+        Insert: {
+          channel: string
+          delay_days?: number
+          id?: string
+          is_new_thread?: boolean
+          position: number
+          sequence_id: string
+        }
+        Update: {
+          channel?: string
+          delay_days?: number
+          id?: string
+          is_new_thread?: boolean
+          position?: number
+          sequence_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_sequence_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_sequences: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      outreach_settings: {
+        Row: {
+          apify_monthly_budget_cents: number
+          booking_meeting_type_id: string | null
+          email_daily_cap: number
+          email_ramp: number[]
+          id: boolean
+          ig_daily_cap: number
+          paused_reason: string | null
+          last_attribution_at: string | null
+          last_enrol_at: string | null
+          ramp_started_on: string | null
+          send_weekdays: number[]
+          send_window_end: string
+          send_window_start: string
+          sender_name: string
+          sending_paused: boolean
+          signature: string
+          updated_at: string
+        }
+        Insert: {
+          apify_monthly_budget_cents?: number
+          booking_meeting_type_id?: string | null
+          email_daily_cap?: number
+          email_ramp?: number[]
+          id?: boolean
+          ig_daily_cap?: number
+          paused_reason?: string | null
+          last_attribution_at?: string | null
+          last_enrol_at?: string | null
+          ramp_started_on?: string | null
+          send_weekdays?: number[]
+          send_window_end?: string
+          send_window_start?: string
+          sender_name?: string
+          sending_paused?: boolean
+          signature?: string
+          updated_at?: string
+        }
+        Update: {
+          apify_monthly_budget_cents?: number
+          booking_meeting_type_id?: string | null
+          email_daily_cap?: number
+          email_ramp?: number[]
+          id?: boolean
+          ig_daily_cap?: number
+          paused_reason?: string | null
+          last_attribution_at?: string | null
+          last_enrol_at?: string | null
+          ramp_started_on?: string | null
+          send_weekdays?: number[]
+          send_window_end?: string
+          send_window_start?: string
+          sender_name?: string
+          sending_paused?: boolean
+          signature?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_settings_booking_meeting_type_id_fkey"
+            columns: ["booking_meeting_type_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_variants: {
+        Row: {
+          active: boolean
+          body: string
+          created_at: string
+          id: string
+          label: string
+          step_id: string
+          subject: string | null
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          created_at?: string
+          id?: string
+          label: string
+          step_id: string
+          subject?: string | null
+          weight?: number
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          created_at?: string
+          id?: string
+          label?: string
+          step_id?: string
+          subject?: string | null
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_variants_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequence_steps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       package_categories: {
         Row: {
@@ -4726,6 +5529,141 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      outreach_is_existing_customer: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
+      outreach_retention_pass: {
+        Args: { p_cutoff: string }
+        Returns: number
+      }
+      outreach_settle_ig_batch: {
+        Args: { p_run: string; p_actual_cents: number }
+        Returns: undefined
+      }
+      outreach_start_ig_batch: {
+        Args: { p_run: string; p_max: number; p_budget_cents: number; p_cents_per_profile: number }
+        Returns: Json
+      }
+      outreach_claim_checks: {
+        Args: { p_check: string; p_limit: number }
+        Returns: {
+          check: string
+          checked_at: string | null
+          claimed_at: string | null
+          error: string | null
+          id: string
+          prospect_id: string
+          result: Json
+          run_id: string
+          status: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "outreach_checks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      outreach_claim_due_emails: {
+        Args: { p_limit: number }
+        Returns: {
+          attempts: number
+          body: string
+          channel: string
+          created_at: string
+          enrollment_id: string
+          error: string | null
+          gmail_message_id: string | null
+          gmail_thread_id: string | null
+          id: string
+          prospect_id: string
+          claimed_at: string | null
+          reply_checked_at: string | null
+          rfc_message_id: string | null
+          scheduled_for: string
+          send_local_hour: number | null
+          send_local_weekday: number | null
+          sent_at: string | null
+          skip_reason: string | null
+          status: string
+          step_id: string
+          subject: string | null
+          variant_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "outreach_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      outreach_threads_to_poll: {
+        Args: { p_limit: number; p_since: string }
+        Returns: { gmail_thread_id: string; prospect_id: string }[]
+      }
+      outreach_stranded_enrolments: {
+        Args: { p_limit: number }
+        Returns: { enrollment_id: string }[]
+      }
+      outreach_enrol_candidates: {
+        Args: { p_campaign: string; p_limit: number }
+        Returns: {
+          activity_score: number | null
+          created_at: string
+          dedupe_key: string
+          do_not_contact: boolean
+          email: string | null
+          email_check: string
+          email_checked_at: string | null
+          email_source: string | null
+          facebook_url: string | null
+          first_name: string | null
+          full_name: string
+          id: string
+          ig_bio: string | null
+          ig_checked_at: string | null
+          ig_followers: number | null
+          ig_is_private: boolean | null
+          ig_last_post_at: string | null
+          ig_posts: number | null
+          ig_status: string | null
+          instagram_handle: string | null
+          instagram_source: string | null
+          last_name: string | null
+          linked_user_id: string | null
+          lost_reason: string | null
+          notes: string | null
+          opted_out_at: string | null
+          phone: string | null
+          postcode: string | null
+          ref_code: string
+          registration_no: string | null
+          reply_sentiment: string | null
+          sheet_notes: string | null
+          sheet_raw: Json
+          sheet_status: string | null
+          site_checked_at: string | null
+          site_has_wedding_content: boolean | null
+          site_latest_year: number | null
+          site_status: string | null
+          stage: string
+          state: string | null
+          suburb: string | null
+          updated_at: string
+          verdict: string
+          verdict_reason: string | null
+          verdict_source: string
+          website: string | null
+          website_source: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "outreach_prospects"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       _contract_canonical_payload: {
         Args: { p_contract_id: string }
         Returns: string
@@ -5191,11 +6129,11 @@ export type Database = {
       }
       submit_booking: {
         Args: {
+          p_answers?: Json
           p_email: string
           p_ends_at: string
           p_name: string
           p_notes?: string
-          p_partner_name?: string
           p_phone?: string
           p_starts_at: string
           p_timezone: string

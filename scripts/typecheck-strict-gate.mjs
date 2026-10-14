@@ -85,7 +85,9 @@ import { execSync } from 'node:child_process';
 // array-destructure accesses replaced with optional chaining, -2): 238 -> 237.
 // Spotify song search: the portal songs section and both song modals were
 // rewritten clean under strict while splitting them up, 237 -> 231.
-const STRICT_BUDGET = 231;
+// Admin Outreach landed strict-clean and its rewrite of the cron tick route
+// cleared one more, 231 -> 230.
+const STRICT_BUDGET = 230;
 
 function runTscStrict() {
   try {

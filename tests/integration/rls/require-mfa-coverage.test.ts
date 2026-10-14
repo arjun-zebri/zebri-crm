@@ -192,7 +192,7 @@ describe('require_mfa coverage', () => {
     'save_questionnaire_progress(token uuid, p_responses jsonb)': TOKEN_RPC,
     'sign_contract(token uuid, p_signer_name text, p_signer_ip text, p_signer_user_agent text)': TOKEN_RPC,
     'sign_contract_v2(p_token uuid, p_payload jsonb)': TOKEN_RPC,
-    'submit_booking(token uuid, p_starts_at timestamp with time zone, p_ends_at timestamp with time zone, p_timezone text, p_name text, p_email text, p_partner_name text, p_phone text, p_notes text)': TOKEN_RPC,
+    'submit_booking(token uuid, p_starts_at timestamp with time zone, p_ends_at timestamp with time zone, p_timezone text, p_name text, p_email text, p_phone text, p_notes text, p_answers jsonb)': TOKEN_RPC,
     'submit_lead(token uuid, p_payload jsonb, p_source_origin text)': TOKEN_RPC,
     'submit_questionnaire(token uuid, p_responses jsonb)': TOKEN_RPC,
     'verify_contract_hash(p_hash text)': 'public certificate lookup by document hash; returns no MC data beyond the certificate',
