@@ -827,6 +827,23 @@ export type AlertEvent =
       diagnostic: string;
     })
 
+  // ───── Admin outreach ──────────────────────────────────────────────
+  | (BaseEvent & {
+      // Outreach sending stopped itself: Gmail refused a send, the
+      // mailbox token died, or the bounce rate crossed the tripwire.
+      type: 'outreach_paused';
+      severity: 'error';
+      reason: string;
+    })
+  | (BaseEvent & {
+      // A celebrant replied, booked a demo or opted out. Carries the
+      // prospect id only (open it in Admin > Outreach), never the reply.
+      type: 'outreach_activity';
+      severity: 'info';
+      kind: 'reply' | 'booking' | 'opt_out';
+      prospectId: string;
+    })
+
   // ───── In-app feedback ─────────────────────────────────────────────
   | (BaseEvent & {
       type: 'bug_report_submitted';

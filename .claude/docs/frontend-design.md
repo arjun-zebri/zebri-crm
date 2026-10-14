@@ -108,6 +108,11 @@ treatment: the `Input` chrome. Two knock-ons, both intentional:
 - The builder meta row's couple and terms pickers were `py-1.5` (34px)
   and are now `h-8`.
 
+**Input `leadingIcon`** (2026-10-12): an icon inside the field on the
+left, with the text padded past it. Use it for search boxes instead of
+placing an icon beside the input by hand. Admin Outreach's prospect
+search is the first user.
+
 **`Textarea` is `Input`'s sibling for prose** (2026-08-15,
 `components/ui/textarea.tsx`). Same chrome  -  control radius, border
 darkening to `brand-fg` on focus, `danger` border on error, label /

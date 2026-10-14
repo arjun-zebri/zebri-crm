@@ -223,6 +223,14 @@ export async function POST(request: NextRequest) {
   // Answers as plain text, shared by the calendar event and the MC's email.
   const answerLines = answers.map((a) => ({ label: a.label, value: formatAnswerValue(a) }));
 
+  // Outreach attribution: stamp the tagged link's code on the booking.
+  // The RPC is shared by every MC and stays untouched; a failure here
+  // only costs the attribution (the outreach tick still matches by email).
+  if (input.ref) {
+    const { error: refError } = await admin.from('bookings').update({ source_ref: input.ref }).eq('id', bookingId);
+    if (refError) logger.warn('[booking/submit] source_ref write failed', { bookingId, message: refError.message });
+  }
+
   let joinUrl: string | null = null;
   const eventIds: Record<string, string> = {};
 

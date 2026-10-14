@@ -85,6 +85,13 @@ export const bookingSubmitSchema = z.object({
     .refine((v) => !v || v.trim().length === 0, 'Honeypot field should be empty'),
   // Timing gate: measures form fill time to detect bots
   startedAt: z.number().int().nonnegative(),
+  // Attribution code from a tagged link (`/book/<token>?ref=<code>`), set
+  // by Admin Outreach. Anything malformed is dropped, never an error: a
+  // mangled link must not cost the visitor their booking.
+  ref: z
+    .string()
+    .optional()
+    .transform((v) => (v && /^[a-z0-9]{8}$/.test(v) ? v : undefined)),
 });
 
 export type BookingSubmitInput = z.infer<typeof bookingSubmitSchema>;

@@ -568,6 +568,17 @@ const fixtures: FixturesByType = {
     message: 'unexpected error',
     source: 'test',
   },
+  outreach_paused: {
+    type: 'outreach_paused',
+    severity: 'error',
+    reason: 'Gmail 429: rate limited',
+  },
+  outreach_activity: {
+    type: 'outreach_activity',
+    severity: 'info',
+    kind: 'reply',
+    prospectId: '00000000-0000-0000-0000-000000000001',
+  },
 };
 
 const allTypes = Object.keys(fixtures) as AlertEvent['type'][];
@@ -576,7 +587,7 @@ describe('AlertEvent fixtures carry no couple-side PII (T27)', () => {
   it('covers every AlertEvent type with a fixture', () => {
     // FixturesByType already guarantees this at compile time (a missing
     // key fails to compile); this just makes it visible at runtime too.
-    expect(allTypes.length).toBe(69);
+    expect(allTypes.length).toBe(71);
   });
 
   it.each(allTypes)('%s: no field outside the MC allowlist looks like an email', (type) => {

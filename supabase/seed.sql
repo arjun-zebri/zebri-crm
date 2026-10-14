@@ -20,11 +20,18 @@ create extension if not exists pgcrypto with schema extensions;
 
 -- Minimal demo auth user (idempotent). Enough for referential integrity and a
 -- usable local login; not a full GoTrue provisioning flow.
+--
+-- The token columns are set to '' rather than left NULL: GoTrue scans them
+-- as plain strings, so a single NULL makes `auth.admin.listUsers` fail for
+-- every page ("Database error finding users"). Outreach's signup attribution
+-- and the admin analytics both list users.
 insert into auth.users (
   instance_id, id, aud, role, email,
   encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data,
-  created_at, updated_at
+  created_at, updated_at,
+  confirmation_token, recovery_token, email_change, email_change_token_new,
+  email_change_token_current, phone_change, phone_change_token, reauthentication_token
 ) values (
   '00000000-0000-0000-0000-000000000000',
   '9524e31d-d35b-4ea4-b775-eea8dcf0dde3',
@@ -37,7 +44,8 @@ insert into auth.users (
   -- raw_user_meta_data; note this is also the §7.4 entitlement-in-user-
   -- metadata vector tracked for the 0.8 security work).
   '{"display_name":"Demo MC","business_name":"Demo MC Co","account_type":"vendor","subscription_status":"active","subscription_plan":"pro","is_subscribed":true}'::jsonb,
-  now(), now()
+  now(), now(),
+  '', '', '', '', '', '', '', ''
 )
 on conflict (id) do nothing;
 

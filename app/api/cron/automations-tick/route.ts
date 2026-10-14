@@ -73,6 +73,7 @@ import { revokeExpiredShadowSessions } from '@/lib/admin/shadow-sessions'
 import { sendAlert } from '@/lib/alerts/send-alert'
 import { isCronAuthorized } from '@/lib/api/cron-auth'
 import { runTimeEmitters, type TimeEmittersResult } from '@/lib/automations/time-emitters'
+import { runOutreachTick } from '@/lib/outreach/services/tick'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dispatchPendingEvents as dispatchWorkflowEvents } from '@/lib/workflows/dispatcher'
 import { advanceDueSteps, sweepStuckSteps } from '@/lib/workflows/executor'
@@ -263,6 +264,12 @@ async function handle(request: NextRequest) {
       dispatchWorkflowEvents(supabase, 500, { deadline }),
     )
 
+    // Admin outreach rides this tick on its own slice, after the workflow
+    // passes so it only ever spends time they left over. Its passes are
+    // isolated inside `runOutreachTick`, which never throws; the guard is
+    // a backstop so an outreach bug can never cost the workflow engine.
+    const outreach = await guard('outreach.tick', () => runOutreachTick(supabase, deadline))
+
     const durationMs = Date.now() - started
     const truncated =
       emitters.skippedEmitters > 0 ||
@@ -353,6 +360,7 @@ async function handle(request: NextRequest) {
       emitters,
       workflow_dispatch: workflowDispatch,
       workflow_executor: workflowExecutor,
+      outreach,
       stuck_recovered: stuckRecovered,
       interrupted_applies: interruptedApplies,
       healed_instances: heal?.healed ?? 0,

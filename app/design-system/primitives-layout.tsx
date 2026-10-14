@@ -4,8 +4,10 @@ import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { FilterChip } from '@/components/ui/filter-chip';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatePill } from '@/components/ui/state-pill';
+import { UnderlineTabs } from '@/components/ui/underline-tabs';
 
 import { Demo, DemoGrid, SampleFrame, Spec } from './showroom';
 
@@ -96,6 +98,43 @@ export function PrimitivesLayout() {
         </div>
       </Spec>
 
+      <Spec
+        name="UnderlineTabs"
+        file="components/ui/underline-tabs.tsx"
+        importPath="@/components/ui/underline-tabs"
+        description="Text tabs with a 2px underline under the active one. Navigation style: each tab reports its id and the caller decides whether that is a route change or local state. Scrolls sideways on narrow screens."
+      >
+        <div className="space-y-6">
+          <Demo label="Active tab">
+            <SampleFrame>
+              <UnderlineTabs
+                tabs={[
+                  { id: 'today', label: 'Today' },
+                  { id: 'checks', label: 'Checks' },
+                  { id: 'settings', label: 'Settings' },
+                ]}
+                active="checks"
+                onChange={() => {}}
+                ariaLabel="Sample tabs"
+              />
+            </SampleFrame>
+          </Demo>
+        </div>
+      </Spec>
+
+
+      <Spec
+        name="FilterChip"
+        file="components/ui/filter-chip.tsx"
+        importPath="@/components/ui/filter-chip"
+        description="A pill that narrows a list. Pressed means the filter is on; the count is the point. Use it for status filters, not for tabs or checkboxes."
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterChip label="Active" count={12} pressed={false} onClick={() => {}} />
+          <FilterChip label="Not active" count={4} pressed onClick={() => {}} />
+          <FilterChip label="Not checked yet" count={30} pressed={false} onClick={() => {}} />
+        </div>
+      </Spec>
     </>
   );
 }

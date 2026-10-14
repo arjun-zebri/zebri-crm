@@ -83,7 +83,7 @@ export default function PublicBookingPage() {
     changeTimezone,
     goBackToSlots,
     submit,
-  } = useBookingPage(token)
+  } = useBookingPage(token, searchParams.get('ref'))
 
   useBrandingHead(bookingPage)
 
