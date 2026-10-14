@@ -86,8 +86,30 @@ export function countLinks(text: string): number {
 }
 
 /**
+ * The "<sender name>, Zebri" line that says who sent the email, or null
+ * when the signature already says it.
+ *
+ * Why it can drop: a signature that names the sender and Zebri (a
+ * zebri.com.au address counts) identifies them as well as this line does,
+ * and printing both put the founder's name twice in a row. A signature
+ * missing either keeps the line, so every email still names its sender.
+ *
+ * @param senderName - The name the email is sent under.
+ * @param signature - The plain-text signature.
+ */
+export function identityLine(senderName: string, signature: string): string | null {
+  const name = senderName.trim();
+  // Whole words only, so a short name like "Al" is not found inside "Australia".
+  const names = name && new RegExp(`(^|[^\\p{L}])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}])`, 'iu').test(signature);
+  if (names && signature.toLowerCase().includes(BUSINESS_NAME.toLowerCase())) return null;
+  return name ? `${name}, ${BUSINESS_NAME}` : BUSINESS_NAME;
+}
+
+/**
  * Append the sender identity, signature and opt-out line to a rendered
- * email body. Every email carries all three, so no variant can drop one.
+ * email body. The opt-out line is always there, and the sender is always
+ * named: by the identity line, or by a signature that already names them
+ * (see {@link identityLine}).
  *
  * The identity line is "<sender name>, Zebri", or just "Zebri" when no
  * name is set. Sending is blocked without a name and a contact-bearing
@@ -99,8 +121,9 @@ export function countLinks(text: string): number {
  * @returns The full plain-text body.
  */
 export function withEmailFooter(body: string, signature: string, senderName = ''): string {
-  const name = senderName.trim();
-  const parts = [body.trimEnd(), name ? `${name}, ${BUSINESS_NAME}` : BUSINESS_NAME];
+  const identity = identityLine(senderName, signature);
+  const parts = [body.trimEnd()];
+  if (identity) parts.push(identity);
   if (signature.trim()) parts.push(signature.trim());
   parts.push(OPT_OUT_LINE);
   return parts.join('\n\n');
@@ -138,6 +161,23 @@ export function textToHtml(text: string): string {
 }
 
 /**
+ * Signature HTML with each paragraph as a Gmail-style `<div>` line.
+ *
+ * Why: the editor keeps signature lines tight with its own stylesheet, but
+ * an email has none, so Gmail gives every `<p>` a full line of space above
+ * and below and the signature reads double-spaced. A `<div>` has no
+ * margin, and an empty paragraph (a blank line in the editor) becomes
+ * `<div><br></div>`, the way Gmail writes one. The input is already
+ * sanitised, so its `<p>` tags are well formed.
+ */
+export function signatureLinesHtml(html: string): string {
+  return html
+    .replace(/<p(\s[^>]*)?>/g, '<div$1>')
+    .replace(/<\/p>/g, '</div>')
+    .replace(/<div(\s[^>]*)?><\/div>/g, '<div$1><br></div>');
+}
+
+/**
  * The HTML part of an email: the body, the identity line, the rendered
  * signature and the opt-out line, in the same order as
  * {@link withEmailFooter} so the two parts say the same thing.
@@ -145,12 +185,14 @@ export function textToHtml(text: string): string {
  * @param body - The rendered message text, without a footer.
  * @param signatureHtml - Sanitised signature HTML, or `''` when there is none.
  * @param senderName - The name the email is sent under.
+ * @param signatureText - The signature's plain-text copy, which decides the identity line.
  */
-export function withEmailFooterHtml(body: string, signatureHtml: string, senderName = ''): string {
-  const name = senderName.trim();
+export function withEmailFooterHtml(body: string, signatureHtml: string, senderName = '', signatureText = ''): string {
+  const identity = identityLine(senderName, signatureText);
   const blank = '<div><br></div>';
-  const parts = [textToHtml(body), blank, `<div>${escapeHtml(name ? `${name}, ${BUSINESS_NAME}` : BUSINESS_NAME)}</div>`];
-  if (signatureHtml) parts.push(blank, signatureHtml);
+  const parts = [textToHtml(body)];
+  if (identity) parts.push(blank, `<div>${escapeHtml(identity)}</div>`);
+  if (signatureHtml) parts.push(blank, signatureLinesHtml(signatureHtml));
   parts.push(blank, `<div>${escapeHtml(OPT_OUT_LINE)}</div>`);
   return `<div dir="ltr">${parts.join('')}</div>`;
 }

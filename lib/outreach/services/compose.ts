@@ -45,6 +45,6 @@ export function composeEmail(
   const doc = (settings.signature_doc as JSONContent | null) ?? textToSignatureDoc(settings.signature);
   return {
     text: withEmailFooter(body, settings.signature, settings.sender_name),
-    html: withEmailFooterHtml(body, renderSignatureHtml(doc), settings.sender_name),
+    html: withEmailFooterHtml(body, renderSignatureHtml(doc), settings.sender_name, settings.signature),
   };
 }

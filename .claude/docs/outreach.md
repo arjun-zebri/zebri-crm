@@ -181,7 +181,13 @@ The founder-facing guide is `docs/outreach-guide.md`.
 Every email carries:
 - the sender's identity: "<sender>, Zebri", then the signature, which must
   hold an email, phone or web address (`hasContactDetails`, run on the
-  plain-text copy, where a link keeps its address: "Call me <0412...>");
+  plain-text copy, where a link keeps its address: "Call me <0412...>").
+  The "<sender>, Zebri" line is left out when the signature already names
+  the sender (whole words) and Zebri (`identityLine`), so the name is not
+  printed twice;
+- in the HTML part, each signature paragraph is sent as a Gmail-style
+  `<div>` line (`signatureLinesHtml`): a bare `<p>` gets Gmail's default
+  margins and the signature arrives double-spaced;
 - "Not interested? Reply 'stop' and I won't contact you again.";
 - a `List-Unsubscribe: mailto:` header.
 
