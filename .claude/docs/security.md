@@ -1671,7 +1671,8 @@ only (see the RLS matrix). Findings fixed in this pass:
   which sets `email_source = manual` and writes a `manual_touch` event
   (`kind: email_confirmed`).
 - **Emails lacked sender identification.** The footer always carries
-  "<sender>, Zebri", the signature and the opt-out line. Activation is
+  "<sender>, Zebri" (dropped only when the signature itself names the
+  sender and Zebri), the signature and the opt-out line. Activation is
   blocked until sender name and signature are set, and until the signature
   holds an email, phone or web address (`activationProblems`). Send-time
   backstop: `no_sender_identity`.
