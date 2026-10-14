@@ -52,4 +52,13 @@ describe('<Input />', () => {
     render(<Input label="Name" />);
     expect(screen.getByLabelText('Name').className).not.toContain('appearance');
   });
+
+  it('draws a leading icon inside the field and pads the input for it', () => {
+    render(<Input aria-label="Search" leadingIcon={<svg data-testid="lead" />} />);
+    const input = screen.getByRole('textbox', { name: 'Search' });
+    expect(input.className).toContain('pl-8');
+    const icon = screen.getByTestId('lead').parentElement;
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon?.className).toContain('pointer-events-none');
+  });
 });

@@ -3303,35 +3303,22 @@ Route: `/book/[token]`
 
 Route group: none (standalone public route, no sidebar, no auth required)
 
-Purpose: Allow logged-out visitors to book consultations with the MC via a share-token URL. Three-column branded interface (Calendly-style).
+Purpose: Allow logged-out visitors to book a meeting with the business via a share-token URL. Industry-neutral: nothing on the page assumes a wedding; the business decides what to ask.
 
-## Three-Column Layout
+## Layout: one card, summary left, step right (`booking-shell.tsx`)
 
-A single card wrapping three equal columns (or stacked on mobile):
+Every step (pick → details → confirmed) renders inside one centred card (`max-w-5xl` while picking a time, `max-w-4xl` afterwards so the form fills its column rather than leaving a dead strip on the right).
 
-**Left panel (meta):**
-- MC name (from branding)
-- Meeting type name
-- Meeting type duration (e.g. "30 min")
-- Meeting type location type and address (if in-person)
-- Branding accent color used for interaction elements
+**Left column (`booking-summary.tsx`), rendered once and never re-mounted:**
+- Logo (`logo_url`), business name, meeting type name (heading font), duration, location (icon + label or address), description
+- Once a time is chosen: "Selected time", the day (`Wednesday 14 October`), the range with a zone name (`10:30–11:00am AEDT`), an MC-zone hint when the booker reads a different zone ("That's 9:30am in Sydney."), and a "Change" link back to the picker
+- On a phone after a time is chosen it collapses into a sticky top bar: `Wed 14 Oct · 10:30am · Change`
 
-**Center column (month calendar and day selector):**
-- Month/year header with prev/next arrows (allows browsing forward)
-- Six-week calendar grid
-- Available days marked with a small filled circle in brand color (derived from availability rules, overrides, and booked slots)
-- Selected day marked with a solid filled circle (brand fill)
-- Unavailable dates are greyed out and not clickable
-- Clicking an available day populates the right column's slot list
+**Right column:** the current step, keyed on the step so it slides in (`step-in` keyframe, motion-safe).
 
-**Right column (time slots):**
-- Heading: the selected day, rendered in the booker's timezone
-- City line naming that zone, e.g. "All times are in Perth time" (IANA-derived, never a fixed offset)
-- Scrollable list of available time slots for the selected day (times in the booker's timezone, formatted HH:MM AM/PM)
-- Each slot is a button; clicking advances to the booking form
-- Empty state if no slots are available that day
-- Below the list, the timezone control: the current zone plus a searchable picker
+**Pick step:** month calendar + day's times + timezone control (behaviour below).
 
+**Time formatting** (`lib/booking/format-time.ts`): booker's locale (`navigator.language`, `en-AU` fallback). The zone is always named, never an offset: `zoneLabel` tries the booker's locale, then en-AU (which knows AEST/AEDT/AWST…), then falls back to "<City> time". `GMT+11` is never shown.
 ## Timezone handling
 
 Zebri cannot know where a couple is, so the booking page follows the Calendly
@@ -3362,32 +3349,25 @@ Sending the MC the booker's zone would make them convert their own diary; the
 reverse strands the couple. Regression coverage:
 `tests/unit/lib/booking/lifecycle.test.ts` ("audience-specific timezones").
 
-## 2-Step Booking Flow
+## Booking Flow
 
-1. **Slot Picker (interactive month calendar plus day slots)**
-   - Booker clicks an available day, then a time slot
-   - Both selections must happen before form submission
+1. **Pick** a day, then a time.
 
-2. **Booking Form (modal overlay, step: "details")**
-   - Back button returns to month calendar (preserves day selection, resets time)
-   - Selected time displays as a read-only summary box
-   - Fields:
-     - Your name (required)
-     - Partner's name (optional)
-     - Email (required)
-     - Phone (optional)
-     - Notes (optional)
-   - Honeypot: hidden "website" field plus form-start timestamp (matches lead-capture bot defense pattern)
-   - CTA: "Confirm booking" button (disabled if name or email empty, or form is submitting)
-   - Loading state: button shows spinner overlay on label
-   - On submit: calls submit_booking RPC
+2. **Details** ("Almost there" / "Tell us a little about you.")
+   - Quiet ghost "Back" button above the heading.
+   - Fixed core fields: Full name (required); Email (required) and Phone side by side on sm+; phone is hidden / optional / required per `meeting_types.phone_field`.
+   - Then the meeting type's own questions (`meeting_types.questions`, see `lib/booking/questions.ts`), in order: short answer → Input, paragraph → Textarea, date → DatePicker, number → numeric Input, single/multiple choice → `ChoiceGroup` pills (never a dropdown). Consecutive short questions pair two to a row.
+   - Then "Anything else we should know?" (Textarea, optional).
+   - Optional fields carry a muted "Optional" tag beside the label.
+   - "Confirm booking" is always enabled: pressing it validates client-side (`details-validation.ts`, mirrors the server), shows inline errors and focuses the first invalid field. Server 400s return `fieldErrors` keyed by `name` / `email` / `phone` / question id and are shown inline too.
+   - On a phone the submit button is pinned to the bottom with safe-area padding.
+   - Honeypot `website` field + form-start timestamp (bot defense, unchanged).
 
-3. **Confirmation (step: "confirmed")**
-   - Meeting type name (from booking page)
-   - Scheduled time (formatted in booker's timezone with city line)
-   - Video join URL (if video meeting and event-push populated it)
-   - "Check your email" callout
-   - No further CTAs (end state)
+3. **Confirmed**: drawn tick, "You're booked", the time, "We've sent the details to <email>", join link / address / "we'll call you", and Add to calendar (Google, Outlook, .ics download for Apple and others; builders in `lib/booking/calendar-links.ts`).
+
+## Custom questions
+
+Defined per meeting type in the dashboard meeting-type modal ("Booking form" section): label, type, required, help text, options (choice types), and an optional "Also save to contact as" mapping (`partner_name` → couple secondary name, `event_date` → couple event date, `venue` → couple venue). Presets (Wedding, Event, General enquiry) in `lib/booking/question-presets.ts` insert ordinary editable questions; the wedding meeting-type templates start with the Wedding preset. Answers are stored on `bookings.answers` with the label and type copied in, shown on the dashboard booking panel ("Their answers"), in the MC's new-booking email and in the pushed calendar event. Unmapped answers on a newly created couple land in its notes.
 
 ## Special Behaviors
 
@@ -3440,12 +3420,13 @@ If the slot-generation service is down:
 
 **Mobile (Pixel 5, iPhone 12)**
 - Slot picker: 2-column grid on phone, 3-column on tablet
-- Form: full-width inputs, no multi-column layouts
+- Card columns stack; summary becomes a sticky bar once a time is chosen; submit pinned to the bottom
+- No horizontal scroll at 360px
 - Prev/Next pagination buttons stack vertically if space-constrained
 - Embed mode works identically (parent iframe handles sizing)
 
 **Desktop**
-- Max-width container (512px / 32rem) centered on page
+- One card, `max-w-5xl` on the picker and `max-w-4xl` on details/confirmation
 - Slot grid adjusts column count based on viewport width
 
 ## Branding Integration
@@ -3456,14 +3437,17 @@ The page reads MC's branding from the get_public_booking_page payload (merged vi
 - Font family + weights (bodyFontFamily utility)
 - Density (cozy/compact): affects padding scale
 
-All rendered directly as inline style attributes (not Tailwind tokens, to honor custom MC branding on public surfaces).
+- Brand colour as the accent: `booking-brand.ts` sets `--brand-fg` / `--brand-bg` on the card (with a contrast fallback), so the primary Button, focus rings and selected pills pick it up through the normal tokens
+- Heading font on headings
+
+Dynamic branding values are the only inline styles on the page.
 
 ## Accessibility & Bot Defense
 
 - Form uses Input primitive (semantic label + aria-label)
 - Honeypot field (hidden, aria-hidden="true", tabindex="-1")
 - Form-start timestamp (startedAt) submitted server-side for timing analysis
-- Buttons use native `<button>` with `disabled` prop
+- All controls are design-system primitives (Button, Input, Textarea, DatePicker, ChoiceGroup)
 
 ## No Authentication
 
@@ -3472,7 +3456,7 @@ All rendered directly as inline style attributes (not Tailwind tokens, to honor 
 - IP rate-limiting on API layer (/api/booking/slots: 30/min/IP, /api/booking/submit: 5/min/IP)
 - In-RPC rate-limit on submit_booking: 6/hour/meeting_type (per brief)
 
-Migration: `20260820000000_create_bookings.sql` + `20260820001000_booking_rpcs.sql`.
+Migrations: `20260820000000_create_bookings.sql`, `20260820001000_booking_rpcs.sql`, `20261029000000_booking_form_questions.sql` (questions, phone_field, answers, new `submit_booking` signature).
 
 ---
 

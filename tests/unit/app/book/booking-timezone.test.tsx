@@ -25,6 +25,7 @@ describe('BookingSlotColumn timezone rendering', () => {
         selectedDate="2026-08-21"
         slots={[SLOT]}
         timezone="Australia/Sydney"
+        locale="en-AU"
         onSelectSlot={() => {}}
       />,
     );
@@ -35,6 +36,7 @@ describe('BookingSlotColumn timezone rendering', () => {
         selectedDate="2026-08-21"
         slots={[SLOT]}
         timezone="Australia/Perth"
+        locale="en-AU"
         onSelectSlot={() => {}}
       />,
     );
@@ -49,6 +51,7 @@ describe('BookingSlotColumn timezone rendering', () => {
         selectedDate="2026-08-21"
         slots={[SLOT]}
         timezone="Australia/Perth"
+        locale="en-AU"
         onSelectSlot={() => {}}
       />,
     );

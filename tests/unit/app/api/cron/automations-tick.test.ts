@@ -66,6 +66,14 @@ vi.mock('@/lib/automations/time-emitters', () => ({
     return runTimeEmitters(...args);
   },
 }));
+// Admin outreach rides this tick; its own passes are tested in the outreach
+// suites. Here it only has to run after dispatch and never throw.
+vi.mock('@/lib/outreach/services/tick', () => ({
+  runOutreachTick: async () => {
+    calls.push('outreach');
+    return { ran: [], failed: [] };
+  },
+}));
 vi.mock('@/lib/workflows/heartbeat', () => ({
   TICK_HEARTBEAT: 'automations-tick',
   recordHeartbeat: (...args: unknown[]) => recordHeartbeat(...args),
@@ -261,7 +269,7 @@ describe('GET /api/cron/automations-tick', () => {
   it('runs the executor first, then dispatch, and skips the emitters off the quarter hour', async () => {
     const res = await GET(request());
     expect(res.status).toBe(200);
-    expect(calls).toEqual(['executor', 'dispatch']);
+    expect(calls).toEqual(['executor', 'dispatch', 'outreach']);
     const body = await res.json();
     expect(body.emitters.durationMs).toBe(0);
     expect(body.workflow_executor.stepsExecuted).toBe(3);
@@ -270,7 +278,7 @@ describe('GET /api/cron/automations-tick', () => {
   it('runs the emitters between the executor and dispatch on the quarter hour', async () => {
     vi.setSystemTime(new Date('2026-09-22T10:15:00Z'));
     await GET(request());
-    expect(calls).toEqual(['executor', 'emitters', 'dispatch']);
+    expect(calls).toEqual(['executor', 'emitters', 'dispatch', 'outreach']);
   });
 
   it('caps the executor at its own slice and gives dispatch the full budget', async () => {
@@ -300,7 +308,7 @@ describe('GET /api/cron/automations-tick', () => {
     runTimeEmitters.mockRejectedValue(new Error('emitter boom'));
     const res = await GET(request());
     expect(res.status).toBe(200);
-    expect(calls).toEqual(['executor', 'emitters', 'dispatch']);
+    expect(calls).toEqual(['executor', 'emitters', 'dispatch', 'outreach']);
     expect(vi.mocked(sendAlert)).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'app_error', source: 'workflows.emitters' }),
     );
@@ -324,7 +332,7 @@ describe('GET /api/cron/automations-tick', () => {
     advanceDueSteps.mockRejectedValue(new Error('boom'));
     const res = await GET(request());
     expect(res.status).toBe(200);
-    expect(calls).toEqual(['executor', 'dispatch']);
+    expect(calls).toEqual(['executor', 'dispatch', 'outreach']);
     expect(vi.mocked(sendAlert)).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'app_error', source: 'workflows.executor' }),
     );

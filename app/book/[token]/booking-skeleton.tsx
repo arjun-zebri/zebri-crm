@@ -21,27 +21,26 @@ const MONTH_CELLS = 42
 const SLOT_PLACEHOLDERS = 6
 
 /**
- * Skeleton for the whole booking page, matching the picker's layout.
+ * Skeleton for the whole booking page, drawn in the same card as the loaded
+ * shell: summary column on the left, calendar and times on the right.
  */
 export function BookingPageSkeleton() {
   return (
     <SkeletonRegion
       label="Loading booking page"
-      className="border border-border rounded-control p-6 lg:p-8 bg-surface"
+      className="mx-auto w-full max-w-5xl bg-card max-md:min-h-screen md:rounded-control md:border md:border-border md:shadow-sm"
     >
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
+      <div className="grid md:grid-cols-[280px_minmax(0,1fr)]">
         {/* Left: who the couple is booking with */}
-        <div className="space-y-3">
-          <Skeleton tone="inherit" shape="circle" className="w-12 h-12" />
+        <div className="space-y-3 border-b border-border p-5 md:border-b-0 md:border-r md:p-8">
           <Skeleton tone="inherit" className="h-4 w-24" />
           <Skeleton tone="inherit" className="h-5 w-36" />
-          <Skeleton tone="inherit" className="h-4 w-28" />
           <SkeletonText tone="inherit" lines={3} />
         </div>
 
         {/* Right: month grid and the times for the chosen day */}
-        <div className="lg:col-span-3">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        <div className="min-w-0 p-5 md:p-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Skeleton tone="inherit" className="h-5 w-32" />
@@ -59,9 +58,9 @@ export function BookingPageSkeleton() {
 
             {/* Times for the selected day */}
             <div className="space-y-2">
-              <Skeleton tone="inherit" className="h-5 w-40 mb-3" />
+              <Skeleton tone="inherit" className="mb-3 h-5 w-40" />
               {Array.from({ length: SLOT_PLACEHOLDERS }).map((_, index) => (
-                <Skeleton key={index} tone="inherit" className="h-10 w-full" />
+                <Skeleton key={index} tone="inherit" className="h-8 w-full" />
               ))}
             </div>
           </div>
@@ -70,4 +69,3 @@ export function BookingPageSkeleton() {
     </SkeletonRegion>
   )
 }
-

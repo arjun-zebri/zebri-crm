@@ -46,7 +46,11 @@ export type AdminActionType =
   // Written by middleware (lib/admin/shadow-sessions logShadowRequest):
   // one row per non-GET request made under a verified shadow grant, which
   // covers server actions that write with the service role.
-  | 'shadow_request';
+  | 'shadow_request'
+  // Admin Outreach: a sheet import, and connecting / dropping the mailbox.
+  | 'outreach_import'
+  | 'outreach_mailbox_connect'
+  | 'outreach_mailbox_disconnect';
 
 export interface RecordAdminActionInput {
   /** The admin who performed the action — required. */

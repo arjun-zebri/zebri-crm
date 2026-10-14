@@ -19,6 +19,14 @@ describe('bookingSubmitSchema', () => {
     startedAt: Date.now(),
   };
 
+  it('keeps a well-formed outreach ref and silently drops a mangled one', () => {
+    const good = bookingSubmitSchema.safeParse({ ...validBase, ref: 'abcd2345' });
+    expect(good.success && good.data.ref).toBe('abcd2345');
+    const bad = bookingSubmitSchema.safeParse({ ...validBase, ref: 'ABC<script>' });
+    expect(bad.success).toBe(true);
+    expect(bad.success && bad.data.ref).toBeUndefined();
+  });
+
   it('accepts a valid body with required fields only', () => {
     const result = bookingSubmitSchema.safeParse(validBase);
     expect(result.success).toBe(true);
@@ -34,17 +42,36 @@ describe('bookingSubmitSchema', () => {
   it('accepts a valid body with all optional fields', () => {
     const full = {
       ...validBase,
-      partnerName: 'Sam Rivers',
+      answers: [
+        { question_id: 'partner_name', value: 'Sam Rivers' },
+        { question_id: 'services', value: ['Ceremony', 'Reception'] },
+      ],
       phone: '+61 400 000 000',
       notes: 'Prefer video consultation',
     };
     const result = bookingSubmitSchema.safeParse(full);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.partnerName).toBe('Sam Rivers');
+      expect(result.data.answers).toHaveLength(2);
+      expect(result.data.answers[1]!.value).toEqual(['Ceremony', 'Reception']);
       expect(result.data.phone).toBe('+61 400 000 000');
       expect(result.data.notes).toBe('Prefer video consultation');
     }
+  });
+
+  it('defaults answers to an empty list', () => {
+    const result = bookingSubmitSchema.safeParse(validBase);
+    expect(result.success && result.data.answers).toEqual([]);
+  });
+
+  it('rejects more answers than a form can have questions', () => {
+    const answers = Array.from({ length: 21 }, (_, i) => ({ question_id: `q${i}`, value: 'x' }));
+    expect(bookingSubmitSchema.safeParse({ ...validBase, answers }).success).toBe(false);
+  });
+
+  it('rejects an oversized answer', () => {
+    const answers = [{ question_id: 'q1', value: 'x'.repeat(2001) }];
+    expect(bookingSubmitSchema.safeParse({ ...validBase, answers }).success).toBe(false);
   });
 
   it('tolerates honeypot field as empty string', () => {
@@ -131,15 +158,10 @@ describe('bookingSubmitSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('allows empty string for optional partnerName', () => {
-    const result = bookingSubmitSchema.safeParse({
-      ...validBase,
-      partnerName: '',
-    });
+  it('drops a legacy partnerName field from older clients', () => {
+    const result = bookingSubmitSchema.safeParse({ ...validBase, partnerName: 'Sam' });
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.partnerName).toBeUndefined();
-    }
+    if (result.success) expect('partnerName' in result.data).toBe(false);
   });
 
   it('allows empty string for optional phone', () => {

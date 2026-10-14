@@ -16,6 +16,9 @@
  * @module app/(dashboard)/calendar/meeting-type-templates
  */
 
+import { WEDDING_QUESTIONS } from '@/lib/booking/question-presets';
+import type { BookingQuestion } from '@/lib/booking/questions';
+
 /** The only two lengths a template may use. */
 export type TemplateDuration = 30 | 60;
 
@@ -28,6 +31,8 @@ export interface MeetingTypeTemplate {
   durationMinutes: TemplateDuration;
   /** Matches `meeting_types.location_type`. */
   locationType: 'video' | 'phone' | 'in_person';
+  /** Booking-form questions the template starts with. Every template is a wedding meeting today. */
+  questions: BookingQuestion[];
 }
 
 /**
@@ -49,6 +54,7 @@ export const MEETING_TYPE_TEMPLATES: MeetingTypeTemplate[] = [
       'First chat with an enquiring couple: their date, the venue, and how they want the day to feel.',
     durationMinutes: 30,
     locationType: 'video',
+    questions: WEDDING_QUESTIONS,
   },
   {
     id: 'ceremony-planning',
@@ -57,6 +63,7 @@ export const MEETING_TYPE_TEMPLATES: MeetingTypeTemplate[] = [
       'Shape the ceremony with the couple: vows, readings, rituals and who stands where.',
     durationMinutes: 60,
     locationType: 'video',
+    questions: WEDDING_QUESTIONS,
   },
   {
     id: 'noim-paperwork',
@@ -65,6 +72,7 @@ export const MEETING_TYPE_TEMPLATES: MeetingTypeTemplate[] = [
       'Complete the Notice of Intended Marriage and sight original ID. Must be lodged at least one month before the wedding.',
     durationMinutes: 30,
     locationType: 'in_person',
+    questions: WEDDING_QUESTIONS,
   },
   {
     id: 'run-sheet-review',
@@ -73,6 +81,7 @@ export const MEETING_TYPE_TEMPLATES: MeetingTypeTemplate[] = [
       'Walk the order of the day, lock in timings, and confirm names and pronunciations.',
     durationMinutes: 60,
     locationType: 'video',
+    questions: WEDDING_QUESTIONS,
   },
   {
     id: 'final-catch-up',
@@ -81,5 +90,6 @@ export const MEETING_TYPE_TEMPLATES: MeetingTypeTemplate[] = [
       'Quick confirmation in the week of the wedding: final numbers, arrival times and any late changes.',
     durationMinutes: 30,
     locationType: 'phone',
+    questions: WEDDING_QUESTIONS,
   },
 ];

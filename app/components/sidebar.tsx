@@ -18,6 +18,7 @@ import {
   FileHeart,
   FileStack,
   RotateCcw,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -153,10 +154,22 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
               // writing account_type='admin' to user_metadata via
               // auth.updateUser({data}) cannot make the link appear.
               ...(isAdmin(user)
-                ? [{ label: "Admin", href: "/admin", icon: Shield }]
+                ? [
+                    { label: "Outreach", href: "/admin/outreach", icon: Send },
+                    { label: "Admin", href: "/admin", icon: Shield },
+                  ]
                 : []),
-            ].map((item) => {
-              const isActive = pathname.startsWith(item.href);
+            ].map((item, _i, all) => {
+              // Outreach lives under /admin, so a bare prefix match would
+              // light up Admin too. The most specific matching href wins.
+              const isActive =
+                pathname.startsWith(item.href) &&
+                !all.some(
+                  (other) =>
+                    other.href.length > item.href.length &&
+                    other.href.startsWith(item.href) &&
+                    pathname.startsWith(other.href),
+                );
               const Icon = item.icon;
 
               return (

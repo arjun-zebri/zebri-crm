@@ -29,6 +29,16 @@ interface DatePickerProps {
    *  scroll to the couple's existing event date when adding a second
    *  event on the same day. */
   defaultViewDate?: string
+  /** Visible label above the trigger. Omit it for the compact in-row variants. */
+  label?: string
+  /** Trigger id, so the label (and focus management) can reach the control. */
+  id?: string
+  /** Quiet "Optional" tag beside the label. Requires `label`. */
+  optional?: boolean
+  /** Helper text under the trigger. Hidden while `error` is set. */
+  help?: string | undefined
+  /** Error message under the trigger; also turns its border `danger`. */
+  error?: string | undefined
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -106,7 +116,7 @@ function calendarWidth(triggerWidth: number): number {
   return Math.min(DROPDOWN_WIDTH.max, Math.max(DROPDOWN_WIDTH.min, triggerWidth))
 }
 
-export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix, defaultViewDate }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix, defaultViewDate, label, id, optional = false, help, error }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
@@ -250,6 +260,8 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
   // at the corners.
   const stateChrome = disabled
     ? 'border-border bg-surface-muted text-text-subtle cursor-not-allowed'
+    : error
+    ? 'border-danger hover:bg-surface-muted'
     : open
     ? 'border-border-strong'
     : 'border-border hover:bg-surface-muted focus-visible:border-brand-fg'
@@ -351,17 +363,40 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     document.body
   ) : null
 
+  const triggerId = id ?? (label ? `date-picker-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : undefined)
+  const helpId = help && !error && triggerId ? `${triggerId}-help` : undefined
+  const errorId = error && triggerId ? `${triggerId}-error` : undefined
+
   return (
     <div ref={containerRef} className="relative">
+      {label ? (
+        <div className="mb-1 flex items-center gap-1.5">
+          <label htmlFor={triggerId} className="block text-body font-medium text-text">
+            {label}
+          </label>
+          {optional ? <span className="text-body text-text-muted">Optional</span> : null}
+        </div>
+      ) : null}
       <button
         ref={triggerRef}
+        id={triggerId}
         type="button"
         onClick={() => !disabled && setOpen(o => !o)}
         disabled={disabled}
+        aria-describedby={errorId ?? helpId}
         className={triggerClass}
       >
         {triggerContent}
       </button>
+      {error ? (
+        <p id={errorId} role="alert" className="mt-1 text-body text-danger">
+          {error}
+        </p>
+      ) : help ? (
+        <p id={helpId} className="mt-1 text-body text-text-muted">
+          {help}
+        </p>
+      ) : null}
 
       {dropdown}
     </div>

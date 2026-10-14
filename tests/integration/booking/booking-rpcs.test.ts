@@ -9,12 +9,23 @@
  */
 import { afterAll, describe, expect, it } from 'vitest';
 
+import type { Json } from '@/types/database';
+
 import {
   anonClient,
   createTestUser,
   serviceClient,
   type TestUser,
 } from '../helpers/supabase';
+
+/** The partner-name question every meeting type gets from the backfill. */
+const PARTNER_QUESTION = {
+  id: 'partner_name',
+  label: "Partner's name",
+  type: 'short_text',
+  required: false,
+  maps_to: 'partner_name',
+};
 
 const pro = {
   account_type: 'vendor',
@@ -37,6 +48,8 @@ async function arrangeMeetingType(opts: {
   durationMinutes?: number;
   locationTypes?: 'video' | 'phone' | 'in_person';
   active?: boolean;
+  questions?: Json[];
+  phoneField?: 'hidden' | 'optional' | 'required';
 } = {}): Promise<ArrangedType> {
   const user = await createTestUser({}, pro);
   const admin = serviceClient();
@@ -53,6 +66,9 @@ async function arrangeMeetingType(opts: {
       duration_minutes: durationMinutes,
       location_type: opts.locationTypes ?? 'video',
       active: opts.active !== false,
+      // Default new types to no questions, so the RPC tests stay focused.
+      questions: opts.questions ?? [],
+      phone_field: opts.phoneField ?? 'optional',
     })
     .select('id, share_token')
     .single();
@@ -162,7 +178,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Test Booker',
-      p_partner_name: null as any,
       p_email: 'test@example.test',
       p_phone: '+61 400 000 000',
       p_notes: 'Test booking',
@@ -191,7 +206,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Test Booker',
-      p_partner_name: null as any,
       p_email: 'test@example.test',
       p_phone: '+61 400 000 000',
       p_notes: null as any,
@@ -213,7 +227,6 @@ describe('submit_booking', () => {
       p_ends_at: starts.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Test Booker',
-      p_partner_name: null as any,
       p_email: 'test@example.test',
       p_phone: '+61 400 000 000',
       p_notes: null as any,
@@ -238,7 +251,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Test Booker',
-      p_partner_name: null as any,
       p_email: 'test@example.test',
       p_phone: '+61 400 000 000',
       p_notes: null as any,
@@ -260,7 +272,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Test Booker',
-      p_partner_name: null as any,
       p_email: 'test@example.test',
       p_phone: '+61 400 000 000',
       p_notes: null as any,
@@ -269,7 +280,7 @@ describe('submit_booking', () => {
   });
 
   it('creates a booking with all fields', async () => {
-    const arr = await arrangeMeetingType();
+    const arr = await arrangeMeetingType({ questions: [PARTNER_QUESTION] });
     cleanupQueue.push(arr.user.cleanup);
 
     const now = new Date();
@@ -282,10 +293,10 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Jamie Lee',
-      p_partner_name: 'Sam Rivers',
       p_email: 'jamie@example.test',
       p_phone: '+61 400 000 000',
       p_notes: 'Looking for a video consultation',
+      p_answers: [{ question_id: 'partner_name', value: 'Sam Rivers' }],
     });
 
     expect(error).toBeNull();
@@ -323,7 +334,7 @@ describe('submit_booking', () => {
   });
 
   it('creates a couple when no email match exists', async () => {
-    const arr = await arrangeMeetingType();
+    const arr = await arrangeMeetingType({ questions: [PARTNER_QUESTION] });
     cleanupQueue.push(arr.user.cleanup);
 
     const now = new Date();
@@ -336,10 +347,10 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'New Booker',
-      p_partner_name: 'Partner Name',
       p_email: 'newbooker@example.test',
       p_phone: '+61 400 000 000',
       p_notes: 'First time booking',
+      p_answers: [{ question_id: 'partner_name', value: 'Partner Name' }],
     });
 
     const result = data as unknown as {
@@ -399,7 +410,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'New Name',
-      p_partner_name: null as any,
       p_email: 'ALICE@example.test', // different case
       p_phone: '+61 400 000 001',
       p_notes: null as any,
@@ -443,7 +453,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Another Name',
-      p_partner_name: null as any,
       p_email: 'LEGACY@example.test', // different case, legacy column
       p_phone: '+61 400 000 002',
       p_notes: null as any,
@@ -499,7 +508,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Yet Another Name',
-      p_partner_name: null as any,
       p_email: 'charlie@example.test',
       p_phone: '+61 400 000 003',
       p_notes: null as any,
@@ -525,7 +533,6 @@ describe('submit_booking', () => {
       p_ends_at: ends1.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'First Booker',
-      p_partner_name: null as any,
       p_email: 'first@example.test',
       p_phone: null as any,
       p_notes: null as any,
@@ -543,7 +550,6 @@ describe('submit_booking', () => {
       p_ends_at: ends2.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Second Booker',
-      p_partner_name: null as any,
       p_email: 'second@example.test',
       p_phone: null as any,
       p_notes: null as any,
@@ -574,7 +580,6 @@ describe('submit_booking', () => {
       p_ends_at: ends1.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'First Booker',
-      p_partner_name: null as any,
       p_email: 'first@example.test',
       p_phone: null as any,
       p_notes: null as any,
@@ -592,7 +597,6 @@ describe('submit_booking', () => {
       p_ends_at: ends2.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Second Booker',
-      p_partner_name: null as any,
       p_email: 'second@example.test',
       p_phone: null as any,
       p_notes: null as any,
@@ -625,7 +629,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Attacker',
-      p_partner_name: null as any,
       p_email: 'attacker@example.test',
       p_phone: null as any,
       p_notes: null as any,
@@ -686,7 +689,6 @@ describe('submit_booking', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Plan Limited',
-      p_partner_name: null as any,
       p_email: 'limited@example.test',
       p_phone: null as any,
       p_notes: null as any,
@@ -751,7 +753,6 @@ describe('submit_booking', () => {
       p_timezone: 'Australia/Sydney',
       p_name: 'Rate Limited Booker',
       p_email: 'ratelimited@example.test',
-      p_partner_name: null as any,
       p_phone: null as any,
       p_notes: null as any,
     });
@@ -784,7 +785,6 @@ describe('booking RLS', () => {
       p_ends_at: ends.toISOString(),
       p_timezone: 'Australia/Sydney',
       p_name: 'Booker',
-      p_partner_name: null as any,
       p_email: 'booker@example.test',
       p_phone: null as any,
       p_notes: null as any,

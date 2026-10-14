@@ -32,7 +32,7 @@ const mockBooking: Booking = {
   id: 'booking-123',
   name: 'John Smith',
   email: 'john@example.com',
-  partner_name: null,
+  answers: [],
   phone: '0412345678',
   starts_at: '2026-08-20T14:00:00Z',
   ends_at: '2026-08-20T14:30:00Z',

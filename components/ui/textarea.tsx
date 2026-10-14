@@ -33,9 +33,14 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
   /** Visible label rendered above the field. Preferred over placeholder-as-label. */
   label?: string;
   /** Helper text below the field. Hidden when `error` is set. */
-  help?: string;
+  help?: string | undefined;
+  /**
+   * Marks the field as optional with a quiet "Optional" tag beside the label.
+   * Use instead of "(optional)" in the label text. Requires `label`.
+   */
+  optional?: boolean;
   /** Error message rendered in place of `help`. Role=alert. */
-  error?: string;
+  error?: string | undefined;
   /** Optional ref to the underlying `<textarea>`. */
   ref?: Ref<HTMLTextAreaElement>;
 }
@@ -53,6 +58,7 @@ export function Textarea({
   id,
   label,
   help,
+  optional = false,
   error,
   className,
   rows = 4,
@@ -73,9 +79,12 @@ export function Textarea({
   return (
     <div className={`space-y-1${className ? ` ${className}` : ''}`}>
       {label ? (
-        <label htmlFor={fieldId} className="block text-body font-medium text-text">
-          {label}
-        </label>
+        <div className="flex items-center gap-1.5">
+          <label htmlFor={fieldId} className="block text-body font-medium text-text">
+            {label}
+          </label>
+          {optional ? <span className="text-body text-text-muted">Optional</span> : null}
+        </div>
       ) : null}
       <textarea
         {...rest}

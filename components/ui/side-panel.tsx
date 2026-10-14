@@ -1,6 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
+import { useId } from 'react'
 
 import { OVERLAY_Z, useOverlay } from './use-overlay'
 
@@ -24,6 +25,9 @@ export function SidePanel({
   // Was a bare `if (e.key === 'Escape')` handler with no depth check, so
   // a dialog opened from inside the panel closed both at once.
   useOverlay({ isOpen, onClose })
+  // Names the dialog after its title, so screen readers (and role-based
+  // test selectors) can tell one panel from another.
+  const titleId = useId()
 
   if (!isOpen) return null
 
@@ -36,12 +40,13 @@ export function SidePanel({
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className={`fixed top-0 right-0 bottom-0 ${OVERLAY_Z.base.panel} w-full sm:w-[640px] lg:w-[760px] bg-surface shadow-2xl flex flex-col animate-slide-in-right`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-border">
           {title && (
-            <h2 className="flex-1 text-body font-medium text-text-muted truncate">{title}</h2>
+            <h2 id={titleId} className="flex-1 text-body font-medium text-text-muted truncate">{title}</h2>
           )}
           <div className="flex items-center gap-1 ml-auto">
             {headerActions}
