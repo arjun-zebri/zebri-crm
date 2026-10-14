@@ -27,7 +27,8 @@ const EMPTY_DOC: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] }
  *
  * Builds from the shared signature extension set the server-side renderer
  * also uses, so the stored JSON round-trips identically between editing
- * and sending. Emits JSONContent on every update. To avoid fighting the
+ * and sending. Emits plain JSONContent (safe to pass to a server action)
+ * on every update. To avoid fighting the
  * user's typing, it ignores parent re-renders that merely echo back the
  * value it just emitted, and only re-syncs on a genuinely external change
  * (e.g. the saved signature loading in). The content uses the shared
@@ -57,9 +58,13 @@ export function SignatureEditor({ value, onChange, placeholder = 'Warm regards, 
     content: value && Object.keys(value).length > 0 ? value : EMPTY_DOC,
     immediatelyRender: false,
     onUpdate: ({ editor: ed }) => {
-      const json = ed.getJSON()
-      lastEmittedRef.current = JSON.stringify(json)
-      onChange(json)
+      const serialized = JSON.stringify(ed.getJSON())
+      lastEmittedRef.current = serialized
+      // Why a parsed copy and not getJSON() itself: ProseMirror builds node
+      // and mark attrs with Object.create(null). A server action cannot
+      // receive those, so React passes them as opaque references and the
+      // server throws the moment it reads a link's href.
+      onChange(JSON.parse(serialized) as JSONContent)
     },
   })
 
