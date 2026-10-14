@@ -2,11 +2,12 @@
 
 /**
  * Sequences as rows: name, a one-line summary of the steps, how many
- * campaigns use it, and the Edit and Archive actions.
+ * campaigns use it, and the Edit, Archive and Delete actions.
  *
- * Archive is withheld while a campaign uses the sequence, because the
- * server refuses that. The row says why instead of offering a button
- * that fails.
+ * Archive and Delete are withheld while a campaign uses the sequence,
+ * because the server refuses both. The row says why instead of offering a
+ * button that fails. Delete is also refused once anyone has been through
+ * the sequence; the toast then says to archive it.
  *
  * @module features/outreach/views/sequences/sequence-list
  */
@@ -20,6 +21,7 @@ interface SequenceListProps {
   sequences: SequenceWithSteps[];
   onEdit: (seq: SequenceWithSteps) => void;
   onArchive: (seq: SequenceWithSteps) => void;
+  onDelete: (seq: SequenceWithSteps) => void;
 }
 
 /** Plain-language campaign usage for one sequence. */
@@ -29,7 +31,7 @@ export function usageLabel(campaignCount: number): string {
 }
 
 /** The list of live (non-archived) sequences. */
-export function SequenceList({ sequences, onEdit, onArchive }: SequenceListProps) {
+export function SequenceList({ sequences, onEdit, onArchive, onDelete }: SequenceListProps) {
   return (
     <ul className="rounded-control border border-border bg-card divide-y divide-border">
       {sequences.map((seq) => {
@@ -43,7 +45,7 @@ export function SequenceList({ sequences, onEdit, onArchive }: SequenceListProps
               </p>
               <p className="text-body text-text-muted">
                 {usageLabel(seq.campaign_count)}
-                {inUse && '. Remove it from those campaigns before you can archive it.'}
+                {inUse && '. Remove it from those campaigns before you can archive or delete it.'}
               </p>
             </div>
             <div className="flex items-center gap-1">
@@ -53,7 +55,11 @@ export function SequenceList({ sequences, onEdit, onArchive }: SequenceListProps
               {!inUse && (
                 <RowActionsMenu
                   alwaysVisible
-                  actions={[{ label: 'Archive', destructive: true, onSelect: () => onArchive(seq) }]}
+                  label={`More actions for ${seq.name}`}
+                  actions={[
+                    { label: 'Archive', destructive: true, onSelect: () => onArchive(seq) },
+                    { label: 'Delete', destructive: true, onSelect: () => onDelete(seq) },
+                  ]}
                 />
               )}
             </div>

@@ -126,7 +126,22 @@ The founder-facing guide is `docs/outreach-guide.md`.
   - Can't DM, and IG Replied (neither can be undone on the server);
   - bulk and single do-not-contact;
   - removing a step or variant (one with sends can't be removed);
-  - discarding a dirty sequence or campaign draft.
+  - discarding a dirty sequence or campaign draft;
+  - deleting a prospect, sequence or campaign.
+- **Deletes** (`lib/outreach/services/deletes.ts`) are permanent and each
+  keeps what outreach must not lose:
+  - **Prospect** (modal "more" menu): takes their enrolments, messages,
+    checks and history with them. Their `outreach_suppression` rows stay,
+    so an opted-out person stays unreachable if added back.
+  - **Sequence** (row menu, only while no campaign uses it): refused once
+    anyone has been enrolled in it, since their messages point at its
+    steps. Archive it instead.
+  - **Campaign** (row menu, not while active): takes its arms, enrolments
+    and unsent messages. Refused once any message in it has gone out,
+    because those sent messages are the threads the reply poll watches;
+    deleting them would let a reply or "stop" go unseen. Finish it
+    instead. To clear a test run, delete the test prospect first, then
+    the campaign.
 - **Copied DMs:** the Today IG queue returns `copiedAt` (from the
   `ig_copied` event), so a reload never offers "Copy & open" again for a
   DM already copied.
@@ -148,7 +163,7 @@ The founder-facing guide is `docs/outreach-guide.md`.
 | `lib/outreach/render.ts` | Merge fields, Spam Act footer |
 | `lib/outreach/gmail/` | Gmail API client, MIME builder, inbound classifier |
 | `lib/outreach/analytics/` | Wilson intervals, comparison tables (pure) |
-| `lib/outreach/services/` | DB-backed services (import, checks, sequencer, send, poll, attribution, queries, admin-ops, tick) |
+| `lib/outreach/services/` | DB-backed services (import, checks, sequencer, send, poll, attribution, queries, admin-ops, deletes, tick) |
 | `features/outreach/` | The admin UI: `actions.ts` (server actions, `assertAdmin` + Zod), `schemas.ts`, `hooks.ts`, `views/*` |
 | `app/(dashboard)/admin/outreach/page.tsx` | Route |
 | `app/api/admin/outreach/gmail/{connect,callback}` | Outreach mailbox OAuth |

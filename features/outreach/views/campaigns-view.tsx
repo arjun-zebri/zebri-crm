@@ -5,7 +5,7 @@
  *
  * Lists campaigns, opens the editor, and changes status. Activation asks
  * first, since it starts real sends. Finishing stops every active
- * sequence, so it asks too. A pause banner shows above the list whenever
+ * sequence, so it asks too, and so does Delete. A pause banner shows above the list whenever
  * sending stops, and a one-line setup summary links to Settings while
  * anything is still missing. `?new=1` opens the editor straight away.
  *
@@ -22,7 +22,7 @@ import { Loading } from '@/components/ui/loading';
 import { useToast } from '@/components/ui/toast';
 import type { CampaignSummary } from '@/lib/outreach/services/queries';
 
-import { setCampaignStatusAction } from '../actions';
+import { deleteCampaignAction, setCampaignStatusAction } from '../actions';
 import { useCampaigns, useOutreachMutation, useReadiness, useSequences } from '../hooks';
 
 import { ActivateConfirm } from './campaigns/activate-confirm';
@@ -47,6 +47,7 @@ export function CampaignsView() {
   const sequences = useSequences();
   const readiness = useReadiness();
   const status = useOutreachMutation(setCampaignStatusAction);
+  const remove = useOutreachMutation(deleteCampaignAction, 'Campaign deleted');
   const { toast } = useToast();
   // Why: the shared mutation toasts only the data it returns, so the status-specific line is added per call.
   const changeStatus = (id: string, next: CampaignNextStatus, after?: () => void) =>
@@ -54,6 +55,7 @@ export function CampaignsView() {
   const [editor, setEditor] = useState<OpenEditor | null>(null);
   const [toActivate, setToActivate] = useState<CampaignSummary | null>(null);
   const [toFinish, setToFinish] = useState<CampaignSummary | null>(null);
+  const [toDelete, setToDelete] = useState<CampaignSummary | null>(null);
 
   const open = (draft: DraftCampaign) => setEditor({ key: newKey(), draft });
   const openBlank = () => open(blankCampaign());
@@ -103,6 +105,7 @@ export function CampaignsView() {
           onStatus={(c, next) => changeStatus(c.id, next)}
           onActivate={setToActivate}
           onFinish={setToFinish}
+          onDelete={setToDelete}
         />
       )}
 
@@ -130,6 +133,19 @@ export function CampaignsView() {
         onConfirm={() => {
           if (!toFinish) return;
           changeStatus(toFinish.id, 'finished', () => setToFinish(null));
+        }}
+      />
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Delete this campaign?"
+        description="Removes the campaign and anyone waiting to start it. The prospects stay. A campaign that has sent anything can only be finished."
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => {
+          if (!toDelete) return;
+          remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) });
         }}
       />
     </div>

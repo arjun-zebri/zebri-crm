@@ -21,7 +21,7 @@ vi.mock('@/features/outreach/hooks', () => ({
   useSequences: () => sequencesState,
   useOutreachMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-vi.mock('@/features/outreach/actions', () => ({ archiveSequenceAction: vi.fn() }));
+vi.mock('@/features/outreach/actions', () => ({ archiveSequenceAction: vi.fn(), deleteSequenceAction: vi.fn() }));
 
 // Stub the editor: the real one is a large modal. The stub exposes the draft it was opened with.
 vi.mock('@/features/outreach/views/sequences/sequence-editor', () => ({
