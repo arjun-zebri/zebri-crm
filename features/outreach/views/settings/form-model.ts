@@ -8,7 +8,10 @@
  *
  * @module features/outreach/views/settings/form-model
  */
+import type { JSONContent } from '@tiptap/core';
+
 import type { SettingsInput } from '@/lib/outreach/services/settings';
+import { signatureDocToText, textToSignatureDoc } from '@/lib/outreach/signature';
 import type { OutreachSettings } from '@/lib/outreach/types';
 
 /** Sentinel for "no booking page". A Select option must never be "". */
@@ -17,7 +20,8 @@ export const NO_BOOKING = '__none__';
 /** Editable settings as the inputs hold them. */
 export interface SettingsForm {
   sender_name: string;
-  signature: string;
+  /** The signature as the rich editor holds it. */
+  signature_doc: JSONContent;
   /** Comma-separated daily email caps, one per week of the ramp. */
   ramp: string;
   email_daily_cap: string;
@@ -43,7 +47,8 @@ export type FieldErrors = Partial<Record<keyof SettingsForm, string>>;
 export function toForm(s: OutreachSettings): SettingsForm {
   return {
     sender_name: s.sender_name,
-    signature: s.signature,
+    // A signature saved before the rich editor becomes one paragraph per line.
+    signature_doc: (s.signature_doc as JSONContent | null) ?? textToSignatureDoc(s.signature),
     ramp: s.email_ramp.join(', '),
     email_daily_cap: String(s.email_daily_cap),
     ig_daily_cap: String(s.ig_daily_cap),
@@ -95,7 +100,8 @@ export function toInput(f: SettingsForm): { ok: true; data: SettingsInput } | { 
     ok: true,
     data: {
       sender_name: f.sender_name.trim(),
-      signature: f.signature.trim(),
+      signature: signatureDocToText(f.signature_doc),
+      signature_doc: f.signature_doc,
       email_ramp: ramp as number[],
       email_daily_cap: emailCap as number,
       ig_daily_cap: igCap as number,

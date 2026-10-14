@@ -7,8 +7,9 @@
  * than sending "Hi ,").
  *
  * Every email also gets the Spam Act footer: the sender's signature
- * (identity) and a working opt-out instruction. The footer is appended
- * here, not in templates, so no variant can forget it.
+ * (identity) and a working opt-out instruction. The footer is added at
+ * send time by these helpers, not in templates, so no variant can forget
+ * it and a queued email always carries the current signature.
  *
  * Pure.
  *
@@ -103,6 +104,55 @@ export function withEmailFooter(body: string, signature: string, senderName = ''
   if (signature.trim()) parts.push(signature.trim());
   parts.push(OPT_OUT_LINE);
   return parts.join('\n\n');
+}
+
+/** Escape text for HTML element content and attribute values. */
+export function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const URL_RE = /https?:\/\/[^\s<>"']+/g;
+
+/** One line of text as HTML, with http(s) URLs made clickable. Trailing punctuation stays outside the link. */
+function lineToHtml(line: string): string {
+  let out = '';
+  let last = 0;
+  for (const m of line.matchAll(URL_RE)) {
+    const url = m[0].replace(/[.,;:!?)]+$/, '');
+    const start = m.index ?? 0;
+    out += escapeHtml(line.slice(last, start)) + `<a href="${escapeHtml(url)}">${escapeHtml(url)}</a>`;
+    last = start + url.length;
+  }
+  return out + escapeHtml(line.slice(last));
+}
+
+/**
+ * Plain text as HTML the way Gmail composes it: one `<div>` per line and
+ * `<div><br></div>` for a blank one. Why this shape: it renders like a
+ * message typed in Gmail, not like a newsletter template.
+ */
+export function textToHtml(text: string): string {
+  return text.replace(/\r\n/g, '\n').trimEnd().split('\n')
+    .map((line) => (line.trim() === '' ? '<div><br></div>' : `<div>${lineToHtml(line)}</div>`))
+    .join('');
+}
+
+/**
+ * The HTML part of an email: the body, the identity line, the rendered
+ * signature and the opt-out line, in the same order as
+ * {@link withEmailFooter} so the two parts say the same thing.
+ *
+ * @param body - The rendered message text, without a footer.
+ * @param signatureHtml - Sanitised signature HTML, or `''` when there is none.
+ * @param senderName - The name the email is sent under.
+ */
+export function withEmailFooterHtml(body: string, signatureHtml: string, senderName = ''): string {
+  const name = senderName.trim();
+  const blank = '<div><br></div>';
+  const parts = [textToHtml(body), blank, `<div>${escapeHtml(name ? `${name}, ${BUSINESS_NAME}` : BUSINESS_NAME)}</div>`];
+  if (signatureHtml) parts.push(blank, signatureHtml);
+  parts.push(blank, `<div>${escapeHtml(OPT_OUT_LINE)}</div>`);
+  return `<div dir="ltr">${parts.join('')}</div>`;
 }
 
 /** Merge values for a prospect, given the settings-derived extras. */
