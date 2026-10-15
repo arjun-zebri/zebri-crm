@@ -16,10 +16,12 @@ import { VerdictPill } from './verdict-pill';
 /** Props for {@link ProspectHeader}. */
 export interface ProspectHeaderProps {
   prospect: Prospect;
+  /** Called once the prospect is deleted from the actions menu. */
+  onDeleted: () => void;
 }
 
 /** "Bondi, NSW · Replied", warnings if any, and the actions menu. */
-export function ProspectHeader({ prospect: p }: ProspectHeaderProps) {
+export function ProspectHeader({ prospect: p, onDeleted }: ProspectHeaderProps) {
   const place = [p.suburb, p.state].filter(Boolean).join(', ');
   return (
     <div className="flex items-center justify-between gap-3">
@@ -28,7 +30,7 @@ export function ProspectHeader({ prospect: p }: ProspectHeaderProps) {
         {p.verdict !== 'active' && <VerdictPill verdict={p.verdict} />}
         {p.do_not_contact && <StatePill label="Do not contact" tone="danger" />}
       </div>
-      <DrawerActions prospectId={p.id} name={p.full_name} />
+      <DrawerActions prospectId={p.id} name={p.full_name} onDeleted={onDeleted} />
     </div>
   );
 }

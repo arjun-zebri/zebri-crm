@@ -56,8 +56,8 @@ describe('usageLabel', () => {
 
 describe('SequenceList', () => {
   it('explains why a sequence in use cannot be archived', () => {
-    render(<SequenceList sequences={[saved]} onEdit={() => {}} onArchive={() => {}} />);
-    expect(screen.getByText('Used by 2 campaigns. Remove it from those campaigns before you can archive it.')).toBeInTheDocument();
+    render(<SequenceList sequences={[saved]} onEdit={() => {}} onArchive={() => {}} onDelete={() => {}} />);
+    expect(screen.getByText('Used by 2 campaigns. Remove it from those campaigns before you can archive or delete it.')).toBeInTheDocument();
   });
 });
 

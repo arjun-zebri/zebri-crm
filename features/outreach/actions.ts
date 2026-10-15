@@ -24,6 +24,7 @@ import {
   retryMessage, saveCampaign, saveSequence, setCampaignStatus, setVerdicts, undoOptOut, updateProspect,
 } from '@/lib/outreach/services/admin-ops';
 import { cancelRun, processCheckBatch, startActivityRun } from '@/lib/outreach/services/checks';
+import { deleteCampaign, deleteProspect, deleteSequence } from '@/lib/outreach/services/deletes';
 import { stopActiveEnrollment } from '@/lib/outreach/services/events';
 import { importProspects, previewImport, type ImportOutcome } from '@/lib/outreach/services/import';
 import { pollMailbox } from '@/lib/outreach/services/poll';
@@ -228,6 +229,11 @@ export async function stopSequenceAction(id: unknown) {
   });
 }
 
+/** Delete a prospect, with their messages and history. Opt-outs stay suppressed. */
+export async function deleteProspectAction(id: unknown) {
+  return run('deleteProspect', z.uuid(), id, (pid) => deleteProspect(db(), pid));
+}
+
 /** Link to a Zebri account. */
 export async function linkUserAction(input: unknown) {
   return run('linkUser', linkUserSchema, input, ({ id, email }) => linkUser(db(), id, email));
@@ -277,6 +283,11 @@ export async function archiveSequenceAction(id: unknown) {
   return run('archiveSequence', z.uuid(), id, (sid) => archiveSequence(db(), sid));
 }
 
+/** Delete a sequence nobody has been through and no campaign uses. */
+export async function deleteSequenceAction(id: unknown) {
+  return run('deleteSequence', z.uuid(), id, (sid) => deleteSequence(db(), sid));
+}
+
 /** Save a campaign. */
 export async function saveCampaignAction(input: unknown) {
   return run('saveCampaign', saveCampaignSchema, input, (c) => saveCampaign(db(), c));
@@ -285,6 +296,11 @@ export async function saveCampaignAction(input: unknown) {
 /** Activate / pause / finish a campaign. */
 export async function setCampaignStatusAction(input: unknown) {
   return run('setCampaignStatus', campaignStatusSchema, input, ({ id, status }) => setCampaignStatus(db(), id, status));
+}
+
+/** Delete a campaign that is not active and has sent nothing. */
+export async function deleteCampaignAction(id: unknown) {
+  return run('deleteCampaign', z.uuid(), id, (cid) => deleteCampaign(db(), cid));
 }
 
 // ───── Settings ───────────────────────────────────────────────────────

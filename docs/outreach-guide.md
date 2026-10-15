@@ -203,8 +203,10 @@ A **sequence** is a series of steps, for example:
 - **Rules:** emails are plain text, with no tracking pixels and at most
   one link (the booking link). This keeps you out of spam folders.
 
-You can't archive a sequence that a campaign is using. The list shows
-how many campaigns use each one. You also can't remove a step or variant
+You can't archive or delete a sequence that a campaign is using. The
+list shows how many campaigns use each one. **Delete** removes a
+sequence for good, but only one nobody has been sent; once anyone has
+been through it, archive it instead so its results stay in Analytics. You also can't remove a step or variant
 that has already sent messages, because that would break its history in
 Analytics. Removing anything else asks you to confirm first. Closing the
 editor with unsaved changes asks before throwing them away. On a phone,
@@ -236,7 +238,15 @@ sequence(s)**.
    with a **Finish setup** link.
 
 **Pause** stops new sends and keeps everyone's place, so you can resume
-later. **Finish** ends the campaign for good.
+later. **Finish** ends the campaign for good. **Delete** (in the row's
+menu, once it isn't active) removes a campaign that hasn't sent anything
+yet. One that has sent can only be finished, so replies and STOP
+requests to its emails are still caught.
+
+To delete a prospect, open them and choose **Delete prospect** from the
+menu. Their messages and history go with them. If they asked you to
+stop, they stay blocked even if you add them again. To clear out a test
+run, delete the test prospect first, then its campaign.
 
 ---
 

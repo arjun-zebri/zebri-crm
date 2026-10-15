@@ -152,6 +152,20 @@ describe('reply poll', () => {
     expect(enr!.status).toBe('stopped');
   });
 
+  it('does not count mail the prospect sent before the first email as a reply', async () => {
+    // A prospect who had emailed the mailbox earlier the same day was marked
+    // "replied" as soon as the first email went out, and the sequence stopped.
+    const p = await contacted('earlier');
+    const earlier = injectInbound({
+      from: p.email, threadId: `thr-earlier-${t.tag}`, body: "I'm ready", internalDate: Date.now() - 2 * 3_600_000,
+    });
+    const result = await poll();
+    expect(result.replies).toBe(0);
+    expect(await markersFor(earlier.id)).toEqual([]);
+    const { data: enr } = await db.from('outreach_enrollments').select('status').eq('id', p.enrollmentId).single();
+    expect(enr!.status).toBe('active');
+  });
+
   it('handles each inbound message once: a second poll does nothing new', async () => {
     const p = await contacted('idempotent');
     const reply = injectInbound({ from: p.email, threadId: p.threadId, body: 'Tell me more' });
