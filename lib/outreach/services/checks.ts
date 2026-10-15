@@ -12,7 +12,7 @@
  */
 import type { Json } from '@/types/database';
 
-import { checkEmail } from '../checks/email-check';
+import { checkEmail, isDnsTimeout } from '../checks/email-check';
 import {
   ApifyError,
   EST_CENTS_PER_PROFILE,
@@ -269,14 +269,20 @@ async function processWebsites(db: AdminDb, deadline: number): Promise<number> {
   return claimed.length;
 }
 
-/** Claim and process one batch of email checks. */
-async function processEmails(db: AdminDb): Promise<number> {
+/**
+ * Claim and process one batch of email checks.
+ *
+ * Past `deadline` no new lookup starts; those claims expire and are
+ * retried, as in {@link processWebsites}.
+ */
+async function processEmails(db: AdminDb, deadline: number): Promise<number> {
   const { data: claimed, error } = await db.rpc('outreach_claim_checks', { p_check: 'email', p_limit: EMAIL_BATCH });
   if (error) throw new Error(`claim email: ${error.message}`);
   if (!claimed?.length) return 0;
   const prospects = await loadProspects(db, claimed.map((c) => c.prospect_id));
   const events: EventInput[] = [];
   await pool(claimed, 20, async (check) => {
+    if (Date.now() > deadline) return;
     const p = prospects.get(check.prospect_id);
     const now = new Date().toISOString();
     if (!p?.email) {
@@ -294,8 +300,17 @@ async function processEmails(db: AdminDb): Promise<number> {
       await db.from('outreach_checks').update({ status: 'ok', result: { result } as Json, checked_at: now }).eq('id', check.id);
       events.push({ prospectId: p.id, type: 'email_checked', channel: 'email', payload: { result } });
     } catch (err) {
-      // Transient DNS trouble: release the claim so a later batch retries.
-      await db.from('outreach_checks').update({ status: 'pending', claimed_at: null, error: String(err).slice(0, 200) }).eq('id', check.id);
+      const error = String(err).slice(0, 200);
+      if (isDnsTimeout(err)) {
+        // A nameserver that never answers keeps never answering. Requeued,
+        // the same domain was claimed again and again, each try stalling
+        // the tick and holding its run open. Settled as an error instead:
+        // the address stays unjudged and the run can finish.
+        await db.from('outreach_checks').update({ status: 'error', error, checked_at: now }).eq('id', check.id);
+        return;
+      }
+      // Other transient DNS trouble: release the claim so a later batch retries.
+      await db.from('outreach_checks').update({ status: 'pending', claimed_at: null, error }).eq('id', check.id);
     }
   });
   await recordEvents(db, events);
@@ -591,7 +606,7 @@ export interface BatchProgress {
  */
 export async function processCheckBatch(db: AdminDb, deadline: number): Promise<BatchProgress> {
   const websites = Date.now() < deadline ? await processWebsites(db, deadline) : 0;
-  const emails = Date.now() < deadline ? await processEmails(db) : 0;
+  const emails = Date.now() < deadline ? await processEmails(db, deadline) : 0;
 
   const { data: runs, error } = await db
     .from('outreach_check_runs')
