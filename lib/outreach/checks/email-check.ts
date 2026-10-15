@@ -11,7 +11,7 @@
  *
  * @module lib/outreach/checks/email-check
  */
-import { resolve4, resolveMx } from 'node:dns/promises';
+import { Resolver } from 'node:dns/promises';
 
 import { isEmailSyntaxValid } from '../import/normalise';
 
@@ -24,7 +24,26 @@ export interface DnsResolver {
   a(domain: string): Promise<string[]>;
 }
 
-const nodeResolver: DnsResolver = { mx: resolveMx, a: resolve4 };
+/**
+ * Per-try timeout and tries for each lookup. Why bounded: Node's defaults
+ * retry an unresponsive nameserver for about 24 seconds, and that wait ran
+ * inside the shared automations tick (prod, 2026-10-15). These settings
+ * give up in about 4 seconds while still surviving one lost packet; the
+ * failure is a timeout, not a verdict.
+ */
+export const DNS_TIMEOUT_MS = 1_500;
+export const DNS_TRIES = 2;
+
+const bounded = new Resolver({ timeout: DNS_TIMEOUT_MS, tries: DNS_TRIES });
+const nodeResolver: DnsResolver = {
+  mx: (domain) => bounded.resolveMx(domain),
+  a: (domain) => bounded.resolve4(domain),
+};
+
+/** True when a DNS error is a lookup that ran out of time. */
+export function isDnsTimeout(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException)?.code === 'ETIMEOUT';
+}
 
 // The disposable providers worth naming; a celebrant's business address
 // is never on one, so any hit means junk data.

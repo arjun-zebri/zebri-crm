@@ -281,13 +281,17 @@ async function handle(request: NextRequest) {
     // behind" - that is `truncated`'s own signal. Alerting `_slow` too
     // would just be the same fact twice; keep the slow alert for a tick
     // that finished everything but took its time getting there.
+    //
+    // Awaited, like every alert in this tail: a post still in flight when
+    // the handler returns is frozen with the function, and its timeout
+    // then fires inside the next tick as a false "not delivered" error.
     if (durationMs > TICK_SLOW_THRESHOLD_MS && !truncated) {
-      void sendAlert({
+      await sendAlert({
         type: 'automation_tick_slow',
         severity: 'warn',
         durationMs,
         actionsExecuted: workflowExecutor?.stepsExecuted ?? 0,
-      })
+      }).catch(() => false)
     }
 
     // After dispatch, peek at remaining backlog. Cheap thanks to
@@ -301,18 +305,18 @@ async function handle(request: NextRequest) {
     const backlog = backlogError ? null : (count ?? 0)
     if (backlogError) {
       failedPasses.push('workflows.backlog')
-      void sendAlert({
+      await sendAlert({
         type: 'app_error',
         severity: 'error',
         source: 'workflows.backlog',
         message: `tick pass failed: backlog count: ${backlogError.message}`,
-      })
+      }).catch(() => false)
     } else if ((backlog ?? 0) > TICK_BACKLOG_THRESHOLD) {
-      void sendAlert({
+      await sendAlert({
         type: 'automation_tick_backlog',
         severity: 'warn',
         pendingEvents: backlog ?? 0,
-      })
+      }).catch(() => false)
     }
 
     // Reads that failed inside passes that carried on. Each left its work
