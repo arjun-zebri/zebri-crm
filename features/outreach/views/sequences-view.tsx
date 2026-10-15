@@ -4,7 +4,7 @@
  * Outreach > Sequences: the message plans that campaigns send.
  *
  * Loads the list, opens the editor for a new, blank or template-based
- * sequence, and confirms before archiving. `?new=template` and `?new=1`
+ * sequence, and confirms before archiving or deleting. `?new=template` and `?new=1`
  * open the editor straight away, so the Today setup guide can link here.
  *
  * @module features/outreach/views/sequences-view
@@ -19,7 +19,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { Loading } from '@/components/ui/loading';
 import type { SequenceWithSteps } from '@/lib/outreach/services/queries';
 
-import { archiveSequenceAction } from '../actions';
+import { archiveSequenceAction, deleteSequenceAction } from '../actions';
 import { useOutreachMutation, useSequences } from '../hooks';
 
 import { blankSequence, draftFromSequence, type DraftSequence, newKey } from './sequences/sequence-draft';
@@ -38,8 +38,10 @@ interface OpenEditor {
 export function SequencesView() {
   const sequences = useSequences();
   const archive = useOutreachMutation(archiveSequenceAction, 'Sequence archived');
+  const remove = useOutreachMutation(deleteSequenceAction, 'Sequence deleted');
   const [editor, setEditor] = useState<OpenEditor | null>(null);
   const [toArchive, setToArchive] = useState<SequenceWithSteps | null>(null);
+  const [toDelete, setToDelete] = useState<SequenceWithSteps | null>(null);
 
   const open = (draft: DraftSequence) => setEditor({ key: newKey(), draft });
   const openTemplate = () => open(templateSequence());
@@ -94,6 +96,7 @@ export function SequencesView() {
           sequences={list}
           onEdit={(seq) => open(draftFromSequence(seq))}
           onArchive={setToArchive}
+          onDelete={setToDelete}
         />
       )}
 
@@ -109,6 +112,19 @@ export function SequencesView() {
         onConfirm={() => {
           if (!toArchive) return;
           archive.mutate(toArchive.id, { onSuccess: () => setToArchive(null) });
+        }}
+      />
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Delete this sequence?"
+        description="Removes the sequence and its wording for good. One that anyone has been through can only be archived."
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => {
+          if (!toDelete) return;
+          remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) });
         }}
       />
     </div>

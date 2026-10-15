@@ -54,19 +54,19 @@ export function ProspectModal({ prospectId, onClose }: ProspectModalProps) {
         </SkeletonRegion>
       )}
       {query.isError && <ErrorState error={query.error} onRetry={() => void query.refetch()} />}
-      {query.data && <ModalBody key={query.data.prospect.id} detail={query.data} />}
+      {query.data && <ModalBody key={query.data.prospect.id} detail={query.data} onDeleted={onClose} />}
     </Modal>
   );
 }
 
 /** The loaded content. Keyed by prospect so no draft or tab leaks between people. */
-function ModalBody({ detail }: { detail: ProspectDetail }) {
+function ModalBody({ detail, onDeleted }: { detail: ProspectDetail; onDeleted: () => void }) {
   const p = detail.prospect;
   const [tab, setTab] = useState<Tab>('messages');
   const hasReplied = detail.events.some((e) => e.type === 'replied');
   return (
     <div className="space-y-6">
-      <ProspectHeader prospect={p} />
+      <ProspectHeader prospect={p} onDeleted={onDeleted} />
       <LatestReply events={detail.events} />
       <PipelineFields prospect={p} hasReplied={hasReplied} />
       <div className="space-y-4">

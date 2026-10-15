@@ -83,10 +83,16 @@ async function sweepFreshReplies(db: AdminDb, gmail: GmailClient, ownEmail: stri
   const since = new Date(Date.now() - LOOKBACK_DAYS * DAY_MS).toISOString();
   const { data: sent } = check('recent sends', await db
     .from('outreach_messages')
-    .select('prospect_id')
+    .select('prospect_id, sent_at')
     .eq('channel', 'email').eq('status', 'sent').gte('sent_at', since)
     .limit(10_000));
-  const prospectIds = [...new Set((sent ?? []).map((m) => m.prospect_id))];
+  // Each prospect's first send in the window: mail from them before it is not a reply.
+  const firstSent = new Map<string, number>();
+  for (const m of sent ?? []) {
+    const at = m.sent_at ? Date.parse(m.sent_at) : Number.POSITIVE_INFINITY;
+    firstSent.set(m.prospect_id, Math.min(firstSent.get(m.prospect_id) ?? at, at));
+  }
+  const prospectIds = [...firstSent.keys()];
 
   const byEmail = new Map<string, string>();
   for (let i = 0; i < prospectIds.length; i += 200) {
@@ -106,7 +112,14 @@ async function sweepFreshReplies(db: AdminDb, gmail: GmailClient, ownEmail: stri
       if (done.has(hit.id)) continue;
       const msg = await gmail.message(hit.id);
       const prospectId = byEmail.get(addressOf(headerOf(msg, 'From') ?? ''));
-      if (prospectId) await handleInbound(db, gmail, ownEmail, prospectId, msg, result);
+      if (!prospectId) continue;
+      // Why: the search is "from them, last 2 days", which also finds mail
+      // they sent before we ever wrote. That is not a reply, and counting it
+      // stopped a sequence the moment its first email went out. Left without
+      // a marker, so it is looked at again next poll and skipped again.
+      const arrived = msg.internalDate ? Number(msg.internalDate) : Date.now();
+      if (arrived < (firstSent.get(prospectId) ?? 0)) continue;
+      await handleInbound(db, gmail, ownEmail, prospectId, msg, result);
     }
   }
 }

@@ -23,7 +23,7 @@ vi.mock('@/features/outreach/hooks', () => ({
   useReadiness: () => readinessState,
   useOutreachMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-vi.mock('@/features/outreach/actions', () => ({ setCampaignStatusAction: vi.fn(), resumeSendingAction: vi.fn() }));
+vi.mock('@/features/outreach/actions', () => ({ setCampaignStatusAction: vi.fn(), deleteCampaignAction: vi.fn(), resumeSendingAction: vi.fn() }));
 // The activate confirm runs an audience count query; it is not under test here.
 vi.mock('@/features/outreach/views/campaigns/activate-confirm', () => ({ ActivateConfirm: () => null }));
 vi.mock('@/features/outreach/views/readiness/setup-summary-link', () => ({
