@@ -37,6 +37,15 @@ export const SignatureImage = Image.extend({
         renderHTML: (attributes: { width?: string | null }) =>
           attributes.width ? { style: `width: ${attributes.width}` } : {},
       },
+      // Why never rendered: an image pasted from Gmail arrives with a fixed
+      // height (Gmail writes height="48"). After a resize changes the width,
+      // that stale height squashed the logo in the sent email, while the
+      // editor (which ignores it) showed it in proportion. Width alone keeps
+      // the aspect ratio everywhere.
+      height: {
+        default: null,
+        renderHTML: () => ({}),
+      },
     }
   },
 })
