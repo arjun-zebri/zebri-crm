@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkEmail, type DnsResolver } from '@/lib/outreach/checks/email-check';
+import { checkEmail, isDnsTimeout, type DnsResolver } from '@/lib/outreach/checks/email-check';
 import { estimateCostCents, parseItem } from '@/lib/outreach/checks/instagram-apify';
 import { isPrivateAddress } from '@/lib/outreach/checks/website';
 
@@ -41,6 +41,16 @@ describe('checkEmail', () => {
 
   it('throws on transient DNS failure instead of condemning the address', async () => {
     await expect(checkEmail('jane@x.com', resolver({ 'x.com': err('ETIMEOUT') }))).rejects.toThrow();
+  });
+});
+
+describe('isDnsTimeout', () => {
+  it('singles out a lookup that ran out of time', () => {
+    expect(isDnsTimeout(err('ETIMEOUT'))).toBe(true);
+    expect(isDnsTimeout(err('EBUSY'))).toBe(false);
+    expect(isDnsTimeout(err('ESERVFAIL'))).toBe(false);
+    expect(isDnsTimeout(new Error('boom'))).toBe(false);
+    expect(isDnsTimeout(null)).toBe(false);
   });
 });
 
