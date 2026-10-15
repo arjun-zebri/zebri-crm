@@ -87,6 +87,17 @@ describe('renderSignatureHtml', () => {
     expect(html).toContain('rel="noopener noreferrer"')
   })
 
+  it('never sends a stored height, so a resized image keeps its proportions', () => {
+    // A logo pasted from a Gmail signature carried height 48. Resized to
+    // 121px wide, the email drew it 121x48 instead of about 121x60.
+    const html = renderSignatureHtml({
+      type: 'doc',
+      content: [{ type: 'image', attrs: { src: 'https://cdn.example.com/logo.png', width: '121px', height: 48 } }],
+    })
+    expect(html).toMatch(/width:\s*121px/i)
+    expect(html).not.toMatch(/height/i)
+  })
+
   it('keeps a resized image width as an inline style', () => {
     const html = renderSignatureHtml({
       type: 'doc',
