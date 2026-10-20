@@ -73,7 +73,9 @@ import { execSync } from 'node:child_process';
 // then moving the meeting type status onto its card removed another → 52.
 // Spotify song search: the two song modals' setState-in-effect resets moved
 // into a render-time reset in the shared `useSongForm` hook, 43 -> 41.
-const ERROR_BUDGET = 41;
+// ZEB-126: seeding invoice line items during render instead of in an effect
+// removed another set-state-in-effect error, 41 -> 40.
+const ERROR_BUDGET = 40;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
