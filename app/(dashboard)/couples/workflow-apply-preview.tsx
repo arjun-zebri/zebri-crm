@@ -19,6 +19,7 @@ import { Empty } from '@/components/ui/empty';
 import { ErrorState } from '@/components/ui/error-state';
 import { Loading } from '@/components/ui/loading';
 import type { ApplyPreview } from '@/lib/workflows/apply-projection';
+import type { SelfStart } from '@/lib/workflows/self-start';
 
 import { WorkflowApplyPreviewRow } from './workflow-apply-preview-row';
 
@@ -30,13 +31,28 @@ export function skippedSummary(count: number): string {
     : `${count} steps will be skipped because their dates have passed.`;
 }
 
+/**
+ * The warning for a workflow its trigger times from a date (ZEB-124).
+ *
+ * Starting one here applies it with no trigger, so its steps count from
+ * now rather than from the invoice or event date: "7 days before each
+ * invoice is due" becomes "today".
+ */
+export function selfStartNotice({ when, active }: SelfStart): string {
+  return active
+    ? `This workflow already starts by itself ${when}, so you do not need to start it here. Starting it here runs it from today instead.`
+    : `This workflow is set to start ${when} once you turn it on. Starting it here runs it from today instead.`;
+}
+
 export interface WorkflowApplyPreviewProps {
   /** The preview query, owned by the picker so its footer can read it. */
   query: UseQueryResult<ApplyPreview>;
+  /** The chosen workflow's date-anchored trigger, if it has one. */
+  selfStart: SelfStart | null;
 }
 
 /** The preview body. See {@link WorkflowApplyPreviewProps}. */
-export function WorkflowApplyPreview({ query }: WorkflowApplyPreviewProps) {
+export function WorkflowApplyPreview({ query, selfStart }: WorkflowApplyPreviewProps) {
   // isPending, not isLoading: "no data yet" in every case, so an idle
   // or paused fetch shows the spinner rather than an empty error.
   if (query.isPending) return <Loading label="Working out the dates" />;
@@ -66,6 +82,7 @@ export function WorkflowApplyPreview({ query }: WorkflowApplyPreviewProps) {
 
   return (
     <div className="flex flex-col gap-3">
+      {selfStart ? <Callout tone="warning">{selfStartNotice(selfStart)}</Callout> : null}
       <p className="text-body text-text">{skippedSummary(skipped)}</p>
       {waitsForDate ? (
         <Callout tone="info">

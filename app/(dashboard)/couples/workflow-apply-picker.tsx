@@ -5,8 +5,10 @@
  *
  * Lists the MC's non-archived templates. Start (or "Start again") opens a
  * preview of when each step will run for this couple, in the same modal,
- * with any step whose date has already passed flagged as skipped; only
- * "Start workflow" applies it. A template already running on this couple
+ * with any step whose date has already passed flagged as skipped, and a
+ * warning when the workflow is normally started by a date-anchored
+ * trigger (starting it here runs it from today); only "Start workflow"
+ * applies it. A template already running on this couple
  * still needs a confirm to apply again, because a second copy means a
  * second set of emails.
  *
@@ -106,7 +108,7 @@ export function WorkflowApplyPicker({
         footer={footer}
       >
         {chosen ? (
-          <WorkflowApplyPreview query={preview} />
+          <WorkflowApplyPreview query={preview} selfStart={chosen.selfStart} />
         ) : templates.isLoading ? (
           <Loading label="Loading your workflows" />
         ) : templates.error ? (

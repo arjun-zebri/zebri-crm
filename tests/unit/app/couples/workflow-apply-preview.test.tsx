@@ -18,16 +18,19 @@ let preview: ApplyPreview;
 type PreviewResult = { ok: true; data: ApplyPreview } | { ok: false; error: string };
 const previewApplyAction = vi.fn(async (): Promise<PreviewResult> => ({ ok: true, data: preview }));
 
+let selfStart: SelfStart | null = null;
+
 vi.mock('@/app/(dashboard)/workflows/instance-actions', () => ({
   loadApplicableTemplatesAction: vi.fn(async () => ({
     ok: true,
-    data: [{ id: TEMPLATE_ID, name: 'Wedding countdown', description: null, tagIds: [] }],
+    data: [{ id: TEMPLATE_ID, name: 'Wedding countdown', description: null, tagIds: [], selfStart }],
   })),
   previewApplyAction: (...args: unknown[]) => previewApplyAction(...(args as [])),
 }));
 
 import { WorkflowApplyPicker } from '@/app/(dashboard)/couples/workflow-apply-picker';
 import type { ApplyPreview } from '@/lib/workflows/apply-projection';
+import type { SelfStart } from '@/lib/workflows/self-start';
 
 const threeWeeksOut: ApplyPreview = {
   templateName: 'Wedding countdown',
@@ -66,6 +69,7 @@ async function openPreview(label = 'Start') {
 describe('WorkflowApplyPicker preview', () => {
   beforeEach(() => {
     preview = threeWeeksOut;
+    selfStart = null;
     previewApplyAction.mockClear();
   });
 
@@ -148,5 +152,42 @@ describe('WorkflowApplyPicker preview', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Start again' }));
     await waitFor(() => expect(onApply).toHaveBeenCalledWith(TEMPLATE_ID, true));
+  });
+
+  // ZEB-124: an invoice reminder started by hand came due today, not 7 days
+  // before the invoice, because starting by hand bypasses the trigger.
+  it('says a live date-triggered workflow starts by itself, and that Start runs it from today', async () => {
+    selfStart = { when: '7 days before each invoice is due', active: true };
+    renderPicker();
+
+    expect(
+      await screen.findByText('Starts by itself 7 days before each invoice is due'),
+    ).toBeInTheDocument();
+    await openPreview();
+    expect(
+      screen.getByText(
+        'This workflow already starts by itself 7 days before each invoice is due, so you do not need to start it here. Starting it here runs it from today instead.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('warns on a draft date-triggered workflow without claiming it runs itself', async () => {
+    selfStart = { when: '7 days before each invoice is due', active: false };
+    renderPicker();
+    await openPreview();
+
+    expect(
+      screen.getByText(
+        'This workflow is set to start 7 days before each invoice is due once you turn it on. Starting it here runs it from today instead.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/already starts by itself/)).not.toBeInTheDocument();
+  });
+
+  it('shows no trigger warning for a workflow with no date-anchored trigger', async () => {
+    renderPicker();
+    await openPreview();
+
+    expect(screen.queryByText(/Starting it here runs it from today/)).not.toBeInTheDocument();
   });
 });
