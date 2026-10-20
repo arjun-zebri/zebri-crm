@@ -473,7 +473,11 @@ The tab header carries **Start a workflow** and **Add a to-do**, both
 buttons opening modals. Choosing a workflow in the Start picker shows a
 preview of its dates for this couple first, with past-dated steps
 flagged as skipped; only **Start workflow** applies it (see
-`workflows.md`, "The Start preview shows the calendar first"). The classifier is
+`workflows.md`, "The Start preview shows the calendar first"). A workflow
+whose trigger is tied to a date (invoice due, days before the event)
+says in the list and the preview that it starts by itself, and that
+starting it here runs it from today (`workflows.md`, "Starting a
+date-triggered workflow by hand"). The classifier is
 `couple-workflow-buckets.ts`, pure and unit-tested. Below the list sits
 the engine's audit feed.
 
