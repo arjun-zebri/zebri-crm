@@ -23,7 +23,7 @@
  * @module lib/workflows/schedule-projection
  */
 
-import { computeWaitWakeAt, waitConfigSchema } from '@/lib/automations/conditions';
+import { computeWaitWakeAt, waitConfigSchema, waitNeedsWeddingDate } from '@/lib/automations/conditions';
 import { nextAllowedSendAt, type QuietHoursWindow } from '@/lib/automations/quiet-hours';
 import type { WaitActionConfig } from '@/types/automations';
 import type { WorkflowStepRow } from '@/types/workflows';
@@ -66,6 +66,9 @@ type Release = { at: string } | { gate: string };
  * otherwise run into the sentence around it.
  */
 const quoted = (step: ProjectionStep): string => `“${stepShortTitle(step)}”`;
+
+/** Why a wedding-relative step or wait cannot be dated yet. */
+const NEEDS_WEDDING_DATE = 'Needs a wedding date';
 
 const later = (a: string, b: Date): string =>
   new Date(Math.max(new Date(a).getTime(), b.getTime())).toISOString();
@@ -178,8 +181,7 @@ function projectStep(
       previousCompletedAt: 'at' in prev ? prev.at : null,
     });
     if (start === null) {
-      const gate = 'Needs a wedding date';
-      return { shown: { at: null, gate }, release: { gate } };
+      return { shown: { at: null, gate: NEEDS_WEDDING_DATE }, release: { gate: NEEDS_WEDDING_DATE } };
     }
   }
 
@@ -196,6 +198,14 @@ function projectStep(
     return { shown: { at: start, gate: null }, release: { gate: `After you OK ${title}` } };
   }
   if (step.type === 'wait') {
+    // A wait counting from a wedding the couple has no date for parks
+    // until one is set (`evaluateWaitAction`). It used to project as
+    // finishing now, so every send behind it read "Needs your OK" today
+    // while the engine would not run it (owner report, 2026-10-20).
+    const parsed = waitConfigSchema.safeParse(step.config ?? {});
+    if (parsed.success && waitNeedsWeddingDate(parsed.data as WaitActionConfig, anchors.weddingDate)) {
+      return { shown: { at: null, gate: NEEDS_WEDDING_DATE }, release: { gate: NEEDS_WEDDING_DATE } };
+    }
     const finish = waitFinish(step, start, anchors, quietWindow, now);
     if (finish === null) {
       const gate = `After ${title}, which cannot run`;
@@ -234,7 +244,7 @@ function waitFinish(
     const eventDate = anchors.weddingDate;
     wake = computeWaitWakeAt(
       parsed.data as WaitActionConfig,
-      { couple: eventDate === null ? null : { eventDate } },
+      { couple: eventDate === null ? null : { eventDate }, timezone: anchors.timezone },
       begin,
     );
     if (wake.getTime() <= begin.getTime()) return begin.toISOString();

@@ -34,6 +34,7 @@ export interface AuditEntry {
     | 'step_errored'
     | 'step_waiting'
     | 'step_added'
+    | 'step_deleted'
     | 'step_approved'
     | 'step_rescheduled'
     | 'step_retry_scheduled'

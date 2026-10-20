@@ -52,6 +52,7 @@ import type { WaitActionConfig } from '@/types/automations';
 import type { WorkflowStepRow } from '@/types/workflows';
 
 import { isExecutable } from './executable';
+import { DEFAULT_MC_TIMEZONE } from './mc-timezone';
 import { computeDueAt, isHeld, recomputeDueDates, RELEASES_NEXT, type InstanceAnchors } from './timing';
 import { toStepTiming } from './timing-summary';
 
@@ -94,11 +95,13 @@ export function isPastWeddingAnchored(step: WorkflowStepRow, appliedAt: Date): b
  * @param step - any step
  * @param weddingDate - the couple's wedding date, `YYYY-MM-DD`, or null
  * @param appliedAt - the apply moment
+ * @param timezone - the MC's timezone, which a dated wake is 9am in
  */
 export function isPastWait(
   step: WorkflowStepRow,
   weddingDate: string | null,
   appliedAt: Date,
+  timezone: string = DEFAULT_MC_TIMEZONE,
 ): boolean {
   if (step.type !== 'wait' || step.status !== 'pending') return false;
   const parsed = waitConfigSchema.safeParse(step.config ?? {});
@@ -107,7 +110,7 @@ export function isPastWait(
   if (config.mode !== 'relative_to_event' && config.mode !== 'until_date') return false;
   // With no date to wait for, computeWaitWakeAt answers `appliedAt`
   // itself, which is not before it: an undated wait is never skipped.
-  const wake = computeWaitWakeAt(config, { couple: { eventDate: weddingDate } }, appliedAt);
+  const wake = computeWaitWakeAt(config, { couple: { eventDate: weddingDate }, timezone }, appliedAt);
   return wake.getTime() < appliedAt.getTime();
 }
 
@@ -120,9 +123,10 @@ export function isSkippedOnApply(
   step: WorkflowStepRow,
   weddingDate: string | null,
   appliedAt: Date,
+  timezone?: string,
 ): boolean {
   return (
-    isPastWait(step, weddingDate, appliedAt) ||
+    isPastWait(step, weddingDate, appliedAt, timezone) ||
     ((step.type === 'action' || step.type === 'branch') &&
       isPastWeddingAnchored(step, appliedAt))
   );
@@ -138,9 +142,12 @@ export function isSkippedOnRelease(
   step: WorkflowStepRow,
   weddingDate: string | null,
   appliedAt: Date,
+  timezone?: string,
 ): boolean {
   return (
-    step.type === 'action' || step.type === 'branch' || isPastWait(step, weddingDate, appliedAt)
+    step.type === 'action' ||
+    step.type === 'branch' ||
+    isPastWait(step, weddingDate, appliedAt, timezone)
   );
 }
 
@@ -205,7 +212,7 @@ export function planApplySkips(
 
   for (const row of rows) {
     if (row.status !== 'pending') continue;
-    if (isExecutable(row, now) && isSkippedOnApply(row, anchors.weddingDate, appliedAt)) {
+    if (isExecutable(row, now) && isSkippedOnApply(row, anchors.weddingDate, appliedAt, anchors.timezone)) {
       skip(row);
     }
   }
@@ -222,7 +229,7 @@ export function planApplySkips(
     const released = rows.filter(
       (r) =>
         undated.has(r.id) &&
-        isSkippedOnRelease(r, anchors.weddingDate, appliedAt) &&
+        isSkippedOnRelease(r, anchors.weddingDate, appliedAt, anchors.timezone) &&
         isExecutable({ ...r, due_at: skipDates.get(r.id) ?? null }, now),
     );
     changed = released.length > 0;

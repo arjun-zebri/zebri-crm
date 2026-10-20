@@ -46,6 +46,7 @@ import { createPassReads, readInstancesInChunks, type QuietHours } from './pass-
 import { CONTEXT_UNREADABLE, describeFailure, isWorkflowReadError, throwIfReadFailed } from './read-failure';
 import { releaseBlocker, type ReleaseStep } from './release';
 import { isAccountPauseBacklog, settleAccountPauseWindow } from './resume';
+import { stepDisplayTitle } from './step-label';
 import { AUTOMATED_STEP_TYPES, isAutomated } from './steps';
 import { recomputeDueDates } from './timing';
 import { loadWeddingDateOrThrow } from './wedding-date';
@@ -965,7 +966,11 @@ async function runOneStep(
   const built = await buildStepContext(supabase, instance, step);
   const ctx = opts.manual ? { ...built, manualRun: true } : built;
   const quietHours = await quietHoursFor(instance.template_id);
-  const { result, branchPath } = await executeStep(step, ctx, quietHours);
+  // Only a wait reads it: a dated wake is 9am in the MC's own zone, the
+  // same zone the wedding-date recompute re-derives it in.
+  const timezone =
+    step.type === 'wait' ? await loadMcTimezone(supabase, instance.user_id, true) : undefined;
+  const { result, branchPath } = await executeStep(step, ctx, quietHours, timezone);
 
   switch (result.kind) {
     case 'ok': {
@@ -1436,6 +1441,64 @@ export async function completeStep(
     await completeInstanceIfDone(supabase, instance.id);
   });
   return settled ? 'done' : 'unsettled';
+}
+
+/**
+ * Delete one step from a couple's workflow, and re-date what it gated.
+ *
+ * The recompute is the point, as it is for {@link completeStep}. A step
+ * waiting on the deleted one has a null `due_at`, and nothing but a
+ * recompute ever dates it: a bare `delete()` left a workflow whose first
+ * step was removed with its new head undated for good, so the engine
+ * never ran it and every send behind it showed "Needs your OK" with no
+ * way to send (owner report, 2026-10-20).
+ *
+ * The audit row carries the step's title in its detail rather than its
+ * id: `step_id` is `on delete set null`, so the row would otherwise name
+ * nothing.
+ *
+ * @param supabase - service-role client; the caller has checked ownership
+ * @param stepId - the step to delete
+ * @returns `deleted`, `unsettled` when the row went but re-dating did
+ *   not (the instance is marked for the heal pass), or `noop` when there
+ *   was nothing to delete
+ */
+export async function deleteStep(
+  supabase: SupabaseClient<Database>,
+  stepId: string,
+): Promise<'deleted' | 'unsettled' | 'noop'> {
+  const { data: stepRow, error } = await supabase
+    .from('workflow_steps')
+    .select('*')
+    .eq('id', stepId)
+    .maybeSingle();
+  throwIfReadFailed('executor.delete_step_read', error);
+  const step = stepRow as unknown as WorkflowStepRow | null;
+  if (!step) return 'noop';
+
+  const instance = await loadInstance(supabase, step.instance_id);
+
+  const { data: deleted, error: deleteError } = await supabase
+    .from('workflow_steps')
+    .delete()
+    .eq('id', stepId)
+    .select('id');
+  throwIfReadFailed('executor.delete_step_write', deleteError);
+  if ((deleted?.length ?? 0) === 0) return 'noop';
+  if (!instance) return 'deleted';
+
+  const settled = await settleAfterCompletion(supabase, instance.id, stepId, async () => {
+    await writeAudit(supabase, {
+      userId: instance.user_id,
+      instanceId: instance.id,
+      coupleId: instance.couple_id,
+      event: 'step_deleted',
+      detail: { step_id: stepId, type: step.type, title: stepDisplayTitle(step) },
+    });
+    await recomputeInstance(supabase, instance);
+    await completeInstanceIfDone(supabase, instance.id);
+  });
+  return settled ? 'deleted' : 'unsettled';
 }
 
 /** What {@link reopenStep} did, or why it would not. */

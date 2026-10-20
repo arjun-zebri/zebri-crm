@@ -177,10 +177,11 @@ describe('a sleeping wait', () => {
 
     await admin.from('couples').update({ event_date: '2027-08-01' } as never).eq('id', coupleId)
 
-    // 09:00 UTC on the anchor date, minus seven days: the same formula
-    // `computeWaitWakeAt` applies on the production runtime (UTC).
+    // 9am in the MC's timezone (Sydney, unset here) seven days before
+    // the new date, the same instant `computeWaitWakeAt` gives. It was
+    // 09:00 UTC, 8pm in Sydney (owner report, 2026-10-20).
     expect(new Date((await stepRow(wait)).due_at!).toISOString()).toBe(
-      '2027-07-25T09:00:00.000Z',
+      '2027-07-24T23:00:00.000Z',
     )
   })
 

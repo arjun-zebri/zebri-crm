@@ -4,12 +4,14 @@
  * "1 month before the event" is calendar-month arithmetic on the event
  * date, clamped to the end of a shorter month (31 March minus 1 month is
  * the last day of February), then the same 09:00 wake every relative unit
- * uses. The SQL recompute (`_workflow_wait_relative_wake`) mirrors it and
- * is pinned by an integration test.
+ * uses, in the MC's timezone. The SQL recompute
+ * (`_workflow_wait_relative_wake_local`) mirrors it and is pinned by an
+ * integration test.
  */
 import { describe, expect, it } from 'vitest'
 
 import { computeWaitWakeAt, waitConfigSchema } from '@/lib/automations/conditions'
+import { zonedTimeToUtc } from '@/lib/scheduling/timezone'
 import type { WaitActionConfig } from '@/types/automations'
 
 function monthsWait(amount: number, direction: 'before' | 'after'): WaitActionConfig {
@@ -21,11 +23,13 @@ function monthsWait(amount: number, direction: 'before' | 'after'): WaitActionCo
 
 /** The wake for a months wait on this event date. */
 function wake(eventDate: string, amount: number, direction: 'before' | 'after'): Date {
-  return computeWaitWakeAt(monthsWait(amount, direction), { couple: { eventDate } }, new Date('2020-01-01T00:00:00Z'))
+  return computeWaitWakeAt(monthsWait(amount, direction), { couple: { eventDate }, timezone: SYDNEY }, new Date('2020-01-01T00:00:00Z'))
 }
 
-/** 09:00 on a date, the way every relative unit resolves it. */
-const nineAm = (date: string) => new Date(`${date}T09:00:00`)
+const SYDNEY = 'Australia/Sydney'
+
+/** 09:00 Sydney time on a date, the way every relative unit resolves it. */
+const nineAm = (date: string) => zonedTimeToUtc(date, '09:00', SYDNEY)
 
 describe('a relative-date Wait in months', () => {
   it('is accepted by the runner schema', () => {

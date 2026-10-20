@@ -22,7 +22,7 @@
 
 import { z } from 'zod'
 
-import { addMonthsToDateString } from '@/lib/scheduling/timezone'
+import { addDaysToDateString, addMonthsToDateString, zonedTimeToUtc } from '@/lib/scheduling/timezone'
 import type {
   ActionResult,
   ApprovalActionConfig,
@@ -111,14 +111,28 @@ export const approvalConfigSchema = z.object({
  * decide whether the action has already elapsed (advance immediately)
  * or needs to sleep.
  *
- * Only the couple's wedding date is read from the context, so the
- * parameter asks for no more: applying a workflow judges a wait's date
- * with this same function before any run context exists
+ * Only the couple's wedding date and the MC's timezone are read from the
+ * context, so the parameter asks for no more: applying a workflow judges
+ * a wait's date with this same function before any run context exists
  * (`isPastWait` in `lib/workflows/apply-skips.ts`).
+ *
+ * A date-only wake ("2 months before the wedding", "until 1 March") is
+ * 09:00 on that day in the MC's timezone. It used to be `T09:00:00`
+ * parsed on the server, which runs in UTC, so every such wait woke at
+ * 8pm in Sydney (owner report, 2026-10-20). Days, weeks and months shift
+ * the calendar date and then take 09:00, so a wait across a daylight-
+ * saving switch still lands at 9am on the wall clock; minutes and hours
+ * are an instant offset from 09:00 on the wedding day. The SQL recompute
+ * (`_workflow_wait_relative_wake_local`, 20261101000000) derives the same
+ * instant; keep the two in step.
+ *
+ * With no wedding date a relative wait answers `now`, as it always has:
+ * the callers that need to tell "no date" from "already passed" ask
+ * {@link waitNeedsWeddingDate} first.
  */
 export function computeWaitWakeAt(
   config: WaitActionConfig,
-  ctx: { couple: Pick<CoupleSnapshot, 'eventDate'> | null },
+  ctx: { couple: Pick<CoupleSnapshot, 'eventDate'> | null; timezone: string },
   now: Date = new Date(),
 ): Date {
   switch (config.mode) {
@@ -128,7 +142,10 @@ export function computeWaitWakeAt(
     }
     case 'until_date': {
       if (!config.untilDate) return now
-      const d = new Date(config.untilDate.length === 10 ? `${config.untilDate}T09:00:00` : config.untilDate)
+      const d =
+        config.untilDate.length === 10
+          ? zonedTimeToUtc(config.untilDate, WAIT_WAKE_TIME, ctx.timezone)
+          : new Date(config.untilDate)
       return Number.isNaN(d.getTime()) ? now : d
     }
     case 'relative_to_event': {
@@ -136,29 +153,62 @@ export function computeWaitWakeAt(
       const anchor = ctx.couple?.eventDate
       if (!r || !anchor) return now
       const direction = r.direction === 'before' ? -1 : 1
-      if (r.unit === 'months') {
-        // A month has no fixed length, so it is calendar arithmetic on the
-        // event's own date (the MC's calendar day), clamped to the end of
-        // a shorter month: 31 March minus 1 month is 28 or 29 February.
-        // Then the same 09:00 as every other unit, so the SQL recompute
-        // (`_workflow_wait_relative_wake`, 20261024600000) derives the
-        // same instant and never moves a sleeping wake it did not need to.
-        const shifted = addMonthsToDateString(anchor, direction * r.amount)
-        return new Date(`${shifted}T09:00:00`)
+      if (r.unit === 'minutes' || r.unit === 'hours') {
+        const base = zonedTimeToUtc(anchor, WAIT_WAKE_TIME, ctx.timezone)
+        const unitMs = r.unit === 'minutes' ? 60_000 : 3_600_000
+        return new Date(base.getTime() + direction * r.amount * unitMs)
       }
-      const base = new Date(`${anchor}T09:00:00`)
-      const unitMs = { minutes: 60_000, hours: 3_600_000, days: 86_400_000, weeks: 604_800_000 }[r.unit]
-      return new Date(base.getTime() + direction * r.amount * unitMs)
+      // A month has no fixed length, so it is calendar arithmetic on the
+      // event's own date, clamped to the end of a shorter month: 31 March
+      // minus 1 month is 28 or 29 February.
+      const shifted =
+        r.unit === 'months'
+          ? addMonthsToDateString(anchor, direction * r.amount)
+          : addDaysToDateString(anchor, direction * r.amount * (r.unit === 'weeks' ? 7 : 1))
+      return zonedTimeToUtc(shifted, WAIT_WAKE_TIME, ctx.timezone)
     }
   }
 }
 
+/** The wall-clock time a date-only wait wakes at, in the MC's timezone. */
+const WAIT_WAKE_TIME = '09:00'
+
+/**
+ * The wake a wait parks on while the couple has no wedding date. Far
+ * future, so nothing resumes it but a date arriving: the wedding-date
+ * trigger (`_workflow_recompute_wedding_steps`) re-derives a sleeping
+ * relative wait's wake from its config the moment one is set.
+ */
+export const NEEDS_WEDDING_DATE_WAKE = '9999-12-31T00:00:00.000Z'
+
+/**
+ * Does this wait count from a wedding date the couple does not have?
+ *
+ * Such a wait used to finish at once, which released every send behind
+ * it on the spot: three "N months before the wedding" check-ins applied
+ * to an undated couple all came due together. It parks instead
+ * ({@link evaluateWaitAction}), and Upcoming says why.
+ */
+export function waitNeedsWeddingDate(config: WaitActionConfig, eventDate: string | null | undefined): boolean {
+  return config.mode === 'relative_to_event' && Boolean(config.relative) && !eventDate
+}
+
+/**
+ * Run a wait: finish it, or say how long it sleeps.
+ *
+ * @param timezone - the MC's IANA timezone (`loadMcTimezone`), which a
+ *   date-only wake is resolved in
+ */
 export function evaluateWaitAction(
   config: WaitActionConfig,
   ctx: RunContext,
+  timezone: string,
   now: Date = new Date(),
 ): ActionResult {
-  const wake = computeWaitWakeAt(config, ctx, now)
+  if (waitNeedsWeddingDate(config, ctx.couple?.eventDate)) {
+    return { kind: 'sleep', wakeAt: NEEDS_WEDDING_DATE_WAKE, reason: 'needs_wedding_date' }
+  }
+  const wake = computeWaitWakeAt(config, { couple: ctx.couple, timezone }, now)
   if (wake.getTime() <= now.getTime()) return { kind: 'ok' }
   return { kind: 'sleep', wakeAt: wake.toISOString(), reason: 'wait' }
 }

@@ -13,8 +13,12 @@ import {
   evaluateBranch,
   evaluatePredicate,
   evaluateWaitAction,
+  NEEDS_WEDDING_DATE_WAKE,
 } from '@/lib/automations/conditions'
+import { addDaysToDateString, zonedTimeToUtc } from '@/lib/scheduling/timezone'
 import type { RunContext } from '@/types/automations'
+
+const SYDNEY = 'Australia/Sydney'
 
 interface MakeContextOptions {
   weddingOffsetDays?: number
@@ -125,7 +129,7 @@ describe('computeWaitWakeAt', () => {
   it('duration mode adds minutes from now', () => {
     const ctx = makeCtx()
     const now = new Date('2026-06-04T12:00:00Z')
-    const wake = computeWaitWakeAt({ mode: 'duration', durationMinutes: 60 }, ctx, now)
+    const wake = computeWaitWakeAt({ mode: 'duration', durationMinutes: 60 }, { couple: ctx.couple, timezone: SYDNEY }, now)
     expect(wake.getTime() - now.getTime()).toBe(60 * 60_000)
   })
 
@@ -134,11 +138,46 @@ describe('computeWaitWakeAt', () => {
     const now = new Date()
     const wake = computeWaitWakeAt(
       { mode: 'relative_to_event', relative: { amount: 7, unit: 'days', direction: 'before', anchor: 'event_date' } },
-      ctx,
+      { couple: ctx.couple, timezone: SYDNEY },
       now,
     )
-    const weddingDate = new Date(`${ctx.couple!.eventDate}T09:00:00`)
-    expect(wake.getTime()).toBe(weddingDate.getTime() - 7 * 86_400_000)
+    const sevenBefore = addDaysToDateString(ctx.couple!.eventDate!, -7)
+    expect(wake).toEqual(zonedTimeToUtc(sevenBefore, '09:00', SYDNEY))
+  })
+
+  // Owner report 2026-10-20: `T09:00:00` parsed on the (UTC) server woke
+  // every dated wait at 8pm in Sydney.
+  it('wakes a dated wait at 9am in the MC timezone, not 9am UTC', () => {
+    const wake = computeWaitWakeAt(
+      { mode: 'relative_to_event', relative: { amount: 6, unit: 'months', direction: 'before', anchor: 'event_date' } },
+      { couple: { eventDate: '2027-04-27' }, timezone: SYDNEY },
+      new Date('2026-01-01T00:00:00Z'),
+    )
+    // 27 Oct 2026 is daylight time in Sydney (UTC+11).
+    expect(wake.toISOString()).toBe('2026-10-26T22:00:00.000Z')
+  })
+
+  it('keeps 9am on the wall clock across a daylight-saving switch', () => {
+    // Sydney leaves daylight time on 4 Apr 2027. A week before a 10 Apr
+    // wedding is 3 Apr, still UTC+11; the wedding day itself is UTC+10.
+    // Both wake at 9am local.
+    const wakeFor = (amount: number) =>
+      computeWaitWakeAt(
+        { mode: 'relative_to_event', relative: { amount, unit: 'weeks', direction: 'before', anchor: 'event_date' } },
+        { couple: { eventDate: '2027-04-10' }, timezone: SYDNEY },
+        new Date('2026-01-01T00:00:00Z'),
+      )
+    expect(wakeFor(1).toISOString()).toBe('2027-04-02T22:00:00.000Z')
+    expect(wakeFor(0).toISOString()).toBe('2027-04-09T23:00:00.000Z')
+  })
+
+  it('resolves a date-only until wait at 9am local', () => {
+    const wake = computeWaitWakeAt(
+      { mode: 'until_date', untilDate: '2026-11-03' },
+      { couple: null, timezone: SYDNEY },
+      new Date('2026-01-01T00:00:00Z'),
+    )
+    expect(wake.toISOString()).toBe('2026-11-02T22:00:00.000Z')
   })
 })
 
@@ -146,15 +185,29 @@ describe('evaluateWaitAction', () => {
   it('returns ok when the wait has already elapsed', () => {
     const ctx = makeCtx()
     const past = new Date('2020-01-01T00:00:00Z')
-    const r = evaluateWaitAction({ mode: 'until_date', untilDate: past.toISOString() }, ctx, new Date())
+    const r = evaluateWaitAction({ mode: 'until_date', untilDate: past.toISOString() }, ctx, SYDNEY, new Date())
     expect(r.kind).toBe('ok')
   })
 
   it('returns sleep when the wait is in the future', () => {
     const ctx = makeCtx()
     const future = new Date(Date.now() + 86_400_000)
-    const r = evaluateWaitAction({ mode: 'until_date', untilDate: future.toISOString() }, ctx, new Date())
+    const r = evaluateWaitAction({ mode: 'until_date', untilDate: future.toISOString() }, ctx, SYDNEY, new Date())
     expect(r.kind).toBe('sleep')
+  })
+
+  // Owner report 2026-10-20: with no wedding date the wait finished at
+  // once and released every check-in behind it on the same day.
+  it('parks a wedding-relative wait when the couple has no wedding date', () => {
+    const ctx = makeCtx()
+    const undated = { ...ctx, couple: { ...ctx.couple!, eventDate: null } }
+    const r = evaluateWaitAction(
+      { mode: 'relative_to_event', relative: { amount: 10, unit: 'months', direction: 'before', anchor: 'event_date' } },
+      undated,
+      SYDNEY,
+      new Date(),
+    )
+    expect(r).toEqual({ kind: 'sleep', wakeAt: NEEDS_WEDDING_DATE_WAKE, reason: 'needs_wedding_date' })
   })
 })
 

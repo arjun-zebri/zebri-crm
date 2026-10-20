@@ -32,6 +32,7 @@ import type {
 } from '@/types/automations';
 import type { WorkflowStepRow } from '@/types/workflows';
 
+import { DEFAULT_MC_TIMEZONE } from './mc-timezone';
 import { STOP_NOT_A_STEP } from './step-config-validation';
 import { stepDisplayTitle } from './step-label';
 
@@ -124,6 +125,8 @@ export async function executeStep(
   step: WorkflowStepRow,
   ctx: RunContext,
   quietHours: QuietHoursOverride | null,
+  /** The MC's timezone (`loadMcTimezone`), which a dated wait wakes in. */
+  timezone: string = DEFAULT_MC_TIMEZONE,
 ): Promise<StepOutcome> {
   const config = (step.config ?? {}) as Record<string, unknown>;
 
@@ -139,7 +142,7 @@ export async function executeStep(
         const waitConfig = parsed.data as WaitActionConfig;
         return {
           result: applyQuietHours(
-            evaluateWaitAction(waitConfig, ctx),
+            evaluateWaitAction(waitConfig, ctx, timezone),
             ctx,
             parsed.data.respectQuietHours,
             quietHours,

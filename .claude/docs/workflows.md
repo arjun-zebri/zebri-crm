@@ -236,9 +236,26 @@ sum and the card showed two unrelated numbers. Now:
   date takes minutes, hours, days, weeks or **months**. Months are
   calendar months on the event's own date, clamped to the end of a
   shorter month (31 March minus 1 month is 28 or 29 February), then the
-  same 09:00 as every other unit: `computeWaitWakeAt` in TS, and
-  `_workflow_wait_relative_wake` (`20261024600000`) for the SQL
-  recompute when a wedding moves, so the two never disagree.
+  same 09:00 as every other unit, **in the MC's timezone**
+  (`user_public_settings.timezone`, Sydney when unset). Days and weeks
+  shift the calendar date too, so a Wait across a daylight-saving switch
+  still wakes at 9am on the wall clock; minutes and hours are an elapsed
+  offset from 9am on the wedding day. `computeWaitWakeAt` in TS, and
+  `_workflow_wait_relative_wake_local` (`20261101000000`) for the SQL
+  recompute when a wedding moves, so the two never disagree (pinned by
+  `tests/integration/workflows/wait-wake-local-time.test.ts`). Until
+  `20261101000000` both said 09:00 **UTC**, which is 8pm in Sydney: every
+  dated Wait, and every send behind one, ran at 8pm (owner report,
+  2026-10-20). That migration also moved the Waits already asleep on the
+  old wake to 9am local.
+- **No wedding date.** A Relative date Wait on a couple with no wedding
+  date **parks** (`waiting`, wake `9999-12-31`, reason
+  `needs_wedding_date`) rather than finishing at once. Finishing released
+  every send behind it on the spot, so an undated couple on "10 / 6 / 4
+  months before the wedding" got all three check-ins at once. Setting the
+  date fires the wedding-date trigger, which gives the parked Wait its
+  real wake. Upcoming shows the Wait and everything behind it as **Needs
+  a wedding date**.
   **"Until a specific date" is no longer offered** by the builder or
   the copilot (its model schema refuses `until_date`). Saved
   `until_date` Waits are untouched: they run unchanged, pass save
@@ -776,11 +793,11 @@ ticking any sibling to-do ended a three-day wait at the next tick and
 sent the step behind it days early. The one sleeping wake that does
 move is a `relative_to_event` wait ("until 7 days before the wedding")
 when the wedding moves: the database function re-derives it from the
-wait's own config (`_workflow_wait_relative_wake`, 09:00 UTC on the
-anchor date plus or minus the amount, calendar months clamped to month
-end for `months` since `20261024600000`, which is what
-`computeWaitWakeAt` resolves on the production runtime), and leaves it
-alone when the wedding date is cleared.
+wait's own config (`_workflow_wait_relative_wake_local` since
+`20261101000000`: 09:00 in the MC's timezone on the anchor date shifted
+by the amount, calendar months clamped to month end, exactly what
+`computeWaitWakeAt` resolves), and leaves it alone when the wedding date
+is cleared.
 
 That re-derived wake is unshifted, so it can land inside the MC's quiet
 hours even though the executor pushed the original wake out of them. The
@@ -1666,7 +1683,11 @@ three things.
 
 A send waiting for the MC's OK carries a warning `StatePill` reading
 **Needs your OK**: the row's ⚡ says "Zebri runs this", which is the
-opposite of what a held send needs them to know. Every row also has an
+opposite of what a held send needs them to know. On a phone the row's
+text column stacks (title, then pill, then date) and is one line from
+`sm` up (`upcoming-row.tsx`): side by side, a long date like "Wed 27 Jan
+2027, 9:00am" took the whole width, the title shrank to nothing and the
+pill sat on top of the date (owner report, 2026-10-20). Every row also has an
 always-visible `⋯` (Change date / Tomorrow / Next week / Skip this
 step / Open the couple) - a control that appears only under the pointer
 is a control an MC has to already know about. **Change date** (ZEB-125)
@@ -1957,6 +1978,15 @@ wait starts again (`workflow-resume-dialog.tsx`). Stopped workflows sit in a col
 each with why and when it stopped and a Resume button, or, when Resume
 is refused, the reason in place of the button. Pause and Resume errors
 show as a toast in the server's words (`use-instance-controls.ts`).
+
+**Remove re-dates the workflow.** `deleteInstanceStepAction` goes
+through `deleteStep` (`lib/workflows/executor.ts`), which deletes the row,
+writes a `step_deleted` audit line (title in its detail, since `step_id`
+is set null with the row) and recomputes the instance like a tick. A bare
+`delete()` used to leave the step that was waiting on the removed one with
+a null `due_at` for good: removing a workflow's first step stranded the
+whole lane, and the held send behind it read "Needs your OK" with Send
+refused (owner report, 2026-10-20).
 
 "Add a to-do" sits beside "Start a workflow" as a button and a modal
 (`couple-todo-modal.tsx`), like every other create: the inline row it

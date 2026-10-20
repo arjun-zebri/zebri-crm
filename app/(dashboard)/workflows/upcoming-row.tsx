@@ -96,57 +96,65 @@ export function UpcomingRow({
         </span>
       )}
 
-      <button type="button" className="min-w-0 flex-1 cursor-pointer text-left">
-        <span className="flex min-w-0 items-center gap-2">
-          {/* The subject is what tells two sends apart; "Send email" on
-              every row is context, so it sits back in the muted tone. */}
-          <span className="min-w-0 truncate text-body text-text">
-            {item.kind ? <span className="text-text-muted">{item.kind} · </span> : null}
-            {item.name ?? item.title}
+      {/* Title, couple and date. A row on a phone is too narrow for all
+          three on one line: the date took its full width, the title
+          shrank to nothing and the pill overflowed onto the date (owner
+          report, 2026-10-20). So the column stacks there, title over
+          date, and sits in one line from `sm` up. */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+        <button type="button" className="min-w-0 cursor-pointer text-left sm:flex-1">
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            {/* The subject is what tells two sends apart; "Send email" on
+                every row is context, so it sits back in the muted tone. */}
+            <span className="min-w-0 max-w-full truncate text-body text-text">
+              {item.kind ? <span className="text-text-muted">{item.kind} · </span> : null}
+              {item.name ?? item.title}
+            </span>
+            {/* A ⚡ says "Zebri runs this", which is the opposite of what a
+                held send needs the MC to know. The pill says whose move it
+                is. It wraps under a long title rather than squeezing it. */}
+            {item.requiresApproval ? (
+              <StatePill label="Needs your OK" tone="warning" dot="hollow" className="shrink-0" />
+            ) : null}
           </span>
-          {/* A ⚡ says "Zebri runs this", which is the opposite of what a
-              held send needs the MC to know. The pill says whose move it is. */}
-          {item.requiresApproval ? (
-            <StatePill label="Needs your OK" tone="warning" dot="hollow" className="shrink-0" />
+          {/* On a phone the reason gets its own line: there is no hover to
+              read a truncated one on touch. */}
+          {gated ? (
+            <span className="block text-body text-text-muted sm:hidden">{item.gate}</span>
           ) : null}
-        </span>
-        {/* On a phone the reason gets its own line: there is no hover to
-            read a truncated one on touch. */}
-        {gated ? (
-          <span className="block text-body text-text-muted sm:hidden">{item.gate}</span>
-        ) : null}
-      </button>
+        </button>
 
-      {/* Redundant when the rail is already the couple's name, and a
-          repeated name down a column is what makes a grouped list hard
-          to scan. */}
-      {showCouple ? (
-        <span className="hidden shrink-0 text-body text-text-muted sm:inline">
-          {coupleLine(item)}
-        </span>
-      ) : null}
-
-      {/* One fixed slot for the date or the pill, so the couple column
-          beside it lines up on every row. Sized for the longest label,
-          "Wed 30 Sep 2027, 10:30am"; a narrower slot let that overflow
-          and shoved its row's couple name out of line. */}
-      <span className="flex shrink-0 justify-end sm:w-56">
-        {gated ? (
-          // The pill says there is a step first; hovering it says which.
-          // Phones read the whole reason on the line under the title.
-          <Tooltip label={item.gate ?? ''} multiline className="hidden sm:inline-flex">
-            <StatePill label={gatePillLabel(item.gate ?? '')} tone="neutral" />
-          </Tooltip>
-        ) : (
-          <span
-            className={`whitespace-nowrap text-body tabular-nums ${
-              band === 'overdue' ? 'text-danger' : 'text-text-muted'
-            }`}
-          >
-            {rowDueLabel(item, band, timezone)}
+        {/* Redundant when the rail is already the couple's name, and a
+            repeated name down a column is what makes a grouped list hard
+            to scan. */}
+        {showCouple ? (
+          <span className="hidden shrink-0 text-body text-text-muted sm:inline">
+            {coupleLine(item)}
           </span>
-        )}
-      </span>
+        ) : null}
+
+        {/* One fixed slot for the date or the pill on wider screens, so
+            the couple column beside it lines up on every row. Sized for
+            the longest label, "Wed 30 Sep 2027, 10:30am"; a narrower slot
+            let that overflow and shoved its row's couple name out of
+            line. A gated row's phone line is the reason above. */}
+        <span className={`shrink-0 sm:flex sm:w-56 sm:justify-end ${gated ? 'hidden' : 'flex'}`}>
+          {gated ? (
+            // The pill says there is a step first; hovering it says which.
+            <Tooltip label={item.gate ?? ''} multiline className="hidden sm:inline-flex">
+              <StatePill label={gatePillLabel(item.gate ?? '')} tone="neutral" />
+            </Tooltip>
+          ) : (
+            <span
+              className={`whitespace-nowrap text-body tabular-nums ${
+                band === 'overdue' ? 'text-danger' : 'text-text-muted'
+              }`}
+            >
+              {rowDueLabel(item, band, timezone)}
+            </span>
+          )}
+        </span>
+      </div>
 
       <RowActionsMenu
         size="sm"

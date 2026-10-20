@@ -90,8 +90,27 @@ describe('projectSchedule', () => {
       },
     });
     const out = projectSchedule([doneEmail, w, step({ id: 'e2' })], ANCHORS, null, NOW);
-    // Same instant the engine computes: 28 Feb 2027 at 09:00 server time.
-    expect(out.get('e2')?.at).toBe(new Date('2027-02-28T09:00:00').toISOString());
+    // Same instant the engine computes: 9am Sydney (UTC+11) on 28 Feb
+    // 2027. Written as an instant: a `new Date('…T09:00:00')` here read
+    // the test machine's zone, which hid the server's 8pm wake.
+    expect(out.get('e2')?.at).toBe('2027-02-27T22:00:00.000Z');
+  });
+
+  // Owner report 2026-10-20: an undated couple's "10 months before the
+  // wedding" wait projected as finishing now, so its held send read
+  // "Needs your OK" today while the engine would not run it.
+  it('a wedding-relative wait without a wedding date says what it needs', () => {
+    const w = wait(0, {
+      id: 'w',
+      config: {
+        mode: 'relative_to_event',
+        relative: { amount: 10, unit: 'months', direction: 'before', anchor: 'event_date' },
+      },
+    });
+    const held = step({ id: 'e2', requires_approval: true });
+    const out = projectSchedule([doneEmail, w, held], { ...ANCHORS, weddingDate: null }, null, NOW);
+    expect(out.get('w')).toEqual({ at: null, gate: 'Needs a wedding date' });
+    expect(out.get('e2')).toEqual({ at: null, gate: 'Needs a wedding date' });
   });
 
   it('holds a wait that ends inside quiet hours until they end', () => {

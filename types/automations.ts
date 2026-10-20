@@ -318,6 +318,9 @@ export type WaitReason =
   // it can be (Task 30 fix round 1). Not a limit being reached.
   | 'send_check_unavailable'
   | 'account_paused'
+  // A wait counting from a wedding date the couple does not have yet.
+  // It parks until one is set (`NEEDS_WEDDING_DATE_WAKE`).
+  | 'needs_wedding_date'
 
 export interface AutomationRow {
   id: string

@@ -33,6 +33,7 @@ import { buildStepContext } from '@/lib/workflows/context'
 import {
   completeInstanceIfDone,
   completeStep,
+  deleteStep,
   reopenStep,
   runStepNow,
 } from '@/lib/workflows/executor'
@@ -68,7 +69,7 @@ import {
 import { reviewEditsSchema } from '@/lib/workflows/review-edits-schema'
 import { partialSendFailure, type PartialSendFailure } from '@/lib/workflows/send-outcome'
 import { validateStepConfig } from '@/lib/workflows/step-config-validation'
-import { stepDisplayTitle } from '@/lib/workflows/step-label'
+import { fillStepVariables, stepDisplayTitle } from '@/lib/workflows/step-label'
 import { isAutomated } from '@/lib/workflows/steps'
 import { loadWeddingDate } from '@/lib/workflows/wedding-date'
 import type { Json } from '@/types/database'
@@ -507,19 +508,29 @@ export async function retryStepAction(
 
 const deleteStepSchema = z.object({ stepId: z.string().uuid() })
 
-/** Remove a step from a couple's checklist entirely. */
+/**
+ * Remove a step from a couple's checklist entirely, and re-date the steps
+ * it was holding back (see `deleteStep`). Ownership is checked through
+ * the caller's own client; the delete and the recompute then run on the
+ * service-role client, as ticking does.
+ */
 export async function deleteInstanceStepAction(
   input: z.infer<typeof deleteStepSchema>,
 ): Promise<ActionResult<null>> {
   const parsed = deleteStepSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: parsed.error.message }
   const supabase = await createClient()
-  const { error } = await supabase
-    .from('workflow_steps')
-    .delete()
-    .eq('id', parsed.data.stepId)
-  if (error) return { ok: false, error: error.message }
+  if (!(await ownedStep(supabase, parsed.data.stepId))) {
+    return { ok: false, error: 'Step not found.' }
+  }
+  // An `unsettled` delete still landed; the heal pass re-dates the rest.
+  try {
+    await deleteStep(createAdminClient(), parsed.data.stepId)
+  } catch (err) {
+    return { ok: false, error: actionFailureMessage(err, 'deleteInstanceStepAction') }
+  }
   revalidatePath('/couples')
+  revalidatePath('/workflows')
   return { ok: true, data: null }
 }
 
@@ -853,7 +864,11 @@ export async function loadStepDetailAction(
     ok: true,
     data: {
       stepId: step.id,
-      title: stepDisplayTitle(step),
+      // Filled the way the Upcoming row fills it, so the modal opened from
+      // "Emma & Brian Check In!" is not titled "{{couple.name}} Check In!".
+      title: fillStepVariables(stepDisplayTitle(step), {
+        coupleName: instance?.couples?.name ?? null,
+      }),
       description: step.description,
       type: step.type,
       actionType:

@@ -134,10 +134,17 @@ export function narrateWorkflowEvent(
       // The account-wide stop (Task 18) held an automated send back. It
       // does not resume by itself: when the stop lifts it is skipped.
       if (reason === 'account_paused') return `${base} (held while all workflows are paused)`;
+      // A wait counting from a wedding date the couple does not have; it
+      // carries on by itself once one is added.
+      if (reason === 'needs_wedding_date') return `${base} (needs the couple's wedding date)`;
       return base;
     }
     case 'step_added':
       return withName('Added', step);
+    // The step row is gone, so its title rides in the detail
+    // (`deleteStep` in ./executor).
+    case 'step_deleted':
+      return withName('Removed', step ?? detailString(detail, 'title'));
     case 'step_approved':
       return withName('You approved', step);
     case 'step_rescheduled': {
