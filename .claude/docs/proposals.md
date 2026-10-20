@@ -185,7 +185,10 @@ it logs `proposal_layout_invalid_editor` and shows "Save failed"
 rather than reaching the server with a broken layout.
 
 **Limits** (`model/rich-doc-spec.ts`'s `LAYOUT_LIMITS`): 40 sections
-per template, 200 nodes per rich doc, 2MB serialised.
+per template, 2000 nodes per rich doc (raised from 200 for ZEB-123:
+an ordinary long section hit it and every save failed), 2MB serialised.
+The server-action body limit in `next.config.ts` is set above the 2MB
+so a layout the schema accepts is never refused for size in transit.
 
 **Nothing the MC types is ever held only in React state** (2026-09-20
 hardening, after work was lost on refresh three times). The root cause

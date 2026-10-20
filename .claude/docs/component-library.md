@@ -66,6 +66,9 @@ longer fits on two lines. Used for single- and multi-choice booking questions.
 `Input` and `Textarea` take `optional` for a quiet "Optional" tag beside the
 label; never write `(optional)` into the label text. `DatePicker` takes
 `label`, `id`, `optional`, `help` and `error` (it was a bare trigger before).
+`calendarOnly` renders just the calendar, opened on the value's month;
+`clearable={false}` drops the Clear link where an empty date is invalid
+(the Upcoming row's Change date modal).
 
 ### `<AddressAutocomplete />` — `@/components/ui/address-autocomplete` (Phase 14, onboarding)
 

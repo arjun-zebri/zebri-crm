@@ -18,6 +18,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 
+import type { QueueItem } from '@/lib/workflows/queue';
 import { isAutomated } from '@/lib/workflows/steps';
 
 import { bucketFor, type QueueBucket } from './queue-buckets';
@@ -33,6 +34,8 @@ export interface UpcomingListProps {
   onTick: (stepId: string) => void;
   /** Opens the detail modal. */
   onOpen: (stepId: string) => void;
+  /** Opens the date picker for a step, to move it to a chosen day. */
+  onChangeDate: (item: QueueItem) => void;
   /** Moves a step's due date on by N days. */
   onSnooze: (stepId: string, days: number) => void;
   /** Drops a step without doing it. */
@@ -48,6 +51,7 @@ export function UpcomingList({
   groupBy,
   onTick,
   onOpen,
+  onChangeDate,
   onSnooze,
   onSkip,
   onOpenCouple,
@@ -128,6 +132,7 @@ export function UpcomingList({
                     onOpen(item.stepId);
                   }}
                   onTick={onTick}
+                  onChangeDate={onChangeDate}
                   onSnooze={onSnooze}
                   onSkip={onSkip}
                   onOpenCouple={onOpenCouple}

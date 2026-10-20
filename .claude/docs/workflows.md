@@ -1625,7 +1625,8 @@ branch-lane head once its branch is `done`, the top-level head at once,
 and a wedding- or apply-dated step always. Every surface refuses by it:
 
 - the Upcoming row (`QueueItem.blocked`, which also covers a send with
-  only a projected time) drops Tomorrow and Next week from its `⋯`;
+  only a projected time) drops Change date, Tomorrow and Next week
+  from its `⋯`;
 - the detail modal (`StepDetail.blockedReason`) drops Snooze and Send &
   complete and shows the reason ("This step waits for "Wait" to finish
   first."); Save stays, since editing sends nothing;
@@ -1666,9 +1667,14 @@ three things.
 A send waiting for the MC's OK carries a warning `StatePill` reading
 **Needs your OK**: the row's ⚡ says "Zebri runs this", which is the
 opposite of what a held send needs them to know. Every row also has an
-always-visible `⋯` (Tomorrow / Next week / Skip this step / Open the
-couple) - a control that appears only under the pointer is a control an
-MC has to already know about. Nothing sends from a list row; the row
+always-visible `⋯` (Change date / Tomorrow / Next week / Skip this
+step / Open the couple) - a control that appears only under the pointer
+is a control an MC has to already know about. **Change date** (ZEB-125)
+opens `change-date-modal.tsx`, a calendar seeded with the step's day;
+picking a day saves it through `rescheduleStepAction`, keeping the
+step's time of day (`onDate` in `queue-labels.ts`; 9am for an undated
+step). It works for sends as well as to-dos, and offers no Clear: a
+step with no `due_at` is never run. Nothing sends from a list row; the row
 opens the step and Send lives in the modal. The same pill appears on
 the couple's Workflow tab.
 

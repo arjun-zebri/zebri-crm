@@ -58,10 +58,19 @@ export function detectEmbedProvider(url: string): EmbedProvider | null {
   return null
 }
 
-/** Size and count constraints for proposal layouts and documents. */
+/**
+ * Size and count constraints for proposal layouts and documents.
+ *
+ * `maxNodesPerDoc` counts every node, text runs included, so one bulleted
+ * line with a bold label is four (listItem, paragraph, two text runs). The
+ * original 200 was hit by an MC's ordinary long section (ZEB-123): the
+ * editor never stops you at the cap, so every autosave after it failed
+ * validation and the template could not be saved at all. 2000 is ten
+ * times that; `maxSerialisedBytes` remains the real bound on payload size.
+ */
 export const LAYOUT_LIMITS = {
   maxSections: 40,
-  maxNodesPerDoc: 200,
+  maxNodesPerDoc: 2000,
   maxSerialisedBytes: 2 * 1024 * 1024,
 } as const
 

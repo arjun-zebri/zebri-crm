@@ -13,8 +13,13 @@ interface DatePickerProps {
   className?: string
   /** Render the calendar inline (in-flow below the trigger, no portal) */
   inline?: boolean
-  /** Render only the calendar body without trigger or portal */
+  /** Render only the calendar body without trigger or portal. It opens
+   *  on `value`'s month (else `defaultViewDate`'s, else today's). */
   calendarOnly?: boolean
+  /** Offer the Clear link under the calendar. Defaults to true; pass
+   *  false where an empty date is not a valid answer (a workflow step
+   *  with no date never runs). */
+  clearable?: boolean
   disabled?: boolean
   /** Where the calendar icon sits inside the trigger. Defaults to
    *  'right' for backward-compat; the builder modals pass 'left' to
@@ -116,10 +121,13 @@ function calendarWidth(triggerWidth: number): number {
   return Math.min(DROPDOWN_WIDTH.max, Math.max(DROPDOWN_WIDTH.min, triggerWidth))
 }
 
-export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix, defaultViewDate, label, id, optional = false, help, error }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, clearable = true, disabled, iconPosition = 'right', displayPrefix, defaultViewDate, label, id, optional = false, help, error }: DatePickerProps) {
   const [open, setOpen] = useState(false)
-  const [viewYear, setViewYear] = useState(new Date().getFullYear())
-  const [viewMonth, setViewMonth] = useState(new Date().getMonth())
+  // Seeded from the value because calendar-only mode is never "opened",
+  // so the effect below that re-aims the view never runs for it.
+  const initialView = parseYMD(value) ?? (defaultViewDate ? parseYMD(defaultViewDate) : null) ?? new Date()
+  const [viewYear, setViewYear] = useState(initialView.getFullYear())
+  const [viewMonth, setViewMonth] = useState(initialView.getMonth())
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const [mounted, setMounted] = useState(false)
 
@@ -320,7 +328,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       </div>
 
       {/* Clear */}
-      {value && (
+      {value && clearable && (
         <div className="mt-2 pt-2 border-t border-gray-100 text-center">
           <button type="button" onClick={handleClear} className="text-body text-text-subtle hover:text-gray-600 transition cursor-pointer">
             Clear

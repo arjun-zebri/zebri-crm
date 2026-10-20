@@ -60,6 +60,16 @@ const embedFrameHeader = {
 };
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      // The proposal template autosave sends the whole layout through a
+      // Server Action, and the layout schema allows up to 2MB serialised
+      // (`LAYOUT_LIMITS.maxSerialisedBytes`). Next's default 1MB body
+      // limit refused anything between the two, so a large template
+      // failed every save (ZEB-123). Kept just above the schema cap.
+      bodySizeLimit: "3mb",
+    },
+  },
   async headers() {
     return [
       {

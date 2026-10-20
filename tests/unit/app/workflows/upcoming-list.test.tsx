@@ -40,6 +40,7 @@ function renderList(items: QueueItem[], handlers: Record<string, unknown> = {}) 
   const props = {
     onTick: vi.fn(),
     onOpen: vi.fn(),
+    onChangeDate: vi.fn(),
     onSnooze: vi.fn(),
     onSkip: vi.fn(),
     onOpenCouple: vi.fn(),
@@ -47,6 +48,7 @@ function renderList(items: QueueItem[], handlers: Record<string, unknown> = {}) 
   } as {
     onTick: ReturnType<typeof vi.fn>;
     onOpen: ReturnType<typeof vi.fn>;
+    onChangeDate: ReturnType<typeof vi.fn>;
     onSnooze: ReturnType<typeof vi.fn>;
     onSkip: ReturnType<typeof vi.fn>;
     onOpenCouple: ReturnType<typeof vi.fn>;

@@ -116,11 +116,18 @@ describe('parseProposalLayout', () => {
     expect(parseProposalLayout(layout([contentSection(bad)])).ok).toBe(false)
   })
 
-  it('rejects more than 40 sections and more than 200 nodes in one doc', () => {
+  it('rejects more than 40 sections and more than 2000 nodes in one doc', () => {
     const many = Array.from({ length: 41 }, (_, i) => ({ ...contentSection(), id: `s${i}` }))
     expect(parseProposalLayout(layout(many)).ok).toBe(false)
-    const big = doc(...Array.from({ length: 201 }, () => paragraph(text('x'))))
+    const big = doc(...Array.from({ length: 1001 }, () => paragraph(text('x'))))
     expect(parseProposalLayout(layout([contentSection(big)])).ok).toBe(false)
+  })
+
+  it('accepts a long section an MC actually writes (ZEB-123: 200 nodes made templates unsaveable)', () => {
+    // 60 bullets, each a bold label plus a description: 241 nodes, over the old cap of 200.
+    const item = () => ({ type: 'listItem', content: [paragraph(text('Label: ', [{ type: 'bold' }]), text('what is included'))] })
+    const list = { type: 'bulletList', content: Array.from({ length: 60 }, item) }
+    expect(parseProposalLayout(layout([contentSection(doc(list))])).ok).toBe(true)
   })
 
   it('requires content on content sections and data on data sections', () => {
