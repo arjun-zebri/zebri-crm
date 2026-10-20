@@ -91,7 +91,7 @@ interface PageSettings {
 }
 ```
 
-Limits (enforced by the Zod schema): 40 sections, 200 nodes per rich doc, 25 MB
+Limits (enforced by the Zod schema): 40 sections, 2000 nodes per rich doc (200 until ZEB-123), 25 MB
 of media referenced per layout, 2 MB serialised.
 
 ### 2.2 Rich doc

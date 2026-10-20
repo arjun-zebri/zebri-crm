@@ -19,12 +19,18 @@ function item(over: Partial<QueueItem> = {}): QueueItem {
   };
 }
 
-const on = { onSnooze: vi.fn(), onSkip: vi.fn(), onOpenCouple: vi.fn() };
+const on = { onChangeDate: vi.fn(), onSnooze: vi.fn(), onSkip: vi.fn(), onOpenCouple: vi.fn() };
 
 describe('rowActions', () => {
   it('offers snooze on a released send', () => {
     const labels = rowActions(item(), on).map((a) => a.label);
-    expect(labels).toEqual(['Tomorrow', 'Next week', 'Skip this step', 'Open the couple']);
+    expect(labels).toEqual([
+      'Change date',
+      'Tomorrow',
+      'Next week',
+      'Skip this step',
+      'Open the couple',
+    ]);
   });
 
   it('offers no snooze on a send still behind an earlier step', () => {
@@ -37,8 +43,16 @@ describe('rowActions', () => {
     expect(labels).toEqual(['Skip this step', 'Open the couple']);
   });
 
+  it('opens the date picker for the row it belongs to', () => {
+    // ZEB-125: an MC needed a to-do on a particular day and the menu
+    // only offered Tomorrow and Next week.
+    const row = item();
+    rowActions(row, on)[0]?.onSelect();
+    expect(on.onChangeDate).toHaveBeenCalledWith(row);
+  });
+
   it('snoozes the row it belongs to', () => {
-    rowActions(item(), on)[1]?.onSelect();
+    rowActions(item(), on)[2]?.onSelect();
     expect(on.onSnooze).toHaveBeenCalledWith('s1', 7);
   });
 });

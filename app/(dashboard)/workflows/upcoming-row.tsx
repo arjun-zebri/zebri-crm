@@ -36,6 +36,7 @@ export interface UpcomingRowProps {
   /** Opens the row (and moves the cursor to it). */
   onSelect: () => void;
   onTick: (stepId: string) => void;
+  onChangeDate: (item: QueueItem) => void;
   onSnooze: (stepId: string, days: number) => void;
   onSkip: (stepId: string) => void;
   onOpenCouple: (coupleId: string) => void;
@@ -50,6 +51,7 @@ export function UpcomingRow({
   selected,
   onSelect,
   onTick,
+  onChangeDate,
   onSnooze,
   onSkip,
   onOpenCouple,
@@ -149,7 +151,7 @@ export function UpcomingRow({
       <RowActionsMenu
         size="sm"
         alwaysVisible
-        actions={rowActions(item, { onSnooze, onSkip, onOpenCouple })}
+        actions={rowActions(item, { onChangeDate, onSnooze, onSkip, onOpenCouple })}
       />
     </div>
   );

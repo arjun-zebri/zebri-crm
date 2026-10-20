@@ -40,7 +40,7 @@ describe('rich-doc spec', () => {
   })
 
   it('pins the limits and the width / padding stops from the spec', () => {
-    expect(LAYOUT_LIMITS).toEqual({ maxSections: 40, maxNodesPerDoc: 200, maxSerialisedBytes: 2 * 1024 * 1024 })
+    expect(LAYOUT_LIMITS).toEqual({ maxSections: 40, maxNodesPerDoc: 2000, maxSerialisedBytes: 2 * 1024 * 1024 })
     expect(CONTENT_WIDTH_PX).toEqual({ narrow: 560, medium: 720, wide: 1100 })
     expect(SECTION_PADDING_PX).toEqual({ compact: 32, cozy: 48, roomy: 64 })
   })

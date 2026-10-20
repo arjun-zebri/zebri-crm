@@ -25,6 +25,23 @@ export function inDays(days: number): string {
   return at.toISOString();
 }
 
+/**
+ * A step's due instant moved to another day, keeping its time of day.
+ *
+ * An 8pm send moved to Friday should still go at 8pm: the MC chose the
+ * day, not the hour. A step with no date yet lands at 9am, the same
+ * hour {@link inDays} snoozes to. Read in the reader's own day, like
+ * the detail modal's date field.
+ *
+ * @param dueAt - the step's current due instant, or null
+ * @param date - the picked day, `YYYY-MM-DD`
+ */
+export function onDate(dueAt: string | null, date: string): string {
+  const at = dueAt ? new Date(dueAt) : new Date(new Date().setHours(9, 0, 0, 0));
+  at.setFullYear(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
+  return at.toISOString();
+}
+
 /** Whole days between two `YYYY-MM-DD` strings. */
 function dayDelta(from: string, to: string): number {
   const a = Date.UTC(

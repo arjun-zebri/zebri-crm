@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The Upcoming queue's row mutations: tick, snooze and skip. Split out of
+ * The Upcoming queue's row mutations: tick, snooze, move and skip. Split out of
  * `./workflows-queue` so each carries an `onError` toast (Task 36 fix
  * round 1, review I2) without the component outgrowing its budget.
  *
@@ -39,11 +39,19 @@ export function useQueueStepMutations(onSettled: () => void) {
     onError,
   });
 
+  // A picked day rather than a day count: the row menu's Change date.
+  const move = useMutation({
+    mutationFn: async ({ stepId, dueAt }: { stepId: string; dueAt: string }) =>
+      unwrap(await rescheduleStepAction({ stepId, dueAt })),
+    onSuccess: onSettled,
+    onError,
+  });
+
   const skip = useMutation({
     mutationFn: async (stepId: string) => unwrap(await skipStepAction({ stepId })),
     onSuccess: onSettled,
     onError,
   });
 
-  return { tick, snooze, skip };
+  return { tick, snooze, move, skip };
 }
