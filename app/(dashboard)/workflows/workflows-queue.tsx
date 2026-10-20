@@ -24,8 +24,9 @@ import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
-import type { QueueResult } from '@/lib/workflows/queue';
+import type { QueueItem, QueueResult } from '@/lib/workflows/queue';
 
+import { ChangeDateModal } from './change-date-modal';
 import { DoneSection } from './done-section';
 import { loadQueueAction } from './instance-actions';
 import { QueueAddStep } from './queue-add-step';
@@ -61,6 +62,7 @@ export function WorkflowsQueue({ timezone }: WorkflowsQueueProps) {
   const [groupBy, setGroupBy] = useState<QueueGroupBy>(DEFAULT_GROUP_BY);
   const [adding, setAdding] = useState(false);
   const [openStepId, setOpenStepId] = useState<string | null>(null);
+  const [dating, setDating] = useState<QueueItem | null>(null);
 
   // Anything that moves a step also moves it across the Done strip, so
   // both lists and the strip's count refresh together. Ticking a row and
@@ -80,7 +82,7 @@ export function WorkflowsQueue({ timezone }: WorkflowsQueueProps) {
     },
   });
 
-  const { tick, snooze, skip } = useQueueStepMutations(invalidate);
+  const { tick, snooze, move, skip } = useQueueStepMutations(invalidate);
 
   const all = useMemo(() => flattenQueue(query.data ?? EMPTY), [query.data]);
 
@@ -141,6 +143,7 @@ export function WorkflowsQueue({ timezone }: WorkflowsQueueProps) {
             groupBy={groupBy}
             onTick={(stepId) => tick.mutate(stepId)}
             onOpen={setOpenStepId}
+            onChangeDate={setDating}
             onSnooze={(stepId, days) => snooze.mutate({ stepId, days })}
             onSkip={(stepId) => skip.mutate(stepId)}
             onOpenCouple={(coupleId) => router.push(`/couples?openCouple=${coupleId}`)}
@@ -154,6 +157,12 @@ export function WorkflowsQueue({ timezone }: WorkflowsQueueProps) {
           <DoneSection timezone={timezone} onOpen={setOpenStepId} onRestored={invalidate} />
         )}
       </div>
+
+      <ChangeDateModal
+        item={dating}
+        onClose={() => setDating(null)}
+        onPick={(stepId, dueAt) => move.mutate({ stepId, dueAt })}
+      />
 
       <StepDetailModal
         stepId={openStepId}

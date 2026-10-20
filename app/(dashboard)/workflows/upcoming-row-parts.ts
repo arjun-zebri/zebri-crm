@@ -10,6 +10,7 @@ import type { QueueItem } from '@/lib/workflows/queue';
 
 /** What the row's menu items call. */
 export interface RowActionHandlers {
+  onChangeDate: (item: QueueItem) => void;
   onSnooze: (stepId: string, days: number) => void;
   onSkip: (stepId: string) => void;
   onOpenCouple: (coupleId: string) => void;
@@ -17,14 +18,17 @@ export interface RowActionHandlers {
 
 /**
  * The row's `⋯` menu. A send still behind an earlier step (or dated
- * only by projection) gets no snooze: any date on it is one the engine
- * runs on sight, out of order (`lib/workflows/release`). Exported for
- * the tests.
+ * only by projection) gets no snooze and no Change date: any date on it
+ * is one the engine runs on sight, out of order (`lib/workflows/release`).
+ * Exported for the tests.
  */
 export function rowActions(item: QueueItem, on: RowActionHandlers) {
   const snooze = item.blocked
     ? []
     : [
+        // First, because it is the general answer: the two snoozes
+        // below are shortcuts to particular days (ZEB-125).
+        { label: 'Change date', onSelect: () => on.onChangeDate(item) },
         { label: 'Tomorrow', onSelect: () => on.onSnooze(item.stepId, 1) },
         { label: 'Next week', onSelect: () => on.onSnooze(item.stepId, 7) },
       ];

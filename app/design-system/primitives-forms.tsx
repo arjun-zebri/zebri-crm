@@ -327,6 +327,9 @@ export function PrimitivesForms() {
           <Demo label="Disabled">
             <DatePicker value={date} onChange={setDate} disabled placeholder="Pick a date" />
           </Demo>
+          <Demo label="Calendar only, not clearable">
+            <DatePicker value={date} onChange={setDate} calendarOnly clearable={false} />
+          </Demo>
         </DemoGrid>
       </Spec>
 
