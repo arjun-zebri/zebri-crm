@@ -272,8 +272,10 @@ export function InvoiceBuilderModal({
   // Gated on `openedAsNew`, not `isNewInvoice`: once the first save
   // adopts an id the detail query starts fetching, and gating on the row
   // would throw the fully-populated form back behind the skeleton.
+  // Line items are a separate query from the row; the total (and so the
+  // payment-schedule validation) is meaningless until they land too.
   const firstPaintReady =
-    (openedAsNew || !!invoice) &&
+    (openedAsNew || (!!invoice && !!dbItems)) &&
     !applySourcesLoading &&
     !couplesLoading &&
     !brandingLoading;
@@ -341,9 +343,15 @@ export function InvoiceBuilderModal({
     }
   }, [invoice?.id, isNewInvoice, initialCoupleId, couples]);
 
-  useEffect(() => {
-    if (dbItems) setItems(dbItems);
-  }, [dbItems]);
+  // Seed line items during render, not in an effect. An effect runs after
+  // paint, so the first frame with the invoice showed its saved payment
+  // stages against a $0 total and flagged every fixed-amount stage as
+  // larger than the invoice (ZEB-126).
+  const [seededItems, setSeededItems] = useState<LineItem[] | undefined>(undefined);
+  if (dbItems && dbItems !== seededItems) {
+    setSeededItems(dbItems);
+    setItems(dbItems);
+  }
 
   /* ─── computed money ────────────────────────────────────────── */
   const subtotal = items.reduce((sum, i) => sum + Number(i.amount || 0), 0);

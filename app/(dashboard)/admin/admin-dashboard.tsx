@@ -3,11 +3,13 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
+import { UnderlineTabs } from '@/components/ui/underline-tabs';
 import type {
   AdminDashboard,
   AdminUser,
 } from '@/lib/admin/admin-analytics';
 import type { SchedulerCardData } from '@/lib/admin/scheduler';
+import { ADMIN_SECTIONS, adminSectionHref, type AdminSection } from '@/lib/admin/sections';
 import type { UserStats } from '@/lib/admin/user-value';
 
 import { UserDetailPanel } from './components/user-detail-panel';
@@ -21,15 +23,8 @@ import { SchedulerCard } from './sections/scheduler-card';
 import { UpcomingRenewalsList } from './sections/upcoming-renewals-list';
 import { UsersTableView } from './sections/users-table-view';
 
-type TabId = 'dashboard' | 'users';
-
-const tabs: { id: TabId; label: string }[] = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'users', label: 'Users' },
-];
-
 /**
- * Admin orchestrator with two views: a founder dashboard (hero
+ * Admin orchestrator with two views (Outreach has its own sidebar entry): a founder dashboard (hero
  * metric charts + operational action lists) and a flat Users table
  * with its own search bar.
  *
@@ -49,39 +44,19 @@ export function AdminDashboardView({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab: TabId =
+  const activeTab: AdminSection =
     searchParams.get('tab') === 'users' ? 'users' : 'dashboard';
   const [openUserId, setOpenUserId] = useState<string | null>(null);
   const openUser = users.find((u) => u.id === openUserId) ?? null;
 
-  const handleTabChange = (tabId: TabId) => {
-    router.replace(`/admin?tab=${tabId}`);
+  const handleTabChange = (tabId: AdminSection) => {
+    router.replace(adminSectionHref(tabId));
   };
 
   return (
     <>
       <div className="px-4 md:px-6 flex-shrink-0">
-        <div className="relative overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-b border-border">
-          <div className="flex gap-6 mb-0">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                aria-current={activeTab === tab.id ? 'page' : undefined}
-                className={`pb-3 text-body whitespace-nowrap transition-colors relative cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'text-text font-medium'
-                    : 'text-text-muted hover:text-text'
-                }`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-text" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        <UnderlineTabs tabs={ADMIN_SECTIONS} active={activeTab} onChange={handleTabChange} ariaLabel="Admin sections" />
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hover">

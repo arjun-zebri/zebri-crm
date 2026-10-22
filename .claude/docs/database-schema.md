@@ -1235,6 +1235,8 @@ max_advance_days (integer, not null, default 60, check 1-365)  -  maximum days i
 reminder_enabled (boolean, not null, default true)
 active (boolean, not null, default true)
 uses_custom_availability (boolean, not null, default false)  -  when true the slot engine reads meeting_type_availability_rules for this type instead of the MC's availability_rules
+questions (jsonb, not null, default '[]', check: array of at most 20)  -  the booking form's custom questions, in display order. Each item: {id, label, type, required, help?, options?, maps_to?}. type is one of short_text | long_text | date | number | single_choice | multi_choice; maps_to is partner_name | event_date | venue (copies the answer into the new couple). Shape and limits mirror lib/booking/questions.ts; submit_booking re-applies them. Backfilled with a partner_name question for every pre-existing type.
+phone_field (text, not null, default 'optional', check in: hidden | optional | required)  -  how the fixed phone field behaves on the public form. hidden stores null whatever the booker sends; required rejects a blank phone.
 share_token (uuid, not null, unique, default gen_random_uuid())  -  capability token for Phase C public /book page
 created_at, updated_at (timestamptz)
 
@@ -1242,7 +1244,7 @@ Index: (user_id) for fast owner lookups.
 
 RLS: Standard owner-only policy `auth.uid() = user_id` (SELECT/INSERT/UPDATE/DELETE).
 
-Migrations: `20260819000000_create_scheduling_tables.sql`, `20260821010000_meeting_type_availability.sql` (uses_custom_availability).
+Migrations: `20260819000000_create_scheduling_tables.sql`, `20260821010000_meeting_type_availability.sql` (uses_custom_availability), `20261029000000_booking_form_questions.sql` (questions, phone_field).
 
 ## availability_rules (Scheduler Phase B)
 
@@ -1362,7 +1364,8 @@ user_id (uuid, not null, FK auth.users cascade)  -  RLS key (the MC who owns the
 meeting_type_id (uuid, not null, FK meeting_types cascade)  -  the booked meeting type
 couple_id (uuid, nullable, FK couples set null)  -  matched or created couple; null if plan-limited
 name (text, not null)  -  booker's primary name
-partner_name (text, nullable)  -  booker's partner name
+partner_name (text, nullable)  -  LEGACY: booker's partner name. Never renamed or dropped. Still written by submit_booking from the answer whose question maps_to partner_name; read answers for new code.
+answers (jsonb, not null, default '[]', check: array)  -  the booker's answers to the meeting type's questions: [{question_id, label, type, value}]. label and type are copied from the question at booking time, so the row still reads after the question is renamed or deleted. value is a string, or an array of strings for multi_choice.
 email (text, not null)  -  booker's email
 phone (text, nullable)  -  booker's phone
 notes (text, nullable)  -  booker's free-text notes
@@ -1394,7 +1397,7 @@ RLS: owner-only `auth.uid() = user_id` on all four verbs, plus a parent-ownershi
 Trigger: tg_bookings_emit_consultation_booked
 On INSERT, if status='confirmed', emits a consultation_booked automation event (feeds the automation trigger bus). See automations documentation.
 
-Migrations: `20260820000000_create_bookings.sql`, `20260821040000_bookings_parent_ownership_guard.sql`.
+Migrations: `20260820000000_create_bookings.sql`, `20260821040000_bookings_parent_ownership_guard.sql`, `20261029000000_booking_form_questions.sql` (answers; partner_name backfilled into answers).
 
 ## Public Booking RPCs (Scheduler Phase C)
 
@@ -1411,6 +1414,8 @@ Returns jsonb object:
   "duration_minutes": 30,
   "location_type": "video",
   "address": null,  -  only meaningful for in_person
+  "questions": [...],  -  the meeting type's questions, as stored on meeting_types.questions
+  "phone_field": "optional",  -  hidden | optional | required
   "business_name": "MC Business Name",
   ...branding scalars (surface_color, text_color, etc., merged from _user_branding)
 }
@@ -1427,9 +1432,9 @@ Error handling:
 
 Rate limiting: none at the RPC boundary (route-level rate-limit applies).
 
-Migration: `20260820001000_booking_rpcs.sql`.
+Migrations: `20260820001000_booking_rpcs.sql` (original), `20261029000000_booking_form_questions.sql` (adds questions and phone_field to the payload).
 
-### submit_booking(token, p_starts_at, p_ends_at, p_timezone, p_name, p_email, p_partner_name?, p_phone?, p_notes?) -> jsonb
+### submit_booking(token, p_starts_at, p_ends_at, p_timezone, p_name, p_email, p_phone?, p_notes?, p_answers?) -> jsonb
 
 Validates the token, timing, and duration, then creates a booking. Couple match by email (case-insensitive), with exception handling for plan limits.
 
@@ -1440,9 +1445,9 @@ Parameters:
 - p_timezone (text): booker's IANA timezone
 - p_name (text): booker's primary name
 - p_email (text): booker's email (case-insensitive couple match)
-- p_partner_name (text, optional): booker's partner name
-- p_phone (text, optional): booker's phone
-- p_notes (text, optional): free-text notes
+- p_phone (text, optional): booker's phone. Required and blank is invalid when the type's phone_field is 'required'; dropped when 'hidden'
+- p_notes (text, optional): the booker's free-text message. Becomes the new couple's notes, followed by one "Label: value" line per unmapped answer
+- p_answers (jsonb, optional, default '[]'): [{question_id, value}]. A non-array counts as no answers; more than 50 entries is invalid. label, type and labels come from the meeting type, never from the input; unknown question ids are ignored
 
 Response (success):
 {
@@ -1463,7 +1468,7 @@ Response (error):
 
 Error results:
 - "not_found": token not found or inactive
-- "invalid": p_starts_at >= p_ends_at, starts_at in past, or duration mismatch (>60sec off expected)
+- "invalid": p_starts_at >= p_ends_at, starts_at in past, duration mismatch (>60sec off expected), blank phone when phone_field is 'required', a required question unanswered, a value that fails its question's rules (single_choice not in options, date not a real YYYY-MM-DD, number not numeric, text over 2000 characters), or more than 50 answers. Every answer failure returns the same generic 'invalid' so the response does not say which question failed
 - "rate_limited": >6 confirmed bookings for this meeting type in the last hour
 - "slot_taken": exclusion constraint violation (double-booking guard); booker should retry with different time
 
@@ -1484,17 +1489,25 @@ Validation:
    - Exclusion violation returns {"error": "slot_taken"}
    - consultation_booked trigger fires on successful insert
 
+Answer rules (mirrors validateAnswers in lib/booking/questions.ts):
+- multi_choice: kept values are the strings that are options, in option order; none kept = no answer
+- Text types are trimmed; empty = no answer. Required with no answer = invalid
+- A question's maps_to applies only when its type fits the target (partner_name and venue take short_text, event_date takes date); otherwise the answer goes to notes
+- Mapped answers: partner_name -> couples.secondary_name and bookings.partner_name; event_date -> couples.event_date; venue -> couples.venue. These only fill a NEW couple; an existing couple is never changed by a booking's answers
+- Every answer, mapped or not, is stored on bookings.answers
+
 Couple creation (if no match):
 - Resolves landing status: first couple_statuses row by position, else 'new'
 - Inserts couple with lead_source='booking', status=resolved
-- Nullifies empty strings (partner_name, phone, notes)
+- Nullifies empty strings (notes, phone, partner name, venue)
+- Notes = p_notes, then one "Label: value" line per unmapped answer
 
 Security:
 - SECURITY DEFINER: bypasses RLS on insert
 - MC email is NOT returned to anon (harvesting risk via share tokens)
 - Route fetches mc_email server-side for alert/email headers
 
-Migration: `20260820001000_booking_rpcs.sql`.
+Migrations: `20260820001000_booking_rpcs.sql` (original), `20261029000000_booking_form_questions.sql` (current signature; the old p_partner_name signature was dropped).
 
 ## Booking Lifecycle RPCs (Scheduler Phase D)
 
@@ -1775,6 +1788,35 @@ Full feature doc: `.claude/docs/workflows.md`. Migrations
 An applied workflow instance IS the run. Templates are authored once;
 applying one **snapshots** its steps into rows the couple owns, so
 editing a template never disturbs live work.
+
+## Outreach (admin, service role only)
+
+Every `outreach_*` table is admin-only operational data: no owner column,
+RLS on with no policies, `anon` and `authenticated` revoked, `service_role`
+only. The base tables are in `20261028000000_create_outreach.sql`.
+
+Added by `20261030100000_outreach_compliance.sql`:
+
+| Object | Purpose |
+|---|---|
+| `outreach_suppression` | Global do-not-contact list. `kind` (`email` or `instagram`), `value` (lower-cased email, or handle without `@`), `reason` (`opted_out`, `bounced`, `complained`, `manual`), `source`, `created_at`. Unique on `(kind, value)`. Backfilled from every do-not-contact prospect. |
+| `outreach_spend_reservations` | One row per Apify batch: `run_id`, `amount_cents` (estimate), `actual_cents` (real, once settled), `status` (`reserved` or `settled`), timestamps. Monthly spend is the sum over this table. Backfilled from existing run costs. |
+| `outreach_is_existing_customer(p_email)` | `boolean`. True when an `auth.users` email matches. SECURITY DEFINER, pinned search path, service role only. |
+| `outreach_enrol_candidates(p_campaign, p_limit)` | Replaced. Adds: excludes suppressed emails and handles, existing customers (linked user or auth email match), and prospects whose only contact is a scraped email. Signature, grants and search path unchanged. |
+| `outreach_start_ig_batch(p_run, p_max, p_budget_cents, p_cents_per_profile)` | `jsonb` status (`started` with `reservation_id` and `check_ids`, `in_flight`, `budget`, `empty`, `not_running`). Takes an advisory lock, refuses a second in-flight run, claims pending IG checks and reserves their estimated cost in one transaction. Releases reservations open for more than two hours. |
+| `outreach_settle_ig_batch(p_run, p_actual_cents)` | Settles the run's open reservation at its real cost and clears `apify_run_id`. |
+| `outreach_retention_pass(p_cutoff)` | Clears `ig_bio`, `sheet_raw`, message bodies and reply snippets on prospects idle since the cutoff. Returns the eligible count. |
+
+Column-level changes: none. `outreach_prospects` and `outreach_events` keep
+their shape; the `do_not_contact` flag is now also set at import and manual
+add when the address or handle is on the suppression list. A new event
+kind, `manual_touch` with `payload.kind = 'email_confirmed'`, records a
+founder confirming a scraped email.
+
+Generated types for these live in `types/database.ts`; keep them in step
+with the migration.
+
+---
 
 ## `workflow_tags`
 

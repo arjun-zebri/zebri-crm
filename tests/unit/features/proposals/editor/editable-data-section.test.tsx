@@ -242,9 +242,9 @@ describe('acceptSlots', () => {
 })
 
 describe('packagesSlots', () => {
-  it('exposes per-card slots and the add tile - no heading or text-below field (2026-09-19 feedback)', () => {
+  it('exposes per-card slots only - no heading or text-below field (2026-09-19 feedback); Add package sits under the grid', () => {
     const slots = packagesSlots({ sectionId: 's1', data: packagesData(), dispatch: vi.fn(), externalVersion: 0, onFocus: vi.fn(), branding, theme, swatches: [] })
-    expect(Object.keys(slots)).toEqual(['card', 'trailing'])
+    expect(Object.keys(slots)).toEqual(['card'])
   })
 })
 

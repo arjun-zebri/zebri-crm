@@ -109,7 +109,9 @@ function renderInline(nodes: JSONContent[] | undefined, ctx: RichDocContext, key
       case 'hardBreak': return <br key={k} />
       case 'variable': {
         const id = String(n.attrs?.id ?? '')
-        if (!isProposalVariable(id)) return null
+        // A proposal's own fields, or one the host hands a value for (a
+        // contract's package and fee): an id nobody vouches for draws nothing.
+        if (!isProposalVariable(id) && !Object.hasOwn(ctx.values, id)) return null
         // The chip's own fallback stands in for an empty value; a proposal
         // sent before the venue is known reads "your venue", not a gap.
         const fallback = typeof n.attrs?.fallback === 'string' ? n.attrs.fallback : ''
@@ -220,9 +222,11 @@ function renderBlock(n: JSONContent, ctx: RichDocContext, key: string): ReactNod
 }
 
 /** Renders one rich doc. Clears floats at the end so a floated image never leaks into the next section. */
-export function RichDocView({ doc, ctx }: { doc: RichDoc; ctx: RichDocContext }) {
+export function RichDocView({ doc, ctx, trimEnd = false }: { doc: RichDoc; ctx: RichDocContext; trimEnd?: boolean | undefined }) {
+  // `trimEnd`: a content section's words end flush, so its padding is even
+  // above and below; an intro keeps its last margin as the gap to the cards.
   return (
-    <div className="after:clear-both after:table after:content-['']" style={ctx.textColor ? { color: ctx.textColor } : undefined}>
+    <div className={`after:clear-both after:table after:content-['']${trimEnd ? ' [&>*:last-child]:mb-0' : ''}`} style={ctx.textColor ? { color: ctx.textColor } : undefined}>
       {(doc.content ?? []).map((n, i) => renderBlock(n, ctx, `n${i}`))}
     </div>
   )

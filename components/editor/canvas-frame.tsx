@@ -43,6 +43,8 @@ export interface CanvasFrameProps {
    * proposal editor's section bar - Proposal Layout v2 Phase 2 Task 14).
    */
   scrollRef?: RefObject<HTMLDivElement | null>
+  /** Shows the zoom pill at the foot. Defaults to true; false where the host wants a plain desk (pinch and ⌘ + wheel still zoom). */
+  zoomControl?: boolean
 }
 
 const ZOOM_MIN = 0.5
@@ -59,7 +61,7 @@ const PAGE_MAX_WIDTH = 1200
 const PAGE_MIN_WIDTH = 720
 
 /** A zoomable, pannable canvas: dotted backdrop, centred content, fit-to-width and cursor-anchored zoom. */
-export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overlay, scrollRef: externalScrollRef }: CanvasFrameProps) {
+export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overlay, scrollRef: externalScrollRef, zoomControl = true }: CanvasFrameProps) {
   // Portal uses a wider surface (it's a real-app dashboard preview); documents
   // stay narrower and identical across quote / invoice / contract. The page
   // canvas is wider still than the 1100px column so section backgrounds
@@ -336,7 +338,7 @@ export function CanvasFrame({ device, zoom, setZoom, wide, page, children, overl
 
       {overlay}
 
-      <ZoomWidget zoom={zoom} fitZoom={fitZoom} setZoom={(v) => setZoom(clampZoom(v))} />
+      {zoomControl ? <ZoomWidget zoom={zoom} fitZoom={fitZoom} setZoom={(v) => setZoom(clampZoom(v))} /> : null}
     </div>
   )
 }

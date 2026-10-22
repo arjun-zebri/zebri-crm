@@ -27,7 +27,7 @@ import type { LayoutAction } from '../state'
 import { acceptSlots } from './edit-accept'
 import { AddFaqItem, faqSlots } from './edit-faq'
 import { gallerySlots } from './edit-gallery'
-import { packagesSlots } from './edit-packages'
+import { packagesAfter, packagesSlots } from './edit-packages'
 import { AddTestimonialItem, testimonialsSlots } from './edit-testimonials'
 import { videoSlots } from './edit-video'
 
@@ -87,8 +87,10 @@ function dataSlotsFor(
       }
     case 'accept':
       return { accept: acceptSlots({ sectionId, data: data.accept, dispatch, externalVersion, onFocus, branding, swatches }) }
-    case 'packages':
-      return { packages: packagesSlots({ sectionId, data: data.packages, dispatch, externalVersion, onFocus, branding, theme, swatches }) }
+    case 'packages': {
+      const a = { sectionId, data: data.packages, dispatch, externalVersion, onFocus, branding, theme, swatches }
+      return { packages: packagesSlots(a), after: packagesAfter(a) }
+    }
     case 'gallery':
       return { gallery: gallerySlots({ sectionId, data: data.gallery, dispatch, externalVersion, onFocus }) }
     case 'video':

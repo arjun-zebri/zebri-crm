@@ -14,28 +14,18 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import { BookingSlotPicker } from '@/app/book/[token]/booking-slot-picker';
-import type { BookingPageData } from '@/app/book/[token]/use-booking-page';
-
-const bookingPage = {
-  name: 'Intro call',
-  business_name: 'Test Business',
-  duration_minutes: 30,
-  location_type: 'video' as const,
-  address: null,
-  brand_color: '#111827',
-} as unknown as BookingPageData;
 
 function renderPicker(overrides: { slotsLoading?: boolean; availableDates?: Set<string> }) {
   return render(
     <BookingSlotPicker
       state="ready"
       slotsLoading={overrides.slotsLoading ?? false}
-      bookingPage={bookingPage}
       slotsForSelectedDate={[]}
       availableDates={overrides.availableDates ?? new Set()}
       selectedDate={null}
       currentMonth="2026-09"
       timezone="Australia/Sydney"
+      locale="en-AU"
       onSelectSlot={vi.fn()}
       onSelectDate={vi.fn()}
       onChangeMonth={vi.fn()}

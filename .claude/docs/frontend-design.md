@@ -21,1256 +21,1814 @@ Regenerate after any sweep so the page reports today's reality:
 npm run design-system:audit
 ```
 
-### Radius: two tokens only
-
-```
---radius-control  6px      everything with corners
---radius-pill     9999px   pills, chips, avatars, dots
-```
-
-That is the whole scale. The 12px card tier and the 16px overlay tier
-were removed on 2026-08-06 after the app was found rendering six radii
-against three tokens. Cards, modals, inputs and buttons all share 6px.
-Do not reintroduce a third value without a deliberate decision.
-
-Exceptions, both intentional: two arbitrary values (a 12px colour swatch
-and a 2px progress segment, where 6px would round them into blobs), and
-public branded surfaces, which set `borderRadius` inline from each MC's
-brand kit.
-
-### Typography: tokens carry their line-height
-
-Three sizes, no more:
-
-| Token | Size / line-height | Use |
-|---|---|---|
-| `text-display` | 30 / 36px | Page titles, with `font-semibold` |
-| `text-section` | 20 / 28px | Section titles, with `font-semibold` |
-| `text-body` | 13 / 20px | Everything else |
-
-Each ships a paired `--text-*--line-height`, and `leading-*` still
-overrides. `text-body` dropped from 14px to 13px on 2026-08-16 (the app
-read too large next to its own chrome); leading stayed at 20px so every
-control and row keeps its exact height. It is no longer equivalent to
-`text-sm`, which is one more reason `text-sm` must not reappear.
-
-**There is no caption size.** `--text-caption` (12px) was removed on
-2026-08-07 and its 777 uses swept to `text-body`. Secondary text is
-distinguished by *colour* (`text-text-muted`, `text-text-subtle`), never
-by shrinking it. That includes form labels, help text, error messages
-and dense toolbar chrome.
-
-1,186 sites were swept onto tokens. `text-2xl`, `text-lg` and
-`text-base` remain because no token defines them.
-
-### Portalled panels carry their own type size
-
-Any panel rendered into `document.body` (Radix `Select`/`Popover` content,
-the `DatePicker` calendar, `Tooltip`) is outside its trigger's subtree, so
-it inherits the document's 16px rather than the control's 13px. Every one
-of them sets `text-body` on the panel root. If you add a new floating
-surface, do the same: the symptom is dropdown rows that read noticeably
-larger than the placeholder they replaced.
-
-`AudioPlayButton` has the same shape of trap for a different reason: it
-takes all its styling from `className`, so it sets `text-body` as a floor
-that callers can still override.
-
-### Controls: one height, no `size` prop
-
-`Button`, `Input`, `Select` and `DatePicker` are all **32px** (`h-8`).
-None of them takes a `size` prop. Content never grows a control
-either: `Select` truncates a too-long selected label inside the 32px
-trigger (added 2026-08-07 after long email-template names wrapped and
-overflowed the automation inspector).
-
-Four button sizes, two input sizes and two select sizes existed until
-2026-08-07. Roughly 80% of the 193 call sites passing a `size` passed
-the same value; the rest were an invitation to drift, and a control
-that disagreed with the one beside it was the most common visual bug in
-the app. A toolbar or form row now lines up with no effort.
-
-The corollary: never reach for `h-9`, `h-10` or `py-2` on a control to
-make it "match" something. If two controls disagree, one of them is not
-using the primitive.
-
-`DatePicker` lost its `variant` prop the same day. It had three chromes
-(`outlined`, `underline`, `meta`), so a date field looked like a
-different species depending on which form it landed in, and `meta`
-rendered at 34px against everything else's 32px. There is now one
-treatment: the `Input` chrome. Two knock-ons, both intentional:
-
-- The couple and event modals used a bespoke underline vocabulary for
-  every field. A boxed 32px date field among 37px underlined text fields
-  read as two forms spliced together, so those modals moved to the boxed
-  `Input` geometry. Their textareas use a `textareaClass` that drops the
-  `h-8`.
-- The builder meta row's couple and terms pickers were `py-1.5` (34px)
-  and are now `h-8`.
-
-**`Textarea` is `Input`'s sibling for prose** (2026-08-15,
-`components/ui/textarea.tsx`). Same chrome  -  control radius, border
-darkening to `brand-fg` on focus, `danger` border on error, label /
-help / error linked by `aria-describedby`  -  with the one deliberate
-difference that height comes from `rows` rather than the 32px control
-height. It exists because multi-line fields were being hand-rolled
-with a copied class string that drifted from `Input` (the automations
-inspector had seven of them behind a local `TextArea`). Reach for it
-wherever a form needs more than one line.
-
-**No textarea in Zebri is user-resizable** (2026-09-07). `Textarea` has
-no `resizable` prop any more, and `globals.css` carries a base rule
-setting `resize: none` on every bare `textarea`, so a hand-rolled field
-cannot reintroduce the drag handle either. Every multi-line field in the
-app sits in a fixed layout  -  a modal, a card, a form column  -  where
-dragging one taller only shoves the rest of the form around, and the
-handle itself reads as an unfinished control. Height is a design
-decision made once at the call site with `rows`: 3 for a one-line note,
-8 to 10 for a body of prose. The rule sits in `@layer base` (same
-layering as the `cursor: pointer` button rule), so a deliberate
-`resize-y` utility on a call site still wins if a genuinely resizable
-surface ever turns up.
-
-`MenuItem` and `RowActionsMenu` keep a `size` prop, but it is a **row
-density** (padding and min-width), not a height or a type size. Menu
-rows do not sit in a line with page controls.
-
-**`MenuItem` takes `checked`** (2026-08-16) for a menu whose choices
-are independent rather than one-of. The row becomes a
-`menuitemcheckbox` and announces its own state; put the tick in
-`trailing`, not as a leading icon hidden with `invisible`, which
-indents every unticked label by the width of the tick.
-
-### Controls never resize when you click them
-
-A control that changes size mid-action moves everything beside it. Two
-primitives cover the cases, and both are on `/design-system` under
-Foundations → "State changes never resize":
-
-- **`BusyLabel`** overlays the spinner on the label instead of adding it
-  beside, and the label itself does not change. `Button` uses it, so
-  `<Button loading={saving}>Save</Button>` is all a call site needs.
-  Reach for `BusyLabel` directly only inside a button that cannot be a
-  `Button`  -  the public branded surfaces (portal, questionnaire,
-  invoice, contract) style their buttons from the MC's brand kit via
-  inline `style`.
-- **`CopyButton`** stacks its idle and confirmed labels in one CSS grid
-  cell, so the button is always as wide as the longer one. It owns the
-  clipboard write and the revert timer. `plain` renders bare text for
-  meta rows that read as a sentence.
-
-**Never write `{saving ? 'Saving…' : 'Save'}` inside a button.** That
-pattern was swept out on 2026-08-07: 10 `Button` call sites moved to
-`loading`, 8 raw buttons moved to `Button`, and 8 branded-surface
-buttons moved to `BusyLabel`. Where a text-link button in a meta row
-needs an in-flight signal, swap the *icon* to a spinner (same box, no
-reflow) and leave the label alone.
-
-### Route-level loading is a skeleton, not a spinner
-
-`app/(dashboard)/loading.tsx` is the Suspense fallback every dashboard
-page inherits. It renders a skeleton in the shape of a dashboard page
-(title, toolbar, list), not a centred spinner. Until 2026-08-07 it was a
-spinner, so one sidebar click produced two layout changes: spinner, then
-the page's own skeleton, then the content.
-
-### Cursor: buttons are covered globally
-
-`globals.css` sets `cursor: pointer` on every `button` and
-`[role="button"]` that is not disabled, in `@layer base`. It has to be
-in that layer so it lands after Tailwind's preflight (which sets
-`cursor: default`) but still loses to the utilities layer, leaving a
-deliberate `cursor-not-allowed` on a call site working.
-
-So: do **not** add `cursor-pointer` to a `<button>` or to `Button`.
-Do add it to non-button clickables  -  table rows, cards, and anything
-whose click handler is on a `div`.
-
-### Colour: mind the Tailwind 4 palette shift
-
-Tailwind 4 changed its default grays, so the raw classes and our tokens
-are **not** the same colour:
-
-| Class | Tailwind 4 | Token | |
-|---|---|---|---|
-| `text-gray-900` | `#101828` | `--text` `#111827` | differ |
-| `text-gray-500` | `#6a7282` | `--text-muted` `#6b7280` | differ |
-| `text-gray-400` | `#99a1af` | `--text-subtle` `#9ca3af` | differ |
-| `border-gray-200` | `#e5e7eb` | `--border` `#e5e7eb` | same |
-| `bg-gray-100` | `#f3f4f6` | `--surface-emphasis` | same |
-
-Always use the token. Mixing raw grays with tokens puts two palettes on
-the same screen. 1,735 sites were swept onto tokens on 2026-08-06;
-`gray-600`, `gray-700` and `gray-50` remain because no token matches.
-
-Known divergences the showroom still reports:
-
-- **Buttons.** The CLAUDE.md "buttons are `rounded-xl`" rule contradicts
-  the `Button` primitive, which is `rounded-control` (6px). The
-  primitive is the intended look; the rule is stale.
-  `Button` also takes `shape="pill"`, which swaps `rounded-control` for
-  `rounded-pill`. It is for a button that floats free of the layout (the
-  assistant dock); a pill sitting in a form row beside an input reads as a
-  third radius the system does not have.
-- **Status chips.** Four implementations coexist: `StatePill` (tokens,
-  keep), `Badge` (21 raw-palette variants), `StatBadge` inside
-  `dashboard-stats.tsx`, and the vendor badges.
-- **Number inputs.** `Input` strips the browser's spinner buttons
-  whenever `type="number"`. They are platform chrome that ignores the
-  tokens, eat the field's right-hand padding, and step the value when
-  the field is scrolled past. Arrow keys still work. Six raw `<input>`
-  call sites in `components/builders/` and `branding/` carry the same
-  class soup by hand; they lose it when they move onto the primitive.
-- **Inline notes.** `Callout` (`components/ui/callout.tsx`) is the one
-  tinted note box: four tones, tonal border + `/10` fill, `text-text`
-  body. The hand-rolled amber banners in `settings/`, `calendar/` and
-  the public booking pages predate it and should fold into it as those
-  pages are next touched. A caption that only describes a field stays
-  muted prose - the box is for a sentence with a consequence.
-- **Missing primitives.** `SectionNav` and `DataTable` are still
-  copy-pasted markup. `PageHeader` and `Card` were extracted (see below).
-
-### Layout primitives
-
-- **`<PageHeader title count actions />`** (`components/ui/page-header.tsx`)
-  is the title row for every dashboard page. Title is `text-2xl` below
-  `sm` and `text-display` above it. `count` renders as "N total"; use
-  `meta` for anything else. Page gutters stay with the page, since a
-  full-height calendar and a scrolling list legitimately differ.
-- **`<Card padding surface borderless />`** (`components/ui/card.tsx`)
-  is the standard bordered panel: `rounded-control`, `border-border`, and
-  a padding scale of `none` / `sm` (16px) / `md` (24px, default) /
-  `lg` (32px). Do **not** use it for popovers, dropdowns or menus:
-  those carry their own z-index, shadow and entry animation and should
-  keep their own markup.
-
-  22 sites are migrated (dashboard panels, admin lists, template
-  previews, auth forms). The rest of the roughly 89 bordered containers
-  convert as each page is hardened.
-
-------------------------------------------------------------------------
-
-## Overlays and the z-index ladder
-
-`Modal`, `SidePanel` and `ConfirmDialog` all take their behaviour from
-**`components/ui/use-overlay.ts`**. Never hand-roll Escape handling or
-body-scroll locking in a new overlay; call `useOverlay({ isOpen, onClose })`
-and you get depth-aware Escape (only the topmost overlay reacts) plus a
-scroll lock that releases when the last overlay closes.
-
-`useBackdropDismiss(onClose)` covers click-to-dismiss while ignoring
-drags that began inside the panel.
-
-Stacking comes from `OVERLAY_Z`, keyed by `layer`:
-
-| Layer | Backdrop / panel | Used by |
-|---|---|---|
-| `base` | `z-50` / `z-[60]` | `Modal` (default), `SidePanel` |
-| `nested` | `z-[75]` / `z-[80]` | a modal opened from another modal |
-| (popover) | `z-[90]` | `Select` dropdown and other popovers |
-| `top` | `z-[120]` / `z-[130]` | `ConfirmDialog`. Note this is ABOVE the popover tier, so a `Select` inside a `top` modal opens behind it. Use `nested` for any modal with a dropdown in it |
-| (tooltip) | `z-[140]` | `Tooltip`. Above every modal and popover tier so a hint inside a popover (the contract Copy link rows) is not painted behind it |
-| (feedback) | `z-[150]` | `FeedbackPill`, above every overlay so it stays clickable with a modal open |
-| (toast) | `z-[200]` | `Toast`, above everything by design |
-
-`Modal` takes `layer="nested" | "top"`. The older `nested` boolean still
-works and maps to `layer="nested"`.
-
-The assistant dock sits between the overlay ladder and toasts on purpose: a
-modal is exactly where a bug tends to show itself, so the dock has to stay
-usable over one. Two consequences to keep in mind:
-
-- The toast stack is offset to `bottom-20` (rather than `bottom-6`) so a toast
-  never lands on the dock. This applies on public pages too, where toasts
-  therefore float slightly high.
-- Anything else anchored bottom-right has to clear the dock's open footprint,
-  roughly 320px. Already moved: the payments footer total (`pr-40`) and the
-  branding canvas zoom widget (`right-40`). Add to that list rather than
-  nudging the dock.
-
-**`data-capture-hide` marks app chrome.** Two things read it, and both mean
-the same thing: this element is chrome, not page content.
-
-1. The feedback screenshot (`modern-screenshot`) leaves it out of the shot.
-   Excluding a node skips its whole subtree.
-2. `isChromePress()` in `use-overlay` treats a press on it as *not* an outside
-   press, so dropdowns and panels stay open when the MC reaches for the dock.
-
-The assistant dock and the toast stack set it directly; the feedback form gets
-it from `<Modal chrome>`. Nothing else should. An ordinary modal is usually the
-very thing being reported, so it has to appear in the screenshot and behave
-like page content: an earlier version excluded every `[data-overlay]`, which
-meant a shot taken from inside the couple modal showed the page beneath rather
-than the modal and its nested Add-event dialog.
-
-Any new dismiss-on-outside-press handler needs the guard:
-
-```ts
-if (ref.current && !ref.current.contains(e.target as Node) && !isChromePress(e.target)) {
-  setOpen(false);
-}
-```
-
-**A tier only means anything if the overlay escapes to the body.** `Modal`
-and `ConfirmDialog` both `createPortal` to `document.body` **during render**,
-not from an effect. A z-index is resolved inside the nearest ancestor that
-creates a stacking context, so an inline overlay rendered within a
-transformed, `overflow-hidden` modal panel is trapped and clipped there no
-matter how high its tier: `ConfirmDialog` carried `z-[130]` and still painted
-*behind* an invoice modal until it was portalled (2026-08-19). Portalling
-during render also keeps parent-before-child DOM order, which an
-effect-gated portal inverts because effects run child-first.
-
-Known gap: roughly a hundred call sites still hard-code raw `z-[…]`
-values across fifteen tiers, including a `z-[9999]` in
-`add-status-modal.tsx`. Point those at `OVERLAY_Z` as each page is
-hardened rather than in one sweep.
-
-------------------------------------------------------------------------
-
-## Design tokens (Phase 0.5)  -  source of truth
-
-Tokens live in `app/globals.css` as Tailwind 4 `@theme` CSS variables; each
-becomes a Tailwind utility automatically. **Always prefer the semantic
-token over a raw hex or arbitrary value**  -  ESLint warns on `bg-[#…]` etc.
-The branding system in `lib/branding/*` is end-user-facing brand
-customisation, intentionally separate from these internal tokens.
-
-### Colour
-
-| Token | Utility | Hex | Use |
-|---|---|---|---|
-| `--color-surface` | `bg-surface` | `#ffffff` | Primary panel background |
-| `--color-surface-muted` | `bg-surface-muted` | `#fafafa` | Card background |
-| `--color-surface-emphasis` | `bg-surface-emphasis` | `#f3f4f6` | Hovered / selected row |
-| `--color-text` | `text-text` | `#111827` | Body text |
-| `--color-text-muted` | `text-text-muted` | `#6b7280` | Secondary text |
-| `--color-text-subtle` | `text-text-subtle` | `#9ca3af` | Placeholder / meta |
-| `--color-text-inverse` | `text-text-inverse` | `#ffffff` | On dark / brand background |
-| `--color-border` | `border-border` | `#e5e7eb` | Default divider |
-| `--color-border-strong` | `border-border-strong` | `#d1d5db` | Emphasised border |
-| `--color-brand-fg` | `bg-brand-fg`, `text-brand-fg` | `#000000` | Primary CTA / mark |
-| `--color-brand-bg` | `bg-brand-bg` | `#ffffff` | Brand inverse |
-| `--color-success` | `bg-success`, `text-success` | `#059669` | Success / paid |
-| `--color-danger` | `bg-danger`, `text-danger` | `#dc2626` | Destructive / error |
-| `--color-warning` | `bg-warning`, `text-warning` | `#f59e0b` | Caution |
-| `--color-info` | `bg-info`, `text-info` | `#2563eb` | Informational |
-
-### Typography
-
-The semantic tokens below are the only type sizes. The old CLAUDE.md
-anchors (`text-3xl font-semibold` page titles, `text-xl font-semibold`
-section titles, `text-sm` body) map onto `text-display` and
-`text-section`, but since 2026-08-16 `text-body` is 13px and no longer
-matches `text-sm`:
-
-| Token | Utility | Size | Use |
-|---|---|---|---|
-| `--text-display` | `text-display` | 1.875rem / 2.25rem | Page titles (pair with `font-semibold`) |
-| `--text-section` | `text-section` | 1.25rem / 1.75rem | Section titles (pair with `font-semibold`) |
-| `--text-body` | `text-body` | 0.8125rem / 1.25rem | Everything that is not a title |
-
-### Radius
-
-| Token | Utility | Value | Use |
-|---|---|---|---|
-| `--radius-control` | `rounded-control` | 6px | Everything with corners |
-| `--radius-pill` | `rounded-pill` | 9999px | Pills, chips, avatars, dots |
-
-### Container
-
-| Token | Utility | Value | Use |
-|---|---|---|---|
-| `--container-doc-page` | `max-w-doc-page` | 68.75rem (1100px) | Inner readable column of the `page` frame (proposals). Keep in sync with `DOC_PAGE_MAX_WIDTH_PX` in `lib/branding/document-frame.ts`. |
-| `--container-doc-prose` | `max-w-doc-prose` | 45rem (720px) | A readable measure for running text inside the page column (the personal note). Follows the text's alignment: `mx-auto` when centred, `ml-auto` when right-aligned. |
-| `--container-doc-narrow` | `max-w-doc-narrow` | 35rem (560px) | A single card or form inside the page column (a lone package). |
-
-### Motion
-
-| Token | Utility | Value | Use |
-|---|---|---|---|
-| `--animate-reveal-up` | `animate-reveal-up` | `reveal-up 700ms ease-out both` | Section reveal-on-scroll in the `page` frame (see `useReveal` in `lib/branding/page-section.tsx`). Respects `motion-reduce`; never applied to the hero or the `print` frame. |
-
-Spacing uses the Tailwind default scale; no custom spacing tokens.
-
-### Dark mode (Phase 0.5b)
-
-Class-based dark variant (`<html class="dark">`), scoped to the
-authenticated CRM. The token *names* don't change  -  the SAME utility
-(`bg-surface`, `text-text`, …) resolves to a different colour per theme via
-the underlying CSS variables. No `dark:` modifier required at call sites.
-
-Dark-mode token values:
-
-| Token | Light | Dark |
-|---|---|---|
-| `bg-surface` | `#ffffff` | `#0a0a0a` |
-| `bg-surface-muted` | `#fafafa` | `#171717` |
-| `bg-surface-emphasis` | `#f3f4f6` | `#262626` |
-| `text-text` | `#111827` | `#fafafa` |
-| `text-text-muted` | `#6b7280` | `#a1a1aa` |
-| `text-text-subtle` | `#9ca3af` | `#71717a` |
-| `border-border` | `#e5e7eb` | `#27272a` |
-| `border-border-strong` | `#d1d5db` | `#3f3f46` |
-| `bg-brand-fg` / `text-brand-fg` | `#000000` | `#ffffff` (flips) |
-| `bg-success` | `#059669` | `#10b981` |
-| `bg-danger` | `#dc2626` | `#ef4444` |
-| `bg-info` | `#2563eb` | `#3b82f6` |
-
-Activation:
-- A synchronous bootstrap in `app/layout.tsx` reads `localStorage.zebri-theme`
-  before paint (no FOUC). Defaults to the OS `prefers-color-scheme`.
-- `<ThemeToggle />` (`components/ui/theme-toggle.tsx`) flips the `dark` class
-  on `<html>` and persists the choice. Place it once, typically in the
-  sidebar / settings.
-
-Out of scope:
-- **Public surfaces** (portal / quote / invoice / contract / timeline) follow
-  each MC's brand kit, not the dashboard theme  -  they currently use raw
-  colours via `lib/branding/*` and remain visually unchanged.
-- **Auth pages** (login / signup / reset) use raw colours today; they pick
-  up dark mode automatically only after migration to tokens.
-
-> The hex / hard-coded colour values **below** are the pre-0.5 reference and
-> are kept for context; new code uses the token utilities above. Legacy
-> off-token usage is burned down per page.
-
-------------------------------------------------------------------------
-
-# Colours
-
-Primary (CTA): #111111
-
-Secondary accent: #A7F3D0
-
-Neutrals: Background: #FFFFFF\
-Card: #FAFAFA\
-Border: #E5E7EB\
-Text Primary: #111827\
-Text Secondary: #6B7280
-
-------------------------------------------------------------------------
-
-# Typography
-
-Primary font: Inter
-
-Fallback: system-ui
-
-Example: font-family: "Inter", system-ui, sans-serif;
-
-------------------------------------------------------------------------
-
-# Typography Scale
-
-These are the **desktop defaults**. Always apply the responsive mobile variants below on any page visible on mobile.
-
-| Element | Mobile | Desktop (sm+) |
-|---|---|---|
-| Page title | `text-2xl font-semibold` | `sm:text-3xl` |
-| Section title | `text-base font-semibold` | `sm:text-xl` |
-| Stat / chart value (large) | `text-xl font-semibold` | `sm:text-2xl` |
-| Chart total (hero number) | `text-2xl font-semibold` | `sm:text-3xl` |
-| Data row label | `text-xs` | `sm:text-sm` |
-| Data row count / amount | `text-xs font-medium` | `sm:text-sm` |
-| Body / descriptions | `text-sm` |  -  (unchanged) |
-| Labels | `text-sm font-medium text-gray-700` |  -  (unchanged) |
-| Dense section titles | `text-sm font-medium text-gray-900` |  -  (unchanged) |
-| Dropdown items | `text-xs` | `sm:text-sm` |
-
-Dense page section titles (e.g. settings): text-sm font-medium text-gray-900
-
-------------------------------------------------------------------------
-
-# Layout
-
-## Outward-facing document frame
-
-`lib/branding/document-frame.ts` is the single source of truth for how a sent
-document is framed, so the branding builder, the previews, and the public
-pages stay in lockstep:
-
-- `DOC_MAX_WIDTH_PX = 720`  -  the shared content width. Used by the branding
-  builder canvas, the branding preview page, the builder-modal preview, and
-  the public invoice / contract / run sheet / questionnaire pages. Apply it as
-  `style={{ maxWidth: DOC_MAX_WIDTH_PX }}` with `mx-auto w-full`, not a
-  `max-w-*` class, so there is one numeric source.
-- `DOC_PAGE_MAX_WIDTH_PX = 1100`  -  the inner readable column of the `page`
-  frame (proposals only). Unlike `DOC_MAX_WIDTH_PX`, this one does have a
-  Tailwind class, `max-w-doc-page` (`--container-doc-page` in
-  `app/globals.css`), because the page frame's sections are plain Tailwind
-  markup rather than an inline-styled card. Keep the two in sync.
-- `DOC_CANVAS_BG = '#F4F4F1'`  -  the light-grey page canvas the white document
-  card sits on. The public invoice and contract pages set their page
-  background to this (the card keeps its own `surface_color`) so the card
-  reads as a document, matching the builder backdrop. Run sheet and
-  questionnaire share the width but not the canvas: they have no white card,
-  so grey would leave their content floating (revisit if they gain a card).
-- The couple portal is intentionally wider (`max-w-5xl`) and is out of scope.
-
-### The `page` frame (Proposals, Phase B)
-
-The proposal surface is the one exception to the document-card model
-above: `PublicBlockRenderer` takes a `frame: 'document' | 'page' |
-'print'` prop, and in `page` mode every top-level block becomes its own
-full-width `<section>` (`PageSection` in `lib/branding/page-section.tsx`)
-that can carry a `sectionBackground` (colour and/or image with a 0-100
-overlay), with the readable content centred at `max-w-doc-page` (1100px,
-`--container-doc-page`, kept in sync with `DOC_PAGE_MAX_WIDTH_PX`). The
-hero block is the one exception within the exception: it owns the
-section's full width, with no inner column.
-
-Sections reveal on scroll with `animate-reveal-up` (`--animate-reveal-up`,
-a 700ms rise-and-fade), driven by `useReveal`: it respects
-`motion-reduce` and only ever runs once per section. The hero and the
-`print` frame never animate, and the animation falls back to "already
-revealed" when `IntersectionObserver` doesn't exist, so SSR and print
-always paint visible.
-
-The hero's height is dragged, not picked: `heightVh` (30-100) renders
-as `min-height: Nsvh` in the page frame (mobile-first `svh` units so
-the opening section fills the couple's actual visible viewport, not
-the address-bar-inflated `100vh`) and as a share of a 480px opening in
-the document and print frames, where there's no viewport to fill. The
-editor's `HeroResizeGrip` is the same bottom-edge grip the spacer and
-header banner use. See the "Page frame" entry on `/design-system` for
-the rendered demo, and `.claude/docs/proposals.md` for the full
-block/config table and the legacy `height` preset fallback.
-
-The personal note's toolbar is the same one-group row (`Heading` /
-`Note` chip by what was clicked, then typography), and the section
-background every non-hero proposal block shares is a caption-less
-group at the end of that row: colour swatch, image button (icon when
-empty, thumbnail + Remove when set), and an Overlay slider chip shown
-only once there is an image to darken. On the canvas the note itself
-is a muted stand-in under a mint "written per proposal" caption, since
-it is typed in the builder, not here.
-
-The hero's toolbar follows the general-block row (target chip, font,
-size, weight, colour, then `PositionControl`, a 3x3 grid for
-horizontal + vertical placement, the Overlay chip when there is media,
-and `IncludeDropdown` for the heading and subheading); it never shows
-captions above its controls, and the structural row hides spacing /
-radius / border because a full-bleed opening has no box to pad or
-frame. `IncludeDropdown` and `ToolbarDivider` live in
-`blocks/toolbar-primitives.tsx` and are the shared show/hide and
-separator controls for every block toolbar.
-
-Sidebar width: 240px (desktop expanded), 68px (desktop collapsed)
-
-Structure: Sidebar \| Main Content
-
-## Mobile Breakpoint Strategy
-
-Breakpoints follow Tailwind defaults: `sm` = 640px, `md` = 768px, `lg` = 1024px.
-
-**Sidebar:**
-- Mobile (`< md`): hidden by default, opens as a 280px drawer from the left via hamburger button in top bar
-- Desktop (`md+`): fixed 68px icon-only sidebar, expands to 240px on hover
-
-**Couple Profile modal:**
-- Wrapper: `fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4`  -  `p-3` creates visible gaps on all edges on mobile
-- Modal box: `w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] rounded-2xl`  -  full-bleed with gaps on mobile, bounded on desktop
-- Navigation: horizontal scrollable tab strip (`overflow-x-auto`, `min-w-max`) on mobile (`sm:hidden`); vertical 200px sidebar on desktop (`hidden sm:block`)
-- Header actions: consolidated into a single `⋯` (MoreHorizontal) Popover dropdown  -  all actions (Call, Email, WhatsApp, Portal, Delete) inside it
-- **VendorProfile** (slide-over): Mobile `w-full`, Desktop `w-[640px]`
-
-**Tables:**
-- Wrapper: `overflow-x-auto`; table: `min-w-[400px]`
-- Couples column visibility: name+status always; email+event_date at `sm`; phone+venue at `lg`
-- Vendors column visibility: name+status always; category at `sm`; contact_name+phone+email at `lg`
-
-**Dashboard grids:**
-- Top section: `grid-cols-1 lg:grid-cols-7`  -  fixed height only on desktop: `lg:h-[560px]`. No fixed height on mobile.
-- Calendar column: `lg:col-span-2 lg:h-full`  -  no hardcoded mobile height; calendar fills naturally
-- Bottom section: `grid-cols-1 sm:grid-cols-2 xl:grid-cols-4`  -  2-col at 640px (not 768px)
-- Stats: `grid-cols-1 sm:grid-cols-3`
-
-**Calendar filter sidebar:**
-- Mobile: hidden, opens as overlay drawer via SlidersHorizontal button
-- Desktop (`md+`): always visible inline
-
-## Calendar Grid Layout Engine (Scheduler Phase E)
-
-`lib/calendar/grid-layout.ts` provides pure geometry for day and week hour grids:
-
-**`bandGeometry(rules, viewport)`**  -  computes pixel height and offset for a band (availability, busy block, or booking chip):
-- Takes start and end times relative to grid-window boundaries
-- Clamps bands to viewport (never extends past grid edges)
-- Enforces minimum height (5 minutes = 5px at 1px/minute density) at the grid bottom
-- Returns `{ top, height }` in pixels for absolute positioning
-
-**`layoutOverlaps(overlappingBands)`**  -  manages columns for simultaneous bookings:
-- Detects A-B-C transitive overlaps (if A overlaps B and B overlaps C, all three get columns)
-- Returns column assignments and computed column widths
-- Used so two simultaneous bookings render side-by-side; three or more overflow the right edge (visible with scrolling)
-
-**Grid window and viewport:**
-- `lib/calendar/grid-window.ts` defines the visible time slice (e.g. Monday 07:00 to 21:00)
-- Window is in the MC's local timezone; queries use overlap predicates (gt/lt on UTC instants, see security.md)
-- Day view: one column, 24-hour window
-- Week view: seven columns (one per local day), 24-hour window
-
-**Timezone handling:**
-- All grid start/end times are computed using `lib/scheduling/timezone.ts` helpers (`zonedDateParts`, `zonedTimeToUtc`)
-- Day start is the MC's local midnight expressed as a UTC instant (e.g. Australia/Sydney midnight = T14:00Z)
-- Column dates are derived in the MC's timezone, never UTC, so DST boundaries are correct
-- Public booking page derives available day states (circles) in MC's timezone, never hardcoding UTC
-
-**Rendering density:**
-- 1 pixel per minute vertically (e.g. 60 pixels = 1 hour, 5 pixels = 5 minutes)
-- Availability shading, busy blocks, booking chips, and current-time indicator all use the same density
-
-------------------------------------------------------------------------
-
-# Mobile Responsiveness Rules
-
-These rules apply to **every page**. Follow them when building or auditing any component.
-
-## Heights
-
-**Never use `h-[Npx]` as a mobile fallback.** Fixed pixel heights cause blank space or overflow on phones.
-
-| Situation | Pattern |
-|---|---|
-| Component must fill desktop container | `lg:h-full` (parent must have a fixed height at `lg:`) |
-| Component needs a minimum on mobile | `min-h-[Npx] lg:h-full` |
-| Scrollable list inside a flex card | `flex-1 min-h-0 overflow-y-auto` |
-| Chart / card on mobile | `h-[260px] sm:h-[340px] lg:h-full` |
-
-## Cards
-
-- Padding: `p-4 sm:p-6` (not just `p-6`)
-- Border radius, border, bg: unchanged at all breakpoints
-
-## Grids
-
-- Start with `grid-cols-1` for all grids
-- Use `sm:grid-cols-2` (640px) for 2-column layouts  -  not `md:grid-cols-2` (768px) which is too late for most phones in landscape
-- Use `xl:grid-cols-4` for 4-column dashboard cards
-- Stats rows: `sm:grid-cols-3`
-
-## Hiding / showing content on mobile
-
-- Hide a section on mobile, show on tablet+: `hidden sm:block` / `hidden sm:grid`
-- Example: dashboard calendar grid is `hidden sm:grid`  -  only the events list shows on phones
-- Hide desktop-only labels: `hidden sm:inline`, `hidden md:inline`
-
-## Responsive label text in dropdowns / buttons
-
-When a label is too long for mobile, use two spans:
-
-```tsx
-<span className="sm:hidden">{shortLabel}</span>
-<span className="hidden sm:inline">{fullLabel}</span>
-```
-
-Example: period selector shows `6m` on mobile, `6 months` on desktop.
-
-## Charts (Recharts)
-
-- XAxis: `interval={1}`  -  shows every other tick, halves label density
-- YAxis: `tickCount={4}`, `width={40}`  -  4 increments, narrower axis
-- Tick font: `fontSize: 11` (down from 12)
-- Wrap the stats row with `flex flex-wrap` so badge + "vs previous period" never overflow
-
-## Anti-patterns to avoid
-
-- `h-[Npx]` on a mobile container  -  use `min-h` or natural height instead
-- Fixed label widths narrower than the longest label (causes wrapping): keep `w-28` for "Word of Mouth"-length labels
-- `md:grid-cols-2` on bottom-section cards  -  use `sm:grid-cols-2` instead
-- Inline period pills (1m 3m 6m 1Y) on the same row as a title  -  use a dropdown instead
-
-------------------------------------------------------------------------
-
-# Buttons
-
-Primary: bg-black text-white rounded-xl px-4 py-2 hover:bg-neutral-800 cursor-pointer
-
-Secondary: bg-neutral-100 text-neutral-900 rounded-xl cursor-pointer
-
-## Mobile FAB (Floating Action Button)
-
-Use a FAB for the primary CTA on mobile when the page header is too narrow to show the full button:
-
-```tsx
-{/* Header button  -  desktop only */}
-<button className="hidden md:flex text-sm px-3 py-1.5 rounded-xl bg-black text-white ...">
-  + New Thing
-</button>
-
-{/* FAB  -  mobile only, fixed bottom-right above nav bar */}
-<button className="md:hidden fixed bottom-20 right-4 z-20 bg-black text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg ...">
-  <Plus size={22} strokeWidth={2} />
-</button>
-```
-
-- `bottom-20` clears the mobile nav bar (h-14 = 56px, plus buffer)
-- `right-4` = 16px from screen edge
-- Circle shape (`rounded-full w-12 h-12`)  -  standard mobile FAB convention
-
-------------------------------------------------------------------------
-
-# Dropdowns  -  Custom Only
-
-**Never use native `<select>` elements anywhere in Zebri.** All dropdowns must be custom-built using a `<div>`/`<button>` + popover pattern.
-
-This applies to every context: filter pills, form fields, period selectors, sort pickers, status selectors  -  everything.
-
-## Compact pill dropdown (filters / toolbar)
-
-Used for small inline selectors like the dashboard period picker:
-
-```tsx
-const [open, setOpen] = useState(false)
-const ref = useRef<HTMLDivElement>(null)
-
-useEffect(() => {
-  const handler = (e: MouseEvent) => {
-    if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-  }
-  document.addEventListener('mousedown', handler)
-  return () => document.removeEventListener('mousedown', handler)
-}, [])
-
-<div className="relative" ref={ref}>
-  <button
-    onClick={() => setOpen(!open)}
-    className="flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
-  >
-    {currentLabel}
-    <ChevronDown className="w-3.5 h-3.5 text-gray-400" strokeWidth={1.5} />
-  </button>
-  {open && (
-    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[130px]">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => { onChange(opt.value); setOpen(false) }}
-          className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition first:rounded-t-lg last:rounded-b-lg ${
-            value === opt.value ? 'font-medium text-gray-900' : 'text-gray-600'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  )}
-</div>
-```
-
-## Form field dropdown (modals / forms)
-
-For dropdowns inside modals or forms, see the **Select (Custom)** entry in `component-library.md`.
-
-------------------------------------------------------------------------
-
-# Cards
-
-bg-white\
-border\
-rounded-xl\
-shadow-sm\
-p-6
-
-------------------------------------------------------------------------
-
-# Branding Editor Typography System (2026-07-15)
-
-## Font catalogue
-
-`lib/branding/fonts.ts` provides 40+ curated Google fonts: sans-serif, serif and (since 2026-09-19) script faces:
-
-- **FONT_IDS**: union of all available font IDs (e.g. `inter`, `poppins`, `montserrat`, `raleway`, `nunito`, `spectral`, `eb_garamond`, `cardo`, `dm_mono`, `figtree`, etc.)
-- **SCRIPT_FONT_IDS**: the cursive subset (`great_vibes`, `dancing_script`, `parisienne`, `allura`, `alex_brush`, `pinyon_script`, `sacramento`, `satisfy`). Stacks fall back to `"Brush Script MT", cursive`, the same fallback the signature stack uses.
-- **FONT_LABELS**: human-readable label per ID
-- **FONT_STACKS**: CSS font-family stack (Google Font family + fallbacks)
-- **GOOGLE_FONT_FAMILIES**: Google Fonts API family descriptor (with weight axis)
-- **HEADING_FONTS** is the whole catalogue; **BODY_FONTS** excludes the script faces so Branding's page-wide body font can never be cursive. The proposal builder's per-role and per-run font pickers read `FONT_IDS` directly, so a cursive run inside a paragraph is still possible there.
-- **fontIdFromStack(stack)**: maps a stored stack string back to its id (the proposal editor stores a `textStyle` mark's `fontFamily` as the raw stack).
-- **HeadingFont / BodyFont**: type aliases for FontId (backward compatible)
-
-Public surfaces load fonts through `useBrandingHead()` (`lib/branding/public-surface.ts`): Branding's heading + body pair, plus any `fonts` the caller names. The public proposal page passes `layoutFontIds(layout, branding)` (`features/proposals/model/layout-fonts.ts`): the theme's four roles plus every `textStyle` override in its content sections, so a face picked in the builder actually loads on the couple's page and in the PDF (the print window copies the page's stylesheets).
-
-## Couple script documents
-
-`lib/documents/script-fonts.ts` is a second, coverage-first font
-catalogue used only by the Scripts tab: `noto_serif` (default) and
-`noto_sans` ahead of the branding faces, and every stack ends with the
-four Noto CJK families so a CJK passage inside an English script never
-renders as tofu. `useScriptFonts()` mounts one `<link data-script-fonts>`
-for a set of faces; the print shell inlines the same href through
-`PrintDocumentOptions.fonts` (with `frame: false` for an unframed page).
-
-Typography for a script (`.script-document` in `globals.css`) is in `em`
-over a 16px editor base. The toolbar
-(`components/documents/script-toolbar.tsx`) is the one always-visible
-Word-style toolbar in the app: its font select is the shared `Select`
-with `restoreFocus={false}` (so the caret goes back to the editor, not
-the closed trigger) and a sentinel "inherit" option, each face rendered
-in itself; its colour pickers are `ColorPopover` behind a
-glyph-with-colour-bar trigger; font size is a readout with A- / A+ steps
-rather than a dropdown; and every control is wrapped in `Tooltip`. Shown
-under Editors on `/design-system`.
-
-`useOverlay` ignores an Escape keydown that is already `defaultPrevented`:
-a Radix popover, select or menu open inside a Modal handles Esc in the
-capture phase and marks it, so the Modal underneath stays open.
-
-## Type role defaults
-
-`lib/branding/type-defaults.ts` resolves global type rules for each role (heading / body):
-
-```ts
-interface RoleType {
-  font: FontId
-  sizePx: number
-  weight: FontWeight
-  color: string
-  align: TextAlign
-  textTransform: 'none' | 'uppercase' | 'capitalize'
-  letterSpacing: number
-  lineHeight: number
-}
-
-interface TypeDefaults {
-  heading: RoleType
-  body: RoleType
-}
-
-resolveTypeDefaults(b: PublicBranding): TypeDefaults
-```
-
-Each role resolves its effective style from the global branding scalars: `heading_size`, `body_size`, `heading_case`, `body_case`, `heading_letter_spacing`, `body_line_height`, plus existing `font_heading/font_body/font_weight/font_body_weight/text_color`.
-
-## Per-text-element styling
-
-Text-bearing blocks (business name, tagline, text, action, line items, etc.) resolve their effective style in layered order:
-
-1. Global type default (role heading or body)
-2. Block TextStyle override (optional, per-block)
-3. Inline element style (e.g. individual action label text)
-
-`TextStyle` interface:
-
-```ts
-interface TextStyle {
-  font?: FontId
-  sizePx?: number
-  weight?: FontWeight
-  color?: string
-  align?: TextAlign
-  textTransform?: 'none' | 'uppercase' | 'capitalize'
-  letterSpacing?: number
-  lineHeight?: number
-}
-```
-
-------------------------------------------------------------------------
-
-# Branding Editor Per-Block Controls (2026-07-15)
-
-Every block in the editor exposes a unified Canva-style toolbar:
-
-## Shared block controls (BaseBlock)
-
-Applied by `blockOuterStyle(block, branding)` in both the editor (`BlockFrame`) and public renderer (`BlockOuter`) so they can't drift:
-
-- **Padding:** top, right, bottom, left (px slider per side)
-- **Background:** colour (ColorPopover)
-- **Border:** width (px), colour, radius (px)
-- **Width:** max width in px + horizontal alignment (left/centre/right)
-- **Spacing:** space above, space below (px slider)
-
-## Block type-specific controls
-
-Each block type offers additional controls audited per surface:
-
-- **Header banner:** image (upload), fit (cover/contain), focal point (X/Y/scale), height (px), overlay colour + opacity, rounding
-- **Business name:** layout variant, logo size, alignment
-- **Tagline:** full text controls (font, size, weight, colour, alignment, case, letter-spacing, line-height)
-- **Text:** full text controls + link colour usage
-- **Image:** fit, focal point, height, width, alignment, padding, background
-- **Spacer:** height (px)
-- **Divider:** thickness (px), colour, style (solid/dashed/dotted), width, alignment
-- **Action button:** variant (fill/outline), size (sm/md/lg), radius, alignment, label text + styling
-- **Line items:** row style (lines/stripes/plain), header + item text controls, column spread
-- **Totals:** heading/label/value text controls, show/hide rows
-- **Payment details:** heading/label/value text controls
-- **Footer:** note + contact text controls, show/hide contact lines
-- **Form field** (Website form surface): role (Name / Partner / Email / Phone / Wedding date / Venue / Message / Referral / Custom), input type (text / email / phone / date / long text / dropdown), label, placeholder, required toggle, and options list (dropdown only)
-- **Submit button** (Website form surface): labelled toolbar controls on two rows: Button label + After sending (Select: show a success message / redirect to a URL, http(s) only), then the matching Success message / Redirect URL input full-width. Below them, action-style button styling: fill colour, fill/outline, size (S/M/L), alignment, radius, and width, each a block override falling back to the brand's global button settings. Editor preview and public page render the same `RenderFormSubmitButton` (`lib/branding/public-blocks/form-submit.tsx`)
-
-The **Website form** (`lead`) is a full branding surface with its own tab, edited exactly like the invoice/contract/questionnaire surfaces. Its palette is the General blocks plus one ready-made entry per enquiry question (each a `formField` preset with its role, input type, label, and required flag preset; name + email preset required), a Custom question, and the Submit button; the public `/lead/[token]` page renders the block tree. See `page-specs.md` (Lead Capture) for the public + ingest behaviour.
-
-------------------------------------------------------------------------
-
-# Editor primitives (`components/editor/`)
-
-The controls above (`PillToggle`, `ActiveTargetLabel`, `ToolbarDivider`,
-`IncludeDropdown`, `PositionControl`, `Select`, `Slider`,
-`NumberStepper`), the `ResizeGrip` resize handle and its drag maths,
-and the zoomable/pannable `CanvasFrame` used to live under
-`app/(dashboard)/branding/`. Proposal Layout v2 Phase 2 (spec 5.3)
-lifted them to `components/editor/` so the Branding editor and the
-proposal section editor share one set instead of drifting into two.
-Import from the barrel:
-
-```ts
-import { PillToggle, ToolbarDivider, CanvasFrame, type CanvasDevice } from '@/components/editor'
-```
-
-- `PillToggle`, `ActiveTargetLabel`, `VAlignIcon`, `ToolbarDivider`,
-  `IncludeDropdown` (+ `IncludeRow`): `components/editor/toolbar-primitives.tsx`.
-- `PositionControl`: `components/editor/position-control.tsx`. A 3x3
-  grid button placing text top/middle/bottom x left/centre/right.
-  Deliberately untyped against the Branding block model: it takes
-  plain `'left' | 'center' | 'right'` / `'top' | 'middle' | 'bottom'`
-  unions rather than importing `HeroBlock`, because `components/editor/`
-  must not import from `app/` or `features/`.
-- `Select`, `SelectOption`: `components/editor/select.tsx`. Popover
-  select with an optional custom label renderer and a meta column.
-- `Slider`: `components/editor/slider.tsx`. Pointer-drag + keyboard
-  (arrows, Page Up/Down, Home/End) slider over `[min, max]`.
-- `NumberStepper`: `components/editor/number-stepper.tsx`. An editable
-  numeric `<input type="number">` (role `spinbutton`), clamped to
-  `[min, max]`, flanked by Decrease/Increase buttons named
-  `Decrease ${ariaLabel}` / `Increase ${ariaLabel}`. An optional
-  `suffix` (e.g. `"px"`) renders as muted text after the input.
-- `ResizeGrip`, `ResizeGripProps`, plus the pure drag maths it's built
-  on (`Snap`, `zoomFactor`, `clamp`, `stepRound`, `applySnaps`,
-  `dragValue`): `components/editor/resize-grip.tsx` and
-  `resize-math.ts`. A `role="slider"` pill grip (`axis: 'y'` on the
-  bottom edge, `cursor-ns-resize`; `'x'` on the side edge,
-  `cursor-ew-resize`) draggable with the mouse or the arrow keys
-  (`step`, default 1), with an optional `scale` (layout px per unit
-  of `value`, e.g. a vh-based height), `snaps` (locks within
-  `tolerance` units and swaps the readout for the snap's `label`),
-  and `onCommit` (fires once on mouse up, the undo-history point).
-  `zoomFactor` recovers the CSS-`zoom` scale of a zoomed canvas from
-  an element's unzoomed layout height vs. its zoomed screen height
-  (1 in jsdom, which has no layout). The Branding hero's
-  `HeroResizeGrip` (`app/(dashboard)/branding/blocks/proposal/hero-resize.tsx`)
-  is a thin wrapper over it.
-- `CanvasFrame`, `CanvasFrameProps`, `CanvasDevice`:
-  `components/editor/canvas-frame.tsx`. The zoomable, pannable
-  document viewport (cursor-anchored zoom, space/middle-drag pan,
-  fit-to-width), with its zoom widget.
-
-**The Branding editor's old import paths still work.** Each one
-(`app/(dashboard)/branding/blocks/toolbar-primitives.tsx`,
-`app/(dashboard)/branding/blocks/proposal/position-control.tsx`,
-`app/(dashboard)/branding/components/{select,slider}.tsx`,
-`app/(dashboard)/branding/canvas-frame.tsx`) is now a compatibility
-re-export of `@/components/editor`, removed in Phase 5 when the
-Branding toolbar is rebuilt on these primitives directly. New code
-(the proposal section editor, and any Branding code touched from now
-on) should import from `@/components/editor`, not the old paths.
-
-Rendered on `/design-system` under "Editor primitives".
-
-## Control bars (Proposal Layout v2 Phase 2)
-
-The section, node and text bars in `features/proposals/editor/bars/`
-(section bar, node bar + its per-kind variants, text bar) share one
-rule set, enforced by `BarShell` (`features/proposals/editor/bars/bar-shell.tsx`):
-
-- **One 32px row.** `BarShell` lays out `h-8 items-center gap-1`; a bar
-  never wraps to a second row or grows taller to fit more controls.
-  Built only from `components/editor/` primitives plus `components/ui/`
-  (`Tooltip`, `ColorPopover`, `MenuPanel`/`MenuItem`, `Button`,
-  `ConfirmDialog`).
-- **No captions above controls.** A control's meaning comes from its
-  icon, its `aria-label`/`Tooltip`, or (for a `Select`) its own visible
-  value - never a label rendered above the row.
-  `ActiveTargetLabel` (`components/editor/toolbar-primitives.tsx`) is
-  the one exception: it names what a bar is currently acting on (e.g.
-  a selected image), inline in the row itself.
-- **Overflow `...` when a bar would not fit at 380px.** A control that
-  does not fit the row at that width moves behind the bar's own
-  trailing `...` menu (`BarShell`'s `overflow` slot), a `Popover`
-  anchored to the `...` trigger - `text-bar-overflow.tsx` (list
-  toggles + the `Aa` case choices) and `section-bar.tsx` (Hide on
-  phone, Duplicate, Reset style, Delete) both do this. The threshold
-  is the bar's own control order, not a runtime width measurement
-  (`BarShell`'s module doc has the why).
-- **Anything deeper than one step opens a popover from that control.**
-  A colour choice, a font pick, a link edit - each opens a `Popover`
-  anchored to the control that triggered it, never a second toolbar
-  row. `text-bar.tsx`'s `Link` control and `ColorPopover` follow this;
-  so does every `Select` in a bar.
-
-Rendered on `/design-system` alongside the editor primitives (the
-Templates editor itself, behind `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2`, is
-where the bars run for real - see `.claude/docs/page-specs.md`).
-
-------------------------------------------------------------------------
-
-# Global Styles (Branding Editor)
-
-The **Global styles** accordion exposes branding defaults applied to every surface:
-
-- **Corner radius** (px)  -  applied to blocks via BaseBlock border-radius
-- **Link colour** (hex)  -  default link text colour when no block override
-- **Button style**  -  variant (fill/outline), size (sm/md/lg), radius (px)
-- **Base line-height** (unitless)  -  fallback for body text when not overridden per block
-- **Section spacing** (px)  -  default space between blocks
-- **Page background**  -  colour (hex) or optional texture ID
-
-Density (cozy/compact) is read-only; the stored value is honoured on render but the control is removed. All new fields resolve in `_user_branding` and merge into public RPC payloads.
-
-------------------------------------------------------------------------
-
-# Tables
-
-Clean Notion-style tables: no card wrapper (no border/rounded-xl container), white header with bottom border, sentence-case header text (not uppercase), plain text pagination.
-
-## Column headers
-
-| Property | Value |
-|---|---|
-| Cell class | `px-1 py-1.5 text-left text-xs text-gray-400` |
-| Layout | Each header label uses `flex items-center gap-1.5` with a 12px lucide icon (`size={12} strokeWidth={1.5}`) before the text |
-| Name column | Uses a small "Aa" text marker instead of an icon: `<span className="text-[11px]">Aa</span>` |
-| Sticky header | `sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]` |
-
-## Row styling
-
-| Property | Value |
-|---|---|
-| Cell padding | `px-1 py-2` (compact rows) |
-| Row hover | `hover:bg-gray-50/60` |
-| Row selected | `bg-emerald-50/40` |
-| Row class pattern | `cursor-pointer transition group ${isSelected ? 'bg-emerald-50/40' : 'hover:bg-gray-50/60'}` |
-| Per-row borders | Use `border-separate border-spacing-0` on the `<table>` and `border-b border-gray-100` on each `<td>` |
-
-## Checkboxes
-
-Use a custom `<button>` (not a native `<input type="checkbox">`) so the styling matches across the app:
-
-```tsx
-<button
-  type="button"
-  onClick={toggle}
-  className={`shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
-    selected
-      ? 'bg-success border-success'
-      : `border-gray-300 hover:border-gray-500 ${
-          selectionActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-        }`
-  }`}
->
-  {selected && <CheckMark />}
-</button>
-```
-
-- Hidden until row hover by default; always visible when row is selected or any selection is active
-- Filled with `bg-success` when selected, with a white SVG checkmark inside. That is the same green a `Toggle` shows when it is on: the two were `emerald-500` and `success` (emerald-600) until 2026-08-21, one shade apart, which showed as two greens whenever a checkbox and a switch shared a form
-- Header "select all" checkbox uses the same component, with a `<DashMark />` for the indeterminate state
-
-## Page header layout
-
-Page headers stack vertically (title row → toolbar row → optional view tabs), matching the `/tasks` page:
-
-```tsx
-<div className="px-6 sm:px-[3.75rem] pt-6 pb-3 flex-shrink-0">
-  {/* Title row */}
-  <div className="flex items-center justify-between mb-4">
-    <div className="flex items-baseline gap-3">
-      <h1 className="text-3xl font-semibold text-gray-900">{title}</h1>
-      <span className="text-sm text-gray-400">{count} total</span>
-    </div>
-    {/* Mobile + button  -  sm:hidden, w-8 h-8 rounded-full bg-gray-900 */}
-  </div>
-
-  {/* Toolbar row  -  search, filter, sort on left; primary CTA on right */}
-  <div className="flex items-center gap-2 mt-3 flex-wrap">
-    <SearchInput />
-    <FilterButton />
-    <SortButton />
-    <div className="ml-auto">
-      <NewButton />
-    </div>
-  </div>
-</div>
-```
-
-## Toolbar elements
-
-All toolbar controls share the same compact aesthetic (no `rounded-xl`, no `text-sm`, no large icons):
-
-| Element | Class |
-|---|---|
-| Search input | `w-full sm:w-56 border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300` |
-| Search icon | `Search size={11} strokeWidth={1.5}` at `absolute left-2 top-1/2 -translate-y-1/2 text-gray-400` |
-| Clear (X) | `X size={10} strokeWidth={2}` at `absolute right-1.5` |
-| Filter / Sort button | `flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50` with an 11px lucide icon and a text label |
-| Primary CTA ("New …") | `inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700`, with `Plus size={11} strokeWidth={2}` |
-| Mobile + button | `sm:hidden w-8 h-8 rounded-full bg-gray-900 text-white` with `Plus size={16} strokeWidth={2}` (in the title row, not a FAB) |
-| Dropdown panel | `bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-32` |
-| Dropdown item | `w-full text-left px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50` |
-
-## Alignment with the page title
-
-The title in the header sits at the page's `sm:px-[3.75rem]` left padding (60px). To make the first row content (e.g. couple names, task names) line up vertically with that title:
-
-- Content area uses **asymmetric padding**: `pl-6 pr-6 sm:pr-[3.75rem]` (24px left, 60px right)
-- A fixed-width gutter column on the left of each row fills the 36px gap. For tables: `width: '36px'` on the select column (with the checkbox `pl-3` inside it). For task-style lists: a 28px grid column with `px-2` row padding.
-- Net result: row content starts at exactly 60px from the sidebar, matching the page title
-
-# Board Views
-
-Notion-style kanban aesthetic:
-- Columns with bg-gray-50 rounded-xl containers, content-height (not equal)
-- Colored pill headers (bg + text color per status)
-- Cards: bg-white shadow-sm rounded-lg; hover shadow-md
-- Text-only cards (no icons for metadata)
-- "+ New" full-width button at column bottom with status-colored border
-- Hidden scrollbar on kanban container
-
-# Toolbar Style
-
-Notion-style compact toolbar in header row:
-- Expandable search (icon → input on click, X clears text only when present)
-- Sort dropdown (ArrowUpDown icon) with sort options
-- Filter dropdown (SlidersHorizontal icon)
-- Small black "New" button
-- All buttons use cursor-pointer
-
-------------------------------------------------------------------------
-
-# Contract List Numbering (2026-09-12)
-
-Legal-style clause numbering on contract surfaces (contract builder body,
-contract template editor). The rich-text toolbar's Numbered list button
-becomes a split control (`ListStyleMenu`,
-`components/ui/rich-text-list-style-menu.tsx`): the icon still toggles
-the list; beside it a trigger shows the current list's glyph (`1.`, `1.1`,
-`(a)`) with a chevron, muted when the caret is not in a list. It opens a
-`MenuPanel` with two labelled groups: **Whole list**, holding the Legal
-preset (`1.` / `1.1` / `(a)` / `(i)`), and **This level**, the eight
-formats each row leading with its first marker: `1.` · `1.1` · `a.` ·
-`(a)` · `A.` · `i.` · `(i)` · `I.`. The row in effect is `selected`.
-
-- The preset is one attribute on the outermost list and numbers by depth,
-  so a sub-list made later with Tab is right without another pick. A
-  per-level format applies to the one list under the caret and overrides
-  the preset there. Nested lists are their own `<ol>`.
-- Typing a first marker at the start of a line (`a. `, `(a) `, `A. `,
-  `i. `, `(i) `, `I. `, `1.1 `) starts a list in that format, as Word's
-  automatic lists do; `1. ` stays the plain list.
-- Rendering is CSS only: `ol[data-list-style="…"] > li::marker { content: … }`
-  and `:where(ol[data-list-scheme="legal"] ol …) > li::marker` in
-  `globals.css`, keyed on the attributes rather than any wrapper class, so
-  every surface that shows contract HTML (editor, builder preview, template
-  preview, public page, PDF) draws the same marker. `1.1` composes one
-  named counter per depth (`zc1` … `zc4`, reset on every `<ol>` and
-  incremented on its items) with plain `counter()`, and keeps the plain
-  `1.` at the top level. Not `counters(list-item, ".")`: inside a size
-  container (the branded card is `@container/doc`) Chrome resolves that
-  with a phantom extra level, so the preview and public page showed
-  `1.1.1` for the editor's `1.1`. The scheme rules carry no specificity
-  so a per-list format wins.
-- Numbered markers take the body text colour (`--cc-body-color`) so a
-  clause number reads with its clause; bullet dots keep the muted grey.
-  The format rules themselves only set `content`.
-- The marker follows the styling the item's text starts with: an item
-  whose first inline is bold or italic gets a bold or italic number
-  (`li:has(> :first-child > strong:first-child)::marker`, one level of
-  mark nesting covered). A `::marker` never inherits from a `<strong>`
-  inside the item, hence the `:has()`.
-- A list item may be a heading (`ContractListItem` admits `heading` as
-  the first block, so H1/H2/H3 work inside a list). The marker then
-  takes the heading's font, weight, size and colour, the heading drops
-  its top margin (it would push the title below its number) and the item
-  carries `1rem` of clause spacing instead.
-- Rendered live on `/design-system` under Editors and pickers.
-
-------------------------------------------------------------------------
-
-# Inputs
-
-border border-gray-200\
-rounded-xl\
-px-3\
-py-2\
-focus:ring-2\
-focus:ring-green-200
-
-------------------------------------------------------------------------
-
-# TimeSelect Primitive (Scheduler Phase B)
-
-**`<TimeSelect />`** (`components/ui/time-select.tsx`) is a 24-hour time picker for selecting a wall-clock time (HH:mm format). Renders as a control-height (32px) dropdown trigger with a time value displayed in 12-hour label format (e.g. "2:30 PM" for a 14:30 value).
-
-Props:
-- `value` (string, "HH:mm")  -  24-hour time value
-- `onChange(value: string)`  -  fired on selection, passes "HH:mm"
-- `minuteStep` (number, default 15)  -  minute granularity in the dropdown (5, 15, 30, 60)
-- `startHour` (number, default 0)  -  earliest hour to show (0-23)
-- `endHour` (number, default 23)  -  latest hour to show (0-23); generates times up to and including the final minute at this hour
-- `disabled` (boolean, default false)
-- `label` / `help` / `error` (text, optional)  -  linked to the input via `aria-describedby`
-
-Dropdown renders times as 12-hour format with AM/PM (e.g. "9:00 AM", "2:30 PM"). Never hand-roll a time dropdown; reach for TimeSelect.
-
-------------------------------------------------------------------------
-
-# Icons
-
-Use lucide-react. All icons must use `strokeWidth={1.5}` for a lighter, more refined line weight.
-
-------------------------------------------------------------------------
-
-# Animations
-
-Allowed: - hover transitions - fade in - subtle scale
-
-Avoid: - flashy motion - bouncing effects
-
-------------------------------------------------------------------------
-
-# Empty States
-
-Example:
-
-"No couples yet.
-
-Start by adding your first couple."
-
-Button: Add Couple
-
-------------------------------------------------------------------------
-
-# Horizontal Tabs
-
-Style: Vercel / Beyond.so underline tabs.
-
-Container: `flex gap-6 border-b border-gray-200`
-
-Active tab: `text-gray-900 font-medium` + 2px `bg-gray-900` bottom border
-
-Inactive tab: `text-gray-500 hover:text-gray-700`
-
-Tab text: `text-sm`
-
-------------------------------------------------------------------------
-
-# Command Palette
-
-Shortcut: Cmd + K
-
-Style similar to Linear / Vercel.
-
-------------------------------------------------------------------------
-
-# Theming on Public Pages
-
-Public quote (`/quote/[token]`) and invoice (`/invoice/[token]`) pages support per-MC accent theming.
-
-- **Accent color:** Use `brand_color` from the MC's `user_metadata` (returned by the public RPC) for primary CTA buttons. Fallback to `#A7F3D0` when not set.
-- **Logo:** When `logo_url` is set, render the logo image (`max-h-12 object-contain`) instead of the `business_name` text header.
-- **Tagline:** Shown below logo/name when `tagline` is set; `text-xs text-gray-400`.
-- **Contact footer:** Rendered when `show_contact_on_documents` is true; phone, website, social links in `text-xs text-gray-400`.
-
-All other styling (background, card, typography) remains the standard Zebri design system. See `.claude/docs/branding.md` for the full spec.
+**Input `leadingIcon`** (2026-10-12): an icon inside the field on the
+left, with the text padded past it. Use it for search boxes instead of
+placing an icon beside the input by hand. Admin Outreach's prospect
+search is the first user.
+
+### v2 preview: `/design-system/v2`
+
+A new system, themed on zebras, blue sky and green grass, built
+alongside v1 (`app/design-system/v2/`). So far it holds Foundations,
+and within that only the colour palette: four 11-step scales
+(`zebra-*`, `azure-*`, `grass-*`, 50 to 950, plus `champagne-*`, a
+warm gold kept for celebration only: never an action, status or
+surface) declared in `app/globals.css`. The blue scale is `azure`, not `sky`, because
+Tailwind's built-in `sky` is still used by Badge and the template
+category colours. Nothing in the app consumes v2 yet; v1 stays the
+source of truth until v2 is complete.
+
+The page is set in v2 itself (`showroom-v2.tsx`: `Section`, `Group`,
+`Spec`, `Demo`, `DemoRow`), never the v1 `../showroom` wrappers, which
+put v1 type around v2 components. Heading ladder: page `type-display`,
+section `type-title`, group `type-heading`, component `type-subheading`
+with its file in `type-code`. Components are grouped as the rail lists
+them: Buttons & links, Inputs, Selection, Display, Overlays, Motion,
+and **every primitive in `components/ui-v2/` has its own entry**; a new
+primitive lands with its entry.
+
+#### v2 consistency rules (2026-10-14, user rulings after the audit)
+
+These win over anything older in this section.
+
+- **Text fields are "option G"** (user ruling 2026-10-14, picked from
+  seven live options; superseded the "quiet name" rule the same day). A
+  field is a line led by its icon (`size-4 text-zebra-400`), then the
+  words themselves: the field's name as grey placeholder text until
+  something is typed, then the value in black, all one size (no
+  title-sized name line). No box, no border, no label above, nothing
+  "(optional)"; the icon is what names a filled value, so every form
+  field has one and it is chosen by meaning. Hovering tints exactly the
+  words, placeholder or value (`FitInput`, `components/ui-v2/fit-input.tsx`:
+  a hidden copy of the text sizes the field, `size={1}` drops the
+  browser's minimum width), and the tint grows as you type; clicking in
+  clears the tint and leaves the caret (no label appears on focus: tried
+  and rejected). `Input` (`icon`, `label`, `wide`), `Dropdown` and
+  `Select` in a form, `Textarea`, `DateField` and `PasswordInput` all
+  draw it. A question label ("Where did you meet?") shows above, quiet,
+  and the field prompts "Your answer". Choices with ticks stay
+  `ChipGroup`. `raised` / `filled` are only for a search among toolbar
+  buttons or atop a dialog's rail. A record that is read more than
+  edited (the client Overview) keeps its rows: icon and grey name in a
+  column, the value beside it. So does a setting panel (`SettingRow`,
+  `payments/modal/setting-row.tsx`: icon, grey name, the value's control):
+  a setting always holds a value, so a placeholder-named field would never
+  say what it is (user, 2026-10-14, the invoice's "Get paid" panel).
+- **Custom values are "type to find"** (user ruling 2026-10-15, picked
+  from live options; the default for every custom input). A setting with
+  usual values that takes any other (a deposit percent, a due date's lead
+  time, a booking length, a reminder) is a `ValuePicker`
+  (`components/ui-v2/value-picker.tsx`): the value on a small white button
+  ("7 days ⌄"), opening a `ValueMenu` (`value-menu.tsx`) whose first line
+  is a quiet "Type a number…" over the common choices. Typing replaces the
+  choices with what the text could mean ("9" lists 9 days, 9 weeks,
+  9 months; "9 w" narrows to weeks; `readAmount` for number-and-unit,
+  a caller's own `read` for words like "1 hr 30"); Enter takes the first.
+  No "Custom…" row, no second screen, no Done button: typing is the custom
+  value, and a value that is not a choice is listed first, ticked. A
+  second choice that shapes the value goes under a rule after the values
+  (`also`: the invoice balance's "Before the event" / "After this
+  invoice"), and the button then says the whole phrase ("2 months before
+  the event ⌄"), one line that never wraps (`row` keeps the menu's rows
+  short: "2 months"). A chip
+  or row that already opens a menu (the booking chips, Journeys' "Asks
+  for") renders `ValueMenu` inside it. Rejected on the way: a tinted
+  number with a tiny unit menu beside it, a stepper, a settings list, a
+  sentence with underlined values, Custom… opening an editor with a green
+  Done and a units switch, and Custom… turning into a typing row.
+- **Dialog anatomy** (`components/ui-v2/dialog-parts.tsx`): header is an
+  `IconCircle`, the title in `type-label text-zebra-500`, the dialog's
+  actions (`DialogHeader actions`, primary last) and Close (ghost square)
+  top right, all on that one row; the big name and its subtitle sit on
+  their own full-width row under it. Never a row of buttons under Close
+  (user, 2026-10-14: read as clutter); no header or footer bars or rules; footer
+  right-aligned, `gap-3`, primary last. **Padding is Settings'** (the
+  gold standard, user 2026-10-15), the same in every size:
+  `DIALOG_HEADER_PAD` (`py-3 pl-4 pr-3`: the X glyph 22px from the top
+  and right) and `DIALOG_FOOTER_PAD` (`px-5.5 pb-5.5`: the last button's
+  edge 22px from the right and bottom, under the X). Body stays 24px,
+  40px in a large dialog. A hand-built header or footer imports these
+  constants rather than copying the classes. Form dialogs have no Cancel
+  (Escape, the scrim and Close are the way out); a confirmation dialog
+  has a `plain` Cancel before its primary or danger button.
+- **Ledger rows** (`Input`, `DateField`, `Dropdown` `row`; `LEDGER_ROW` in
+  `control-styles`): the field's name on the left, its value beside it, no
+  box, no icon; a field's help sits behind an info mark by the name. On a
+  phone the name stacks over the value. Used by Settings (2026-10-15).
+  Anywhere a field shows an error, the error replaces its help line
+  rather than stacking under it.
+- **Boxed fields** (`Input`, `DateField`, `Dropdown` `boxed`; `ChipGroup
+  stacked`; `CalendarField` with `DatePanel`; `ComboField`; `BoxedLabel`;
+  `BOXED_CONTROL` in `control-styles`): the name over a white hairline
+  box, 40px tall (a step over the app's 36px), help shown under it. An
+  invalid one takes a red edge through `boxedControl(error)`, never by
+  appending `border-danger` to `BOXED_CONTROL` (two border colours on one
+  element resolve by stylesheet order, and the neutral one won). Only
+  where a stranger fills a form in once: the entry screens and the
+  couple's public BDM form (2026-10-15). There, and only there,
+  `optional` marks a field "(optional)"; required fields stay unmarked. A
+  date is a `CalendarField`: typed DD / MM / YYYY in one box (`DateSegments`,
+  auto-advancing, paste-aware), with a calendar button opening `DatePanel`,
+  whose Month and Year are menus in its header (a birthday opens near 1990); a list of more than twelve
+  is a typed `ComboField` with `pinned` options first. On the couple's form:
+  - One card filling the window; only the questions scroll, so the bar
+    and the footer ("Only Sophie sees your answers", "Powered by Zebri")
+    stay in view.
+  - A welcome page first: what it is for, what to have to hand, and that
+    both of them confirm it at the end. No "who is filling this in".
+  - A section a page (`PagedStyle`), titled by its heading, the parts
+    named in a rail from `lg`; on phones a `ProgressBar edge` line along
+    the bar's foot.
+  - Related answers share a row (a question's `span`); choices are a
+    stacked list with a hint line each; a branch few take opens from a
+    quiet link (`reveal`: "I live outside Australia").
+  - Each ID is a photo: pick the document on a card, take or upload a
+    photo, the details are read off it to check (`id-capture.tsx`;
+    pretend in the demo).
+  - On phones the card is full-bleed, Back and Next split the width of a
+    row at the end of the page, never stuck to the screen (`PHONE_BAR`;
+    Start too), short fields pair up
+    (`phoneHalf`: State and Postcode), and bar status is icon-only.
+  - Check your answers, each part with Change; at its foot both confirm,
+    then Send. Sent says so in place; they can change an answer and send
+    the changes until the celebrant has checked the notice.
+- **The celebrant's paperwork dialog** (2026-10-15): every part sits on
+  one `PaperCard` (`bdm/paper-card.tsx`): initials or a glyph, the name,
+  anything "to look at", then on the right "3 of 5" with a short
+  `ProgressBar`, or Complete, and one action.
+  - Couple's details: a card a person, then "Together". Read first, name
+    over value in two columns, the names in the celebrant's voice
+    (`celebrant-labels.ts`); a refused answer in red under it, one that
+    only looks wrong (`oddities.ts`: postcode outside its state, a
+    certificate year before the birth) in amber. "Still to come: A, B and
+    14 more", where "14 more" (a `TextLink` with no href, so a button)
+    opens the rest. Edit turns the card into ledger rows. Before it is
+    sent, one compact `EmptyState` with Fill in for them.
+  - Before the day and Lodge: a card a group; ticks for what they saw
+    happen, ledger rows (`row` Input, Dropdown, DateField) for anything
+    with a value, a problem under its own field.
+  - The side: the facts on `ReadBack`, then the history as a `Timeline`
+    (sent, back, notice signed by a month before, wedding, lodged,
+    registered), with the date each was done or is due.
+- **Icons are all Zebri.** Lucide is no longer used anywhere in v2; every
+  icon comes from `components/ui-v2/icons/` (see Icons below). Brand logos
+  (Google, Outlook, Zoom) stay real logos, one mark per brand.
+- **Focus mark**: one keyboard-only treatment for every control, row and
+  card, the `focus-mark` utility (a 2px grass-500 outline 2px outside the
+  shape, following its corners; an outline, so it never replaces a
+  button's shadow). `focus-mark-within` on a wrapper. Text fields show
+  focus by the caret only (their hover tint clears); menu rows by the
+  highlight fill.
+  Never `outline-none` without a mark.
+- **Interaction tokens**: `bg-hover` (zebra-950 at 5%) behind anything
+  under the pointer, `bg-pressed` (8%) for open or current, `selected`
+  (grass-800) for every picked chip, card, check or menu tick,
+  `HOVER_ON_WHITE` for opaque white things. Dividers inside a v2 surface
+  are `hairline` (zebra-950 at 7%: `border-hairline`, `bg-hairline`,
+  `ring-hairline`), never zebra-100/200/300. The white secondary button's
+  zebra-200 edge, Checkbox and ChoiceCard's zebra-300 box, and dashed
+  edges (FilterChip, FileDrop, Waterfall) are edges, not dividers.
+  Disabled is one recipe (`DISABLED` in `control-styles.ts`: 50%, no
+  pointer) on every interactive primitive.
+- **Geometry**: controls that sit in toolbars beside buttons are 36px
+  (`h-9`) with `rounded-panel` corners (Button, FilterChip, Segmented
+  track, raised Input, Dropdown, Stepper, Badge `control`). Chips inside
+  content (ChipGroup, PropertyChip, TagList) are 32px, `rounded-button`,
+  `type-body`. Nested parts take a smaller radius than their container.
+- **Shared recipes** in `control-styles.ts`: `FLOATING` (menus, popovers),
+  `FLOATING_BAR` + `BAR_RULE` (every floating toolbar), `MENU_ITEM`,
+  `MENU_LABEL`, `MENU_RULE`, `ROW` (a clickable row or card: hover fill,
+  focus mark, 150ms). New primitives: `IconCircle` (32px or `lg` 48px,
+  zebra-100 with a zebra-500 glyph), `GroupLabel`, `EmptyState`, `Badge
+  dot` for status dots. Square `Button`s name themselves with a Tooltip
+  from their `aria-label`; never a native `title=`.
+- **Scrollbars**: thin, no track, invisible at rest; a faint zebra thumb
+  shows only while the pointer is over the area that scrolls (`.v2-scroll`
+  in `app/globals.css`, applied by the v2 layout). Never the default grey
+  bar (user, 2026-10-14).
+- **Motion**: 150ms for state changes; entrances via `animate-rise-in` /
+  `animate-reveal-up`; curves from tokens only (`ease-roll` for buttons,
+  `ease-glide` for sliding parts); every transition has a
+  `motion-reduce` off switch. Dialog and Sheet scrims are zebra-950/20.
+- **Formats**: dates day first ("24 Sep", "14 Mar 2027"), money through
+  one `money()`, times "9:00 am", relative times spelled out ("2 days
+  ago"), merge fields `{first names}`.
+- **Type**: figures use `type-numeric`; intro lines `type-lead`; group
+  labels `GroupLabel`; no overrides on a role.
+
+Typography lists each UI element (page title, heading, button, label,
+…) with its role, from `app/design-system/v2/type-scale.ts`. Each one
+renders with a `type-*` role class in `app/globals.css` that bundles
+size, line height, weight and tracking. Everything is Inter. Never add a
+weight, size or tracking override to a role: if a role is missing, add
+it. `type-lead` (16px regular) is an intro line, a description or
+prompt text (it replaced `type-subheading font-normal`); `type-eyebrow`
+(13px medium caps, 0.1em) is a kicker above a title in a proposal (it
+replaced `type-label tracking-widest uppercase`). A group label ("Today",
+"Get paid") is `type-body text-zebra-400`.
+
+Background and surface: **Backdrop** (`components/ui-v2/backdrop.tsx`,
+`bg-backdrop` utility) is the app background: a bone base with pale
+grass (100 step) tinting the bottom-left corner and pale sky the top
+right, plus soft white clouds from an inline SVG `feTurbulence`
+texture, drawn on a fixed layer (iOS ignores `background-attachment:
+fixed`). Colour stays at the edges; the middle is near-neutral.
+**Panel** (`components/ui-v2/panel.tsx`, `rounded-panel` 10px; `raised`
+adds `shadow-xl` and a hairline ring for a panel floating alone, like a
+dialog or the onboarding card) is the
+one raised surface. `surface-glass` (2026-09-30: every card now uses the
+recipe that began as the Payments chart's "clear" tone, so the app is one
+material): 72% white (40% read as no card at all), 28px backdrop blur, a
+white hairline and inner top highlight, so the backdrop's wash shines
+through. Its edge is drawn by the shadow, not a border: a 5% dark ring,
+a 1px contact shadow and a soft 24px lift (2026-09-30, user: white cards
+vanished over the backdrop's near-white middle). `tone="highlight"`
+(`surface-highlight`, `rounded-button` 6px) is for the key block inside a
+panel: pure white with a grass-300 to azure-300 gradient hairline.
+Dialogs, sheets and form controls stay solid `bg-field`. Never hand-write `-webkit-backdrop-filter`: Lightning CSS then drops
+the standard property and Chrome gets no blur.
+
+Icons: every icon in v2 is a Zebri icon from `components/ui-v2/icons/`
+(user ruling 2026-10-14: the 117 Lucide icons v2 used were redrawn in
+the Soft glyph style and Lucide removed), `size-4` by default and
+`size-3.5` in compact spots. A new icon is drawn with the `/new-icon`
+skill (`.claude/skills/new-icon/SKILL.md`), never as a hand-rolled
+svg in a component. Each icon is built by `createIcon` (`icon-base.tsx`)
+with Lucide's props and type, so it fills any `icon` prop a Lucide icon
+does. It is decorative (`aria-hidden`) unless given a `title`, and it
+ignores a passed `strokeWidth`, because the weight belongs to the
+drawing. There are three tiers: **glyph** (24 grid, inline, currentColor only;
+locked to the Soft style: stroke 1.5, `rx` 4 objects, dots as list
+markers, no folded corners), **tile** (48 grid, Blocks art) and
+**spot** (160 grid, empty states). Tile and spot may add one palette
+accent and one muted fill, and their style is locked the first time
+one is drawn. Every icon is listed on the Icons entry under
+Foundations.
+
+Components so far: **Button** (`components/ui-v2/button.tsx`; variants
+primary (grass-800), secondary, danger, plus `loading`). 36px tall with
+10px corners (`rounded-panel`), see the consistency rules above. Minimal at rest; hover is only a one-shade step
+darker in the fill (150ms), and it presses to 96% on click. `loading`
+uses the disabled colour (50% fade) with a spinner beside the label.
+All motion is dropped under `prefers-reduced-motion`. Tailwind 4 moves
+elements with the `translate` / `scale` properties, so a custom
+`transition-[…]` list must name those, not `transform`.
+
+Forms (`components/ui-v2/`): **Input**, **PasswordInput** (show/hide
+toggle with `aria-pressed`), **Textarea**, **Checkbox**, **TextLink** (always black, zebra-950, always underlined; semibold on hover, with an invisible semibold copy reserving the width so nothing shifts; `inheritSize` takes the surrounding text's size for a link inside a larger line),
+built on **Field** (the accessible name, shown only for a question, see
+the consistency rules above;
+optional `labelAside`; a help line and any error under the control;
+help stays when an error shows and both describe the control via
+`aria-describedby`; `aria-invalid`, error `role="alert"`). Hints are
+never tooltips: phones cannot hover.
+ChipGroup's `description` and FileDrop's `help` follow the same rule and
+`control-styles.ts`. Same API as v1 `Input` (`label`, `help`, `error`).
+Fields are option G (see the consistency rules above) and 36px tall; a
+`raised` field keeps a white fill for toolbars. Checkbox keeps the native input
+(appearance reset), fills grass-800 when checked, `rounded-check` 4px.
+
+Selection & pickers (`components/ui-v2/`): **ChipGroup** (single or
+multi, `aria-pressed` toggle buttons in a labelled group, grass tint and
+a check when on), **ChoiceCard** (large pick-one card, 2px grass border
+when selected; a top-aligned flex column because buttons centre their
+content; selected is the grass border only, the fill stays white; `check` adds a corner check mark for multi-select groups), **Badge** (neutral / brand, plus `warning` (amber tint, near-black text) and `danger` (red tint and text) for a status that asks for attention; `size="control"` is 32px, for a status standing in
+for a button), **Select** (native select,
+restyled), **ColorField** (swatch plus hex text; the swatch opens the
+app's own `ColorPopover` from `components/ui/color-popover.tsx`, never
+the browser's native picker; `inline` is the settings-row trigger,
+a small square swatch, the hex and a chevron, like an inline Dropdown),
+**FileDrop** (dashed drop box with image preview; `face` is the tile
+form, the caller's own picture as the whole target, as the brand kit's
+logo on light and dark), **Tooltip** (`components/ui-v2/tooltip.tsx`:
+a small dark label naming an icon-only button on hover after a beat or
+on keyboard focus, never on click; repeats the aria-label, so it is
+hidden from screen readers), **Dropdown** (`components/ui-v2/dropdown.tsx`:
+Radix Select in the v2 control look with a custom floating menu, for
+options that must be shown rather than named; `fontFamily` renders an
+option and the trigger in its own face; `inline` drops the label row and
+the box for a pick inside a sentence ("Popular with MC ⌄"), `label` then
+naming it for screen readers; inside a modal dialog the menu portals into
+that dialog. Plain text options in a form stay on the native Select). Button gained a **ghost** variant, a **plain** variant (muted text, no
+fill or padding, for actions inside a document-like form such as "Add
+another"), and a **square** icon-only shape. **TagList**
+(`components/ui-v2/tag-list.tsx`): soft zebra-100 tags the user wrote,
+each with its own X (`Remove <tag>`), plus an `after` slot for an add
+control. A removed tag fades where it stands (120ms), then the rest
+slide over (auto-animate with a custom plugin that has no exit of its
+own); tags never wrap, or a fading tag spills its text out of the pill. **Collapse**
+(`components/ui-v2/collapse.tsx`): eases content open and shut by
+height (`grid-rows` 0fr to 1fr) on one shared timeline: outgoing content
+fades (100ms), every height moves together (200ms), incoming content
+fades up 4px (180ms); unmount a shut one after `COLLAPSE_MS` (300), stays mounted, `inert`
+while shut. Gotcha: never unmount an auto-animate root inside another
+auto-animate root (the nested exit throws `HierarchyRequestError`);
+keep it mounted and swap with Collapse instead. **InlineInput**
+(`components/ui-v2/inline-input.tsx`): a boxless field that takes its
+size from a type role and draws no line of its own (focus shows only
+the caret); `underline` adds a dark underline, grass on focus, and
+`suffix` puts a unit inside it and sizes the field to its value. Gotcha: Tailwind orders same-property
+utilities by value, so a call-site `px-0` or `justify-between` loses to
+the base `px-4` / `justify-center`; primitives choose these per prop
+instead of letting callers override them.
+
+Dates (`/design-system/v2#dates`, 2026-09-27): **DateField**
+(`components/ui-v2/date-field.tsx`) takes a typed date day first
+("1 Jul 2026", "1/7/26", "2026-07-01"), reads it back as "1 Jul 2026"
+on blur or Enter, and shows an error under the field rather than
+guessing; `formatDate` and `parseDate` are exported. Month names are
+spelled out by hand because en-AU writes "June" and "Sept".
+**RangeCalendar** (`range-calendar.tsx`): one month, Monday first, 32px
+days, with filled grass ends and a grass-100 band between them. It only
+reports clicks. **DateRangePicker** (`date-range-picker.tsx`) puts From
+and To DateFields over the calendar (first click sets the start, the
+next the end; focusing a field sets which end; never backwards), sized
+for a `card` Popover.
+
+Lists & figures (`/design-system/v2#data`, 2026-09-27): **StatStrip** /
+**Stat** (`components/ui-v2/stat-strip.tsx`) hold up to four figures on
+one glass panel split by the panel's 5% hairline (`border-zebra-950/5`),
+not separate cards. Each has a label with an optional chart swatch, the
+figure in `type-heading` (red via `danger` only while it needs attention)
+and one line on what it means. **FilterChip** (`filter-chip.tsx`,
+2026-09-30, in Selection): one MULTI-select filter on a view whose
+options can grow; a dashed "+ Service" chip unset, a filled "Service
+MC, Celebrant" chip (a count past two) with a × set; the menu is a
+search box over checkboxes, stays open while ticking, with Clear.
+**CardField** (`card-field.tsx`, 2026-10-01, in Inputs): a payment card
+as one control, number, expiry and CVC on one line in one box, the
+brands (Visa, Mastercard, Amex) at the right until a number is typed;
+groups the number and slashes the expiry as typed; `cardProblem()`
+names the one thing to fix. **Button `wallet`**: black, for Apple Pay
+only. **PropertyChip** (`property-chip.tsx`, 2026-10-01, in Selection): one
+optional detail of a thing being created, under its name (Linear's New
+issue): a quiet icon + label chip empty, the value in black on a soft
+fill when set; opens its picker in a popover, `open` owned by the caller
+so a picker closes itself on a pick. **RangeCalendar** takes `min` to
+grey out and disable earlier days, and the same day as from and to for a
+single date.
+`bare` drops the panel: each figure sits
+on the backdrop led by a 10% hairline rule, for a page whose one panel
+is the chart below (Payments Overview). **RowSections** (`row-sections.tsx`):
+the "sections by what needs you" list (dot, title, count, note,
+chevron; rows on a glass Panel; empty sections left out, `shut` ones
+start folded). Clients' For you, Payments' Invoices and Contracts, and
+the Proposals list are built on it. **Waterfall** (`waterfall.tsx`,
+2026-09-28, to the user's mockup): a start total (grass-700), the losses
+as floating grey bars with dashed rules under each loss, and
+the end (grass-900); one loss can be `highlight`ed amber (bar, figure,
+label), with the reason said in words beside it. Figures above bars,
+name and "N left" below; `short` names on phones. It replaced a
+horizontal Funnel the user swapped out the same day. **Insight**
+(`insight.tsx`, 2026-09-29): one piece of Zebri AI's advice, unboxed:
+the finding (`type-label`), why with the numbers (`type-body`
+zebra-500), the one fix (`type-body` zebra-950), an optional secondary
+button. No Zebri mark of its own (its holder carries it); stack a few
+with space, no rules. **Button `ai`** (2026-09-29): the door into Zebri
+AI, the secondary shape with the `surface-highlight` grass-to-sky
+hairline and the Sparkles icon in grass-700; hover steps
+`--highlight-fill` to zebra-100 (the utility's fill is now that var,
+white by default). **StretchedButton**
+is `w-full` so `truncate` lines inside it shorten (a block button sizes
+to its text; it overflowed the Overview rows on phones). **MirrorChart**
+(`mirror-chart.tsx`, 2026-09-28, to the user's mockup): two people's
+time down an ordered list as one smooth shape either side of a seam
+(grass-800 left, grass-200 right, square-root widths, clamped so an
+unread row pinches to the seam), rows to the right with the combined
+time ("48s", "4m 22s"), the longest row bold (no per-person split
+line, cut by the user), and a legend.
+`active` bolds a row other than the longest and `marker` draws a line
+across the shape; the proposal modal drives both from the preview's
+scroll (`use-reading-position.ts`: the section under a point 40% down
+the preview's window, snapping to the end at the bottom; the cover
+counts as the start of Welcome so it is on Welcome as the modal opens;
+the line runs Welcome to Accept with no easing so it keeps pace with a
+fast scroll; wide layout only). **StretchedButton** (`stretched-button.tsx`,
+2026-09-28): the one real button behind a clickable row or card; wraps
+the title, its hit area covers the nearest `relative` ancestor, the
+focus ring draws round that whole area (`radius` button or panel), and
+controls on top sit in `relative z-10`. It replaced the page-level
+`OpenRow` (Payments, Proposals) and backs Clients' `OpenClient`. Never
+hand-write a stretched `<button>`. **MediaCard** (`media-card.tsx`): a
+glass card with a picture edge to edge and a caption, the title a
+StretchedButton, hover shades the caption one step (Proposals
+Templates). Amber tokens (2026-09-28, `app/globals.css`):
+`warning-ink` (amber mixed halfway to black, for amber words and
+figures) and `warning-muted` (a softer gold for a large fill), shown
+with danger and warning under Foundations > Colour > Status; they
+replace the hand-mixed `color-mix(...)` classes that were in four files.
+Hairlines inside v2 panels are `border-hairline`
+(or `bg-hairline` for a drawn line), never a third grey.
+
+**DocumentPage** (`components/ui-v2/document-page.tsx`, 2026-09-27): a
+sheet of A4 laid out at real size (794 by 1123 CSS px, 210 by 297mm at
+96dpi) and scaled down as a whole to the width it is given (never up), so
+an invoice or contract keeps its printed proportions instead of
+reflowing like a card. Measured before paint; content past one page is
+cut. Lay content out for the full 794px page with about 64px margins.
+
+**Textarea** never has a resize handle (`resize-none`, user ruling
+2026-09-27): size it with `rows` for the job instead. It takes
+`optional` like Input (2026-09-30), for the muted "(optional)" mark.
+
+Primitive extensions (2026-09-27): **ChipGroup** `hints` (a muted note
+inside a chip) and `inline` (a muted label in a narrow left column, for
+short rows in a compact form).
+**Dialog** `form` size (40rem wide, grows with its content like `sm`); a
+second Dialog opened over one stacks in front, and Escape closes only
+the top one. `modal={false}` (2026-10-10) draws it as a layer on the
+page instead of a native modal, for content that portals to `<body>`.
+
+**Document engine** (`app/design-system/v2/pages/dashboard/doc-builder/`,
+demo at `/design-system/v2/doc-builder`, 2026-10-09): one editor for
+every document Zebri sends (proposal now; email, contract, invoice,
+questionnaire, run sheet, script and custom documents move onto it in
+turn). Everything outside the module imports from its `index.ts`.
+- **One stack, web first.** A document is a stack of sections (the
+  shape of production's proposal layout), read as a web page that
+  reflows on a phone. Printable types print from it; there are no A4
+  sheets in the editor and nothing is placed freely.
+- **The editor is production's** (2026-10-10, founder: "the actual
+  editor can be what's in current proposals in production"): the canvas
+  is `SectionCanvas` inside `CanvasFrame`, with production's text bar,
+  node bars, edge "+" and add palette, and inline data editing
+  (`editor/doc-editor-view.tsx`). Reviews are production's testimonials,
+  named "Reviews"; pages kept with the engine's old starred kind are
+  turned back as they open (`model/upgrade.ts`). Pictures and videos are
+  asked for through v2 dialogs (`editor/media-host.tsx`), since the
+  preview has nothing to upload to.
+- **Ours on top of it**: production's anchored section toolbar is off
+  (`SectionCanvas sectionToolbar={false}`, an optional prop that defaults
+  to on). A picked section gets its tools
+  as one slim white bar across its top edge at the page's right, in the
+  bottom bar's style (`editor/section-bar/`): the name (drag it to move
+  the bar), the choice the section is picked for as icons (a text
+  section's alignment, a list's layout, answers folding, a video's
+  corners, or Accept's "Booking terms"), then Background (a short list
+  in words) and Width, an inline pixel field on the bar itself, no
+  popover (Figma style: type and Enter, arrow keys nudge 10px or 50 with
+  Shift, drag the arrows icon to scrub; one undo step each; production's
+  320 to 1400px range; `section-bar/width-menu.tsx`).
+  Selected words get our own text bar (`editor/text-bar/`), drawn
+  inside production's bubble through `TextBar`'s optional `row` prop
+  (defaults to production's row), everything on the bar with no ⋯:
+  a grip (drag it anywhere; it stays there for every selection after,
+  `use-drag-bar.ts`) | Font (every font in its own face, the brand
+  kit's two first) | size (‹ px field ›, arrow keys nudge) | colour (an A over a bar of the
+  colour, opening named brand colours plus Automatic) | Bold, Italic,
+  Underline, Strikethrough | Text case (Aa) | bulleted and numbered
+  lists | align | link. Formatting the same words never moves it; only
+  a new selection does. While the text bar shows, the section bar steps aside
+  (one floating bar at a time, as Notion and Qwilr do) and fades back
+  when the selection goes.
+  Client fields in the words are a quiet token (`editor/variable-token.tsx`,
+  through production's additive `VariableViewProvider`): a soft grass tint,
+  no border, a ring when picked. A click opens a short menu: the field
+  name (swaps it for another field), an inline "If unknown" row, Remove,
+  above it; the token takes the words' formatting, and a picked token gets
+  the text bar below it (`TextBar showOverVariables`, additive, off by default). Never two lists in one
+  dropdown. Height is the section's edge, dragged on the page; the
+  side width handles are off (`SectionCanvas widthHandles={false}`, an
+  optional prop that defaults to on), since Width does that job. Background: three choices only, Brand colour (the
+  live brand variable, so it follows the Brand kit), Custom colour (the
+  full picker with brand, second colour and white as quick picks; live,
+  one undo step on close) and Photo from the brand kit; picking the one
+  in use again clears the background; picking one also sets the text to read on it, so there is
+  no text colour control. The bar names a section by its kind ("Text"),
+  never by the starter's internal name ("Ready", "Footer").
+ The ⋯ menu: Move up, Move down, Duplicate, Hide on
+  phones, Back to your brand, Delete (asks first, as production's does).
+  Exact pixel sizes, side spacing, full height, video backgrounds, card
+  and carousel colours are left out on purpose; a section that has them
+  keeps them. Header and Footer cannot be duplicated; a new page marker
+  gets no bar. Inserting inside text is the "/" menu. A bar centred at the foot holds Add, the Brand kit
+  and the "/" hint (`editor/bottom-bar.tsx`). No zoom pill
+  (`CanvasFrame zoomControl={false}`, an optional prop that defaults to
+  on; pinch and ⌘ + wheel still zoom) and no Undo or Redo buttons in the
+  header (⌘Z and ⇧⌘Z). The header: title and "Saved" | Reset (a plain
+  button, one undo step) | Send or Use template | Preview, the one green
+  button | Close (X) at the far right. No Done: the work saves as it goes.
+  Headings end a section with no forced empty line (production's
+  StarterKit `trailingNode: { notAfter: ['heading'] }`).
+- **One add list**: the bar's Add, every section's edge "+", the
+  trailing "Add section" and the empty page all open the same short list
+  (`editor/add-menu.tsx`): each kind of section as a small custom glyph
+  and its name, in a v2 `menu` popover, like the "/" menu. Production's
+  canvas takes `onRequestAdd` (optional; without it, its add palette
+  shows as before). The glyphs (`TextSectionIcon`, `PackageIcon`,
+  `PhotosIcon`, `VideoIcon`, `ReviewsIcon`, `CommonQuestionsIcon`,
+  `AcceptIcon`, `NewPageIcon`) live in `components/ui-v2/icons`.
+- **The window**: `DocShell`, a `lg` dialog grown to the window less a
+  2rem margin, with `closeOnBackdrop={false}` and `modal={false}`:
+  production's text bar and popovers portal to `<body>`, which a modal
+  `<dialog>` draws under itself and makes inert, so the editor's window
+  is a layer on the page (`components/ui-v2/dialog-layer.tsx`, z-20)
+  instead. Escape lets a picked section go first (also when focus sits
+  on the window itself, after a click on a section), then closes it.
+- **Header section** (`doc-builder/sections/header/`): first in the add
+  list, the MC's logo across the top of a document with their own words
+  under it (typed in place, same editor and text bar as Text). Centred,
+  48px tall, wide column by default. The logo is the brand kit's own, so
+  adding or changing it in a header (click or drop a picture while
+  editing) sets it everywhere; with no logo the business name stands in
+  on the page. Its size is dragged from the logo's corner (16 to 200px,
+  the height shown while dragging, one undo step); the bar holds only
+  alignment. It is an engine kind, drawn inside production's canvas
+  through `SectionCanvas renderBody` (additive prop), edited by
+  `editor/header-edit.tsx`.
+- **The brand kit is global**: logo, main colour, document background,
+  fonts, text colour, page rounding and button rounding (separate: page
+  rounding never moves the buttons), and side padding (every section's
+  `theme.sectionPaddingX`, set once; a section's own still wins), used by every document and email;
+  drafts follow it live. An `xl` dialog (founder's mockup, 2026-10-11):
+  on the left the title with "Saved" and one list of rows (Identity:
+  logo, main colour, document background; Type: headings and body
+  faces, text colour; every colour a `bare` round `ColorField`, no hex; Shape: page and button rounding in px as `Stepper`s),
+  each row a name and a control with a hairline under it; on the right
+  every document (proposal, contract, invoice, email, questionnaire, run
+  sheet) drawn by its real renderer with the sample couple on the
+  document background (`--b-paper` from `brandVars`, which
+  `DocumentPage` and the email card read), picked from
+  the document menu over the page, with Close in the corner. Business
+  details and the email signature (which shows from Business: logo,
+  role, phone, website, plus an extra line) live in Settings > Business
+  and Settings > Email.
+- **Phones**: production's canvas, without the section popover or the
+  bottom bar.
+- **Questionnaire, contract and invoice designs** (2026-10-20, founder:
+  the canvas Design editor "looked nothing like" proposals): their
+  Design button opens this editor (`EditorWorkspace` as a template of
+  the type, in `DocShell`; `canvas/docs/engine-design.tsx`), not the
+  canvas. One design per type (`doc-types/designed.ts`, kept in
+  `canvas/docs/design-store.ts`): the MC's Header over the document's
+  working parts, engine kinds that are locked (no Delete or Duplicate in
+  ⋯, `guard.ts` refuses both) and drawn from the document's own data
+  through `DocPartsProvider` (`sections/parts/`): Questions; Agreement,
+  Clauses, Signatures; Invoice details, Line items, How to pay. They
+  take the section bar without an align choice, the page's type and the
+  section's text colour, so Background and the brand kit reach them.
+  Packages and Accept are proposal-only in Add. A saved design is what
+  Payments shows for a contract or invoice (`Designed`). A modal holding
+  a Design button (the questionnaire builder, the document modal, the
+  builder stub) steps aside while a design is open (`useDesigning`),
+  since `DocShell` is a layer under the browser's top layer.
+
+**Dashboard** (`app/design-system/v2/pages/dashboard/`, full screen at
+`/design-system/v2/dashboard`, client-only via `dashboard-client.tsx`
+because it runs off the viewer's clock): the Home page on the backdrop.
+Every surface floats in the log in card's material (glass `Panel`, no
+shadow), and text is kept to a minimum: no subtitle, no card notes.
+- Sidebar: a glass panel inset 12px from the window. Z mark only (no
+  wordmark), Home / Clients then whatever tools the MC added in the
+  Blocks dialog (Proposals and Payments by default), Zebri chats grouped
+  Today / This week as text-only rows, Blocks pinned above the user.
+  Collapses 240px to 64px with a 300ms width transition while labels fade
+  (`sidebar-row.tsx`); the toggle is the round chevron tab on the right
+  edge, as in the current app. Hidden below `md`.
+- Top right: a small glass panel with Calendar, Enquiries and
+  Notifications ghost buttons, working as one switcher (`top-actions.tsx`):
+  a single Radix popover anchored to the panel's right edge (`align="end"`,
+  416px for all three), the open icon in the Button `active` state (ghost
+  fill at rest), clicking another icon swaps the content with a 200ms fade
+  (no slide and no height animation: both were tried; the user rejected
+  side-to-side motion), clicking the open icon, Escape or outside closes.
+  Enquiries and Notifications show a grass dot (not a count) while anything
+  is unread (`use-unread.ts`). On open, focus goes to the popover itself so
+  no control shows a ring after a mouse click.
+  Notifications (`notification-panel.tsx`): Mark all read, Unread / All
+  `Segmented` with counts (Unread first and the default: what is new is
+  why the bell was opened), items grouped Today / Earlier with a tinted icon
+  circle (grass for payments and signatures, amber `warning` for
+  deadlines, zebra for the rest), the actor in black then the action, a
+  detail line, time and unread dot; a Settings button (gear icon) at the foot
+  (plain white: no grey band and no rule above it, in any popover). Enquiries (`enquiry-panel.tsx`, sharing `panel-parts.tsx`):
+  Mark all read, then each enquiry (muted Avatar, couple, date and
+  guest count, an amber `warning-ink` "Booked that day · who" line ONLY
+  on a clash, one-line message, a neutral `Badge` with the source icon:
+  Email / Instagram / Website form / the directory's name, a grass unread
+  dot, or "Replied" once answered). No source filter (user cut it,
+  2026-10-02). A row opens the enquiry modal; the foot is a secondary
+  Settings button (a primary Set up until a source is connected) (View all enquiries was removed: there is no
+  Enquiries page). No "Copy enquiry form" (user cut it). Enquiries stay unread until
+  opened or marked read, so the icon's dot is honest. Enquiry modal
+  (`enquiries/enquiry-dialog.tsx`, `xl`, house style): header couple +
+  "Enquired 1h ago · source", Archive, More (Open client), Close; left
+  their message then the reply, whose label names the channel (same as it
+  came in; email for website and directories), opening on Zebri's draft;
+  Booking link / Proposal menus insert a labelled link line at the cursor,
+  Decline swaps in the drafted no with Undo (outlined on a clash), Send.
+  Right: "You're free that day" (grass dot) or the clash (amber), then
+  Date / Venue / Guests / Source / Received. **Settings**
+  (`pages/dashboard/settings/`, `split` size: fixed height, shorter than `xl`, which was mostly white space) opens from the
+  sidebar gear and the Enquiries popover's foot (`openSettings`, a shared
+  store; each page renders `SettingsDialog` once). Laid out like the Blocks dialog
+  but with a WHITE 13rem rail set off by a hairline (user's call) (title + one row per tab; there will be many) and
+  the picked tab under a 64px header naming it, level with the rail
+  title; section headings inside a tab are `type-label`; each feature owns its tab's content. The
+  Enquiries tab (`enquiries/settings/enquiries-tab.tsx`) is ONE section,
+  Messages: Gmail, Outlook and Instagram as identical `SourceRow`s (bare
+  brand mark, name, a "Connected as …" line that eases in only once
+  connected; Connect / Disconnect handed over with `Swap`), then one muted
+  line saying website-form and directory enquiries arrive by email, so the
+  inbox brings them in. The user cut the website form (embed code, field
+  picker, developer API), the directories section and the message filters
+  on 2026-10-02: those sources already email the MC and Zebri's AI sorts
+  them. Everything is simulated; nothing is connected at the start, and
+  the popover reads Set up until one source is. Calendar holds
+  `calendar-panel.tsx`: month grid Monday first (`month-grid.tsx`;
+  the picked day filled in the `selected` grass with white figures, today
+  in the selected grass as `type-label` (2026-10-14: one grass family for
+  both, so a picked today still reads), grey dots for the
+  MC's own events and grass for bookings and weddings), Today and month
+  arrows, the picked day's events (min height for two, so the popover
+  never jumps), then Booking types on the panel's white
+  (`booking-types.tsx`): a **Switch** (`components/ui-v2/switch.tsx`,
+  44 by 24, grass-800 when on, `role="switch"`; the thumb glides on
+  `--ease-glide` and squashes in flight, and a tick draws into it as it
+  lands) and a **CopyButton**
+  (`components/ui-v2/copy-button.tsx`, secondary, "Copied" in the same
+  width) per type, then Update availability and New booking type.
+- Greeting in Inter (`type-display`, `type-title` on phones); no serif
+  (tried, rejected). Under it, the headline (`headline()` in
+  `briefing.ts`): how the month is going ("3 weddings booked this month,
+  your best September yet.") then the one booking at risk ("Priya & James
+  haven't signed, and another couple wants their date.", the couple a
+  `TextLink inheritSize` that opens a card, `at-risk-link.tsx`: the
+  date, where the booking stalled, who else wants the date, Open client,
+  and Send contract reminder, which becomes a "Reminder sent" tick in
+  place so the card never resizes). Each half shows only when true and
+  never repeats the panel; a recap of the panel was tried and rejected.
+- **PromptBox** (`components/ui-v2/prompt-box.tsx`): a borderless
+  multi-line field in a glass panel with a tools / actions toolbar; the
+  panel takes the grass focus halo; Enter sends, Shift+Enter is a new
+  line; `inputRef` exposes the field; the field's 16px inset lines the
+  placeholder up with the first toolbar control. Borderless (ghost)
+  client scope popover; the mic is a quiet ghost icon and becomes the
+  green Send only once there is text. No keyboard shortcut.
+- Quick starts (`briefing.ts`) are borderless ghost buttons for the
+  jobs that move money or save hours: Send a proposal, Send an invoice,
+  Build a run sheet. Never errands the Up next panel already covers, and
+  never vague ("Prep Saturday"); "Write an MC script" was cut as low value.
+- Under them, one glass panel (`up-next.tsx`) of rows: the next wedding
+  (couple, date, "In 2 days" brand badge), then each message waiting on a
+  reply (**Avatar**, `components/ui-v2/avatar.tsx`, initials in a 32px
+  circle, `ink`, `muted`, or `soft` (zebra-100) for a couple's pair or a
+  long list; `src` lays a photo over the initials). **AvatarStack**
+  (`components/ui-v2/avatar-stack.tsx`) overlaps a few of them, ringed
+  in the page colour, with an ink "+N" bubble for the rest. Then the counts as one plain line of links
+  ("3 new enquiries · $3,850 outstanding · 2 unsigned proposals"). No card
+  grid, no stat tiles, no highlighted tile: all tried and rejected as too
+  many boxes.
+- Clients (`clients/`, 2026-09-25): picking Clients in the sidebar swaps
+  Home for the Clients page in place (`#clients` in the URL opens straight
+  onto it, the only way in on phones for now). Full width (no max-width
+  cap: the user asked why a wide screen showed so much side space), and
+  no sheet behind the page: the title and toolbar sit on the backdrop,
+  and only the clients are on glass (a `Panel` per For you section, a
+  `Panel` per board column, one around the list table), so the grass and
+  sky show between them. Two lines of chrome only: "Clients" and its
+  count with the dashboard's `TopActions`, then the view **Tabs** on the left sharing
+  a row with search, an Everyone / Leads / Booked `Segmented`, a heat
+  filter (`ChipGroup` in a `card` Popover) and New client (the page's
+  only primary button). For you: sections Needs you / Hot / Warm / On
+  track (dot, count, note, chevron beside the title), rows of couple,
+  stage name and time over a hairline 7-segment bar, Zebri's read at a
+  readable measure, and the next move. Board: a zebra-100 column per stage
+  ("N need you" in grey with a red dot), white cards with a red dot, not
+  a coloured border. List: a table, no row rules, columns drop out below
+  `xl`/`lg`/`md`/`sm`. Sending a move spins, then `Swap`s to a Done badge
+  and the For you row folds away; views share that state
+  (`use-next-moves.ts`). User rulings after the first cut ("doesn't feel
+  premium"): next moves are always secondary (a column of green buttons
+  made nothing stand out), no heat badge in For you (the section says it),
+  no dotted black stage track, no second row of chrome, no white sheet
+  hiding the backdrop. Called "Clients", never "Couples". Demo data in
+  `clients-data.ts`.
+- Payments (`payments/`, 2026-09-27): Payments in the sidebar (or
+  `#payments`) swaps Home for the Payments page, built to the Clients
+  page's rules (full width, title and toolbar on the backdrop, content
+  on glass, two lines of chrome). **Tabs** Overview / Invoices /
+  Contracts, with **Overview first** (user ruling). Overview
+  (`overview/`, laid out to the user's mockup): the toolbar holds a custom
+  **period picker** (`period-picker.tsx`, a secondary button and a
+  `menu` Popover listing FY 2026–27, FY 2025–26, This quarter, Last
+  quarter, then Custom range. Custom range turns the popover into the
+  `DateRangePicker`, with dates typed or clicked, and a full-width Apply.
+  The native Select and month-only pickers were both rejected) and a secondary **Export** menu that
+  downloads payments received or GST by BAS quarter as CSV. Below
+  that come:
+  - a **bare `StatStrip`** (`overview-stats.tsx`, straight on the
+    backdrop): Received (with the change on this time last year), To
+    come (the amount due in the next 30 days), Overdue (red only when
+    there is some) and GST collected (with the open BAS)
+  - the **Cash flow by month** card (2026-09-30 redesign to the user's
+    mockup) on the glass `Panel`: bars stacking received (`grass-700`), overdue (`danger/70`)
+    and to come (striped `grass-400`), a dashed Today line, no axis, a
+    swatch key under the title, tooltips just above each bar. A
+    single multi-select **`FilterChip`** under the title ("+ Service",
+    from `payments/services.ts`) with the key beside it scopes the chart
+    to any mix of services; packages are not offered. A `Segmented` row was
+    rejected because an MC can offer any number of services and it
+    overflows. It FILTERS and never recolours. User rulings 2026-09-30, all
+    rejected: a switcher stacking each category in its own colour, a
+    filter by payment in the plan, a dropdown menu of services with
+    totals and share bars ("hate"), and a breakdown bar with a key of
+    amounts and a breadcrumb ("text overload"). Keep chart chrome to one
+    quiet control; figures live in the bar tooltips. The AI insights
+    button has no icon.
+    **AI insights** (`Button variant="ai"`) opens
+    the Payments **AI insights dialog** (`overview/insights/`), in the
+    house modal style on the fixed-height `split` Dialog size (56rem by
+    37rem, sized to the longest insight; user rulings 2026-09-30: a
+    modal never changes height, and no big empty space). Header is the
+    title and Close only (no icon, no period line; the Sparkles icon was
+    rejected on this page, and the chart button has none). Left: the
+    insights as rows (dot + tag, figure, headline; picked one on the
+    sidebar's `zebra-950/5` fill). Right: the headline (tag and figure are NOT repeated from the row), a
+    sentence of what Zebri found with the numbers, "Behind it" as a
+    plain label-and-value list, "What to do", and a hairline footer with
+    ONE action (no Dismiss: beside Close it read as a second close; no
+    inline drafted message or email). Insights must be things the chart
+    cannot show (`payments/advice.ts`): late invoices only one partner
+    has opened (remind the other, by text); unsigned bookings and whose
+    signature each waits on; final payments due in the fortnight before
+    the wedding (change the payment plan to 30 days); card vs bank
+    transfer days-to-paid (put card first). Each is computed from the
+    demo data; generated bookings pay by card within days and by bank
+    in over a week (`invoice-seed.ts`)
+  - beside it the **What's next rail** (`whats-next.tsx`,
+    `rail-row.tsx`), unboxed on the backdrop, ONE list with ONE row
+    shape (user ruling 2026-09-30: no Today rule, no month drill-down):
+    late invoices, then contracts waiting on a signature (contracts
+    live here, not in a separate block), then the next 30 days. Each
+    row is date, couple over what it is (red "Deposit · 12 days late"),
+    amount over Auto / Sent, then an action column of its own: a real
+    Send reminder button (opening the drafted reminder first, as
+    Proposals' Nudge does) that swaps to a Reminded tick; rows with nothing to do leave it empty so
+    amounts align. The rail is the wider share of the row (chart 1.2fr,
+    rail min 30rem). Pointing at a row lights its month on the chart.
+    The rail is pinned to the chart's height and scrolls inside; the
+    page itself never scrolls on a laptop
+
+  The figures and chart follow the period; the rail is always as of
+  today. Every figure is summed from the same invoices the Invoices
+  tab lists (`INVOICE_SEEDS` = named invoices plus `invoice-seed.ts`,
+  with status worked out from the dates against a fixed today in
+  `dates.ts`), so the tabs always agree. Invoices and Contracts are
+  `RowSections`: Overdue / Due in the next 30 days /
+  Scheduled later / Paid (the last two start folded), and Waiting on
+  signature / Drafts / Signed. Their toolbar is search plus New invoice
+  or New contract. A row opens `modal/document-modal.tsx`, an `xl`
+  Dialog laid out to the user's mockup:
+  - **Header** (one row): the name and a state `Badge` over "Ella & Noah ·
+    Deposit · $900". On the right are Copy pay link, Mark paid and Send
+    reminder (the primary, last), then More and Close past a hairline.
+  - **Left**, on a `bg-zebra-50` desk: an invoice progress track
+    (`invoice-progress.tsx`: Sent, Opened, Due, Reminded, Paid as bars
+    that are grass when done, `danger/70` for a due date missed, grey to
+    come). Then "What Ella & Noah see" with Download PDF, and the
+    couple's copy as a real A4 invoice on a `DocumentPage`: letterhead,
+    billed to, dates, event, the line, totals with GST, how to pay,
+    footer. Contracts render on one too.
+  - **Right** (`invoice-side.tsx`): the package and "$0 of $3,600 paid",
+    then the couple's whole payment plan with this instalment picked out
+    (`plan.ts` fills in the instalments not yet invoiced: a 25% deposit,
+    the final two weeks before the wedding, the second halfway). Then
+    History, led by Zebri's next move in a grass-50 note with Pause,
+    and "Fell due" in red.
+
+  Send reminder opens `reminder-dialog.tsx`, a `form` Dialog stacked in
+  front of the invoice. It has To (a `ChipGroup` with `hints`: who
+  opened it last, else their email, or a mobile for SMS), Via (Email or
+  SMS) and Tone (`Segmented`: Friendly, Firm, Final notice). Changing
+  the tone or channel rewrites Zebri's draft. Subject and Message are
+  ordinary labelled `Input` / `Textarea` fields (a borderless letter
+  did not read as editable), with the pay link in the text: no Pay
+  button picture and no footer note (both cut by the user). The footer
+  is Cancel and "Send to Ella & Noah". This is the only AI on the page. New opens a "Builder coming
+  soon" page, because the preview is view only. No Stripe payouts
+  anywhere (user ruling).
+- Proposals (`proposals/`, 2026-09-28): Proposals in the sidebar (or
+  `#proposals`) swaps Home for the Proposals page, built to the Payments
+  page's rules. The user ruled against a catch-all Documents area:
+  each tool keeps its own page and templates, and Contracts stay on
+  Payments. **Tabs** Overview / Proposals / Templates (Overview first,
+  as on Payments). Overview: the Payments period picker, a `StatStrip`
+  (Acceptance rate of those answered, Won value, Out now, Time to
+  accept), a **Waterfall** panel "From sent to booked" (user's mockup:
+  Sent, then Didn't open, Left before packages, Saw packages didn't
+  accept, Accepted no deposit, then Booked; the biggest drop by count is
+  amber and named in the line under the title; no callout box and no
+  dashed rule over Sent, both cut by the user; top right, an **AI
+  insights** `Button variant="ai"` (user's call, replacing an insight
+  column beside the chart) opens a `form` dialog of up to three
+  `Insight`s from `advice.ts`: where most couples drop off, which
+  template wins more often, and who has waited past twice the typical
+  time to accept; each has one fix and a button, "Try it on {template}"
+  to the builder stub or "See who" to the Proposals tab), then **Opened, not
+  accepted** (Nudge all is the tab's primary and skips anyone nudged in
+  the last 3 days, `NUDGE_GAP`) beside **Expiring soon** (the next 14 days). It fits a
+  laptop screen. Proposals: `RowSections` Opened, not accepted / Sent,
+  not opened / Drafts / Accepted and Declined or expired (folded); each
+  row has the couple, wedding, package (leaning to or chosen), value,
+  timing, Nudge, and Zebri's one-line read under it. Templates: cards
+  with the real cover shrunk (`template-thumb.tsx`), use line, times
+  sent and % accepted; a card opens an `lg` preview with Edit and Use
+  for a couple. The proposal modal (to the user's mockup): header is the
+  couple over template, wedding and value, then Copy link and Nudge
+  (primary), More (Edit, Duplicate, Extend expiry, Mark accepted,
+  Download PDF, Withdraw) and Close; no badge, no Edit button. Left is
+  only the proposal preview (no progress track, no "What X see" row).
+  Right, a narrow 20rem column (the user found 24rem too wide and too
+  airy; facts, chart rows and Activity use tight 5rem label columns and
+  `History compact`), sections separated by space (no rules, per the v2
+  ruling): Template, Value, Expires, then "Where
+  their attention went" over a `MirrorChart` of each partner's seconds
+  per section, then Activity. The user cut a status heading ("Waiting
+  for their answer"), a pipeline Stage row, the read line over the chart
+  ("Sophie is the one on Packages") and counts like "3rd time today" in
+  the activity. No Zebri next move or Pause here: Zebri only drafts the nudges (user
+  ruling), and drafts never tell the couple they were watched. Nudge
+  opens `nudge-dialog.tsx` (To / Via / Tone Friendly, Helpful, Last
+  call). The preview is the onboarding's `BrandProposal` (user ruling),
+  which now takes `wedding`, `headline` and `hints` (off here, so the
+  onboarding's dashed hover outline does not show); the page calls
+  `ensureBrandFontsStylesheet()` so the brand fonts load. New proposal
+  is a two-step `form` dialog (couple, then template) that ends on the
+  builder stub, as do Edit and New template: view only.
+- Workflows: **removed 2026-10-14** in favour of Journeys (user
+  ruling). The `workflows/` folder, its route (`/workflows`, now
+  redirected to `/journeys` on both dashboards), its first-use page and
+  the dashboard's backdrop-dim hook (only its builder used it) are gone.
+  The Blocks catalogue keeps the block's id `workflows` (so saved
+  accounts keep it) but names it Journeys, and Open launches Journeys.
+  User-facing "workflow" copy elsewhere (Email's Used in, the client
+  profile's Change journey, the plan sheet) now says journey.
+- Journeys (`journeys/`) is the only automation page. What moved over
+  from Workflows (2026-10-14) is its **Up next** queue, the one thing
+  Journeys lacked, rebuilt in Journeys' own language: an **Up next**
+  pill before the journeys' pills in the same `PillTabs` (count = sends
+  and to-dos waiting on the MC; no ⋯ menu, cannot be renamed; Add a
+  client and the dot legend hide while it is picked). It swaps the line
+  for `RowSections` (`up-next-view.tsx`) headed with the line's own dots
+  (`WAIT_DOT`): **Needs you** (amber: sends held for an OK, from steps
+  Sent by "You, after approving" or sent by hand, a secondary Send that opens the
+  review; the MC's to-dos, from to-do steps and "Tell me after"
+  follow-ups, a v2 `Checkbox`, late in red, Undo), **Zebri sends today**
+  / **later** (green; quiet rows, the row reads the message, a ⋯ holds
+  Send it now, Skip this one, Pause for this client, Open the step,
+  which picks that journey and opens the step dialog), **Done** folded.
+  Each row is one couple at one step: "{couple} · {journey name}", Zebri's
+  why, when. A settled row shows its outcome in place for a beat, then
+  folds into Done (`use-up-next.ts`). The review (`up-next-review.tsx`)
+  is built like the to-do dialog: the step's glyph in its family tint,
+  couple and journey, Zebri's why in the `surface-highlight` with the
+  sparkle, the subject typed onto the dialog, the message under a label,
+  Skip this one and Send to {names}. A draft is the step's own email (or
+  the follow-up's) from `step-email.ts`, `{first names}` filled with the
+  couple's names and other `{field}`s with the sample values. Demo
+  queue in `up-next-data.ts`, on the demo journeys' steps and couples;
+  shown only for the demo business (a first-run account passes
+  `source` and has nothing queued). Dropped with Workflows, as already
+  covered by Journeys or not worth keeping: the On/Off list (a journey is
+  always live), the trigger/filter story builder and If branches (a
+  journey's step timing and follow-ups cover them), New workflow from a
+  sentence and the Ask bar (faked AI with no Journeys counterpart),
+  Zebri's suggestion card, Test with a client dates (the line already
+  shows clients on their step), the per-workflow Clients view (clients
+  sit on their step on the line), and the three starter workflows (a
+  new account gets its starter journey).
+- Client profile (`clients/profile/`, 2026-09-26 rebuild to the user's
+  own spec): an `xl` Dialog opened from the Clients page (a whole For
+  you row or board card via `OpenClient`; the name in List). A light grey
+  **sidebar** (`bg-zebra-100`, `w-60`) on the left, set apart from the
+  white main area by tone: avatars, name, stage, then four rows using the
+  dashboard's own `SidebarRow`: **Overview, Details, Activity,
+  Documents**. On phones it becomes a grey top block with `Tabs`. The
+  main area has a top row: section title (`type-heading`), More (portal
+  links, rotate, timer, status, downloads, delete) and Close.
+  **Overview** = timeline + chat. The timeline is one quiet line with
+  small dots: ticked milestones with dates, then a grass "You are here"
+  marker with Zebri's headline and a sentence, then what is ahead. The
+  MC's steps carry a draft and **Review**; Zebri's say what it will do
+  with **Pause** and **Do it now**; plain dates are quieter. A step that
+  is sent or done moves up into the ticked milestones. The ⋯ beside
+  "Timeline" holds Apply a workflow, Add a to-do and Stop all workflows.
+  Review replaces the main area with a compose view (back arrow, to,
+  subject, message, Send) and returns to the timeline on send. The chat
+  (`ask-chat.tsx`, a `bg-zebra-50` column from `lg`) has three starters,
+  bubbles and an Enter-to-ask `Input`. The Overview's first two rows are
+  **Primary contact** and **Secondary contact**, typed in place
+  (`use-client-names.ts`): they are the client's `names`, so the title
+  reads "Priya" or "Priya & Dev", and a rename cascades to the account's
+  client, their journey, and the marriage paperwork and run sheet (kept by
+  name, so moved to the new one; a partner's name answers update while
+  they still read what Zebri filled in). The People row lists only
+  everyone else. **Details**: people with contact
+  and preferred channel, source, events, package, notes, others involved
+  (the old Contacts), time tracked, each group with one plain action.
+  **Activity**: Send email (templates) and Add note over a day-grouped
+  feed. **Documents**: one list of every kind (proposal, contract,
+  invoice, questionnaire, run sheet, music, speeches, script, file) with
+  a kind filter and one New menu. This merges all 14 production tabs.
+  No "wedding" or "couple" in copy or identifiers anywhere in the Clients
+  area or on Home (`clientName`, `ClientAvatars`, `NEXT_EVENT`, stage
+  "Event"). Demo data: `profile-data.ts` builds a profile from any row;
+  `amelia-jack.ts` is the full hand-written one.
+- Up next rows open in place, one at a time (`up-next-row.tsx`, a
+  disclosure button over v2 `Collapse`): the wedding shows its run sheet
+  (`run-sheet-summary.tsx`, open items in black), a message shows Zebri's
+  drafted reply in a `Textarea` with Not now and Send (`reply-draft.tsx`).
+  Sending folds the row away; avatar tones follow the person, not the
+  position.
+- The column starts 16vh down on desktop, not `my-auto` centred:
+  centring made the greeting jump whenever a row opened beneath it.
+- Motion: blocks rise 6px and fade in once on load, 60ms apart
+  (`animate-rise-in`, `motion-safe` only). No hover motion anywhere.
+- **Blocks** (`blocks/`; never "Marketplace" or "apps", and go light on
+  the word "blocks" in copy), opened from the sidebar row, or a phone-only
+  Blocks icon in the top-right panel: a `Dialog size="lg"` (56rem) of the
+  twelve Zebri tools it launches with (2026-10-01): Enquiries, Booking
+  links (formerly Booking pages), Video calls, Proposals, Contracts,
+  Payments, Questionnaires, Run sheets, Ceremony scripts, Calendar, Email
+  and Journeys (id `workflows`; it was Workflows until 2026-10-14). Every block is a Zebri tool; third-party services are no
+  longer blocks of their own. A block that needs one names it under
+  `connects` (Payments: Stripe; Booking links and Calendar: Google
+  Calendar or Outlook; Email: Gmail or Outlook), shown on its detail as
+  "Connects to" with the brand marks in their own colours
+  (`connects-to.tsx`, nothing to press), and the MC connects it as that
+  block's first step on its own page (see Block first use). Adding is
+  instant. Categories follow the client's journey, in order, each with
+  one line of what it is for (`CATEGORY_LINES`): Win clients (Enquiries,
+  Booking links, Video calls, Proposals), Book and get paid (Contracts,
+  Payments), Plan the event (Questionnaires, Run sheets, Ceremony
+  scripts), Run your business (Calendar, Email, Journeys). Copy is the
+  outcome first (the row's pitch: "Follow-ups that send themselves."),
+  then how (the detail's two-sentence about), then the specifics
+  (bullets). Max: Video calls and Email; the rest are Pro. Two panes,
+  kept sparse. A 224px zebra-50 rail (`blocks-rail.tsx`): "Blocks",
+  search, views as sidebar rows with icons and no counts (All, Added, a
+  gap, then the four categories; current in the sidebar's zebra-950/5
+  tint), and one "Pro plan · Compare" line at the foot. The content pane:
+  the view name (a category view adds its line beside it), then the rows.
+  No recommendation: twelve blocks in a clear order need no curating
+  (the role-picked "Recommended for [MC]" bundle panel was removed
+  2026-10-01, with `bundles.ts`, `featured-bundle.tsx` and the orphaned
+  onboarding `step-blocks.tsx` / `step-build.tsx`). On All the rows group
+  under each category's name (`type-label`) and line (muted). Rows
+  (`block-row.tsx`) are one column: white mark tile, name, a `Max` badge
+  only when locked, one pitch line (two on phones, never cut mid-word),
+  and a fixed 112px action slot: Add is the quiet secondary (white)
+  button, Upgrade the primary (the only one that costs), grass Added,
+  Coming soon. A row opens its detail in the pane (`block-detail.tsx`): a
+  breadcrumb header (back chevron pulled onto the content's left edge,
+  the view, the block), a large mark, name and a meta line ("Win clients
+  · Included in Pro"), the description with "Works with" chips right
+  under it (`works-with.tsx`: the same soft 6px zebra-100 chip, plain
+  icon, name, Required / Recommended, Added or an Add button in place;
+  the name opens that block), then Connects to, a borderless striped
+  media placeholder for the product animation, and the checklist as a
+  plain ticked list (rules between items were rejected). A fixed footer
+  (`block-detail-footer.tsx`) holds the next step: for an added block the
+  "Show in sidebar" `Switch` (hides it without removing it), ghost Remove
+  and primary "Open Proposals →"; otherwise Add, or "Part of Max, $99 a
+  month" with primary Upgrade to Max (then "Welcome to Max"), or Coming
+  soon. On phones the rail stacks on top and the views scroll sideways.
+  Rejected: a 288px rail with subtitle, role dropdown, counts, a
+  Categories label and a boxed plan card; two-column rows with "Pairs
+  with" lines; a large bundle card; a single column with no rail; and
+  categories named by tool type (Sell / Plan / Get paid / Connect) with
+  integrations as blocks. State in `use-blocks.ts` (demo: nothing saved;
+  Upgrade waits a beat). Motion: nothing snaps. Every Add / Added /
+  Upgrade / Coming soon slot, the Max badge, the Works with states and
+  both footer sides are `Swap`s; ticks are `DrawnCheck`s; row lists
+  (`block-list.tsx`) and the sidebar nav use `@formkit/auto-animate`
+  (280-300ms, the cubic-bezier(0.2, 0.7, 0.2, 1) ease-out) so rows fade
+  in and the rest glide; the list is keyed by view and the detail by
+  block, each rising in (`rise-in`) on change. Adding from the detail
+  footer hands Add straight over to the switch, Remove and Open in place
+  (an "Added" badge between them, and an empty pause that collapsed the
+  bar, were both rejected). Build your Zebri's Add all still lands its
+  blocks one at a time, 240ms apart (`addAll`).
+
+**Website** (`app/design-system/v2/pages/website/`, full screen at
+`/design-system/v2/website`; rebuilt 2026-10-16, reworked 2026-10-17 on
+founder feedback): the zebri.com.au marketing page, built to read like
+**Stripe**. A preview only: never deployed from here; the live site
+stays in `zebri-landing` until sign-off. The rules of the look:
+- **White and ink, no colour washes** ("too colourful", "can't look
+  AI"). Brand green only on buttons, kickers, ticks and small dots. No
+  ink blocks: the founding panel moved onto the backdrop (2026-10-18).
+- **Website-only type** in `globals.css`: `type-site-hero`,
+  `type-site-title`, `type-site-lead` (fluid with `clamp()`). Copy under
+  a title is never 13px.
+- **One picture per feature**, a real slice of the app (`shot-frame.tsx`,
+  `inert` + `aria-hidden`), with at most two small callouts pinned to it
+  (`feature-row.tsx`; callouts hide below `lg`).
+- **A waitlist, not sign-ups** (founder, 2026-10-19): every call to
+  action reads "Join the waitlist" and lands on the one form
+  (`site-founding.tsx`); people are let in a few at a time and everyone
+  in before the public launch is a founding member. The sign-up ends on
+  a referral link that moves them up `REFERRAL_JUMP` places
+  (`waitlist-done.tsx`). **No waitlist count and no place in line,
+  anywhere**: in a market this small a big number reads as made up and a
+  small one is not taken seriously. A plan picked on a pricing card is
+  carried to the form (`waitlist-plan.tsx`, "Joining with Max").
+- **Founding deal is one perk**: Max for the price of Pro, read from the
+  plan sheet (`FOUNDING_PRICE` in `founding-offer.ts`). The page is for
+  founding members, so the Max card shows that price ($47, struck from
+  $99) and is the recommended plan; Pro shows its usual $59 with nothing
+  struck. The v2 plan sheet (`first-run/plan-pricing.ts`) sells the same
+  (2026-10-19): Max $47 for 12 months then $99, recommended; Pro $59,
+  nothing struck (`onOffer` hides the strike and "then" line). The live
+  billing page (`settings/billing/plans.ts`, Stripe) is not changed yet.
+- **Band heading ids are `site-<id>-title`**: the hero's live dashboard
+  renders ids of its own (`blocks-title`), and a clash named the Blocks
+  band "Blocks" instead of its heading.
+- Nav (founder, 2026-10-19): Features (lands on Journeys, lit through
+  every feature band), Guides, Blocks, Pricing; the current section or
+  page is underlined in the brand green (`SiteNav page="blocks"` on a
+  page of its own). The footer's Product column keeps every band (its
+  Blocks link goes to the Blocks page), a Resources column has Guides and
+  FAQ, and the footer carries Instagram, Facebook and LinkedIn (`FacebookIcon`,
+  `LinkedinIcon` drawn to sit beside `InstagramIcon`; links are
+  placeholders).
+Bands, in a buyer's order:
+- Nav: logo left, links centred (Journeys, Lodgement, Blocks, Zebri AI,
+  Security, Pricing) at regular weight (`type-body`), Log in (a plain
+  label, not underlined) + Get early access right, its edges on the
+  page's content edges (gutter on the bar, `max-w-7xl` on the nav); transparent at the top, frosted white once scrolled;
+  `zebri-logo-clear.svg` (the brand logo minus its white ground). Below
+  `lg` the links and Log in go into a menu (`site-nav-menu.tsx`,
+  `MenuIcon`). On a phone's first screen the nav button hides (the
+  hero's is right there) and returns once the page scrolls.
+- Hero (`site-hero.tsx`), built to the live zebri.com.au hero's
+  measurements: a 27rem words column and the product filling the rest
+  of the 1152 content width (`max-w-6xl`, which every band and the nav
+  share), side by side from `lg`, stacked below, on the design system's
+  `Backdrop` (grass bottom left, sky top right, clouds) masked to fade
+  into the page. Headline "You run the event. Zebri does the rest." (2026-10-19; never "back office")
+  (36 to 48px, -0.025em, a sentence a line, no kicker, never "CRM"); a
+  16px lead (`type-lead`, zebra-500) naming who it is for and what the
+  admin is (no state, no "AI"). Then `HeroActions`: Get early access
+  (`JumpButton`, `ArrowForwardIcon`, to the founding form) and See how
+  it works (secondary, to the features); an `AvatarStack` of five
+  founding members (no "+N" count) beside "Shaped by working MCs and
+  Celebrants with 10,000+ weddings between them." (`social-proof.ts`, **placeholder people
+  until launch**; real photos go in `public/founding/`); two promises
+  with icons (built and hosted in Australia; your couples' data stays
+  yours), the proof and promises at body size (`type-body`). The hero ends on the tools strip (`site-replaces.tsx`): body-size,
+  regular-weight names beside 16px marks (`ToolMark small`) on one
+  centred row; below `md` one endless row instead (`animate-marquee`,
+  the list twice over, stopped and swipeable under reduced motion;
+  founder 2026-10-19). Celebrant Easy, DocuSign, Typeform and Qwilr are in no
+  icon set, so their real marks (from each company's site icon) live in
+  `public/brands/` and `ToolMark` shows them from `Tool.image`.
+- Hero picture (`hero-stage.tsx`): the real dashboard,
+  `DashboardPageV2 contained sidebarCollapsed showcase`, client-only
+  with the backdrop as its loading state. The whole screen at a laptop
+  size (1280 x 736, 40:23), its frame the column's full width at that
+  aspect, zoomed to fit (`--shot-zoom`, measured with a ResizeObserver),
+  so it is always whole and ends on the content edge. `showcase`
+  (`dashboard/showcase.ts`) shows a fictional MC (Jess Taylor) on a
+  set-up account (Enquiries and Calendar on), sets Home a fixed way
+  down, leaves out the sidebar toggle and the counts line, and gives
+  the still one focal point: Up next lifted (`shadow-xl`), Ask Zebri at
+  60%. Phones get the same desktop render zoomed down, so the whole
+  screen shows (founder, 2026-10-19), not the phone layout: the frame
+  carries `data-shot`, and the Home screen's breakpoint classes have
+  `shot:` twins (a `@custom-variant` in `globals.css`) so the rail, the
+  top row and Up next lay out as a laptop sees them. Not an iframe:
+  every route sends `X-Frame-Options: DENY`. No
+  floating notifications.
+- Five feature rows (`site-features.tsx`), alternating sides, in this
+  order: Journeys, the one `wide` row (words centred above, picture the
+  full 1152px below; `journey-shot.tsx`): straight on its grey band, no
+  gradient box. On the left, the steps straight on the band, no
+  container (`journey-step.tsx`): each with what sets it off ("When
+  they accept", kept after it ticks, as it is what makes it a journey),
+  ticking off as the band scrolls into view (`use-played.ts`; ticks
+  drawn on with `draw-check`). The step on the stage lifts into a white
+  card (`shadow-lg`) and opens a line on what it does; the rail to the
+  next step is the clock, drawing down over `STEP_MS` (2600ms, the
+  `duration-[2600ms]` class) so the next ticks as it arrives. The NOIM
+  says Checked, since lodgement is after the wedding. On the right, one
+  shadowed container shaped like the couple's record
+  (`journey-stage.tsx`, 680 by 600, zoomed down to fit, never up): a
+  head with Mia and Leo and Enquiry turning Booked, a `zebra-50` canvas
+  with what the step sent at real size (`journey-docs.tsx`, data in
+  `journey-data.ts`), and a foot with one line on what happened
+  ("Signed by Jess, Mia and Leo"). The scenes: the email
+  (`EmailBody`), the proposal's cover with its `Packages` lifted in
+  front, the contract's first page with its `Signatures` lifted in
+  front, the $500 invoice (`InvoiceEmail`), Mia's NOIM read back
+  (`CoupleFormReview`), and the $1,500 balance as the same
+  `InvoiceEmail` (founder 2026-10-19: it must look like the deposit;
+  a later payment shows its label, Pay final payment, and the deposit
+  already paid on the schedule); white cards with a resting shadow, a lifted
+  piece `shadow-xl`; no phone or browser frame (founder, 2026-10-18);
+  the default deep green brand, so the invoice's text is white. Scene
+  changes run in turn (out in 200ms, then in), never overlapping. A
+  done step is a `StretchedButton` row that puts its scene back
+  (`aria-current="step"` on the lit one); the stage stays inert. Loads
+  the brand fonts (`ensureBrandFontsStylesheet`); finished state on the
+  server and under reduced motion. Below `lg` the steps come first as
+  no separate stage: each step is one card (`journey-slide.tsx`), the
+  step as its head (icon, name, when, badge), its scene under it at the
+  stage's zoom, and the event line wrapping as its foot, swiped in a
+  `SwipeRow` that follows the step playing (founder, 2026-10-19: a step
+  card over a separate record card read as two things). It plays all six steps and ends on the paid balance, every
+  step with its screen (founder 2026-10-19: the NOIM and balance had
+  none). Mia and Leo are Rossi and Grant on every document, as the
+  invoices bill them (`personOf`); Jess's letterhead email is her own
+  (`site-account.ts`), never the demo account's. BDM lodgement (`bdm-shot.tsx`, wide: three separate cards side by
+  side, one per step, playing once in turn when half the band is in
+  view (`use-run.ts`: even if on screen at load; each card plays exactly
+  its own length, `FORM_MS` / `CHECK_MS` / `LODGE_MS` exported by each
+  snapshot, about 3.1s, 6s and 5s, 14s in all (2026-10-19: 10s read as
+  too fast; typing 95ms a letter, the refusal held 2.4s); the next card starts
+  the moment the one before lands its result, no wait for a fade), then
+  holding finished (founder, 2026-10-18: a loop was "really weird UX").
+  Cards waiting their turn sit at 40% opacity and come up in 500ms as
+  their play starts. Each card (`px-6 py-6`, the page's resting card): a
+  quiet `zebra-400` "01" / "02" / "03", a `type-heading` title and a
+  quiet line, then a hairline and the moment straight in the card, no
+  well (founder, 2026-10-19: the tinted box inside read as a box in a
+  box, and its own padding and vertical centring put the text off the
+  head's line). Head and moment share one 24px left edge, and every
+  moment starts at the top under the hairline, so first lines run level
+  across the row; one body height from `lg` (16.75rem), sized so none
+  clips (no `overflow-hidden`, so focus rings and the slip's ring show).
+  **Shared frame, own body** (founder, 2026-10-19: three different
+  styles read as unrelated, identical rows could not be told apart):
+  every card opens its body with the same `Status` line
+  (`bdm-snap-parts.tsx`: an `IconCircle`, neutral idle, a spinner when
+  busy, amber when there is something to fix, green with a check when
+  done, over a `type-label` title and a muted detail); under it, each
+  card shows what its step is. Green is kept for results (Saved, the
+  pass count, Registered); the playing card lifts 4px. **One answer is
+  the thread** (chevrons and a per-card progress line were both tried
+  and cut): 1 (`bdm-snap-form.tsx`), the couple's own form, two `Input
+  boxed` fields with labels over them, Family name "Hart" already in and
+  only First given name typing "Amelia Rose" (`SLIP`) at one steady 95ms
+  a letter, the focus ring and a caret on that field only, then the
+  status turns to Saved; 2 (`bdm-snap-check.tsx`), Zebri's check rows
+  (label left, answer right, hairline between), the answer arriving only
+  once step 1 has typed it, the status counting "n of 47 pass BDM's
+  rules", turning amber at "1 answer to fix" with the rule's own words
+  from `rules.ts` fading in red under the answer ("One word only; the
+  rest belongs in Other given names"), then fixed in place: "Amelia", an
+  Other given names row "Rose" under it, and "All 47 answers pass" in
+  green. Before and after are layered in one cell and cross-fade, and an
+  empty answer holds a space, so no BDM card ever changes height
+  (founder, 2026-10-19: resizing pushed the page about on phones); 3 (`bdm-snap-lodge.tsx`), opens on "Ready to lodge",
+  the couple and date, "Order their marriage certificate" ticked and
+  Lodge with BDM pressing in and spinning ("Lodging with NSW BDM"), then
+  the action lifts away and a registration slip rises into its place: a
+  bordered `rounded-control` record headed "Marriage registration" with
+  Couple / Married / Lodged / Certificate rows under a dashed rule.
+  Zebri's own confirmation, never drawn as BDM's certificate. Stacked
+  on phones; without script or with reduced motion every card is
+  finished. The copy leads with the founder's claim that Zebri is the
+  only app in Australia that lodges with BDM directly (keep it true);
+  kicker "BDM lodgement" with an "Only in Zebri" badge), Blocks (`blocks-shot.tsx`, wide like
+  Journeys, titled "Made for what you do.": sells the benefit, not the
+  mechanics (founder, 2026-10-18: a newcomer does not care where blocks
+  go; a role picker was cut as pointless). Straight on its grey band, six
+  `OutcomeCard`s in journey order (Enquiries, Booking links, Video
+  calls, Proposals, Questionnaires, Run sheets), each an outcome title
+  and one line of how over the block's `BlockPicture` (its real image
+  from `BLOCK_IMAGES`, or its mark and bullets on a quiet 16:9 card until
+  it has one; Video calls' is the real call-updates window,
+  `blocks/images/video.tsx`), titles one line at three across, the
+  block's mark and name as
+  the source; then a `TextLink` "See all" to the all-blocks
+  page. The outcomes (`blocks-outcomes.ts`) only reword catalogue claims),
+Zebri AI (`ai-shot.tsx`, wide: its three
+  features as `ChoiceCard`s (an `IconCircle`, grass when picked, beside
+  the title on one row, the line under them) beside the picked one as the app's
+  own window for it, finished, still and usable, founder 2026-10-18: no
+  animation, and no window saying the same thing twice. Each window
+  uses the dialog anatomy (`DialogHeader` `closable={false}`,
+  `DialogBody`, `DialogFooter`) on `bg-field`. Replies drafted for you
+  (`ai-reply-panel.tsx`: the enquiry window on Mia and Leo's DM, the
+  couple large under the header, their message as a bubble, the app's
+  reply field (labelled with its channel as `ReplyComposer` does) on
+  Zebri's draft, signed Jess, shown free, and Send only, `EnquiryFacts` as a full-height
+  tinted sidebar from `xl`); Nudges when couples go quiet
+  (`ai-nudge-panel.tsx`: the proposal as one unboxed row, its second line why
+  Zebri raised it (opened three times, no reply), then the app's
+  `MessageChips` and the message (no subject), each tone
+  or channel change writing the new `draftFor` draft); Calls that update
+  the couple (`ai-call-panel.tsx`: Amelia and Jack's Final numbers call
+  as the app's `CallUpdates` with `quotes`, each value with the line
+  Zebri heard, wrapping rather than truncating; no summary or record
+  card, which repeated the four changes). Replies and Nudges end on
+  `AiDone` with a way back. From `lg` the cards and the window are one
+  34rem rectangle (cards a third each, the window filling the rest), so
+  nothing below moves as windows change; below `lg` there is no
+  switcher: each feature is a `SwipeRow` slide (`wide`, 90%), its icon and title over
+  its own window (founder, 2026-10-19). On phones `CallUpdates` stacks
+  each row (label and decision, the change under them) and the call's
+  aside drops the couple's name), Security (wide, lead "Where it lives, who can see it, and
+  what AI does with it.": its six commitments as tiles on its grey band,
+  `security-grid.tsx` over `security-points.ts`, each tile the page's
+  resting card (`shadow-lg ring-zebra-950/10`) as BDM, Blocks and Pricing
+  use (Stored in Sydney,
+  Encrypted, Never trains AI, Your account only, Marriage paperwork,
+  Australian privacy law; each says only what the FAQ or the codebase
+  backs: "records and files" in Sydney, never "everything" (email,
+  payments and the app's servers are elsewhere), and no "AI runs in
+  Australia" (it calls Anthropic's API directly), checked 2026-10-19; each tile its icon beside the title, the detail under them),
+  then "Read our privacy policy". Replaced the lodge-login screen,
+  which showed one BDM-only promise, founder 2026-10-18. White like
+  every other row; `FeatureRow` has no dark variant). **Band rhythm**
+  (founder, 2026-10-19: a gradient box behind every band read as seven
+  separate cards): bands run full width, alternating white and a faint
+  grey (`muted` on `FeatureRow` and `SiteSection`, `bg-zebra-50`):
+  Journeys grey, BDM white, Blocks grey, AI white, Security grey, Pricing
+  white, Founding grey (wrapped in `website-page.tsx`), FAQ white, at
+  `py-16 sm:py-24`. The brand gradient (`Backdrop`) is kept for the hero
+  and the BDM band only, what only Zebri does; every other picture
+  floats on its band with its own shadow. Each row steps
+  down from the hero: kicker `type-label`, title `type-site-title` (28
+  to 40px), lead `type-lead` (16px), and no ticked points under
+  it on any row (founder 2026-10-19: what matters goes in the lead). The shot
+  is the only frame (no grey matte round it); callouts sit outside the
+  card, on the side facing the words.
+- Pages of their own share `site-subpage.tsx`: the nav with the page
+  marked, the hero's sky behind a kicker, h1 and lead, the page's bands,
+  the waitlist panel and the footer.
+- Blocks (`/design-system/v2/website/blocks`, `blocks-page.tsx`; in the
+  nav since 2026-10-19): "Every block in Zebri.", reached from the nav
+  and the Blocks band's See all, then
+  the catalogue's four groups as bands (`type-site-title` group name,
+  its line), each a grid of `BlockCard`s (picture, name with a Max or
+  Coming soon badge, pitch, bullets), closing on the waitlist panel.
+- Guides (`/design-system/v2/website/guides`, `guides-page.tsx`):
+  "Guides for wedding MCs and Celebrants." and an honest empty state
+  until the first guide is written (no listed titles that cannot be
+  opened). Guides, not a blog or news (founder, 2026-10-19: SEO and
+  AEO); each guide will be its own `/guides/<slug>` page. The
+  nav and footer links are `sectionHref(id)` (`nav-links.ts`: the home
+  path plus the anchor), so they scroll on the home page and go home
+  from this one; `JumpButton` goes home when its section is not on the
+  page.
+- Product pictures wear the site's sample business (`site-account.ts`:
+  Jess Taylor Celebrant, Mia & Leo on Sat 13 Mar 2027 at Bendooley
+  Estate on every band); `BlockPicture` and the AI reply composer get
+  it through `AccountContext`, and the Journeys account builds on it.
+  The dashboard demo carries the founder's real name, which must never
+  reach the page (it leaked on three Blocks pictures, 2026-10-18).
+  Enquiry drafts sign with the account MC's first name (`draftReply`,
+  `draftDecline`'s `signer`), the demo user's when there is none.
+- Pricing (`site-pricing.tsx`, on `SiteSection`, whose header is set
+  exactly as a wide feature row's: `type-label` kicker, `type-lead`
+  lead, the same band padding; titled "Simple pricing. No lock-in.",
+  the 20% left to the founding panel's headline): three cards in the BDM band's shell
+  (`rounded-panel bg-field p-1.5 shadow-lg ring-zebra-950/10`, straight
+  on the white band): plan name, who it is for and price, then the
+  plan's list under a hairline (13px points with a `grass-700` check like
+  the feature rows; no grey well, founder 2026-10-19), and the button at
+  the card's foot, level across the row. Pro is marked by its
+  Recommended badge and the primary button only (no ink ring: one card
+  style on the page). Enterprise priced "Custom" (not "Let's talk", which
+  repeated its Talk to us button), "Priced with you, by team size"
+  under it. A plan that builds on another says so once, as a
+  `type-label` lead line ("Everything in Pro, plus:"), never folded into
+  a tick row (founder, 2026-10-19); Enterprise lists `ENTERPRISE_EXTRAS`
+  (unlimited team members, help moving clients in, a named contact,
+  invoiced monthly or yearly). "Join as …" lands on the
+  form, trial "at launch". Below `md` the cards are a `SwipeRow`.
+- Founding (`site-founding.tsx`), closed the way Stripe closes a page
+  (founder 2026-10-19, after a perk checklist beside a boxed form and a
+  live member card were both rejected): white, no card, no backdrop.
+  Left, kicker, title, "Join before the public launch.", the email capture
+  at the app's control size (`EarlyAccessForm`: a `raised` `Input` beside
+  its `Button`, both 36px, 13px text; the 48px box was too large;
+  stacked below `sm`, the button full width, as side by side the field
+  was too narrow) and
+  "Rather talk first? Email the founder". The email opens a small dialog
+  (`early-access-dialog.tsx`: name, MC / Celebrant / Both, then
+  `DoneView`), so the page asks for one thing. Right, the five perks
+  (`founding-offer.ts`) as one quiet column: a small grass icon (Max
+  features `MaxPlanIcon`, account manager `AccountManagerIcon`, the vote
+  `VoteIcon`, drawn for it), a bold name, one line.
+- FAQ (`site-faq.tsx`): split, title sticky on the left, in the rows'
+  type (kicker `type-label`, `type-lead` line), with "Rather talk it
+  through?" and Email the founder under it, unboxed (the card round it
+  was removed, founder 2026-10-19), so the column is not empty; questions in regular
+  weight (`Disclosure`: 13px `type-body` question and answer, a plus that becomes a minus).
+- Footer (`site-footer.tsx`): logo and "Built for Australian wedding MCs and
+  Celebrants.", Product (the nav's own `NAV_LINKS`, same order and
+  labels, Security included) / Company (FAQ, Contact) / Legal columns,
+  all 13px like the nav, then "© 2026 Zebri" (the brand only: no
+  company name or ABN, founder 2026-10-19) and "Built and hosted in
+  Australia" (the hero's promise). Quiet: a giant
+  faint wordmark was tried and rejected (2026-10-18).
+No testimonials until real ones exist. The security lines are launch
+commitments: change them only with the product.
+
+**Onboarding** (`app/design-system/v2/pages/onboarding/`, full screen at
+`/design-system/v2/onboarding`): the eight-step setup from
+`feature/onboarding` rebuilt in v2. **Not skippable** (no Skip, no close
+X, no "later"). Opens on a welcome cover (step 0, same 1024px panel as the steps):
+"Ten tools. / Now one." in the `type-hero` role (64px, medium weight;
+"Ten tools." zebra-400, "Now one." black), one line of copy ("From first enquiry to last dance, your
+whole business lives here. Made for MCs, Celebrants and DJs.") and one CTA ("Set up my business", with the line "Two minutes to your
+first booking"), grouped and vertically centred. On the right, with no box
+round it and no texture (just a soft grass glow), ten tool badges on two
+concentric rings of five around a round Zebri mark with a grass-to-sky
+hairline (`surface-highlight`). The tool marks are muted (60% grayscale,
+70% opacity) so the Zebri mark holds the eye. Each badge (`tool-badge.tsx`) is an
+app-icon circle with the brand's mark and the name
+beneath, struck through a beat after it lands (the `strike` keyframe).
+Tools (`tools.tsx`): Calendly, Celebrant Easy, Zoom, DocuSign, Xero,
+Typeform, Canva, Spotify, Dropbox, Qwilr. Simple Icons marks, Tabler's
+camera for Zoom (the Simple Icons Zoom and Typeform marks are wordmarks
+that blur at 24px), and lettermarks for Celebrant Easy, DocuSign, Qwilr
+and Typeform. The orbit square is a fixed 576px so spacing never depends
+on the panel; phones get the badges as a grid instead.
+Then the same 1024px panel, `raised` (modal shadow plus a hairline ring
+so it lifts off the backdrop). No Z mark at the top (tried 2026-10-14
+and removed the same day: the cover already has one at the centre of
+its orbit). The step title is an h1 in
+`type-title md:type-display` (the same role as the auth titles), the
+intro `type-lead`, then the form; the footer (save status with a
+`DrawnCheck`, Back, then **Go to Zebri** last) sits under it. Step 1 is
+"Tell us about you": name, business and website as option G fields
+(see the consistency rules; name is the only one Go to Zebri waits for)
+and "What you do" as a `ChipGroup`. The cover's summary line is fixed
+copy ("Two minutes to your first booking"). The rail, the "1 / 9"
+counter, the progress bar, the four check cards and home address were
+removed with the multi-step flow, and the old step files (Your apps,
+Build your Zebri, packages, brand, signature, Watch it book, plan,
+founder) were deleted on 2026-10-14.
+
+**Setup is one screen** (2026-09-30, `onboarding-flow.tsx`): the cover,
+then "Tell us about you" (name, business, website, what you do; name is
+the only required field) and **Go to Zebri**, which writes the handoff
+and lands on the first-run dashboard. Everything else is asked where it
+is first needed: the price and deposit in New proposal, the signature in
+the first New contract, the plan and card at the first real client.
+The account arrives with no blocks (sidebar: Home, Clients); Proposals, Contracts and
+Payments are added from Home as the recommended starting blocks. The old steps were deleted on 2026-10-14; any notes below that describe
+them are history.
+
+**Account context** (`pages/dashboard/account.tsx`): the real Clients,
+Proposals and Payments pages read their clients, proposals, invoices and
+contracts through `useAccount()` instead of importing demo data. The
+default is `DEMO_ACCOUNT`, so `/design-system/v2/dashboard` is
+unchanged. Optional `addClient` / `sendProposal` / `sendContract` /
+`sendInvoice` turn on working New flows: New client opens
+`clients/new-client-dialog.tsx`, a quick-create rather than a form in
+an `lg` sheet: a Primary contact line (required) and a Secondary
+contact line (their partner; empty for a client who is one person),
+which become the client's `names`; the title reads "Priya", then
+"Priya & Dev" as they are typed (`clientName`), with their avatars
+beside it, and everything that names the partners (the marriage
+paperwork's first and second partner, "Hi Priya and Dev" via
+`greetNames`) reads them; email and phone as quieter lines under them (placeholders "Email" and
+"Phone"), then detail chips
+(`new-client-details.tsx`, PropertyChips: Event date with no past days
+and "in N days", Venue and Guests (each popover IS the field: one
+borderless line led by the chip's icon, no second label or box; Venue
+lists the MC's past venues under it, filtered as they type), Package from the MC's packages, Found
+you via: Instagram, Google, Referral, Venue, Directory listing, Expo,
+Other), then the MC's notes as a bare `Textarea` (`bare`, new) filling
+the sheet. Add client is disabled until there is a name; no header or
+footer bars and no Cancel (a quiet × top right, the only way out on a
+phone; Escape; a click outside); no keyboard shortcut to add, not even
+Enter (the user removed ⌘⏎). It replaced a five-field two-column form
+with "(optional)" on most labels; the builder stub after New proposal
+gains "Send to X"; New invoice / New contract open
+`payments/modal/new-document-form.tsx` (pick a client with an accepted
+proposal, Send). Each page has an empty state for an account with none
+(`dashboard/empty-state.tsx`: a heading and one line on the backdrop, no
+panel, centred on the screen; the page and its tab panel stretch so it
+can fill the space under the title row, and a bottom padding lifts it by
+about half that row, more on phones where the row is taller). The
+"Nothing matches that search" panels stay in a panel, since a list is
+there to clear back to;
+a client can be one person (the second name is optional everywhere),
+and lists under 10 rows never fold their settled sections (`unfolded`).
+
+**First-run dashboard** (`pages/dashboard/first-run/`, full screen at
+`/design-system/v2/dashboard/new`): where finishing setup and logging in
+land. It renders the REAL pages inside an `AccountContext.Provider`
+holding a brand new account (`use-new-account.ts`, saved beside the
+onboarding handoff). The account arrives with the test client, Clara &
+Alex, already in, who replies on a script (`derive.ts`, derived from
+send times so a reload resumes mid-reply).
+
+**Home is the real Home** (`first-run/first-home.tsx`, rebuilt
+2026-09-30 after the user found a separate guide page weird): the
+greeting, the line under it, Ask Zebri with its quick starts, Up next
+and its counts, and the Calendar / Enquiries / Notifications icons top
+right, all fed by the new account. There is no guide layer: the steps
+are **Up next to-dos** (`home-rows.ts`), written as every later to-do
+will be ("Clara & Felix accepted MC package. Send the contract."), each
+with one button (`UpNextRow`'s `action` variant: buttons only on the
+MC's own to-dos, primary on the one that matters now; the text wraps
+rather than truncates). While the test client is replying, Up next steps
+aside and the line under the greeting is the live commentary ("Sent.
+Waiting for Clara to open it…", "Clara opened your proposal.", "Clara
+is looking at MC package…", "Clara accepted MC package, $2,400."),
+written in by `TypedLine`: each letter fades and sharpens in over
+300ms, 22ms apart on the frame clock, no caret, and the old line fades
+out before the next starts (a per-character typewriter with a caret read
+as jerky). Up next comes back once the last line has written in,
+sharpening in with `swap-in`, holding the next to-do's button. Replies
+are paced to be read: the proposal's at 3, 7 and 11 seconds, the
+contract's and invoice's at 3 and 7 (`REPLY` in `derive.ts`; 1.5s apart
+flashed past). A real client's row still shows what they did last and
+when. **The booking.** When the test client pays, "Clara paid the
+deposit." types out, then (2s later) `booked-celebration.tsx` opens: a compact card (`form`
+Dialog, `backdrop="light"`: the usual grey wash muddied the confetti) over Home, lit from behind by a soft halo of the brand colour (`card-glow.tsx`,
+lightened towards white, breathing in over 1.6s while the deposit
+counts up), and one burst of confetti from each bottom corner of the
+window BEHIND the card (`side-cannons.tsx`, the `canvas-confetti`
+package as Magic UI's side cannons use it), then stillness: about 26
+pieces a side, mostly long thin ribbons that tumble slowly with a few
+small squares, in two colours only, grass and the celebration-only
+`champagne` gold, each in a light and a deeper step so a turning ribbon
+catches the light. Tried and dropped: a stream every frame (busy even
+at one a frame) and a four-colour green and blue mix (generic). Both
+glow and canvas are fixed at `-z-10` inside the dialog, mounted after
+the entrance transform ends.
+Then "Your first booking", "Clara & Felix are booked" in the MC's heading
+font at regular weight (the celebration loads the brand fonts itself:
+reached by a reload or the dev skip, the stack fell back to a bolded
+Times; display faces such as the default Italiana have no bold), the
+deposit counting up, then the journey: the stops (New enquiry, Proposal
+accepted, Contract signed, Deposit paid) light 800ms apart, each
+circle filling with a slight spring and its tick drawing itself
+(`DrawnCheck`), while one
+linear line sweeps through them, reaching each as it lights (a width
+step per stop eased in and out at every stop and looked jerky), then "Your
+real clients follow the same steps. Zebri tells you as each one
+moves." and one button, Take me in (to Home). Rejected along
+the way: a brand-coloured full window (the default brand is Zebri's CTA
+green, which must never be the page), a full-window takeover on the
+light backdrop (too big), our own confetti from the middle (cheap), a
+check above the title (too many ticks), "paid in 1 minute" (real
+clients take days) and "See your Zebri" or "Add your first real client" as the button. All of this is on
+`/design-system/v2` under Moments, Page patterns and Documents. Setup ends when it is closed (`progress.celebrated`; `tour.onboarded`
+waits for it, and until then Home adds nothing), and Home then opens in
+order instead of all at once: the day's greeting rises in, "That was
+the practice run. Now add a real client, and Zebri takes them from
+enquiry to paid." types, Ask Zebri rises as the column eases up (padding
+transition), then Up next. Closing it also clears the test client and
+everything sent to them (`celebrate()`), so Home, Clients, Proposals,
+Payments, the bell and the calendar start empty; the brand, packages,
+signature, contract wording and blocks stay. Home after setup, modelled
+on Shopify's setup guide (the plan is a task beside the job, not a
+paywall in front of it): Up next holds "Add your first real client"
+(New client, primary) and "Start your free week" (Pick a plan,
+secondary; opens the plan sheet with nothing waiting on it, via
+`askPlan()`, and leaves once a plan starts). Adding a real client still
+opens the same sheet, so either route gets there. Ask Zebri has no quick
+starts and no client scope until there is a real client (then Send a
+proposal and Send an invoice; Build a run sheet is not on a new account,
+which cannot make one yet), and the counts line is hidden while every
+count is zero. The replies also arrive as notifications
+behind the bell's green dot (`noticesOf`; `useUnread` now remembers
+what was read, so later items come in unread). A booked client becomes
+an event row with "In N days", as the real Home shows the next event,
+and lands on the calendar. The line under the greeting says Clara is a
+test client, then "went from new enquiry to paid in under a minute"
+once they pay; after that it is empty, as on the real Home. When the
+practice run ends nothing swaps: "Add your first real client" is just
+the next to-do. During setup (until the test client has paid) Home is
+only the greeting, its line and Up next: Ask Zebri, its quick starts
+and the counts join once setup is done, and Clara's row waits until the
+tools are picked. The sidebar shows every added page, but Proposals,
+Contracts, Payments and Journeys stay greyed and unclickable
+(`SidebarRow` `locked`, via `NavItem.locked`) until setup reaches them
+(`tour.reach`: tools picked, then the contract, then the invoice, then
+done); the page a to-do opens is never shown locked. The hand-off from
+setup is one motion: the setup panel fades out (`swap-out`) over the
+backdrop, the route's loading state is that same backdrop, and the
+sidebar eases in while Home rises. Page switches rise in, and an Up
+next row's words fade when a reply changes them. The top-right panels take `events` / `enquiries` /
+`notifications` (the demo's by default) and have empty states.
+
+**Review links** (2026-10-01): every page of both dashboards has its own
+URL so one can be sent for review. Optional catch-all routes
+(`dashboard/[[...page]]`, `dashboard/new/[[...page]]`) render the same
+client page, which reads the address once and `pushState`s on every
+move (Back and Forward work through `popstate`). Demo business:
+`/design-system/v2/dashboard`, `/clients`, `/proposals`, `/payments`,
+`/journeys`, `/email` (the old `#clients` links still open, and an old
+`/workflows` link opens Journeys; inside the
+showroom preview the address is never touched). New account
+(`first-run/routes.ts`): `/design-system/v2/dashboard/new`, `/clients`,
+`/clients/new` (New client open), `/proposals`, `/payments?tab=invoices`
+(or `contracts`), `/plan` (the plan sheet over Home; closing it puts the
+address back to Home's), `/run-sheets`, `/booking-links`, `/journeys`
+(`/workflows` lands on Journeys).
+A link to anything but Home, opened with nothing saved, lands on an
+account already past setup and the practice run, with the three
+first-use blocks in the sidebar (`useNewAccount({ setUp })`); a saved
+account always wins. Internal moves never put `/new` in the address, so
+a New dialog opened by a to-do does not reopen on reload.
+
+**Block first use** (`pages/dashboard/first-use/`): no tours, no coach
+marks, nothing to skip. Each block declares one of three kinds and its
+page opens in the matching state, with one line from Zebri typed out on
+arrival (`zebri-says.tsx`: the wand in a grass circle and a
+`TypedLine`). Works instantly (Run sheets): one already filled in,
+badged Example, to edit or delete; New run sheet adds the MC's own
+above it and Zebri's line goes. Needs a connection (Booking links): the
+page is only that step, centred (Connect Google Calendar, Connect
+Outlook, and why), then a drawn tick, "Google Calendar connected", and
+Zebri hands over the intro call link, already made, with Copy link.
+Needs understanding: Workflows was the example, with three starters
+already on; it was removed 2026-10-14 with the Workflows page, and the
+automation block now opens Journeys, where a new account already has
+its starter journey.
+
+**Build your Zebri** (`first-run/build-your-zebri.tsx`, a `form` dialog
+over Home, the first to-do, titled "Recommended starting blocks"; the to-do
+says what a block is, led by the word as other rows are led by the
+client: "**Blocks** are the Lego pieces of Zebri. Pick only what you need
+now, and add more as you grow." (user: playful but clear, Lego with a
+capital L, no examples, no sidebar mention, say it avoids clutter;
+"tools you add" and "switch on parts of Zebri" were rejected)): the
+three every booking runs on, Proposals, Contracts and Payments (where
+invoices live; `STARTING_BLOCKS`). A new account arrives without them
+(the handoff drops them), so adding them is what puts them in the
+sidebar. The intro reads "Win the client with a proposal, lock in the
+date with a contract, then get paid." The rows have no Add buttons (the
+test client's run needs all three): Add all is the only action, each
+row ticks Added as it lands, then Done. Add all is paced to be watched
+(`addAll(blocks, { lead: 250, gap: 650 })`): a beat after the click, then
+one row at a time, each badge's drawn tick finished before the next
+starts (the default 240ms stagger, first at once, read as all three
+flashing in); the button keeps "Add all 3" under its spinner rather than
+counting down, and Done replaces it only 750ms after the last block
+lands, once that row's tick has drawn (arriving with the last row read
+as sudden); there is no Not now, and
+closing leaves the to-do. The three join the sidebar together on Done,
+not one by one behind the open dialog (they showed greyed before the
+step was finished). Proposals' catalogue pitch is "Beautiful
+proposals you design exactly how you want." (never "world-class") (the old "accept and pay in one
+go" was rejected as meaningless). The
+rest of the catalogue is named as living in Blocks. During setup Home
+sits lower (about the middle of the screen) with more room under the
+greeting; it moves up to the real Home's position once Ask Zebri joins.
+The sidebar's blocks are saved with the account.
+
+**Creating the documents.** New proposal is two steps (client, template),
+then the **proposal editor** (`proposals/editor/`, an `xl` dialog in the
+document-modal layout): the couple's page live on the grey desk, and a
+narrow (17rem) side of the brand only (logo, brand and accent colour,
+heading and body font) under "Make it yours" and one line that sells
+the builder: "Start with your look. Later in the proposal builder, you design
+every section: photos, videos, words and packages." (a longer version
+was cut as too long).
+Words and Package tabs were tried and taken out (the files are parked,
+unused): this is the template with the MC's brand on it, and saying so
+stops them hunting for controls that are not here. The words are the
+template's and the package is the account's first (a new account's
+starter). The desk ends in `MoreBelow`, a 64px blurred glow stuck to
+the modal's bottom edge that fades once the page's end is in view, so
+the MC knows to scroll. Send saves the brand to the account.
+`ColorField` portals its picker into the enclosing `<dialog>` (the
+`container` prop on `ColorPopover`), as `Dropdown` does, since a
+modal's top layer covers anything portalled to the body. New contract and New invoice open
+`payments/modal/new-document-editor.tsx` in the same layout, with its
+own header (`editor-header.tsx`: title only, a second line made the bar
+tall; Send to Clara beside Close, top right, as in the proposal editor).
+Neither labels the page ("What Clara sees") nor restates who it is for.
+**Contract:** Zebri's standard MC agreement (`contract-clauses.ts`, ten
+clauses written for an MC, "event" never "wedding") on two A4 pages
+(`contract-preview.tsx`: parties, a summary of event, package, fee and
+deposit/balance, clauses 1-5; then 6-10 and the signatures, "Page N of
+2"). The wording is not editable in the send flow; the side says "Ready
+to sign" and that they can bring in their own contract later, then the
+signature pad (first time only). The drawn signature shows on the page
+as it is drawn (the preview takes a `signature` override), the desk
+scrolls to the signature line on each stroke, and the pad crops its PNG
+to the ink so it fills the line. **Invoice:** the preview is the
+deposit email as the couple gets it (`invoice-email.tsx`), not the paper
+tax invoice (that goes with it as a PDF): the MC's brand, the amount and
+due date on the brand gradient with a light Pay deposit button under
+it, the MC's note signed with their portrait, a two-step payment
+schedule (deposit, then balance) over the package total, and the PDF
+attachment. The side (17rem, as narrow as the proposal editor's; the contract's stays 24rem for the signature pad) is three plain fields, each taking any value:
+Deposit (%, with the amount), Deposit due in, and Balance due before
+the event (each a number with a days/weeks/months inline Dropdown inside
+the Input, `trailingWide`), each field's help line saying the money or
+the date. The note comes written and is not edited here. Tried and
+rejected: segmented presets, preset dropdowns (no custom value, old
+fashioned), a fill-in-the-blanks sentence (too clever to scan), and a
+"Zebri takes care of" list (confusing). Contracts and invoices wear the brand (`letterhead.tsx`: `BrandScope`
+and `Letterhead`); ABN, email, phone and bank print only when the
+account has them (`account.contact`; the demo business does, a new
+account does not), and a new account's clients are billed by the names
+and email they gave. Every send returns the MC to Home, where the
+replies land.
+
+Anything done
+for a real client (adding one, or sending them anything) is queued
+behind `plan-sheet.tsx`, an `lg` split modelled on Stripe Checkout and
+Superhuman's upgrade sheet, monthly only (a Yearly toggle was removed:
+one decision too many). Left, the value (`plan-picker.tsx`): "Start your
+free week", why it is open ("To add Priya & Dev"), Pro and Max as
+ChoiceCard rows (radio mark, name with a brand Popular badge, who it is
+for, the whole-dollar offer beside the usual price struck, and "then
+$59/mo after a year"), then what the picked plan includes, a Lucide icon
+in a zebra-100 circle per line (Max: Everything in Pro plus Talk to
+Zebri; SMS and video calls; Email marketing; Integrations: Instagram,
+BDM and calendars).
+Right, on a neutral tint (`bg-zebra-950/[0.025]`; zebra-50's cream next
+to two olive greens read as off), the payment (`plan-payment.tsx`): Due
+today $0 with the plan beside it, the trial as three dated steps (today,
+the reminder two days before, the first charge), Apple Pay and Google
+Pay as each brand's mark plus "Pay" (Google's in its four colours) (the Apple Pay logo artwork carries
+its own outline and read as a box in the button), "or pay by card" and
+one `CardField`, Start free week, then "You won't be charged until
+{date}. Cancel any time in Settings. Secured by Stripe." No header or
+footer bars, a quiet × top right (in a wrapper: the Button is itself
+`relative`). Starting the plan runs the queue, so the typed client lands the moment
+the card goes in; closing drops it. The test client never asks. Copy
+says "event", never "wedding". Pages with no real view yet (Run sheets,
+...) are an empty state.
+
+Step 3, What do you charge? (`step-packages.tsx`, `package-row.tsx`,
+`packages.ts`): a price list typed straight into, no editor or modal.
+Each row is the package name and price as **InlineInput**s at heading
+size (name medium, price regular with a muted `$`), divided by
+hairlines. It starts with one row (Ceremony only, $900, with Legal
+paperwork and One meeting included); a blank row is ignored, and "Add another package" goes up to eight
+and puts the caret in the new row's name. Each row has a remove X
+(with a mouse, shown on hover or when the X itself has focus, not while typing in the row; always on touch); removing the
+last row leaves a blank one. Nothing is suggested: every row shows its
+own items as a TagList (each with an X) with "+ Add
+an inclusion" at the end, a bare caret with no placeholder (Enter
+adds). There is no focused-row state: every row looks the same
+whatever has focus, because swapping a row's tags for a one-line summary
+on blur made the row above flash when a package was added. Everything moves by height through Collapse, one system: a
+new row grows in (`appear`), a removed row folds shut and unmounts after
+`COLLAPSE_MS`, so "Add another package"
+and the deposit line move with the layout. Only the tags inside a row use
+auto-animate. Gotcha: mixing auto-animate (which measures start and end
+once) with a CSS height transition nearby makes things snap at the end;
+use one or the other for a region. The deposit is set inside a sentence:
+"Couples pay [25%] to lock in their date."
+
+Step 4, Your brand (`step-brand.tsx`, `brand-preview.tsx`,
+`brand-proposal.tsx`, `proposal-media.tsx`, `proposal-sections.tsx`): the
+one **bleed** step (`bleed: true` in `steps-meta.ts`). Under the title the
+body runs to the panel's edges and down to the footer: a plain zebra-50
+canvas (no dots) with the MC's proposal as a Qwilr-style web page, in
+reading order: a navbar (their logo as uploaded, never recoloured, and
+business name), a cover photo slot (the couple's names, date and venue,
+no tag), a welcome signed by the MC with a portrait slot, a video slot,
+how it works (three numbered steps and a three-photo mosaic), their packages, a pull-quote
+testimonial between hairlines, and an accept block with their real
+deposit. It scrolls inside the canvas, and a gradient of the canvas colour
+rises over the bottom edge so whatever sits there fades out. Corners
+are tight (`rounded-check`, 4px) throughout the page. Text on the brand
+and accent colours comes from `readableOn()` (white or near black by
+WCAG contrast ratio, not the app's brightness cutoff), so a dark accent
+card gets light text. The default heading font is Italiana. The intro
+says every part can be changed later, Canva-style. On the
+right, a 208px sidebar with the original controls: logo, brand and
+accent colour (the app's ColorPopover), heading and body font (Dropdown,
+each font in its own face). No helper copy in the sidebar. Hovering a section of the
+page outlines it as a block, the one hint that layouts are edited later
+in the proposal builder. Photo and video slots are brand-tinted gradients;
+the video carries a small "Your video" tag, so it reads as a slot, not
+broken embeds. Brand values reach the page as CSS custom properties from
+`brandVars()`.
+
+Step 6, Watch it book (`step-replay.tsx`, `replay/`): the aha, first
+built from the 2026-09-24 Claude Design handoff ("Watch It Book"), then
+reworked to one big animation with no timeline. It plays once, about
+fifty seconds, through ten scenes: enquiry, lead created in Zebri,
+instant reply (thanks for reaching out, six call times, Sarah picks
+one), video call (a solid brand "Zebri AI is taking notes" pill, live
+captions, and each thing said landing in "Their record, filled from the
+call" a beat later), proposal (delivered, opened, viewed; no sent time),
+accepted (payment schedule: deposit today, balance on a real date),
+contract, signed (the couple's signature, then the MC's real step 5
+signature, drawn, uploaded or typed), invoice (a realistic tax invoice:
+number, issued date, "Deposit, N% of package", GST included at 1/11,
+total due in AUD, balance note; then paid by card) and booked (paid,
+added to the calendar, "Enquiry to paid deposit in under three days." in
+body weight).
+
+Layout (`step-replay.tsx`): one zebra-100 panel, brand vars applied.
+Left (`replay-story.tsx`, 240px from lg, above on phones): the scene's
+time on one line, a `type-display` headline and one detail line, rising
+in per scene inside a stable `aria-live` region; at the foot one
+continuous progress bar (SVG, so the fill is an attribute, not a style)
+that is also a slider: click or drag anywhere to scrub, arrow keys step
+a scene, a playhead dot shows on hover or focus; and a round secondary square Button for Pause, Play and, at the end,
+Watch again. Right: the cards stacked absolutely (`replay-parts.tsx`
+`Card`, tones paper, tight, bleed, brand), crossfading with a stagger so
+two never collide half-faded. Times live only in the story column, never
+inside a card. Clock (`use-replay-clock.ts`): elapsed ms measured with
+`performance.now` on 50ms ticks, 5.2s a scene, details landing on four
+beats (0.8, 1.7, 2.6, 3.5s) via `on(step, beat)`; it runs only while the
+step is on screen and stops on the booking. Everything the MC set up
+flows in (`replay-data.ts`): business name or logo, brand colour (`--b-soft`
+wash and `--b-deep` gradient from `brandVars`), fonts, their first package
+and its real deposit and balance, and their signature. The couple, dates,
+venue and call are sample data; no card names a price the MC did not set.
+
+Step 7, Choose your plan (`step-plan.tsx`): a highlight Panel banner on
+top ("20% off Pro or Max for your first 12 months", a one-time offer),
+visible without the primary colour; then Pro ($59), Max ($99) and
+Enterprise ("Let's talk"), no free tier. Pro and Max show the discounted
+monthly price with "Normally $X" struck through on the line below;
+prices include GST. Step 8, A note from the founder, is centred in the
+panel (`center: true` in `steps-meta.ts`) with no counter or eyebrow
+above it.
+
+**Dialog** (`components/ui-v2/dialog.tsx`): the native `<dialog>` via
+`showModal()` (focus trap, inert page, Escape, focus return all from the
+browser) holding a solid white card with the modal shadow; a faint
+zebra-950/20 backdrop so changes behind it stay visible (`backdrop="light"` washes the page pale instead, for a celebration whose colour behind the card must read bright); closes on Escape and backdrop
+click. `size="sm"` (28rem, grows with content), `"md"` (40rem, fixed
+height, full screen below `sm`; the default for a sheet) `"lg"` (56rem,
+for a rail beside a list) or `"xl"` (72rem by up to 52rem tall, for a
+record with a rail and a working column: a client's profile). `data-autofocus` picks the first focus
+(skipped on touch so the keyboard stays down). The surface is solid white, not glass,
+and the backdrop is not blurred: stacked backdrop-filters made Chrome
+flicker while the dialog scrolled. Gotcha: the page outside a modal dialog
+is inert, so anything portalled to `<body>` opens behind it; `Dropdown`
+portals into the enclosing dialog, and any new popover must do the same.
+
+**Popover** (`components/ui-v2/popover.tsx`): Radix Popover on the
+shared floating surface (`FLOATING` in `control-styles.ts`: white,
+zebra-200 hairline, `shadow-lg`, 120ms fade), which the `Dropdown` menu
+also uses (`MENU_ITEM` rows too), so every menu matches. Sizes: `menu`
+(10px corners like the buttons, rows 6px, 4px inset, `MenuOption` rows with the grass check;
+`multiple` makes a row one of several that can be on at once, announced as a checkbox, as in a Show menu),
+`card` (320px, 10px, padded: facts and one action) and `panel` (384px,
+10px, scrolls, brings its own layout: the dashboard's calendar,
+enquiries and notifications). Like Dropdown it portals into an
+enclosing dialog. Never hand-roll a Radix popover in a page.
+
+**Swap** (`components/ui-v2/swap.tsx`): one control's states in the same
+spot (`active` + a `states` record), handed over in place: the old state
+softens and fades (`swap-out`, 200ms, then unmounts, `inert` meanwhile),
+the new one sharpens and settles from 94% (`swap-in`, 320ms after a 60ms
+lead). States share one grid cell, so nothing around them shifts. The
+first render never animates; reduced motion drops it all. Use it for any
+button that becomes a status (Add to Added, Upgrade to Add), never a
+`{done ? <Badge/> : <Button/>}` that snaps.
+
+**Sheet** (`components/ui-v2/sheet.tsx`): a panel that slides in from
+the right of the `relative` surface it sits in (a dialog, a region) over
+a zebra-950/10 scrim; not a portal or a new top layer. Focus moves in
+(`data-autofocus`, else the sheet) and returns on close; Escape and a
+scrim click call `onClose`, and Escape is stopped so an enclosing
+`Dialog` stays open. Keep it mounted: it slides out and is `inert` shut.
+For a focused job that should not replace the page behind it (reviewing
+a drafted message on a client's profile).
+
+**DrawnCheck** (`components/ui-v2/drawn-check.tsx`): a tick whose stroke
+draws itself (`tick-draw`, 400ms after a 150ms beat). Inside a `Swap` it
+draws only when its state arrives by a hand-over (via
+`SwapAppearContext`), so ticks already there when a dialog opens sit
+still; outside a Swap it draws on mount. A leaving state is frozen as it was (a `memo` that stops updating), so
+a spinner that clears in the same render never flashes the label back
+while it fades. A Swap settles its arrivals
+after 800ms, so reopening a `<dialog>` (which restarts attached CSS
+animations) does not replay them. `currentColor`.
+
+**Segmented** (`components/ui-v2/segmented.tsx`): two to five options in
+one 32px track, the pick raised on a white thumb; buttons with
+`aria-pressed` in a labelled group. Optional `counts` shows a quieter number after each label, for a filter. `iconsOnly` shows only each option's icon (a choice that reads better seen than named), with the label read out and on hover.
+
+**Tabs** (`components/ui-v2/tabs.tsx`): the views of a whole page (the
+Clients page's For you / Board / List). Labels with a 2px ink bar under
+the current one drawn by `after:` (no full-width rule under the row), an
+optional quiet `count` and a grass `dot` for a view with something new. A
+real `tablist` with roving focus (arrows, Home, End); the caller's panel
+takes `role="tabpanel"` and `aria-labelledby={tabId(id, value)}`. For a
+small setting inside a form, use `Segmented` instead.
+
+**Disclosure** (`components/ui-v2/disclosure.tsx`, 2026-10-16, in
+Display): a question that opens to its answer, for an FAQ. The whole
+question line is the button and wraps to as many lines as it needs (a
+`Button` is a fixed 36px and would clip a long question on a phone); a
+plus becomes a minus as the answer eases open through `Collapse`, the
+question in regular weight. Stack them in a list with `divide-hairline`.
+Used by the marketing page's FAQ.
+
+**Swipe row** (`components/ui-v2/swipe-row.tsx`, 2026-10-19, in
+Display): a list that swipes sideways below `until` (`md` or `lg`), one
+item at a time with the next peeking in, bleeding to the screen edge
+and snapping to the gutter (`scrollbar-none` hides the bar; `py-6
+-my-6` so the scroller does not clip a card's ring or shadow); from
+`until` up it is a plain list laid out by `className`. `item` sets the
+swipe width (`card` 85%, `wide` 90% for the Zebri AI windows, `step` 16rem); `current` keeps one item in view
+for a row that moves on by itself, scrolling the row only. Inside a grid
+give its wrapper `min-w-0`, or the cell grows to every item and the row
+never scrolls. Used by the marketing page's pricing, Zebri AI and
+Journeys.

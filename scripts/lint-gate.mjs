@@ -71,7 +71,9 @@ import { execSync } from 'node:child_process';
 // Scheduler UI pass: sweeping four hand-rolled toggle switches onto the shared
 // `Toggle` primitive removed the duplicated markup and its violations → 53,
 // then moving the meeting type status onto its card removed another → 52.
-const ERROR_BUDGET = 43;
+// ZEB-126: seeding invoice line items during render instead of in an effect
+// removed a set-state-in-effect error → 42.
+const ERROR_BUDGET = 42;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C

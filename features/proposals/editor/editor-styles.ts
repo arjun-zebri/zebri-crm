@@ -197,10 +197,19 @@ const PARAGRAPH_SPACING = '[&_p]:mb-3'
 
 /**
  * The full prose class for a content section's editor: the rules above,
- * paragraph spacing, and a min-height so an empty section stays
+ * paragraph spacing, no margin under the last block, and a min-height so an empty section stays
  * clickable instead of collapsing to 0.
  */
-export const EDITOR_PROSE_CLASS = [...PROSE_RULES, PARAGRAPH_SPACING, 'min-h-[1.5em]'].join(' ')
+/**
+ * The last block's own bottom margin dropped, so a section's padding is
+ * the same above and below its words (v2 review, 2026-10-10: every text
+ * section sat 12 to 16px lower than its padding said). `> *:last-child`
+ * outranks the `[&_p]`/`[&_h*]` margins above. Matches `RichDocView`'s
+ * `trimEnd` on the public page.
+ */
+const TRIM_END = '[&>*:last-child]:mb-0'
+
+export const EDITOR_PROSE_CLASS = [...PROSE_RULES, PARAGRAPH_SPACING, TRIM_END, 'min-h-[1.5em]'].join(' ')
 
 /**
  * The prose class for a data section's `InlineField`: everything above

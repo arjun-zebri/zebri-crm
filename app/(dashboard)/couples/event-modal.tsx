@@ -133,7 +133,8 @@ export function EventModal({
     if (event) {
       setTitle(event.title ?? '')
       setDate(event.date)
-      setVenue(event.venue)
+      // `events.venue` is nullable in the DB even though the Event type says string.
+      setVenue(event.venue ?? '')
       setVenuePhone(event.venue_phone ?? null)
       setVenueWebsite(event.venue_website ?? null)
       setVenueLat(event.venue_lat ?? null)

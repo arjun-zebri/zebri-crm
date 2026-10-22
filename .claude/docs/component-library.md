@@ -44,6 +44,19 @@ spec (emerald fill + white checkmark when checked) — never a native
 and an optional clickable `label`. Always visible (form variant);
 table rows keep their own hover-reveal selection checkbox.
 
+### `<ChoiceGroup />` — `@/components/ui/choice-group`
+Tappable pills for a short fixed list (2–8 options). `mode="single"` (default)
+is a `radiogroup` of `radio` buttons with a roving tab stop and arrow-key
+selection; `mode="multiple"` is a `group` of `checkbox` buttons. Takes `label`,
+`help`, `error`, `optional`, `disabled`. The chosen pill uses `brand-fg` /
+`brand-bg`, so a branded page picks it up. Use a `Select` once the list no
+longer fits on two lines. Used for single- and multi-choice booking questions.
+
+### `<Input />`, `<Textarea />`, `<DatePicker />` — `optional` and labels
+`Input` and `Textarea` take `optional` for a quiet "Optional" tag beside the
+label; never write `(optional)` into the label text. `DatePicker` takes
+`label`, `id`, `optional`, `help` and `error` (it was a bare trigger before).
+
 ### `<AddressAutocomplete />` — `@/components/ui/address-autocomplete` (Phase 14, onboarding)
 
 Address search + autocomplete using Google Places API. Extracted from Settings page during onboarding wizard work. Props:

@@ -2,9 +2,10 @@
  * Public booking page - orchestrator.
  *
  * Reached via the share-token URL (`/book/<token>`). Loads the
- * `get_public_booking_page(token)` RPC payload, applies the MC's branding, and renders
- * the 3-step booking flow (slot picker, details form, confirmation), or an unavailable card.
- * `?embed=1` strips the page chrome for iframe use (Task 9).
+ * `get_public_booking_page(token)` payload, applies the MC's branding, and
+ * renders the three-step flow (pick a time, details, confirmed) inside one
+ * shell, or an unavailable card. `?embed=1` drops the page background for
+ * iframe use and reports its height to the host.
  *
  * Client component for immediate render then RPC-fetch UX (matches lead page idiom).
  *
@@ -18,10 +19,10 @@ import { useEffect } from 'react'
 
 import {
   bodyFontFamily,
-  DENSITY_PAD,
   useBrandingHead,
   type Density,
 } from '@/lib/branding/public-surface'
+
 
 import {
   ConfirmedView,
@@ -31,13 +32,33 @@ import {
   NotFoundView,
   PickView,
 } from './_views'
+import { BookingShell, type BookingStep } from './booking-shell'
+import { useBookerLocale } from './use-booker-locale'
 import { useBookingPage } from './use-booking-page'
+
+/** Only the three steps render inside the shell. */
+function shellStep(state: string): BookingStep | null {
+  return state === 'pick' || state === 'details' || state === 'confirmed' ? state : null;
+}
+
+/**
+ * Top and bottom breathing room around the card, desktop only: on a phone the
+ * card runs edge to edge, and padding around it just pushes the calendar down.
+ * Written out per density because Tailwind cannot see a prefixed class built
+ * from a variable.
+ */
+const PAGE_PAD_MD: Record<Density, string> = {
+  compact: 'md:py-8',
+  cozy: 'md:py-12',
+  roomy: 'md:py-16',
+}
 
 export default function PublicBookingPage() {
   const params = useParams<{ token: string }>()
   const searchParams = useSearchParams()
   const embed = searchParams.get('embed') === '1'
   const token = params.token
+  const locale = useBookerLocale()
 
   const {
     state,
@@ -48,6 +69,9 @@ export default function PublicBookingPage() {
     currentMonth,
     availableDates,
     timezone,
+    mcTimezone,
+    questions,
+    phoneField,
     slotTakenNotice,
     confirmation,
     error,
@@ -59,7 +83,7 @@ export default function PublicBookingPage() {
     changeTimezone,
     goBackToSlots,
     submit,
-  } = useBookingPage(token)
+  } = useBookingPage(token, searchParams.get('ref'))
 
   useBrandingHead(bookingPage)
 
@@ -81,68 +105,73 @@ export default function PublicBookingPage() {
   const textColor = bookingPage?.text_color || '#111827'
   const bodyStack = bookingPage ? bodyFontFamily(bookingPage) : undefined
   const density = (bookingPage?.density ?? 'cozy') as Density
-  const pad = DENSITY_PAD[density]
-  const viewProps = { pageBg, textColor, bodyStack, padPage: pad.page }
 
-  if (state === 'notFound') {
-    return <NotFoundView {...viewProps} />
-  }
-
-  if (state === 'error' && error) {
-    return <ErrorView {...viewProps} error={error} />
-  }
+  const step = shellStep(state)
+  // After confirmation the selected slot is cleared, so the summary reads the
+  // confirmed slot and the zone it was booked in instead.
+  const when = state === 'confirmed' && confirmation
+    ? { start: confirmation.start, end: confirmation.end }
+    : selectedSlot
+  const whenZone = state === 'confirmed' && confirmation ? confirmation.timezone : timezone
 
   return (
     <div
-      className={embed ? 'px-4 py-6' : `min-h-screen ${pad.page} px-4`}
+      className={embed ? 'md:px-4 md:py-6' : `min-h-screen md:px-4 ${PAGE_PAD_MD[density]}`}
       style={{
         background: embed ? 'transparent' : pageBg,
         color: textColor,
         fontFamily: bodyStack,
       }}
     >
-      <div className="max-w-6xl mx-auto">
-        {state === 'loading' && <LoadingView />}
+      {state === 'notFound' && <NotFoundView />}
 
-        {state === 'pick' && bookingPage && (
-          <PickView
-            bookingPage={bookingPage}
-            slotsForSelectedDate={slotsForSelectedDate}
-            availableDates={availableDates}
-            selectedDate={selectedDate}
-            currentMonth={currentMonth}
-            timezone={timezone}
-            slotTakenNotice={slotTakenNotice}
-            error={error}
-            slotsLoading={slotsLoading}
-            onSelectSlot={selectSlot}
-            onSelectDate={selectDate}
-            onChangeMonth={changeMonth}
-            onChangeTimezone={changeTimezone}
-            {...viewProps}
-          />
-        )}
+      {state === 'error' && error && <ErrorView error={error} />}
 
-        {state === 'details' && bookingPage && selectedSlot && (
-          <DetailsView
-            bookingPage={bookingPage}
-            selectedSlot={selectedSlot}
-            timezone={timezone}
-            submitting={submitting}
-            onGoBack={goBackToSlots}
-            onSubmit={(payload) =>
-              submit({
-                token,
-                ...payload,
-              })
-            }
-          />
-        )}
+      {state === 'loading' && <div className="mx-auto max-w-5xl"><LoadingView /></div>}
 
-        {state === 'confirmed' && bookingPage && confirmation && (
-          <ConfirmedView bookingPage={bookingPage} confirmation={confirmation} />
-        )}
-      </div>
+      {step && bookingPage && (
+        <BookingShell
+          bookingPage={bookingPage}
+          step={step}
+          when={when}
+          timezone={whenZone}
+          mcTimezone={mcTimezone}
+          locale={locale}
+          onChangeTime={goBackToSlots}
+        >
+          {step === 'pick' && (
+            <PickView
+              slotsForSelectedDate={slotsForSelectedDate}
+              availableDates={availableDates}
+              selectedDate={selectedDate}
+              currentMonth={currentMonth}
+              timezone={timezone}
+              locale={locale}
+              slotTakenNotice={slotTakenNotice}
+              error={error}
+              slotsLoading={slotsLoading}
+              onSelectSlot={selectSlot}
+              onSelectDate={selectDate}
+              onChangeMonth={changeMonth}
+              onChangeTimezone={changeTimezone}
+            />
+          )}
+
+          {step === 'details' && selectedSlot && (
+            <DetailsView
+              questions={questions}
+              phoneField={phoneField}
+              submitting={submitting}
+              onGoBack={goBackToSlots}
+              onSubmit={(payload) => submit({ token, ...payload })}
+            />
+          )}
+
+          {step === 'confirmed' && confirmation && (
+            <ConfirmedView bookingPage={bookingPage} confirmation={confirmation} />
+          )}
+        </BookingShell>
+      )}
     </div>
   )
 }

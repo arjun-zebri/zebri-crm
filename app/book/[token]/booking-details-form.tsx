@@ -1,157 +1,211 @@
 /**
- * Booking details form for the public booking page.
+ * The details step's form: name, email, phone, the meeting type's questions,
+ * and notes.
  *
- * Collects: name (required), partner name (optional), email (required), phone (optional),
- * notes (optional). Includes hidden honeypot (website) and timestamps form start for bot defense.
- * Matches the lead form's input styling idiom (uses Input primitive like lead does).
+ * The submit button is never disabled. Pressing it runs the checks, puts each
+ * message beside its field, and moves focus to the first problem. A server
+ * rejection goes through the same path, so a couple never meets a second kind
+ * of error. The honeypot and the form-fill timer stay here, as on the old form.
  *
  * @module app/book/[token]/booking-details-form
  */
-
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import type { AnswerValue, BookingQuestion, PhoneFieldMode } from '@/lib/booking/questions'
 
-import type { Slot } from './use-booking-page'
-
-interface SubmitPayload {
-  name: string
-  partnerName: string | undefined
-  email: string
-  phone: string | undefined
-  notes: string | undefined
-}
+import { BookingQuestionField, groupQuestionRows } from './booking-question-field'
+import { fieldOrder, firstInvalidField, validateDetails, type CleanDetails } from './details-validation'
+import type { SubmitPayload, SubmitResult } from './use-booking-page'
 
 export interface BookingDetailsFormProps {
-  selectedSlot: Slot
-  timezone: string
-  loading: boolean
-  onSubmit: (payload: SubmitPayload & { startedAt: number }) => void
+  questions: BookingQuestion[];
+  phoneField: PhoneFieldMode;
+  /** True while the booking is being sent. */
+  loading: boolean;
+  /** Sends the cleaned details. Resolves with any server errors to show. */
+  onSubmit: (payload: Omit<SubmitPayload, 'token'>) => Promise<SubmitResult>;
 }
 
+/** Field values the form owns directly (questions are kept separately). */
+interface FieldValues {
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  website: string;
+}
+
+const EMPTY_VALUES: FieldValues = { name: '', email: '', phone: '', notes: '', website: '' };
+
 /**
- * Form to capture details for the booking. Mint startedAt on mount for
- * bot defense (matches lead-form timing pattern).
+ * Drop one key from an errors map without mutating it.
+ *
+ * @param errors - the current messages
+ * @param key - the field whose message is cleared
  */
-export function BookingDetailsForm({
-  selectedSlot,
-  timezone,
-  loading,
-  onSubmit,
-}: BookingDetailsFormProps) {
-  const startedAtRef = useRef(0)
+function withoutKey(errors: Record<string, string>, key: string): Record<string, string> {
+  if (!(key in errors)) return errors;
+  const next = { ...errors };
+  delete next[key];
+  return next;
+}
+
+/** Form for the details step. See the module docs for the submit behaviour. */
+export function BookingDetailsForm({ questions, phoneField, loading, onSubmit }: BookingDetailsFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const startedAtRef = useRef(0);
   useEffect(() => {
-    startedAtRef.current = Date.now()
-  }, [])
+    // Minted on mount, not per render: the server measures fill time from here.
+    startedAtRef.current = Date.now();
+  }, []);
 
-  const [name, setName] = useState('')
-  const [partnerName, setPartnerName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [notes, setNotes] = useState('')
-  const [website, setWebsite] = useState('') // honeypot
+  const [values, setValues] = useState<FieldValues>(EMPTY_VALUES);
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const canSubmit = name.trim() !== '' && email.trim() !== '' && !loading
+  const setValue = (key: keyof FieldValues, value: string) => {
+    setValues((v) => ({ ...v, [key]: value }));
+    setErrors((e) => withoutKey(e, key));
+  };
+  const setAnswer = (id: string, value: AnswerValue) => {
+    setAnswers((a) => ({ ...a, [id]: value }));
+    setErrors((e) => withoutKey(e, id));
+  };
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!canSubmit) return
+  /** Moves focus to a field by its key. The form marks each row with `data-booking-field`. */
+  const focusField = (key: string | undefined) => {
+    if (!key || !formRef.current) return;
+    const row = Array.from(formRef.current.querySelectorAll<HTMLElement>('[data-booking-field]'))
+      .find((el) => el.dataset.bookingField === key);
+    row?.querySelector<HTMLElement>('input, textarea, button')?.focus();
+  };
 
-    const trimmedPartner = partnerName.trim()
-    const trimmedPhone = phone.trim()
-    const trimmedNotes = notes.trim()
-
-    onSubmit({
-      name: name.trim(),
-      partnerName: trimmedPartner ? trimmedPartner : undefined,
-      email: email.trim(),
-      phone: trimmedPhone ? trimmedPhone : undefined,
-      notes: trimmedNotes ? trimmedNotes : undefined,
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (loading) return;
+    const order = fieldOrder(questions, phoneField);
+    const checked = validateDetails({ ...values, answers }, questions, phoneField);
+    if (!checked.clean) {
+      setFormError(null);
+      setErrors(checked.errors);
+      focusField(firstInvalidField(order, checked.errors));
+      return;
+    }
+    setErrors({});
+    setFormError(null);
+    const clean: CleanDetails = checked.clean;
+    const result = await onSubmit({
+      name: clean.name,
+      email: clean.email,
+      phone: clean.phone,
+      notes: clean.notes,
+      answers: clean.answers,
       startedAt: startedAtRef.current,
-    })
+    });
+    if (result.fieldErrors && Object.keys(result.fieldErrors).length > 0) {
+      setErrors(result.fieldErrors);
+      focusField(firstInvalidField(order, result.fieldErrors));
+    }
+    if (result.formError) setFormError(result.formError);
   }
 
-  // Format selected time for display
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: timezone,
-  })
-  const selectedTimeStr = formatter.format(new Date(selectedSlot.start))
+  const showPhone = phoneField !== 'hidden';
+  const rows = groupQuestionRows(questions);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      {/* Honeypot: hidden from humans, catnip for bots. Matches lead-form pattern. */}
+    <form ref={formRef} onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
+      {/* Honeypot: hidden from humans, catnip for bots. */}
       <div className="hidden" aria-hidden="true">
         <Input
           label=""
           name="website"
           tabIndex={-1}
           autoComplete="off"
-          value={website}
-          onChange={(e) => setWebsite(e.target.value)}
+          value={values.website}
+          onChange={(e) => setValue('website', e.target.value)}
         />
       </div>
 
-      <div className="bg-surface-muted rounded-control p-4 mb-6">
-        <p className="text-sm text-text-muted mb-1">Selected time</p>
-        <p className="text-sm font-semibold text-text">{selectedTimeStr}</p>
+      <div data-booking-field="name">
+        <Input
+          label="Full name"
+          autoComplete="name"
+          value={values.name}
+          onChange={(e) => setValue('name', e.target.value)}
+          error={errors.name}
+        />
       </div>
 
-      <Input
-        label="Your name"
-        required
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="First and last name"
-      />
+      <div className={showPhone ? 'grid gap-5 sm:grid-cols-2' : undefined}>
+        <div data-booking-field="email">
+          <Input
+            label="Email"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            value={values.email}
+            onChange={(e) => setValue('email', e.target.value)}
+            error={errors.email}
+          />
+        </div>
+        {showPhone ? (
+          <div data-booking-field="phone">
+            <Input
+              label="Phone"
+              type="tel"
+              autoComplete="tel"
+              optional={phoneField === 'optional'}
+              value={values.phone}
+              onChange={(e) => setValue('phone', e.target.value)}
+              error={errors.phone}
+            />
+          </div>
+        ) : null}
+      </div>
 
-      <Input
-        label="Partner's name (optional)"
-        value={partnerName}
-        onChange={(e) => setPartnerName(e.target.value)}
-        placeholder="If applicable"
-      />
+      {rows.map((row) => (
+        <div key={row.map((q) => q.id).join('|')} className={row.length > 1 ? 'grid gap-5 sm:grid-cols-2' : undefined}>
+          {row.map((q) => (
+            <div key={q.id} data-booking-field={q.id}>
+              <BookingQuestionField
+                question={q}
+                value={answers[q.id]}
+                error={errors[q.id]}
+                onChange={(v) => setAnswer(q.id, v)}
+              />
+            </div>
+          ))}
+        </div>
+      ))}
 
-      <Input
-        label="Email"
-        type="email"
-        required
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="your@email.com"
-      />
+      <div data-booking-field="notes">
+        <Textarea
+          label="Anything else we should know?"
+          optional
+          rows={4}
+          value={values.notes}
+          onChange={(e) => setValue('notes', e.target.value)}
+          error={errors.notes}
+        />
+      </div>
 
-      <Input
-        label="Phone (optional)"
-        type="tel"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        placeholder="Include area code"
-      />
-
-      <Input
-        label="Notes (optional)"
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="Anything we should know?"
-      />
-
-      <Button
-        type="submit"
-        disabled={!canSubmit}
-        loading={loading}
-        className="w-full"
-      >
-        Confirm booking
-      </Button>
+      {/* Pinned to the bottom on a phone so the button stays in thumb reach. */}
+      <div className="space-y-2 pt-2 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:-mx-5 max-md:border-t max-md:border-border max-md:bg-card max-md:px-5 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] max-md:pt-3">
+        {formError ? (
+          <p role="alert" className="text-body text-danger">
+            {formError}
+          </p>
+        ) : null}
+        <Button type="submit" loading={loading} className="w-full">
+          Confirm booking
+        </Button>
+      </div>
     </form>
-  )
+  );
 }

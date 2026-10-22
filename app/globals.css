@@ -60,6 +60,9 @@
      animation-delay elapses, which is what makes the staggered entrance
      read. */
   --animate-tile-in: tile-in 2000ms ease-in-out backwards;
+  /* The couple's ID photo being read: a soft band sweeping down the
+     photo and back, while the details are "read" from it. */
+  --animate-scan: scan 1600ms ease-in-out infinite;
 
   /* Colour utilities reference the runtime CSS vars above so the same
      class name resolves to the right value per theme automatically. */
@@ -84,6 +87,119 @@
   --color-warning: var(--warning);
   --color-info: var(--info);
 
+  /* ── Design system v2 amber (preview) ────────────────────────────────
+     Amber-500 is too light to read as text and too loud as a big fill.
+     warning-ink is amber taken halfway to black, for status words and
+     figures that ask for attention (AA on white); warning-muted is a
+     softer gold for a large fill such as the waterfall's picked-out bar. */
+  --color-warning-ink: color-mix(in oklab, var(--warning) 55%, black);
+  --color-warning-muted: color-mix(in oklab, var(--warning) 78%, #5a5a55);
+
+  /* ── Design system v2 button elevation (preview) ─────────────────────
+     Every button sits at `surface-glass`'s height, so a button beside a
+     glass panel (the dashboard's icon panel) no longer sits lower than
+     it (user, 2026-10-02). Raised reads as lit on top, edged, and casting
+     a shadow below, the way the glass does it:
+     - a brighter inner top highlight (an inner dark rim, tried first,
+       read as recessed);
+     - a faint dark ring outside the edge, the glass's own ring;
+     - the glass's soft lift, about twice as strong on a solid fill, as
+       a dark button swallows a faint shadow.
+     The white buttons carry a zebra-200 border for the edge, so theirs
+     is the glass's shadow as it is. Shadows are tinted with zebra-950,
+     not pure black, so they sit warm on the bone surfaces. */
+  --shadow-btn: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 0 0 1px rgb(11 11 10 / 0.08), 0 1px 2px rgb(11 11 10 / 0.12), 0 8px 24px -10px rgb(11 11 10 / 0.28);
+  --shadow-btn-soft: 0 1px 2px rgb(11 11 10 / 0.05), 0 8px 24px -12px rgb(11 11 10 / 0.12);
+  /* v2 corners are deliberately tight: round enough to feel soft,
+     never pill-like on a 32px control. */
+  --radius-button: 0.375rem; /* 6px, rounded-button */
+  /* v2 panels round a touch more than buttons so a button sitting
+     inside one still reads as nested. */
+  --radius-panel: 0.625rem; /* 10px, rounded-panel */
+  /* v2 checkbox: small enough to read as square, soft enough to match. */
+  --radius-check: 0.25rem; /* 4px, rounded-check */
+  /* v2 text-field fill: pure white, so fields read as open and clean
+     against the off-white panel, not as grey wells. */
+  --color-field: #ffffff;
+  /* Slow-in, slow-out curve for v2 button motion: quick through the
+     middle so a change feels decisive, soft at both ends. */
+  --ease-roll: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Glide curve for v2 sliding parts (the switch thumb): leaves at once
+     and spends most of its time settling, so a slide reads as smooth
+     rather than mechanical. */
+  --ease-glide: cubic-bezier(0.32, 0.72, 0, 1);
+  /* v2 switch: the track sits slightly sunk, the thumb sits raised on a
+     soft two-layer shadow, with a hairline edge so it holds on white. */
+  --shadow-switch-track: inset 0 1px 2px rgb(11 11 10 / 0.14);
+  --shadow-switch-thumb: 0 0 0 0.5px rgb(11 11 10 / 0.06), 0 1px 2px rgb(11 11 10 / 0.16), 0 3px 8px rgb(11 11 10 / 0.10);
+  /* v2 interaction fills (2026-10-14 audit: seven hover recipes became
+     one). `bg-hover` is behind anything you can press or pick while the
+     pointer is on it, on glass and on white alike; `bg-pressed` is a
+     row or trigger that is open or current. `selected` is the one grass
+     step for a picked chip, card, check or menu tick. `hairline` is the
+     only divider inside a v2 surface (was border-zebra-950/5, and four
+     stray greys). Zebra-950 based so they sit warm on the bone surfaces. */
+  --color-hover: rgb(11 11 10 / 0.05);
+  --color-pressed: rgb(11 11 10 / 0.08);
+  --color-hairline: rgb(11 11 10 / 0.07);
+  --color-selected: #2f521f; /* grass-800 */
+
+  /* ── Design system v2 palette (preview; /design-system/v2) ──────────
+     Zebras, blue sky and green grass. Raw scales only: nothing in the
+     app uses these yet, and no semantic token maps onto them. The blue
+     is `azure`, not `sky`, because Tailwind's built-in `sky` scale is
+     still used by Badge and the template category colours, and
+     redeclaring it here would silently recolour both. */
+  --color-zebra-50:  #fafaf7;
+  --color-zebra-100: #f2f2ee;
+  --color-zebra-200: #e4e4df;
+  --color-zebra-300: #cbcbc5;
+  --color-zebra-400: #a3a39c;
+  --color-zebra-500: #7a7a74;
+  --color-zebra-600: #5a5a55;
+  --color-zebra-700: #3e3e3b;
+  --color-zebra-800: #262624;
+  --color-zebra-900: #161615;
+  --color-zebra-950: #0b0b0a;
+
+  --color-azure-50:  #f0f8ff;
+  --color-azure-100: #ddeffd;
+  --color-azure-200: #bfe1fb;
+  --color-azure-300: #92cdf7;
+  --color-azure-400: #5db2f0;
+  --color-azure-500: #3796e4;
+  --color-azure-600: #1f72bf;
+  --color-azure-700: #1e61a3;
+  --color-azure-800: #1d5286;
+  --color-azure-900: #1c446e;
+  --color-azure-950: #132b48;
+
+  --color-grass-50:  #f3faec;
+  --color-grass-100: #e3f4d3;
+  --color-grass-200: #c8e9ac;
+  --color-grass-300: #a3d97a;
+  --color-grass-400: #7fc54f;
+  --color-grass-500: #5fa932;
+  --color-grass-600: #488725;
+  --color-grass-700: #386721;
+  --color-grass-800: #2f521f;
+  --color-grass-900: #28461d;
+  --color-grass-950: #12260b;
+
+  /* Champagne: a warm gold for celebration only (the booking's confetti
+     beside grass). Never an action, a status or a surface. */
+  --color-champagne-50:   #fbf8f1;
+  --color-champagne-100:  #f5eedc;
+  --color-champagne-200:  #ecdcb6;
+  --color-champagne-300:  #e0c68a;
+  --color-champagne-400:  #d4ae62;
+  --color-champagne-500:  #c49645;
+  --color-champagne-600:  #a87a36;
+  --color-champagne-700:  #876030;
+  --color-champagne-800:  #6e4e2c;
+  --color-champagne-900:  #5b4127;
+  --color-champagne-950:  #332213;
+
   /* Radii (theme-agnostic) */
   /* Two radii, deliberately. Everything with corners is 6px; anything
      that should read as a pill or a circle is fully round. The 12px
@@ -103,6 +219,16 @@
      enters the viewport. Sections that never intersect keep opacity-0 only
      when JS is running (see useReveal); reduced-motion users get no motion. */
   --animate-reveal-up: reveal-up 700ms ease-out both;
+  /* v2 dashboard: the page settles in once on load, each block rising a
+     few pixels a beat after the one above (delays set per block). */
+  --animate-rise-in: rise-in 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  /* v2 Journeys: a step settling onto the line (long, soft landing) and a
+     glyph swapping in when a step is done. Tokens so callers stop copying
+     the timing (2026-10-14). */
+  --animate-line-rise: line-rise 1400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-swap-in: swap-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* The marketing page's tools strip on phones: one row, endlessly, the list twice over. */
+  --animate-marquee: marquee 40s linear infinite;
 
   /* Typography. Three sizes, each carrying its own line-height: without
      the `--line-height` half a token sets only a font-size and inherits
@@ -121,6 +247,209 @@
      every control, row and toolbar keeps its exact height. */
   --text-body:    0.8125rem; /* body, captions, labels, controls */
   --text-body--line-height: calc(1.25 / 0.8125);
+}
+
+/* ── Design system v2 type roles (preview; /design-system/v2) ─────────
+   One class per role, bundling size, line-height, weight and tracking,
+   so a component asks for "heading" rather than assembling 19px + 28px
+   + 600 by hand and drifting. Scale: 13px base, 1.2 ratio, rounded to
+   whole pixels (13 / 16 / 19 / 28 / 33); 23px is deliberately unused so
+   heading and title stay clearly apart. Every line-height sits on the
+   4px grid. Tracking tightens as size grows because large text reads
+   loose at default spacing.
+   Every role is Inter, inherited from the body. Nothing in the app uses
+   these yet. */
+/* The one oversized role: a cover headline ("Ten tools. Now one.").
+   Tracking pulls in hard because display type at this size reads loose;
+   line height is tight so a two-line headline sits as one block. Used
+   once per screen at most. */
+@utility type-hero {
+  font-size: 4rem;       /* 64px */
+  line-height: 4rem;     /* 64px */
+  font-weight: 500;      /* medium: at 64px, semibold reads as shouting */
+  letter-spacing: -0.04em;
+}
+/* The marketing page's section title: between the hero and display, for
+   a band's headline on a wide screen. Website only (the app never needs a
+   title this size); below `sm` it steps down to `type-display` so a long
+   headline does not wrap into a wall on a phone. */
+@utility type-headline {
+  font-size: 2.75rem;    /* 44px */
+  line-height: 3rem;     /* 48px */
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+@utility type-display {
+  font-size: 2.0625rem;  /* 33px */
+  line-height: 2.5rem;   /* 40px */
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+@utility type-title {
+  font-size: 1.75rem;    /* 28px */
+  line-height: 2.25rem;  /* 36px */
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+@utility type-heading {
+  font-size: 1.1875rem;  /* 19px */
+  line-height: 1.75rem;  /* 28px */
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@utility type-subheading {
+  font-size: 1rem;       /* 16px */
+  line-height: 1.5rem;   /* 24px */
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+/* The subheading's size at regular weight: an intro line under a title,
+   a block's description, text typed into the prompt box. Reads a step
+   above body without competing with the headings. */
+@utility type-lead {
+  font-size: 1rem;       /* 16px */
+  line-height: 1.5rem;   /* 24px */
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+@utility type-body {
+  font-size: 0.8125rem;  /* 13px */
+  line-height: 1.25rem;  /* 20px */
+  font-weight: 400;
+}
+@utility type-label {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+}
+/* A small uppercase kicker above a title, in a proposal or a document
+   ("A proposal for"). Wide tracking because capitals at 13px crowd. */
+@utility type-eyebrow {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* Money and counts: tabular figures so columns of amounts line up. */
+@utility type-numeric {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+/* One pixel under body: monospace glyphs are wider and taller than
+   Inter's at the same size, so 12px mono matches 13px Inter optically. */
+@utility type-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  font-weight: 400;
+}
+
+/* Marketing page roles (`/design-system/v2/website` only; the app never
+   uses them). The page is built to read like Stripe or Attio: one very
+   large, tightly tracked headline, section titles that still dominate on
+   a wide screen, and lead copy at 18-20px, because 13-16px copy under
+   a big title read as fine print (founder review, 2026-10-16: "doesn't
+   look modern or clean or premium"). Sizes scale with the viewport
+   between a phone and a laptop, so no breakpoint jump. */
+@utility type-site-hero {
+  font-size: clamp(2.25rem, 1.6rem + 1.6vw, 3rem);   /* 36px to 48px, as the live zebri.com.au hero */
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+@utility type-site-title {
+  font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);    /* 28px to 40px: a step under the 48px hero */
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+@utility type-site-lead {
+  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);      /* 16px to 18px: 20px competed with the headline */
+  line-height: 1.55;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* ── Design system v2 backdrop + glass (preview; /design-system/v2) ───
+   `bg-backdrop`: the app background. A bone base with grass tinting the
+   bottom left corner and sky the top right, and soft clouds drifting
+   across it. The tints are the pale 100 steps at partial strength and
+   fade out well before the middle, so content always sits on a calm,
+   near-neutral field; colour lives at the edges only.
+   The clouds are an inline SVG in `components/ui-v2/backdrop.tsx`, not
+   a `url("data:…")` layer here: Turbopack's CSS pipeline fails on that
+   data URI and silently keeps serving the last good stylesheet.
+   Rendered by `components/ui-v2/backdrop.tsx` on a fixed layer rather
+   than `background-attachment: fixed`, which iOS Safari ignores. */
+/* `draw-check`: a CheckIcon drawn on, stroke by stroke, rather than faded
+   in (the website's Journeys shot). Its path is about 20 units long, so
+   a 20 dash fully offset hides it and `draw-check-on` draws it, on an
+   even ease-in-out so the stroke is seen travelling (a front-loaded ease
+   read as popping in). Reduced
+   motion shows it at once. */
+@utility draw-check {
+  & path {
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    transition: stroke-dashoffset 600ms cubic-bezier(0.65, 0, 0.35, 1) 150ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & path { transition: none; }
+  }
+}
+@utility draw-check-on {
+  & path { stroke-dashoffset: 0; }
+}
+
+@utility bg-backdrop {
+  background-color: var(--color-zebra-50);
+  background-image:
+    radial-gradient(70% 65% at 0% 100%, color-mix(in oklab, var(--color-grass-100) 80%, transparent), transparent 70%),
+    radial-gradient(70% 65% at 100% 0%, color-mix(in oklab, var(--color-azure-100) 85%, transparent), transparent 70%);
+  background-size: 100% 100%;
+}
+
+/* `surface-glass`: the one card material in v2. Clearly white at 72%
+   with a heavy blur, so the backdrop's grass-to-sky wash shows through
+   (40% was too clear to read as white), and a white hairline with an
+   inner top highlight to catch the light like a pane. It started as the
+   Payments chart's "clear" tone; every card now uses it so the app is
+   one material rather than two nearly-identical whites.
+
+   The edge is not the white hairline alone: over the backdrop's near
+   white middle a white card on white vanished (user, 2026-09-30). A
+   faint dark ring drawn by the shadow (not a border, so no divider line
+   inside anything) plus a soft lift sets every card off the page. */
+@utility surface-glass {
+  background-color: rgb(255 255 255 / 0.72);
+  /* Standard property only: Lightning CSS adds the -webkit- prefix for
+     Safari itself, and when both are written it keeps only the prefixed
+     one, which Chrome ignores (no blur at all). */
+  backdrop-filter: blur(28px) saturate(170%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.8),
+    0 0 0 1px rgb(11 11 10 / 0.05),
+    0 1px 2px rgb(11 11 10 / 0.05),
+    0 8px 24px -12px rgb(11 11 10 / 0.12);
+}
+
+/* `surface-highlight`: for the one block that matters most inside a
+   panel (a price, a total, the next step). Pure white on the off-white
+   panel, with a grass-to-sky hairline that picks up the backdrop. The
+   gradient border is two backgrounds: white clipped to the padding box
+   over the gradient on the border box, with a transparent border
+   letting the gradient show through as the hairline. The fill is
+   `--highlight-fill` (white unless set), so a control can take its
+   one-shade hover step without losing the hairline. */
+@utility surface-highlight {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--highlight-fill, var(--color-white)), var(--highlight-fill, var(--color-white))) padding-box,
+    linear-gradient(135deg, var(--color-grass-300), var(--color-azure-300)) border-box;
 }
 
 /* Every button is clickable, so every button gets the hand cursor.
@@ -157,9 +486,68 @@
   }
 }
 
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes scan {
+  0%, 100% { top: 0%; }
+  50% { top: calc(100% - 2rem); }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* v2 onboarding: a step's content slides in from the side it came from.
+   `--step-from` is +12px going forward, -12px going back. */
+@keyframes step-in {
+  from { opacity: 0; translate: var(--step-from, 12px) 0; }
+  to   { opacity: 1; translate: 0 0; }
+}
+
+/* v2 onboarding cover: a line striking through a replaced tool's name,
+   drawn left to right. */
+@keyframes strike {
+  from { scale: 0 1; }
+  to   { scale: 1 1; }
+}
+
+/* v2 onboarding: a check mark drawing itself, via stroke-dashoffset on a
+   path whose dash length is 24. */
+/* v2 Swap (components/ui-v2/swap.tsx): one state of a control hands
+   over to the next in place. The new one sharpens and settles from a
+   touch small; the old one softens and fades a beat faster, so they
+   cross rather than stack. */
+@keyframes swap-in {
+  from { opacity: 0; transform: scale(0.94); filter: blur(2px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes swap-out {
+  from { opacity: 1; transform: none; filter: none; }
+  to   { opacity: 0; transform: scale(0.96); filter: blur(2px); }
+}
+
+@keyframes tick-draw {
+  from { stroke-dashoffset: 24; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* v2 Journeys: a step still to come settling onto the line after the
+   done ones tick off (journeys/use-line-reveal.ts). It drifts up out of a
+   soft blur as it fades in; `translate`, not `transform`, so the drag
+   library's inline transform on the same row is left alone. */
+@keyframes line-rise {
+  from { opacity: 0; translate: 0 14px; filter: blur(6px); }
+  60%  { filter: blur(0); }
+  to   { opacity: 1; translate: 0 0; filter: none; }
 }
 
 @keyframes reveal-up {
@@ -587,6 +975,15 @@ ol ol ol ol[data-list-style="decimal-outline"] > li::marker {
   .contract-content thead { display: table-header-group; }
 }
 
+/* `scrollbar-none`: a row that scrolls sideways without a scrollbar
+   (`SwipeRow` on phones): the next card peeking in already says it moves. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Always-visible thin scrollbar */
 .scrollbar-thin {
   overflow-y: scroll !important;
@@ -681,3 +1078,86 @@ ol ol ol ol[data-list-style="decimal-outline"] > li::marker {
 .script-document a { text-decoration: underline; }
 /* A page break outside the editor is a hairline on screen and a real break in print. */
 .script-document hr[data-page-break] { border: 0; border-top: 1px dashed var(--color-border-strong, #d1d5db); margin: 1.5em 0; }
+
+/* v2 focus rings are for keyboard users only. `focus-key:` is
+   `focus-visible:` that stays off while the last input was a pointer
+   (see app/design-system/v2/focus-modality.tsx): Chrome's focus-visible
+   also fires on clicks after a key press or a scripted focus, which
+   painted rings on things that were only clicked. The rule below does the
+   same for Chrome's own blue outline. Text fields are left alone. */
+@custom-variant focus-key {
+  html:not([data-focus="pointer"]) &:focus-visible {
+    @slot;
+  }
+}
+/* Inside the marketing hero's dashboard still (`data-shot`, hero-stage.tsx):
+   it is drawn at laptop size on every screen, but `md:` reads the visitor's
+   viewport, so the Home screen's md classes carry a `shot:` twin. */
+@custom-variant shot (&:where([data-shot] *));
+/* The same for a wrapper that rings when something inside it has focus. */
+@custom-variant focus-key-within {
+  html:not([data-focus="pointer"]) &:has(:focus-visible) {
+    @slot;
+  }
+}
+html[data-focus="pointer"] :focus:not(input, textarea, select) {
+  outline: none;
+}
+
+/* ── v2 focus mark (2026-10-14) ─────────────────────────────────────
+   The one keyboard focus treatment for every v2 control, row and card:
+   a grass line drawn 2px outside the shape, following its corners. It is
+   an outline, not a box-shadow, so it never replaces a button's lift or
+   the glass edge. Keyboard only (`focus-key`), never on a click. Text
+   fields do not take it: a boxless field shows focus by its name turning
+   grass (see `.field` below). A wrapper whose child takes focus uses
+   `focus-mark-within`. */
+@utility focus-mark {
+  &:focus-visible {
+    outline: none;
+  }
+  html:not([data-focus="pointer"]) &:focus-visible {
+    outline: 2px solid var(--color-grass-500);
+    outline-offset: 2px;
+  }
+}
+@utility focus-mark-within {
+  html:not([data-focus="pointer"]) &:has(:focus-visible) {
+    outline: 2px solid var(--color-grass-500);
+    outline-offset: 2px;
+  }
+  & :focus-visible {
+    outline: none;
+  }
+}
+
+
+/* ── v2 scrollbars (2026-10-14, user: the default grey bar between a
+   dialog's preview and its side panel "looks shit") ───────────────────
+   Every scroll area in v2 gets a thin scrollbar with no track that stays
+   invisible at rest and shows a faint zebra thumb only while the pointer
+   is over the area that scrolls, so content never carries a grey stripe.
+   Chrome and Firefox read scrollbar-width / scrollbar-color; Safari reads
+   the ::-webkit-scrollbar rules. Applied by `app/design-system/v2/layout.tsx`. */
+.v2-scroll,
+.v2-scroll * {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.v2-scroll *:hover {
+  scrollbar-color: rgb(11 11 10 / 0.18) transparent;
+}
+.v2-scroll ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+.v2-scroll ::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-clip: padding-box;
+  background-color: transparent;
+}
+.v2-scroll *:hover::-webkit-scrollbar-thumb {
+  background-color: rgb(11 11 10 / 0.18);
+}

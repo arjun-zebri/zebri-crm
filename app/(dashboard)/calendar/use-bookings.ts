@@ -25,7 +25,12 @@ export interface Booking {
   id: string;
   name: string;
   email: string;
-  partner_name: string | null;
+  /**
+   * Answers to the meeting type's own questions, raw from the jsonb column.
+   * Read through `parseBookingAnswers` (lib/booking/questions): the column is
+   * untyped, and a malformed row should drop an answer, not the booking.
+   */
+  answers: unknown;
   phone: string | null;
   starts_at: string;
   ends_at: string;
@@ -74,7 +79,7 @@ export function useBookings() {
       const { data, error } = await supabase
         .from('bookings')
         .select(
-          'id, name, email, partner_name, phone, starts_at, ends_at, status, notes, video_join_url, external_event_ids, created_at, timezone, couple:couple_id(id, name), meeting_type:meeting_type_id(id, name, location_type, duration_minutes)',
+          'id, name, email, answers, phone, starts_at, ends_at, status, notes, video_join_url, external_event_ids, created_at, timezone, couple:couple_id(id, name), meeting_type:meeting_type_id(id, name, location_type, duration_minutes)',
         )
         .eq('user_id', user.user.id)
         .order('starts_at', { ascending: true });
@@ -114,7 +119,7 @@ export function useBookingsInRange(from: Date, to: Date) {
       const { data, error } = await supabase
         .from('bookings')
         .select(
-          'id, name, email, partner_name, phone, starts_at, ends_at, status, notes, video_join_url, external_event_ids, created_at, timezone, couple:couple_id(id, name), meeting_type:meeting_type_id(id, name, location_type, duration_minutes)',
+          'id, name, email, answers, phone, starts_at, ends_at, status, notes, video_join_url, external_event_ids, created_at, timezone, couple:couple_id(id, name), meeting_type:meeting_type_id(id, name, location_type, duration_minutes)',
         )
         .eq('user_id', user.user.id)
         .gt('ends_at', fromIso)

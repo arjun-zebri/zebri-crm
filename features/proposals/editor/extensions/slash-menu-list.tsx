@@ -10,7 +10,7 @@
  * @module features/proposals/editor/extensions/slash-menu-list
  */
 import type { SuggestionKeyDownProps } from '@tiptap/suggestion'
-import { forwardRef, useImperativeHandle, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 import { MenuItem, MenuLabel, MenuPanel } from '@/components/ui/menu'
 
@@ -39,6 +39,13 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
   // The filtered list shrinks as the query grows; clamp the highlight
   // into range at render time instead of resetting in an effect.
   const active = Math.min(selected, Math.max(items.length - 1, 0))
+  // Each row (with its group heading), so the arrow keys can keep the
+  // highlighted one in view: the list scrolls past `max-h-72`, and
+  // without this the highlight walks off its bottom edge.
+  const rows = useRef<(HTMLDivElement | null)[]>([])
+  useEffect(() => {
+    rows.current[active]?.scrollIntoView({ block: 'nearest' })
+  }, [active])
 
   useImperativeHandle(ref, () => ({
     onKeyDown({ event }) {
@@ -80,7 +87,13 @@ export const SlashMenuList = forwardRef<SlashMenuListHandle, SlashMenuListProps>
         // is a variable there), and those get no headings at all.
         const heading = item.group && item.group !== items[i - 1]?.group ? item.group : null
         return (
-          <div key={item.id} onMouseEnter={() => setSelected(i)}>
+          <div
+            key={item.id}
+            ref={(el) => {
+              rows.current[i] = el
+            }}
+            onMouseEnter={() => setSelected(i)}
+          >
             {heading ? <MenuLabel>{heading}</MenuLabel> : null}
             <MenuItem size="sm" selected={i === active} onClick={() => command(item)}>
               <span className="flex items-center gap-2">

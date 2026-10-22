@@ -2954,35 +2954,22 @@ Route: `/book/[token]`
 
 Route group: none (standalone public route, no sidebar, no auth required)
 
-Purpose: Allow logged-out visitors to book consultations with the MC via a share-token URL. Three-column branded interface (Calendly-style).
+Purpose: Allow logged-out visitors to book a meeting with the business via a share-token URL. Industry-neutral: nothing on the page assumes a wedding; the business decides what to ask.
 
-## Three-Column Layout
+## Layout: one card, summary left, step right (`booking-shell.tsx`)
 
-A single card wrapping three equal columns (or stacked on mobile):
+Every step (pick → details → confirmed) renders inside one centred card (`max-w-5xl` while picking a time, `max-w-4xl` afterwards so the form fills its column rather than leaving a dead strip on the right).
 
-**Left panel (meta):**
-- MC name (from branding)
-- Meeting type name
-- Meeting type duration (e.g. "30 min")
-- Meeting type location type and address (if in-person)
-- Branding accent color used for interaction elements
+**Left column (`booking-summary.tsx`), rendered once and never re-mounted:**
+- Logo (`logo_url`), business name, meeting type name (heading font), duration, location (icon + label or address), description
+- Once a time is chosen: "Selected time", the day (`Wednesday 14 October`), the range with a zone name (`10:30–11:00am AEDT`), an MC-zone hint when the booker reads a different zone ("That's 9:30am in Sydney."), and a "Change" link back to the picker
+- On a phone after a time is chosen it collapses into a sticky top bar: `Wed 14 Oct · 10:30am · Change`
 
-**Center column (month calendar and day selector):**
-- Month/year header with prev/next arrows (allows browsing forward)
-- Six-week calendar grid
-- Available days marked with a small filled circle in brand color (derived from availability rules, overrides, and booked slots)
-- Selected day marked with a solid filled circle (brand fill)
-- Unavailable dates are greyed out and not clickable
-- Clicking an available day populates the right column's slot list
+**Right column:** the current step, keyed on the step so it slides in (`step-in` keyframe, motion-safe).
 
-**Right column (time slots):**
-- Heading: the selected day, rendered in the booker's timezone
-- City line naming that zone, e.g. "All times are in Perth time" (IANA-derived, never a fixed offset)
-- Scrollable list of available time slots for the selected day (times in the booker's timezone, formatted HH:MM AM/PM)
-- Each slot is a button; clicking advances to the booking form
-- Empty state if no slots are available that day
-- Below the list, the timezone control: the current zone plus a searchable picker
+**Pick step:** month calendar + day's times + timezone control (behaviour below).
 
+**Time formatting** (`lib/booking/format-time.ts`): booker's locale (`navigator.language`, `en-AU` fallback). The zone is always named, never an offset: `zoneLabel` tries the booker's locale, then en-AU (which knows AEST/AEDT/AWST…), then falls back to "<City> time". `GMT+11` is never shown.
 ## Timezone handling
 
 Zebri cannot know where a couple is, so the booking page follows the Calendly
@@ -3013,32 +3000,25 @@ Sending the MC the booker's zone would make them convert their own diary; the
 reverse strands the couple. Regression coverage:
 `tests/unit/lib/booking/lifecycle.test.ts` ("audience-specific timezones").
 
-## 2-Step Booking Flow
+## Booking Flow
 
-1. **Slot Picker (interactive month calendar plus day slots)**
-   - Booker clicks an available day, then a time slot
-   - Both selections must happen before form submission
+1. **Pick** a day, then a time.
 
-2. **Booking Form (modal overlay, step: "details")**
-   - Back button returns to month calendar (preserves day selection, resets time)
-   - Selected time displays as a read-only summary box
-   - Fields:
-     - Your name (required)
-     - Partner's name (optional)
-     - Email (required)
-     - Phone (optional)
-     - Notes (optional)
-   - Honeypot: hidden "website" field plus form-start timestamp (matches lead-capture bot defense pattern)
-   - CTA: "Confirm booking" button (disabled if name or email empty, or form is submitting)
-   - Loading state: button shows spinner overlay on label
-   - On submit: calls submit_booking RPC
+2. **Details** ("Almost there" / "Tell us a little about you.")
+   - Quiet ghost "Back" button above the heading.
+   - Fixed core fields: Full name (required); Email (required) and Phone side by side on sm+; phone is hidden / optional / required per `meeting_types.phone_field`.
+   - Then the meeting type's own questions (`meeting_types.questions`, see `lib/booking/questions.ts`), in order: short answer → Input, paragraph → Textarea, date → DatePicker, number → numeric Input, single/multiple choice → `ChoiceGroup` pills (never a dropdown). Consecutive short questions pair two to a row.
+   - Then "Anything else we should know?" (Textarea, optional).
+   - Optional fields carry a muted "Optional" tag beside the label.
+   - "Confirm booking" is always enabled: pressing it validates client-side (`details-validation.ts`, mirrors the server), shows inline errors and focuses the first invalid field. Server 400s return `fieldErrors` keyed by `name` / `email` / `phone` / question id and are shown inline too.
+   - On a phone the submit button is pinned to the bottom with safe-area padding.
+   - Honeypot `website` field + form-start timestamp (bot defense, unchanged).
 
-3. **Confirmation (step: "confirmed")**
-   - Meeting type name (from booking page)
-   - Scheduled time (formatted in booker's timezone with city line)
-   - Video join URL (if video meeting and event-push populated it)
-   - "Check your email" callout
-   - No further CTAs (end state)
+3. **Confirmed**: drawn tick, "You're booked", the time, "We've sent the details to <email>", join link / address / "we'll call you", and Add to calendar (Google, Outlook, .ics download for Apple and others; builders in `lib/booking/calendar-links.ts`).
+
+## Custom questions
+
+Defined per meeting type in the dashboard meeting-type modal ("Booking form" section): label, type, required, help text, options (choice types), and an optional "Also save to contact as" mapping (`partner_name` → couple secondary name, `event_date` → couple event date, `venue` → couple venue). Presets (Wedding, Event, General enquiry) in `lib/booking/question-presets.ts` insert ordinary editable questions; the wedding meeting-type templates start with the Wedding preset. Answers are stored on `bookings.answers` with the label and type copied in, shown on the dashboard booking panel ("Their answers"), in the MC's new-booking email and in the pushed calendar event. Unmapped answers on a newly created couple land in its notes.
 
 ## Special Behaviors
 
@@ -3091,12 +3071,13 @@ If the slot-generation service is down:
 
 **Mobile (Pixel 5, iPhone 12)**
 - Slot picker: 2-column grid on phone, 3-column on tablet
-- Form: full-width inputs, no multi-column layouts
+- Card columns stack; summary becomes a sticky bar once a time is chosen; submit pinned to the bottom
+- No horizontal scroll at 360px
 - Prev/Next pagination buttons stack vertically if space-constrained
 - Embed mode works identically (parent iframe handles sizing)
 
 **Desktop**
-- Max-width container (512px / 32rem) centered on page
+- One card, `max-w-5xl` on the picker and `max-w-4xl` on details/confirmation
 - Slot grid adjusts column count based on viewport width
 
 ## Branding Integration
@@ -3107,14 +3088,17 @@ The page reads MC's branding from the get_public_booking_page payload (merged vi
 - Font family + weights (bodyFontFamily utility)
 - Density (cozy/compact): affects padding scale
 
-All rendered directly as inline style attributes (not Tailwind tokens, to honor custom MC branding on public surfaces).
+- Brand colour as the accent: `booking-brand.ts` sets `--brand-fg` / `--brand-bg` on the card (with a contrast fallback), so the primary Button, focus rings and selected pills pick it up through the normal tokens
+- Heading font on headings
+
+Dynamic branding values are the only inline styles on the page.
 
 ## Accessibility & Bot Defense
 
 - Form uses Input primitive (semantic label + aria-label)
 - Honeypot field (hidden, aria-hidden="true", tabindex="-1")
 - Form-start timestamp (startedAt) submitted server-side for timing analysis
-- Buttons use native `<button>` with `disabled` prop
+- All controls are design-system primitives (Button, Input, Textarea, DatePicker, ChoiceGroup)
 
 ## No Authentication
 
@@ -3123,7 +3107,7 @@ All rendered directly as inline style attributes (not Tailwind tokens, to honor 
 - IP rate-limiting on API layer (/api/booking/slots: 30/min/IP, /api/booking/submit: 5/min/IP)
 - In-RPC rate-limit on submit_booking: 6/hour/meeting_type (per brief)
 
-Migration: `20260820000000_create_bookings.sql` + `20260820001000_booking_rpcs.sql`.
+Migrations: `20260820000000_create_bookings.sql`, `20260820001000_booking_rpcs.sql`, `20261029000000_booking_form_questions.sql` (questions, phone_field, answers, new `submit_booking` signature).
 
 ---
 
@@ -3227,3 +3211,87 @@ If the slot-generation service is down:
 - Time zone display always visible
 
 Migration: `20260821000000_booking_lifecycle.sql`.
+
+# Marketing Website, v2 preview (`/design-system/v2/website`)
+
+Dev-only preview of the zebri.com.au redesign in a Stripe style (rebuilt
+2026-10-16, reworked 2026-10-17); the live site is the separate
+`zebri-landing` repo and is unchanged. Audience is MCs and celebrants
+together, no toggle. Bands, in order:
+
+1. Nav: logo, centred links (Features, Guides, Blocks, Pricing; the
+   current one underlined; Guides and Blocks are pages of their own,
+   Blocks listing every block), Log in, Join the waitlist;
+   a menu below `lg`. On
+   a phone's first screen the nav button waits until the page scrolls
+   (the hero's own is right there).
+2. Hero: headline "You run the event. Zebri does the rest." (no kicker), a lead
+   naming who it is for and what the admin is ("drafts your replies …
+   gets the marriage paperwork ready to lodge"), Join the waitlist (to the
+   waitlist form, cursor in Email) and See how it works (to
+   Journeys, the first feature), five founding members' faces (no "+N" count) beside "Shaped by
+   working MCs and Celebrants with 10,000+ weddings between them." (faces are placeholders until launch), and two
+   promises (built and hosted in Australia; your couples' data stays
+   yours). Beside the words from `xl` (under them below), the real v2
+   dashboard as a landscape showcase still (fictional MC, Enquiries and
+   Calendar icons on, no counts line) filling the rest of the content
+   width; the phone layout on phones. The hero ends on the tools strip:
+   "One subscription instead of the stack you pay for now". Three Blocks
+   outcomes on phones (six from `md`).
+3. Feature rows, one picture each, as full-width bands alternating
+   white and a faint grey (the brand gradient only behind the hero and
+   BDM lodgement; founder 2026-10-19): Journeys (the
+   one full-width row: a couple's journey ticking off on the brand
+   gradient, each step with its trigger and, while on the stage, a line
+   on what it does; beside it one container like the couple's record,
+   with what the step sent at real size and a line on what happened: the thank-you email, the proposal, the signed
+   contract, the $500 deposit (Booked), where it ends, the NOIM and
+   balance still to come (the BDM band tells the notice); a done step
+   can be clicked to show its document again), BDM lodgement (led by
+   "the only app in Australia that lodges directly with BDM"; three separate
+   cards side by side, one shared frame (number, title, line, then the
+   same status line that turns green when the step is done) and each
+   card's own body (the couple's boxed form, Zebri's check rows, the
+   lodge action becoming a registration slip), playing once in turn
+   over about 14s, following one answer:
+   "Amelia Rose" typed as a first given name, refused by BDM's rule and
+   fixed in place in the checks (46 of 47 answers pass, then 47), then
+   the lodge opening on "All 47 answers pass", Lodge with BDM turning Registered and the slip rising in),
+   Blocks, Zebri AI,
+   Security (a row like the others).
+4. Pricing: Pro, Max (recommended), Enterprise as three cards in the
+   page's card style (white card, plan and price on top, the plan's list
+   under a hairline, straight on the band; Max and Enterprise open
+   their list with "Everything in Pro / Max, plus:", and Enterprise
+   says what Custom buys);
+   reassurances under them. Lead: "Founding members get Max for the
+   price of Pro for their first 12 months. Monthly, in Australian
+   dollars, GST included." The page is for founding members, so Max
+   shows $47 struck from $99 (`FOUNDING_PRICE`) and is the recommended
+   plan, and Pro shows its usual $59 with nothing struck, so the founding
+   deal visibly lives on Max (founder, 2026-10-19). No second-price
+   footnote. Join with Pro / Join with Max go to
+   the waitlist form carrying the plan; Enterprise's Talk to us emails
+   the founder. Phones swipe the cards, with "Swipe for Max and
+   Enterprise" under them. (The
+   "Also included" grid was cut, founder 2026-10-18.)
+6. Waitlist panel, "Get on the list.": how the waitlist works (a few at
+   a time; everyone in before the public launch is a founding member),
+   the email form, the founder (photo, "I send the invites myself"), and
+   four perks (Max for the price of Pro, onboarding call, account
+   manager, a vote). Email first, then a dialog opening on Your name
+   (name, what you do), ending on "Welcome to Zebri" and a referral link
+   that moves them up 10 places. No waitlist count and no place in line
+   (founder, 2026-10-19). Demo submit only; a failed submit focuses the
+   first field with an error.
+7. FAQ (split layout; opens on how the waitlist works and what a
+   founding member is) and the footer (every feature band, Instagram,
+   Facebook and LinkedIn, placeholder links).
+
+No testimonials band until real quotes, with permission, exist, and the
+founding members' faces in `social-proof.ts` must be real before
+launch. The real waitlist backend must issue the referral link and move
+people up `REFERRAL_JUMP` places before the line ships. Before it replaces the live site, the launch prerequisites in
+the audit must be true (Sydney hosting, AI in an Australian region, ID
+handling, BDM and AI features shipped, privacy policy updated, signups
+stored).

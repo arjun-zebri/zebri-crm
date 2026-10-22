@@ -26,6 +26,7 @@ import { Color, FontFamily, TextStyle } from '@tiptap/extension-text-style'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 
+import type { DocumentVariable } from '@/lib/branding/document-variables'
 import { FluidFontSizeExtension } from '@/lib/branding/fluid-font-size'
 import { Variable as VariableBase } from '@/lib/branding/rich-text-extensions'
 
@@ -105,6 +106,8 @@ export interface RichDocExtensionOptions {
   placeholder?: string
   /** Swaps the plain DOM node rendering for React NodeViews (Task 7) on every node that has one (image, button, embed, audio, columns, spacer), so the canvas is WYSIWYG and atoms get resize grips. Off by default so schema-only uses (the parity test, `getSchema`) don't need React. */
   nodeViews?: boolean
+  /** What `@` offers in this document; the proposal's variables when absent. */
+  variables?: readonly DocumentVariable[] | undefined
 }
 
 /**
@@ -132,6 +135,11 @@ export function buildRichDocExtensions(o: RichDocExtensionOptions): AnyExtension
       // link mark) so a link reads as one on the canvas exactly as it will
       // for the couple.
       link: { openOnClick: false, autolink: true, protocols: ['https', 'mailto', 'tel'], HTMLAttributes: { class: 'underline' } },
+      // The empty line kept at the end is for clicking below a block (an
+      // image, columns); after a closing heading it was a line Backspace
+      // could never remove, since the rule put it straight back (v2
+      // review, 2026-10-10). Enter after a heading still makes a new line.
+      trailingNode: { notAfter: ['heading'] },
     }),
     TextStyle,
     Color,
@@ -162,7 +170,7 @@ export function buildRichDocExtensions(o: RichDocExtensionOptions): AnyExtension
     // touching `EDITOR_NODE_NAMES`/`EDITOR_MARK_NAMES` below.
     SlashMenuExtension,
     // The `@` / `{{` variable trigger: the same kind of plugin-only extension.
-    VariableSuggestionExtension,
+    o.variables ? VariableSuggestionExtension.configure({ variables: o.variables }) : VariableSuggestionExtension,
     // Cmd/Ctrl-gates the Link mark's click-to-open (`openOnClick: false`
     // above); a plugin-only extension like the two above it.
     LinkClickExtension,

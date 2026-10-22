@@ -39,6 +39,8 @@ export interface SectionResizeOverlayProps {
   /** The layout's theme: supplies the padding the height grip starts from when the section inherits it. */
   theme: ProposalTheme
   dispatch: (action: LayoutAction, opts?: { commit?: boolean }) => void
+  /** False when the host sets width another way (a Width menu): the width handles never mount. Defaults to true. */
+  widthHandles?: boolean
 }
 
 /**
@@ -63,7 +65,7 @@ function offsetRelativeTo(el: HTMLElement, ancestor: HTMLElement): { left: numbe
 }
 
 /** Renders the section's height grip and width handles while it is selected as a whole (not a node inside it). */
-export function SectionResizeOverlay({ section, selected, nodeSelected, device, wrapperRef, theme, dispatch }: SectionResizeOverlayProps) {
+export function SectionResizeOverlay({ section, selected, nodeSelected, device, wrapperRef, theme, dispatch, widthHandles = true }: SectionResizeOverlayProps) {
   const active = selected && !nodeSelected
   const [heightPx, setHeightPx] = useState(0)
   const [columnRect, setColumnRect] = useState<ColumnRect | null>(null)
@@ -118,7 +120,7 @@ export function SectionResizeOverlay({ section, selected, nodeSelected, device, 
   return (
     <>
       <SectionHeightGrip sectionId={section.id} padding={effectivePadding(section.style.padding, theme)} heightPx={heightPx} dispatch={dispatch} />
-      {device === 'mobile' ? null : (
+      {device === 'mobile' || !widthHandles ? null : (
         <SectionWidthHandles sectionId={section.id} contentWidth={effectiveWidth(section.style.contentWidth, theme)} rect={columnRect} dispatch={dispatch} />
       )}
       {section.data?.kind === 'gallery' && (

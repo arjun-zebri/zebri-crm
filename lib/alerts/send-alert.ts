@@ -138,6 +138,10 @@ function describe(event: AlertEvent): string {
       return `user=${event.userId} · ${event.provider} status=${event.status} · booking=${event.bookingId}`;
     case 'booking_video_link_missing':
       return `user=${event.userId} · ${event.provider} · booking=${event.bookingId} — event created but no video link (couple told "link to follow"): ${event.diagnostic}`;
+    case 'outreach_paused':
+      return `outreach sending paused: ${event.reason}`;
+    case 'outreach_activity':
+      return `outreach ${event.kind === 'opt_out' ? 'opt-out' : event.kind}: prospect=${event.prospectId} (Admin > Outreach)`;
     case 'bug_report_submitted':
       return `${event.ticketRef ?? 'new ticket'} · ${event.reportType} · "${event.title}" — ${event.reporter} on ${event.routePath}\n${event.notionUrl}`;
     case 'bug_report_notion_sync_failed':

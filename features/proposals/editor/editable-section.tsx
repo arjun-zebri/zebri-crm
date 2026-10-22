@@ -15,9 +15,10 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { EyeOff, GripVertical } from 'lucide-react'
-import { useRef, useState, type MouseEvent, type RefObject } from 'react'
+import { useRef, useState, type MouseEvent, type ReactNode, type RefObject } from 'react'
 
 import type { CanvasDevice } from '@/components/editor'
+import type { DocumentVariable } from '@/lib/branding/document-variables'
 import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
@@ -68,12 +69,24 @@ export interface EditableSectionProps {
   boundsRef?: RefObject<HTMLElement | null>
   /** Brand swatches offered by the toolbar's colour pickers. Defaults to none. */
   swatches?: readonly string[]
+  /** False when the host shows its own section tools instead of the anchored toolbar. Defaults to true. */
+  toolbar?: boolean
+  /** False when the host sets a section's width another way: the content column's width handles never show. Defaults to true. */
+  widthHandles?: boolean
+  /**
+   * Draws a section's body in place of the built-in one, for a host with
+   * section kinds of its own (the v2 document builder's Header). Return
+   * undefined to keep the built-in body. Defaults to the built-in body.
+   */
+  renderBody?: (section: Section, index: number) => ReactNode | undefined
+  /** What `@` offers in a content section; the proposal's variables when absent (a contract has its own fields). */
+  variables?: readonly DocumentVariable[] | undefined
 }
 
 /** One editable section: sortable, click-anywhere-selectable, with hover/selection chrome. */
 export function EditableSection({
   section, index, total, selected, nodeSelected, branding, theme, doc, device, externalVersion, dispatch,
-  onRequestAdd, atCap, boundsRef = NULL_BOUNDS_REF, swatches = [], pageStart = false,
+  onRequestAdd, atCap, boundsRef = NULL_BOUNDS_REF, swatches = [], pageStart = false, toolbar = true, widthHandles = true, renderBody, variables,
 }: EditableSectionProps) {
   // `animateLayoutChanges: () => false` matches `block-frame.tsx`: without
   // it, dnd-kit's default FLIP animation also fires on non-drag reorders
@@ -160,8 +173,8 @@ export function EditableSection({
       >
         <GripVertical size={14} strokeWidth={1.5} />
       </button>
-      {section.kind === 'content' ? (
-        <ContentSectionFrame section={section} index={index} branding={branding} theme={theme} externalVersion={externalVersion} dispatch={dispatch} />
+      {renderBody?.(section, index) ?? (section.kind === 'content' ? (
+        <ContentSectionFrame section={section} index={index} branding={branding} theme={theme} externalVersion={externalVersion} dispatch={dispatch} variables={variables} />
       ) : (
         <EditableDataSection
           section={section}
@@ -174,13 +187,13 @@ export function EditableSection({
           externalVersion={externalVersion}
           swatches={swatches}
         />
-      )}
-      <SectionResizeOverlay section={section} selected={selected} nodeSelected={nodeSelected} device={device} wrapperRef={wrapperRef} theme={theme} dispatch={dispatch} />
+      ))}
+      <SectionResizeOverlay section={section} selected={selected} nodeSelected={nodeSelected} device={device} wrapperRef={wrapperRef} theme={theme} dispatch={dispatch} widthHandles={widthHandles} />
       <SectionEdgeAdd edge="top" visible={selected} atCap={atCap} onRequestAdd={(anchor) => onRequestAdd(index, anchor)} />
       <SectionEdgeAdd edge="bottom" visible={selected} atCap={atCap} onRequestAdd={(anchor) => onRequestAdd(index + 1, anchor)} />
       {selected && repositioning && section.style.background?.image ? (
         <BackgroundReposition section={section} wrapperRef={wrapperRef} dispatch={dispatch} onDone={() => setRepositioning(false)} />
-      ) : selected ? (
+      ) : selected && toolbar ? (
         <div className="absolute right-3 top-3 z-20">
           <SectionToolbar
             section={section} index={index} total={total} theme={theme} dispatch={dispatch} boundsRef={boundsRef} swatches={swatches}

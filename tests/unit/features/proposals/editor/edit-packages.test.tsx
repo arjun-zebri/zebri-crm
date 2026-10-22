@@ -14,7 +14,7 @@ import type { JSONContent } from '@tiptap/core'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
-  AddPackageTile, defaultTheme, doc, InlineField, InlineNumber, newPackageItem, newSectionFor, PackageCardMenu, packageCardSlots, packagesSlots, paragraph,
+  AddPackageButton, defaultTheme, doc, InlineField, InlineNumber, newPackageItem, newSectionFor, PackageCardMenu, packageCardSlots, packagesAfter, packagesSlots, paragraph,
   starterPackages, text, toPublicOption, type PackageCardArgs, type PackageOption, type PackagesData, type Section,
 } from '@/features/proposals'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
@@ -56,13 +56,13 @@ function findEl<P>(node: React.ReactNode, type: unknown, match: (props: P) => bo
 }
 
 describe('packagesSlots', () => {
-  it('builds per-card slots for the section\'s own packages (starters when it has none) and an Add package tile', () => {
+  it('builds per-card slots for the section\'s own packages (starters when it has none), with Add package under the grid', () => {
     const a = args()
     const slots = packagesSlots(a)
     const [first] = starterPackages()
     const card = slots.card?.(toPublicOption(first!, 0), 0, false)
     expect(card && Object.keys(card)).toEqual(['corner', 'title', 'description', 'price', 'item', 'addon', 'footer', 'cta'])
-    expect(slots.trailing).not.toBeNull()
+    expect(packagesAfter(a)).not.toBeNull()
   })
 
   it('a card the section does not know (a stale id) gets no slots rather than throwing', () => {
@@ -70,14 +70,14 @@ describe('packagesSlots', () => {
     expect(slots.card?.({ ...toPublicOption(starterPackages()[0]!, 0), id: 'ghost' }, 0, false)).toEqual({})
   })
 
-  it('at the card cap there is no add tile', () => {
+  it('at the card cap there is no Add package', () => {
     const six = Array.from({ length: 6 }, (_, i) => ({ ...starterPackages()[0]!, id: `p${i}` }))
-    expect(packagesSlots(args({ data: { ...packagesData(), options: six } })).trailing).toBeNull()
+    expect(packagesAfter(args({ data: { ...packagesData(), options: six } }))).toBeNull()
   })
 
   it('Add package appends a fresh fixed-price package with commit: true and writes the starters into the layout the first time', () => {
     const a = args()
-    render(<>{packagesSlots(a).trailing}</>)
+    render(<>{packagesAfter(a)}</>)
     fireEvent.click(screen.getByRole('button', { name: 'Add package' }))
     const dispatch = a.dispatch as ReturnType<typeof vi.fn>
     expect(lastCommit(dispatch)).toBe(true)
@@ -88,7 +88,8 @@ describe('packagesSlots', () => {
   })
 
   it('has no heading or textBelow field (2026-09-19 feedback: "remove the text from all these sections... we can always add text sections around them")', () => {
-    expect(Object.keys(packagesSlots(args()))).toEqual(['card', 'trailing'])
+    // Adding is under the grid (`packagesAfter`), never a tile taking a card's column.
+    expect(Object.keys(packagesSlots(args()))).toEqual(['card'])
   })
 })
 
@@ -213,11 +214,11 @@ describe('PackageCardMenu', () => {
   })
 })
 
-describe('AddPackageTile', () => {
+describe('AddPackageButton', () => {
   it('explains the hidden-while-empty rule only when the section has no packages', () => {
-    const { rerender } = render(<AddPackageTile empty={false} onAdd={vi.fn()} />)
+    const { rerender } = render(<AddPackageButton empty={false} onAdd={vi.fn()} />)
     expect(screen.queryByText(/hidden on the sent proposal/)).toBeNull()
-    rerender(<AddPackageTile empty onAdd={vi.fn()} />)
+    rerender(<AddPackageButton empty onAdd={vi.fn()} />)
     expect(screen.getByText(/hidden on the sent proposal/)).toBeInTheDocument()
   })
 })

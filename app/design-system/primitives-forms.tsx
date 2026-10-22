@@ -1,10 +1,11 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ChoiceGroup } from '@/components/ui/choice-group';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
@@ -128,6 +129,15 @@ export function PrimitivesForms() {
                 'The word clients see you called, on contracts and in their portal.\n\n' +
                 'Example: "This agreement is made between Zebri (the MC) and the Couple."'
               }
+            />
+          </Demo>
+          <Demo label="Leading icon">
+            {/* `leadingIcon` sits inside the field and pads the text past it.
+                Use it for search boxes, never a hand-placed icon beside the field. */}
+            <Input
+              aria-label="Search"
+              placeholder="Search name, email or suburb"
+              leadingIcon={<Search size={14} strokeWidth={1.5} />}
             />
           </Demo>
           <Demo label="Error">
@@ -345,6 +355,65 @@ export function PrimitivesForms() {
         </DemoGrid>
       </Spec>
 
+      <Spec name="ChoiceGroup" file="components/ui/choice-group.tsx"
+        importPath="@/components/ui/choice-group" description="Tappable pills for a short list of options. Single choice is a radiogroup; multiple choice is a group of checkboxes.">
+        <Rule>
+          <strong>Pills, not a dropdown, for a short fixed list.</strong> Every option is visible
+          and one tap away, which is what a thumb on a phone needs. A <code>Select</code> hides the
+          options behind a tap and reads as a form field, not a choice. Use <code>Select</code> once
+          the list grows past what fits on two lines.
+        </Rule>
+        <Rule>
+          The chosen pill takes the brand colour (<code>brand-fg</code> fill, <code>brand-bg</code>
+          text), so a branded booking page picks it up with no call-site styling. Pills are the one
+          place a control uses <code>rounded-pill</code> inside a form row, because the options are
+          chips rather than fields.
+        </Rule>
+        <ChoiceGroupDemos />
+      </Spec>
+
+      <Spec name="Optional tag" file="components/ui/input.tsx"
+        importPath="@/components/ui/input" description="Input, Textarea and DatePicker take optional. A quiet Optional tag sits beside the label instead of the label carrying (optional).">
+        <Rule>
+          Mark the field, do not name it. <code>(optional)</code> in the label is part of the name
+          a screen reader hears and the words a person has to read past. The tag is metadata: the
+          label stays the field&rsquo;s name, and only the optional fields carry the extra word.
+        </Rule>
+        <DemoGrid cols={3}>
+          <Demo label="Input">
+            <Input label="Phone" type="tel" optional />
+          </Demo>
+          <Demo label="Textarea">
+            <Textarea label="Anything else we should know?" optional rows={3} />
+          </Demo>
+          <Demo label="DatePicker with label, help and error">
+            <DatePicker label="Wedding date" id="ds-wedding-date" value="" onChange={() => {}} optional help="Your best guess is fine." />
+          </Demo>
+        </DemoGrid>
+      </Spec>
+
     </>
+  );
+}
+
+/** Live ChoiceGroup examples for the design-system page. Kept out of the render body so the spec reads top-down. */
+function ChoiceGroupDemos() {
+  const [venue, setVenue] = useState<string | null>('Garden');
+  const [services, setServices] = useState<string[]>(['Ceremony']);
+  return (
+    <DemoGrid cols={2}>
+      <Demo label="Single choice">
+        <ChoiceGroup label="Venue type" help="Pick the one closest to your plans." options={['Garden', 'Ballroom', 'Beach']} value={venue} onChange={setVenue} />
+      </Demo>
+      <Demo label="Multiple choice, optional">
+        <ChoiceGroup mode="multiple" label="Services you need" optional options={['Ceremony', 'Reception', 'Speeches']} value={services} onChange={setServices} />
+      </Demo>
+      <Demo label="Error">
+        <ChoiceGroup label="Venue type" options={['Garden', 'Ballroom']} value={null} onChange={() => {}} error="Choose an option" />
+      </Demo>
+      <Demo label="Disabled">
+        <ChoiceGroup label="Venue type" options={['Garden', 'Ballroom']} value="Garden" onChange={() => {}} disabled />
+      </Demo>
+    </DemoGrid>
   );
 }

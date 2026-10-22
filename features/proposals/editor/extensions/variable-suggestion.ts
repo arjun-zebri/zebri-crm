@@ -48,11 +48,11 @@ export const VARIABLE_BRACES_PLUGIN_KEY = new PluginKey('proposal-variable-brace
 /** Live state of the `/` trigger - `InlineField` only, see the module doc. */
 export const VARIABLE_SLASH_PLUGIN_KEY = new PluginKey('proposal-variable-slash')
 
-/** The proposal variables whose label or id contains `query` (case-insensitive); every one for an empty query. */
-export function filterProposalVariables(query: string): readonly DocumentVariable[] {
+/** The variables in `list` (the proposal's by default) whose label or id contains `query` (case-insensitive); every one for an empty query. */
+export function filterProposalVariables(query: string, list: readonly DocumentVariable[] = PROPOSAL_VARIABLES): readonly DocumentVariable[] {
   const q = query.trim().toLowerCase()
-  if (!q) return PROPOSAL_VARIABLES
-  return PROPOSAL_VARIABLES.filter((v) => v.label.toLowerCase().includes(q) || v.id.includes(q))
+  if (!q) return list
+  return list.filter((v) => v.label.toLowerCase().includes(q) || v.id.includes(q))
 }
 
 /** A variable as a list row: the shared `SlashMenuList` renders `InsertItem`s, so each variable becomes one whose `run` inserts its chip. */
@@ -65,12 +65,12 @@ function toItem(v: DocumentVariable): InsertItem {
   }
 }
 
-function plugin(editor: Editor, char: string, pluginKey: PluginKey) {
+function plugin(editor: Editor, char: string, pluginKey: PluginKey, variables: readonly DocumentVariable[] = PROPOSAL_VARIABLES) {
   return Suggestion<InsertItem, InsertItem>({
     editor,
     char,
     pluginKey,
-    items: ({ query }) => filterProposalVariables(query).map(toItem),
+    items: ({ query }) => filterProposalVariables(query, variables).map(toItem),
     command: ({ editor: ed, range, props }: { editor: Editor; range: { from: number; to: number }; props: InsertItem }) => {
       // The trigger text goes first, so the chip lands in its place.
       ed.chain().focus().deleteRange(range).run()
@@ -80,12 +80,23 @@ function plugin(editor: Editor, char: string, pluginKey: PluginKey) {
   })
 }
 
+/** Options for {@link VariableSuggestionExtension}. */
+export interface VariableSuggestionOptions {
+  /** What `@` and `{{` offer; the proposal's variables unless a document needs its own (a ceremony script's answers). */
+  variables: readonly DocumentVariable[]
+}
+
 /** The TipTap extension registering the `@` and `{{` variable triggers. A plain `Extension`, no node/mark: safe in any schema that has the `variable` node. */
-export const VariableSuggestionExtension = Extension.create({
+export const VariableSuggestionExtension = Extension.create<VariableSuggestionOptions>({
   name: 'variableSuggestion',
 
+  addOptions() {
+    return { variables: PROPOSAL_VARIABLES }
+  },
+
   addProseMirrorPlugins() {
-    return [plugin(this.editor, '@', VARIABLE_AT_PLUGIN_KEY), plugin(this.editor, '{{', VARIABLE_BRACES_PLUGIN_KEY)]
+    const { variables } = this.options
+    return [plugin(this.editor, '@', VARIABLE_AT_PLUGIN_KEY, variables), plugin(this.editor, '{{', VARIABLE_BRACES_PLUGIN_KEY, variables)]
   },
 })
 

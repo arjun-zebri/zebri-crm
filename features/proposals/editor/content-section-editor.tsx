@@ -25,6 +25,7 @@ import { NodeSelection } from '@tiptap/pm/state'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { useEffect, useMemo, useRef } from 'react'
 
+import type { DocumentVariable } from '@/lib/branding/document-variables'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
 import type { ProposalTheme } from '../model/theme'
@@ -75,6 +76,8 @@ export interface ContentSectionEditorProps {
   onFocusSection: (sectionId: string) => void
   /** Fired when the selection becomes a `NodeSelection` on an atom node, or on the `columns` container (the one non-atom node view: a click on its own gutter/box, not on a child's text, still selects the row, see `node-views/select-node.ts`), or when the caret is inside a `table` (reported at the table's position); fired with `null` for any other selection. Only called when the reported value actually changes. */
   onNodeSelect: (node: EditorNodeSelection | null) => void
+  /** What `@` offers; the proposal's variables when absent. Read once, when the editor is made. */
+  variables?: readonly DocumentVariable[] | undefined
 }
 
 /**
@@ -86,7 +89,7 @@ export interface ContentSectionEditorProps {
  * elements this component can style per node.
  */
 export function ContentSectionEditor(props: ContentSectionEditorProps) {
-  const { sectionId, content, externalVersion, branding, theme, textColor, align, onChange, onFocusSection, onNodeSelect } = props
+  const { sectionId, content, externalVersion, branding, theme, textColor, align, onChange, onFocusSection, onNodeSelect, variables } = props
 
   // The last node-selection value reported, keyed by node type + position
   // (not object identity: a fresh `{ sectionId, nodeType, pos }` literal
@@ -109,7 +112,9 @@ export function ContentSectionEditor(props: ContentSectionEditorProps) {
   // `rich-text.tsx`): a fresh array of freshly-`.configure()`d extension
   // instances on every keystroke is needless allocation, even though
   // `useEditor`'s default `deps: []` would otherwise ignore the change.
-  const extensions = useMemo(() => buildRichDocExtensions({ nodeViews: true, placeholder: CONTENT_PLACEHOLDER }), [])
+  // The list is fixed for an editor's life: a document's fields do not change while it is open.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const extensions = useMemo(() => buildRichDocExtensions({ nodeViews: true, placeholder: CONTENT_PLACEHOLDER, variables }), [])
 
   const editor = useEditor({
     extensions,

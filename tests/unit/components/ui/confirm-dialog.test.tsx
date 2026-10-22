@@ -64,10 +64,10 @@ describe('<ConfirmDialog />', () => {
   });
 
   it('disables both actions while loading', () => {
-    render(<ConfirmDialog {...base} open loading loadingLabel="Deleting..." />);
+    render(<ConfirmDialog {...base} open loading />);
 
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Deleting/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
   });
 
   it('stacks above a nested Modal instead of tying with it', () => {

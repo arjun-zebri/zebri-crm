@@ -49,7 +49,12 @@ export interface ConfirmDialogProps {
   loading?: boolean;
   /** Confirm button label. Defaults to `'Delete'`. */
   confirmLabel?: string;
-  /** Confirm label while `loading`. Defaults to `'Deleting...'`. */
+  /**
+   * @deprecated Ignored. While `loading` the confirm Button overlays its
+   * spinner on the label (see `BusyLabel`); the label text never swaps,
+   * so a control does not change width mid-click. Kept so existing
+   * callers still compile; new callers should omit it.
+   */
   loadingLabel?: string;
 }
 
@@ -61,7 +66,6 @@ export function ConfirmDialog({
   onCancel,
   loading,
   confirmLabel = 'Delete',
-  loadingLabel = 'Deleting...',
 }: ConfirmDialogProps) {
   useOverlay({ isOpen: open, onClose: onCancel });
   const dismiss = useBackdropDismiss(onCancel);
@@ -141,7 +145,7 @@ export function ConfirmDialog({
                 loading={loading ?? false}
                 className="flex-1"
               >
-                {loading ? loadingLabel : confirmLabel}
+                {confirmLabel}
               </Button>
             </div>
           </div>

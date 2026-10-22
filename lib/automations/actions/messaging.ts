@@ -251,10 +251,13 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
         replyTo: ctx.mc.email,
         ...(attachments.length ? { attachments } : {}),
       })
-      if (!res.ok || !res.messageId) {
-        return { kind: 'error', message: `send_email (test): ${res.error ?? 'no message id'}` }
+      if (!res.ok) {
+        return { kind: 'error', message: `send_email (test): ${res.error ?? 'send failed'}` }
       }
-      return { kind: 'ok', output: { test: true, sent_to_mc: ctx.mc.email, message_id: res.messageId } }
+      return {
+        kind: 'ok',
+        output: { test: true, sent_to_mc: ctx.mc.email, ...(res.messageId ? { message_id: res.messageId } : {}) },
+      }
     }
 
     // The non-test path resolves the couple's recipients, which needs the
@@ -304,6 +307,7 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     }
 
     const messageIds: string[] = []
+    let sent = 0
     let lastError: string | null = null
     const replyTo = config.replyToOverride || ctx.mc.email
     // BCC: the MC's own address plus anything they typed, deduped.
@@ -325,14 +329,17 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
         ...(cc ? { cc } : {}),
         ...(attachments.length ? { attachments } : {}),
       })
-      if (!res.ok || !res.messageId) {
-        lastError = res.error ?? 'Send returned no message id'
+      // `ok` is the success signal, not the message id: Microsoft Graph's
+      // sendMail answers 202 with an empty body, so Outlook-connected MCs
+      // never get an id back even though the email went out.
+      if (!res.ok) {
+        lastError = res.error ?? 'send failed'
         continue
       }
-      messageIds.push(res.messageId)
+      sent++
+      if (res.messageId) messageIds.push(res.messageId)
     }
 
-    const sent = messageIds.length
     const failed = addressable.length - sent
 
     // Total failure: nothing went out. Surface it so the runner

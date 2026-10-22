@@ -33,6 +33,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendAlert } from '@/lib/alerts/send-alert'
 import { isCronAuthorized } from '@/lib/api/cron-auth'
 import { runTimeEmitters } from '@/lib/automations/time-emitters'
+import { runOutreachTick } from '@/lib/outreach/services/tick'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dispatchPendingEvents as dispatchWorkflowEvents } from '@/lib/workflows/dispatcher'
 import { advanceDueSteps } from '@/lib/workflows/executor'
@@ -71,6 +72,11 @@ async function handle(request: NextRequest) {
   const workflowExecutor = await guard('workflows.executor', () =>
     advanceDueSteps(supabase, { deadline }),
   )
+
+  // Admin outreach rides this tick on its own slice, after the workflow
+  // passes so it only ever spends time they left over. Its passes are
+  // isolated inside `runOutreachTick`, which never throws.
+  const outreach = await guard('outreach.tick', () => runOutreachTick(supabase, deadline))
 
   const durationMs = Date.now() - started
   const truncated =
@@ -117,6 +123,7 @@ async function handle(request: NextRequest) {
     emitters,
     workflow_dispatch: workflowDispatch,
     workflow_executor: workflowExecutor,
+    outreach,
     backlog: count ?? 0,
   })
 }

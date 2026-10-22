@@ -1,0 +1,22 @@
+// Template for /new-icon. Copy to components/ui-v2/icons/<name>.tsx and
+// replace the placeholders. Not compiled from here.
+import { createIcon } from './icon-base';
+
+/**
+ * <Title> glyph: <what it shows, in one sentence>. For <where it is used>.
+ *
+ * @example
+ * ```tsx
+ * <__Name__Icon className="size-4" />
+ * ```
+ *
+ * @module components/ui-v2/icons/<name>
+ */
+export const __Name__Icon = createIcon(
+  '__Name__Icon',
+  'glyph',
+  <>
+    <rect x="4.5" y="3" width="15" height="18" rx="4" />
+    <path d="M8.5 8h7" />
+  </>,
+);

@@ -37,6 +37,7 @@ import { EditorContent, ReactNodeViewRenderer, useEditor, type Editor } from '@t
 import StarterKit from '@tiptap/starter-kit'
 import { useEffect, useMemo } from 'react'
 
+import type { DocumentVariable } from '@/lib/branding/document-variables'
 import { FluidFontSizeExtension } from '@/lib/branding/fluid-font-size'
 import { RICH_TEXT_EXTENSIONS, Variable as VariableBase } from '@/lib/branding/rich-text-extensions'
 import { toPlainJSON } from '@/lib/utils'
@@ -152,10 +153,12 @@ export interface InlineFieldProps {
   onReady?: (editor: Editor) => void
   /** Mounts a `TextBar` bubble menu on this field's own editor (see the module doc). Omitted, the field has no toolbar - exactly the pre-2026-09-18 behaviour. */
   richTextBar?: { theme: ProposalTheme; swatches?: readonly string[] } | undefined
+  /** What `@` and `{{` offer; the proposal's variables when absent (an invoice has its own fields). Read once, when the editor is made. */
+  variables?: readonly DocumentVariable[] | undefined
 }
 
 /** One inline TipTap field for a data section's text. See the module doc for the full rationale. */
-export function InlineField({ value, onChange, placeholder, singleLine = false, className = '', externalVersion, onFocus, onReady, richTextBar }: InlineFieldProps) {
+export function InlineField({ value, onChange, placeholder, singleLine = false, className = '', externalVersion, onFocus, onReady, richTextBar, variables }: InlineFieldProps) {
   const extensions = useMemo(
     () => [
       ...BASE_EXTENSIONS,
@@ -172,9 +175,10 @@ export function InlineField({ value, onChange, placeholder, singleLine = false, 
       // have no text bar or block-insertion `/` menu (see
       // `variable-suggestion.ts`'s module doc for why `/` is a second,
       // field-only extension rather than a third plugin on the first).
-      VariableSuggestionExtension,
+      variables ? VariableSuggestionExtension.configure({ variables }) : VariableSuggestionExtension,
       InlineFieldSlashVariableExtension,
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `variables` is read once, as `ContentSectionEditor` reads its own.
     [placeholder],
   )
 

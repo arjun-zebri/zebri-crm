@@ -29,13 +29,15 @@ import {
   closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import type { RefObject } from 'react'
+import type { ReactNode, RefObject } from 'react'
 
 import type { CanvasDevice } from '@/components/editor'
+import type { DocumentVariable } from '@/lib/branding/document-variables'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import { SAMPLE_PROPOSAL_DOC } from '@/lib/proposals/sample-proposal'
 import type { ProposalRole } from '@/lib/proposals/types'
 
+import type { Section } from '../model/layout'
 import { LAYOUT_LIMITS } from '../model/rich-doc-spec'
 import { resolveTheme } from '../model/theme'
 
@@ -62,6 +64,26 @@ export interface SectionCanvasProps {
   boundsRef?: RefObject<HTMLElement | null>
   /** Brand swatches offered by a selected section's toolbar colour pickers. Defaults to none. */
   swatches?: readonly string[]
+  /** False when the host shows its own section tools in place of each section's anchored toolbar. Defaults to true. */
+  sectionToolbar?: boolean
+  /** False when the host sets a section's width another way: no section shows its width handles. Defaults to true. */
+  widthHandles?: boolean
+  /**
+   * Draws a section's body in place of the built-in one, for a host with
+   * section kinds of its own (the v2 document builder's Header). Return
+   * undefined to keep the built-in body. Defaults to the built-in body.
+   */
+  renderBody?: (section: Section, index: number) => ReactNode | undefined
+  /** What `@` offers in content sections; the proposal's variables when absent. */
+  variables?: readonly DocumentVariable[] | undefined
+  /**
+   * Opens the host's own add menu in place of the add palette, for every
+   * add control (each section's edge "+", the trailing "Add section", the
+   * empty page's): the index a new section lands at, and the control's
+   * element to anchor to (null from the trailing button). Defaults to the
+   * add palette.
+   */
+  onRequestAdd?: (index: number, anchor: HTMLElement | null) => void
 }
 
 /**
@@ -69,7 +91,7 @@ export interface SectionCanvasProps {
  * in order and wires reordering (drag or `Alt+Arrow`), selection, section
  * deletion, and inserting a new section from the add palette.
  */
-export function SectionCanvas({ state, dispatch, branding, device, role, boundsRef, swatches }: SectionCanvasProps) {
+export function SectionCanvas({ state, dispatch, branding, device, role, boundsRef, swatches, sectionToolbar = true, widthHandles = true, onRequestAdd, renderBody, variables }: SectionCanvasProps) {
   const sections = state.layout.sections
   const theme = resolveTheme(state.layout, branding)
   // Task 15: every add control (the leading/trailing hover lines and each
@@ -88,6 +110,7 @@ export function SectionCanvas({ state, dispatch, branding, device, role, boundsR
   // editor's focus; Task 15 wires the editor-focus case separately).
   useCanvasKeys({ state, dispatch, requestDelete })
   const palette = useAddPalette(dispatch)
+  const requestAdd = onRequestAdd ? (index: number, anchor?: HTMLElement) => onRequestAdd(index, anchor ?? null) : palette.requestAdd
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e
@@ -132,10 +155,14 @@ export function SectionCanvas({ state, dispatch, branding, device, role, boundsR
                   device={device}
                   externalVersion={state.externalVersion}
                   dispatch={dispatch}
-                  onRequestAdd={palette.requestAdd}
+                  onRequestAdd={requestAdd}
                   atCap={atCap}
+                  toolbar={sectionToolbar}
+                  widthHandles={widthHandles}
+                  {...(renderBody ? { renderBody } : {})}
                   {...(boundsRef ? { boundsRef } : {})}
                   {...(swatches ? { swatches } : {})}
+                  {...(variables ? { variables } : {})}
                 />
               )}
             />
@@ -144,13 +171,13 @@ export function SectionCanvas({ state, dispatch, branding, device, role, boundsR
         {sections.length === 0 ? (
           // A lone outline button on an otherwise blank sheet read as
           // broken; the empty state says what the page is waiting for.
-          <CanvasEmpty onRequestAdd={palette.requestAdd} />
+          <CanvasEmpty onRequestAdd={requestAdd} />
         ) : (
-          <AddLine index={sections.length} onRequestAdd={palette.requestAdd} trailing atCap={atCap} />
+          <AddLine index={sections.length} onRequestAdd={requestAdd} trailing atCap={atCap} />
         )}
       </PageSheet>
       {dialog}
-      <AddPalette
+      {onRequestAdd ? null : <AddPalette
         open={palette.open}
         at={palette.at}
         anchor={palette.anchor}
@@ -159,7 +186,7 @@ export function SectionCanvas({ state, dispatch, branding, device, role, boundsR
         role={role}
         branding={branding}
         atCap={atCap}
-      />
+      />}
     </div>
   )
 }

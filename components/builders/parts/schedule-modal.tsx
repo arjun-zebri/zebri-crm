@@ -59,7 +59,7 @@ function reason(code: string): string {
     case 'sum_mismatch':
       return 'The stages do not add up to the invoice total.'
     case 'fixed_exceeds_total':
-      return 'A fixed amount is larger than the invoice total.'
+      return 'The stage amounts add up to more than the invoice total.'
     case 'single_stage':
       return 'A schedule needs at least two stages.'
     case 'no_due_date':

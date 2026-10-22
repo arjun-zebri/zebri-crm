@@ -773,6 +773,9 @@ DELETE (sampled clean across the migrations).
 | `couple_questionnaires` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-questionnaires.test.ts` (8 tests — RLS + public RPC token gating + submit/double-submit) + `tests/integration/rls/portal-questionnaires.test.ts` (3 tests — portal RPC) | Questionnaires |
 | `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
 | `couple_time_entries` | ✅ (owner, and the couple must be the writer's own; see the note below) | `user_id` | ✅ `tests/integration/couples/time-actions.test.ts` (10 tests: cross-tenant read/insert/update/delete denial, one-running-timer index, couple-delete cascade, category-delete set-null) | Couples & Events |
+| `outreach_suppression` | ✅ (no policies; service role only) | none (admin-only, global) | ✅ `tests/integration/rls/outreach.test.ts` (anon, vendor and admin-session denial; `outreach_is_existing_customer` and the batch RPCs refused outside service role) | Outreach (compliance) |
+| `outreach_spend_reservations` | ✅ (no policies; service role only) | none (admin-only, global) | ✅ `tests/integration/rls/outreach.test.ts` (same denial set) | Outreach (Apify budget) |
+| `outreach_prospects` … `outreach_mailbox` (13 tables) | ✅ (no policies; service role only) | none (admin-only, global) | ✅ `tests/integration/rls/outreach.test.ts` (one row per table) | Outreach |
 | `time_categories` | ✅ | `user_id` | ✅ `tests/integration/couples/time-actions.test.ts` (case-insensitive uniqueness plus cross-tenant denial) | Couples & Events |
 | `bug_reports` | ✅ (owner SELECT/INSERT/UPDATE; no DELETE policy) | `user_id` | ✅ `tests/integration/rls/bug-reports.test.ts` (6 tests — cross-tenant read/update denial, forged `user_id` insert rejected, delete is a no-op, anon locked out) | Feedback |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
@@ -894,6 +897,76 @@ inserted rows `is_starter`. Behaviour covered by
 `couples.test.ts` shape (owner reads ok / other tenant cannot
 SELECT|UPDATE|DELETE / anon cannot read) for every owned table the
 phase touches. Tick the matrix box when a test lands.
+
+---
+
+## Outreach (admin cold-email engine) — compliance and spend findings
+
+Scope: `lib/outreach/**`, `features/outreach/actions.ts`, migration
+`20261030100000_outreach_compliance.sql`. Spec and runbook:
+`.claude/docs/outreach.md`. Every table is admin-only and service-role
+only (see the RLS matrix). Findings fixed in this pass:
+
+- **Opt-outs were per row, not per address (Spam Act 2003).** A re-import
+  under a new merge key created a row that could be mailed. Now a global
+  `outreach_suppression` list (lower-cased email, handle without `@`, unique
+  per kind) is written by `optOut()` and by `suppressAddress()` (bounces);
+  import and manual add flag matching rows do-not-contact; the candidates
+  RPC and `sendBlockReason()` both check it. Backfilled from existing
+  do-not-contact rows. An opt-out always overwrites a bounce reason; a
+  bounce never downgrades an opt-out.
+- **Existing Zebri customers were cold-enrolled.** The candidates RPC
+  excludes `linked_user_id` and any `auth.users` email match;
+  `sendBlockReason()` returns `existing_customer`.
+- **Scraped emails were mailable.** A `found` email (scraped from a
+  celebrant's site, possibly a third party's address) never counts as an
+  email channel (`availabilityOf`), is never mailed (`unconfirmed_email`),
+  and is a candidate only when the prospect also has an Instagram handle.
+  The founder confirms with `updateProspect({ confirm_email: true })`,
+  which sets `email_source = manual` and writes a `manual_touch` event
+  (`kind: email_confirmed`).
+- **Emails lacked sender identification.** The footer always carries
+  "<sender>, Zebri", the signature and the opt-out line. Activation is
+  blocked until sender name and signature are set, and until the signature
+  holds an email, phone or web address (`activationProblems`). Send-time
+  backstop: `no_sender_identity`.
+- **SSRF in the website checker.** The old prefix check missed IPv4-mapped
+  IPv6 in hex (`::ffff:a9fe:a9fe`), NAT64 (`64:ff9b::/96`), `::/96`,
+  `100::/64`, `192.0.0.0/24`, `198.18.0.0/15`, 6to4 and Teredo. DNS was
+  resolved once to check and again to connect, and every redirect hop was
+  followed by `fetch`. Now: IPv6 is parsed (`private-address.ts`), every DNS
+  answer is checked, the socket is pinned to the checked address through
+  the request's `lookup` hook (`safe-fetch.ts`, Node `http`/`https`, no new
+  dependency), each redirect hop is re-validated, and bodies that aren't
+  HTML or text are destroyed unread.
+- **Apify budget race.** Two batches could both start a run for the same
+  checks, and in-flight runs weren't counted against the monthly cap (cost
+  landed only when a run finished). Now `outreach_start_ig_batch` takes an
+  advisory lock, refuses a second in-flight run per check run, claims the
+  checks and writes an `outreach_spend_reservations` row in one transaction;
+  Apify is called only after that commits. Settlement is one RPC
+  (`outreach_settle_ig_batch`), and finishing a run is a compare-and-swap
+  on `apify_run_id`, so only one caller writes results. A reservation open
+  for two hours counts at its full estimate and its claims are released.
+- **Mailbox disconnect left the Google grant alive.** `disconnectMailbox`
+  now revokes the refresh token at `oauth2.googleapis.com/revoke` before
+  deleting the row. A failed revoke is logged and does not block the
+  disconnect (a 400 means already revoked).
+- **Merge fields read inherited properties.** `{{constructor}}` read
+  `Object.prototype` and threw. Fields are now checked against the known
+  list with `Object.hasOwn`.
+- **No retention (APP 11.2).** `outreach_retention_pass` (called through
+  `runRetentionPass`, twelve-month window) clears the Instagram bio, the raw
+  sheet row, message bodies and reply snippets on prospects with no activity
+  since the cutoff, skipping customers and live enrolments. It keeps the
+  prospect row (its email is the suppression key), suppression rows, events
+  and messages (aggregate analytics). Idempotent.
+
+Still open (not in this change): the `poll.ts` bounce path must call
+`suppressAddress(db, { email }, 'bounced', 'gmail bounce')`; the tick must
+call `runRetentionPass` once a day; the sequencer and variant preview must
+pass the sender name to `withEmailFooter`; the Gmail MIME builder does not
+yet add a `List-Unsubscribe` header.
 
 ---
 

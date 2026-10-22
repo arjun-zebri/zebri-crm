@@ -92,7 +92,7 @@ export function SectionView({ section, index, branding, theme, doc, mode, values
       <div data-content-column data-align={section.style.align} className={`relative mx-auto flex w-full flex-col ${justifyClass} ${columnClass}`} style={column}>
         {section.intro ? <RichDocView doc={section.intro} ctx={ctx} /> : null}
         {section.kind === 'content' && section.content ? (
-          <RichDocView doc={section.content} ctx={ctx} />
+          <RichDocView doc={section.content} ctx={ctx} trimEnd />
         ) : section.kind !== 'content' ? (
           <>
             <DataSectionView section={section} branding={branding} doc={doc} mode={mode} proposal={proposal} values={values} slots={slots} defaultSelection={defaultSelection} />

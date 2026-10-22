@@ -1,6 +1,6 @@
 import { Info } from 'lucide-react';
 import { useId } from 'react';
-import type { InputHTMLAttributes, Ref } from 'react';
+import type { InputHTMLAttributes, ReactNode, Ref } from 'react';
 
 import { Tooltip } from '@/components/ui/tooltip';
 
@@ -33,7 +33,7 @@ export interface InputProps
   /** Visible label rendered above the input. Strongly preferred over placeholder-as-label. */
   label?: string;
   /** Helper text below the input. Hidden when `error` is set. */
-  help?: string;
+  help?: string | undefined;
   /**
    * Explanation shown on hover from an info glyph beside the label. Use this
    * instead of {@link InputProps.help} when the note explains *why* a field
@@ -43,8 +43,20 @@ export interface InputProps
   tooltip?: string;
   /** Let a long {@link InputProps.tooltip} wrap. See {@link Tooltip}. */
   tooltipMultiline?: boolean;
+  /**
+   * Marks the field as optional with a quiet "Optional" tag beside the label.
+   * Prefer this over writing "(optional)" into the label text: the tag reads
+   * as metadata instead of part of the field's name. Requires `label`.
+   */
+  optional?: boolean;
   /** Error message rendered in place of `help`. Role=alert. */
-  error?: string;
+  error?: string | undefined;
+  /**
+   * Icon drawn inside the field on the left (e.g. a search glyph). It sits
+   * over the `<input>` itself, so the text gets the room; a `pl-*` class
+   * passed as `className` lands on the wrapper and does not reach the input.
+   */
+  leadingIcon?: ReactNode;
   /** Optional ref to the underlying `<input>`. */
   ref?: Ref<HTMLInputElement>;
 }
@@ -80,8 +92,10 @@ export function Input({
   help,
   tooltip,
   tooltipMultiline = false,
+  optional = false,
   error,
   className,
+  leadingIcon,
   ref,
   ...rest
 }: InputProps) {
@@ -103,6 +117,7 @@ export function Input({
           <label htmlFor={inputId} className="block text-body font-medium text-text">
             {label}
           </label>
+          {optional ? <span className="text-body text-text-muted">Optional</span> : null}
           {tooltip ? (
             <Tooltip label={tooltip} side="top" multiline={tooltipMultiline}>
               <Info
@@ -115,16 +130,23 @@ export function Input({
           ) : null}
         </div>
       ) : null}
-      <input
-        id={inputId}
-        ref={ref}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy}
-        className={`${BASE_CLASSES} ${SIZE_CLASSES} ${borderClass}${
-          rest.type === 'number' ? ` ${NUMBER_CLASSES}` : ''
-        }`}
-        {...rest}
-      />
+      <div className="relative">
+        {leadingIcon ? (
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 flex text-text-subtle" aria-hidden="true">
+            {leadingIcon}
+          </span>
+        ) : null}
+        <input
+          id={inputId}
+          ref={ref}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={`${BASE_CLASSES} ${SIZE_CLASSES} ${borderClass}${
+            rest.type === 'number' ? ` ${NUMBER_CLASSES}` : ''
+          }${leadingIcon ? ' pl-8' : ''}`}
+          {...rest}
+        />
+      </div>
       {error ? (
         <p id={errorId} role="alert" className="text-body text-danger">
           {error}

@@ -8,6 +8,8 @@
  */
 import { z } from 'zod';
 
+import { QUESTION_LIMITS } from '@/lib/booking/questions';
+
 /** Minimum time a genuine human takes to fill the form, in ms. */
 const MIN_FILL_MS = 2_000;
 
@@ -52,13 +54,28 @@ export const bookingSubmitSchema = z.object({
       `Not a valid IANA timezone`,
     ),
   name: z.string().trim().min(1).max(120),
-  partnerName: optionalText(120),
   email: z.preprocess(
     (v) => (typeof v === 'string' ? v.trim() : v),
     z.email().max(200),
   ),
   phone: optionalText(40),
   notes: optionalText(2000),
+  // Answers to the meeting type's own questions, keyed by question id. Only
+  // the shape is checked here: whether each answer fits its question needs
+  // the meeting type, so the route runs `validateAnswers` once it has loaded
+  // it, and the RPC checks again because it is anon-callable.
+  answers: z
+    .array(
+      z.object({
+        question_id: z.string().min(1).max(64),
+        value: z.union([
+          z.string().max(QUESTION_LIMITS.answerLength),
+          z.array(z.string().max(QUESTION_LIMITS.optionLength)).max(QUESTION_LIMITS.maxOptions),
+        ]),
+      }),
+    )
+    .max(QUESTION_LIMITS.maxQuestions)
+    .default([]),
   // Honeypot: bots fill hidden form fields; must be empty
   website: z
     .string()
@@ -66,6 +83,13 @@ export const bookingSubmitSchema = z.object({
     .refine((v) => !v || v.trim().length === 0, 'Honeypot field should be empty'),
   // Timing gate: measures form fill time to detect bots
   startedAt: z.number().int().nonnegative(),
+  // Attribution code from a tagged link (`/book/<token>?ref=<code>`), set
+  // by Admin Outreach. Anything malformed is dropped, never an error: a
+  // mangled link must not cost the visitor their booking.
+  ref: z
+    .string()
+    .optional()
+    .transform((v) => (v && /^[a-z0-9]{8}$/.test(v) ? v : undefined)),
 });
 
 export type BookingSubmitInput = z.infer<typeof bookingSubmitSchema>;

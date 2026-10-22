@@ -38,7 +38,11 @@ export type AdminActionType =
   | 'update_user_profile'
   | 'send_password_reset'
   | 'delete_user'
-  | 'sync_scheduler';
+  | 'sync_scheduler'
+  // Admin Outreach: a sheet import, and connecting / dropping the mailbox.
+  | 'outreach_import'
+  | 'outreach_mailbox_connect'
+  | 'outreach_mailbox_disconnect';
 
 export interface RecordAdminActionInput {
   /** The admin who performed the action — required. */

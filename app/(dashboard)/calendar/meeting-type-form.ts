@@ -4,6 +4,8 @@
  * @module app/(dashboard)/calendar/meeting-type-form
  */
 
+import type { BookingQuestion, PhoneFieldMode } from '@/lib/booking/questions';
+
 import { emptyWeek, rulesFromWeek, type WeekState } from './availability-utils';
 
 export interface FormState {
@@ -25,6 +27,10 @@ export interface FormState {
    * the modal opens, so switching to custom starts from something real.
    */
   availabilityWeek: WeekState;
+  /** Whether the fixed phone field is hidden, optional or required. */
+  phoneField: PhoneFieldMode;
+  /** Questions asked on top of the fixed name and email, in display order. */
+  questions: BookingQuestion[];
 }
 
 export type FormAction = { type: 'set'; payload: Partial<FormState> } | { type: 'reset' };
@@ -43,6 +49,8 @@ export const DEFAULT_FORM_STATE: FormState = {
   active: true,
   customAvailability: false,
   availabilityWeek: emptyWeek(),
+  phoneField: 'optional',
+  questions: [],
 };
 
 /**
@@ -72,6 +80,8 @@ export function buildMeetingTypePayload(form: FormState) {
     max_advance_days: parseInt(form.maxAdvanceDays, 10),
     reminder_enabled: form.reminderEnabled,
     active: form.active,
+    phone_field: form.phoneField,
+    questions: form.questions,
     // Always sent from the modal, which knows the MC's intent for both
     // fields. Other callers (the card's pause action) omit it, and an
     // absent `availability` leaves the stored hours untouched.

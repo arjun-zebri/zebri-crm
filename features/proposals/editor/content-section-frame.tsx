@@ -9,6 +9,7 @@
  *
  * @module features/proposals/editor/content-section-frame
  */
+import type { DocumentVariable } from '@/lib/branding/document-variables'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
 import type { Section } from '../model/layout'
@@ -29,10 +30,12 @@ export interface ContentSectionFrameProps {
   /** `LayoutEditorState.externalVersion` (`./state.ts`), passed straight through to `ContentSectionEditor` - see its module doc for what it gates. */
   externalVersion: number
   dispatch: (action: LayoutAction, opts?: { commit?: boolean }) => void
+  /** What `@` offers in this document; the proposal's variables when absent. */
+  variables?: readonly DocumentVariable[] | undefined
 }
 
 /** The section's own background/padding/column frame around its live `ContentSectionEditor`, mirroring `SectionView`'s `mode: 'edit'` chrome exactly. */
-export function ContentSectionFrame({ section, index, branding, theme, externalVersion, dispatch }: ContentSectionFrameProps) {
+export function ContentSectionFrame({ section, index, branding, theme, externalVersion, dispatch, variables }: ContentSectionFrameProps) {
   const { section: frameStyle, column, columnClass, justifyClass } = sectionCss(section.style, 'edit', theme)
   return (
     // `grow` mirrors `render/section.tsx`: in step flow a `full` section fills its page.
@@ -60,6 +63,7 @@ export function ContentSectionFrame({ section, index, branding, theme, externalV
           onChange={(id, content) => dispatch({ type: 'setContent', id, content })}
           onFocusSection={(id) => dispatch({ type: 'select', sectionId: id })}
           onNodeSelect={(node) => dispatch({ type: 'selectNode', node })}
+          variables={variables}
         />
       </div>
     </section>

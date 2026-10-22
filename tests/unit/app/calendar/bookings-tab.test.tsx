@@ -25,7 +25,7 @@ const baseBooking: Booking = {
   id: '1',
   name: 'Alice Smith',
   email: 'alice@example.com',
-  partner_name: null,
+  answers: [],
   phone: '0412345678',
   starts_at: '2026-08-20T16:00:00Z',
   ends_at: '2026-08-20T17:00:00Z',

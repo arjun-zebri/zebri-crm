@@ -23,7 +23,7 @@
  */
 import * as Popover from '@radix-ui/react-popover'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { useState, type MouseEvent } from 'react'
+import { createContext, createElement, useContext, useState, type ComponentType, type MouseEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,8 +35,26 @@ import { selectNodeOnClick } from './select-node'
 /** `id` → definition, from the same list the editor's variable inserter offers. */
 const BY_ID = Object.fromEntries(PROPOSAL_VARIABLES.map((v) => [v.id, v]))
 
-/** Editor node view for the `variable` node. */
-export function VariableView({ node, selected, editor, getPos, updateAttributes, deleteNode }: NodeViewProps) {
+/**
+ * A host's own chip, drawn in place of the default one for every variable
+ * beneath it (the v2 document builder's quieter token). Node views render
+ * inside the editor's React tree, so a provider around the canvas reaches
+ * them all. Absent, the default chip below draws.
+ */
+const VariableViewContext = createContext<ComponentType<NodeViewProps> | null>(null)
+
+/** Provides a replacement variable chip to every editor beneath it. See {@link VariableView}. */
+export const VariableViewProvider = VariableViewContext.Provider
+
+/** Editor node view for the `variable` node: a provided replacement (`VariableViewProvider`), or the default chip. */
+export function VariableView(props: NodeViewProps) {
+  const Override = useContext(VariableViewContext)
+  // createElement, not JSX: the replacement is a stable component handed down, not one made in render.
+  return Override ? createElement(Override, props) : <DefaultVariableView {...props} />
+}
+
+/** The default chip and its popover. */
+function DefaultVariableView({ node, selected, editor, getPos, updateAttributes, deleteNode }: NodeViewProps) {
   const { id = '', fallback = null } = node.attrs as { id?: string | null; fallback?: string | null }
   const def = BY_ID[id ?? '']
   const label = def?.label ?? id ?? ''

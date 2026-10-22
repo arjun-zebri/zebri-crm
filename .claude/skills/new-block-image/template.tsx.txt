@@ -1,0 +1,30 @@
+// Template for /new-block-image. Copy to
+// app/design-system/v2/pages/dashboard/blocks/images/<block-id>.tsx and
+// replace the placeholders. Not compiled from here.
+import { Button } from '@/components/ui-v2/button';
+
+import { BlockImageFrame } from './block-image-frame';
+
+/**
+ * <Block name> product image: <the moment it shows, in one sentence>.
+ * The real v2 UI zoomed in, Stripe-style (see calendar.tsx): the surface
+ * where the block lives, plus what is on it, bleeding off the foot. On the block's detail view
+ * and in the Block images gallery on /design-system/v2.
+ *
+ * @module app/design-system/v2/pages/dashboard/blocks/images/<block-id>
+ */
+
+const CARD = 'absolute rounded-panel bg-field shadow-sm ring-1 ring-zebra-950/5';
+
+/** <Block name> block image. */
+export function __Name__Image() {
+  return (
+    <BlockImageFrame alt="<what the picture shows, one sentence>">
+      <div className={`${CARD} -bottom-6 left-16 right-10 top-10 space-y-3 px-6 pt-5`}>
+        <p className="type-label">Deposit for Hannah & Ravi</p>
+        <p className="type-body text-zebra-500">$1,200 of $3,600 · Sat 14 Mar</p>
+        <Button>Send receipt</Button>
+      </div>
+    </BlockImageFrame>
+  );
+}

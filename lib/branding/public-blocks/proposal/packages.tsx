@@ -75,8 +75,16 @@ export function resolveSelection(
  * ever happens on a non-proposal surface, where the block cannot occur.
  */
 /** Card grid columns: 2 at `@md`, 3 at `@lg`, as `auto-fit` fixed tracks so `justify-content` can park a partial row (see the `gridCls` comment). */
-const GRID_TRACKS =
-  '@md/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-1rem)/2-0.02px)))] @lg/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-2rem)/3-0.02px)))] [justify-content:var(--doc-box-justify,start)]'
+const HALVES = '@md/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-1rem)/2-0.02px)))]'
+const GRID_TRACKS = `${HALVES} @lg/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-2rem)/3-0.02px)))] [justify-content:var(--doc-box-justify,start)]`
+
+/**
+ * The grid's columns for `count` packages. Two share the row in halves:
+ * on thirds they filled two of three columns and left the third empty,
+ * squeezing each card's words one to a line (2026-10-11 review). Three or
+ * more keep thirds, wrapping into further rows.
+ */
+const tracksFor = (count: number) => (count === 2 ? `${HALVES} [justify-content:var(--doc-box-justify,start)]` : GRID_TRACKS)
 
 export function RenderPackages({
   block,
@@ -139,7 +147,7 @@ export function RenderPackages({
       // where the section's alignment says (`--doc-box-justify`, published
       // by the proposal content column; `start` when unset, i.e. today's
       // layout). `auto-rows-fr` keeps every row card-height-equal as before.
-      : `grid auto-rows-fr gap-4 ${GRID_TRACKS} ${p.options.length === 1 && !slots?.trailing ? 'max-w-doc-narrow mx-auto' : ''}`
+      : `grid auto-rows-fr gap-4 ${tracksFor(p.options.length + (slots?.trailing ? 1 : 0))} ${p.options.length === 1 && !slots?.trailing ? 'max-w-doc-narrow mx-auto' : ''}`
 
   const renderCard = (option: PublicProposalOption, index: number) => {
     const isSelected = option.id === optionId

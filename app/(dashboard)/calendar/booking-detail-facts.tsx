@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 
+import { formatAnswerValue, parseBookingAnswers } from '@/lib/booking/questions';
+
 import { formatShortDate } from './booking-display';
 import type { Booking } from './use-bookings';
 
@@ -57,6 +59,7 @@ export function BookingDetailFacts({
   onSelectCouple,
 }: BookingDetailFactsProps) {
   const couple = booking.couple;
+  const answers = parseBookingAnswers(booking.answers);
 
   return (
     <div>
@@ -115,6 +118,24 @@ export function BookingDetailFacts({
           <Row label="Their timezone">{booking.timezone.replace(/_/g, ' ')}</Row>
         )}
       </div>
+
+      {answers.length > 0 && (
+        <div className="mt-6">
+          <h4 className="text-body font-semibold uppercase tracking-wider text-text">
+            Their answers
+          </h4>
+          <dl className="mt-2 space-y-3">
+            {answers.map((answer) => (
+              <div key={answer.question_id}>
+                <dt className="text-body text-text-muted">{answer.label}</dt>
+                <dd className="whitespace-pre-wrap text-body text-text">
+                  {formatAnswerValue(answer)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
 
       {booking.notes && (
         <div className="mt-6">

@@ -39,7 +39,7 @@ import type { Editor } from '@tiptap/react'
 import { useEditorState } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { Link as LinkIcon } from 'lucide-react'
-import { useEffect, useImperativeHandle, useState, type Ref } from 'react'
+import { useEffect, useImperativeHandle, useState, type ComponentType, type Ref } from 'react'
 
 import { ToolbarDivider } from '@/components/editor'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -121,6 +121,26 @@ export interface TextBarProps {
   ref?: Ref<TextBarHandle> | undefined
 }
 
+/** Props for {@link TextBar}: the row's, plus an optional replacement row. */
+export interface TextBarBubbleProps extends TextBarProps {
+  /**
+   * A host's own row, drawn inside the bubble in place of {@link TextBarRow},
+   * keeping the bubble's placement, host element and hide rules. It gets
+   * the same props (the `ref` so it can serve `openLink()`), and must mark
+   * itself and its popovers with `data-text-bar` so the bubble stays open
+   * while one is in use. Pass a stable component: a new one each render
+   * would remount the row and shut its open menus. Defaults to `TextBarRow`.
+   */
+  row?: ComponentType<TextBarProps> | undefined
+  /**
+   * Also shows the bar over a selection holding a variable chip and no
+   * text (a picked chip), so the chip can be formatted like the words
+   * around it. Off by default: production's own chip opens a popover in
+   * the same place.
+   */
+  showOverVariables?: boolean | undefined
+}
+
 /** The bar's plain 32px row, with no floating/positioning of its own. */
 export function TextBarRow({ editor, swatches = [], theme, ref }: TextBarProps) {
   const [linkOpen, setLinkOpen] = useState(false)
@@ -187,7 +207,7 @@ export function TextBarRow({ editor, swatches = [], theme, ref }: TextBarProps) 
  * own clipping, exactly like a Radix popover portalling to body. The
  * target is `textBarHost()` rather than body itself - see its doc.
  */
-export function TextBar({ editor, swatches, theme, ref }: TextBarProps) {
+export function TextBar({ editor, swatches, theme, ref, row: Row = TextBarRow, showOverVariables = false }: TextBarBubbleProps) {
   useHideOnOutsidePointerDown(editor)
   return (
     <BubbleMenu
@@ -204,14 +224,19 @@ export function TextBar({ editor, swatches, theme, ref }: TextBarProps) {
       options={{ offset: 8, placement: 'bottom', strategy: 'fixed' }}
       shouldShow={({ editor: ed }) => {
         const { from, to, empty } = ed.state.selection
-        const hasTextSelection = !empty && ed.state.doc.textBetween(from, to, '', '').length > 0
+        let hasTextSelection = !empty && ed.state.doc.textBetween(from, to, '', '').length > 0
+        if (!hasTextSelection && !empty && showOverVariables) {
+          ed.state.doc.nodesBetween(from, to, (n) => {
+            if (n.type.name === 'variable') hasTextSelection = true
+          })
+        }
         return bubbleShouldShow({
           menuFocused: Boolean(document.activeElement?.closest(TEXT_BAR_MENU_SELECTOR)),
           hasTextSelection,
         })
       }}
     >
-      <TextBarRow editor={editor} swatches={swatches} theme={theme} ref={ref} />
+      <Row editor={editor} swatches={swatches} theme={theme} ref={ref} />
     </BubbleMenu>
   )
 }

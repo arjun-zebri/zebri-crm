@@ -70,7 +70,8 @@ describe('RenderPackages', () => {
   })
 
   it('the card grid parks a partial row where the section alignment says (`--doc-box-justify`), at the start when unset', () => {
-    const { container } = render(<RenderPackages block={block} branding={branding} doc={doc} />)
+    const three = { ...doc, proposal: { ...proposal, options: [...proposal.options, { ...optionA!, id: 'opt-3' }] } }
+    const { container } = render(<RenderPackages block={block} branding={branding} doc={three} />)
     const grid = container.querySelector('.grid') as HTMLElement
     expect(grid.className).toContain('[justify-content:var(--doc-box-justify,start)]')
     // `auto-fit` over fixed-width tracks, not `grid-cols-3`: three `1fr`
@@ -79,6 +80,14 @@ describe('RenderPackages', () => {
     // keep their card widths.
     expect(grid.className).toContain('@md/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-1rem)/2-0.02px)))]')
     expect(grid.className).toContain('@lg/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-2rem)/3-0.02px)))]')
+  })
+
+  it('two packages share the row in halves, never two thirds with an empty third (2026-10-11 review)', () => {
+    expect(proposal.options).toHaveLength(2)
+    const { container } = render(<RenderPackages block={block} branding={branding} doc={doc} />)
+    const grid = container.querySelector('.grid') as HTMLElement
+    expect(grid.className).toContain('@md/doc:grid-cols-[repeat(auto-fit,minmax(0,calc((100%-1rem)/2-0.02px)))]')
+    expect(grid.className).not.toContain('@lg/doc:grid-cols')
   })
 
   it('resolves {{ id | fallback }} tokens in the CTA label', () => {

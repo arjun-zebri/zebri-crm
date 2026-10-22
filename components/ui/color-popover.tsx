@@ -23,6 +23,11 @@ interface ColorPopoverProps {
   /** Extra attributes for the portalled panel, so a parent that finds its
    *  own menus by attribute can claim this one too. */
   contentProps?: React.HTMLAttributes<HTMLDivElement> & Record<`data-${string}`, string>
+  /** Where the panel is portalled; the body by default. A trigger inside a
+   *  native modal `<dialog>` must pass that dialog: the dialog sits in the
+   *  browser's top layer, above anything in the body at any z-index, so a
+   *  panel portalled to the body opens behind the modal. */
+  container?: HTMLElement | null | undefined
 }
 
 export function ColorPopover({
@@ -34,11 +39,12 @@ export function ColorPopover({
   zClassName = 'z-[70]',
   onOpenChange,
   contentProps,
+  container,
 }: ColorPopoverProps) {
   return (
     <Popover.Root {...(onOpenChange ? { onOpenChange } : {})}>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
-      <Popover.Portal>
+      <Popover.Portal {...(container ? { container } : {})}>
         <Popover.Content
           {...contentProps}
           align={align}
