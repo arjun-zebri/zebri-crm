@@ -400,6 +400,28 @@ describe('loaders', () => {
     expect(ids).not.toContain(gone)
   })
 
+  it('tells the picker when a template starts itself from an invoice due date', async () => {
+    const invoiceFlow = await seedTemplate(owner, 'Picker Invoice Reminder')
+    await admin
+      .from('workflow_templates')
+      .update({
+        apply_rule_type: 'on_event',
+        apply_rule_config: { eventType: 'invoice_due', triggerConfig: { days: 7 } },
+      } as never)
+      .eq('id', invoiceFlow)
+    const manualFlow = await seedTemplate(owner, 'Picker Manual')
+
+    activeUser = owner
+    const res = await loadApplicableTemplatesAction()
+    expect(res.ok).toBe(true)
+    const rows = (res as { data: { id: string; selfStart: unknown }[] }).data
+    expect(rows.find((t) => t.id === invoiceFlow)?.selfStart).toEqual({
+      when: '7 days before each invoice is due',
+      active: true,
+    })
+    expect(rows.find((t) => t.id === manualFlow)?.selfStart).toBeNull()
+  })
+
   it('the picker never shows another tenant’s templates', async () => {
     const victimTemplate = await seedTemplate(owner, 'Picker Victim')
     activeUser = attacker

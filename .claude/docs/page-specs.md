@@ -473,7 +473,11 @@ The tab header carries **Start a workflow** and **Add a to-do**, both
 buttons opening modals. Choosing a workflow in the Start picker shows a
 preview of its dates for this couple first, with past-dated steps
 flagged as skipped; only **Start workflow** applies it (see
-`workflows.md`, "The Start preview shows the calendar first"). The classifier is
+`workflows.md`, "The Start preview shows the calendar first"). A workflow
+whose trigger is tied to a date (invoice due, days before the event)
+says in the list and the preview that it starts by itself, and that
+starting it here runs it from today (`workflows.md`, "Starting a
+date-triggered workflow by hand"). The classifier is
 `couple-workflow-buckets.ts`, pure and unit-tested. Below the list sits
 the engine's audit feed.
 
@@ -1679,6 +1683,12 @@ the thing you press when you want something from Zebri.
   and stagger, which turned a two-button menu into a small performance:
   the eye tracked the movement instead of reading the labels, and the
   pair were never both readable until it finished.
+- **Closed, only the round button takes clicks.** Both pills stay
+  mounted, so the row is ~290px wide even when you can only see the
+  circle. The row is `pointer-events-none`, and only the round button
+  and a showing pill opt back in. Before that, the invisible strip ate
+  clicks on page 3, Next and the page-size picker on the couples list
+  (ZEB-127).
 - **"Zebri AI" is disabled** where no page has offered a chat, rather
   than hidden. A control that comes and goes between screens teaches
   nobody where it lives.

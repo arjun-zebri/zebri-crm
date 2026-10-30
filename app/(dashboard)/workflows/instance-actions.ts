@@ -66,6 +66,7 @@ import {
   type StepPreview,
 } from '@/lib/workflows/review'
 import { reviewEditsSchema } from '@/lib/workflows/review-edits-schema'
+import { toSelfStart, type SelfStart } from '@/lib/workflows/self-start'
 import { partialSendFailure, type PartialSendFailure } from '@/lib/workflows/send-outcome'
 import { validateStepConfig } from '@/lib/workflows/step-config-validation'
 import { stepDisplayTitle } from '@/lib/workflows/step-label'
@@ -215,13 +216,25 @@ export async function applyTemplateToCoupleAction(
 
 /** Active, non-archived templates for the "Apply workflow" picker. */
 export async function loadApplicableTemplatesAction(): Promise<
-  ActionResult<{ id: string; name: string; description: string | null; tagIds: string[] }[]>
+  ActionResult<
+    {
+      id: string
+      name: string
+      description: string | null
+      tagIds: string[]
+      /**
+       * When its trigger starts it on its own, and whether that trigger is
+       * live. Null for a workflow not anchored to a date.
+       */
+      selfStart: SelfStart | null
+    }[]
+  >
 > {
   const supabase = await createClient()
   const [templatesRes, joinRes] = await Promise.all([
     supabase
       .from('workflow_templates')
-      .select('id, name, description')
+      .select('id, name, description, status, apply_rule_type, apply_rule_config')
       .neq('status', 'archived')
       .order('name', { ascending: true }),
     supabase.from('workflow_template_tags').select('template_id, tag_id'),
@@ -238,8 +251,11 @@ export async function loadApplicableTemplatesAction(): Promise<
   return {
     ok: true,
     data: (templatesRes.data ?? []).map((t) => ({
-      ...t,
+      id: t.id,
+      name: t.name,
+      description: t.description,
       tagIds: byTemplate.get(t.id) ?? [],
+      selfStart: toSelfStart(t.status, t.apply_rule_type, t.apply_rule_config),
     })),
   }
 }

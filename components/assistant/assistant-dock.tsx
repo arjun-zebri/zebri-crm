@@ -35,6 +35,13 @@
  * footer total (`pr-40`) and the branding canvas zoom widget
  * (`right-40`). Add to that list rather than nudging the dock.
  *
+ * Closed, it must take no clicks except on the round button. The row
+ * keeps both hidden buttons mounted, so its box stays ~290px wide even
+ * when all you can see is the 40px circle; as a click target that
+ * invisible strip swallowed page 3, Next and the page-size picker on
+ * the couples list (ZEB-127). So the row is `pointer-events-none` and
+ * only the round button and a showing pair opt back in.
+ *
  * @module components/assistant/assistant-dock
  */
 
@@ -67,7 +74,7 @@ export function AssistantDock({
     <div
       // Kept out of any screenshot the feedback form itself captures.
       data-capture-hide
-      className="fixed bottom-6 right-6 z-[150] flex items-center gap-2"
+      className="pointer-events-none fixed bottom-6 right-6 z-[150] flex items-center gap-2"
     >
       {/* Both stay mounted, so the row never reflows and nothing jumps
           as they arrive. */}
@@ -98,7 +105,7 @@ export function AssistantDock({
         onClick={onToggleMenu}
         aria-label={menuOpen ? 'Close Zebri menu' : 'Open Zebri menu'}
         aria-expanded={menuOpen}
-        className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand-fg text-text-inverse shadow-lg transition hover:opacity-90"
+        className="pointer-events-auto inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand-fg text-text-inverse shadow-lg transition hover:opacity-90"
       >
         {menuOpen ? (
           <X size={18} strokeWidth={1.5} />
@@ -115,13 +122,14 @@ export function AssistantDock({
  *
  * `pointer-events-none` while hidden matters as much as the opacity: a
  * fully transparent button still takes the click meant for the canvas
- * underneath it.
+ * underneath it. Showing, it has to say `pointer-events-auto` outright,
+ * because the row around it is `pointer-events-none`.
  */
 function DockButton({ show, children }: { show: boolean; children: React.ReactNode }) {
   return (
     <span
       className={`transition-opacity duration-150 ease-out ${
-        show ? 'opacity-100' : 'pointer-events-none opacity-0'
+        show ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
       }`}
     >
       {children}

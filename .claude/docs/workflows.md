@@ -1234,6 +1234,32 @@ both and asserts they skip the same steps
 (`tests/unit/lib/workflows/apply-skips-agreement.test.ts`), and an
 integration test checks the preview against a real apply.
 
+### Starting a date-triggered workflow by hand
+
+Some workflows are timed by their trigger, not their steps: "7 days
+before an invoice is due" is the `invoice_due` trigger with `days = 7`.
+Starting one from the couple's picker applies it with no trigger, so
+the first step counts from the apply moment and comes due **today**
+(ZEB-124: an MC's invoice reminder was about to go out the day they
+started it).
+
+The picker now says so. `selfStartTiming` (`lib/workflows/self-start.ts`)
+turns a date-anchored trigger (`invoice_due`, `invoice_overdue`,
+`time_before_event`, `time_after_event`, `anniversary_of_event`) into a
+phrase, read through the trigger's own schema so a stored default reads
+the way the emitter reads it. `loadApplicableTemplatesAction` returns it
+as `selfStart`, with whether the template is active:
+
+- **List row:** an active one reads "Starts by itself 7 days before each
+  invoice is due", which tells the MC they never needed to press Start.
+- **Preview:** a warning callout above the dates says it already starts
+  by itself (or is set to, once turned on) and that starting it here runs
+  it from today instead.
+
+Starting it anyway still works: the dates in the preview are the truth.
+Triggers not tied to a date ("when a couple is created") get no notice,
+because starting those by hand loses nothing.
+
 ### Stopping a workflow marks its steps cancelled
 
 Every way a workflow stops (Stop this workflow, Stop everything,
