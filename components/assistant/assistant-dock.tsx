@@ -67,7 +67,11 @@ export function AssistantDock({
     <div
       // Kept out of any screenshot the feedback form itself captures.
       data-capture-hide
-      className="fixed bottom-6 right-6 z-[150] flex items-center gap-2"
+      // The row is as wide as both hidden buttons, so it must not take
+      // clicks itself: only the buttons that are showing opt back in.
+      // Without this its invisible footprint swallowed the builder
+      // footer's Save button on a phone (ZEB-128).
+      className="pointer-events-none fixed bottom-6 right-6 z-[150] flex items-center gap-2"
     >
       {/* Both stay mounted, so the row never reflows and nothing jumps
           as they arrive. */}
@@ -98,7 +102,7 @@ export function AssistantDock({
         onClick={onToggleMenu}
         aria-label={menuOpen ? 'Close Zebri menu' : 'Open Zebri menu'}
         aria-expanded={menuOpen}
-        className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand-fg text-text-inverse shadow-lg transition hover:opacity-90"
+        className="pointer-events-auto inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-brand-fg text-text-inverse shadow-lg transition hover:opacity-90"
       >
         {menuOpen ? (
           <X size={18} strokeWidth={1.5} />
@@ -113,15 +117,16 @@ export function AssistantDock({
 /**
  * One button of the pair. Fades, and does not move.
  *
- * `pointer-events-none` while hidden matters as much as the opacity: a
+ * Not taking clicks while hidden matters as much as the opacity: a
  * fully transparent button still takes the click meant for the canvas
- * underneath it.
+ * underneath it. The row is `pointer-events-none`, so a hidden button
+ * inherits that and only a showing one opts back in.
  */
 function DockButton({ show, children }: { show: boolean; children: React.ReactNode }) {
   return (
     <span
       className={`transition-opacity duration-150 ease-out ${
-        show ? 'opacity-100' : 'pointer-events-none opacity-0'
+        show ? 'pointer-events-auto opacity-100' : 'opacity-0'
       }`}
     >
       {children}

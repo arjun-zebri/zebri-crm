@@ -152,11 +152,18 @@ export function BuilderModalShell({
         // facing page reads at a comfortable size while composing;
         // the form column stays narrow but workable. Below the lg
         // breakpoint they stack vertically — preview comes after.
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,4fr)] gap-4 lg:gap-6 h-full">
-          {/* Left pane scrolls internally so the modal's footer +
-              the right-pane preview stay anchored regardless of
-              form height. */}
-          <div className="flex flex-col min-w-0 min-h-0 overflow-y-auto pr-1">
+        //
+        // The fixed height + inner scroll are `lg:` only. Stacked, a
+        // `min-h-0` scroll pane inside an `h-full` grid contributes ~0
+        // to its auto row, so the preview's `min-h-[60vh]` took the
+        // whole modal and the form collapsed to a few pixels (ZEB-128:
+        // invoices could not be edited on a phone). Below `lg:` both
+        // panes take their natural height and the modal body scrolls.
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,4fr)] gap-4 lg:gap-6 lg:h-full">
+          {/* On desktop the left pane scrolls internally so the
+              modal's footer + the right-pane preview stay anchored
+              regardless of form height. */}
+          <div className="flex flex-col min-w-0 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
             <input
               type="text"
               value={title}
