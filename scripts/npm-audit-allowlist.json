@@ -16,5 +16,29 @@
     "package": "happy-dom",
     "reason": "happy-dom is only reached through @tiptap/html, whose peer range is ^20.8.9 even at the latest Tiptap (3.32.1), and no 20.x carries this fix (fixed after 20.14.6, the newest 20.x; the advisory needs iframe or link-stylesheet loading enabled while parsing untrusted HTML). Zebri only calls generateHTML (lib/email, lib/contracts, lib/branding, lib/documents), which serialises our own Tiptap JSON into a happy-dom Window created with disableJavaScriptEvaluation, disableJavaScriptFileLoading, disableCSSFileLoading and disableIframePageLoading all true; nothing parses untrusted HTML through it (generateJSON is unused), so neither the script-execution nor the iframe/stylesheet fetch path is reachable. Revisit when Tiptap accepts happy-dom 21, together with the @tiptap/* family upgrade.",
     "expires": "2026-12-20"
+  },
+  {
+    "id": "GHSA-2464-fhr4-w9xw",
+    "package": "next",
+    "reason": "Held at the installed version by decision (2026-10-30): no dependency version bumps right now. Fixed in next 16.4.3. Image Optimization RCE with SVGs. next.config sets no images config, so dangerouslyAllowSVG is off (default), but exposure has not been verified beyond that. Highest-priority item on this list.",
+    "expires": "2026-12-20"
+  },
+  {
+    "id": "GHSA-673q-mjm6-r5xr",
+    "package": "next",
+    "reason": "Held at the installed version by decision (2026-10-30): no dependency version bumps right now. Fixed in next 16.4.3. RCE in 'use cache' functions returning typed arrays; the codebase has no 'use cache' directive, so the vulnerable path is not used.",
+    "expires": "2026-12-20"
+  },
+  {
+    "id": "GHSA-p3m5-59mp-jv5r",
+    "package": "next",
+    "reason": "Held at the installed version by decision (2026-10-30): no dependency version bumps right now. Fixed in next 16.4.3. DoS in the App Router via Server Actions; the app does use Server Actions, so this is reachable.",
+    "expires": "2026-12-20"
+  },
+  {
+    "id": "GHSA-mrhx-c7xc-m3w5",
+    "package": "zod",
+    "reason": "Held at the installed version by decision (2026-10-30): no dependency version bumps right now. Fixed in zod 4.6.6. Memory exhaustion validating oversized constrained collections; inputs pass through Zod on API routes and server actions, bounded by request body limits.",
+    "expires": "2026-12-20"
   }
 ]
