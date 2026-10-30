@@ -309,15 +309,13 @@ manual verification of mentions/tables/lists. Revisit before
 
 ### Dependabot
 
-`.github/dependabot.yml` opens weekly update PRs for the `npm`
-ecosystem (root `package.json`) and for `github-actions` workflow
-pins. npm minor/patch updates are grouped into one PR to cut noise;
-major bumps still open their own PR since those can be breaking.
-`open-pull-requests-limit` caps how many can be open at once per
-ecosystem so a quiet week doesn't turn into a backlog. Dependabot is
-about staying current; the security gate itself is `audit:gate`
-above, which catches advisories on whatever is already installed
-whether or not Dependabot has gotten to it yet.
+`.github/dependabot.yml` opens weekly update PRs for `github-actions`
+workflow pins only. npm version updates are switched off
+(`open-pull-requests-limit: 0`, since 2026-10-30): a week of unmerged
+bumps, several of them majors, left seven red PRs against `main`.
+Dependency upgrades are done on purpose, one at a time. Security is not
+Dependabot's job here: `audit:gate` above fails CI on any high or
+critical advisory in what is already installed.
 
 ---
 
