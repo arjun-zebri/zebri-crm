@@ -4,5 +4,17 @@
     "package": "@tiptap/core",
     "reason": "Fix requires bumping @tiptap/suggestion to 3.31.3, which conflicts with the peer requirement of the other exact-pinned Tiptap packages (@tiptap/extension-list, @tiptap/extension-table, both pinned at 3.22.4) and needs a coordinated upgrade of the whole @tiptap/* family. That is a real editor-behaviour change (mentions, tables, lists) needing manual verification, not a mechanical npm audit fix; revisit as its own task.",
     "expires": "2026-12-20"
+  },
+  {
+    "id": "GHSA-834v-8h66-3h79",
+    "package": "happy-dom",
+    "reason": "happy-dom is only reached through @tiptap/html, whose peer range is ^20.8.9 even at the latest Tiptap (3.32.1), and no 20.x carries this fix (fixed in 21.0.4, outside the peer range; the advisory needs JavaScript evaluation enabled). Zebri only calls generateHTML (lib/email, lib/contracts, lib/branding, lib/documents), which serialises our own Tiptap JSON into a happy-dom Window created with disableJavaScriptEvaluation, disableJavaScriptFileLoading, disableCSSFileLoading and disableIframePageLoading all true; nothing parses untrusted HTML through it (generateJSON is unused), so neither the script-execution nor the iframe/stylesheet fetch path is reachable. Revisit when Tiptap accepts happy-dom 21, together with the @tiptap/* family upgrade.",
+    "expires": "2026-12-20"
+  },
+  {
+    "id": "GHSA-c8p4-j97h-3vg8",
+    "package": "happy-dom",
+    "reason": "happy-dom is only reached through @tiptap/html, whose peer range is ^20.8.9 even at the latest Tiptap (3.32.1), and no 20.x carries this fix (fixed after 20.14.6, the newest 20.x; the advisory needs iframe or link-stylesheet loading enabled while parsing untrusted HTML). Zebri only calls generateHTML (lib/email, lib/contracts, lib/branding, lib/documents), which serialises our own Tiptap JSON into a happy-dom Window created with disableJavaScriptEvaluation, disableJavaScriptFileLoading, disableCSSFileLoading and disableIframePageLoading all true; nothing parses untrusted HTML through it (generateJSON is unused), so neither the script-execution nor the iframe/stylesheet fetch path is reachable. Revisit when Tiptap accepts happy-dom 21, together with the @tiptap/* family upgrade.",
+    "expires": "2026-12-20"
   }
 ]
