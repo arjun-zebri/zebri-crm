@@ -1683,6 +1683,12 @@ the thing you press when you want something from Zebri.
   and stagger, which turned a two-button menu into a small performance:
   the eye tracked the movement instead of reading the labels, and the
   pair were never both readable until it finished.
+- **Closed, only the round button takes clicks.** Both pills stay
+  mounted, so the row is ~290px wide even when you can only see the
+  circle. The row is `pointer-events-none`, and only the round button
+  and a showing pill opt back in. Before that, the invisible strip ate
+  clicks on page 3, Next and the page-size picker on the couples list
+  (ZEB-127).
 - **"Zebri AI" is disabled** where no page has offered a chat, rather
   than hidden. A control that comes and goes between screens teaches
   nobody where it lives.
