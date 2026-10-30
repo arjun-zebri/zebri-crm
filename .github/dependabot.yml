@@ -6,6 +6,11 @@
 # caps how many PRs Dependabot can have open at once per ecosystem, so a
 # quiet week of merging doesn't turn into a pile-up.
 #
+# npm version updates are switched off (`open-pull-requests-limit: 0`,
+# 2026-10-30): a week of unmerged bumps, several of them majors, left
+# seven red PRs against `main`. Dependency upgrades are done on purpose,
+# one at a time, not on a schedule.
+#
 # Advisories on already-installed dependencies are caught separately by
 # `npm run audit:gate` in CI (see .claude/docs/cicd.md). Dependabot here
 # is about staying current, not about the security gate itself.
@@ -15,12 +20,7 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    open-pull-requests-limit: 10
-    groups:
-      npm-minor-patch:
-        update-types:
-          - 'minor'
-          - 'patch'
+    open-pull-requests-limit: 0
 
   - package-ecosystem: 'github-actions'
     directory: '/'
