@@ -35,6 +35,13 @@
  * footer total (`pr-40`) and the branding canvas zoom widget
  * (`right-40`). Add to that list rather than nudging the dock.
  *
+ * Closed, it must take no clicks except on the round button. The row
+ * keeps both hidden buttons mounted, so its box stays ~290px wide even
+ * when all you can see is the 40px circle; as a click target that
+ * invisible strip swallowed page 3, Next and the page-size picker on
+ * the couples list (ZEB-127). So the row is `pointer-events-none` and
+ * only the round button and a showing pair opt back in.
+ *
  * @module components/assistant/assistant-dock
  */
 
@@ -67,10 +74,6 @@ export function AssistantDock({
     <div
       // Kept out of any screenshot the feedback form itself captures.
       data-capture-hide
-      // The row is as wide as both hidden buttons, so it must not take
-      // clicks itself: only the buttons that are showing opt back in.
-      // Without this its invisible footprint swallowed the builder
-      // footer's Save button on a phone (ZEB-128).
       className="pointer-events-none fixed bottom-6 right-6 z-[150] flex items-center gap-2"
     >
       {/* Both stay mounted, so the row never reflows and nothing jumps
@@ -117,16 +120,16 @@ export function AssistantDock({
 /**
  * One button of the pair. Fades, and does not move.
  *
- * Not taking clicks while hidden matters as much as the opacity: a
+ * `pointer-events-none` while hidden matters as much as the opacity: a
  * fully transparent button still takes the click meant for the canvas
- * underneath it. The row is `pointer-events-none`, so a hidden button
- * inherits that and only a showing one opts back in.
+ * underneath it. Showing, it has to say `pointer-events-auto` outright,
+ * because the row around it is `pointer-events-none`.
  */
 function DockButton({ show, children }: { show: boolean; children: React.ReactNode }) {
   return (
     <span
       className={`transition-opacity duration-150 ease-out ${
-        show ? 'pointer-events-auto opacity-100' : 'opacity-0'
+        show ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
       }`}
     >
       {children}
