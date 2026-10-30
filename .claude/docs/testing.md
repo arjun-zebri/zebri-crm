@@ -682,6 +682,26 @@ forged `user_id` insert, and the parent-ownership `with check` on
 attached to another tenant's proposal/option is rejected).
 `tests/integration/proposals/proposal-role-action.test.ts` covers
 `chooseProposalRoleAction`.
+`tests/integration/proposals/new-proposal-design.test.ts` (T8,
+2026-09-23) covers the "Make edits" seam: everything opening the editor
+needs is a read, and the pair of calls the autosave makes on the first
+change leaves exactly one proposal with the MC's edit, the seeded
+options and an untouched template. It also pins
+`proposals.layout_revision`'s default, which the editor's first save is
+based on.
+
+Unit (2026-09-23, T8): `tests/unit/app/proposals/new-proposal-design.test.tsx`
+renders the uncreated-proposal editor on a real component tree and
+asserts that opening and leaving creates nothing, that a style edit
+creates exactly one proposal and saves the edit at revision 0, and that
+the explainer appears once per account.
+`tests/unit/features/proposals/editor/use-layout-autosave-create.test.tsx`
+and `layout-equivalence.test.ts` cover the create-inside-the-save-path
+and what counts as a change;
+`tests/unit/features/proposals/editor/design-explainer-seen.test.ts`
+covers the per-user storage gate (including storage that throws);
+`tests/unit/app/proposals/proposal-drafts-strip.test.tsx` covers the
+drafts strip on `/proposals`.
 
 E2E: `tests/e2e/proposals.spec.ts` (chromium, Mobile Chrome, Mobile
 Safari). Creates a proposal from `/proposals`, saves it, and confirms
@@ -863,6 +883,65 @@ a doc using every rich-doc node type through
 live editor sends) and asserts a cross-tenant write is refused with
 the row untouched. No new RLS tables this phase - `proposal_templates`
 and `proposal_settings` coverage is unchanged from Phase 1.
+
+#### Layout v2 (R3: create-from-template, send modal, design editor, 2026-09-23)
+
+Full feature doc: `.claude/docs/proposals.md` ("Layout v2 (R3: ...)").
+
+Integration (local Supabase, real RLS): `tests/integration/proposals/create-from-template.test.ts`
+covers `createProposalFromTemplateAction` end to end: the layout
+snapshot gets fresh section ids, options seed from the packages
+section with items intact, a template's own settings beat the account
+defaults, another tenant's template is refused with nothing created,
+plus `updateProposalLayoutAction`'s `layout_revision` guard (bumps on
+a matched write, refuses and does not overwrite a stale one).
+`tests/integration/proposals/proposal-layout-beacon-route.test.ts`
+covers `POST /api/proposals/layout-beacon`: the owner's write lands
+and leaves `layout_revision` where it was (deliberately, see the
+route's module doc), an unauthenticated beacon is refused (401), a
+stale revision is refused without overwriting (409), an accepted
+proposal is frozen (409, `error` mentions "accepted"), and another
+tenant's proposal is untouchable (404, row unchanged).
+
+Unit: `tests/unit/proposals/seed-options.test.ts` covers
+`layoutPackageOptions`/`packageOptionsToInputs` (first-packages-section-
+only, rich text flattened to plain strings, id minting for non-uuid
+card ids). `tests/unit/proposals/template-preview-doc.test.ts` covers
+`templatePreviewDoc`. `tests/unit/components/builders/send-proposal-modal.test.tsx`
+covers the modal: Send is off with a reason until a couple is chosen,
+"Make edits" and "Send to couple" both create the proposal exactly
+once and a failed send retries against the same id rather than
+minting a second proposal. `tests/unit/app/proposals/proposal-detail.test.tsx`
+covers "Edit design" appearing only once a proposal carries a
+`template_id` (with `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2` stubbed on via
+`vi.stubEnv`, since the flag reads a `NEXT_PUBLIC_*` env var at call
+time). `tests/unit/components/builders/proposal-readiness.test.tsx`
+and `tests/unit/components/builders/parts/share-and-send.test.tsx`
+cover `sendBlockReason` (the first failing readiness check's message,
+in check order) and its `aria-describedby` wiring on the legacy
+builder's Send button.
+
+**Selector notes (R3):**
+- The template card's `...` menu trigger is `Row actions`
+  (`RowActionsMenu`, `alwaysVisible` on a template card); its first
+  item is "Send to a couple".
+- `SendProposalModal` is `getByRole('dialog', { name: 'Send a
+  proposal' })`. `tests/e2e/proposals.spec.ts` tells which shell a
+  build is running by `waitFor`-ing that dialog rather than reading
+  the `NEXT_PUBLIC_PROPOSAL_LAYOUT_V2` flag itself (a same-tick
+  `isVisible()` reads the DOM before the modal's portal mounts and
+  always reports false; `waitFor` polls).
+- The "New" split button (`new-proposal-menu.tsx`, shown once
+  `onNewTemplate` is passed, i.e. the flag is on) carries
+  `aria-label="New"` at every width, same reasoning as the plain "New
+  proposal" button's own `aria-label` note above: its visible text
+  collapses below `sm`.
+- The proposal detail page's two edit actions are named "Details"
+  (`getByRole('button', { name: /Details/ })`, always present while
+  not accepted) and "Edit design" (`getByRole('link', { name: /Edit
+  design/ })`, only once `template_id` is set and the proposal is not
+  accepted). "Details" was "Edit" before this pass; a test asserting
+  the old name is testing a button that no longer exists.
 
 ## What NOT to Test
 - Supabase internals or DB queries

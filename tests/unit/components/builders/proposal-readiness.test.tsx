@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ProposalReadiness,
   readinessChecks,
+  sendBlockReason,
 } from '@/components/builders/parts/proposal-readiness';
 
 const form = {
@@ -28,5 +29,25 @@ describe('proposal readiness', () => {
     render(<ProposalReadiness form={{ ...form, contractTemplateId: null }} />);
     expect(screen.getByText('Contract template chosen')).toBeInTheDocument();
     expect(screen.getByRole('list')).toBeInTheDocument();
+  });
+});
+
+describe('sendBlockReason', () => {
+  it('returns null once every check passes', () => {
+    expect(sendBlockReason(form)).toBeNull();
+  });
+
+  it('surfaces the first failing check, in check order', () => {
+    // coupleId and title both fail here; couple comes first in
+    // readinessChecks, so its message wins.
+    expect(sendBlockReason({ ...form, coupleId: null, title: '' })).toBe('Choose a couple first');
+  });
+
+  it('surfaces title, option, and contract template messages in turn', () => {
+    expect(sendBlockReason({ ...form, title: '' })).toBe('Give the proposal a title');
+    expect(sendBlockReason({ ...form, options: [] })).toBe('Add at least one package');
+    expect(sendBlockReason({ ...form, contractTemplateId: null })).toBe(
+      'Choose a contract template below',
+    );
   });
 });

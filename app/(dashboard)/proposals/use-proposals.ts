@@ -22,6 +22,8 @@ export interface ProposalListRow {
   last_viewed_at: string | null;
   view_count: number;
   created_at: string;
+  /** Last write of any kind, including an autosaved layout edit: what the drafts strip means by "edited". */
+  updated_at: string;
   couple: { id: string; name: string };
   proposal_options: { subtotal: number; is_popular: boolean; position: number }[];
 }
@@ -39,6 +41,13 @@ export interface ProposalDetailRow extends ProposalListRow {
   declined_message: string | null;
   contract_id: string | null;
   invoice_id: string | null;
+  /**
+   * The template this proposal was created from, when it carries a Layout
+   * v2 design of its own. Non-null is what the detail page keys its "Edit
+   * design" action off: a proposal created before templates reached the
+   * create path has no design to open.
+   */
+  template_id: string | null;
   proposal_options: { id: string; subtotal: number; is_popular: boolean; position: number; title: string }[];
 }
 
@@ -60,7 +69,7 @@ export function useProposals() {
       const { data, error } = await supabase
         .from('proposals')
         .select(
-          'id, proposal_number, title, status, expires_at, email_sent_at, last_viewed_at, view_count, created_at, couple:couple_id(id, name), proposal_options!proposal_options_proposal_id_fkey(subtotal, is_popular, position)',
+          'id, proposal_number, title, status, expires_at, email_sent_at, last_viewed_at, view_count, created_at, updated_at, couple:couple_id(id, name), proposal_options!proposal_options_proposal_id_fkey(subtotal, is_popular, position)',
         )
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });
@@ -89,7 +98,7 @@ export function useProposal(id: string) {
       const { data, error } = await supabase
         .from('proposals')
         .select(
-          'id, proposal_number, title, status, version, expires_at, email_sent_at, first_viewed_at, last_viewed_at, view_count, created_at, share_token, share_token_enabled, declined_reason, declined_message, contract_id, invoice_id, couple:couple_id(id, name), proposal_options!proposal_options_proposal_id_fkey(id, subtotal, is_popular, position, title)',
+          'id, proposal_number, title, status, version, expires_at, email_sent_at, first_viewed_at, last_viewed_at, view_count, created_at, updated_at, share_token, share_token_enabled, declined_reason, declined_message, contract_id, invoice_id, template_id, couple:couple_id(id, name), proposal_options!proposal_options_proposal_id_fkey(id, subtotal, is_popular, position, title)',
         )
         .eq('id', id)
         .maybeSingle();

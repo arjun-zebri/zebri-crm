@@ -4,7 +4,7 @@
  * The small floating pill `InsertMediaHost` shows while an image/audio
  * upload it started is in flight, or once it has failed: anchored
  * bottom-centre of the canvas, the same `pointer-events-none` wrapper +
- * `pointer-events-auto` inner pattern `template-editor-body.tsx` uses for
+ * `pointer-events-auto` inner pattern `layout-editor-body.tsx` uses for
  * the section/node-bar overlay strip, so it never blocks a click on the
  * canvas beneath it except over its own pill.
  *

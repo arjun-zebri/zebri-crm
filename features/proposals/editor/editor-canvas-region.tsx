@@ -3,7 +3,7 @@
 /**
  * The canvas column under `EditorHeader`: the zoomable `CanvasFrame`
  * holding `SectionCanvas`, plus the text bar and insert-media host that
- * float over it. Split out of `template-editor-body.tsx` so that file
+ * float over it. Split out of `layout-editor-body.tsx` so that file
  * stays the orchestrator: state, shortcuts, autosave, rename, with the
  * actual region markup delegated here.
  *

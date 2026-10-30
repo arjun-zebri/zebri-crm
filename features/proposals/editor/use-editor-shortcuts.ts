@@ -6,7 +6,7 @@
  * through every mounted section editor's storage
  * (`extensions/proposal-editor-storage.ts`), so the in-editor keymap
  * extension (`extensions/history-keymap.ts`) has something to forward
- * to. `template-editor-body.tsx` calls this once, for the lifetime of
+ * to. `layout-editor-body.tsx` calls this once, for the lifetime of
  * the whole editor - not per section - which is also why it targets
  * every registered editor (`editor-registry.ts`) rather than just the
  * selected section's: any one of them can be the DOM-focused editor when
@@ -15,7 +15,7 @@
  * always reaches the one Text bar mounted for the selected section).
  *
  * Takes `textBarRef` directly (rather than a caller-built `openLink`
- * callback) so `template-editor-body.tsx` only has to create the ref and
+ * callback) so `layout-editor-body.tsx` only has to create the ref and
  * pass it two places (here, and to the mounted `TextBar`) - the
  * `.current?.openLink()` indirection lives in one place instead of at
  * every call site.
@@ -38,7 +38,7 @@ export interface UseEditorShortcutsOptions {
   undo: () => void
   /** `useLayoutEditor`'s `redo`. */
   redo: () => void
-  /** The ref `template-editor-body.tsx` passes to the mounted `TextBar`; `Mod-k` calls `.current?.openLink()` on it, a no-op while no Text bar is mounted (nothing selected, or a node rather than text). */
+  /** The ref `layout-editor-body.tsx` passes to the mounted `TextBar`; `Mod-k` calls `.current?.openLink()` on it, a no-op while no Text bar is mounted (nothing selected, or a node rather than text). */
   textBarRef: RefObject<TextBarHandle | null>
 }
 

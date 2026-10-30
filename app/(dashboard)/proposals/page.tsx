@@ -18,9 +18,11 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { ProposalBuilderModal } from '@/components/builders/proposal-builder-modal';
+import { SendProposalModal } from '@/components/builders/send-proposal-modal';
 
 import { proposalLayoutV2Enabled } from './flags';
 import { NewTemplateFlow } from './new-template-flow';
+import { ProposalDraftsStrip } from './proposal-drafts-strip';
 import { ProposalSettingsModal } from './proposal-settings-modal';
 import { ProposalTemplatesShortcut } from './proposal-templates-shortcut';
 import { ProposalsFrame } from './proposals-frame';
@@ -34,9 +36,10 @@ export default function ProposalsPage() {
   const [newOpen, setNewOpen] = useState(false);
   const [newTemplateOpen, setNewTemplateOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Only the aggregate counts (`ProposalsStatsRow`) are drawn from this -
-  // no per-proposal list on this page any more, see the module doc.
-  const { data, isLoading } = useProposals();
+  // The aggregate counts (`ProposalsStatsRow`) and the drafts strip are
+  // both drawn from this one query - still no per-proposal list on this
+  // page, see the module doc.
+  const { data, isLoading, error, refetch } = useProposals();
   const layoutV2 = proposalLayoutV2Enabled();
 
   return (
@@ -51,8 +54,27 @@ export default function ProposalsPage() {
           {...(layoutV2 ? { onOpenSettings: () => setSettingsOpen(true) } : {})}
         />
         {layoutV2 ? <ProposalsStatsRow stats={computeProposalStats(data ?? [])} loading={isLoading} /> : null}
+        {layoutV2 ? (
+          <ProposalDraftsStrip
+            rows={data ?? []}
+            loading={isLoading}
+            error={error}
+            onRetry={() => void refetch()}
+            onDeleted={() => void refetch()}
+          />
+        ) : null}
         {layoutV2 ? <ProposalTemplatesShortcut onNewTemplate={() => setNewTemplateOpen(true)} /> : null}
-        {newOpen ? (
+        {/* Layout v2: a proposal IS a copy of a template, so "New proposal"
+            is a send, not an authoring session (founder review 2026-09-22).
+            The old builder stays for accounts still on v1. */}
+        {newOpen && layoutV2 ? (
+          <SendProposalModal
+            isOpen
+            onClose={() => setNewOpen(false)}
+            onSent={(id) => router.push(`/proposals/${id}`)}
+          />
+        ) : null}
+        {newOpen && !layoutV2 ? (
           <ProposalBuilderModal
             proposalId={null}
             isOpen

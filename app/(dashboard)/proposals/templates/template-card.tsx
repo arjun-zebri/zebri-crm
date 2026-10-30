@@ -19,7 +19,7 @@
  *
  * @module app/(dashboard)/proposals/templates/template-card
  */
-import { Copy, Pencil, Settings, Star, Trash2 } from 'lucide-react';
+import { Copy, Pencil, Send, Settings, Star, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { type ReactNode, useState } from 'react';
 
@@ -36,6 +36,8 @@ export interface TemplateCardProps {
   branding: PublicBranding | null;
   /** Whether Delete is offered (false only for the account's last template; the default itself is deletable). */
   canDelete: boolean;
+  /** Opens the Send a proposal modal with this template preselected (the menu's first action). */
+  onSend: () => void;
   /** Opens the template in the editor (the menu's "Edit"; the thumbnail link covers the click case). */
   onEdit: () => void;
   onSetDefault: () => void;
@@ -52,6 +54,7 @@ export function TemplateCard({
   template,
   branding,
   canDelete,
+  onSend,
   onEdit,
   onSetDefault,
   onDuplicate,
@@ -65,7 +68,11 @@ export function TemplateCard({
   const [nowMs] = useState(() => Date.now());
 
   const icon = (Icon: typeof Pencil) => <Icon size={14} strokeWidth={1.5} aria-hidden="true" />;
+  // Send comes first: a template exists in order to be sent, and the
+  // founder asked for it from the card itself (2026-09-22, "you should be
+  // able to send ... by clicking ... on the proposal template card").
   const actions: RowAction[] = [
+    { label: 'Send to a couple', icon: icon(Send), onSelect: onSend },
     { label: 'Edit', icon: icon(Pencil), onSelect: onEdit },
     ...(template.isDefault ? [] : [{ label: 'Set as default', icon: icon(Star), onSelect: onSetDefault }]),
     { label: 'Duplicate', icon: icon(Copy), onSelect: onDuplicate },

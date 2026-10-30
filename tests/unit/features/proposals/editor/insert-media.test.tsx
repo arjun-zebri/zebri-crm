@@ -8,7 +8,7 @@
  * (which broke every autosave on the template, per Finding 2).
  *
  * Wires one `ContentSectionEditor` up to one `InsertMediaHost` the same
- * way `template-editor-body.tsx` does: a ref, not a shared context.
+ * way `layout-editor-body.tsx` does: a ref, not a shared context.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -36,7 +36,7 @@ const SAMPLE_THEME = defaultTheme(SAMPLE_BRANDING)
 const IMAGE_MIME = MEDIA_LIMITS.image.types[0]!
 const AUDIO_MIME = MEDIA_LIMITS.audio.types[0]!
 
-/** Mounts one section editor plus the insert-media host, wired together exactly as `template-editor-body.tsx` does; the provider is for the image chooser's library query. */
+/** Mounts one section editor plus the insert-media host, wired together exactly as `layout-editor-body.tsx` does; the provider is for the image chooser's library query. */
 function Harness({ sectionId }: { sectionId: string }) {
   const hostRef = useRef<InsertMediaHandle>(null)
   useInsertMedia({ hostRef })

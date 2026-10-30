@@ -20,6 +20,7 @@ import { sectionLabel } from '../model/section-labels'
 import { ANIMATION_SPEED_MS, resolveTheme } from '../model/theme'
 import { resolveProposalVariables } from '../model/variables'
 
+import type { PackageIdSource } from './package-ids'
 import { pageSurfaceStyle } from './page-surface'
 import type { RenderMode } from './rich-doc'
 import { SectionView, type SectionViewProps } from './section'
@@ -37,6 +38,8 @@ export interface ProposalLayoutViewProps {
   onAction?: ((action: ButtonAction) => void) | undefined
   /** Forwarded to a `packages` section - see `RenderPackages`'s doc comment. `false` from the template editor canvas, its Preview overlay and the thumbnail; omitted (`true`) on the real public page. */
   defaultSelection?: boolean | undefined
+  /** `'proposal'` on a real proposal's page: the package cards keep the layout's presentation but carry the proposal's own `proposal_options` ids, which is what the accept and close path works from. Defaults to `'layout'`, which every template surface wants. */
+  packageIds?: PackageIdSource | undefined
 }
 
 /** Everything `SectionView` takes from the layout, shared by every section. */
@@ -49,11 +52,11 @@ type SharedSectionProps = Omit<SectionViewProps, 'section' | 'index' | 'pageStar
  * root carries `data-flow` (the snap rule in `globals.css` keys off it)
  * and `--doc-anim-ms` (the reveal duration every section reads).
  */
-export function ProposalLayoutView({ layout, branding, doc, mode, proposal, onAction, defaultSelection }: ProposalLayoutViewProps) {
+export function ProposalLayoutView({ layout, branding, doc, mode, proposal, onAction, defaultSelection, packageIds }: ProposalLayoutViewProps) {
   const values = resolveProposalVariables(branding, doc)
   const theme = resolveTheme(layout, branding)
   const step = theme.flow === 'step' && mode === 'page'
-  const shared: SharedSectionProps = { branding, theme, doc, mode, values, proposal, onAction, defaultSelection }
+  const shared: SharedSectionProps = { branding, theme, doc, mode, values, proposal, onAction, defaultSelection, packageIds }
   // A page with nothing on it (a leading, trailing or doubled break) would
   // be a blank screen, so it is skipped here; the editor keeps it visible.
   const pages = step ? splitPages(layout.sections).filter((p) => p.sections.length > 0) : []

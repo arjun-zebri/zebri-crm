@@ -20,6 +20,7 @@ import {
   saveProposalAction,
 } from '@/app/(dashboard)/proposals/actions';
 import { PROPOSALS_QUERY_KEY } from '@/app/(dashboard)/proposals/use-proposals';
+import type { ProposalLayout } from '@/features/proposals';
 import { emptyForm } from '@/lib/proposals/form-factories';
 import { fromRow, toInput, type ProposalFormState, type ProposalRow } from '@/lib/proposals/form-mapping';
 import { createClient } from '@/lib/supabase/client';
@@ -145,5 +146,16 @@ export function useProposalForm(proposalId: string | null, initialCoupleId: stri
     },
   });
 
-  return { form, update, dirty, isLoading: !!proposalId && isLoading, save, send, remove, revert };
+  // A proposal created from a template carries its own Layout v2 design,
+  // and that design is where its packages are edited (the couple reads the
+  // card, the option rows follow it). This modal must not offer a second,
+  // conflicting packages editor for one of those, so it says so instead.
+  const hasLayout = !!loaded?.layout;
+  // The stored design itself, for the preview pane: the column is `Json`,
+  // and the renderer takes the parsed shape. A layout the schema would
+  // reject is a bug worth seeing as a broken preview rather than a crash,
+  // so the cast stays narrow and the render path tolerates it.
+  const layout = (loaded?.layout ?? null) as ProposalLayout | null;
+
+  return { form, update, dirty, isLoading: !!proposalId && isLoading, hasLayout, layout, save, send, remove, revert };
 }

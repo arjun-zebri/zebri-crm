@@ -19,6 +19,7 @@ import type { Section } from '../model/layout'
 import type { ProposalTheme } from '../model/theme'
 
 import { DataSectionView, type DataSectionSlots } from './data-section'
+import type { PackageIdSource } from './package-ids'
 import { RichDocView, type RenderMode } from './rich-doc'
 import { SectionBackdrop } from './section-backdrop'
 import { sectionCss } from './section-style'
@@ -39,12 +40,14 @@ export interface SectionViewProps {
   slots?: DataSectionSlots | undefined
   /** Forwarded to `DataSectionView` - see its own doc comment. */
   defaultSelection?: boolean | undefined
+  /** Forwarded to `DataSectionView` - see {@link PackageIdSource}. Defaults to `'layout'`. */
+  packageIds?: PackageIdSource | undefined
   /** Step flow: true for the first section on a page, which never carries the theme's section gap above it (the gap is between sections on a page, not between the page's top and its first section). */
   pageStart?: boolean | undefined
 }
 
 /** Renders one layout section: background, reveal, content column, and the content/data switch. */
-export function SectionView({ section, index, branding, theme, doc, mode, values, proposal, onAction, slots, defaultSelection, pageStart }: SectionViewProps) {
+export function SectionView({ section, index, branding, theme, doc, mode, values, proposal, onAction, slots, defaultSelection, packageIds, pageStart }: SectionViewProps) {
   const { section: sectionStyle, column, columnClass, justifyClass } = sectionCss(section.style, mode, theme)
   const { animation } = theme
   // Reveal only ever runs on the live page. `section` mode skips the
@@ -95,7 +98,7 @@ export function SectionView({ section, index, branding, theme, doc, mode, values
           <RichDocView doc={section.content} ctx={ctx} />
         ) : section.kind !== 'content' ? (
           <>
-            <DataSectionView section={section} branding={branding} doc={doc} mode={mode} proposal={proposal} values={values} slots={slots} defaultSelection={defaultSelection} />
+            <DataSectionView section={section} branding={branding} doc={doc} mode={mode} proposal={proposal} values={values} slots={slots} defaultSelection={defaultSelection} packageIds={packageIds} />
             {slots?.after}
           </>
         ) : null}

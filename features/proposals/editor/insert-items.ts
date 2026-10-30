@@ -13,7 +13,7 @@
  * has no UI to show. Those three only invoke the matching callback on
  * `editor.storage.proposalEditor.callbacks`
  * (`extensions/proposal-editor-storage.ts`) and do nothing if it is
- * unset; `use-insert-media.ts` (mounted once in `template-editor-body.tsx`)
+ * unset; `use-insert-media.ts` (mounted once in `layout-editor-body.tsx`)
  * registers them. Embed in particular never inserts a bare `url: null`
  * placeholder here - `extensions/embed.ts`'s `setEmbed` command refuses
  * any url `detectEmbedProvider` doesn't recognise, and an empty embed

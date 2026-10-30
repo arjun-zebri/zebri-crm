@@ -5,7 +5,7 @@
  * node's own DOM element on the canvas, instead of a fixed strip pinned to
  * the top of the canvas (UX audit §3.5/§6/§7.3: "bars on selection" means
  * the bar sits at the selection, not floating hundreds of pixels away from
- * the click that produced it - `template-editor-body.tsx`'s module doc has
+ * the click that produced it - `layout-editor-body.tsx`'s module doc has
  * the fuller history).
  *
  * The node's screen rect comes straight from `editor.view.nodeDOM(pos)`

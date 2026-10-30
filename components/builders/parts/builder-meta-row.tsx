@@ -15,7 +15,7 @@
 
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, Search, User } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { DatePicker } from '@/components/ui/date-picker';
 
@@ -49,6 +49,11 @@ export interface BuilderMetaRowProps {
    *  hidden on quotes. */
   paymentTerms?: PaymentTerms;
   onPaymentTermsChange?: (next: PaymentTerms) => void;
+  /** Optional control rendered between the couple picker and the date
+   *  field, for a document that needs one more choice in the same calm
+   *  row (the Send a proposal modal's template picker). Give it a width
+   *  and let it keep the shared 32px control height so the row lines up. */
+  extra?: ReactNode;
   /** Trailing date field. `dateLabel` is the empty-state placeholder
    *  (e.g. "Set expiry date"). `datePrefix` (optional) prepends to
    *  the formatted date when a value is set (e.g. "Expires 31 May
@@ -77,6 +82,7 @@ export function BuilderMetaRow({
   onSelectCouple,
   paymentTerms,
   onPaymentTermsChange,
+  extra,
   dateValue,
   dateLabel,
   datePrefix,
@@ -102,6 +108,9 @@ export function BuilderMetaRow({
           canEdit={canEdit}
         />
       ) : null}
+
+      {/* Caller's own control, e.g. the proposal template picker. */}
+      {extra}
 
       {/* Date — left icon so the trigger reads as a sibling of the
           couple picker / terms picker beside it. */}

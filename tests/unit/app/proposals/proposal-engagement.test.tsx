@@ -13,8 +13,9 @@ vi.mock('@/app/(dashboard)/proposals/use-proposal-events', () => ({
 const proposal: ProposalDetailRow = {
   id: 'p1', proposal_number: 'PR-001', title: 'Anna & Jake', status: 'viewed', version: 2,
   expires_at: null, email_sent_at: null, first_viewed_at: null, last_viewed_at: null,
-  view_count: 2, created_at: '2026-09-01T00:00:00Z', share_token: 'tok', share_token_enabled: true,
-  declined_reason: null, declined_message: null, contract_id: null, invoice_id: null,
+  view_count: 2, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z',
+  share_token: 'tok', share_token_enabled: true,
+  declined_reason: null, declined_message: null, contract_id: null, invoice_id: null, template_id: null,
   couple: { id: 'c1', name: 'Anna & Jake' },
   proposal_options: [{ id: 'opt1', subtotal: 1500, is_popular: true, position: 1, title: 'Full Day MC' }],
 };

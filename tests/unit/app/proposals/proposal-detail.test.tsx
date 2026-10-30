@@ -40,8 +40,9 @@ const proposal: ProposalDetailRow = {
   id: 'p1', proposal_number: 'PR-001', title: 'Anna & Jake', status: 'viewed', version: 2,
   expires_at: '2027-01-31', email_sent_at: '2026-09-01T00:00:00Z', first_viewed_at: '2026-09-02T00:00:00Z',
   last_viewed_at: '2026-09-03T00:00:00Z', view_count: 4, created_at: '2026-09-01T00:00:00Z',
+  updated_at: '2026-09-03T00:00:00Z',
   share_token: 'tok', share_token_enabled: true, declined_reason: null, declined_message: null,
-  contract_id: null, invoice_id: null, couple: { id: 'c1', name: 'Anna & Jake' },
+  contract_id: null, invoice_id: null, template_id: null, couple: { id: 'c1', name: 'Anna & Jake' },
   proposal_options: [{ id: 'opt1', subtotal: 1500, is_popular: true, position: 1, title: 'Full day' }],
 };
 
@@ -63,7 +64,23 @@ describe('ProposalDetail', () => {
     expect(screen.getByText('Viewed')).toBeInTheDocument();
     expect(screen.getByText(/Version 2/)).toBeInTheDocument();
     expect(screen.getByText(/4 views/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Edit/ })).toBeInTheDocument();
+    // "Details" opens the builder modal (couple, terms, options); the
+    // couple-facing design opens at /proposals/[id]/design and only exists
+    // once the proposal was created from a template.
+    expect(screen.getByRole('button', { name: /Details/ })).toBeInTheDocument();
+  });
+
+  it('offers "Edit design" only for a proposal created from a template', () => {
+    // The flag is read at call time from a NEXT_PUBLIC_* env var, so it has
+    // to be stubbed here: without it the design route 404s and the action
+    // must not be offered.
+    vi.stubEnv('NEXT_PUBLIC_PROPOSAL_LAYOUT_V2', '1');
+    const { unmount } = renderDetail();
+    expect(screen.queryByRole('link', { name: /Edit design/ })).toBeNull();
+    unmount();
+    renderDetail({ template_id: 'tpl-1' });
+    expect(screen.getByRole('link', { name: /Edit design/ })).toHaveAttribute('href', '/proposals/p1/design');
+    vi.unstubAllEnvs();
   });
 
   it('shows the decline note when declined', () => {

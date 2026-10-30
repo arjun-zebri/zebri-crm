@@ -23,6 +23,7 @@
 'use client';
 
 import { Check, CheckCheck, ExternalLink, Link2, Loader2, FileDown } from 'lucide-react';
+import { useId } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -50,6 +51,14 @@ export interface ShareAndSendProps {
   sending: boolean;
   /** Whether a coupleId is selected — required before sending. */
   hasCouple: boolean;
+  /**
+   * Short imperative reason Send is disabled, e.g. "Choose a couple first".
+   * Rendered beside the button on desktop and under it on mobile, and wired
+   * to the button via `aria-describedby`, only while Send is actually
+   * disabled. Callers that have no such concept (contracts, invoices) leave
+   * this unset; `hasCouple` alone keeps deciding `disabled`.
+   */
+  blockedReason?: string | null;
   /** Save without sending. */
   onSave: () => void;
   /** Send email to the couple. The share link is already live
@@ -101,6 +110,7 @@ export function ShareAndSend({
   saving,
   sending,
   hasCouple,
+  blockedReason = null,
   onSave,
   onSend,
   canMarkSent = false,
@@ -115,6 +125,12 @@ export function ShareAndSend({
   const sendLabel = lastSentAt ? 'Resend' : 'Send to couple';
   const isLive = shareEnabled && !!shareUrl;
   const perContact = !!signerLinks?.length;
+  const sendDisabled = !hasCouple || sending || saving || locked;
+  // Only worth showing once it's actually the reason the button won't
+  // click - a stale blockedReason from a parent that forgot to clear it
+  // must not outlive the condition that produced it.
+  const showBlockedReason = sendDisabled && !!blockedReason;
+  const blockedReasonId = useId();
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -252,14 +268,22 @@ export function ShareAndSend({
         >
           Save changes
         </Button>
-        <Button
-          variant="primary"
-          onClick={onSend}
-          disabled={!hasCouple || sending || saving || locked}
-          loading={sending}
-        >
-          {sendLabel}
-        </Button>
+        <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
+          {showBlockedReason ? (
+            <span id={blockedReasonId} className="text-body text-text-muted">
+              {blockedReason}
+            </span>
+          ) : null}
+          <Button
+            variant="primary"
+            onClick={onSend}
+            disabled={sendDisabled}
+            loading={sending}
+            aria-describedby={showBlockedReason ? blockedReasonId : undefined}
+          >
+            {sendLabel}
+          </Button>
+        </div>
       </div>
     </div>
   );

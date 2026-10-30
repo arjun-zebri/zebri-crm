@@ -49,6 +49,20 @@ describe('ShareAndSend', () => {
     expect(screen.getByRole('button', { name: 'Send to couple' })).toBeDisabled();
   });
 
+  it('shows the blocked reason next to Send when disabled, wired via aria-describedby', () => {
+    render(<ShareAndSend {...base()} hasCouple={false} blockedReason="Choose a couple first" />);
+    const reason = screen.getByText('Choose a couple first');
+    const button = screen.getByRole('button', { name: 'Send to couple' });
+    expect(reason).toBeInTheDocument();
+    expect(button).toHaveAttribute('aria-describedby', reason.id);
+  });
+
+  it('hides the blocked reason once Send is enabled, even if a caller forgets to clear it', () => {
+    render(<ShareAndSend {...base()} hasCouple blockedReason="Choose a couple first" />);
+    expect(screen.queryByText('Choose a couple first')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Send to couple' })).not.toHaveAttribute('aria-describedby');
+  });
+
   it('hides the share-status row when shareUrl is not available (e.g. brand-new draft)', () => {
     // Post-2026-05-27: share_token_enabled defaults to true on
     // insert, so the only time the left side is empty is when

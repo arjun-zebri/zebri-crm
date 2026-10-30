@@ -3,7 +3,8 @@
 /**
  * The grid of {@link TemplateCard}s plus everything a card's menu needs
  * behind it: the set default / duplicate / delete mutations, the
- * delete confirmation, and the per-template settings modal. Shared by the /templates hub's grid and the
+ * delete confirmation, the Send a proposal modal, and the per-template
+ * settings modal. Shared by the /templates hub's grid and the
  * cards on `/proposals` so both places offer the same menu; the list
  * itself (loading / error / empty) and the New template flow stay with
  * each host, which is why this takes `templates` rather than querying.
@@ -14,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
 
 import { ProposalSettingsModal } from '@/app/(dashboard)/proposals/proposal-settings-modal';
+import { SendProposalModal } from '@/components/builders/send-proposal-modal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { TemplateListItem } from '@/features/proposals';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
@@ -37,6 +39,9 @@ export function TemplateCards({ templates, overlay }: TemplateCardsProps) {
   // The id, not the item: the modal reads `settings` from the live list so
   // a save (which refetches) is reflected on the very next open.
   const [settingsId, setSettingsId] = useState<string | null>(null);
+  // Same id-not-item reasoning as `settingsId` above: the list is the one
+  // source of truth for a template's layout and settings.
+  const [sendId, setSendId] = useState<string | null>(null);
   const settingsTemplate = templates.find((t) => t.id === settingsId) ?? null;
   const { setDefault, duplicate, remove } = useTemplateMutations(
     // `create` is the host's (its New template flow), never fired from a card.
@@ -53,6 +58,7 @@ export function TemplateCards({ templates, overlay }: TemplateCardsProps) {
             template={t}
             branding={branding}
             canDelete={templates.length > 1}
+            onSend={() => setSendId(t.id)}
             onEdit={() => router.push(`/proposals/templates/${t.id}`)}
             onSetDefault={() => setDefault.mutate(t.id)}
             onDuplicate={() => duplicate.mutate(t.id)}
@@ -71,6 +77,9 @@ export function TemplateCards({ templates, overlay }: TemplateCardsProps) {
         onConfirm={() => pendingDelete && remove.mutate(pendingDelete.id)}
         onCancel={() => setPendingDelete(null)}
       />
+      {sendId ? (
+        <SendProposalModal isOpen initialTemplateId={sendId} onClose={() => setSendId(null)} />
+      ) : null}
       {settingsTemplate ? (
         <ProposalSettingsModal
           scope={{ kind: 'template', template: settingsTemplate }}

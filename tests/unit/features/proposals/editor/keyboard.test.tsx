@@ -55,7 +55,7 @@ interface HarnessState {
 
 /**
  * Mounts one content section's editor behind the real `useLayoutEditor` +
- * `useEditorShortcuts` wiring `template-editor-body.tsx` uses, minus the
+ * `useEditorShortcuts` wiring `layout-editor-body.tsx` uses, minus the
  * header/canvas chrome this test does not need. Renders `TextBarRow`
  * (not the `BubbleMenu`-wrapped `TextBar`) for the same reason
  * `text-bar.test.tsx` does: `Mod-k`'s effect is `TextBarHandle.openLink()`

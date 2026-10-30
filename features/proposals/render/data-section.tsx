@@ -11,6 +11,7 @@
 import type { ReactNode } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { logger } from '@/lib/alerts/logger'
 import { RenderAccept, type AcceptSlots } from '@/lib/branding/public-blocks/proposal/accept'
 import { RenderFaq, type FaqSlots } from '@/lib/branding/public-blocks/proposal/faq'
 import { RenderGallery, type GallerySlots } from '@/lib/branding/public-blocks/proposal/gallery'
@@ -19,10 +20,12 @@ import { RenderTestimonials, type TestimonialsSlots } from '@/lib/branding/publi
 import { RenderVideo, type VideoSlots } from '@/lib/branding/public-blocks/proposal/video'
 import type { ProposalSlotProps, PublicDocData } from '@/lib/branding/public-blocks/shared'
 import type { PublicBranding } from '@/lib/branding/public-branding'
+import type { PublicProposalOption } from '@/lib/proposals/public-types'
 
 import { DATA_TEXT_FIELDS, type Section } from '../model/layout'
 import { resolvePackageOptions, toPublicOption } from '../model/packages'
 
+import { withProposalOptionIds, type PackageIdSource } from './package-ids'
 import type { RenderMode } from './rich-doc'
 
 /**
@@ -78,9 +81,37 @@ export function toV1Block(section: Section): Block {
   return { id: section.id, type: section.kind, ...fields } as Block
 }
 
+/** Mismatches already shouted about (proposal + section + reason), so a component that re-renders on every package click does not write the same error a hundred times over one visit. */
+const reportedMismatches = new Set<string>()
+
+/**
+ * The packages a `packages` section renders: its own cards, re-idded from
+ * the proposal's `proposal_options` rows when the host asked for
+ * `packageIds: 'proposal'` (see {@link withProposalOptionIds}).
+ *
+ * `undefined` on a mismatch, which makes `RenderPackages` fall back to
+ * `doc.proposal.options` themselves: plainer cards, but ids the accept and
+ * close path can work from, and a couple who cannot accept is a lost
+ * booking. That is a real bug upstream, so it is logged, not absorbed.
+ */
+function packagesForSection(section: Section, doc: PublicDocData, packageIds: PackageIdSource | undefined): PublicProposalOption[] | undefined {
+  if (section.data?.kind !== 'packages') return undefined
+  const cards = resolvePackageOptions(section.data.packages).map(toPublicOption)
+  if (packageIds !== 'proposal') return cards
+  const mapped = withProposalOptionIds(cards, doc.proposal?.options)
+  if (mapped.ok) return mapped.options
+  const proposalNumber = doc.proposal?.proposalNumber ?? doc.refNumber
+  const key = `${proposalNumber}:${section.id}:${mapped.reason}`
+  if (!reportedMismatches.has(key)) {
+    reportedMismatches.add(key)
+    logger.error('proposal package cards do not line up with their option rows; rendering the rows instead', undefined, { proposalNumber, sectionId: section.id, reason: mapped.reason })
+  }
+  return undefined
+}
+
 /** Renders a v2 data section (`packages` / `accept` / `gallery` / `video` / `testimonials` / `faq`) through its v1 public component. */
 export function DataSectionView({
-  section, branding, doc, mode, proposal, values, slots, defaultSelection,
+  section, branding, doc, mode, proposal, values, slots, defaultSelection, packageIds,
 }: {
   section: Section
   branding: PublicBranding
@@ -92,6 +123,8 @@ export function DataSectionView({
   slots?: DataSectionSlots | undefined
   /** Forwarded to a `packages` section's `RenderPackages` - see its own doc comment. Every other kind ignores it. */
   defaultSelection?: boolean | undefined
+  /** Which ids a `packages` section's cards carry - see {@link PackageIdSource}. Defaults to `'layout'`. Every other kind ignores it. */
+  packageIds?: PackageIdSource | undefined
 }) {
   const block = toV1Block(section)
   // The v1 components take the old frame names; edit behaves like page here.
@@ -103,8 +136,9 @@ export function DataSectionView({
   // is a type error distinct from the prop being absent altogether.
   switch (block.type) {
     case 'packages': {
-      // The section's own packages (`model/packages.ts`, starters until it has any).
-      const options = section.data?.kind === 'packages' ? resolvePackageOptions(section.data.packages).map(toPublicOption) : undefined
+      // The section's own packages (`model/packages.ts`, starters until it
+      // has any), re-idded from the proposal's rows on a real proposal.
+      const options = packagesForSection(section, doc, packageIds)
       return <RenderPackages block={block} branding={branding} doc={doc} proposal={proposal} variableValues={values} options={options} defaultSelection={defaultSelection} {...(slots?.packages ? { slots: slots.packages } : {})} />
     }
     case 'accept': return <RenderAccept block={block} branding={branding} doc={doc} proposal={proposal} variableValues={values} {...(slots?.accept ? { slots: slots.accept } : {})} />

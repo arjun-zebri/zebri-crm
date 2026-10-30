@@ -1,5 +1,5 @@
 /**
- * The template editor's local draft: a `localStorage` mirror of the layout
+ * The layout editor's local draft: a `localStorage` mirror of the layout
  * being edited, so the browser holds a copy the moment a change is made
  * rather than only once the debounced autosave has landed. This is what
  * lets a refresh inside the autosave window, a failed save, or a closed
@@ -7,9 +7,10 @@
  * root cause) - the same local-first pattern Qwilr, Canva and Google Docs
  * rely on.
  *
- * Pure functions, no React: `use-template-autosave.ts` writes the draft on
- * every change and clears it once the server confirms, `template-editor.tsx`
- * reconciles it against the loaded row with {@link reconcileDraft}.
+ * Pure functions, no React: `use-layout-autosave.ts` writes the draft on
+ * every change and clears it once the server confirms, and each editor's
+ * load gate (`template-editor.tsx`, `proposal-editor.tsx`) reconciles it
+ * against the loaded row with {@link reconcileDraft}.
  *
  * Every read and write is wrapped: `localStorage` can be absent, full, or
  * throw (private mode, cleared site data), and the editor must keep
@@ -21,7 +22,14 @@
 import type { ProposalLayout } from '../model/layout'
 import { parseProposalLayout } from '../model/schema'
 
-/** What the browser keeps for one template between saves. */
+/**
+ * Which row a draft belongs to. A template and a proposal are separate
+ * tables with separate id spaces, and the editor mounts on either, so the
+ * kind has to be part of the storage key (see {@link draftKey}).
+ */
+export type LayoutTargetKind = 'template' | 'proposal'
+
+/** What the browser keeps for one template or proposal between saves. */
 export interface LocalDraft {
   /** The layout as last edited. */
   layout: ProposalLayout
@@ -34,13 +42,25 @@ export interface LocalDraft {
 const KEY_PREFIX = 'zebri:proposal-draft'
 
 /**
- * The storage key for one user's draft of one template. Scoped by user id
- * because `localStorage` outlives the session: `signOut()` clears the
- * auth cookies but not storage, so a browser-global key would hand one
- * account's draft to the next account that signs in on that machine.
+ * The storage key for one user's draft of one template or proposal.
+ *
+ * Scoped by user id because `localStorage` outlives the session:
+ * `signOut()` clears the auth cookies but not storage, so a browser-global
+ * key would hand one account's draft to the next account that signs in on
+ * that machine.
+ *
+ * Also scoped by `kind`, because a proposal created from a template is a
+ * different row in a different table that the same editor mounts on: two
+ * ids could in principle coincide, and reading a template's draft into a
+ * proposal (or the reverse) would autosave one document's content over the
+ * other's. `'template'` keeps the original, unprefixed key so a draft
+ * written before this argument existed is still found after the deploy;
+ * only the new `'proposal'` kind takes a segment of its own. That segment
+ * sits where a user id used to, and a user id is always a uuid, so the two
+ * shapes can never collide.
  */
-export function draftKey(userId: string, templateId: string): string {
-  return `${KEY_PREFIX}:${userId}:${templateId}`
+export function draftKey(userId: string, id: string, kind: LayoutTargetKind = 'template'): string {
+  return kind === 'template' ? `${KEY_PREFIX}:${userId}:${id}` : `${KEY_PREFIX}:${kind}:${userId}:${id}`
 }
 
 function storage(): Storage | null {

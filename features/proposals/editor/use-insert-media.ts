@@ -24,7 +24,7 @@ import type { InsertMediaHandle } from './insert-media-host'
 
 /** Options for {@link useInsertMedia}. */
 export interface UseInsertMediaOptions {
-  /** The ref `template-editor-body.tsx` passes to the mounted `InsertMediaHost`; a no-op while it has not mounted yet. */
+  /** The ref `layout-editor-body.tsx` passes to the mounted `InsertMediaHost`; a no-op while it has not mounted yet. */
   hostRef: RefObject<InsertMediaHandle | null>
 }
 

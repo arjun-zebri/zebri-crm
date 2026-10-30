@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Mounted once for the whole template editor (`template-editor-body.tsx`,
+ * Mounted once for the whole layout editor (`layout-editor-body.tsx`,
  * beside `useEditorShortcuts`), this is where "Image"/"Audio"/"Embed" in
  * the `/` slash menu and the text bar's `+` menu (`insert-items.ts`)
  * actually land: `use-insert-media.ts` wires this component's `open`
