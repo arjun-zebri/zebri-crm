@@ -7,7 +7,7 @@
  * step-results fallback path that lets later steps reference
  * earlier outputs.
  */
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { linkLabel, linkLabelForUrl, renderTemplate, VARIABLE_CATALOGUE } from '@/lib/automations/variables'
 import type { RunContext } from '@/types/automations'
@@ -205,5 +205,52 @@ describe('linkLabelForUrl', () => {
     expect(linkLabelForUrl('https://example.com/portal/tok')).toBeNull()
     expect(linkLabelForUrl('https://app.zebri.com.au/about')).toBeNull()
     expect(linkLabelForUrl('not a url')).toBeNull()
+  })
+})
+
+describe('proposal variables', () => {
+  const base = {
+    userId: 'u1', automationId: 'a', runId: 'r', instanceId: 'r', stepId: 's', coupleId: 'c1',
+    couple: null, invoice: null,
+    mc: { userId: 'u1', businessName: 'Acme MC', contactName: 'Charlie', email: 'c@acme.test', phone: null, brandColor: null, logoUrl: null, quietHoursStart: null, quietHoursEnd: null, quietHoursTimezone: 'Australia/Sydney' },
+    actionResults: {},
+  }
+  function withEvent(source_table: string, payload: Record<string, unknown>, actionResults = {}) {
+    return { ...base, actionResults, triggerEvent: { source_table, payload } as never } as unknown as RunContext
+  }
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://app.zebri.test'
+  })
+
+  it('builds the link from a lifecycle payload share token', () => {
+    const ctx = withEvent('proposals', { share_token: 'tok', proposal_number: 'PR-001', title: 'Wedding MC' })
+    expect(renderTemplate('{{proposal.link}}', ctx)).toBe('https://app.zebri.test/proposal/tok')
+    expect(renderTemplate('{{proposal.number}}', ctx)).toBe('PR-001')
+    expect(renderTemplate('{{proposal.title}}', ctx)).toBe('Wedding MC')
+  })
+
+  it("prefers a send_proposal step's output", () => {
+    const ctx = withEvent('proposals', { share_token: 'old' }, {
+      s1: { proposal_link: 'https://app.zebri.test/proposal/new', proposal_title: 'Fresh' },
+    })
+    expect(renderTemplate('{{proposal.link}}', ctx)).toBe('https://app.zebri.test/proposal/new')
+    expect(renderTemplate('{{proposal.title}}', ctx)).toBe('Fresh')
+  })
+
+  it('does not borrow a title from a non-proposal payload', () => {
+    const ctx = withEvent('contracts', { title: 'MC agreement', share_token: 'x' })
+    expect(renderTemplate('{{proposal.title}}', ctx)).toBe('')
+    expect(renderTemplate('{{proposal.link}}', ctx)).toBe('')
+  })
+
+  it('labels the link for email bodies', () => {
+    expect(linkLabel('proposal.link')).toBe('View your proposal')
+    expect(linkLabelForUrl('https://app.zebri.test/proposal/tok')).toBe('View your proposal')
+  })
+
+  it('lists the three variables in the catalogue', () => {
+    const tokens = VARIABLE_CATALOGUE.flatMap((g) => g.variables.map((v) => v.token))
+    expect(tokens).toEqual(expect.arrayContaining(['{{proposal.link}}', '{{proposal.number}}', '{{proposal.title}}']))
   })
 })

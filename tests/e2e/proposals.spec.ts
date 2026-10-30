@@ -104,4 +104,79 @@ test.describe('proposals', () => {
     await expect(visitor.getByRole('dialog')).toBeVisible()
     await context.close()
   })
+
+  /**
+   * Opt-in: needs `TEST_PROPOSAL_TOKEN` (a sent, unaccepted proposal owned
+   * by the e2e login user, with at least one option and a contract
+   * template, on the target DB) and `CRON_SECRET` (to drive the
+   * automations tick). Without either, the test skips.
+   *
+   * The run consumes the proposal: accepting it through the public flow
+   * stamps `accepted_at`, so the same token cannot be reused for a second
+   * run and needs reseeding before the next one.
+   */
+  test('accepting a proposal applies a "Proposal accepted" workflow', async ({ page, browser }) => {
+    // Four pages and a cron tick on a cold dev server: give it room.
+    test.setTimeout(120000)
+    test.skip(!process.env.TEST_PROPOSAL_TOKEN, 'needs a sent, unaccepted proposal token on the target DB')
+    test.skip(!process.env.CRON_SECRET, 'needs CRON_SECRET to drive the tick')
+
+    // 1. Build and activate the workflow as the MC.
+    await login(page)
+    const name = uniqueName('Proposal accepted')
+    await page.goto('/workflows?tab=templates', { waitUntil: 'domcontentloaded' })
+    // "New workflow" opens a menu; "Build it myself" lands on a blank canvas.
+    await page.getByRole('button', { name: /New workflow|Build your first workflow/ }).first().click()
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Build it myself' }).click()
+    await page.waitForURL(/\/workflows\/[0-9a-f-]{36}/, { timeout: 20000 })
+    const canvasUrl = page.url()
+    const nameInput = page.getByPlaceholder('Untitled workflow')
+    await nameInput.fill(name)
+    await Promise.all([
+      page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/workflows/')),
+      nameInput.blur(),
+    ])
+    await page.getByText('When does this start?').click()
+    const rules = page.getByRole('dialog', { name: 'When does this apply?' })
+    await rules.getByPlaceholder('Find a rule…').fill('Proposal accepted')
+    await Promise.all([
+      page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/workflows/')),
+      rules.getByRole('button', { name: /Proposal accepted/ }).first().click(),
+    ])
+    await page.getByRole('button', { name: 'Turn on' }).click()
+    await expect(page.getByRole('button', { name: 'Turn off' })).toBeVisible({ timeout: 10000 })
+
+    // 2. The couple, logged out, chooses a package and signs.
+    const context = await browser.newContext()
+    const visitor = await context.newPage()
+    await visitor.goto(`/proposal/${process.env.TEST_PROPOSAL_TOKEN}`)
+    const cards = visitor.locator('article[data-option-id]')
+    await cards.first().getByRole('button').first().click()
+    await visitor.getByRole('button', { name: 'Accept and sign' }).click()
+    // The confirm dialog opens on its Choose step; the sign form is the next one.
+    const confirm = visitor.getByRole('dialog')
+    await confirm.getByRole('button', { name: 'Continue to sign' }).click()
+    await visitor.getByLabel('Your full legal name').fill('Sam Test')
+    await visitor.getByLabel(/I agree to the terms above/).check()
+    await visitor.getByRole('button', { name: 'Sign and confirm' }).click()
+    // The pay step is optional; bank transfer skips it.
+    const payLater = visitor.getByRole('button', { name: 'Pay by bank transfer later' })
+    // isVisible() answers at once; waitFor() gives the signed contract time to land.
+    if (await payLater.waitFor({ state: 'visible', timeout: 15000 }).then(() => true, () => false)) {
+      await payLater.click()
+    }
+    await expect(visitor.getByText('Your date is confirmed')).toBeVisible({ timeout: 20000 })
+    await context.close()
+
+    // 3. One tick applies the workflow; the canvas's "Running on" drawer shows it.
+    const tick = await page.request.post('/api/cron/automations-tick', {
+      headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+    })
+    expect(tick.status()).toBe(200)
+    await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' })
+    await page.getByRole('button', { name: 'Running on' }).click()
+    await expect(page.getByText('Not applied yet')).toHaveCount(0, { timeout: 10000 })
+    await expect(page.getByRole('heading', { name: 'Applied to' })).toBeVisible()
+    await expect(page.locator('li').filter({ hasText: /Running|Finished/ }).first()).toBeVisible()
+  })
 })

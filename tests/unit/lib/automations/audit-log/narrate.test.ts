@@ -37,6 +37,14 @@ describe('narrateAuditEntry', () => {
     expect(n?.text).toMatch(/no recipients/i)
   })
 
+  it('narrates a sent proposal and its skip reasons', () => {
+    expect(narrateAuditEntry({ event: 'action_completed', actionType: 'send_proposal', actionLabel: null, details: {} }))
+      .toMatchObject({ tone: 'success', text: 'Sent proposal' })
+    const skipped = narrateAuditEntry({ event: 'action_completed', actionType: 'send_proposal', actionLabel: null, details: { skipped: 'no draft proposal' } })
+    expect(skipped).toMatchObject({ tone: 'warning' })
+    expect(skipped?.text).toMatch(/Proposal not sent.*no draft proposal/)
+  })
+
   it('names the destination stage for update_couple_stage', () => {
     const n = narrateAuditEntry({
       event: 'action_completed',

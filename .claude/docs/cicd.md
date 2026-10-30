@@ -391,6 +391,7 @@ run per day; an incoming request is not capped, which is why the tick can run ev
 | `zebri:automations-tick` | `/api/cron/automations-tick` | `* * * * *` | Advance due steps, time emitters (quarter hour only), dispatch, heartbeat |
 | `zebri:tick-watchdog` | (SQL only, `tick_watchdog()`) | `*/5 * * * *` | Posts to Slack through pg_net when the tick heartbeat is older than 5 minutes; independent of the app |
 | `zebri:expire-contracts` | `/api/cron/expire-contracts` | `0 22 * * *` | Sent contracts past `expires_at` become expired |
+| `zebri:expire-proposals` | `/api/cron/expire-proposals` | `10 22 * * *` | Sent/viewed proposals past `expires_at` become expired; the DB trigger emits `proposal_expired` |
 | `zebri:booking-reminders` | `/api/cron/booking-reminders` | `30 22 * * *` | Scheduler booking reminders |
 | `zebri:prune-stripe-events` | `/api/cron/prune-stripe-events` | `0 3 * * *` | Archived Stripe events older than 90 days |
 | `zebri:workflow-digest` | `/api/cron/workflow-digest` | `0 * * * *` | Morning digest at each MC's local 7am; tick heartbeat check |

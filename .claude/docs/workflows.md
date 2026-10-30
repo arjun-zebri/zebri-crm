@@ -302,6 +302,61 @@ schema has no backing data. `.claude/docs/automations.md` (retired)
 still describes the pre-sweep, unenforced version of this filter;
 this doc wins where the two disagree.
 
+### Proposals (R2)
+
+Six triggers, all `category: 'proposal'`, specced in
+`lib/automations/triggers/proposals.ts` and spread into the registry:
+`proposal_sent`, `proposal_opened`, `proposal_accepted`,
+`proposal_declined`, `proposal_expired` and `proposal_expiring`.
+
+The five lifecycle triggers are emitted by one DB trigger,
+`tg_proposals_emit_lifecycle` (`AFTER UPDATE` on `proposals`, migration
+`20261002000000_proposal_lifecycle_events.sql`): `proposal_sent` when
+`share_token_enabled` flips true, `proposal_opened` when
+`first_viewed_at` is first stamped, `proposal_accepted` when
+`accepted_at` is first stamped, `proposal_declined` when `declined_at`
+is first stamped, `proposal_expired` when `status` becomes `expired`.
+Every payload carries `proposal_id`, `couple_id`, `proposal_number`,
+`title`, `share_token` and `event_date`; `proposal_sent` and
+`proposal_expired` add `expires_at`, `proposal_accepted` adds
+`accepted_option_id`, `option_title` and `total`, `proposal_declined`
+adds `declined_reason` and `declined_message`.
+
+`proposal_expiring` is tick-emitted by `proposalExpiringEmitter`
+(`lib/automations/time-emitters/proposal-expiring.ts`): a `sent` or
+`viewed` proposal with no `accepted_at` whose `expires_at` is exactly
+`days` away, deduped per proposal per lead time per UTC day. Its
+payload adds `days_until_expiry` to the same base fields plus
+`expires_at`. The lead time is a chip on the trigger's config,
+`days` (`z.number().int().min(0).max(60).default(3)`); the trigger's
+`match()` only fires for the event whose `days_until_expiry` equals its
+own configured `days`, the same way `invoice_due` narrows.
+
+The `send_proposal` action (`lib/automations/actions/proposals.ts`)
+sends a proposal that is a **draft, or `sent` but never emailed**
+(`email_sent_at` null: the link went live but the email failed before
+it was stamped, so a retry of the errored step can finish the send).
+Any other proposal the couple already has (emailed, viewed, accepted,
+declined, expired) is treated the same as no proposal found; L8 holds
+because `email_sent_at` is the proof the couple has it. It picks the
+proposal in order: an explicit `config.proposalId` → the triggering
+event's `payload.proposal_id` → a prior action's output `proposal_id`
+(for R3's `create_proposal`) → the couple's most recent sendable row
+(same draft-or-unmailed rule). It skips with one of three run-log
+reasons: `no draft proposal` (also covers a non-sendable pick and a
+couple mismatch), `no contract template`, `no primary email`. A successful send shares `lib/proposals/send.ts` with
+the manual `/api/email/send-proposal` route and outputs `proposal_id`,
+`proposal_link`, `proposal_number`, `proposal_title`.
+
+`{{proposal.link}}` (label "View your proposal"), `{{proposal.number}}`
+and `{{proposal.title}}` resolve in `lib/automations/variables.ts` in
+this order: a stamped `proposal_<key>` on the trigger payload first
+(previews stuff these), then the same key on any prior action's output
+(a `send_proposal` step's `proposal_link`), then the lifecycle
+payload's own `share_token` / `title` for an event the proposal trigger
+emitted; the link is built from `share_token` at render time since
+Postgres cannot know the app's runtime origin.
+
 ## Surfaces
 
 | Route | What it is |
@@ -448,7 +503,7 @@ Once the lease is held, each tick:
    only.
 3. `runTimeEmitters`, **on the quarter hour only**: compute what should
    fire now for triggers with no source-row change (`invoice_due`,
-   `step_overdue`, …). Every emitter is day-granular, so 96 runs a day
+   `step_overdue`, `proposal_expiring`, …). Every emitter is day-granular, so 96 runs a day
    is already generous and the other 56 ticks an hour stay cheap. The
    pass gets a 10-second slice of its own (`EMITTERS_BUDGET_MS`),
    measured from when it starts rather than from the top of the tick,

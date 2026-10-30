@@ -171,6 +171,7 @@ export const MODAL_ACTIONS: ReadonlySet<string> = new Set([
   // couple receives.
   'send_contract',
   'send_invoice',
+  'send_proposal',
 ])
 
 
@@ -945,12 +946,18 @@ export function ActionFields({
     case 'create_reminder':
       return <CalendarEntryForm config={config} updateConfig={updateInner} />
     case 'send_contract':
-    case 'send_invoice': {
-      const kind = actionType === 'send_contract' ? 'contract' : 'invoice'
+    case 'send_invoice':
+    case 'send_proposal': {
+      const kind =
+        actionType === 'send_contract' ? 'contract' : actionType === 'send_invoice' ? 'invoice' : 'proposal'
       return modal ? (
         <DocumentComposerModal isOpen={modal.open} onClose={modal.onClose} kind={kind} />
       ) : (
-        <Hint>This action sends the most recent {kind} for the triggering couple.</Hint>
+        <Hint>
+          {kind === 'proposal'
+            ? 'This action sends the most recent draft proposal for the triggering couple.'
+            : `This action sends the most recent ${kind} for the triggering couple.`}
+        </Hint>
       )
     }
     case 'trigger_payment_reminder':

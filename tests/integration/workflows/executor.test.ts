@@ -91,6 +91,32 @@ describe('advanceDueSteps / completeStep', () => {
     expect(couple!.status).toBe('Booked');
   });
 
+  it('narrates an action that found nothing to send as skipped, not done', async () => {
+    // send_proposal with no draft on the couple completes with
+    // `{ skipped: 'no draft proposal' }`. The step is done for timing, but
+    // the couple's feed must say what did not happen (R2 live check).
+    const { instanceId } = await scenario('Executor Skip Narration');
+    const stepId = await addStep(instanceId, {
+      type: 'action',
+      title: 'Send proposal',
+      config: { actionType: 'send_proposal' },
+      due_at: PAST,
+    });
+
+    await advanceDueSteps(admin);
+
+    const row = await step(stepId);
+    expect(row.status).toBe('done');
+    expect(row.output).toEqual({ skipped: 'no draft proposal' });
+    const { data: audit } = await admin
+      .from('workflow_audit_log').select('event, detail').eq('step_id', stepId);
+    const events = audit!.map((a) => a.event);
+    expect(events).toContain('step_skipped');
+    expect(events).not.toContain('step_completed');
+    const skipped = audit!.find((a) => a.event === 'step_skipped');
+    expect((skipped!.detail as Record<string, unknown>).reason).toBe('no draft proposal');
+  });
+
   it('runs steps of one instance in position order when they fall due together', async () => {
     // Two steps of one workflow can share a due instant (a template
     // applied with zero offsets). Without a position tiebreak the second

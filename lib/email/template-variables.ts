@@ -94,6 +94,9 @@ export function buildSampleContext(opts: SampleContextOptions = {}): RunContext 
         invoice_total: '2500',
         contract_link: 'https://app.zebri.com.au/c/sample',
         contract_number: 'CTR-001',
+        proposal_link: 'https://app.zebri.com.au/proposal/sample',
+        proposal_number: 'PR-001',
+        proposal_title: 'Wedding MC proposal',
         // Questionnaire namespace: stamped directly (like the other link
         // namespaces) so the sample link doesn't depend on
         // NEXT_PUBLIC_APP_URL — previewing localhost URLs looked broken.

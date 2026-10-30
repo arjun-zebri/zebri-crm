@@ -75,6 +75,7 @@ const COMPLETED_PHRASE: Partial<Record<ActionType, string>> = {
   send_sms: 'Sent SMS',
   send_invoice: 'Sent invoice',
   send_contract: 'Sent contract',
+  send_proposal: 'Sent proposal',
   send_portal_link: 'Sent portal link',
   request_information: 'Requested information',
   send_pre_event_checklist: 'Sent pre-event checklist',
@@ -99,6 +100,7 @@ const ACTION_NOUN: Partial<Record<ActionType, string>> = {
   send_sms: 'SMS',
   send_invoice: 'Invoice',
   send_contract: 'Contract',
+  send_proposal: 'Proposal',
   send_portal_link: 'Portal link',
 }
 

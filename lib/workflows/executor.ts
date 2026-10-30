@@ -1039,13 +1039,22 @@ async function runOneStep(
           await endRestOfInstance(supabase, instance, step.id, { site: 'executor.end_workflow' });
         }
 
+        // A document action that found nothing to send (no draft proposal,
+        // no primary email) completes with `{ skipped: reason }`. The step
+        // is still done for timing purposes, but the couple's feed should
+        // say what did not happen rather than "Done".
+        const output =
+          result.output && typeof result.output === 'object' && !Array.isArray(result.output)
+            ? (result.output as Record<string, Json | undefined>)
+            : null;
+        const skipReason = typeof output?.['skipped'] === 'string' ? output['skipped'] : null;
         await writeAudit(supabase, {
           userId: instance.user_id,
           instanceId: instance.id,
           stepId: step.id,
           coupleId: instance.couple_id,
-          event: 'step_completed',
-          detail: (result.output ?? {}) as Json,
+          event: skipReason ? 'step_skipped' : 'step_completed',
+          detail: (skipReason && output ? { ...output, reason: skipReason } : (result.output ?? {})) as Json,
         });
         await recomputeInstance(supabase, instance);
       });

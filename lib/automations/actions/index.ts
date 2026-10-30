@@ -27,6 +27,7 @@ import { documentActions } from './documents'
 import { extendedActions } from './extended'
 import { messagingActions } from './messaging'
 import { postEventActions } from './post-event'
+import { proposalActions } from './proposals'
 import { questionnaireActions } from './questionnaire'
 import { taskActions } from './task'
 import { timelineActions } from './timeline'
@@ -51,6 +52,7 @@ export const actionRegistry: Partial<Record<ActionType, ActionSpec<any>>> = {
   ...coupleActions,
   ...taskActions,
   ...documentActions,
+  ...proposalActions,
   ...questionnaireActions,
   ...timelineActions,
   ...postEventActions,

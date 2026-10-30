@@ -75,6 +75,7 @@ describe('pg_cron scheduler migration', () => {
       'zebri:booking-reminders|30 22 * * *',
       'zebri:cron-history-prune|0 4 * * *',
       'zebri:expire-contracts|0 22 * * *',
+      'zebri:expire-proposals|10 22 * * *',
       'zebri:prune-stripe-events|0 3 * * *',
       'zebri:tick-watchdog|*/5 * * * *',
       'zebri:workflow-digest|0 * * * *',

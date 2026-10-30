@@ -69,6 +69,15 @@ export type TriggerType =
   | 'contract_revoked'
   | 'contract_expired'
   | 'document_signed' // alias of contract_signed for picker UX
+  // Proposals. The five lifecycle events are emitted by one DB trigger on
+  // `proposals` (roadmap R2, decision L6); `proposal_expiring` is emitted
+  // by the tick from `expires_at` and a configured lead time.
+  | 'proposal_sent'
+  | 'proposal_opened'
+  | 'proposal_accepted'
+  | 'proposal_declined'
+  | 'proposal_expired'
+  | 'proposal_expiring' // emitted by the tick
   // Events (the event / rehearsal / reception rows under a couple)
   | 'event_created'
   | 'event_updated'
@@ -200,6 +209,7 @@ export type ActionType =
   // Payments
   | 'send_contract'
   | 'send_invoice'
+  | 'send_proposal'
   // Couple questionnaires
   | 'send_couple_questionnaire'
   | 'trigger_payment_reminder'
@@ -788,6 +798,7 @@ export const TRIGGER_CATEGORIES = [
   { slug: 'pipeline', label: 'Pipeline' },
   { slug: 'payment', label: 'Quotes, invoices & payments' },
   { slug: 'contract', label: 'Contracts' },
+  { slug: 'proposal', label: 'Proposals' },
   { slug: 'calendar', label: 'Calendar & events' },
   { slug: 'consultation', label: 'Consultations' },
   { slug: 'portal', label: 'Client portal' },

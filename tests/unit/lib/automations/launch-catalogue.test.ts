@@ -23,7 +23,7 @@ import {
 import { triggerRegistry } from '@/lib/automations/triggers'
 
 describe('launch catalogue — triggers', () => {
-  it('lists exactly the 29 triggers that fire today', () => {
+  it('lists exactly the 35 triggers that fire today', () => {
     // 28 from the launch review + questionnaire_completed (P4 — emitted by
     // the couple_questionnaires completion DB trigger) + consultation_booked,
     // booking_cancelled (consultation lifecycle from Phase D DB trigger and RPC),
@@ -31,8 +31,10 @@ describe('launch catalogue — triggers', () => {
     // duplicates folded into "Portal item added", minus the three task_*
     // triggers retired at the Workflows cutover, plus step_overdue and
     // package_applied which replaced them, plus workflow_completed
-    // (workflow chaining, emitted by the executor's completion check).
-    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(29)
+    // (workflow chaining, emitted by the executor's completion check),
+    // plus the six R2 proposal triggers (five DB-trigger lifecycle events
+    // plus the tick-emitted proposal_expiring).
+    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(35)
   })
 
   it('hides the task triggers Workflows retired, without deregistering them', () => {
@@ -128,7 +130,7 @@ describe('launch catalogue — triggers', () => {
 })
 
 describe('launch catalogue — actions', () => {
-  it('lists exactly the 14 actions offered today', () => {
+  it('lists exactly the 15 actions offered today', () => {
     // 21 from the launch review, + send_couple_questionnaire (the
     // couple-questionnaires feature added it), - trigger_payment_
     // reminder and the two folded run-sheet steps, -
@@ -145,8 +147,9 @@ describe('launch catalogue — actions', () => {
     // create_task spawns a to-do that gates nothing. Two things called
     // "to-do" behaving in opposite ways is a trap, so only the gating
     // one is offered. Plus start_workflow (workflow chaining): moves the
-    // couple on to another workflow.
-    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(14)
+    // couple on to another workflow. Plus send_proposal (R2): sends the
+    // couple's most recent draft proposal.
+    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(15)
     for (const retired of [
       'pause_couple_automations',
       'update_task',
