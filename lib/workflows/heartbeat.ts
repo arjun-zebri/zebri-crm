@@ -38,12 +38,13 @@ export const STALE_EVENTS_HEARTBEAT = 'workflow-stale-events'
 export const STALE_EVENT_MS = 24 * 60 * 60 * 1000
 
 /**
- * Five missed one-minute ticks. One missed tick is pg_net timing out on a
- * slow route; five in a row is the scheduler not reaching the app. The
+ * The tick calls the app only when there is work, and always on the
+ * quarter hour (`automations_tick_due()`), so a healthy heartbeat can be
+ * 15 minutes old. 25 leaves room for one failed call. The
  * same window the pg_cron watchdog uses (`tick_watchdog()`), so the Admin
  * card, the digest and Slack agree on what "stale" means.
  */
-export const TICK_STALE_MS = 5 * 60_000
+export const TICK_STALE_MS = 25 * 60_000
 
 /** Upsert `name`'s row with the current instant. Service-role client only. */
 export async function recordHeartbeat(

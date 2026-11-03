@@ -381,13 +381,15 @@ Scheduling lives in Postgres, not Vercel. `supabase/migrations/20261001000000_pg
 registers one pg_cron job per route; each job runs `public.cron_call('<path>')`, which POSTs to
 `<app_base_url><path>` through pg_net with `Authorization: Bearer <cron_secret>`. The routes and
 `isCronAuthorized` are unchanged from the Vercel era. Vercel Hobby caps its own scheduler at one
-run per day; an incoming request is not capped, which is why the tick can run every minute
-(`20261001200000_tick_every_minute.sql` moved it from every 15 minutes).
+run per day; an incoming request is not capped. The tick ran every minute from 22 Sep 2026
+(`20261001200000_tick_every_minute.sql`), which used ~3h a month of Hobby's 4h Fluid Active CPU,
+so `20261103000000_tick_only_when_due.sql` runs its slot every five minutes and calls the app only
+when `automations_tick_due()` sees work, and always on the quarter hour for the time emitters.
 
 | Job | Route | Schedule (UTC) | Purpose |
 |---|---|---|---|
-| `zebri:automations-tick` | `/api/cron/automations-tick` | `* * * * *` | Advance due steps, time emitters (quarter hour only), dispatch, heartbeat |
-| `zebri:tick-watchdog` | (SQL only, `tick_watchdog()`) | `*/5 * * * *` | Posts to Slack through pg_net when the tick heartbeat is older than 5 minutes; independent of the app |
+| `zebri:automations-tick` | `/api/cron/automations-tick` | `*/5 * * * *`, calls only when `automations_tick_due()` (always on the quarter hour) | Advance due steps, time emitters (quarter hour only), dispatch, heartbeat |
+| `zebri:tick-watchdog` | (SQL only, `tick_watchdog()`) | `*/5 * * * *` | Posts to Slack through pg_net when the tick heartbeat is older than 25 minutes; independent of the app |
 | `zebri:expire-contracts` | `/api/cron/expire-contracts` | `0 22 * * *` | Sent contracts past `expires_at` become expired |
 | `zebri:booking-reminders` | `/api/cron/booking-reminders` | `30 22 * * *` | Scheduler booking reminders |
 | `zebri:prune-stripe-events` | `/api/cron/prune-stripe-events` | `0 3 * * *` | Archived Stripe events older than 90 days |
@@ -417,7 +419,8 @@ stored webhook alone.
    the base URL, every job with its last run, and the tick heartbeat.
 
 **Health.** The tick stamps `system_heartbeats.automations-tick` after every run. Two independent
-watchers read it, both on the same 5-minute window (`TICK_STALE_MS`):
+watchers read it, both on the same 25-minute window (`TICK_STALE_MS`; the tick always runs on the
+quarter hour, so 25 is one missed call):
 
 - `tick_watchdog()` in Postgres, every 5 minutes. Posts straight to the Slack webhook through
   pg_net, so it still fires when the deployment itself is what broke (wrong base URL, missing
