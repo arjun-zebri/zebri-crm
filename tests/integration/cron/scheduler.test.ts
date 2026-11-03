@@ -71,7 +71,7 @@ describe('pg_cron scheduler migration', () => {
   it('registers every route as a zebri: job with the spec schedule', () => {
     const rows = runSql(`select jobname, schedule from cron.job where jobname like 'zebri:%' order by jobname`)
     expect(rows.split('\n')).toEqual([
-      'zebri:automations-tick|* * * * *',
+      'zebri:automations-tick|*/5 * * * *',
       'zebri:booking-reminders|30 22 * * *',
       'zebri:cron-history-prune|0 4 * * *',
       'zebri:expire-contracts|0 22 * * *',
@@ -79,6 +79,13 @@ describe('pg_cron scheduler migration', () => {
       'zebri:tick-watchdog|*/5 * * * *',
       'zebri:workflow-digest|0 * * * *',
     ])
+  })
+
+  it('only calls the tick route when automations_tick_due() says there is work', () => {
+    const command = runSql(`select command from cron.job where jobname = 'zebri:automations-tick'`)
+    expect(command).toBe(
+      "select public.cron_call('/api/cron/automations-tick') where public.automations_tick_due()",
+    )
   })
 
   it('unschedules the legacy feature/video-meetings job names', () => {
@@ -195,9 +202,20 @@ describe('pg_cron scheduler migration', () => {
       expect(await watchdogState()).toBeNull()
     })
 
+    it('stays quiet while the tick is inside its 25-minute window', async () => {
+      // The tick only calls the app when there is work and on the quarter
+      // hour, so a 20-minute-old heartbeat is one late call, not an outage.
+      useLoopbackWebhook()
+      await setTick(20 * 60_000)
+      const { data, error } = await admin.rpc('tick_watchdog')
+      expect(error).toBeNull()
+      expect(data).toBeNull()
+      expect((await watchdogState())?.open ?? false).toBe(false)
+    })
+
     it('posts once when the tick is stale, then holds for an hour', async () => {
       useLoopbackWebhook()
-      await setTick(6 * 60_000)
+      await setTick(26 * 60_000)
 
       const first = await admin.rpc('tick_watchdog')
       expect(first.error).toBeNull()

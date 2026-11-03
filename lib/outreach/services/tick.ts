@@ -6,8 +6,9 @@
  * {@link OUTREACH_BUDGET_MS}) and every pass is isolated, so an outreach
  * failure can neither starve nor break the workflow engine.
  *
- * The tick cadence is not fixed: production runs it every minute, and the
- * cron migration schedules it every fifteen. Nothing here counts ticks or
+ * The tick cadence is not fixed: it runs every quarter hour, and every five
+ * minutes in between when `automations_tick_due()` sees work (including an
+ * outreach email due or a check run in progress). Nothing here counts ticks or
  * assumes a minute of the hour. Each pass decides from its own timestamp:
  * - poll: self-throttled to every {@link POLL_INTERVAL_MS} (poll.ts)
  * - send, checks, repair: every tick; each claims a small batch, so a

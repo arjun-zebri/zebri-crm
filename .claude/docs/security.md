@@ -734,6 +734,7 @@ Two RPCs for the `/api/cron/booking-reminders` endpoint. Service-role only: clie
 
 Three functions in `20261001000000_pg_cron_scheduler.sql`, all `security definer`, `set search_path = public`, and all revoked from public/anon/authenticated; service_role keeps the default grant:
 
+- **`automations_tick_due(p_at)`**: security definer so pg_cron can read the work queues across every tenant; returns only a boolean, and execute is revoked from public, anon and authenticated, so no client can probe another business's queue through it (integration test in `tests/integration/cron/tick-due.test.ts`).
 - **`cron_call(p_path text)`**: reads the Vault-stored `app_base_url` and `cron_secret`, then POSTs to `<app_base_url><path>` via pg_net. Never exposes the secret: it is read into a local variable and used only as an outbound header, never returned.
 - **`set_scheduler_secrets(p_base_url, p_secret)`**: upserts the two Vault secrets. Called only from the Admin "Sync scheduler" server action, which supplies the app's own `NEXT_PUBLIC_APP_URL` and `CRON_SECRET`.
 - **`scheduler_status()`**: returns `{ configured, base_url, jobs[], heartbeats{} }` for the Admin Scheduler card. Returns the base URL only, never the secret.
