@@ -1,14 +1,16 @@
 /**
  * Cron route: tick the workflows engine once.
  *
- * pg_cron calls this every minute (`zebri:automations-tick`, rescheduled
- * in `supabase/migrations/20261001200000_tick_every_minute.sql`). It runs
+ * pg_cron considers calling this every five minutes
+ * (`zebri:automations-tick`, `20261103000000_tick_only_when_due.sql`):
+ * it calls on the quarter hour, and in between only when
+ * `automations_tick_due()` sees work waiting. It runs
  * inside a Vercel function with a hard duration limit, so the passes
  * share one 45-second budget, but not equally: the executor goes first
  * with a slice of its own, because a due step is what an MC is waiting
  * on ("wait 15 minutes, then send") and nothing else in the tick may
  * starve it. Whatever a pass does not reach stays where it is (steps
- * due, events unprocessed) and the next tick takes it a minute later,
+ * due, events unprocessed) and the next tick takes it within five minutes,
  * oldest first. A tick that keeps truncating is a capacity signal, which
  * is why the response and the heartbeat both record it.
  *
@@ -132,7 +134,7 @@ const LEASE_NAME = 'automations-tick'
  *
  * Twice {@link TICK_BUDGET_MS}, so it always outlasts a healthy tick and
  * only ever expires for a run that died. It is deliberately longer than
- * the one-minute schedule interval, which is exactly why a finished tick
+ * the five-minute schedule interval, which is exactly why a finished tick
  * must release rather than leave it to expire.
  */
 const LEASE_TTL_SECONDS = 120

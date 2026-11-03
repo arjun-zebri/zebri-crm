@@ -374,16 +374,25 @@ sweep; adding one is a single `scheduleKick(user.id)`.
 
 `app/api/cron/automations-tick/route.ts` keeps its path (it is named in
 the scheduler migration; renaming a live cron endpoint is a needless
-outage risk). pg_cron calls it **every minute**
-(`20261001200000_tick_every_minute.sql`; it was every 15 minutes until
-2026-09-22, when "wait 15 minutes, then send" was observed landing 30 to
-45 minutes late in production). It stays the sweeper: it owns the
+outage risk). pg_cron runs its slot **every five minutes** and calls it
+on the quarter hour always, and in between only when
+`automations_tick_due()` sees work waiting: an unprocessed bus event, an
+automated step due on an active instance, an outreach email due or
+mid-send, or an outreach check run in progress
+(`20261103000000_tick_only_when_due.sql`). History: every 15 minutes
+until 2026-09-22, then every minute (`20261001200000_tick_every_minute.sql`)
+after "wait 15 minutes, then send" landed 30 to 45 minutes late; that
+minute call was ~3h a month of Vercel Hobby's 4h Fluid Active CPU, almost
+all of it finding nothing to do, so Nov 2026 moved to five minutes with
+the check. The step type list inside `automations_tick_due()` must match
+`AUTOMATED_STEP_TYPES` (`tests/unit/supabase/tick-due-step-types.test.ts`).
+It stays the sweeper: it owns the
 time-based emitters, catches every event whose emitter does not kick,
 and re-tries anything a kick dropped. The passes share one 45-second
 deadline (`TICK_BUDGET_MS`), but the executor runs first on a 30-second
 slice of its own (`EXECUTOR_BUDGET_MS`): a due step is what an MC is
 waiting on, and nothing else in the tick may starve it. Work not reached
-is left exactly where it was and the next tick takes it a minute later,
+is left exactly where it was and the next tick takes it within five minutes,
 oldest first. The response and the `automations-tick` heartbeat both
 carry `truncated` plus the pass counts (`stepsExecuted`,
 `processedEvents`, `staleEvents`), so a tick that keeps running out of
@@ -395,8 +404,8 @@ not read is never recorded as a clean one that found nothing to do. See
 
 **The tick takes a lease before it does anything else**
 (`acquire_scheduler_lease`, `supabase/migrations/20261003200000_scheduler_lease.sql`).
-pg_cron fires every minute, but a run can take up to the 45-second
-budget, so without a lease a slow run and the next minute's run would
+pg_cron fires every five minutes, but a run can take up to the 45-second
+budget, so without a lease a slow run and a manual or overlapping run would
 both work the same due steps at once. A row with an expiry stands in
 for a session advisory lock because pooled connections do not keep a
 session for a lock to live on. A tick that does not get the lease
@@ -921,9 +930,10 @@ A personal instance, an ad-hoc apply, or a template with
 `allow_reapply` set all get a null key on purpose: those enrolments
 are legitimately allowed to repeat.
 
-Two watchers read the heartbeat (`TICK_STALE_MS`, 5 minutes):
-`tick_watchdog()` in Postgres posts to Slack through pg_net every 5
-minutes the tick is down (hourly dedupe, one "back" post on recovery)
+Two watchers read the heartbeat (`TICK_STALE_MS`, 25 minutes: the tick
+always runs on the quarter hour, so 25 is one missed call):
+`tick_watchdog()` in Postgres checks every 5 minutes and posts to Slack
+through pg_net while the tick is down (hourly dedupe, one "back" post on recovery)
 and keeps working when the app itself is unreachable; the hourly digest
 raises `cron_job_missed` through `sendAlert()`. Details in
 `.claude/docs/cicd.md` "Health".
@@ -2029,7 +2039,7 @@ be, so every timezone gets its own real 7am instead of the shared UTC
 window the old daily run needed.
 
 The hourly run also checks the tick's health: when
-`system_heartbeats.automations-tick` is older than 5 minutes
+`system_heartbeats.automations-tick` is older than 25 minutes
 (`TICK_STALE_MS`), the digest route sends a `cron_job_missed` Slack
 alert. It is the in-app half of the check; `tick_watchdog()` in Postgres
 is the half that survives the app being down.

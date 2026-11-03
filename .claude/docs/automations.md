@@ -42,7 +42,7 @@ DB write / webhook / manual fire / tick
         automation_events     ← append-only bus
                 │
                 ▼
-   tick cron (every minute)
+   tick cron (every 5 min, only when work is due; always on the quarter hour)
         ├── dispatcher: open a run per matching automation
         └── runner:     advance each live run one action
                             │
@@ -109,8 +109,9 @@ RPC.
 
 ## The tick
 
-`app/api/cron/automations-tick/route.ts` fires every minute via
-pg_cron (`.claude/docs/cicd.md` "Scheduled jobs (pg_cron)"); the
+`app/api/cron/automations-tick/route.ts` runs via pg_cron every five
+minutes when `automations_tick_due()` sees work, and always on the
+quarter hour (`.claude/docs/cicd.md` "Scheduled jobs (pg_cron)"); the
 time-based emitters run on the quarter hour only. Bearer-auth via
 `isCronAuthorized`. The current pass order and budgets are in
 `.claude/docs/workflows.md` "The cron sweep"; the description below is
@@ -463,7 +464,7 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 ## API surface
 
 - `POST /api/cron/automations-tick` - bearer-auth tick (pg_cron,
-  every minute)
+  every five minutes when work is due)
 - `POST /api/automations/test-run` - rate-limited preview that
   renders templates against a real couple without sending
 - `GET /api/automations/approve/[token]?decision=approve|deny` -
