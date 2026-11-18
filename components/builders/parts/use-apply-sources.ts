@@ -24,7 +24,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 
-import { flattenItem } from '@/lib/payments/package-math'
+import { flattenItem, singlePriceLine } from '@/lib/payments/package-math'
 import { createClient } from '@/lib/supabase/client'
 import { getCurrentUser } from '@/lib/supabase/current-user'
 
@@ -95,8 +95,10 @@ export function useApplySources({
         supabase.from('packages').select('*').eq('user_id', uid).order('position'),
         supabase.from('package_items').select('*').eq('user_id', uid).order('position'),
         includeInvoiceTemplates
-          ? supabase.from('invoice_templates').select('id, name, description').eq('user_id', uid).order('position')
-          : Promise.resolve({ data: [] as { id: string; name: string; description: string | null }[] }),
+          ? supabase.from('invoice_templates').select('id, name, description, pricing_mode, fixed_price').eq('user_id', uid).order('position')
+          : Promise.resolve({
+              data: [] as { id: string; name: string; description: string | null; pricing_mode: string; fixed_price: number | null }[],
+            }),
         includeInvoiceTemplates
           ? supabase.from('invoice_template_items').select('invoice_template_id, description, note, amount, position').eq('user_id', uid).order('position')
           : Promise.resolve({ data: [] as { invoice_template_id: string; description: string; note: string | null; amount: number }[] }),
@@ -116,8 +118,10 @@ export function useApplySources({
 
       for (const t of invTpls.data ?? []) {
         const key = `it:${t.id}`
-        const items = byInvTpl[t.id] ?? []
-        options.push({ id: key, name: t.name, notes: t.description, itemCount: items.length })
+        const rawItems = byInvTpl[t.id] ?? []
+        // Single-price templates apply exactly like single-price packages.
+        const items = t.pricing_mode === 'single' ? [singlePriceLine(t.name, rawItems, t.fixed_price)] : rawItems
+        options.push({ id: key, name: t.name, notes: t.description, itemCount: rawItems.length })
         applyMap[key] = { notes: t.description, items, addOns: [], package: null }
       }
       for (const p of pkgs.data ?? []) {
@@ -130,27 +134,9 @@ export function useApplySources({
         const notes = p.description ?? null
 
         // A single-price package applies as ONE priced line, with its
-        // inclusions listed in that line's note.
-        //
-        // The alternative (one line per inclusion, each at $0) prints a column
-        // of "$0.00" beside every inclusion on the couple's invoice, which
-        // reads as "these are free" rather than "not itemised" — the exact
-        // impression the single-price mode exists to avoid. Folding them into
-        // the note keeps the inclusions visible while quoting one figure.
+        // inclusions listed in that line's note (see `singlePriceLine`).
         const baseItems: ApplyItem[] =
-          p.pricing_mode === 'single'
-            ? [
-                {
-                  description: p.name,
-                  note:
-                    bucket.base
-                      .map((i) => i.description.trim())
-                      .filter(Boolean)
-                      .join('\n') || null,
-                  amount: Number(p.fixed_price) || 0,
-                },
-              ]
-            : bucket.base
+          p.pricing_mode === 'single' ? [singlePriceLine(p.name, bucket.base, p.fixed_price)] : bucket.base
 
         options.push({
           id: key,

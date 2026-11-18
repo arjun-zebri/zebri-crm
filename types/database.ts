@@ -2088,33 +2088,39 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          fixed_price: number | null
           id: string
           is_starter: boolean
           name: string
           notes: string | null
           position: number
+          pricing_mode: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           description?: string | null
+          fixed_price?: number | null
           id?: string
           is_starter?: boolean
           name: string
           notes?: string | null
           position?: number
+          pricing_mode?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           description?: string | null
+          fixed_price?: number | null
           id?: string
           is_starter?: boolean
           name?: string
           notes?: string | null
           position?: number
+          pricing_mode?: string
           updated_at?: string
           user_id?: string
         }

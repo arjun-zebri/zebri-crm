@@ -36,6 +36,11 @@ interface LineItemPreviewProps {
   actions?: ReactNode
   items: PreviewLineItem[]
   /**
+   * Set for a single-price template: the items render as unpriced
+   * inclusions and this is the total. Null/omitted sums the items.
+   */
+  fixedPrice?: number | null
+  /**
    * Customer-facing notes appended to the quote/invoice when the
    * template is applied (the `description` column). Rendered under the
    * items so the MC sees exactly what a couple will.
@@ -43,8 +48,18 @@ interface LineItemPreviewProps {
   notes?: string | null
 }
 
-export function LineItemPreview({ eyebrow, name, subtitle, meta, actions, items, notes }: LineItemPreviewProps) {
-  const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+export function LineItemPreview({
+  eyebrow,
+  name,
+  subtitle,
+  meta,
+  actions,
+  items,
+  fixedPrice = null,
+  notes,
+}: LineItemPreviewProps) {
+  const single = fixedPrice != null
+  const total = single ? fixedPrice : items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
 
   return (
     <Card>
@@ -81,14 +96,18 @@ export function LineItemPreview({ eyebrow, name, subtitle, meta, actions, items,
                   <span className="min-w-0 truncate text-body text-text">
                     {item.description.trim() || <span className="text-text-subtle">Untitled item</span>}
                   </span>
-                  <span className="shrink-0 text-body tabular-nums text-text">
-                    {formatAUD(Number(item.amount) || 0)}
-                  </span>
+                  {/* Single-price inclusions carry no price: a column of $0.00
+                      would read as "free", not "included". */}
+                  {single ? null : (
+                    <span className="shrink-0 text-body tabular-nums text-text">
+                      {formatAUD(Number(item.amount) || 0)}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
             <div className="flex items-baseline justify-between gap-4 border-t border-border px-4 py-3">
-              <span className="text-body font-medium text-text">Total</span>
+              <span className="text-body font-medium text-text">{single ? 'Price' : 'Total'}</span>
               <span className="shrink-0 text-lg font-semibold tabular-nums text-text">
                 {formatAUD(total)}
               </span>

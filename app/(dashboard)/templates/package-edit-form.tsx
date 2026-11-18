@@ -28,6 +28,7 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { formatAUD } from '@/lib/payments/format'
 import { packageTotals } from '@/lib/payments/package-math'
 
+import { FixedPriceField } from './fixed-price-field'
 import { LineItemsEditor, noArrowsClass, type EditableItem } from './line-items-editor'
 import { PackageCategoryPicker } from './package-category-picker'
 
@@ -249,28 +250,13 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
             }
           />
           {singlePrice && (
-            <div className="mt-3 max-w-[220px]">
-              <label
-                htmlFor="package-fixed-price"
-                className="block text-body font-medium text-text"
-              >
-                Package price
-              </label>
-              <div className="mt-1 flex h-8 items-center rounded-control border border-border bg-surface px-2.5 transition-colors focus-within:border-brand-fg">
-                <span className="pr-1 text-body text-text-muted">$</span>
-                <input
-                  id="package-fixed-price"
-                  type="number"
-                  value={fixedPrice}
-                  onChange={(e) => setFixedPrice(e.target.value)}
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                  disabled={isSaving}
-                  className={`w-full bg-transparent text-body tabular-nums text-text placeholder:text-text-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${noArrowsClass}`}
-                />
-              </div>
-            </div>
+            <FixedPriceField
+              id="package-fixed-price"
+              label="Package price"
+              value={fixedPrice}
+              onChange={setFixedPrice}
+              disabled={isSaving}
+            />
           )}
         </div>
 

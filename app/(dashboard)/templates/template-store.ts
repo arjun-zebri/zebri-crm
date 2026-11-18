@@ -16,6 +16,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import type { PackagePricingMode } from '@/lib/payments/package-math'
 import type { Database } from '@/types/database'
 
 /** Which template tab the store serves. */
@@ -33,6 +34,10 @@ export interface TemplateRecord {
   name: string
   notes: string | null
   description: string | null
+  /** Same semantics as a package's: 'single' quotes {@link fixed_price}. */
+  pricing_mode: PackagePricingMode
+  /** The whole price in single mode; null when itemised. */
+  fixed_price: number | null
   position: number
   updated_at: string
 }
@@ -51,10 +56,29 @@ export interface TemplateDraft {
   name: string
   notes: string | null
   description: string | null
+  /** Omitted reads as 'itemised' (the historical behaviour). */
+  pricing_mode?: PackagePricingMode
+  /** Persisted only in single mode; ignored (stored NULL) when itemised. */
+  fixed_price?: number | null
   items: { description: string; note?: string | null; amount: number }[]
 }
 
 type Client = SupabaseClient<Database>
+
+/**
+ * The pricing columns a draft writes. An itemised template always stores a
+ * NULL price so the column can never disagree with a figure the MC is not
+ * quoting (mirrors `packages`).
+ */
+function pricingColumns(draft: TemplateDraft): { pricing_mode: PackagePricingMode; fixed_price: number | null } {
+  const mode = draft.pricing_mode ?? 'itemised'
+  return { pricing_mode: mode, fixed_price: mode === 'single' ? (draft.fixed_price ?? null) : null }
+}
+
+/** Narrow the DB's free-text `pricing_mode` (CHECK-constrained) to the union. */
+function toPricingMode(raw: string | null | undefined): PackagePricingMode {
+  return raw === 'single' ? 'single' : 'itemised'
+}
 
 /** Bulk-insert a draft's items in array order (uniform keys per row). */
 async function insertItems(
@@ -89,7 +113,7 @@ async function insertItems(
 // one construction site if a sibling table pair ever returns.
 export function createTemplateStore(client: Client, kind: TemplateKind = 'invoice') {
   void kind
-  const fields = 'id, name, notes, description, position, updated_at'
+  const fields = 'id, name, notes, description, pricing_mode, fixed_price, position, updated_at'
 
   return {
     /** Templates in list order. */
@@ -100,7 +124,7 @@ export function createTemplateStore(client: Client, kind: TemplateKind = 'invoic
         .eq('user_id', uid)
         .order('position', { ascending: true })
       if (error) throw error
-      return data ?? []
+      return (data ?? []).map((row) => ({ ...row, pricing_mode: toPricingMode(row.pricing_mode) }))
     },
 
     /** All items grouped by template id, each group in item order. */
@@ -130,6 +154,7 @@ export function createTemplateStore(client: Client, kind: TemplateKind = 'invoic
         name: draft.name,
         notes: draft.notes,
         description: draft.description,
+        ...pricingColumns(draft),
         position,
       }
       const { data, error } = await client.from('invoice_templates').insert(row).select('id').single()
@@ -157,6 +182,7 @@ export function createTemplateStore(client: Client, kind: TemplateKind = 'invoic
         name: draft.name,
         notes: draft.notes,
         description: draft.description,
+        ...pricingColumns(draft),
         updated_at: new Date().toISOString(),
       }
       const { error } = await client.from('invoice_templates').update(patch).eq('id', id).eq('user_id', uid)

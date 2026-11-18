@@ -1203,6 +1203,15 @@ delete cascade), name (not null), description (nullable), notes
 (nullable subtitle), position (default 0), is_starter (boolean, not null,
 default false  -  catalog provenance badge), created_at / updated_at.
 
+Pricing mode (mirrors `packages`): `pricing_mode` (text, not null,
+default `'itemised'`, CHECK in `itemised|single`) and `fixed_price`
+(numeric(10,2), nullable, CHECK `>= 0`). In `single` mode the items are
+unpriced inclusions and `fixed_price` is the whole price; applying the
+template writes ONE invoice line (the template name at `fixed_price`)
+with the inclusions in its note (`singlePriceLine` in
+`lib/payments/package-math.ts`). The store writes `fixed_price = NULL`
+whenever the mode is `itemised`.
+
 `invoice_template_items` columns: id, invoice_template_id (FK
 invoice_templates on delete cascade), user_id (RLS key), description
 (not null), amount (numeric(10,2), not null), position (not null),
@@ -1215,7 +1224,8 @@ RLS: owner-only `user_id = auth.uid()` on both (USING doubles as INSERT
 WITH CHECK).
 
 Migrations: `20260618000400_create_invoice_templates.sql`; `is_starter`
-added in `20260619000100_add_is_starter_to_templates.sql`. Starter invoice
+added in `20260619000100_add_is_starter_to_templates.sql`; pricing mode in
+`20261118000000_invoice_template_single_price.sql`. Starter invoice
 templates are an opt-in catalog
 (`lib/payments/starter-line-item-templates.ts`) added via
 `addStarterInvoiceTemplatesAction`.

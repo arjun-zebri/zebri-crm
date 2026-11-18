@@ -22,10 +22,13 @@ const TABLE_ROWS: Record<string, unknown[]> = {
     { id: 'pi1', package_id: 'p1', description: 'Hosting', amount: 1200, quantity: 1, optional: false },
   ],
   invoice_templates: [
-    { id: 't1', name: 'Deposit invoice', description: 'Standard deposit' },
+    { id: 't1', name: 'Deposit invoice', description: 'Standard deposit', pricing_mode: 'itemised', fixed_price: null },
+    { id: 't2', name: 'Gold', description: null, pricing_mode: 'single', fixed_price: 2400 },
   ],
   invoice_template_items: [
     { invoice_template_id: 't1', description: 'Deposit', amount: 500, position: 0 },
+    { invoice_template_id: 't2', description: 'Two Zoom calls', note: null, amount: 0, position: 0 },
+    { invoice_template_id: 't2', description: 'Run sheet', note: null, amount: 0, position: 1 },
   ],
 }
 
@@ -72,6 +75,23 @@ describe('useApplySources', () => {
 
     // The package source carries its package meta.
     expect(applyMap['pkg:p1']?.package).toMatchObject({ id: 'p1', gstInclusive: true })
+  })
+
+  it('applies a single-price invoice template as one priced line listing its inclusions', async () => {
+    // Regression: invoice templates had no single-price mode, so a template
+    // built from a single-price package applied as a column of $0 lines.
+    const { result } = renderHook(() => useApplySources({ includeInvoiceTemplates: true }), { wrapper })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    const { options, applyMap } = result.current.data!
+    expect(applyMap['it:t2']?.items).toEqual([
+      { description: 'Gold', note: 'Two Zoom calls\nRun sheet', amount: 2400 },
+    ])
+    // The picker still counts the inclusions, not the collapsed line.
+    expect(options.find((o) => o.id === 'it:t2')?.itemCount).toBe(2)
+    // Itemised templates are untouched.
+    expect(applyMap['it:t1']?.items).toEqual([{ description: 'Deposit', note: undefined, amount: 500 }])
   })
 
   it('omits invoice templates when not requested', async () => {

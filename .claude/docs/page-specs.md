@@ -2833,6 +2833,19 @@ the most specific source. Applied notes always come from a source's
 `description` column (customer-facing); the `notes` column is the
 internal subtitle shown only in the Templates list and is never applied.
 
+**Invoice template pricing (2026-11-18).** The invoice template editor has
+the same "Price as a single figure" toggle as the package editor: the
+line items lose their price column and become inclusions, and a
+"Template price" field holds the whole price (seeded from the current
+line total when toggled on). The list row, preview card ("Price" row, no
+per-line amounts) and footer total all read that price. "Add from
+package" pulls in a package's **base** items only (add-ons excluded) and
+always moves the template total by the package's base price: a
+single-price package turns an empty/single template single-price and adds
+its price; into an itemised template it lands as one priced line with the
+inclusions in its note; an itemised package into a single template adds
+its inclusions + total (`template-source-merge.ts`).
+
 ## Emails tab layout
 
 - Header row: email subtitle + "New template" button (`size="sm"` with

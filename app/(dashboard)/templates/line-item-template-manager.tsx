@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input'
 import { RowActionsMenu } from '@/components/ui/row-actions-menu'
 import { useToast } from '@/components/ui/toast'
 import { formatAUD } from '@/lib/payments/format'
+import { flattenItem, packageTotals } from '@/lib/payments/package-math'
 import type { StarterLineItemSet } from '@/lib/payments/starter-line-item-templates'
 import { createClient } from '@/lib/supabase/client'
 import { formatRelativeTime } from '@/lib/utils'
@@ -201,17 +202,34 @@ export function LineItemTemplateManager({
     queryFn: async (): Promise<TemplateSource[]> => {
       if (!userId) return []
       const [pkgs, pkgItems] = await Promise.all([
-        supabase.from('packages').select('id, name, archived_at').eq('user_id', userId).order('position'),
-        supabase.from('package_items').select('package_id, description, amount, position').eq('user_id', userId).order('position'),
+        supabase
+          .from('packages')
+          .select('id, name, archived_at, pricing_mode, fixed_price')
+          .eq('user_id', userId)
+          .order('position'),
+        supabase
+          .from('package_items')
+          .select('package_id, description, amount, quantity, optional, position')
+          .eq('user_id', userId)
+          .order('position'),
       ])
+      // Base items only: add-ons are extras the package total excludes, so
+      // pulling them in would inflate the template past the package price.
       const byPkg: Record<string, { description: string; amount: number }[]> = {}
-      for (const it of pkgItems.data ?? []) (byPkg[it.package_id] ??= []).push({ description: it.description, amount: it.amount })
-      return [
+      for (const it of pkgItems.data ?? []) {
+        if (!it.optional) (byPkg[it.package_id] ??= []).push(flattenItem(it))
+      }
+      return (pkgs.data ?? [])
         // Archived packages leave every picker, matching the builders.
-        ...(pkgs.data ?? [])
-          .filter((p) => !p.archived_at)
-          .map((p) => ({ id: p.id, kind: 'package' as const, name: p.name, items: byPkg[p.id] ?? [] })),
-      ]
+        .filter((p) => !p.archived_at)
+        .map((p) => ({
+          id: p.id,
+          kind: 'package' as const,
+          name: p.name,
+          pricingMode: p.pricing_mode === 'single' ? ('single' as const) : ('itemised' as const),
+          fixedPrice: p.fixed_price,
+          items: byPkg[p.id] ?? [],
+        }))
     },
     enabled: !!userId,
   })
@@ -221,7 +239,11 @@ export function LineItemTemplateManager({
       setLocalTemplates(
         templates.map((t) => {
           const items = allItems?.[t.id] ?? []
-          return { ...t, item_count: items.length, total: items.reduce((sum, item) => sum + (item.amount || 0), 0) }
+          return {
+            ...t,
+            item_count: items.length,
+            total: packageTotals(items, { pricingMode: t.pricing_mode, fixedPrice: t.fixed_price }).base,
+          }
         }),
       )
     }
@@ -284,6 +306,8 @@ export function LineItemTemplateManager({
           name: `${source.name} (copy)`,
           notes: source.notes,
           description: source.description,
+          pricing_mode: source.pricing_mode,
+          fixed_price: source.fixed_price,
           items: (allItems?.[source.id] ?? []).map(({ description, amount }) => ({ description, amount })),
         },
         source.position + 1,
@@ -396,7 +420,7 @@ export function LineItemTemplateManager({
           title={copy.newTemplateTitle}
           subtitle={copy.modalSubtitle}
           namePlaceholder={copy.namePlaceholder}
-          value={{ name: '', notes: null, description: null, items: [] }}
+          value={{ name: '', notes: null, description: null, pricing_mode: 'itemised', fixed_price: null, items: [] }}
           sources={sources}
           takenNames={takenNames(null)}
           onSave={handleSave}
@@ -415,6 +439,8 @@ export function LineItemTemplateManager({
             name: editing.name,
             notes: editing.notes,
             description: editing.description,
+            pricing_mode: editing.pricing_mode,
+            fixed_price: editing.fixed_price,
             items: allItems?.[editingId] ?? [],
           }}
           sources={sources}
@@ -518,6 +544,7 @@ export function LineItemTemplateManager({
                   </>
                 }
                 items={allItems?.[selectedTpl.id] ?? []}
+                fixedPrice={selectedTpl.pricing_mode === 'single' ? (selectedTpl.fixed_price ?? 0) : null}
                 notes={selectedTpl.description}
               />
             ) : (

@@ -91,6 +91,46 @@ describe('line-item template store', () => {
         )
       })
 
+      it('round-trips single-price mode and nulls the price when itemised', async () => {
+        const store = createTemplateStore(userA.client, kind)
+        const id = await store.create(
+          userA.id,
+          {
+            name: 'Gold single',
+            notes: null,
+            description: null,
+            pricing_mode: 'single',
+            fixed_price: 2400,
+            items: [{ description: 'Two Zoom calls', amount: 0 }],
+          },
+          2500,
+        )
+        let row = (await store.list(userA.id)).find((r) => r.id === id)
+        expect(row?.pricing_mode).toBe('single')
+        expect(Number(row?.fixed_price)).toBe(2400)
+
+        // Back to itemised: a stale price must not linger in the column.
+        await store.update(userA.id, id, {
+          name: 'Gold single',
+          notes: null,
+          description: null,
+          pricing_mode: 'itemised',
+          fixed_price: 2400,
+          items: [{ description: 'Two Zoom calls', amount: 300 }],
+        })
+        row = (await store.list(userA.id)).find((r) => r.id === id)
+        expect(row?.pricing_mode).toBe('itemised')
+        expect(row?.fixed_price).toBeNull()
+      })
+
+      it('defaults a template saved without pricing fields to itemised', async () => {
+        const store = createTemplateStore(userA.client, kind)
+        const id = await store.create(userA.id, { name: 'Legacy shape', notes: null, description: null, items: [] }, 2600)
+        const row = (await store.list(userA.id)).find((r) => r.id === id)
+        expect(row?.pricing_mode).toBe('itemised')
+        expect(row?.fixed_price).toBeNull()
+      })
+
       it('reorders templates via setPositions', async () => {
         const store = createTemplateStore(userA.client, kind)
         const rows = await store.list(userA.id)

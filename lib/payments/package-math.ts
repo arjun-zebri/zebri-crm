@@ -128,3 +128,34 @@ export function weekendLoadingLine(
     amount: roundCents(subtotal * (loadingPercent / 100)),
   }
 }
+
+/** A single-price line: one charge whose note lists what it includes. */
+export interface SinglePriceLine extends FlattenedLineItem {
+  note: string | null
+}
+
+/**
+ * Collapse a single-price package or invoice template into ONE priced line,
+ * with its inclusions listed (one per line) in that line's note.
+ *
+ * The alternative (one line per inclusion, each at $0) prints a column of
+ * "$0.00" beside every inclusion on the couple's invoice, which reads as
+ * "these are free" rather than "not itemised" — the impression single-price
+ * mode exists to avoid. Folding them into the note keeps the inclusions
+ * visible while quoting one figure.
+ *
+ * @param name - The package / template name, used as the line description.
+ * @param inclusions - The unpriced inclusions, in display order.
+ * @param fixedPrice - The whole price; null or invalid reads as 0.
+ */
+export function singlePriceLine(
+  name: string,
+  inclusions: readonly { description: string }[],
+  fixedPrice: number | null | undefined,
+): SinglePriceLine {
+  const note = inclusions
+    .map((i) => i.description.trim())
+    .filter(Boolean)
+    .join('\n')
+  return { description: name, note: note || null, amount: roundCents(Number(fixedPrice) || 0) }
+}

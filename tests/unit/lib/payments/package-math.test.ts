@@ -9,6 +9,7 @@ import {
   flattenItem,
   lineTotal,
   packageTotals,
+  singlePriceLine,
   weekendLoadingLine,
 } from '@/lib/payments/package-math'
 
@@ -137,5 +138,19 @@ describe('packageTotals — single-price mode', () => {
     expect(packageTotals(priced, { pricingMode: 'itemised' })).toEqual(withoutPricing)
     expect(packageTotals(priced, { pricingMode: null, fixedPrice: 9999 })).toEqual(withoutPricing)
     expect(withoutPricing.base).toBe(900)
+  })
+})
+
+describe('singlePriceLine', () => {
+  it('collapses inclusions into one priced line with a newline-joined note', () => {
+    expect(singlePriceLine('Gold', [{ description: ' Ceremony ' }, { description: '' }, { description: 'Reception' }], 2400.004)).toEqual({
+      description: 'Gold',
+      note: 'Ceremony\nReception',
+      amount: 2400,
+    })
+  })
+
+  it('treats a missing price as $0 and no inclusions as no note', () => {
+    expect(singlePriceLine('Empty', [], null)).toEqual({ description: 'Empty', note: null, amount: 0 })
   })
 })

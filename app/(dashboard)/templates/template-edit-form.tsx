@@ -13,24 +13,35 @@
  * binds to `description` (customer-facing, appended to the
  * invoice notes when the template is applied).
  *
- * `sources` (when provided) surfaces the "Add from…" picker, which
- * snapshots a package's line items in.
+ * "Price as a single figure" mirrors the package form: the line items
+ * become unpriced inclusions and one template price is quoted. Applying a
+ * single-price template writes ONE priced invoice line with the
+ * inclusions in its note (see `singlePriceLine`).
+ *
+ * `sources` (when provided) surfaces the "Add from package" picker,
+ * which snapshots a package's base items in — carrying its price across
+ * whichever way either side is priced (see `mergeSourceIntoTemplate`).
  *
  * @module app/(dashboard)/templates/template-edit-form
  */
 'use client'
 
-import * as Popover from '@radix-ui/react-popover'
-import { ChevronDown, Package as PackageIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
+import { Toggle } from '@/components/ui/toggle'
 import { formatAUD } from '@/lib/payments/format'
 import { cleanLineItems } from '@/lib/payments/line-item-draft'
+import { roundCents, type PackagePricingMode } from '@/lib/payments/package-math'
 
+import { FixedPriceField } from './fixed-price-field'
 import { LineItemsEditor, type EditableItem } from './line-items-editor'
+import { mergeSourceIntoTemplate, type TemplateSource } from './template-source-merge'
+import { TemplateSourcePicker } from './template-source-picker'
+
+export type { TemplateSource } from './template-source-merge'
 
 /** A line item as the managers persist it (no quantity). */
 export interface TemplateItem {
@@ -48,15 +59,11 @@ export interface TemplateFormValue {
   notes: string | null
   /** Customer-facing text applied to the invoice notes. */
   description: string | null
+  /** 'single' hides per-item prices and quotes {@link fixed_price}. */
+  pricing_mode: PackagePricingMode
+  /** The whole price in single mode; null when itemised. */
+  fixed_price: number | null
   items: TemplateItem[]
-}
-
-/** A package whose items can be pulled into a template. */
-export interface TemplateSource {
-  id: string
-  kind: 'package'
-  name: string
-  items: { description: string; note?: string | null; amount: number }[]
 }
 
 interface TemplateEditFormProps {
@@ -94,7 +101,20 @@ export function TemplateEditForm({
   // don't use); we hold it at 1 and drop it on save.
   const [items, setItems] = useState<EditableItem[]>(value.items.map((i) => ({ ...i, quantity: 1 })))
 
-  const total = items.reduce((sum, i) => sum + (Number(i.amount) || 0), 0)
+  const [singlePrice, setSinglePrice] = useState(value.pricing_mode === 'single')
+  const [fixedPrice, setFixedPrice] = useState(value.fixed_price != null ? String(value.fixed_price) : '')
+
+  const parsedFixedPrice = Number.parseFloat(fixedPrice)
+  const fixedPriceValue = Number.isFinite(parsedFixedPrice) && parsedFixedPrice >= 0 ? roundCents(parsedFixedPrice) : null
+  const itemsSum = roundCents(items.reduce((sum, i) => sum + (Number(i.amount) || 0), 0))
+  const total = singlePrice ? (fixedPriceValue ?? 0) : itemsSum
+
+  // Switching to one price seeds it with the current line total, so the
+  // template's price doesn't silently drop to $0 the moment it's toggled.
+  const toggleSinglePrice = (next: boolean) => {
+    if (next && fixedPrice.trim() === '' && itemsSum > 0) setFixedPrice(String(itemsSum))
+    setSinglePrice(next)
+  }
 
   const cleaned = cleanLineItems(items)
   const nameTaken = !!takenNames?.has(name.trim().toLowerCase())
@@ -105,17 +125,12 @@ export function TemplateEditForm({
       ? 'Give every priced line item a description.'
       : null
 
-  const addFromSource = (s: TemplateSource) =>
-    setItems((prev) => [
-      ...prev,
-      ...s.items.map((it) => ({
-        id: `new-${crypto.randomUUID()}`,
-        description: it.description,
-        note: it.note ?? null,
-        amount: it.amount,
-        quantity: 1,
-      })),
-    ])
+  const addFromSource = (s: TemplateSource) => {
+    const next = mergeSourceIntoTemplate({ items, singlePrice, fixedPrice }, s)
+    setItems(next.items)
+    setSinglePrice(next.singlePrice)
+    setFixedPrice(next.fixedPrice)
+  }
 
   const handleSave = () => {
     if (!name.trim() || blocked) return
@@ -123,6 +138,8 @@ export function TemplateEditForm({
       name: name.trim(),
       notes: notes.trim() || null,
       description: description.trim() || null,
+      pricing_mode: singlePrice ? 'single' : 'itemised',
+      fixed_price: singlePrice ? fixedPriceValue : null,
       items: cleaned.items.map(({ id, description: desc, note, amount }) => ({
         id,
         description: desc,
@@ -203,9 +220,11 @@ export function TemplateEditForm({
           <div className="mb-2 flex items-center justify-between gap-3">
             <p>
               <span className="text-body font-medium text-text">Line items</span>
-              <span className="ml-2 text-body text-text-muted">Applied to the document as-is</span>
+              <span className="ml-2 text-body text-text-muted">
+                {singlePrice ? "What's included, without prices" : 'Applied to the invoice as-is'}
+              </span>
             </p>
-            {sources && sources.length > 0 ? <SourcePicker sources={sources} onPick={addFromSource} /> : null}
+            {sources && sources.length > 0 ? <TemplateSourcePicker sources={sources} onPick={addFromSource} /> : null}
           </div>
           <div className="rounded-control border border-border px-4 pt-2 pb-1.5">
             <LineItemsEditor
@@ -214,81 +233,34 @@ export function TemplateEditForm({
               disabled={isSaving}
               descriptionPlaceholder="e.g., Reception MC"
               addLabel="Add line item"
+              showAmount={!singlePrice}
               compact
               showNote
             />
           </div>
+          <Toggle
+            className="mt-3"
+            checked={singlePrice}
+            onChange={toggleSinglePrice}
+            disabled={isSaving}
+            label="Price as a single figure"
+            description={
+              singlePrice
+                ? 'Applied as one priced line, with these items listed underneath it.'
+                : 'The template total is the sum of the line items above.'
+            }
+          />
+          {singlePrice && (
+            <FixedPriceField
+              id="template-fixed-price"
+              label="Template price"
+              value={fixedPrice}
+              onChange={setFixedPrice}
+              disabled={isSaving}
+            />
+          )}
         </div>
       </div>
     </Modal>
-  )
-}
-
-/* ─── "Add from package" picker ─────────────────────────────────── */
-
-function SourceGroup({
-  label,
-  items,
-  onPick,
-}: {
-  label: string
-  items: TemplateSource[]
-  onPick: (s: TemplateSource) => void
-}) {
-  if (items.length === 0) return null
-  return (
-    <>
-      <p className="px-2 pt-2 pb-1 text-body font-medium text-text-subtle">{label}</p>
-      {items.map((s) => (
-        <button
-          key={`${s.kind}-${s.id}`}
-          type="button"
-          onClick={() => onPick(s)}
-          className="flex w-full items-center justify-between gap-3 rounded-control px-2 py-1.5 text-left hover:bg-surface-muted cursor-pointer"
-        >
-          <span className="truncate text-body text-text">{s.name}</span>
-          <span className="shrink-0 text-body text-text-subtle">
-            {s.items.length} item{s.items.length !== 1 ? 's' : ''}
-          </span>
-        </button>
-      ))}
-    </>
-  )
-}
-
-function SourcePicker({ sources, onPick }: { sources: TemplateSource[]; onPick: (s: TemplateSource) => void }) {
-  const [open, setOpen] = useState(false)
-  const packages = sources.filter((s) => s.kind === 'package')
-  const pick = (s: TemplateSource) => {
-    onPick(s)
-    setOpen(false)
-  }
-
-  const triggerLabel = 'Add from package'
-
-  return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 py-1 text-body text-text-muted transition hover:text-text cursor-pointer"
-        >
-          <PackageIcon size={14} strokeWidth={1.5} />
-          {triggerLabel}
-          <ChevronDown size={13} strokeWidth={1.5} />
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          align="end"
-          sideOffset={6}
-          className="z-[90] w-64 rounded-control border border-border bg-card p-1.5 shadow-lg"
-        >
-          <div className="max-h-64 overflow-y-auto">
-            <SourceGroup label="Packages" items={packages} onPick={pick} />
-          </div>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
   )
 }
